@@ -6,15 +6,37 @@ Integration tests for cardano-node.
 Installation
 ------------
 
-`pip install -r requirements-dev.txt`
+```sh
+# create and activate virtual env
+$ python3 -m venv .env
+$ . .env/bin/activate
+# install this package together with dev requirements
+$ pip install -r requirements-dev.txt
+```
 
 Usage
 -----
 
 Running tests:
 
-`make tests`
+```sh
+# cd to cardano-node repo
+$ cd /path/to/cardano-node
+# launch devops shell
+$ nix-shell -A devops
+# cd to tests repo
+$ cd /path/to/cardano-node-tests
+# activate virtual env
+$ . .env/bin/activate
+# run tests
+$ make tests
+```
 
 Running linter:
 
-`make lint`
+```sh
+# activate virtual env
+$ . .env/bin/activate
+# run linter
+$ make lint
+```
