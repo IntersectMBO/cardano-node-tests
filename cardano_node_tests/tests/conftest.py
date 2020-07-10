@@ -17,7 +17,8 @@ def pytest_configure(config):
 
 
 def run_command(command, workdir=None):
-    cmd = command if not workdir else f"cd {workdir}; {command}"
+    cmd = f"bash -c '{command}'"
+    cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     __, stderr = p.communicate()
     if p.returncode != 0:
