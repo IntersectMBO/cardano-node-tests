@@ -104,7 +104,8 @@ class ClusterLib:
                 str(txbody_file),
             ]
         )
-        return int(stdout.decode().split(" ")[1])
+        fee, *__ = stdout.decode().split(" ")
+        return int(fee)
 
     def get_tx_fee(
         self, txins=None, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
@@ -301,7 +302,7 @@ class ClusterLib:
         return utxo
 
     def get_tip(self):
-        return self.query_cli(["tip"])
+        return json.loads(self.query_cli(["tip"]))
 
     def send_tx_genesis(
         self, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
@@ -347,7 +348,11 @@ class ClusterLib:
                 f"txins: {txins} txouts: {txouts} signing keys: {signing_keys}\n{err}"
             )
 
-    def submit_update_proposal(self, cli_args, epoch=1):
+    def get_current_epoch_no(self):
+        tip = self.get_tip()
+        return int(tip["slotNo"] / self.epoch_length)
+
+    def submit_update_proposal(self, cli_args, epoch=None):
         self.cli(
             [
                 "cardano-cli",
@@ -358,7 +363,7 @@ class ClusterLib:
                 "--out-file",
                 "update.proposal",
                 "--epoch",
-                str(epoch),
+                str(epoch or self.get_current_epoch_no()),
                 "--genesis-verification-key-file",
                 str(self.genesis_vkey),
             ]
