@@ -1,9 +1,13 @@
 """Wrapper for node-cli."""
+import collections
 import functools
 import json
 import subprocess
 from copy import copy
 from pathlib import Path
+
+KeyPair = collections.namedtuple("KeyPair", ("vkey", "skey"))
+CLIOut = collections.namedtuple("CLIOut", ("stdout", "stderr"))
 
 
 class CLIError(Exception):
@@ -16,7 +20,7 @@ class ClusterLib:
     def __init__(self, network_magic, state_dir):
         self.network_magic = network_magic
 
-        self.state_dir = Path(state_dir).expanduser().absolute()
+        self.state_dir = Path(state_dir).expanduser().resolve()
         self.genesis_json = self.state_dir / "keys" / "genesis.json"
         self.genesis_utxo_vkey = self.state_dir / "keys" / "genesis-utxo.vkey"
         self.genesis_utxo_skey = self.state_dir / "keys" / "genesis-utxo.skey"
@@ -57,7 +61,7 @@ class ClusterLib:
         stdout, stderr = p.communicate()
         if p.returncode != 0:
             raise CLIError(f"An error occurred running a CLI command `{p.args}`: {stderr}")
-        return stdout
+        return CLIOut(stdout, stderr)
 
     @staticmethod
     def prepend_flag(flag, contents):
@@ -73,7 +77,7 @@ class ClusterLib:
                 "--testnet-magic",
                 str(self.network_magic),
             ]
-        )
+        ).stdout
 
     def refresh_pparams(self):
         self.query_cli(["protocol-parameters", "--out-file", str(self.pparams_file)])
@@ -103,7 +107,7 @@ class ClusterLib:
                 "--tx-body-file",
                 str(txbody_file),
             ]
-        )
+        ).stdout
         fee, *__ = stdout.decode().split(" ")
         return int(fee)
 
@@ -251,15 +255,13 @@ class ClusterLib:
             ]
         )
 
-    def get_payment_address(self, payment=None, stake=None):
-        cli_args = []
-        if not payment:
-            raise CLIError("Must set payment.")
+    def get_payment_address(self, payment_vkey, stake_vkey=None):
+        if not payment_vkey:
+            raise CLIError("Must set payment key.")
 
-        if payment:
-            cli_args.extend("--payment-verification-key-file", payment)
-        if stake:
-            cli_args.extend("--stake-verification-key-file", stake)
+        cli_args = ["--payment-verification-key-file", str(payment_vkey)]
+        if stake_vkey:
+            cli_args.extend("--stake-verification-key-file", str(stake_vkey))
 
         return (
             self.cli(
@@ -273,7 +275,7 @@ class ClusterLib:
                     *cli_args,
                 ]
             )
-            .rstrip()
+            .stdout.rstrip()
             .decode("ascii")
         )
 
@@ -291,7 +293,7 @@ class ClusterLib:
                     str(vkey_path),
                 ]
             )
-            .rstrip()
+            .stdout.rstrip()
             .decode("ascii")
         )
 
@@ -303,6 +305,107 @@ class ClusterLib:
 
     def get_tip(self):
         return json.loads(self.query_cli(["tip"]))
+
+    def create_payment_key_pair(self, destination_dir, key_name):
+        destination_dir = Path(destination_dir).expanduser()
+        skey = destination_dir / f"{key_name}.skey"
+        vkey = destination_dir / f"{key_name}.vkey"
+        self.cli(
+            [
+                "cardano-cli",
+                "shelley",
+                "address",
+                "key-gen",
+                "--verification-key-file",
+                vkey,
+                "--signing-key-file",
+                skey,
+            ]
+        )
+        return KeyPair(vkey, skey)
+
+    def create_stake_key_pair(self, destination_dir, key_name):
+        destination_dir = Path(destination_dir).expanduser()
+        skey = destination_dir / f"{key_name}.skey"
+        vkey = destination_dir / f"{key_name}.vkey"
+        self.cli(
+            [
+                "cardano-cli",
+                "shelley",
+                "stake-address",
+                "key-gen",
+                "--verification-key-file",
+                vkey,
+                "--signing-key-file",
+                skey,
+            ]
+        )
+        return KeyPair(vkey, skey)
+
+    def build_payment_address(self, payment_vkey):
+        return (
+            self.cli(
+                [
+                    "cardano-cli",
+                    "shelley",
+                    "address",
+                    "build",
+                    "--payment-verification-key-file",
+                    str(payment_vkey),
+                    "--testnet-magic",
+                    str(self.network_magic),
+                ]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
+    def build_stake_address(self, stake_vkey):
+        return (
+            self.cli(
+                [
+                    "cardano-cli",
+                    "shelley",
+                    "stake-address",
+                    "build",
+                    "--stake-verification-key-file",
+                    str(stake_vkey),
+                    "--testnet-magic",
+                    str(self.network_magic),
+                ]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
+    def delegate_stake_address(self, stake_addr_skey, pool_id, delegation_fee):
+        cli_args = [
+            "cardano-cli",
+            "shelley",
+            "stake-address",
+            "delegate",
+            "--signing-key-file",
+            str(stake_addr_skey),
+            "--pool-id",
+            str(pool_id),
+            "--delegation-fee",
+            str(delegation_fee),
+        ]
+
+        stderr = self.cli(cli_args).stderr
+        if stderr and "runStakeAddressCmd" in stderr.decode():
+            cmd = " ".join(cli_args)
+            raise CLIError(f"command not implemented yet;\ncommand: {cmd}\nresult: {stderr}")
+
+    def get_stake_address_info(self, stake_addr):
+        output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
+        delegation = output_json[stake_addr]["delegation"]
+        reward_account_balance = output_json[stake_addr]["rewardAccountBalance"]
+
+        StakeAddrInfo = collections.namedtuple(
+            "StakeAddrInfo", ("delegation", "reward_account_balance", "stake_addr_info")
+        )
+        return StakeAddrInfo(delegation, reward_account_balance, output_json)
 
     def send_tx_genesis(
         self, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
