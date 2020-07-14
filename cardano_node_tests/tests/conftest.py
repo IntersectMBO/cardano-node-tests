@@ -26,7 +26,7 @@ def run_command(command, workdir=None):
 
 
 def setup_cluster():
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().absolute()
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
     state_dir = socket_path.parent
     work_dir = state_dir.parent

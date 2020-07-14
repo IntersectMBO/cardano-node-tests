@@ -9,7 +9,7 @@ LOGGER = logging.getLogger(__name__)
 def test_update_proposal(cluster_session):
     sleep_time = cluster_session.slot_length * cluster_session.epoch_length
 
-    if cluster_session.get_current_epoch_no() < 1:
+    if cluster_session.get_last_block_epoch() < 1:
         LOGGER.info(f"Waiting 1 epoch to submit proposal ({sleep_time} seconds).")
         time.sleep(sleep_time)
 
