@@ -1,10 +1,13 @@
-"""Wrapper for node-cli."""
+"""Wrapper for cardano-cli."""
 import collections
 import functools
 import json
+import logging
 import subprocess
 from copy import copy
 from pathlib import Path
+
+LOGGER = logging.getLogger(__name__)
 
 KeyPair = collections.namedtuple("KeyPair", ("vkey", "skey"))
 CLIOut = collections.namedtuple("CLIOut", ("stdout", "stderr"))
@@ -68,6 +71,8 @@ class ClusterLib:
         p = subprocess.Popen(
             ["cardano-cli", "shelley", *cli_args], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
+        LOGGER.debug("Running `%s`", " ".join(p.args))
+
         stdout, stderr = p.communicate()
         if p.returncode != 0:
             raise CLIError(f"An error occurred running a CLI command `{p.args}`: {stderr}")
@@ -75,7 +80,7 @@ class ClusterLib:
 
     @staticmethod
     def prepend_flag(flag, contents):
-        return sum(([flag, x] for x in contents), [])
+        return sum(([flag, str(x)] for x in contents), [])
 
     def query_cli(self, cli_args):
         return self.cli(["query", *cli_args, "--testnet-magic", str(self.network_magic)]).stdout
@@ -85,7 +90,79 @@ class ClusterLib:
         with open(self.pparams_file) as in_json:
             self.pparams = json.load(in_json)
 
-    def estimate_fee(self, txbody_file, txins=1, txouts=1, witnesses=1, byron_witnesses=0):
+    def build_raw_tx(
+        self,
+        out_file,
+        change_address=None,
+        txins=None,
+        txouts=None,
+        certificate_files=None,
+        proposal_files=None,
+        metadata_json_files=None,
+        metadata_cbor_files=None,
+        withdrawal_files=None,
+        fee=0,
+        ttl=None,
+    ):
+        out_file = Path(out_file)
+        txins = txins or []
+        txouts_copy = copy(txouts) if txouts else []
+        ttl = ttl or self.calculate_tx_ttl()
+
+        certificate_files = certificate_files or []
+        proposal_files = proposal_files or []
+        metadata_json_files = metadata_json_files or []
+        metadata_cbor_files = metadata_cbor_files or []
+        withdrawal_files = withdrawal_files or []
+
+        if change_address:
+            change_balance = self.get_address_balance(change_address)
+        else:
+            change_address = self.genesis_utxo_addr
+            change_balance = 0
+
+        total_input_amount = functools.reduce(lambda x, y: x + y[2], txins, 0)
+        total_output_amount = functools.reduce(lambda x, y: x + y[2], txouts_copy, 0)
+        change = change_balance + total_input_amount - total_output_amount - fee
+        if change > 0:
+            txouts_copy.append((change_address, change))
+
+        txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
+        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts_copy]
+
+        txin_args = self.prepend_flag("--tx-in", txins_combined)
+        txout_args = self.prepend_flag("--tx-out", txouts_combined)
+        cert_args = self.prepend_flag("--certificate-file", certificate_files)
+        proposal_args = self.prepend_flag("--update-proposal-file", proposal_files)
+        metadata_json_args = self.prepend_flag("--metadata-json-file", metadata_json_files)
+        metadata_cbor_args = self.prepend_flag("--metadata-cbor-file", metadata_cbor_files)
+        withdrawal_args = self.prepend_flag("--withdrawal", withdrawal_files)
+
+        self.cli(
+            [
+                "transaction",
+                "build-raw",
+                "--ttl",
+                str(ttl),
+                "--fee",
+                str(fee),
+                "--out-file",
+                str(out_file),
+                *txin_args,
+                *txout_args,
+                *cert_args,
+                *proposal_args,
+                *metadata_json_args,
+                *metadata_cbor_args,
+                *withdrawal_args,
+            ]
+        )
+
+        self.check_outfile(out_file)
+
+    def estimate_fee(
+        self, txbody_file, txin_count=1, txout_count=1, witness_count=1, byron_witness_count=0
+    ):
         self.refresh_pparams()
         stdout = self.cli(
             [
@@ -96,13 +173,13 @@ class ClusterLib:
                 "--protocol-params-file",
                 str(self.pparams_file),
                 "--tx-in-count",
-                str(txins),
+                str(txin_count),
                 "--tx-out-count",
-                str(txouts),
+                str(txout_count),
                 "--byron-witness-count",
-                str(byron_witnesses),
+                str(byron_witness_count),
                 "--witness-count",
-                str(witnesses),
+                str(witness_count),
                 "--tx-body-file",
                 str(txbody_file),
             ]
@@ -111,112 +188,43 @@ class ClusterLib:
         return int(fee)
 
     def calculate_tx_fee(
-        self, txins=None, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
+        self,
+        change_address=None,
+        txins=None,
+        txouts=None,
+        certificate_files=None,
+        proposal_files=None,
+        metadata_json_files=None,
+        metadata_cbor_files=None,
+        withdrawal_files=None,
+        ttl=None,
+        signing_keys=None,
     ):
-        txins = txins or []
-        txouts_copy = copy(txouts) if txouts else []
         signing_keys = signing_keys or []
-        certificates = certificates or []
-
-        # TODO: calculate from current tip
-        ttl = 100000
-
-        # TODO: unhardcode genesis utxo
-        change = (self.genesis_utxo_addr, 0)
-        txouts_copy.append(change)
-
-        txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
-        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts_copy]
-
-        txin_args = self.prepend_flag("--tx-in", txins_combined)
-        txout_args = self.prepend_flag("--tx-out", txouts_combined)
-        cert_args = self.prepend_flag("--certificate-file", certificates)
-
         out_file = Path("tx.body_estimate")
 
-        build_args_estimate = [
-            "transaction",
-            "build-raw",
-            "--ttl",
-            str(ttl),
-            "--fee",
-            "0",
-            "--out-file",
-            str(out_file),
-            *txin_args,
-            *txout_args,
-            *cert_args,
-        ]
+        self.build_raw_tx(
+            out_file,
+            change_address=change_address,
+            txins=txins,
+            txouts=txouts,
+            certificate_files=certificate_files,
+            proposal_files=proposal_files,
+            metadata_json_files=metadata_json_files,
+            metadata_cbor_files=metadata_cbor_files,
+            withdrawal_files=withdrawal_files,
+            fee=0,
+            ttl=ttl,
+        )
 
-        if proposal_file:
-            build_args_estimate.extend(["--update-proposal-file", proposal_file])
-
-        # Build TX for estimate
-        self.cli(build_args_estimate)
-        self.check_outfile(out_file)
-
-        # Estimate fee
         fee = self.estimate_fee(
-            out_file, txins=len(txins), txouts=len(txouts_copy), witnesses=len(signing_keys),
+            out_file,
+            txin_count=len(txins),
+            txout_count=len(txouts),
+            witness_count=len(signing_keys),
         )
 
         return fee
-
-    # TODO: add withdrawal support
-    def build_tx(
-        self,
-        out_file="tx.body",
-        txins=None,
-        txouts=None,
-        certificates=None,
-        fee=0,
-        proposal_file=None,
-    ):
-        txins = txins or []
-        txouts_copy = copy(txouts) if txouts else []
-        certificates = certificates or []
-
-        # TODO: make change_address work - Needs CLI endpoint to query utxo by txid
-        # If no change_address specified send to utxo change address
-        # if not change_address:
-        #    change_address = self.genesis_utxo_addr
-
-        # TODO: calculate from current tip
-        ttl = 100000
-
-        # TODO: unhardcode genesis utxo
-        change = (self.genesis_utxo_addr, 0)
-        txouts_copy.append(change)
-
-        deposit_amount = 0
-        total_input_amount = functools.reduce(lambda x, y: x + y[2], txins, 0)
-        txouts_copy[-1] = (self.genesis_utxo_addr, (total_input_amount - fee - deposit_amount))
-        txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
-        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts_copy]
-
-        txin_args = self.prepend_flag("--tx-in", txins_combined)
-        txout_args = self.prepend_flag("--tx-out", txouts_combined)
-        cert_args = self.prepend_flag("--certificate-file", certificates)
-
-        build_args = [
-            "transaction",
-            "build-raw",
-            "--ttl",
-            str(ttl),
-            "--fee",
-            str(fee),
-            "--out-file",
-            str(out_file),
-            *txin_args,
-            *txout_args,
-            *cert_args,
-        ]
-
-        if proposal_file:
-            build_args.extend(["--update-proposal-file", proposal_file])
-
-        self.cli(build_args)
-        self.check_outfile(out_file)
 
     def sign_tx(self, tx_body_file="tx.body", out_file="tx.signed", signing_keys=None):
         signing_keys = signing_keys or []
@@ -279,9 +287,9 @@ class ClusterLib:
         )
 
     def get_utxo(self, address):
-        self.query_cli(["utxo", "--address", address, "--out-file", "utxo.json"])
-        with open("utxo.json") as in_json:
-            utxo = json.load(in_json)
+        utxo = json.loads(
+            self.query_cli(["utxo", "--address", address, "--out-file", "/dev/stdout"])
+        )
         return utxo
 
     def get_tip(self):
@@ -453,23 +461,15 @@ class ClusterLib:
         return current_slot_no + 1000
 
     def send_tx_genesis(
-        self, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
+        self, txouts=None, certificate_files=None, signing_keys=None, proposal_files=None,
     ):
         txouts = txouts or []
-        certificates = certificates or []
-        signing_keys = signing_keys or []
+        certificate_files = certificate_files or []
+        signing_keys_copy = copy(signing_keys) if signing_keys else []
 
-        utxo = self.get_utxo(address=self.genesis_utxo_addr)
-        total_input_amount = 0
-        txins = []
-        for k, v in utxo.items():
-            total_input_amount += v["amount"]
-            txin = k.split("#")
-            txin = (txin[0], txin[1])
-            txins.append(txin)
+        signing_keys_copy.append(str(self.genesis_utxo_skey))
 
         # TODO: calculate from current tip
-        signing_keys.append(str(self.genesis_utxo_skey))
         utxo = self.get_utxo(address=self.genesis_utxo_addr)
         txins = []
         for k, v in utxo.items():
@@ -479,21 +479,28 @@ class ClusterLib:
 
         # Build, Sign and Send TX to chain
         try:
-            fee = self.calculate_tx_fee(txins, txouts, certificates, signing_keys, proposal_file)
-            self.build_tx(
+            fee = self.calculate_tx_fee(
                 txins=txins,
                 txouts=txouts,
-                certificates=certificates,
-                fee=fee,
-                proposal_file=proposal_file,
+                certificate_files=certificate_files,
+                proposal_files=proposal_files,
+                signing_keys=signing_keys_copy,
             )
-            self.sign_tx(signing_keys=signing_keys)
+            self.build_raw_tx(
+                out_file="tx.body",
+                txins=txins,
+                txouts=txouts,
+                certificate_files=certificate_files,
+                fee=fee,
+                proposal_files=proposal_files,
+            )
+            self.sign_tx(signing_keys=signing_keys_copy)
             self.submit_tx()
         except CLIError as err:
             raise CLIError(
                 f"Sending a genesis transaction failed!\n"
                 f"utxo: {utxo}\n"
-                f"txins: {txins} txouts: {txouts} signing keys: {signing_keys}\n{err}"
+                f"txins: {txins} txouts: {txouts} signing keys: {signing_keys_copy}\n{err}"
             )
 
     def submit_update_proposal(self, cli_args, epoch=None):
@@ -515,5 +522,5 @@ class ClusterLib:
         self.check_outfile(out_file)
 
         self.send_tx_genesis(
-            proposal_file="update.proposal", signing_keys=[str(self.delegate_skey)],
+            proposal_files=["update.proposal"], signing_keys=[str(self.delegate_skey)],
         )
