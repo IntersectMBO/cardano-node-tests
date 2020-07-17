@@ -6,16 +6,18 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List
 from typing import NamedTuple
 from typing import Optional
-from typing import Sequence
 from typing import Tuple
 from typing import Union
 
 LOGGER = logging.getLogger(__name__)
 
 FileType = Union[str, Path]
-OptionalFilesType = Sequence[Optional[FileType]]
+UnpackableSequence = Union[list, tuple]
+# list of `FileType`s, empty list, or empty tuple
+OptionalFiles = Union[List[Optional[FileType]], Tuple[()]]
 
 
 class KeyPair(NamedTuple):
@@ -41,8 +43,8 @@ class StakeAddrInfo(NamedTuple):
 
 
 class TxInfo(NamedTuple):
-    txins: Sequence
-    txouts: Sequence
+    txins: UnpackableSequence
+    txouts: UnpackableSequence
     outfile: Path
 
 
@@ -75,12 +77,12 @@ class PoolData:
 
 @dataclass
 class TxFiles:
-    certificate_files: OptionalFilesType = ()
-    proposal_files: OptionalFilesType = ()
-    metadata_json_files: OptionalFilesType = ()
-    metadata_cbor_files: OptionalFilesType = ()
-    withdrawal_files: OptionalFilesType = ()
-    signing_key_files: OptionalFilesType = ()
+    certificate_files: OptionalFiles = ()
+    proposal_files: OptionalFiles = ()
+    metadata_json_files: OptionalFiles = ()
+    metadata_cbor_files: OptionalFiles = ()
+    withdrawal_files: OptionalFiles = ()
+    signing_key_files: OptionalFiles = ()
 
 
 class CLIError(Exception):
@@ -96,11 +98,11 @@ class ClusterLib:
         self.network_magic = network_magic
 
         self.state_dir = Path(state_dir).expanduser().resolve()
-        self.genesis_json = self.state_dir / "keys" / "genesis.json"
-        self.genesis_utxo_vkey = self.state_dir / "keys" / "genesis-utxo.vkey"
-        self.genesis_utxo_skey = self.state_dir / "keys" / "genesis-utxo.skey"
-        self.genesis_vkey = self.state_dir / "keys" / "genesis-keys" / "genesis1.vkey"
-        self.delegate_skey = self.state_dir / "keys" / "delegate-keys" / "delegate1.skey"
+        self.genesis_json = self.state_dir / "shelley" / "genesis.json"
+        self.genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
+        self.genesis_utxo_skey = self.state_dir / "shelley" / "genesis-utxo.skey"
+        self.genesis_vkey = self.state_dir / "shelley" / "genesis-keys" / "genesis1.vkey"
+        self.delegate_skey = self.state_dir / "shelley" / "delegate-keys" / "delegate1.skey"
         self.pparams_file = self.state_dir / "pparams.json"
 
         self._check_state_dir()
@@ -156,10 +158,10 @@ class ClusterLib:
         return CLIOut(stdout, stderr)
 
     @staticmethod
-    def _prepend_flag(flag: str, contents: Sequence) -> list:
+    def _prepend_flag(flag: str, contents: UnpackableSequence) -> list:
         return sum(([flag, str(x)] for x in contents), [])
 
-    def query_cli(self, cli_args: Sequence) -> str:
+    def query_cli(self, cli_args: UnpackableSequence) -> str:
         stdout = self.cli(["query", *cli_args, "--testnet-magic", str(self.network_magic)]).stdout
         stdout_dec = stdout.decode("utf-8") if stdout else ""
         return stdout_dec
@@ -580,8 +582,8 @@ class ClusterLib:
     def get_tx_ins_outs(
         self,
         change_address: Optional[str] = None,
-        txins: Optional[Sequence] = None,
-        txouts: Optional[Sequence] = None,
+        txins: Optional[UnpackableSequence] = None,
+        txouts: Optional[UnpackableSequence] = None,
         fee: int = 0,
     ) -> Tuple[list, list]:
         txins_copy = list(txins) if txins else []
@@ -611,8 +613,8 @@ class ClusterLib:
         self,
         out_file: FileType,
         change_address: Optional[str] = None,
-        txins: Optional[Sequence] = None,
-        txouts: Optional[Sequence] = None,
+        txins: Optional[UnpackableSequence] = None,
+        txouts: Optional[UnpackableSequence] = None,
         tx_files: Optional[TxFiles] = None,
         fee: int = 0,
         ttl: Optional[int] = None,
@@ -685,8 +687,8 @@ class ClusterLib:
     def calculate_tx_fee(
         self,
         change_address: Optional[str] = None,
-        txins: Optional[Sequence] = None,
-        txouts: Optional[Sequence] = None,
+        txins: Optional[UnpackableSequence] = None,
+        txouts: Optional[UnpackableSequence] = None,
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
     ) -> int:
@@ -716,7 +718,7 @@ class ClusterLib:
         self,
         tx_body_file: FileType = "tx.body",
         out_file: FileType = "tx.signed",
-        signing_key_files: OptionalFilesType = (),
+        signing_key_files: OptionalFiles = (),
     ):
         key_args = self._prepend_flag("--signing-key-file", signing_key_files)
         self.cli(
@@ -750,8 +752,8 @@ class ClusterLib:
     def send_tx(
         self,
         change_address: Optional[str] = None,
-        txins: Optional[Sequence] = None,
-        txouts: Optional[Sequence] = None,
+        txins: Optional[UnpackableSequence] = None,
+        txouts: Optional[UnpackableSequence] = None,
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
         fee: Optional[int] = None,
@@ -784,7 +786,7 @@ class ClusterLib:
         )
         self.submit_tx(tx_file="tx.signed")
 
-    def submit_update_proposal(self, cli_args: Sequence, epoch: int):
+    def submit_update_proposal(self, cli_args: UnpackableSequence, epoch: int):
         out_file = Path("update.proposal")
         self.cli(
             [

@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -35,16 +34,7 @@ def setup_cluster():
     LOGGER.info("Starting cluster.")
     run_command("start-cluster", workdir=work_dir)
 
-    shutil.copy(
-        repo_dir / "nix" / "supervisord-cluster" / "genesis-utxo.vkey",
-        state_dir / "keys" / "genesis-utxo.vkey",
-    )
-    shutil.copy(
-        repo_dir / "nix" / "supervisord-cluster" / "genesis-utxo.skey",
-        state_dir / "keys" / "genesis-utxo.skey",
-    )
-
-    with open(state_dir / "keys" / "genesis.json") as in_json:
+    with open(state_dir / "shelley" / "genesis.json") as in_json:
         genesis_json = json.load(in_json)
 
     cluster_data = {
