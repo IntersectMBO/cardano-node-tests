@@ -800,7 +800,7 @@ class ClusterLib:
         self.send_tx(
             tx_files=TxFiles(
                 proposal_files=[out_file],
-                signing_key_files=[str(self.delegate_skey), str(self.genesis_utxo_skey)],
+                signing_key_files=[self.delegate_skey, self.genesis_utxo_skey],
             ),
         )
 
