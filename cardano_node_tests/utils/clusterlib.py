@@ -142,12 +142,17 @@ class ClusterLib:
     @staticmethod
     def cli(cli_args) -> CLIOut:
         cmd = ["cardano-cli", "shelley", *cli_args]
+        cmd_str = " ".join(cmd)
+
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        LOGGER.debug("Running `%s`", " ".join(cmd))
+        LOGGER.debug("Running `%s`", cmd_str)
 
         stdout, stderr = p.communicate()
         if p.returncode != 0:
-            raise CLIError(f"An error occurred running a CLI command `{cmd}`: {stderr.decode()}")
+            raise CLIError(
+                f"An error occurred running a CLI command `{cmd_str}`: {stderr.decode()}"
+            )
+
         return CLIOut(stdout, stderr)
 
     @staticmethod
