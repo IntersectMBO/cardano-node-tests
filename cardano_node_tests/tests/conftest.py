@@ -24,7 +24,7 @@ def run_command(command, workdir=None):
         raise AssertionError(f"An error occurred while running `{cmd}`: {stderr}")
 
 
-def setup_cluster():
+def setup_cluster() -> ClusterLib:
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
     state_dir = socket_path.parent

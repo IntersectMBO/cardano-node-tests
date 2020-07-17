@@ -21,14 +21,14 @@ OptionalFiles = Union[List[Optional[FileType]], Tuple[()]]
 
 
 class KeyPair(NamedTuple):
-    vkey: Path
-    skey: Path
+    vkey_file: Path
+    skey_file: Path
 
 
 class ColdKeyCounter(NamedTuple):
-    vkey: Path
-    skey: Path
-    counter: Path
+    vkey_file: Path
+    skey_file: Path
+    counter_file: Path
 
 
 class CLIOut(NamedTuple):
@@ -65,8 +65,7 @@ class PoolOwner(NamedTuple):
     stake_addr_skey_file: FileType
 
 
-@dataclass
-class PoolData:
+class PoolData(NamedTuple):
     pool_name: str
     pool_pledge: int
     pool_cost: int
@@ -869,7 +868,7 @@ class ClusterLib:
             destination_dir=destination_dir,
             pool_data=pool_data,
             node_vrf_vkey_file=node_vrf_vkey_file,
-            node_cold_vkey_file=node_cold_key_pair.vkey,
+            node_cold_vkey_file=node_cold_key_pair.vkey_file,
             owner_stake_addr_vkey_file=pool_owner.stake_addr_vkey_file,
         )
 
@@ -879,7 +878,7 @@ class ClusterLib:
             signing_key_files=[
                 pool_owner.addr_vkey_file,
                 pool_owner.stake_addr_skey_file,
-                node_cold_key_pair.skey,
+                node_cold_key_pair.skey_file,
             ],
         )
         tx_fee = self.calculate_tx_fee(
@@ -910,7 +909,7 @@ class ClusterLib:
         pool_dereg_cert_file = self.gen_pool_deregistration_cert(
             destination_dir=destination_dir,
             pool_name=pool_name,
-            cold_vkey_file=node_cold_key_pair.vkey,
+            cold_vkey_file=node_cold_key_pair.vkey_file,
             epoch=epoch,
         )
 
@@ -920,7 +919,7 @@ class ClusterLib:
             signing_key_files=[
                 pool_owner.addr_vkey_file,
                 pool_owner.stake_addr_skey_file,
-                node_cold_key_pair.skey,
+                node_cold_key_pair.skey_file,
             ],
         )
         tx_fee = self.calculate_tx_fee(
@@ -938,32 +937,32 @@ class ClusterLib:
 
     def create_stake_pool(
         self, destination_dir: FileType, pool_data: PoolData, pool_owner: PoolOwner,
-    ):
+    ) -> PoolCreationArtifacts:
         # create the KES key pair
         node_kes = self.gen_kes_key_pair(destination_dir, pool_data.pool_name)
-        LOGGER.debug(f"KES keys created - {node_kes.vkey}; {node_kes.skey}")
+        LOGGER.debug(f"KES keys created - {node_kes.vkey_file}; {node_kes.skey_file}")
 
         # create the VRF key pair
         node_vrf = self.gen_vrf_key_pair(destination_dir, pool_data.pool_name)
-        LOGGER.debug(f"VRF keys created - {node_vrf.vkey}; {node_vrf.skey}")
+        LOGGER.debug(f"VRF keys created - {node_vrf.vkey_file}; {node_vrf.skey_file}")
 
         # create the cold key pair and node operational certificate counter
         node_cold = self.gen_cold_key_pair_and_counter(destination_dir, pool_data.pool_name)
         LOGGER.debug(
             "Cold keys created and counter created - "
-            f"{node_cold.vkey}; {node_cold.skey}; {node_cold.counter}"
+            f"{node_cold.vkey_file}; {node_cold.skey_file}; {node_cold.counter_file}"
         )
 
         pool_reg_cert_file = self.register_stake_pool(
             destination_dir=destination_dir,
             pool_data=pool_data,
             pool_owner=pool_owner,
-            node_vrf_vkey_file=node_vrf.vkey,
+            node_vrf_vkey_file=node_vrf.vkey_file,
             node_cold_key_pair=node_cold,
         )
 
         return PoolCreationArtifacts(
-            stake_pool_id=self.get_stake_pool_id(node_cold.vkey),
+            stake_pool_id=self.get_stake_pool_id(node_cold.vkey_file),
             kes_key_pair=node_kes,
             vrf_key_pair=node_vrf,
             cold_key_pair_and_counter=node_cold,
