@@ -1,16 +1,86 @@
 """Wrapper for cardano-cli."""
-import collections
 import functools
 import json
 import logging
 import subprocess
-from copy import copy
+import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
+from typing import Union
 
 LOGGER = logging.getLogger(__name__)
 
-KeyPair = collections.namedtuple("KeyPair", ("vkey", "skey"))
-CLIOut = collections.namedtuple("CLIOut", ("stdout", "stderr"))
+FileType = Union[str, Path]
+OptionalFilesType = Sequence[Optional[FileType]]
+
+
+class KeyPair(NamedTuple):
+    vkey: Path
+    skey: Path
+
+
+class ColdKeyCounter(NamedTuple):
+    vkey: Path
+    skey: Path
+    counter: Path
+
+
+class CLIOut(NamedTuple):
+    stdout: bytes
+    stderr: bytes
+
+
+class StakeAddrInfo(NamedTuple):
+    delegation: str
+    reward_account_balance: int
+    stake_addr_info: dict
+
+
+class TxInfo(NamedTuple):
+    txins: Sequence
+    txouts: Sequence
+    outfile: Path
+
+
+class PoolCreationArtifacts(NamedTuple):
+    stake_pool_id: str
+    kes_key_pair: KeyPair
+    vrf_key_pair: KeyPair
+    cold_key_pair_and_counter: ColdKeyCounter
+    pool_reg_cert_file: Path
+
+
+class PoolOwner(NamedTuple):
+    addr: str
+    stake_addr: str
+    addr_vkey_file: FileType
+    addr_skey_file: FileType
+    stake_addr_vkey_file: FileType
+    stake_addr_skey_file: FileType
+
+
+@dataclass
+class PoolData:
+    pool_name: str
+    pool_pledge: int
+    pool_cost: int
+    pool_margin: float
+    pool_metadata_url: str
+    pool_metadata_hash: str
+
+
+@dataclass
+class TxFiles:
+    certificate_files: OptionalFilesType = ()
+    proposal_files: OptionalFilesType = ()
+    metadata_json_files: OptionalFilesType = ()
+    metadata_cbor_files: OptionalFilesType = ()
+    withdrawal_files: OptionalFilesType = ()
+    signing_key_files: OptionalFilesType = ()
 
 
 class CLIError(Exception):
@@ -20,7 +90,9 @@ class CLIError(Exception):
 class ClusterLib:
     """Cluster Lib."""
 
-    def __init__(self, network_magic, state_dir):
+    # pylint: disable=too-many-instance-attributes,too-many-public-methods
+
+    def __init__(self, network_magic, state_dir: Union[str, Path]):
         self.network_magic = network_magic
 
         self.state_dir = Path(state_dir).expanduser().resolve()
@@ -31,14 +103,14 @@ class ClusterLib:
         self.delegate_skey = self.state_dir / "keys" / "delegate-keys" / "delegate1.skey"
         self.pparams_file = self.state_dir / "pparams.json"
 
-        self.check_state_dir()
+        self._check_state_dir()
 
         with open(self.genesis_json) as in_json:
             self.genesis = json.load(in_json)
 
-        self.genesis_utxo_addr = self.get_genesis_addr(self.genesis_utxo_vkey)
+        self.genesis_utxo_addr = self.get_genesis_addr(vkey_file=self.genesis_utxo_vkey)
 
-        self.pparams = None
+        self.pparams: dict = {}
         self.refresh_pparams()
 
         self.slot_length = self.genesis["slotLength"]
@@ -46,7 +118,7 @@ class ClusterLib:
         self.slots_per_kes_period = self.genesis["slotsPerKESPeriod"]
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
 
-    def check_state_dir(self):
+    def _check_state_dir(self):
         if not self.state_dir.exists():
             raise CLIError(f"The state dir `{self.state_dir}` doesn't exist.")
 
@@ -61,82 +133,494 @@ class ClusterLib:
                 raise CLIError(f"The file `{file_name}` doesn't exist.")
 
     @staticmethod
-    def check_outfile(out_file):
-        out_file = Path(out_file).expanduser()
-        if not out_file.exists():
-            raise CLIError(f"The expected file `{out_file}` doesn't exist.")
+    def _check_outfiles(*out_files):
+        for out_file in out_files:
+            out_file = Path(out_file).expanduser()
+            if not out_file.exists():
+                raise CLIError(f"The expected file `{out_file}` doesn't exist.")
 
     @staticmethod
-    def cli(cli_args):
-        p = subprocess.Popen(
-            ["cardano-cli", "shelley", *cli_args], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        LOGGER.debug("Running `%s`", " ".join(p.args))
+    def cli(cli_args) -> CLIOut:
+        cmd = ["cardano-cli", "shelley", *cli_args]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        LOGGER.debug("Running `%s`", " ".join(cmd))
 
         stdout, stderr = p.communicate()
         if p.returncode != 0:
-            raise CLIError(f"An error occurred running a CLI command `{p.args}`: {stderr}")
+            raise CLIError(f"An error occurred running a CLI command `{cmd}`: {stderr.decode()}")
         return CLIOut(stdout, stderr)
 
     @staticmethod
-    def prepend_flag(flag, contents):
+    def _prepend_flag(flag: str, contents: Sequence) -> list:
         return sum(([flag, str(x)] for x in contents), [])
 
-    def query_cli(self, cli_args):
-        return self.cli(["query", *cli_args, "--testnet-magic", str(self.network_magic)]).stdout
+    def query_cli(self, cli_args: Sequence) -> str:
+        stdout = self.cli(["query", *cli_args, "--testnet-magic", str(self.network_magic)]).stdout
+        stdout_dec = stdout.decode("utf-8") if stdout else ""
+        return stdout_dec
 
     def refresh_pparams(self):
         self.query_cli(["protocol-parameters", "--out-file", str(self.pparams_file)])
         with open(self.pparams_file) as in_json:
             self.pparams = json.load(in_json)
 
-    def build_raw_tx(
+    def get_payment_addr(
+        self, payment_vkey_file: FileType, stake_vkey_file: Optional[FileType] = None
+    ) -> str:
+        cli_args = ["--payment-verification-key-file", str(payment_vkey_file)]
+        if stake_vkey_file:
+            cli_args.extend(["--stake-verification-key-file", str(stake_vkey_file)])
+
+        return (
+            self.cli(["address", "build", "--testnet-magic", str(self.network_magic), *cli_args])
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
+    def get_genesis_addr(self, vkey_file: FileType) -> str:
+        return (
+            self.cli(
+                [
+                    "genesis",
+                    "initial-addr",
+                    "--testnet-magic",
+                    str(self.network_magic),
+                    "--verification-key-file",
+                    str(vkey_file),
+                ]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
+    def get_utxo(self, address: str) -> dict:
+        utxo = json.loads(
+            self.query_cli(["utxo", "--address", address, "--out-file", "/dev/stdout"])
+        )
+        return utxo
+
+    def get_tip(self) -> dict:
+        return json.loads(self.query_cli(["tip"]))
+
+    def gen_payment_key_pair(self, destination_dir: FileType, key_name: str) -> KeyPair:
+        destination_dir = Path(destination_dir).expanduser()
+        vkey = destination_dir / f"{key_name}.vkey"
+        skey = destination_dir / f"{key_name}.skey"
+        self.cli(
+            [
+                "address",
+                "key-gen",
+                "--verification-key-file",
+                str(vkey),
+                "--signing-key-file",
+                str(skey),
+            ]
+        )
+
+        self._check_outfiles(vkey, skey)
+        return KeyPair(vkey, skey)
+
+    def gen_stake_key_pair(self, destination_dir: FileType, key_name: str) -> KeyPair:
+        destination_dir = Path(destination_dir).expanduser()
+        vkey = destination_dir / f"{key_name}.vkey"
+        skey = destination_dir / f"{key_name}.skey"
+        self.cli(
+            [
+                "stake-address",
+                "key-gen",
+                "--verification-key-file",
+                str(vkey),
+                "--signing-key-file",
+                str(skey),
+            ]
+        )
+
+        self._check_outfiles(vkey, skey)
+        return KeyPair(vkey, skey)
+
+    def gen_kes_key_pair(self, destination_dir: FileType, node_name: str) -> KeyPair:
+        destination_dir = Path(destination_dir).expanduser()
+        vkey = destination_dir / f"{node_name}_kes.vkey"
+        skey = destination_dir / f"{node_name}_kes.skey"
+        self.cli(
+            [
+                "node",
+                "key-gen-KES",
+                "--verification-key-file",
+                str(vkey),
+                "--signing-key-file",
+                str(skey),
+            ]
+        )
+
+        self._check_outfiles(vkey, skey)
+        return KeyPair(vkey, skey)
+
+    def gen_vrf_key_pair(self, destination_dir: FileType, node_name: str) -> KeyPair:
+        destination_dir = Path(destination_dir).expanduser()
+        vkey = destination_dir / f"{node_name}_vrf.vkey"
+        skey = destination_dir / f"{node_name}_vrf.skey"
+        self.cli(
+            [
+                "node",
+                "key-gen-VRF",
+                "--verification-key-file",
+                str(vkey),
+                "--signing-key-file",
+                str(skey),
+            ]
+        )
+
+        self._check_outfiles(vkey, skey)
+        return KeyPair(vkey, skey)
+
+    def gen_cold_key_pair_and_counter(
+        self, destination_dir: FileType, node_name: str
+    ) -> ColdKeyCounter:
+        destination_dir = Path(destination_dir).expanduser()
+        vkey = destination_dir / f"{node_name}_cold.vkey"
+        skey = destination_dir / f"{node_name}_cold.skey"
+        counter = destination_dir / f"{node_name}_cold.counter"
+        self.cli(
+            [
+                "node",
+                "key-gen",
+                "--verification-key-file",
+                str(vkey),
+                "--signing-key-file",
+                str(skey),
+                "--operational-certificate-issue-counter",
+                str(counter),
+            ]
+        )
+
+        self._check_outfiles(vkey, skey, counter)
+        return ColdKeyCounter(vkey, skey, counter)
+
+    def gen_node_operational_cert(
         self,
-        out_file,
-        change_address=None,
-        txins=None,
-        txouts=None,
-        certificate_files=None,
-        proposal_files=None,
-        metadata_json_files=None,
-        metadata_cbor_files=None,
-        withdrawal_files=None,
-        fee=0,
-        ttl=None,
-    ):
-        out_file = Path(out_file)
-        txins = txins or []
-        txouts_copy = copy(txouts) if txouts else []
-        ttl = ttl or self.calculate_tx_ttl()
+        destination_dir: FileType,
+        node_name: str,
+        node_kes_vkey_file: FileType,
+        node_cold_skey_file: FileType,
+        node_cold_counter_file: FileType,
+    ) -> Path:
+        # this certificate is used when starting the node and not submitted throw a tx
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{node_name}.opcert"
+        current_kes_period = self.get_current_kes_period()
+        self.cli(
+            [
+                "node",
+                "issue-op-cert",
+                "--kes-verification-key-file",
+                str(node_kes_vkey_file),
+                "--cold-signing-key-file",
+                str(node_cold_skey_file),
+                "--operational-certificate-issue-counter",
+                str(node_cold_counter_file),
+                "--kes-period",
+                str(current_kes_period),
+                "--out-file",
+                str(out_file),
+            ]
+        )
 
-        certificate_files = certificate_files or []
-        proposal_files = proposal_files or []
-        metadata_json_files = metadata_json_files or []
-        metadata_cbor_files = metadata_cbor_files or []
-        withdrawal_files = withdrawal_files or []
+        self._check_outfiles(out_file)
+        return out_file
 
+    def gen_stake_addr_registration_cert(
+        self, destination_dir: FileType, addr_name: str, stake_addr_vkey_file: FileType
+    ) -> Path:
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{addr_name}_stake.reg.cert"
+        self.cli(
+            [
+                "stake-address",
+                "registration-certificate",
+                "--stake-verification-key-file",
+                str(stake_addr_vkey_file),
+                "--out-file",
+                str(out_file),
+            ]
+        )
+
+        self._check_outfiles(out_file)
+        return out_file
+
+    def gen_stake_addr_delegation_cert(
+        self,
+        destination_dir: FileType,
+        addr_name: str,
+        stake_addr_vkey_file: FileType,
+        node_cold_vkey_file: FileType,
+    ) -> Path:
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{addr_name}_stake.deleg.cert"
+        self.cli(
+            [
+                "stake-address",
+                "delegation-certificate",
+                "--stake-verification-key-file ",
+                str(stake_addr_vkey_file),
+                "--cold-verification-key-file ",
+                str(node_cold_vkey_file),
+                "--out-file ",
+                str(out_file),
+            ]
+        )
+
+        self._check_outfiles(out_file)
+        return out_file
+
+    def gen_pool_metadata_hash(self, pool_metadata_file: FileType) -> str:
+        return (
+            self.cli(
+                ["stake-pool", "metadata-hash", "--pool-metadata-file", str(pool_metadata_file)]
+            )
+            .stdout.rstrip()
+            .decode("utf-8")
+        )
+
+    def gen_pool_registration_cert(
+        self,
+        destination_dir: FileType,
+        pool_data: PoolData,
+        node_vrf_vkey_file: FileType,
+        node_cold_vkey_file: FileType,
+        owner_stake_addr_vkey_file: FileType,
+    ) -> Path:
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{pool_data.pool_name}_pool_reg.cert"
+
+        metadata_cmd = []
+        if pool_data.pool_metadata_url and pool_data.pool_metadata_hash:
+            metadata_cmd = [
+                "--metadata-url",
+                str(pool_data.pool_metadata_url),
+                "--metadata-hash",
+                str(pool_data.pool_metadata_hash),
+            ]
+
+        self.cli(
+            [
+                "stake-pool",
+                "registration-certificate",
+                "--pool-pledge",
+                str(pool_data.pool_pledge),
+                "--pool-cost",
+                str(pool_data.pool_cost),
+                "--pool-margin",
+                str(pool_data.pool_margin),
+                "--vrf-verification-key-file",
+                str(node_vrf_vkey_file),
+                "--cold-verification-key-file",
+                str(node_cold_vkey_file),
+                "--pool-reward-account-verification-key-file",
+                str(owner_stake_addr_vkey_file),
+                "--pool-owner-stake-verification-key-file",
+                str(owner_stake_addr_vkey_file),
+                "--testnet-magic",
+                str(self.network_magic),
+                "--out-file",
+                str(out_file),
+                *metadata_cmd,
+            ]
+        )
+
+        self._check_outfiles(out_file)
+        return out_file
+
+    def gen_pool_deregistration_cert(
+        self, destination_dir: FileType, pool_name: str, cold_vkey_file: FileType, epoch: int,
+    ) -> Path:
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{pool_name}_pool_dereg.cert"
+        self.cli(
+            [
+                "stake-pool",
+                "deregistration-certificate",
+                "--cold-verification-key-file",
+                str(cold_vkey_file),
+                "--epoch",
+                str(epoch),
+                "--out-file",
+                str(out_file),
+            ]
+        )
+
+        self._check_outfiles(out_file)
+        return out_file
+
+    def get_ledger_state(self) -> dict:
+        return json.loads(self.query_cli(["ledger-state"]))
+
+    def get_registered_stake_pools_ledger_state(self) -> dict:
+        registered_pools_details = self.get_ledger_state()["esLState"]["_delegationState"][
+            "_pstate"
+        ]["_pParams"]
+        return registered_pools_details
+
+    def get_stake_pool_id(self, pool_cold_vkey_file: FileType) -> str:
+        pool_id = (
+            self.cli(["stake-pool", "id", "--verification-key-file", str(pool_cold_vkey_file)])
+            .stdout.strip()
+            .decode("utf-8")
+        )
+        return pool_id
+
+    def build_payment_address(self, payment_vkey_file: FileType) -> str:
+        return (
+            self.cli(
+                [
+                    "address",
+                    "build",
+                    "--payment-verification-key-file",
+                    str(payment_vkey_file),
+                    "--testnet-magic",
+                    str(self.network_magic),
+                ]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
+    def build_stake_address(self, stake_vkey_file: FileType) -> str:
+        return (
+            self.cli(
+                [
+                    "stake-address",
+                    "build",
+                    "--stake-verification-key-file",
+                    str(stake_vkey_file),
+                    "--testnet-magic",
+                    str(self.network_magic),
+                ]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
+    def delegate_stake_address(self, stake_addr_skey: FileType, pool_id: str, delegation_fee: int):
+        cli_args = [
+            "stake-address",
+            "delegate",
+            "--signing-key-file",
+            str(stake_addr_skey),
+            "--pool-id",
+            str(pool_id),
+            "--delegation-fee",
+            str(delegation_fee),
+        ]
+
+        stderr = self.cli(cli_args).stderr
+        if stderr and "runStakeAddressCmd" in stderr.decode():
+            cmd = " ".join(cli_args)
+            raise CLIError(
+                f"command not implemented yet;\ncommand: {cmd}\nresult: {stderr.decode()}"
+            )
+
+    def get_stake_address_info(self, stake_addr: str) -> StakeAddrInfo:
+        output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
+        delegation = output_json[stake_addr]["delegation"]
+        reward_account_balance = output_json[stake_addr]["rewardAccountBalance"]
+        return StakeAddrInfo(delegation, reward_account_balance, output_json)
+
+    def get_protocol_params(self) -> dict:
+        self.refresh_pparams()
+        return self.pparams
+
+    def get_key_deposit(self) -> int:
+        return self.get_protocol_params()["keyDeposit"]
+
+    def get_pool_deposit(self) -> int:
+        return self.get_protocol_params()["poolDeposit"]
+
+    def get_stake_distribution(self) -> dict:
+        # stake pool values are displayed starting with line 2 from the command output
+        result = self.query_cli(["stake-distribution"]).splitlines()[2:]
+        stake_distribution = {}
+        for pool in result:
+            pool_id, *__, stake = pool.split(" ")
+            stake_distribution[pool_id] = stake
+        return stake_distribution
+
+    def get_current_slot_no(self) -> int:
+        return int(self.get_tip()["slotNo"])
+
+    def get_last_block_block_no(self) -> int:
+        return int(self.get_tip()["blockNo"])
+
+    def get_last_block_epoch(self) -> int:
+        return int(self.get_current_slot_no() / self.epoch_length)
+
+    def get_address_balance(self, address: str) -> int:
+        available_utxos = self.get_utxo(address) or {}
+        address_balance = functools.reduce(
+            lambda x, y: x + y["amount"], available_utxos.values(), 0
+        )
+        return int(address_balance)
+
+    def get_utxo_with_highest_amount(self, address: str) -> dict:
+        utxo = self.get_utxo(address=address)
+        highest_amount_rec = max(utxo.items(), key=lambda x: x[1].get("amount", 0))
+        return {highest_amount_rec[0]: highest_amount_rec[1]}
+
+    def calculate_tx_ttl(self) -> int:
+        return self.get_current_slot_no() + 1000
+
+    def get_current_kes_period(self) -> int:
+        return int(self.get_last_block_block_no() / self.slots_per_kes_period)
+
+    def get_tx_ins_outs(
+        self,
+        change_address: Optional[str] = None,
+        txins: Optional[Sequence] = None,
+        txouts: Optional[Sequence] = None,
+        fee: int = 0,
+    ) -> Tuple[list, list]:
+        txins_copy = list(txins) if txins else []
+        txouts_copy = list(txouts) if txouts else []
         if change_address:
             change_balance = self.get_address_balance(change_address)
         else:
             change_address = self.genesis_utxo_addr
             change_balance = 0
 
-        total_input_amount = functools.reduce(lambda x, y: x + y[2], txins, 0)
+        if not txins_copy:
+            utxo = self.get_utxo(address=change_address)
+            for k, v in utxo.items():
+                txin = k.split("#")
+                txin = (txin[0], txin[1], v["amount"])
+                txins_copy.append(txin)
+
+        total_input_amount = functools.reduce(lambda x, y: x + y[2], txins_copy, 0)
         total_output_amount = functools.reduce(lambda x, y: x + y[2], txouts_copy, 0)
         change = change_balance + total_input_amount - total_output_amount - fee
         if change > 0:
             txouts_copy.append((change_address, change))
 
-        txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
-        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts_copy]
+        return txins_copy, txouts_copy
 
-        txin_args = self.prepend_flag("--tx-in", txins_combined)
-        txout_args = self.prepend_flag("--tx-out", txouts_combined)
-        cert_args = self.prepend_flag("--certificate-file", certificate_files)
-        proposal_args = self.prepend_flag("--update-proposal-file", proposal_files)
-        metadata_json_args = self.prepend_flag("--metadata-json-file", metadata_json_files)
-        metadata_cbor_args = self.prepend_flag("--metadata-cbor-file", metadata_cbor_files)
-        withdrawal_args = self.prepend_flag("--withdrawal", withdrawal_files)
+    def build_raw_tx(
+        self,
+        out_file: FileType,
+        change_address: Optional[str] = None,
+        txins: Optional[Sequence] = None,
+        txouts: Optional[Sequence] = None,
+        tx_files: Optional[TxFiles] = None,
+        fee: int = 0,
+        ttl: Optional[int] = None,
+    ) -> TxInfo:
+        tx_files = tx_files or TxFiles()
+        out_file = Path(out_file)
+        ttl = ttl or self.calculate_tx_ttl()
+        txins_copy, txouts_copy = self.get_tx_ins_outs(
+            change_address=change_address, txins=txins, txouts=txouts, fee=fee
+        )
+
+        txins_combined = [f"{x[0]}#{x[1]}" for x in txins_copy]
+        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts_copy]
 
         self.cli(
             [
@@ -148,21 +632,27 @@ class ClusterLib:
                 str(fee),
                 "--out-file",
                 str(out_file),
-                *txin_args,
-                *txout_args,
-                *cert_args,
-                *proposal_args,
-                *metadata_json_args,
-                *metadata_cbor_args,
-                *withdrawal_args,
+                *self._prepend_flag("--tx-in", txins_combined),
+                *self._prepend_flag("--tx-out", txouts_combined),
+                *self._prepend_flag("--certificate-file", tx_files.certificate_files),
+                *self._prepend_flag("--update-proposal-file", tx_files.proposal_files),
+                *self._prepend_flag("--metadata-json-file", tx_files.metadata_json_files),
+                *self._prepend_flag("--metadata-cbor-file", tx_files.metadata_cbor_files),
+                *self._prepend_flag("--withdrawal", tx_files.withdrawal_files),
             ]
         )
 
-        self.check_outfile(out_file)
+        self._check_outfiles(out_file)
+        return TxInfo(txins=txins_copy, txouts=txouts_copy, outfile=out_file)
 
     def estimate_fee(
-        self, txbody_file, txin_count=1, txout_count=1, witness_count=1, byron_witness_count=0
-    ):
+        self,
+        txbody_file: FileType,
+        txin_count: int = 1,
+        txout_count: int = 1,
+        witness_count: int = 1,
+        byron_witness_count: int = 0,
+    ) -> int:
         self.refresh_pparams()
         stdout = self.cli(
             [
@@ -189,46 +679,41 @@ class ClusterLib:
 
     def calculate_tx_fee(
         self,
-        change_address=None,
-        txins=None,
-        txouts=None,
-        certificate_files=None,
-        proposal_files=None,
-        metadata_json_files=None,
-        metadata_cbor_files=None,
-        withdrawal_files=None,
-        ttl=None,
-        signing_keys=None,
-    ):
-        signing_keys = signing_keys or []
+        change_address: Optional[str] = None,
+        txins: Optional[Sequence] = None,
+        txouts: Optional[Sequence] = None,
+        tx_files: Optional[TxFiles] = None,
+        ttl: Optional[int] = None,
+    ) -> int:
+        tx_files = tx_files or TxFiles()
         out_file = Path("tx.body_estimate")
 
-        self.build_raw_tx(
+        tx_info = self.build_raw_tx(
             out_file,
             change_address=change_address,
             txins=txins,
             txouts=txouts,
-            certificate_files=certificate_files,
-            proposal_files=proposal_files,
-            metadata_json_files=metadata_json_files,
-            metadata_cbor_files=metadata_cbor_files,
-            withdrawal_files=withdrawal_files,
+            tx_files=tx_files,
             fee=0,
             ttl=ttl,
         )
 
         fee = self.estimate_fee(
             out_file,
-            txin_count=len(txins),
-            txout_count=len(txouts),
-            witness_count=len(signing_keys),
+            txin_count=len(tx_info.txins),
+            txout_count=len(tx_info.txouts),
+            witness_count=len(tx_files.signing_key_files),
         )
 
         return fee
 
-    def sign_tx(self, tx_body_file="tx.body", out_file="tx.signed", signing_keys=None):
-        signing_keys = signing_keys or []
-        key_args = self.prepend_flag("--signing-key-file", signing_keys)
+    def sign_tx(
+        self,
+        tx_body_file: FileType = "tx.body",
+        out_file: FileType = "tx.signed",
+        signing_key_files: OptionalFilesType = (),
+    ):
+        key_args = self._prepend_flag("--signing-key-file", signing_key_files)
         self.cli(
             [
                 "transaction",
@@ -242,9 +727,10 @@ class ClusterLib:
                 *key_args,
             ]
         )
-        self.check_outfile(out_file)
 
-    def submit_tx(self, tx_file="tx.signed"):
+        self._check_outfiles(out_file)
+
+    def submit_tx(self, tx_file: FileType = "tx.signed"):
         self.cli(
             [
                 "transaction",
@@ -256,256 +742,45 @@ class ClusterLib:
             ]
         )
 
-    def get_payment_address(self, payment_vkey, stake_vkey=None):
-        if not payment_vkey:
-            raise CLIError("Must set payment key.")
-
-        cli_args = ["--payment-verification-key-file", str(payment_vkey)]
-        if stake_vkey:
-            cli_args.extend("--stake-verification-key-file", str(stake_vkey))
-
-        return (
-            self.cli(["address", "build", "--testnet-magic", str(self.network_magic), *cli_args])
-            .stdout.rstrip()
-            .decode("ascii")
-        )
-
-    def get_genesis_addr(self, vkey_path):
-        return (
-            self.cli(
-                [
-                    "genesis",
-                    "initial-addr",
-                    "--testnet-magic",
-                    str(self.network_magic),
-                    "--verification-key-file",
-                    str(vkey_path),
-                ]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
-        )
-
-    def get_utxo(self, address):
-        utxo = json.loads(
-            self.query_cli(["utxo", "--address", address, "--out-file", "/dev/stdout"])
-        )
-        return utxo
-
-    def get_tip(self):
-        return json.loads(self.query_cli(["tip"]))
-
-    def create_payment_key_pair(self, destination_dir, key_name):
-        destination_dir = Path(destination_dir).expanduser()
-        skey = destination_dir / f"{key_name}.skey"
-        vkey = destination_dir / f"{key_name}.vkey"
-        self.cli(
-            ["address", "key-gen", "--verification-key-file", vkey, "--signing-key-file", skey]
-        )
-        return KeyPair(vkey, skey)
-
-    def create_stake_key_pair(self, destination_dir, key_name):
-        destination_dir = Path(destination_dir).expanduser()
-        skey = destination_dir / f"{key_name}.skey"
-        vkey = destination_dir / f"{key_name}.vkey"
-        self.cli(
-            [
-                "stake-address",
-                "key-gen",
-                "--verification-key-file",
-                vkey,
-                "--signing-key-file",
-                skey,
-            ]
-        )
-        return KeyPair(vkey, skey)
-
-    def build_payment_address(self, payment_vkey):
-        return (
-            self.cli(
-                [
-                    "address",
-                    "build",
-                    "--payment-verification-key-file",
-                    str(payment_vkey),
-                    "--testnet-magic",
-                    str(self.network_magic),
-                ]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
-        )
-
-    def build_stake_address(self, stake_vkey):
-        return (
-            self.cli(
-                [
-                    "stake-address",
-                    "build",
-                    "--stake-verification-key-file",
-                    str(stake_vkey),
-                    "--testnet-magic",
-                    str(self.network_magic),
-                ]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
-        )
-
-    def delegate_stake_address(self, stake_addr_skey, pool_id, delegation_fee):
-        cli_args = [
-            "stake-address",
-            "delegate",
-            "--signing-key-file",
-            str(stake_addr_skey),
-            "--pool-id",
-            str(pool_id),
-            "--delegation-fee",
-            str(delegation_fee),
-        ]
-
-        stderr = self.cli(cli_args).stderr
-        if stderr and "runStakeAddressCmd" in stderr.decode():
-            cmd = " ".join(cli_args)
-            raise CLIError(f"command not implemented yet;\ncommand: {cmd}\nresult: {stderr}")
-
-    def get_stake_address_info(self, stake_addr):
-        output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
-        delegation = output_json[stake_addr]["delegation"]
-        reward_account_balance = output_json[stake_addr]["rewardAccountBalance"]
-
-        StakeAddrInfo = collections.namedtuple(
-            "StakeAddrInfo", ("delegation", "reward_account_balance", "stake_addr_info")
-        )
-        return StakeAddrInfo(delegation, reward_account_balance, output_json)
-
-    def create_stake_addr_registration_cert(self, destination_dir, stake_addr_vkey, addr_name):
-        destination_dir = Path(destination_dir).expanduser()
-        out_file = destination_dir / f"{addr_name}_stake.reg.cert"
-        self.cli(
-            [
-                "stake-address",
-                "registration-certificate",
-                "--stake-verification-key-file",
-                str(stake_addr_vkey),
-                "--out-file",
-                str(out_file),
-            ]
-        )
-        self.check_outfile(out_file)
-        return out_file
-
-    def create_stake_addr_delegation_cert(
-        self, destination_dir, stake_addr_vkey, node_cold_vkey, addr_name
+    def send_tx(
+        self,
+        change_address: Optional[str] = None,
+        txins: Optional[Sequence] = None,
+        txouts: Optional[Sequence] = None,
+        tx_files: Optional[TxFiles] = None,
+        ttl: Optional[int] = None,
+        fee: Optional[int] = None,
     ):
-        destination_dir = Path(destination_dir).expanduser()
-        out_file = destination_dir / f"{addr_name}_stake.deleg.cert"
-        self.cli(
-            [
-                "stake-address",
-                "delegation-certificate",
-                "--stake-verification-key-file ",
-                str(stake_addr_vkey),
-                "--cold-verification-key-file ",
-                str(node_cold_vkey),
-                "--out-file ",
-                str(out_file),
-            ]
-        )
+        """Build, Sign and Send TX to chain."""
+        tx_files = tx_files or TxFiles()
 
-        self.check_outfile(out_file)
-        return out_file
-
-    def get_protocol_params(self):
-        self.refresh_pparams()
-        return self.pparams
-
-    def get_key_deposit(self):
-        return self.get_protocol_params()["keyDeposit"]
-
-    def get_pool_deposit(self):
-        return self.get_protocol_params()["poolDeposit"]
-
-    def get_stake_distribution(self):
-        # stake pool values are displayed starting with line 2 from the command output
-        result = self.query_cli(["stake-distribution"]).decode().splitlines()[2:]
-        stake_distribution = {}
-        for pool in result:
-            pool_id, *__, stake = pool.split(" ")
-            stake_distribution[pool_id] = stake
-        return stake_distribution
-
-    def get_last_block_slot_no(self):
-        return int(self.get_tip()["slotNo"])
-
-    def get_last_block_block_no(self):
-        return int(self.get_tip()["blockNo"])
-
-    def get_last_block_epoch(self):
-        return int(self.get_last_block_slot_no() / self.epoch_length)
-
-    def get_address_balance(self, address):
-        available_utxos = self.get_utxo(address) or {}
-        address_balance = functools.reduce(
-            lambda x, y: x + y["amount"], available_utxos.values(), 0
-        )
-        return int(address_balance)
-
-    def get_utxo_with_highest_amount(self, address):
-        utxo = self.get_utxo(address=address)
-        highest_amount_rec = max(utxo.items(), key=lambda x: x[1].get("amount", 0))
-        return {highest_amount_rec[0]: highest_amount_rec[1]}
-
-    def calculate_tx_ttl(self):
-        current_slot_no = self.get_last_block_slot_no()
-        return current_slot_no + 1000
-
-    def send_tx_genesis(
-        self, txouts=None, certificate_files=None, signing_keys=None, proposal_files=None,
-    ):
-        txouts = txouts or []
-        certificate_files = certificate_files or []
-        signing_keys_copy = copy(signing_keys) if signing_keys else []
-
-        signing_keys_copy.append(str(self.genesis_utxo_skey))
-
-        # TODO: calculate from current tip
-        utxo = self.get_utxo(address=self.genesis_utxo_addr)
-        txins = []
-        for k, v in utxo.items():
-            txin = k.split("#")
-            txin = (txin[0], txin[1], v["amount"])
-            txins.append(txin)
-
-        # Build, Sign and Send TX to chain
-        try:
+        if fee is None:
             fee = self.calculate_tx_fee(
+                change_address=change_address,
                 txins=txins,
                 txouts=txouts,
-                certificate_files=certificate_files,
-                proposal_files=proposal_files,
-                signing_keys=signing_keys_copy,
-            )
-            self.build_raw_tx(
-                out_file="tx.body",
-                txins=txins,
-                txouts=txouts,
-                certificate_files=certificate_files,
-                fee=fee,
-                proposal_files=proposal_files,
-            )
-            self.sign_tx(signing_keys=signing_keys_copy)
-            self.submit_tx()
-        except CLIError as err:
-            raise CLIError(
-                f"Sending a genesis transaction failed!\n"
-                f"utxo: {utxo}\n"
-                f"txins: {txins} txouts: {txouts} signing keys: {signing_keys_copy}\n{err}"
+                tx_files=tx_files,
+                ttl=ttl,
             )
 
-    def submit_update_proposal(self, cli_args, epoch=None):
+        self.build_raw_tx(
+            out_file="tx.body",
+            change_address=change_address,
+            txins=txins,
+            txouts=txouts,
+            tx_files=tx_files,
+            fee=fee,
+            ttl=ttl,
+        )
+        self.sign_tx(
+            tx_body_file="tx.body",
+            out_file="tx.signed",
+            signing_key_files=tx_files.signing_key_files,
+        )
+        self.submit_tx(tx_file="tx.signed")
+
+    def submit_update_proposal(self, cli_args: Sequence, epoch: int):
         out_file = Path("update.proposal")
-
         self.cli(
             [
                 "governance",
@@ -514,13 +789,176 @@ class ClusterLib:
                 "--out-file",
                 str(out_file),
                 "--epoch",
-                str(epoch or self.get_last_block_epoch()),
+                str(epoch),
                 "--genesis-verification-key-file",
                 str(self.genesis_vkey),
             ]
         )
-        self.check_outfile(out_file)
 
-        self.send_tx_genesis(
-            proposal_files=["update.proposal"], signing_keys=[str(self.delegate_skey)],
+        self._check_outfiles(out_file)
+
+        self.send_tx(
+            tx_files=TxFiles(
+                proposal_files=[out_file],
+                signing_key_files=[str(self.delegate_skey), str(self.genesis_utxo_skey)],
+            ),
+        )
+
+    def wait_for_new_tip(self, slots_to_wait: int = 1):
+        LOGGER.debug(f"Waiting for {slots_to_wait} new block(s) to be created.")
+        timeout_no_of_slots = 200 * slots_to_wait
+        current_slot_no = self.get_current_slot_no()
+        initial_slot_no = current_slot_no
+        expected_slot_no = initial_slot_no + slots_to_wait
+
+        LOGGER.debug(f"Initial tip: {initial_slot_no}")
+        for __ in range(timeout_no_of_slots):
+            time.sleep(self.slot_length)
+            current_slot_no = self.get_current_slot_no()
+            if current_slot_no >= expected_slot_no:
+                break
+        else:
+            raise CLIError(
+                f"Timeout waiting for {timeout_no_of_slots} sec for {slots_to_wait} slot(s)."
+            )
+
+        LOGGER.debug(f"New block was created; slot number: {current_slot_no}")
+
+    def wait_for_new_epoch(self, epochs_to_wait: int = 1):
+        current_slot_no = self.get_current_slot_no()
+        current_epoch_no = self.get_last_block_epoch()
+        LOGGER.debug(
+            f"Current epoch: {current_epoch_no}; Waiting the beginning of epoch: "
+            "{current_epoch_no + epochs_to_wait}"
+        )
+
+        timeout_no_of_epochs = epochs_to_wait + 1
+        expected_epoch_no = current_epoch_no + epochs_to_wait
+
+        for __ in range(timeout_no_of_epochs):
+            sleep_slots = (current_epoch_no + 1) * self.epoch_length - current_slot_no
+            sleep_time = int(sleep_slots * self.slot_length) + 1
+            time.sleep(sleep_time)
+            current_slot_no = self.get_current_slot_no()
+            current_epoch_no = self.get_last_block_epoch()
+            if current_epoch_no >= expected_epoch_no:
+                break
+        else:
+            raise CLIError(
+                f"Waited for {epochs_to_wait + 1} epochs and expected epoch no is not present"
+            )
+
+        LOGGER.debug(f"Expected epoch started; epoch number: {current_epoch_no}")
+
+    def register_stake_pool(
+        self,
+        destination_dir: FileType,
+        pool_data: PoolData,
+        pool_owner: PoolOwner,
+        node_vrf_vkey_file: FileType,
+        node_cold_key_pair: ColdKeyCounter,
+    ) -> Path:
+        pool_reg_cert_file = self.gen_pool_registration_cert(
+            destination_dir=destination_dir,
+            pool_data=pool_data,
+            node_vrf_vkey_file=node_vrf_vkey_file,
+            node_cold_vkey_file=node_cold_key_pair.vkey,
+            owner_stake_addr_vkey_file=pool_owner.stake_addr_vkey_file,
+        )
+
+        # submit the pool registration certificate through a tx
+        tx_files = TxFiles(
+            certificate_files=[pool_reg_cert_file],
+            signing_key_files=[
+                pool_owner.addr_vkey_file,
+                pool_owner.stake_addr_skey_file,
+                node_cold_key_pair.skey,
+            ],
+        )
+        tx_fee = self.calculate_tx_fee(
+            change_address=pool_owner.addr, tx_files=tx_files, ttl=self.calculate_tx_ttl()
+        )
+        self.send_tx(
+            change_address=pool_owner.addr,
+            tx_files=tx_files,
+            fee=tx_fee + self.get_pool_deposit(),
+            ttl=self.calculate_tx_ttl(),
+        )
+
+        self.wait_for_new_tip(slots_to_wait=2)
+        return pool_reg_cert_file
+
+    def deregister_stake_pool(
+        self,
+        destination_dir: FileType,
+        pool_owner: PoolOwner,
+        node_cold_key_pair: ColdKeyCounter,
+        epoch: int,
+        pool_name: str,
+    ) -> Path:
+        LOGGER.debug(
+            f"Deregistering stake pool starting with epoch: {epoch}; "
+            f"Current epoch is: {self.get_last_block_epoch()}"
+        )
+        pool_dereg_cert_file = self.gen_pool_deregistration_cert(
+            destination_dir=destination_dir,
+            pool_name=pool_name,
+            cold_vkey_file=node_cold_key_pair.vkey,
+            epoch=epoch,
+        )
+
+        # submit the pool deregistration certificate through a tx
+        tx_files = TxFiles(
+            certificate_files=[pool_dereg_cert_file],
+            signing_key_files=[
+                pool_owner.addr_vkey_file,
+                pool_owner.stake_addr_skey_file,
+                node_cold_key_pair.skey,
+            ],
+        )
+        tx_fee = self.calculate_tx_fee(
+            change_address=pool_owner.addr, tx_files=tx_files, ttl=self.calculate_tx_ttl()
+        )
+        self.send_tx(
+            change_address=pool_owner.addr,
+            tx_files=tx_files,
+            fee=tx_fee,
+            ttl=self.calculate_tx_ttl(),
+        )
+
+        self.wait_for_new_tip(slots_to_wait=2)
+        return pool_dereg_cert_file
+
+    def create_stake_pool(
+        self, destination_dir: FileType, pool_data: PoolData, pool_owner: PoolOwner,
+    ):
+        # create the KES key pair
+        node_kes = self.gen_kes_key_pair(destination_dir, pool_data.pool_name)
+        LOGGER.debug(f"KES keys created - {node_kes.vkey}; {node_kes.skey}")
+
+        # create the VRF key pair
+        node_vrf = self.gen_vrf_key_pair(destination_dir, pool_data.pool_name)
+        LOGGER.debug(f"VRF keys created - {node_vrf.vkey}; {node_vrf.skey}")
+
+        # create the cold key pair and node operational certificate counter
+        node_cold = self.gen_cold_key_pair_and_counter(destination_dir, pool_data.pool_name)
+        LOGGER.debug(
+            "Cold keys created and counter created - "
+            f"{node_cold.vkey}; {node_cold.skey}; {node_cold.counter}"
+        )
+
+        pool_reg_cert_file = self.register_stake_pool(
+            destination_dir=destination_dir,
+            pool_data=pool_data,
+            pool_owner=pool_owner,
+            node_vrf_vkey_file=node_vrf.vkey,
+            node_cold_key_pair=node_cold,
+        )
+
+        return PoolCreationArtifacts(
+            stake_pool_id=self.get_stake_pool_id(node_cold.vkey),
+            kes_key_pair=node_kes,
+            vrf_key_pair=node_vrf,
+            cold_key_pair_and_counter=node_cold,
+            pool_reg_cert_file=pool_reg_cert_file,
         )

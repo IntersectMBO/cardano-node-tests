@@ -14,7 +14,9 @@ def test_update_proposal(cluster_session):
         time.sleep(sleep_time)
 
     # TODO - revert back?
-    cluster_session.submit_update_proposal(["--decentralization-parameter", "0.5"])
+    cluster_session.submit_update_proposal(
+        ["--decentralization-parameter", "0.5"], epoch=cluster_session.get_last_block_epoch()
+    )
 
     LOGGER.info(f"Update Proposal submited. Sleeping until next epoch ({sleep_time} seconds).")
     time.sleep(sleep_time + 15)
