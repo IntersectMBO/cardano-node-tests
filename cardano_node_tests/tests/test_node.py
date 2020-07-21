@@ -12,6 +12,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def test_update_proposal(cluster_session):
+    """Submit update proposal."""
     cluster_session.refresh_pparams()
     orig_value = cluster_session.pparams["decentralisationParam"]
     sleep_time = cluster_session.slot_length * cluster_session.epoch_length
@@ -39,6 +40,7 @@ def test_update_proposal(cluster_session):
         ), f"Cluster update proposal failed! Param value: {d}.\nTip:{cluster_session.get_tip()}"
 
     _update_proposal(0.5)
+    # revert to original value
     _update_proposal(orig_value)
 
 
@@ -50,7 +52,7 @@ def test_dummy_clean():
 class TestBasic:
     @pytest.fixture(scope="class")
     def temp_dir(self, tmp_path_factory):
-        return tmp_path_factory.mktemp("basic")
+        return tmp_path_factory.mktemp("test_basic")
 
     @pytest.fixture(scope="class")
     def created_addrs(self, cluster_session, temp_dir):

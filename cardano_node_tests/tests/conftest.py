@@ -1,14 +1,11 @@
-import json
 import logging
 import os
-import subprocess
-from pathlib import Path
 
 import pytest
 
-from cardano_node_tests.utils.clusterlib import ClusterLib
-from cardano_node_tests.utils.helpers import setup_addresses
-from cardano_node_tests.utils.types import FileType
+from cardano_node_tests.utils.helpers import run_shell_command
+from cardano_node_tests.utils.helpers import setup_cluster
+from cardano_node_tests.utils.helpers import setup_test_addrs
 
 LOGGER = logging.getLogger(__name__)
 
@@ -17,44 +14,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "clean_cluster: mark that the test needs clean cluster.")
 
 
-def run_command(command: str, workdir: FileType = ""):
-    cmd = f"bash -c '{command}'"
-    cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    __, stderr = p.communicate()
-    if p.returncode != 0:
-        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
-
-
-def setup_cluster() -> ClusterLib:
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
-    os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
-    state_dir = socket_path.parent
-    work_dir = state_dir.parent
-    repo_dir = Path(os.environ.get("CARDANO_NODE_REPO_PATH") or work_dir)
-
-    LOGGER.info("Starting cluster.")
-    run_command("start-cluster", workdir=work_dir)
-
-    with open(state_dir / "shelley" / "genesis.json") as in_json:
-        genesis_json = json.load(in_json)
-
-    cluster_data = {
-        "socket_path": socket_path,
-        "state_dir": state_dir,
-        "repo_dir": repo_dir,
-        "work_dir": work_dir,
-        "genesis": genesis_json,
-    }
-    cluster_obj = ClusterLib(cluster_data["genesis"]["networkMagic"], state_dir)
-    cluster_obj._data = cluster_data
-    cluster_obj.refresh_pparams()
-
-    return cluster_obj
-
-
 @pytest.fixture(scope="session")
 def change_dir(tmp_path_factory):
+    """Change cwd to temp directory before running tests."""
     tmp_path = tmp_path_factory.mktemp("artifacts")
     os.chdir(tmp_path)
 
@@ -64,7 +26,7 @@ def cluster_session(change_dir):
     cluster_obj = setup_cluster()
     yield cluster_obj
     LOGGER.info("Stopping cluster.")
-    run_command("stop-cluster", workdir=cluster_obj._data["work_dir"])
+    run_shell_command("stop-cluster", workdir=cluster_obj._data["work_dir"])
 
 
 @pytest.fixture
@@ -72,16 +34,16 @@ def cluster(change_dir):
     cluster_obj = setup_cluster()
     yield cluster_obj
     LOGGER.info("Stopping cluster.")
-    run_command("stop-cluster", workdir=cluster_obj._data["work_dir"])
+    run_shell_command("stop-cluster", workdir=cluster_obj._data["work_dir"])
 
 
 @pytest.fixture(scope="session")
 def addrs_data_session(cluster_session, tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("addrs_data")
-    return setup_addresses(cluster_session, tmp_path)
+    return setup_test_addrs(cluster_session, tmp_path)
 
 
 @pytest.fixture
 def addrs_data(cluster, tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("addrs_data")
-    return setup_addresses(cluster, tmp_path)
+    return setup_test_addrs(cluster, tmp_path)

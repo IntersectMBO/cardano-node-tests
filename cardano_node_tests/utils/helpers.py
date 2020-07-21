@@ -1,4 +1,7 @@
+import json
 import logging
+import os
+import subprocess
 from pathlib import Path
 from typing import NamedTuple
 
@@ -22,9 +25,20 @@ def read_address_from_file(location: FileType):
         return in_file.read().strip()
 
 
+def run_shell_command(command: str, workdir: FileType = ""):
+    """Run command in shell."""
+    cmd = f"bash -c '{command}'"
+    cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    __, stderr = p.communicate()
+    if p.returncode != 0:
+        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
+
+
 def fund_addr_from_genesis(
     cluster_obj: ClusterLib, *dst_addrs: UnpackableSequence, amount: int = 2000000
 ):
+    """Send `amount` from genesis addr to all `dst_addrs`."""
     fund_dst = [TxOut(address=d, amount=amount) for d in dst_addrs]
     fund_tx_files = TxFiles(
         signing_key_files=[cluster_obj.delegate_skey, cluster_obj.genesis_utxo_skey]
@@ -47,12 +61,13 @@ def create_addrs(cluster_obj, temp_dir, *names):
     return addrs
 
 
-def setup_addresses(cluster_obj: ClusterLib, destination_dir: FileType) -> dict:
+def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict:
+    """Create addresses and their keys for usage in tests."""
     destination_dir = Path(destination_dir).expanduser()
     destination_dir.mkdir(parents=True, exist_ok=True)
     addrs = ["user1", "pool-owner1"]
 
-    LOGGER.debug("Creating addresses and keys for tests." "")
+    LOGGER.debug("Creating addresses and keys for tests.")
     addrs_data = {}
     for addr_name in addrs:
         payment_key_pair = cluster_obj.gen_payment_key_pair(
@@ -83,3 +98,31 @@ def setup_addresses(cluster_obj: ClusterLib, destination_dir: FileType) -> dict:
     fund_addr_from_genesis(cluster_obj, *[d["payment_addr"] for d in addrs_data.values()])
 
     return addrs_data
+
+
+def setup_cluster() -> ClusterLib:
+    """Prepare env and start cluster."""
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
+    os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
+    state_dir = socket_path.parent
+    work_dir = state_dir.parent
+    repo_dir = Path(os.environ.get("CARDANO_NODE_REPO_PATH") or work_dir)
+
+    LOGGER.info("Starting cluster.")
+    run_shell_command("start-cluster", workdir=work_dir)
+
+    with open(state_dir / "shelley" / "genesis.json") as in_json:
+        genesis_json = json.load(in_json)
+
+    cluster_data = {
+        "socket_path": socket_path,
+        "state_dir": state_dir,
+        "repo_dir": repo_dir,
+        "work_dir": work_dir,
+        "genesis": genesis_json,
+    }
+    cluster_obj = ClusterLib(cluster_data["genesis"]["networkMagic"], state_dir)
+    cluster_obj._data = cluster_data
+    cluster_obj.refresh_pparams()
+
+    return cluster_obj
