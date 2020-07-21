@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import subprocess
@@ -111,18 +110,14 @@ def setup_cluster() -> ClusterLib:
     LOGGER.info("Starting cluster.")
     run_shell_command("start-cluster", workdir=work_dir)
 
-    with open(state_dir / "shelley" / "genesis.json") as in_json:
-        genesis_json = json.load(in_json)
-
     cluster_data = {
         "socket_path": socket_path,
         "state_dir": state_dir,
         "repo_dir": repo_dir,
         "work_dir": work_dir,
-        "genesis": genesis_json,
     }
-    cluster_obj = ClusterLib(cluster_data["genesis"]["networkMagic"], state_dir)
-    cluster_obj._data = cluster_data
+    cluster_obj = ClusterLib(state_dir)
+    cluster_obj._cluster_data = cluster_data
     cluster_obj.refresh_pparams()
 
     return cluster_obj

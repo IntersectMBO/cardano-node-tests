@@ -105,9 +105,7 @@ class ClusterLib:
 
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
-    def __init__(self, network_magic, state_dir: Union[str, Path]):
-        self.network_magic = network_magic
-
+    def __init__(self, state_dir: Union[str, Path]):
         self.state_dir = Path(state_dir).expanduser().resolve()
         self.genesis_json = self.state_dir / "shelley" / "genesis.json"
         self.genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
@@ -121,15 +119,16 @@ class ClusterLib:
         with open(self.genesis_json) as in_json:
             self.genesis = json.load(in_json)
 
-        self.genesis_utxo_addr = self.get_genesis_addr(vkey_file=self.genesis_utxo_vkey)
-
-        self.pparams: dict = {}
-        self.refresh_pparams()
-
+        self.network_magic = self.genesis["networkMagic"]
         self.slot_length = self.genesis["slotLength"]
         self.epoch_length = self.genesis["epochLength"]
         self.slots_per_kes_period = self.genesis["slotsPerKESPeriod"]
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
+
+        self.genesis_utxo_addr = self.get_genesis_addr(vkey_file=self.genesis_utxo_vkey)
+
+        self.pparams: dict = {}
+        self.refresh_pparams()
 
     def _check_state_dir(self):
         if not self.state_dir.exists():
