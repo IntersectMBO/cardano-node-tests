@@ -185,3 +185,38 @@ def test_negative_fee(cluster_session, addrs_data_session, temp_dir):
 
     with pytest.raises(CLIError):
         cluster.send_funds(src_address, destinations, tx_files=tx_files, fee=-1)
+
+
+def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
+    """Send a transaction with ttl in the past."""
+    cluster = cluster_session
+    payment_addr = create_addrs(cluster, temp_dir, "addr_past_ttl0")[0]
+    src_address = addrs_data_session["user1"]["payment_addr"]
+
+    out_file_tx = temp_dir / "tx.body"
+    out_file_signed = temp_dir / "tx.signed"
+
+    # fund source address
+    fund_addr_from_genesis(cluster, src_address)
+
+    tx_files = TxFiles(
+        signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
+    )
+    destinations = [TxOut(address=payment_addr.address, amount=1)]
+    ttl = cluster.get_current_slot_no() - 1
+    fee = cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files, ttl=ttl)
+
+    # it should be possible to build and sign a transaction with ttl in the past
+    cluster.build_raw_tx(
+        out_file_tx, src_address, txouts=destinations, tx_files=tx_files, fee=fee, ttl=ttl
+    )
+    cluster.sign_tx(
+        tx_body_file=out_file_tx,
+        out_file=out_file_signed,
+        signing_key_files=tx_files.signing_key_files,
+    )
+
+    # it should NOT be possible to submit a transaction with ttl in the past
+    with pytest.raises(CLIError) as excinfo:
+        cluster.submit_tx(tx_file=out_file_signed)
+        assert "ExpiredUTxO" in str(excinfo)
