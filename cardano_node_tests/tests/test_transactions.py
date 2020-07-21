@@ -2,12 +2,18 @@ import logging
 
 import pytest
 
+from cardano_node_tests.utils.clusterlib import CLIError
 from cardano_node_tests.utils.clusterlib import TxFiles
 from cardano_node_tests.utils.clusterlib import TxOut
 from cardano_node_tests.utils.helpers import create_addrs
 from cardano_node_tests.utils.helpers import fund_addr_from_genesis
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="module")
+def temp_dir(tmp_path_factory):
+    return tmp_path_factory.mktemp("test_transactions")
 
 
 @pytest.mark.clean_cluster
@@ -17,13 +23,9 @@ def test_dummy_clean():
 
 class TestBasic:
     @pytest.fixture(scope="class")
-    def temp_dir(self, tmp_path_factory):
-        return tmp_path_factory.mktemp("test_basic")
-
-    @pytest.fixture(scope="class")
     def payment_addrs(self, cluster_session, temp_dir):
-        """Create 2 new payment addresses (addr0, addr1)."""
-        return create_addrs(cluster_session, temp_dir, "addr0", "addr1")
+        """Create 2 new payment addresses."""
+        return create_addrs(cluster_session, temp_dir, "addr_basic0", "addr_basic1")
 
     def test_transfer_funds(self, cluster_session, addrs_data_session, payment_addrs):
         """Send (tx_fee + 2000) Lovelace from user1 (the faucet) to addr0."""
@@ -88,13 +90,9 @@ class TestBasic:
 
 class Test10InOut:
     @pytest.fixture(scope="class")
-    def temp_dir(self, tmp_path_factory):
-        return tmp_path_factory.mktemp("test_10_in_out")
-
-    @pytest.fixture(scope="class")
     def payment_addrs(self, cluster_session, temp_dir):
-        """Create 11 new payment addresses (addr0..addr10)."""
-        return create_addrs(cluster_session, temp_dir, *[f"addr{i}" for i in range(11)])
+        """Create 11 new payment addresses."""
+        return create_addrs(cluster_session, temp_dir, *[f"addr_10_in_out{i}" for i in range(11)])
 
     def test_10_transactions(self, cluster_session, addrs_data_session, payment_addrs):
         """Send 10 transactions of (tx_fee / 10 + 1000) Lovelace from user1 (the faucet) to addr0.
@@ -169,3 +167,21 @@ class Test10InOut:
             assert (
                 cluster.get_address_balance(addr) == dst_init_balances[addr] + amount
             ), f"Incorrect balance for destination address `{addr}`"
+
+
+def test_negative_fee(cluster_session, addrs_data_session, temp_dir):
+    """Send a transaction with negative fee (-1)."""
+    cluster = cluster_session
+    payment_addr = create_addrs(cluster, temp_dir, "addr_negative_fee0")[0]
+    src_address = addrs_data_session["user1"]["payment_addr"]
+
+    # fund source address
+    fund_addr_from_genesis(cluster, src_address)
+
+    tx_files = TxFiles(
+        signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
+    )
+    destinations = [TxOut(address=payment_addr.address, amount=10)]
+
+    with pytest.raises(CLIError):
+        cluster.send_funds(src_address, destinations, tx_files=tx_files, fee=-1)
