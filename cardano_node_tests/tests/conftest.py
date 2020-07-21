@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 
 from cardano_node_tests.utils.clusterlib import ClusterLib
+from cardano_node_tests.utils.helpers import setup_addresses
+from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,13 +17,13 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "clean_cluster: mark that the test needs clean cluster.")
 
 
-def run_command(command, workdir=None):
+def run_command(command: str, workdir: FileType = ""):
     cmd = f"bash -c '{command}'"
     cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     __, stderr = p.communicate()
     if p.returncode != 0:
-        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr}")
+        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
 
 
 def setup_cluster() -> ClusterLib:
@@ -52,7 +54,13 @@ def setup_cluster() -> ClusterLib:
 
 
 @pytest.fixture(scope="session")
-def cluster_session():
+def change_dir(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("artifacts")
+    os.chdir(tmp_path)
+
+
+@pytest.fixture(scope="session")
+def cluster_session(change_dir):
     cluster_obj = setup_cluster()
     yield cluster_obj
     LOGGER.info("Stopping cluster.")
@@ -60,8 +68,20 @@ def cluster_session():
 
 
 @pytest.fixture
-def cluster():
+def cluster(change_dir):
     cluster_obj = setup_cluster()
     yield cluster_obj
     LOGGER.info("Stopping cluster.")
     run_command("stop-cluster", workdir=cluster_obj._data["work_dir"])
+
+
+@pytest.fixture(scope="session")
+def addrs_data_session(cluster_session, tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("addrs_data")
+    return setup_addresses(cluster_session, tmp_path)
+
+
+@pytest.fixture
+def addrs_data(cluster, tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("addrs_data")
+    return setup_addresses(cluster, tmp_path)

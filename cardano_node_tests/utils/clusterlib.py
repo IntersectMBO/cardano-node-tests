@@ -12,12 +12,11 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-LOGGER = logging.getLogger(__name__)
+from .types import FileType
+from .types import OptionalFiles
+from .types import UnpackableSequence
 
-FileType = Union[str, Path]
-UnpackableSequence = Union[list, tuple]
-# list of `FileType`s, empty list, or empty tuple
-OptionalFiles = Union[List[Optional[FileType]], Tuple[()]]
+LOGGER = logging.getLogger(__name__)
 
 
 class KeyPair(NamedTuple):
@@ -42,10 +41,23 @@ class StakeAddrInfo(NamedTuple):
     stake_addr_info: dict
 
 
-class TxInfo(NamedTuple):
-    txins: UnpackableSequence
-    txouts: UnpackableSequence
+class TxIn(NamedTuple):
+    utxo_hash: str
+    utxo_ix: str
+    amount: int
+
+
+class TxOut(NamedTuple):
+    address: str
+    amount: int
+
+
+class TxRawData(NamedTuple):
+    txins: List[TxIn]
+    txouts: List[TxOut]
     outfile: Path
+    fee: int
+    ttl: int
 
 
 class PoolCreationArtifacts(NamedTuple):
@@ -154,7 +166,7 @@ class ClusterLib:
                 f"An error occurred running a CLI command `{cmd_str}`: {stderr.decode()}"
             )
 
-        return CLIOut(stdout, stderr)
+        return CLIOut(stdout or b"", stderr or b"")
 
     @staticmethod
     def _prepend_flag(flag: str, contents: UnpackableSequence) -> list:
@@ -171,19 +183,24 @@ class ClusterLib:
             self.pparams = json.load(in_json)
 
     def get_payment_addr(
-        self, payment_vkey_file: FileType, stake_vkey_file: Optional[FileType] = None
+        self,
+        payment_vkey_file: FileType,
+        *args: UnpackableSequence,
+        stake_vkey_file: Optional[FileType] = None,
     ) -> str:
         cli_args = ["--payment-verification-key-file", str(payment_vkey_file)]
         if stake_vkey_file:
             cli_args.extend(["--stake-verification-key-file", str(stake_vkey_file)])
 
         return (
-            self.cli(["address", "build", "--testnet-magic", str(self.network_magic), *cli_args])
+            self.cli(
+                ["address", "build", "--testnet-magic", str(self.network_magic), *cli_args, *args]
+            )
             .stdout.rstrip()
             .decode("ascii")
         )
 
-    def get_genesis_addr(self, vkey_file: FileType) -> str:
+    def get_genesis_addr(self, vkey_file: FileType, *args: UnpackableSequence) -> str:
         return (
             self.cli(
                 [
@@ -193,6 +210,7 @@ class ClusterLib:
                     str(self.network_magic),
                     "--verification-key-file",
                     str(vkey_file),
+                    *args,
                 ]
             )
             .stdout.rstrip()
@@ -228,8 +246,8 @@ class ClusterLib:
 
     def gen_stake_key_pair(self, destination_dir: FileType, key_name: str) -> KeyPair:
         destination_dir = Path(destination_dir).expanduser()
-        vkey = destination_dir / f"{key_name}.vkey"
-        skey = destination_dir / f"{key_name}.skey"
+        vkey = destination_dir / f"{key_name}_stake.vkey"
+        skey = destination_dir / f"{key_name}_stake.skey"
         self.cli(
             [
                 "stake-address",
@@ -475,23 +493,7 @@ class ClusterLib:
         )
         return pool_id
 
-    def build_payment_address(self, payment_vkey_file: FileType) -> str:
-        return (
-            self.cli(
-                [
-                    "address",
-                    "build",
-                    "--payment-verification-key-file",
-                    str(payment_vkey_file),
-                    "--testnet-magic",
-                    str(self.network_magic),
-                ]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
-        )
-
-    def build_stake_address(self, stake_vkey_file: FileType) -> str:
+    def get_stake_addr(self, stake_vkey_file: FileType, *args: UnpackableSequence) -> str:
         return (
             self.cli(
                 [
@@ -501,13 +503,14 @@ class ClusterLib:
                     str(stake_vkey_file),
                     "--testnet-magic",
                     str(self.network_magic),
+                    *args,
                 ]
             )
             .stdout.rstrip()
             .decode("ascii")
         )
 
-    def delegate_stake_address(self, stake_addr_skey: FileType, pool_id: str, delegation_fee: int):
+    def delegate_stake_addr(self, stake_addr_skey: FileType, pool_id: str, delegation_fee: int):
         cli_args = [
             "stake-address",
             "delegate",
@@ -526,7 +529,7 @@ class ClusterLib:
                 f"command not implemented yet;\ncommand: {cmd}\nresult: {stderr.decode()}"
             )
 
-    def get_stake_address_info(self, stake_addr: str) -> StakeAddrInfo:
+    def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
         output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
         delegation = output_json[stake_addr]["delegation"]
         reward_account_balance = output_json[stake_addr]["rewardAccountBalance"]
@@ -580,49 +583,63 @@ class ClusterLib:
 
     def get_tx_ins_outs(
         self,
-        change_address: Optional[str] = None,
-        txins: Optional[UnpackableSequence] = None,
-        txouts: Optional[UnpackableSequence] = None,
+        src_address: str,
+        txins: Optional[List[TxIn]] = None,
+        txouts: Optional[List[TxOut]] = None,
         fee: int = 0,
     ) -> Tuple[list, list]:
         txins_copy = list(txins) if txins else []
         txouts_copy = list(txouts) if txouts else []
-        if change_address:
-            change_balance = self.get_address_balance(change_address)
-        else:
-            change_address = self.genesis_utxo_addr
-            change_balance = 0
+        max_address = None
 
         if not txins_copy:
-            utxo = self.get_utxo(address=change_address)
+            utxo = self.get_utxo(address=src_address)
             for k, v in utxo.items():
                 txin = k.split("#")
-                txin = (txin[0], txin[1], v["amount"])
+                txin = TxIn(txin[0], txin[1], v["amount"])
                 txins_copy.append(txin)
 
+        max_index = [idx for idx, val in enumerate(txouts_copy) if val[1] == -1]
+        if len(max_index) > 1:
+            raise CLIError("Cannot send all remaining funds to more than one address.")
+        if max_index:
+            max_address = txouts_copy.pop(max_index[0]).address
+
         total_input_amount = functools.reduce(lambda x, y: x + y[2], txins_copy, 0)
-        total_output_amount = functools.reduce(lambda x, y: x + y[2], txouts_copy, 0)
-        change = change_balance + total_input_amount - total_output_amount - fee
+        total_output_amount = functools.reduce(lambda x, y: x + y[1], txouts_copy, 0)
+
+        funds_needed = total_output_amount + fee
+        change = total_input_amount - funds_needed
+        if change < 0:
+            raise CLIError(
+                "Not enough funds to make a transaction - "
+                f"available: {total_input_amount}; needed {funds_needed}"
+            )
         if change > 0:
-            txouts_copy.append((change_address, change))
+            txouts_copy.append(TxOut((max_address or src_address), change))
+
+        if not txins_copy:
+            raise CLIError("Cannot build transaction, empty `txins`")
+        if not txouts_copy:
+            raise CLIError("Cannot build transaction, empty `txouts`")
 
         return txins_copy, txouts_copy
 
     def build_raw_tx(
         self,
         out_file: FileType,
-        change_address: Optional[str] = None,
-        txins: Optional[UnpackableSequence] = None,
-        txouts: Optional[UnpackableSequence] = None,
+        src_address: str,
+        txins: Optional[List[TxIn]] = None,
+        txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
         fee: int = 0,
         ttl: Optional[int] = None,
-    ) -> TxInfo:
+    ) -> TxRawData:
         tx_files = tx_files or TxFiles()
         out_file = Path(out_file)
         ttl = ttl or self.calculate_tx_ttl()
         txins_copy, txouts_copy = self.get_tx_ins_outs(
-            change_address=change_address, txins=txins, txouts=txouts, fee=fee
+            src_address=src_address, txins=txins, txouts=txouts, fee=fee
         )
 
         txins_combined = [f"{x[0]}#{x[1]}" for x in txins_copy]
@@ -649,7 +666,7 @@ class ClusterLib:
         )
 
         self._check_outfiles(out_file)
-        return TxInfo(txins=txins_copy, txouts=txouts_copy, outfile=out_file)
+        return TxRawData(txins=txins_copy, txouts=txouts_copy, outfile=out_file, fee=fee, ttl=ttl)
 
     def estimate_fee(
         self,
@@ -685,9 +702,9 @@ class ClusterLib:
 
     def calculate_tx_fee(
         self,
-        change_address: Optional[str] = None,
-        txins: Optional[UnpackableSequence] = None,
-        txouts: Optional[UnpackableSequence] = None,
+        src_address: str,
+        txins: Optional[List[TxIn]] = None,
+        txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
     ) -> int:
@@ -696,7 +713,7 @@ class ClusterLib:
 
         tx_info = self.build_raw_tx(
             out_file,
-            change_address=change_address,
+            src_address=src_address,
             txins=txins,
             txouts=txouts,
             tx_files=tx_files,
@@ -750,28 +767,24 @@ class ClusterLib:
 
     def send_tx(
         self,
-        change_address: Optional[str] = None,
-        txins: Optional[UnpackableSequence] = None,
-        txouts: Optional[UnpackableSequence] = None,
+        src_address: str,
+        txins: Optional[List[TxIn]] = None,
+        txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
         fee: Optional[int] = None,
-    ):
+    ) -> TxRawData:
         """Build, Sign and Send TX to chain."""
         tx_files = tx_files or TxFiles()
 
         if fee is None:
             fee = self.calculate_tx_fee(
-                change_address=change_address,
-                txins=txins,
-                txouts=txouts,
-                tx_files=tx_files,
-                ttl=ttl,
+                src_address=src_address, txins=txins, txouts=txouts, tx_files=tx_files, ttl=ttl,
             )
 
-        self.build_raw_tx(
+        tx_data = self.build_raw_tx(
             out_file="tx.body",
-            change_address=change_address,
+            src_address=src_address,
             txins=txins,
             txouts=txouts,
             tx_files=tx_files,
@@ -784,6 +797,8 @@ class ClusterLib:
             signing_key_files=tx_files.signing_key_files,
         )
         self.submit_tx(tx_file="tx.signed")
+
+        return tx_data
 
     def submit_update_proposal(self, cli_args: UnpackableSequence, epoch: int):
         out_file = Path("update.proposal")
@@ -804,10 +819,23 @@ class ClusterLib:
         self._check_outfiles(out_file)
 
         self.send_tx(
+            src_address=self.genesis_utxo_addr,
             tx_files=TxFiles(
                 proposal_files=[out_file],
                 signing_key_files=[self.delegate_skey, self.genesis_utxo_skey],
             ),
+        )
+
+    def send_funds(
+        self,
+        src_address: str,
+        destinations: List[TxOut],
+        tx_files: Optional[TxFiles] = None,
+        fee: Optional[int] = None,
+        ttl: Optional[int] = None,
+    ) -> TxRawData:
+        return self.send_tx(
+            src_address=src_address, txouts=destinations, tx_files=tx_files, ttl=ttl, fee=fee
         )
 
     def wait_for_new_tip(self, slots_to_wait: int = 1):
@@ -882,10 +910,10 @@ class ClusterLib:
             ],
         )
         tx_fee = self.calculate_tx_fee(
-            change_address=pool_owner.addr, tx_files=tx_files, ttl=self.calculate_tx_ttl()
+            src_address=pool_owner.addr, tx_files=tx_files, ttl=self.calculate_tx_ttl()
         )
         self.send_tx(
-            change_address=pool_owner.addr,
+            src_address=pool_owner.addr,
             tx_files=tx_files,
             fee=tx_fee + self.get_pool_deposit(),
             ttl=self.calculate_tx_ttl(),
@@ -923,13 +951,10 @@ class ClusterLib:
             ],
         )
         tx_fee = self.calculate_tx_fee(
-            change_address=pool_owner.addr, tx_files=tx_files, ttl=self.calculate_tx_ttl()
+            src_address=pool_owner.addr, tx_files=tx_files, ttl=self.calculate_tx_ttl()
         )
         self.send_tx(
-            change_address=pool_owner.addr,
-            tx_files=tx_files,
-            fee=tx_fee,
-            ttl=self.calculate_tx_ttl(),
+            src_address=pool_owner.addr, tx_files=tx_files, fee=tx_fee, ttl=self.calculate_tx_ttl(),
         )
 
         self.wait_for_new_tip(slots_to_wait=2)
