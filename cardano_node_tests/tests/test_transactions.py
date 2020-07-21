@@ -33,6 +33,9 @@ class TestBasic:
         src_address = addrs_data_session["user1"]["payment_addr"]
         dst_address = payment_addrs[0].address
 
+        # fund source address
+        fund_addr_from_genesis(cluster, src_address)
+
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balance = cluster.get_address_balance(dst_address)
 
@@ -50,7 +53,7 @@ class TestBasic:
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance[dst_address] + amount
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     def test_transfer_all_funds(self, cluster_session, payment_addrs):
@@ -103,6 +106,9 @@ class Test10InOut:
 
         src_address = addrs_data_session["user1"]["payment_addr"]
         dst_address = payment_addrs[0].address
+
+        # fund source address
+        fund_addr_from_genesis(cluster, src_address)
 
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balance = cluster.get_address_balance(dst_address)
