@@ -14,7 +14,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class CreatedAddresses(NamedTuple):
-    addr: str
+    address: str
     vkey_file: Path
     skey_file: Path
 
@@ -53,7 +53,9 @@ def create_addrs(cluster_obj, temp_dir, *names):
         key_pair = cluster_obj.gen_payment_key_pair(temp_dir, name)
         addr = cluster_obj.get_payment_addr(payment_vkey_file=key_pair.vkey_file)
         addrs.append(
-            CreatedAddresses(addr=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file)
+            CreatedAddresses(
+                address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
+            )
         )
 
     LOGGER.debug(f"{len(addrs)} address(es) created")
