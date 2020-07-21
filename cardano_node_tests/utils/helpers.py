@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 from pathlib import Path
+from typing import List
 from typing import NamedTuple
 
 from cardano_node_tests.utils.clusterlib import ClusterLib
@@ -13,7 +14,7 @@ from cardano_node_tests.utils.types import UnpackableSequence
 LOGGER = logging.getLogger(__name__)
 
 
-class CreatedAddresses(NamedTuple):
+class AddressRecord(NamedTuple):
     address: str
     vkey_file: Path
     skey_file: Path
@@ -46,19 +47,35 @@ def fund_addr_from_genesis(
     cluster_obj.wait_for_new_tip(slots_to_wait=2)
 
 
-def create_addrs(cluster_obj, temp_dir, *names):
-    """Create new payment addresses."""
+def create_addrs(
+    cluster_obj: ClusterLib, temp_dir: FileType, *names: UnpackableSequence
+) -> List[AddressRecord]:
+    """Create new payment address(es)."""
     addrs = []
     for name in names:
         key_pair = cluster_obj.gen_payment_key_pair(temp_dir, name)
         addr = cluster_obj.get_payment_addr(payment_vkey_file=key_pair.vkey_file)
         addrs.append(
-            CreatedAddresses(
-                address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
-            )
+            AddressRecord(address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file)
         )
 
-    LOGGER.debug(f"{len(addrs)} address(es) created")
+    LOGGER.debug(f"Created {len(addrs)} payment address(es)")
+    return addrs
+
+
+def create_stake_addrs(
+    cluster_obj: ClusterLib, temp_dir: FileType, *names: UnpackableSequence
+) -> List[AddressRecord]:
+    """Create new stake address(es)."""
+    addrs = []
+    for name in names:
+        key_pair = cluster_obj.gen_stake_key_pair(temp_dir, name)
+        addr = cluster_obj.get_stake_addr(stake_vkey_file=key_pair.vkey_file)
+        addrs.append(
+            AddressRecord(address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file)
+        )
+
+    LOGGER.debug(f"Created {len(addrs)} stake address(es)")
     return addrs
 
 
@@ -96,7 +113,9 @@ def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict
         }
 
     LOGGER.debug("Funding created addresses." "")
-    fund_addr_from_genesis(cluster_obj, *[d["payment_addr"] for d in addrs_data.values()])
+    fund_addr_from_genesis(
+        cluster_obj, *[d["payment_addr"] for d in addrs_data.values()], amount=1000000000
+    )
 
     return addrs_data
 

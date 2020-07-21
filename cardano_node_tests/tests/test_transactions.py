@@ -6,6 +6,7 @@ from cardano_node_tests.utils.clusterlib import CLIError
 from cardano_node_tests.utils.clusterlib import TxFiles
 from cardano_node_tests.utils.clusterlib import TxOut
 from cardano_node_tests.utils.helpers import create_addrs
+from cardano_node_tests.utils.helpers import create_stake_addrs
 from cardano_node_tests.utils.helpers import fund_addr_from_genesis
 
 LOGGER = logging.getLogger(__name__)
@@ -183,8 +184,9 @@ def test_negative_fee(cluster_session, addrs_data_session, temp_dir):
     )
     destinations = [TxOut(address=payment_addr.address, amount=10)]
 
-    with pytest.raises(CLIError):
+    with pytest.raises(CLIError) as excinfo:
         cluster.send_funds(src_address, destinations, tx_files=tx_files, fee=-1)
+        assert "option --fee: cannot parse value" in str(excinfo)
 
 
 def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
@@ -220,3 +222,25 @@ def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
     with pytest.raises(CLIError) as excinfo:
         cluster.submit_tx(tx_file=out_file_signed)
         assert "ExpiredUTxO" in str(excinfo)
+
+
+def test_send_funds_to_reward_address(cluster_session, temp_dir):
+    """Send funds from payment address to stake address."""
+    cluster = cluster_session
+    out_file_tx = temp_dir / "tx.body"
+
+    payment_addr = create_addrs(cluster, temp_dir, "addr_send_funds_to_reward_address0")[0]
+    stake_addr = create_stake_addrs(cluster, temp_dir, "addr_send_funds_to_reward_address0")[0]
+
+    # fund source address
+    fund_addr_from_genesis(cluster, payment_addr.address)
+
+    tx_files = TxFiles(signing_key_files=[stake_addr.skey_file])
+    destinations = [TxOut(address=stake_addr.address, amount=1000)]
+
+    # it should NOT be possible to build a transaction using a stake address
+    with pytest.raises(CLIError) as excinfo:
+        cluster.build_raw_tx(
+            out_file_tx, payment_addr.address, txouts=destinations, tx_files=tx_files, fee=0
+        )
+        assert "invalid address" in str(excinfo)
