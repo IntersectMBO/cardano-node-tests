@@ -8,7 +8,7 @@ from cardano_node_tests.utils.clusterlib import TxIn
 from cardano_node_tests.utils.clusterlib import TxOut
 from cardano_node_tests.utils.helpers import create_addrs
 from cardano_node_tests.utils.helpers import create_stake_addrs
-from cardano_node_tests.utils.helpers import fund_addr_from_genesis
+from cardano_node_tests.utils.helpers import fund_from_faucet
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,9 +37,6 @@ class TestBasic:
         src_address = addrs_data_session["user1"]["payment_addr"]
         dst_address = payment_addrs[0].address
 
-        # fund source address
-        fund_addr_from_genesis(cluster, src_address)
-
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balance = cluster.get_address_balance(dst_address)
 
@@ -60,7 +57,7 @@ class TestBasic:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-    def test_transfer_all_funds(self, cluster_session, payment_addrs):
+    def test_transfer_all_funds(self, cluster_session, addrs_data_session, payment_addrs):
         """Send ALL funds from addr0 to addr1."""
         cluster = cluster_session
 
@@ -68,7 +65,7 @@ class TestBasic:
         dst_address = payment_addrs[1].address
 
         # fund source address
-        fund_addr_from_genesis(cluster, src_address)
+        fund_from_faucet(cluster, addrs_data_session["user1"], src_address)
 
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balance = cluster.get_address_balance(dst_address)
@@ -107,9 +104,6 @@ class Test10InOut:
         src_address = addrs_data_session["user1"]["payment_addr"]
         dst_address = payment_addrs[0].address
 
-        # fund source address
-        fund_addr_from_genesis(cluster, src_address)
-
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balance = cluster.get_address_balance(dst_address)
 
@@ -137,7 +131,7 @@ class Test10InOut:
             == dst_init_balance + amount * no_of_transactions
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-    def test_transaction_to_10_addrs(self, cluster_session, payment_addrs):
+    def test_transaction_to_10_addrs(self, cluster_session, addrs_data_session, payment_addrs):
         """Send 1 transaction from addr0 to addr1..addr10"."""
         cluster = cluster_session
         src_address = payment_addrs[0].address
@@ -145,7 +139,7 @@ class Test10InOut:
         dst_addresses = [payment_addrs[i].address for i in range(1, len(payment_addrs))]
 
         # fund source address
-        fund_addr_from_genesis(cluster, src_address)
+        fund_from_faucet(cluster, addrs_data_session["user1"], src_address)
 
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balances = {addr: cluster.get_address_balance(addr) for addr in dst_addresses}
@@ -182,9 +176,6 @@ class TestNotBalanced:
         cluster = cluster_session
         src_address = addrs_data_session["user1"]["payment_addr"]
         dst_address = payment_addr.address
-
-        # fund source address
-        fund_addr_from_genesis(cluster, src_address)
 
         tx_files = TxFiles(
             signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
@@ -233,9 +224,6 @@ class TestNotBalanced:
 
         out_file_tx = temp_dir / "tx.body"
         out_file_signed = temp_dir / "tx.signed"
-
-        # fund source address
-        fund_addr_from_genesis(cluster, src_address)
 
         tx_files = TxFiles(
             signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
@@ -286,9 +274,6 @@ def test_negative_fee(cluster_session, addrs_data_session, temp_dir):
     payment_addr = create_addrs(cluster, temp_dir, "addr_negative_fee0")[0]
     src_address = addrs_data_session["user1"]["payment_addr"]
 
-    # fund source address
-    fund_addr_from_genesis(cluster, src_address)
-
     tx_files = TxFiles(
         signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
     )
@@ -307,9 +292,6 @@ def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
 
     out_file_tx = temp_dir / "tx.body"
     out_file_signed = temp_dir / "tx.signed"
-
-    # fund source address
-    fund_addr_from_genesis(cluster, src_address)
 
     tx_files = TxFiles(
         signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
@@ -334,7 +316,7 @@ def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
     assert "ExpiredUTxO" in str(excinfo.value)
 
 
-def test_send_funds_to_reward_address(cluster_session, temp_dir):
+def test_send_funds_to_reward_address(cluster_session, addrs_data_session, temp_dir):
     """Send funds from payment address to stake address."""
     cluster = cluster_session
     out_file_tx = temp_dir / "tx.body"
@@ -343,7 +325,7 @@ def test_send_funds_to_reward_address(cluster_session, temp_dir):
     stake_addr = create_stake_addrs(cluster, temp_dir, "addr_send_funds_to_reward_address0")[0]
 
     # fund source address
-    fund_addr_from_genesis(cluster, payment_addr.address)
+    fund_from_faucet(cluster, addrs_data_session["user1"], payment_addr.address)
 
     tx_files = TxFiles(signing_key_files=[stake_addr.skey_file])
     destinations = [TxOut(address=stake_addr.address, amount=1000)]

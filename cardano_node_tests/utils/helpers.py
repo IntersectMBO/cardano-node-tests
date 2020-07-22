@@ -35,8 +35,8 @@ def run_shell_command(command: str, workdir: FileType = ""):
         raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
 
 
-def fund_addr_from_genesis(
-    cluster_obj: ClusterLib, *dst_addrs: UnpackableSequence, amount: int = 2000000
+def fund_from_genesis(
+    cluster_obj: ClusterLib, *dst_addrs: UnpackableSequence, amount: int = 2_000_000
 ):
     """Send `amount` from genesis addr to all `dst_addrs`."""
     fund_dst = [TxOut(address=d, amount=amount) for d in dst_addrs]
@@ -44,6 +44,19 @@ def fund_addr_from_genesis(
         signing_key_files=[cluster_obj.delegate_skey, cluster_obj.genesis_utxo_skey]
     )
     cluster_obj.send_funds(cluster_obj.genesis_utxo_addr, fund_dst, tx_files=fund_tx_files)
+    cluster_obj.wait_for_new_tip(slots_to_wait=2)
+
+
+def fund_from_faucet(
+    cluster_obj: ClusterLib,
+    faucet_data: dict,
+    *dst_addrs: UnpackableSequence,
+    amount: int = 2_000_000,
+):
+    """Send `amount` from faucet addr to all `dst_addrs`."""
+    fund_dst = [TxOut(address=d, amount=amount) for d in dst_addrs]
+    fund_tx_files = TxFiles(signing_key_files=[faucet_data["payment_key_pair"].skey_file])
+    cluster_obj.send_funds(faucet_data["payment_addr"], fund_dst, tx_files=fund_tx_files)
     cluster_obj.wait_for_new_tip(slots_to_wait=2)
 
 
@@ -113,8 +126,8 @@ def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict
         }
 
     LOGGER.debug("Funding created addresses." "")
-    fund_addr_from_genesis(
-        cluster_obj, *[d["payment_addr"] for d in addrs_data.values()], amount=1000000000
+    fund_from_genesis(
+        cluster_obj, *[d["payment_addr"] for d in addrs_data.values()], amount=10_000_000_000
     )
 
     return addrs_data
