@@ -4,6 +4,7 @@ import pytest
 
 from cardano_node_tests.utils.clusterlib import CLIError
 from cardano_node_tests.utils.clusterlib import TxFiles
+from cardano_node_tests.utils.clusterlib import TxIn
 from cardano_node_tests.utils.clusterlib import TxOut
 from cardano_node_tests.utils.helpers import create_addrs
 from cardano_node_tests.utils.helpers import create_stake_addrs
@@ -170,6 +171,115 @@ class Test10InOut:
             ), f"Incorrect balance for destination address `{addr}`"
 
 
+class TestNotBalanced:
+    @pytest.fixture(scope="class")
+    def payment_addr(self, cluster_session, temp_dir):
+        """Create 1 new payment address."""
+        return create_addrs(cluster_session, temp_dir, "addr_not_balanced0")[0]
+
+    def test_negative_change(self, cluster_session, addrs_data_session, payment_addr, temp_dir):
+        """Build a transaction with a negative change."""
+        cluster = cluster_session
+        src_address = addrs_data_session["user1"]["payment_addr"]
+        dst_address = payment_addr.address
+
+        # fund source address
+        fund_addr_from_genesis(cluster, src_address)
+
+        tx_files = TxFiles(
+            signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
+        )
+        ttl = cluster.calculate_tx_ttl()
+
+        fee_txouts = [TxOut(address=dst_address, amount=1)]
+        fee = cluster.calculate_tx_fee(src_address, txouts=fee_txouts, tx_files=tx_files, ttl=ttl)
+
+        src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
+
+        # use only the UTXO with highest amount
+        txins = [
+            TxIn(
+                utxo_hash=src_addr_highest_utxo.utxo_hash,
+                utxo_ix=src_addr_highest_utxo.utxo_ix,
+                amount=src_addr_highest_utxo.amount,
+            )
+        ]
+        # try to transfer +1 Lovelace more than available and use a negative change (-1)
+        txouts = [
+            TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee + 1),
+            TxOut(address=src_address, amount=-1),
+        ]
+        assert txins[0].amount - txouts[0].amount - fee == txouts[-1].amount
+
+        with pytest.raises(CLIError) as excinfo:
+            cluster.build_raw_tx_bare(
+                out_file=temp_dir / "tx.body",
+                txins=txins,
+                txouts=txouts,
+                tx_files=tx_files,
+                fee=fee,
+                ttl=ttl,
+            )
+        assert "option --tx-out: Failed reading" in str(excinfo.value)
+
+    @pytest.mark.parametrize("amounts", [(1, 0), (-1, 2), (-5, 3)])
+    def test_wrong_balance(
+        self, cluster_session, addrs_data_session, payment_addr, temp_dir, amounts
+    ):
+        """Build a transaction with unbalanced change."""
+        cluster = cluster_session
+        src_address = addrs_data_session["user1"]["payment_addr"]
+        dst_address = payment_addr.address
+
+        out_file_tx = temp_dir / "tx.body"
+        out_file_signed = temp_dir / "tx.signed"
+
+        # fund source address
+        fund_addr_from_genesis(cluster, src_address)
+
+        tx_files = TxFiles(
+            signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
+        )
+        ttl = cluster.calculate_tx_ttl()
+
+        fee_txouts = [TxOut(address=dst_address, amount=1)]
+        fee = cluster.calculate_tx_fee(src_address, txouts=fee_txouts, tx_files=tx_files, ttl=ttl)
+
+        src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
+
+        # use only the UTXO with highest amount
+        txins = [
+            TxIn(
+                utxo_hash=src_addr_highest_utxo.utxo_hash,
+                utxo_ix=src_addr_highest_utxo.utxo_ix,
+                amount=src_addr_highest_utxo.amount,
+            )
+        ]
+        transfered_amount = src_addr_highest_utxo.amount - fee
+        # Add to `transfered_amount` and change amount values from test's parameter.
+        # Since correct change amount is 0, the value from test's parameter is used directly.
+        transfer_add, change_amount = amounts
+        txouts = [
+            TxOut(address=dst_address, amount=transfered_amount + transfer_add),
+            TxOut(address=src_address, amount=change_amount),
+        ]
+
+        # it should be possible to build and sign an unbalanced transaction
+        cluster.build_raw_tx_bare(
+            out_file=out_file_tx, txins=txins, txouts=txouts, tx_files=tx_files, fee=fee, ttl=ttl,
+        )
+        cluster.sign_tx(
+            tx_body_file=out_file_tx,
+            out_file=out_file_signed,
+            signing_key_files=tx_files.signing_key_files,
+        )
+
+        # it should NOT be possible to submit an unbalanced transaction
+        with pytest.raises(CLIError) as excinfo:
+            cluster.submit_tx(tx_file=out_file_signed)
+        assert "ValueNotConservedUTxO" in str(excinfo.value)
+
+
 def test_negative_fee(cluster_session, addrs_data_session, temp_dir):
     """Send a transaction with negative fee (-1)."""
     cluster = cluster_session
@@ -186,7 +296,7 @@ def test_negative_fee(cluster_session, addrs_data_session, temp_dir):
 
     with pytest.raises(CLIError) as excinfo:
         cluster.send_funds(src_address, destinations, tx_files=tx_files, fee=-1)
-        assert "option --fee: cannot parse value" in str(excinfo)
+    assert "option --fee: cannot parse value" in str(excinfo.value)
 
 
 def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
@@ -221,7 +331,7 @@ def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
     # it should NOT be possible to submit a transaction with ttl in the past
     with pytest.raises(CLIError) as excinfo:
         cluster.submit_tx(tx_file=out_file_signed)
-        assert "ExpiredUTxO" in str(excinfo)
+    assert "ExpiredUTxO" in str(excinfo.value)
 
 
 def test_send_funds_to_reward_address(cluster_session, temp_dir):
@@ -243,4 +353,4 @@ def test_send_funds_to_reward_address(cluster_session, temp_dir):
         cluster.build_raw_tx(
             out_file_tx, payment_addr.address, txouts=destinations, tx_files=tx_files, fee=0
         )
-        assert "invalid address" in str(excinfo)
+    assert "invalid address" in str(excinfo.value)

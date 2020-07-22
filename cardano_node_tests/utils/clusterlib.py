@@ -41,6 +41,13 @@ class StakeAddrInfo(NamedTuple):
     stake_addr_info: dict
 
 
+class UTXORec(NamedTuple):
+    utxo_hash: str
+    utxo_ix: str
+    amount: int
+    address: str
+
+
 class TxIn(NamedTuple):
     utxo_hash: str
     utxo_ix: str
@@ -569,10 +576,16 @@ class ClusterLib:
         )
         return int(address_balance)
 
-    def get_utxo_with_highest_amount(self, address: str) -> dict:
+    def get_utxo_with_highest_amount(self, address: str) -> UTXORec:
         utxo = self.get_utxo(address=address)
         highest_amount_rec = max(utxo.items(), key=lambda x: x[1].get("amount", 0))
-        return {highest_amount_rec[0]: highest_amount_rec[1]}
+        utxo_hash, utxo_ix = highest_amount_rec[0].split("#")
+        return UTXORec(
+            utxo_hash=utxo_hash,
+            utxo_ix=utxo_ix,
+            amount=highest_amount_rec[1]["amount"],
+            address=highest_amount_rec[1]["address"],
+        )
 
     def calculate_tx_ttl(self) -> int:
         return self.get_current_slot_no() + 1000
@@ -610,7 +623,7 @@ class ClusterLib:
         funds_needed = total_output_amount + fee
         change = total_input_amount - funds_needed
         if change < 0:
-            raise CLIError(
+            LOGGER.error(
                 "Not enough funds to make a transaction - "
                 f"available: {total_input_amount}; needed {funds_needed}"
             )
@@ -618,31 +631,24 @@ class ClusterLib:
             txouts_copy.append(TxOut((max_address or src_address), change))
 
         if not txins_copy:
-            raise CLIError("Cannot build transaction, empty `txins`")
+            LOGGER.error("Cannot build transaction, empty `txins`.")
         if not txouts_copy:
-            raise CLIError("Cannot build transaction, empty `txouts`")
+            LOGGER.error("Cannot build transaction, empty `txouts`.")
 
         return txins_copy, txouts_copy
 
-    def build_raw_tx(
+    def build_raw_tx_bare(
         self,
         out_file: FileType,
-        src_address: str,
-        txins: Optional[List[TxIn]] = None,
-        txouts: Optional[List[TxOut]] = None,
-        tx_files: Optional[TxFiles] = None,
-        fee: int = 0,
-        ttl: Optional[int] = None,
+        txins: List[TxIn],
+        txouts: List[TxOut],
+        tx_files: TxFiles,
+        fee: int,
+        ttl: int,
     ) -> TxRawData:
-        tx_files = tx_files or TxFiles()
         out_file = Path(out_file)
-        ttl = ttl or self.calculate_tx_ttl()
-        txins_copy, txouts_copy = self.get_tx_ins_outs(
-            src_address=src_address, txins=txins, txouts=txouts, fee=fee
-        )
-
-        txins_combined = [f"{x[0]}#{x[1]}" for x in txins_copy]
-        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts_copy]
+        txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
+        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts]
 
         self.cli(
             [
@@ -664,8 +670,36 @@ class ClusterLib:
             ]
         )
 
+        return TxRawData(txins=txins, txouts=txouts, outfile=out_file, fee=fee, ttl=ttl)
+
+    def build_raw_tx(
+        self,
+        out_file: FileType,
+        src_address: str,
+        txins: Optional[List[TxIn]] = None,
+        txouts: Optional[List[TxOut]] = None,
+        tx_files: Optional[TxFiles] = None,
+        fee: int = 0,
+        ttl: Optional[int] = None,
+    ) -> TxRawData:
+        tx_files = tx_files or TxFiles()
+        out_file = Path(out_file)
+        ttl = ttl or self.calculate_tx_ttl()
+        txins_copy, txouts_copy = self.get_tx_ins_outs(
+            src_address=src_address, txins=txins, txouts=txouts, fee=fee
+        )
+
+        tx_raw_data = self.build_raw_tx_bare(
+            out_file=out_file,
+            txins=txins_copy,
+            txouts=txouts_copy,
+            tx_files=tx_files,
+            fee=fee,
+            ttl=ttl,
+        )
+
         self._check_outfiles(out_file)
-        return TxRawData(txins=txins_copy, txouts=txouts_copy, outfile=out_file, fee=fee, ttl=ttl)
+        return tx_raw_data
 
     def estimate_fee(
         self,
