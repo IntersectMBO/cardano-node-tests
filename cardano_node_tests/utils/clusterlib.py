@@ -92,7 +92,7 @@ class PoolData(NamedTuple):
     pool_metadata_url: str = ""
     pool_metadata_hash: str = ""
     pool_relay_dns: str = ""
-    pool_relay_port: int = -1
+    pool_relay_port: int = 0
 
 
 class TxFiles(NamedTuple):
@@ -436,7 +436,7 @@ class ClusterLib:
         relay_cmd = []
         if pool_data.pool_relay_dns:
             relay_cmd.extend(["--single-host-pool-relay", pool_data.pool_relay_dns])
-        if pool_data.pool_relay_port != -1:
+        if pool_data.pool_relay_port:
             relay_cmd.extend(["--pool-relay-port", str(pool_data.pool_relay_port)])
 
         self.cli(
@@ -604,6 +604,7 @@ class ClusterLib:
     def get_tx_ins_outs(
         self,
         src_address: str,
+        tx_files: TxFiles,
         txins: Optional[List[TxIn]] = None,
         txouts: Optional[List[TxOut]] = None,
         fee: int = 0,
@@ -629,7 +630,8 @@ class ClusterLib:
         total_input_amount = functools.reduce(lambda x, y: x + y[2], txins_copy, 0)
         total_output_amount = functools.reduce(lambda x, y: x + y[1], txouts_copy, 0)
 
-        funds_needed = total_output_amount + fee
+        deposit = len(tx_files.certificate_files) * self.get_key_deposit()
+        funds_needed = total_output_amount + fee + deposit
         change = total_input_amount - funds_needed
         if change < 0:
             LOGGER.error(
@@ -691,11 +693,11 @@ class ClusterLib:
         fee: int = 0,
         ttl: Optional[int] = None,
     ) -> TxRawData:
-        tx_files = tx_files or TxFiles()
         out_file = Path(out_file)
+        tx_files = tx_files or TxFiles()
         ttl = ttl or self.calculate_tx_ttl()
         txins_copy, txouts_copy = self.get_tx_ins_outs(
-            src_address=src_address, txins=txins, txouts=txouts, fee=fee
+            src_address=src_address, tx_files=tx_files, txins=txins, txouts=txouts, fee=fee
         )
 
         tx_raw_data = self.build_raw_tx_bare(
@@ -713,8 +715,8 @@ class ClusterLib:
     def estimate_fee(
         self,
         txbody_file: FileType,
-        txin_count: int = 1,
-        txout_count: int = 1,
+        txin_count: int,
+        txout_count: int,
         witness_count: int = 1,
         byron_witness_count: int = 0,
     ) -> int:
@@ -821,8 +823,8 @@ class ClusterLib:
         txins: Optional[List[TxIn]] = None,
         txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
-        ttl: Optional[int] = None,
         fee: Optional[int] = None,
+        ttl: Optional[int] = None,
     ) -> TxRawData:
         """Build, Sign and Send TX to chain."""
         tx_files = tx_files or TxFiles()
