@@ -114,8 +114,9 @@ class Test10InOut:
         )
         ttl = cluster.calculate_tx_ttl()
 
-        fee_txouts = [TxOut(address=dst_address, amount=1)]
-        fee = cluster.calculate_tx_fee(src_address, txouts=fee_txouts, tx_files=tx_files, ttl=ttl)
+        fee = cluster.calculate_tx_fee(
+            src_address, dst_addresses=[dst_address], tx_files=tx_files, ttl=ttl
+        )
         amount = int(fee / no_of_transactions + 1000)
         destinations = [TxOut(address=dst_address, amount=amount)]
 
@@ -149,8 +150,9 @@ class Test10InOut:
         tx_files = TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.calculate_tx_ttl()
 
-        fee_txouts = [TxOut(address=addr, amount=1) for addr in dst_addresses]
-        fee = cluster.calculate_tx_fee(src_address, txouts=fee_txouts, tx_files=tx_files, ttl=ttl)
+        fee = cluster.calculate_tx_fee(
+            src_address, dst_addresses=dst_addresses, tx_files=tx_files, ttl=ttl
+        )
         amount = int((cluster.get_address_balance(src_address) - fee) / len(dst_addresses))
         destinations = [TxOut(address=addr, amount=amount) for addr in dst_addresses]
 
@@ -184,8 +186,9 @@ class TestNotBalanced:
         )
         ttl = cluster.calculate_tx_ttl()
 
-        fee_txouts = [TxOut(address=dst_address, amount=1)]
-        fee = cluster.calculate_tx_fee(src_address, txouts=fee_txouts, tx_files=tx_files, ttl=ttl)
+        fee = cluster.calculate_tx_fee(
+            src_address, dst_addresses=[dst_address], tx_files=tx_files, ttl=ttl
+        )
 
         src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
 
@@ -232,8 +235,9 @@ class TestNotBalanced:
         )
         ttl = cluster.calculate_tx_ttl()
 
-        fee_txouts = [TxOut(address=dst_address, amount=1)]
-        fee = cluster.calculate_tx_fee(src_address, txouts=fee_txouts, tx_files=tx_files, ttl=ttl)
+        fee = cluster.calculate_tx_fee(
+            src_address, dst_addresses=[dst_address], tx_files=tx_files, ttl=ttl
+        )
 
         src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
 

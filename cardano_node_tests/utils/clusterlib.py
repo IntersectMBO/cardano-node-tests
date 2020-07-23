@@ -745,6 +745,7 @@ class ClusterLib:
     def calculate_tx_fee(
         self,
         src_address: str,
+        dst_addresses: Optional[List[str]] = None,
         txins: Optional[List[TxIn]] = None,
         txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
@@ -753,11 +754,18 @@ class ClusterLib:
         tx_files = tx_files or TxFiles()
         out_file = Path("tx.body_estimate")
 
+        if dst_addresses and txouts:
+            LOGGER.warning(
+                "The value of `dst_addresses` is ignored when value for `txouts` is available"
+            )
+
+        txouts_filled = txouts or [TxOut(address=r, amount=1) for r in (dst_addresses or ())]
+
         tx_info = self.build_raw_tx(
             out_file,
             src_address=src_address,
             txins=txins,
-            txouts=txouts,
+            txouts=txouts_filled,
             tx_files=tx_files,
             fee=0,
             ttl=ttl,
