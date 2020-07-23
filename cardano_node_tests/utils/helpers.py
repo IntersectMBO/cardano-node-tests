@@ -159,3 +159,12 @@ def setup_cluster() -> ClusterLib:
     cluster_obj.refresh_pparams()
 
     return cluster_obj
+
+
+def stop_cluster():
+    LOGGER.info("Stopping cluster.")
+    cluster_env = get_cluster_env()
+    try:
+        run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
+    except Exception as exc:  # pylint: disable=broad-except
+        LOGGER.debug(f"Failed to stop cluster: {exc}")
