@@ -60,7 +60,7 @@ def fund_from_faucet(
     cluster_obj.wait_for_new_tip(slots_to_wait=2)
 
 
-def create_addrs(
+def create_payment_addrs(
     cluster_obj: ClusterLib, temp_dir: FileType, *names: UnpackableSequence
 ) -> List[AddressRecord]:
     """Create new payment address(es)."""

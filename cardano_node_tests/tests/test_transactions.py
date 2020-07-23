@@ -6,7 +6,7 @@ from cardano_node_tests.utils.clusterlib import CLIError
 from cardano_node_tests.utils.clusterlib import TxFiles
 from cardano_node_tests.utils.clusterlib import TxIn
 from cardano_node_tests.utils.clusterlib import TxOut
-from cardano_node_tests.utils.helpers import create_addrs
+from cardano_node_tests.utils.helpers import create_payment_addrs
 from cardano_node_tests.utils.helpers import create_stake_addrs
 from cardano_node_tests.utils.helpers import fund_from_faucet
 
@@ -27,7 +27,7 @@ class TestBasic:
     @pytest.fixture(scope="class")
     def payment_addrs(self, cluster_session, temp_dir):
         """Create 2 new payment addresses."""
-        return create_addrs(cluster_session, temp_dir, "addr_basic0", "addr_basic1")
+        return create_payment_addrs(cluster_session, temp_dir, "addr_basic0", "addr_basic1")
 
     def test_transfer_funds(self, cluster_session, addrs_data_session, payment_addrs):
         """Send (tx_fee + 2000) Lovelace from user1 (the faucet) to addr0."""
@@ -91,7 +91,9 @@ class Test10InOut:
     @pytest.fixture(scope="class")
     def payment_addrs(self, cluster_session, temp_dir):
         """Create 11 new payment addresses."""
-        return create_addrs(cluster_session, temp_dir, *[f"addr_10_in_out{i}" for i in range(11)])
+        return create_payment_addrs(
+            cluster_session, temp_dir, *[f"addr_10_in_out{i}" for i in range(11)]
+        )
 
     def test_10_transactions(self, cluster_session, addrs_data_session, payment_addrs):
         """Send 10 transactions of (tx_fee / 10 + 1000) Lovelace from user1 (the faucet) to addr0.
@@ -169,7 +171,7 @@ class TestNotBalanced:
     @pytest.fixture(scope="class")
     def payment_addr(self, cluster_session, temp_dir):
         """Create 1 new payment address."""
-        return create_addrs(cluster_session, temp_dir, "addr_not_balanced0")[0]
+        return create_payment_addrs(cluster_session, temp_dir, "addr_not_balanced0")[0]
 
     def test_negative_change(self, cluster_session, addrs_data_session, payment_addr, temp_dir):
         """Build a transaction with a negative change."""
@@ -271,7 +273,7 @@ class TestNotBalanced:
 def test_negative_fee(cluster_session, addrs_data_session, temp_dir):
     """Send a transaction with negative fee (-1)."""
     cluster = cluster_session
-    payment_addr = create_addrs(cluster, temp_dir, "addr_negative_fee0")[0]
+    payment_addr = create_payment_addrs(cluster, temp_dir, "addr_negative_fee0")[0]
     src_address = addrs_data_session["user1"]["payment_addr"]
 
     tx_files = TxFiles(
@@ -287,7 +289,7 @@ def test_negative_fee(cluster_session, addrs_data_session, temp_dir):
 def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
     """Send a transaction with ttl in the past."""
     cluster = cluster_session
-    payment_addr = create_addrs(cluster, temp_dir, "addr_past_ttl0")[0]
+    payment_addr = create_payment_addrs(cluster, temp_dir, "addr_past_ttl0")[0]
     src_address = addrs_data_session["user1"]["payment_addr"]
 
     out_file_tx = temp_dir / "tx.body"
@@ -321,7 +323,7 @@ def test_send_funds_to_reward_address(cluster_session, addrs_data_session, temp_
     cluster = cluster_session
     out_file_tx = temp_dir / "tx.body"
 
-    payment_addr = create_addrs(cluster, temp_dir, "addr_send_funds_to_reward_address0")[0]
+    payment_addr = create_payment_addrs(cluster, temp_dir, "addr_send_funds_to_reward_address0")[0]
     stake_addr = create_stake_addrs(cluster, temp_dir, "addr_send_funds_to_reward_address0")[0]
 
     # fund source address
