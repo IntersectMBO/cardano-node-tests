@@ -1,10 +1,10 @@
 """Wrapper for cardano-cli."""
+# pylint: disable=too-many-lines
 import functools
 import json
 import logging
 import subprocess
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 from typing import NamedTuple
@@ -19,6 +19,11 @@ from .types import UnpackableSequence
 LOGGER = logging.getLogger(__name__)
 
 
+class CLIOut(NamedTuple):
+    stdout: bytes
+    stderr: bytes
+
+
 class KeyPair(NamedTuple):
     vkey_file: Path
     skey_file: Path
@@ -28,11 +33,6 @@ class ColdKeyCounter(NamedTuple):
     vkey_file: Path
     skey_file: Path
     counter_file: Path
-
-
-class CLIOut(NamedTuple):
-    stdout: bytes
-    stderr: bytes
 
 
 class StakeAddrInfo(NamedTuple):
@@ -89,12 +89,13 @@ class PoolData(NamedTuple):
     pool_pledge: int
     pool_cost: int
     pool_margin: float
-    pool_metadata_url: str
-    pool_metadata_hash: str
+    pool_metadata_url: str = ""
+    pool_metadata_hash: str = ""
+    pool_relay_dns: str = ""
+    pool_relay_port: int = -1
 
 
-@dataclass
-class TxFiles:
+class TxFiles(NamedTuple):
     certificate_files: OptionalFiles = ()
     proposal_files: OptionalFiles = ()
     metadata_json_files: OptionalFiles = ()
@@ -432,6 +433,12 @@ class ClusterLib:
                 str(pool_data.pool_metadata_hash),
             ]
 
+        relay_cmd = []
+        if pool_data.pool_relay_dns:
+            relay_cmd.extend(["--single-host-pool-relay", pool_data.pool_relay_dns])
+        if pool_data.pool_relay_port != -1:
+            relay_cmd.extend(["--pool-relay-port", str(pool_data.pool_relay_port)])
+
         self.cli(
             [
                 "stake-pool",
@@ -455,6 +462,7 @@ class ClusterLib:
                 "--out-file",
                 str(out_file),
                 *metadata_cmd,
+                *relay_cmd,
             ]
         )
 
@@ -600,6 +608,7 @@ class ClusterLib:
         txouts: Optional[List[TxOut]] = None,
         fee: int = 0,
     ) -> Tuple[list, list]:
+        # pylint: disable=too-many-locals
         txins_copy = list(txins) if txins else []
         txouts_copy = list(txouts) if txouts else []
         max_address = None
