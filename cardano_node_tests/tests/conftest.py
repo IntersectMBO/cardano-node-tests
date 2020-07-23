@@ -3,6 +3,7 @@ import os
 
 import pytest
 
+from cardano_node_tests.utils.helpers import get_cluster_env
 from cardano_node_tests.utils.helpers import run_shell_command
 from cardano_node_tests.utils.helpers import setup_cluster
 from cardano_node_tests.utils.helpers import setup_test_addrs
@@ -29,7 +30,8 @@ def cluster_session(change_dir):
         yield cluster_obj
     finally:
         LOGGER.info("Stopping cluster.")
-        run_shell_command("stop-cluster", workdir=cluster_obj._cluster_data["work_dir"])
+        cluster_env = get_cluster_env()
+        run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
 
 
 @pytest.fixture
@@ -39,7 +41,8 @@ def cluster(change_dir):
         yield cluster_obj
     finally:
         LOGGER.info("Stopping cluster.")
-        run_shell_command("stop-cluster", workdir=cluster_obj._cluster_data["work_dir"])
+        cluster_env = get_cluster_env()
+        run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
 
 
 @pytest.fixture(scope="session")

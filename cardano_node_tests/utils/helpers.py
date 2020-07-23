@@ -133,25 +133,29 @@ def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict
     return addrs_data
 
 
-def setup_cluster() -> ClusterLib:
-    """Prepare env and start cluster."""
+def get_cluster_env() -> dict:
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
-    os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
     state_dir = socket_path.parent
     work_dir = state_dir.parent
     repo_dir = Path(os.environ.get("CARDANO_NODE_REPO_PATH") or work_dir)
 
-    LOGGER.info("Starting cluster.")
-    run_shell_command("start-cluster", workdir=work_dir)
-
-    cluster_data = {
+    cluster_env = {
         "socket_path": socket_path,
         "state_dir": state_dir,
         "repo_dir": repo_dir,
         "work_dir": work_dir,
     }
-    cluster_obj = ClusterLib(state_dir)
-    cluster_obj._cluster_data = cluster_data
+    return cluster_env
+
+
+def setup_cluster() -> ClusterLib:
+    """Prepare env and start cluster."""
+    cluster_env = get_cluster_env()
+
+    LOGGER.info("Starting cluster.")
+    run_shell_command("start-cluster", workdir=cluster_env["work_dir"])
+
+    cluster_obj = ClusterLib(cluster_env["state_dir"])
     cluster_obj.refresh_pparams()
 
     return cluster_obj
