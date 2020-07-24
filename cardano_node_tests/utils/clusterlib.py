@@ -36,8 +36,8 @@ class ColdKeyCounter(NamedTuple):
 
 
 class StakeAddrInfo(NamedTuple):
-    delegation: str
-    reward_account_balance: int
+    delegation: Optional[str]
+    reward_account_balance: Optional[int]
     stake_addr_info: dict
 
 
@@ -545,8 +545,9 @@ class ClusterLib:
 
     def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
         output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
-        delegation = output_json[stake_addr]["delegation"]
-        reward_account_balance = output_json[stake_addr]["rewardAccountBalance"]
+        addr_data = output_json.get(stake_addr) or {}
+        delegation = addr_data.get("delegation")
+        reward_account_balance = addr_data.get("rewardAccountBalance")
         return StakeAddrInfo(delegation, reward_account_balance, output_json)
 
     def get_protocol_params(self) -> dict:
@@ -601,6 +602,26 @@ class ClusterLib:
     def get_current_kes_period(self) -> int:
         return int(self.get_last_block_block_no() / self.slots_per_kes_period)
 
+    def get_tx_deposit(self, tx_files: TxFiles) -> int:
+        if not tx_files.certificate_files:
+            return 0
+
+        pparams = self.get_protocol_params()
+        key_deposit = pparams["keyDeposit"]
+        pool_deposit = pparams["poolDeposit"]
+
+        deposit = 0
+        for cert in tx_files.certificate_files:
+            with open(cert) as in_json:
+                content = json.load(in_json)
+            description = content.get("description", "")
+            if "Stake Address Registration" in description:
+                deposit += key_deposit
+            elif "Stake Pool Registration" in description:
+                deposit += pool_deposit
+
+        return deposit
+
     def get_tx_ins_outs(
         self,
         src_address: str,
@@ -630,8 +651,7 @@ class ClusterLib:
         total_input_amount = functools.reduce(lambda x, y: x + y[2], txins_copy, 0)
         total_output_amount = functools.reduce(lambda x, y: x + y[1], txouts_copy, 0)
 
-        deposit = len(tx_files.certificate_files) * self.get_key_deposit()
-        funds_needed = total_output_amount + fee + deposit
+        funds_needed = total_output_amount + fee + self.get_tx_deposit(tx_files=tx_files)
         change = total_input_amount - funds_needed
         if change < 0:
             LOGGER.error(
@@ -961,17 +981,10 @@ class ClusterLib:
                 node_cold_key_pair.skey_file,
             ],
         )
-        tx_fee = self.calculate_tx_fee(
-            src_address=pool_owner.addr, tx_files=tx_files, ttl=self.calculate_tx_ttl()
-        )
-        self.send_tx(
-            src_address=pool_owner.addr,
-            tx_files=tx_files,
-            fee=tx_fee + self.get_pool_deposit(),
-            ttl=self.calculate_tx_ttl(),
-        )
 
+        self.send_tx(src_address=pool_owner.addr, tx_files=tx_files)
         self.wait_for_new_tip(slots_to_wait=2)
+
         return pool_reg_cert_file
 
     def deregister_stake_pool(
@@ -1002,14 +1015,10 @@ class ClusterLib:
                 node_cold_key_pair.skey_file,
             ],
         )
-        tx_fee = self.calculate_tx_fee(
-            src_address=pool_owner.addr, tx_files=tx_files, ttl=self.calculate_tx_ttl()
-        )
-        self.send_tx(
-            src_address=pool_owner.addr, tx_files=tx_files, fee=tx_fee, ttl=self.calculate_tx_ttl(),
-        )
 
+        self.send_tx(src_address=pool_owner.addr, tx_files=tx_files)
         self.wait_for_new_tip(slots_to_wait=2)
+
         return pool_dereg_cert_file
 
     def create_stake_pool(

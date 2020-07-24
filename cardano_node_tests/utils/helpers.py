@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import List
 from typing import NamedTuple
+from typing import Optional
 
 from cardano_node_tests.utils.clusterlib import ClusterLib
 from cardano_node_tests.utils.clusterlib import TxFiles
@@ -61,13 +62,18 @@ def fund_from_faucet(
 
 
 def create_payment_addrs(
-    cluster_obj: ClusterLib, temp_dir: FileType, *names: UnpackableSequence
+    cluster_obj: ClusterLib,
+    temp_dir: FileType,
+    *names: UnpackableSequence,
+    stake_vkey_file: Optional[FileType] = None,
 ) -> List[AddressRecord]:
     """Create new payment address(es)."""
     addrs = []
     for name in names:
         key_pair = cluster_obj.gen_payment_key_pair(temp_dir, name)
-        addr = cluster_obj.get_payment_addr(payment_vkey_file=key_pair.vkey_file)
+        addr = cluster_obj.get_payment_addr(
+            payment_vkey_file=key_pair.vkey_file, stake_vkey_file=stake_vkey_file
+        )
         addrs.append(
             AddressRecord(address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file)
         )
@@ -90,6 +96,15 @@ def create_stake_addrs(
 
     LOGGER.debug(f"Created {len(addrs)} stake address(es)")
     return addrs
+
+
+def wait_for_stake_distribution(cluster_obj: ClusterLib):
+    last_block_epoch = cluster_obj.get_last_block_epoch()
+    if last_block_epoch < 3:
+        epochs_to_wait = 3 - last_block_epoch
+        LOGGER.info(f"Waiting {epochs_to_wait} epoch(s) to get stake distribution.")
+        cluster_obj.wait_for_new_epoch(epochs_to_wait=epochs_to_wait)
+    return cluster_obj.get_stake_distribution()
 
 
 def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict:
