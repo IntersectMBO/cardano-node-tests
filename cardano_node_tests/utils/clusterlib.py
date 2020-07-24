@@ -536,11 +536,11 @@ class ClusterLib:
             str(delegation_fee),
         ]
 
-        stderr = self.cli(cli_args).stderr
-        if stderr and "runStakeAddressCmd" in stderr.decode():
+        stdout = self.cli(cli_args).stdout
+        if stdout and "runStakeAddressCmd" in stdout.decode():
             cmd = " ".join(cli_args)
             raise CLIError(
-                f"command not implemented yet;\ncommand: {cmd}\nresult: {stderr.decode()}"
+                f"command not implemented yet;\ncommand: {cmd}\nresult: {stdout.decode()}"
             )
 
     def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
