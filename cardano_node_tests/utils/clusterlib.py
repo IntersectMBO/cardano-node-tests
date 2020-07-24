@@ -36,9 +36,9 @@ class ColdKeyCounter(NamedTuple):
 
 
 class StakeAddrInfo(NamedTuple):
+    address_hash: str
     delegation: Optional[str]
     reward_account_balance: Optional[int]
-    stake_addr_info: dict
 
 
 class UTXORec(NamedTuple):
@@ -80,8 +80,8 @@ class PoolOwner(NamedTuple):
     stake_addr: str
     addr_vkey_file: FileType
     addr_skey_file: FileType
-    stake_addr_vkey_file: FileType
-    stake_addr_skey_file: FileType
+    stake_vkey_file: FileType
+    stake_skey_file: FileType
 
 
 class PoolData(NamedTuple):
@@ -361,7 +361,7 @@ class ClusterLib:
         return out_file
 
     def gen_stake_addr_registration_cert(
-        self, destination_dir: FileType, addr_name: str, stake_addr_vkey_file: FileType
+        self, destination_dir: FileType, addr_name: str, stake_vkey_file: FileType
     ) -> Path:
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake.reg.cert"
@@ -370,7 +370,7 @@ class ClusterLib:
                 "stake-address",
                 "registration-certificate",
                 "--stake-verification-key-file",
-                str(stake_addr_vkey_file),
+                str(stake_vkey_file),
                 "--out-file",
                 str(out_file),
             ]
@@ -383,7 +383,7 @@ class ClusterLib:
         self,
         destination_dir: FileType,
         addr_name: str,
-        stake_addr_vkey_file: FileType,
+        stake_vkey_file: FileType,
         node_cold_vkey_file: FileType,
     ) -> Path:
         destination_dir = Path(destination_dir).expanduser()
@@ -392,11 +392,11 @@ class ClusterLib:
             [
                 "stake-address",
                 "delegation-certificate",
-                "--stake-verification-key-file ",
-                str(stake_addr_vkey_file),
-                "--cold-verification-key-file ",
+                "--stake-verification-key-file",
+                str(stake_vkey_file),
+                "--cold-verification-key-file",
                 str(node_cold_vkey_file),
-                "--out-file ",
+                "--out-file",
                 str(out_file),
             ]
         )
@@ -419,7 +419,7 @@ class ClusterLib:
         pool_data: PoolData,
         node_vrf_vkey_file: FileType,
         node_cold_vkey_file: FileType,
-        owner_stake_addr_vkey_file: FileType,
+        owner_stake_vkey_file: FileType,
     ) -> Path:
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{pool_data.pool_name}_pool_reg.cert"
@@ -454,9 +454,9 @@ class ClusterLib:
                 "--cold-verification-key-file",
                 str(node_cold_vkey_file),
                 "--pool-reward-account-verification-key-file",
-                str(owner_stake_addr_vkey_file),
+                str(owner_stake_vkey_file),
                 "--pool-owner-stake-verification-key-file",
-                str(owner_stake_addr_vkey_file),
+                str(owner_stake_vkey_file),
                 "--testnet-magic",
                 str(self.network_magic),
                 "--out-file",
@@ -545,10 +545,15 @@ class ClusterLib:
 
     def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
         output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
-        addr_data = output_json.get(stake_addr) or {}
-        delegation = addr_data.get("delegation")
-        reward_account_balance = addr_data.get("rewardAccountBalance")
-        return StakeAddrInfo(delegation, reward_account_balance, output_json)
+        address_hash = list(output_json)[0]
+        address_rec = output_json[address_hash]
+        delegation = address_rec.get("delegation")
+        reward_account_balance = address_rec.get("rewardAccountBalance")
+        return StakeAddrInfo(
+            address_hash=address_hash,
+            delegation=delegation,
+            reward_account_balance=reward_account_balance,
+        )
 
     def get_protocol_params(self) -> dict:
         self.refresh_pparams()
@@ -969,7 +974,7 @@ class ClusterLib:
             pool_data=pool_data,
             node_vrf_vkey_file=node_vrf_vkey_file,
             node_cold_vkey_file=node_cold_key_pair.vkey_file,
-            owner_stake_addr_vkey_file=pool_owner.stake_addr_vkey_file,
+            owner_stake_vkey_file=pool_owner.stake_vkey_file,
         )
 
         # submit the pool registration certificate through a tx
@@ -977,7 +982,7 @@ class ClusterLib:
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
                 pool_owner.addr_vkey_file,
-                pool_owner.stake_addr_skey_file,
+                pool_owner.stake_skey_file,
                 node_cold_key_pair.skey_file,
             ],
         )
@@ -1011,7 +1016,7 @@ class ClusterLib:
             certificate_files=[pool_dereg_cert_file],
             signing_key_files=[
                 pool_owner.addr_vkey_file,
-                pool_owner.stake_addr_skey_file,
+                pool_owner.stake_skey_file,
                 node_cold_key_pair.skey_file,
             ],
         )

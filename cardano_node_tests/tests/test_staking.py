@@ -18,7 +18,7 @@ def temp_dir(tmp_path_factory):
 
 
 def test_delegate_using_addr(cluster_session, addrs_data_session, temp_dir):
-    """Submit registration certificate and delegate do pool using address."""
+    """Submit registration certificate and delegate to pool using address."""
     cluster = cluster_session
 
     stake_addr = create_stake_addrs(cluster, temp_dir, "addr_delegate_using_addr")[0]
@@ -68,7 +68,7 @@ def test_delegate_using_addr(cluster_session, addrs_data_session, temp_dir):
 
     cluster.wait_for_new_tip(slots_to_wait=2)
 
-    stake_addr_info = cluster.get_stake_addr_info(stake_addr)
+    stake_addr_info = cluster.get_stake_addr_info(stake_addr.address)
     assert (
         stake_addr_info.delegation is not None
     ), f"Stake address was not delegated yet: {stake_addr_info}"
@@ -76,3 +76,49 @@ def test_delegate_using_addr(cluster_session, addrs_data_session, temp_dir):
     assert (
         cluster.get_address_balance(src_address) == src_init_balance - delegation_fee
     ), f"Incorrect balance for source address `{src_address}`"
+
+
+def test_delegate_using_cert(cluster_session, addrs_data_session, temp_dir):
+    """Submit registration certificate and delegate to pool using certificate."""
+    cluster = cluster_session
+
+    stake_addr = create_stake_addrs(cluster, temp_dir, "addr_delegate_using_cert")[0]
+    payment_addr = create_payment_addrs(
+        cluster, temp_dir, "addr_delegate_using_cert", stake_vkey_file=stake_addr.vkey_file
+    )[0]
+    stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        temp_dir, "addr_delegate_using_cert", stake_addr.vkey_file
+    )
+    stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+        temp_dir,
+        "addr_delegate_using_cert",
+        stake_vkey_file=stake_addr.vkey_file,
+        node_cold_vkey_file=addrs_data_session["node-pool1"]["cold_key_counter"].vkey_file,
+    )
+
+    src_address = payment_addr.address
+
+    # fund source address
+    fund_from_faucet(cluster, addrs_data_session["user1"], src_address)
+
+    src_init_balance = cluster.get_address_balance(src_address)
+
+    tx_files = TxFiles(
+        certificate_files=[stake_addr_reg_cert_file, stake_addr_deleg_cert_file],
+        signing_key_files=[payment_addr.skey_file, stake_addr.skey_file],
+    )
+
+    tx_raw_data = cluster.send_tx(src_address, tx_files=tx_files)
+    cluster.wait_for_new_tip(slots_to_wait=2)
+
+    assert (
+        cluster.get_address_balance(src_address)
+        == src_init_balance - tx_raw_data.fee - cluster.get_key_deposit()
+    ), f"Incorrect balance for source address `{src_address}`"
+
+    wait_for_stake_distribution(cluster)
+
+    stake_addr_info = cluster.get_stake_addr_info(stake_addr.address)
+    assert (
+        stake_addr_info.delegation is not None
+    ), f"Stake address was not delegated yet: {stake_addr_info}"

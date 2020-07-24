@@ -7,6 +7,8 @@ from typing import NamedTuple
 from typing import Optional
 
 from cardano_node_tests.utils.clusterlib import ClusterLib
+from cardano_node_tests.utils.clusterlib import ColdKeyCounter
+from cardano_node_tests.utils.clusterlib import KeyPair
 from cardano_node_tests.utils.clusterlib import TxFiles
 from cardano_node_tests.utils.clusterlib import TxOut
 from cardano_node_tests.utils.types import FileType
@@ -98,52 +100,33 @@ def create_stake_addrs(
     return addrs
 
 
-def wait_for_stake_distribution(cluster_obj: ClusterLib):
-    last_block_epoch = cluster_obj.get_last_block_epoch()
-    if last_block_epoch < 3:
-        epochs_to_wait = 3 - last_block_epoch
-        LOGGER.info(f"Waiting {epochs_to_wait} epoch(s) to get stake distribution.")
-        cluster_obj.wait_for_new_epoch(epochs_to_wait=epochs_to_wait)
-    return cluster_obj.get_stake_distribution()
+def load_pools_data():
+    data_dir = get_cluster_env()["state_dir"] / "nodes"
+    pools = ("node-pool1", "node-pool2")
 
-
-def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict:
-    """Create addresses and their keys for usage in tests."""
-    destination_dir = Path(destination_dir).expanduser()
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    addrs = ["user1", "pool-owner1"]
-
-    LOGGER.debug("Creating addresses and keys for tests.")
     addrs_data = {}
-    for addr_name in addrs:
-        payment_key_pair = cluster_obj.gen_payment_key_pair(
-            destination_dir=destination_dir, key_name=addr_name
-        )
-        stake_key_pair = cluster_obj.gen_stake_key_pair(
-            destination_dir=destination_dir, key_name=addr_name
-        )
-        payment_addr = cluster_obj.get_payment_addr(
-            payment_vkey_file=payment_key_pair.vkey_file, stake_vkey_file=stake_key_pair.vkey_file,
-        )
-        stake_addr = cluster_obj.get_stake_addr(stake_vkey_file=stake_key_pair.vkey_file)
-        stake_addr_registration_cert = cluster_obj.gen_stake_addr_registration_cert(
-            destination_dir=destination_dir,
-            addr_name=addr_name,
-            stake_addr_vkey_file=stake_key_pair.vkey_file,
-        )
-
+    for addr_name in pools:
+        addr_data_dir = data_dir / addr_name
         addrs_data[addr_name] = {
-            "payment_key_pair": payment_key_pair,
-            "stake_key_pair": stake_key_pair,
-            "payment_addr": payment_addr,
-            "stake_addr": stake_addr,
-            "stake_addr_registration_cert": stake_addr_registration_cert,
+            "payment_key_pair": KeyPair(
+                vkey_file=addr_data_dir / "owner-utxo.vkey",
+                skey_file=addr_data_dir / "owner-utxo.skey",
+            ),
+            "stake_key_pair": KeyPair(
+                vkey_file=addr_data_dir / "owner-stake.vkey",
+                skey_file=addr_data_dir / "owner-stake.skey",
+            ),
+            "payment_addr": read_address_from_file(addr_data_dir / "owner.addr"),
+            "stake_addr": read_address_from_file(addr_data_dir / "owner-stake.addr"),
+            "stake_addr_registration_cert": read_address_from_file(
+                addr_data_dir / "stake.reg.cert"
+            ),
+            "cold_key_counter": ColdKeyCounter(
+                vkey_file=addr_data_dir / "cold.vkey",
+                skey_file=addr_data_dir / "cold.skey",
+                counter_file=addr_data_dir / "cold.counter",
+            ),
         }
-
-    LOGGER.debug("Funding created addresses." "")
-    fund_from_genesis(
-        cluster_obj, *[d["payment_addr"] for d in addrs_data.values()], amount=10_000_000_000
-    )
 
     return addrs_data
 
@@ -161,6 +144,57 @@ def get_cluster_env() -> dict:
         "work_dir": work_dir,
     }
     return cluster_env
+
+
+def wait_for_stake_distribution(cluster_obj: ClusterLib):
+    last_block_epoch = cluster_obj.get_last_block_epoch()
+    if last_block_epoch < 3:
+        epochs_to_wait = 3 - last_block_epoch
+        LOGGER.info(f"Waiting {epochs_to_wait} epoch(s) to get stake distribution.")
+        cluster_obj.wait_for_new_epoch(epochs_to_wait=epochs_to_wait)
+    return cluster_obj.get_stake_distribution()
+
+
+def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict:
+    """Create addresses and their keys for usage in tests."""
+    destination_dir = Path(destination_dir).expanduser()
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    addrs = ("user1", "pool-owner1")
+
+    LOGGER.debug("Creating addresses and keys for tests.")
+    addrs_data = {}
+    for addr_name in addrs:
+        payment_key_pair = cluster_obj.gen_payment_key_pair(
+            destination_dir=destination_dir, key_name=addr_name
+        )
+        stake_key_pair = cluster_obj.gen_stake_key_pair(
+            destination_dir=destination_dir, key_name=addr_name
+        )
+        payment_addr = cluster_obj.get_payment_addr(
+            payment_vkey_file=payment_key_pair.vkey_file, stake_vkey_file=stake_key_pair.vkey_file,
+        )
+        stake_addr = cluster_obj.get_stake_addr(stake_vkey_file=stake_key_pair.vkey_file)
+        stake_addr_registration_cert = cluster_obj.gen_stake_addr_registration_cert(
+            destination_dir=destination_dir,
+            addr_name=addr_name,
+            stake_vkey_file=stake_key_pair.vkey_file,
+        )
+
+        addrs_data[addr_name] = {
+            "payment_key_pair": payment_key_pair,
+            "stake_key_pair": stake_key_pair,
+            "payment_addr": payment_addr,
+            "stake_addr": stake_addr,
+            "stake_addr_registration_cert": stake_addr_registration_cert,
+        }
+
+    LOGGER.debug("Funding created addresses." "")
+    fund_from_genesis(
+        cluster_obj, *[d["payment_addr"] for d in addrs_data.values()], amount=10_000_000_000
+    )
+
+    pools_data = load_pools_data()
+    return {**addrs_data, **pools_data}
 
 
 def setup_cluster() -> ClusterLib:
