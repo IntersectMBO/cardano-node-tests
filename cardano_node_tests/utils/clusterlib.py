@@ -419,7 +419,7 @@ class ClusterLib:
         pool_data: PoolData,
         node_vrf_vkey_file: FileType,
         node_cold_vkey_file: FileType,
-        owner_stake_vkey_file: FileType,
+        owner_stake_vkey_files: List[FileType],
     ) -> Path:
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{pool_data.pool_name}_pool_reg.cert"
@@ -454,9 +454,10 @@ class ClusterLib:
                 "--cold-verification-key-file",
                 str(node_cold_vkey_file),
                 "--pool-reward-account-verification-key-file",
-                str(owner_stake_vkey_file),
-                "--pool-owner-stake-verification-key-file",
-                str(owner_stake_vkey_file),
+                str(owner_stake_vkey_files[0]),
+                *self._prepend_flag(
+                    "--pool-owner-stake-verification-key-file", owner_stake_vkey_files
+                ),
                 "--testnet-magic",
                 str(self.network_magic),
                 "--out-file",
@@ -974,7 +975,7 @@ class ClusterLib:
             pool_data=pool_data,
             node_vrf_vkey_file=node_vrf_vkey_file,
             node_cold_vkey_file=node_cold_key_pair.vkey_file,
-            owner_stake_vkey_file=pool_owner.stake_vkey_file,
+            owner_stake_vkey_files=[pool_owner.stake_vkey_file],
         )
 
         # submit the pool registration certificate through a tx
