@@ -147,7 +147,7 @@ class TestStakePool:
             pool_data=pool_data,
             node_vrf_vkey_file=node_vrf.vkey_file,
             node_cold_vkey_file=node_cold.vkey_file,
-            owner_stake_vkey_file=stake_addr.vkey_file,
+            owner_stake_vkey_files=[stake_addr.vkey_file],
         )
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
             destination_dir=temp_dir,
@@ -360,7 +360,7 @@ class TestStakePool:
 
             # TODO: change this once 'stake_addr_info' contain stake address, not hash
             assert (
-                # strip 'e2' from the beginning of the address hash
+                # strip 'e0' from the beginning of the address hash
                 stake_addr_info.address_hash[2:]
                 in pool_ledger_state["owners"]
             ), "'owner' value is different than expected"
