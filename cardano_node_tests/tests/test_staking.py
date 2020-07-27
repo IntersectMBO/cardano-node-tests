@@ -21,7 +21,7 @@ def temp_dir(tmp_path_factory):
 
 
 class TestDelegateAddr:
-    def test_delegate_using_addr(self, cluster_session, addrs_data_session, temp_dir):
+    def test_delegate_using_addr(self, cluster_session, addrs_data_session, temp_dir, request):
         """Submit registration certificate and delegate to pool using address."""
         cluster = cluster_session
 
@@ -36,7 +36,7 @@ class TestDelegateAddr:
         src_address = payment_addr.address
 
         # fund source address
-        fund_from_faucet(cluster, addrs_data_session["user1"], src_address)
+        fund_from_faucet(cluster, addrs_data_session["user1"], payment_addr, request=request)
         src_init_balance = cluster.get_address_balance(src_address)
 
         tx_files = TxFiles(
@@ -80,7 +80,7 @@ class TestDelegateAddr:
             cluster.get_address_balance(src_address) == src_init_balance - delegation_fee
         ), f"Incorrect balance for source address `{src_address}`"
 
-    def test_delegate_using_cert(self, cluster_session, addrs_data_session, temp_dir):
+    def test_delegate_using_cert(self, cluster_session, addrs_data_session, temp_dir, request):
         """Submit registration certificate and delegate to pool using certificate."""
         cluster = cluster_session
 
@@ -101,7 +101,7 @@ class TestDelegateAddr:
         src_address = payment_addr.address
 
         # fund source address
-        fund_from_faucet(cluster, addrs_data_session["user1"], src_address)
+        fund_from_faucet(cluster, addrs_data_session["user1"], payment_addr, request=request)
         src_init_balance = cluster.get_address_balance(src_address)
 
         tx_files = TxFiles(
@@ -126,7 +126,7 @@ class TestDelegateAddr:
 
 
 class TestStakePool:
-    def _pool_registration(self, cluster, addrs_data, temp_dir, pool_data, test_name):
+    def _pool_registration(self, cluster, addrs_data, temp_dir, pool_data, test_name, request):
         """Create and register a stake pool - common functionality for tests."""
         stake_addr = create_stake_addrs(cluster, temp_dir, f"addr0_{test_name}")[0]
         payment_addr = create_payment_addrs(
@@ -159,7 +159,9 @@ class TestStakePool:
         src_address = payment_addr.address
 
         # fund source address
-        fund_from_faucet(cluster, addrs_data["user1"], src_address, amount=900_000_000)
+        fund_from_faucet(
+            cluster, addrs_data["user1"], payment_addr, amount=900_000_000, request=request
+        )
         src_init_balance = cluster.get_address_balance(src_address)
 
         tx_files = TxFiles(
@@ -204,7 +206,9 @@ class TestStakePool:
         ), "'owner' value is different than expected"
         assert not check_pool_data(pool_ledger_state, pool_data)
 
-    def test_stake_pool_metadata_1owner(self, cluster_session, addrs_data_session, temp_dir):
+    def test_stake_pool_metadata_1owner(
+        self, cluster_session, addrs_data_session, temp_dir, request
+    ):
         """Create and register a stake pool with metadata and 1 owner."""
         cluster = cluster_session
 
@@ -233,9 +237,10 @@ class TestStakePool:
             temp_dir=temp_dir,
             pool_data=pool_data,
             test_name="test_stake_pool_metadata_1owner",
+            request=request,
         )
 
-    def test_stake_pool_1owner(self, cluster_session, addrs_data_session, temp_dir):
+    def test_stake_pool_1owner(self, cluster_session, addrs_data_session, temp_dir, request):
         """Create and register a stake pool with 1 owner."""
         cluster = cluster_session
 
@@ -249,9 +254,10 @@ class TestStakePool:
             temp_dir=temp_dir,
             pool_data=pool_data,
             test_name="test_stake_pool_1owner",
+            request=request,
         )
 
-    def test_stake_pool_2owners(self, cluster_session, addrs_data_session, temp_dir):
+    def test_stake_pool_2owners(self, cluster_session, addrs_data_session, temp_dir, request):
         """Create and register a stake pool with 2 owners."""
         cluster = cluster_session
         temp_template = "test_stake_pool_2owners"
@@ -303,8 +309,9 @@ class TestStakePool:
         fund_from_faucet(
             cluster,
             addrs_data_session["user1"],
-            *[r.address for r in payment_addrs],
+            *payment_addrs,
             amount=900_000_000,
+            request=request,
         )
 
         src_address = payment_addrs[0].address

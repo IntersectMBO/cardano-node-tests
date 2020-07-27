@@ -25,9 +25,14 @@ def test_dummy_clean():
 
 class TestBasic:
     @pytest.fixture(scope="class")
-    def payment_addrs(self, cluster_session, temp_dir):
+    def payment_addrs(self, cluster_session, addrs_data_session, temp_dir, request):
         """Create 2 new payment addresses."""
-        return create_payment_addrs(cluster_session, temp_dir, "addr_basic0", "addr_basic1")
+        addrs = create_payment_addrs(cluster_session, temp_dir, "addr_basic0", "addr_basic1")
+
+        # fund source addresses
+        fund_from_faucet(cluster_session, addrs_data_session["user1"], addrs[0], request=request)
+
+        return addrs
 
     def test_transfer_funds(self, cluster_session, addrs_data_session, payment_addrs):
         """Send (tx_fee + 2000) Lovelace from user1 (the faucet) to addr0."""
@@ -57,15 +62,12 @@ class TestBasic:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-    def test_transfer_all_funds(self, cluster_session, addrs_data_session, payment_addrs):
+    def test_transfer_all_funds(self, cluster_session, payment_addrs):
         """Send ALL funds from addr0 to addr1."""
         cluster = cluster_session
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
-
-        # fund source address
-        fund_from_faucet(cluster, addrs_data_session["user1"], src_address)
 
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balance = cluster.get_address_balance(dst_address)
@@ -89,11 +91,16 @@ class TestBasic:
 
 class Test10InOut:
     @pytest.fixture(scope="class")
-    def payment_addrs(self, cluster_session, temp_dir):
+    def payment_addrs(self, cluster_session, addrs_data_session, temp_dir, request):
         """Create 11 new payment addresses."""
-        return create_payment_addrs(
+        addrs = create_payment_addrs(
             cluster_session, temp_dir, *[f"addr_10_in_out{i}" for i in range(11)]
         )
+
+        # fund source addresses
+        fund_from_faucet(cluster_session, addrs_data_session["user1"], addrs[0], request=request)
+
+        return addrs
 
     def test_10_transactions(self, cluster_session, addrs_data_session, payment_addrs):
         """Send 10 transactions of (tx_fee / 10 + 1000) Lovelace from user1 (the faucet) to addr0.
@@ -134,15 +141,12 @@ class Test10InOut:
             == dst_init_balance + amount * no_of_transactions
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-    def test_transaction_to_10_addrs(self, cluster_session, addrs_data_session, payment_addrs):
+    def test_transaction_to_10_addrs(self, cluster_session, payment_addrs):
         """Send 1 transaction from addr0 to addr1..addr10"."""
         cluster = cluster_session
         src_address = payment_addrs[0].address
         # addr1..addr10
         dst_addresses = [payment_addrs[i].address for i in range(1, len(payment_addrs))]
-
-        # fund source address
-        fund_from_faucet(cluster, addrs_data_session["user1"], src_address)
 
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balances = {addr: cluster.get_address_balance(addr) for addr in dst_addresses}
@@ -322,7 +326,7 @@ def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
     assert "ExpiredUTxO" in str(excinfo.value)
 
 
-def test_send_funds_to_reward_address(cluster_session, addrs_data_session, temp_dir):
+def test_send_funds_to_reward_address(cluster_session, addrs_data_session, temp_dir, request):
     """Send funds from payment address to stake address."""
     cluster = cluster_session
     out_file_tx = temp_dir / "tx.body"
@@ -331,7 +335,7 @@ def test_send_funds_to_reward_address(cluster_session, addrs_data_session, temp_
     stake_addr = create_stake_addrs(cluster, temp_dir, "addr_send_funds_to_reward_address0")[0]
 
     # fund source address
-    fund_from_faucet(cluster, addrs_data_session["user1"], payment_addr.address)
+    fund_from_faucet(cluster, addrs_data_session["user1"], payment_addr, request=request)
 
     tx_files = TxFiles(signing_key_files=[stake_addr.skey_file])
     destinations = [TxOut(address=stake_addr.address, amount=1000)]

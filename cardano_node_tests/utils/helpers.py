@@ -7,6 +7,9 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 
+from _pytest.fixtures import FixtureRequest
+
+from cardano_node_tests.utils.clusterlib import CLIError
 from cardano_node_tests.utils.clusterlib import ClusterLib
 from cardano_node_tests.utils.clusterlib import ColdKeyPair
 from cardano_node_tests.utils.clusterlib import KeyPair
@@ -58,14 +61,39 @@ def fund_from_genesis(
     cluster_obj.wait_for_new_tip(slots_to_wait=2)
 
 
+def return_funds_to_faucet(
+    cluster_obj: ClusterLib, faucet_addr: str, *src_addrs: AddressRecord, amount: int = -1,
+):
+    """Send `amount` from all `src_addrs` to `faucet_addr`."""
+    try:
+        logging.disable(logging.ERROR)
+        for src in src_addrs:
+            fund_dst = [TxOut(address=faucet_addr, amount=amount)]
+            fund_tx_files = TxFiles(signing_key_files=[src.skey_file])
+            # try to return funds; don't mind if there's not enough funds for fees etc.
+            try:
+                cluster_obj.send_funds(src.address, fund_dst, tx_files=fund_tx_files)
+            except CLIError:
+                pass
+    finally:
+        logging.disable(logging.NOTSET)
+    cluster_obj.wait_for_new_tip(slots_to_wait=2)
+
+
 def fund_from_faucet(
     cluster_obj: ClusterLib,
     faucet_data: dict,
-    *dst_addrs: UnpackableSequence,
-    amount: int = 2_000_000,
+    *dst_addrs: AddressRecord,
+    amount: int = 3_000_000,
+    request: Optional[FixtureRequest] = None,
 ):
     """Send `amount` from faucet addr to all `dst_addrs`."""
-    fund_dst = [TxOut(address=d, amount=amount) for d in dst_addrs]
+    if request:
+        request.addfinalizer(
+            lambda: return_funds_to_faucet(cluster_obj, faucet_data["payment_addr"], *dst_addrs)
+        )
+
+    fund_dst = [TxOut(address=d.address, amount=amount) for d in dst_addrs]
     fund_tx_files = TxFiles(signing_key_files=[faucet_data["payment_key_pair"].skey_file])
     cluster_obj.send_funds(faucet_data["payment_addr"], fund_dst, tx_files=fund_tx_files)
     cluster_obj.wait_for_new_tip(slots_to_wait=2)
