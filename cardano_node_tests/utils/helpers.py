@@ -8,7 +8,7 @@ from typing import NamedTuple
 from typing import Optional
 
 from cardano_node_tests.utils.clusterlib import ClusterLib
-from cardano_node_tests.utils.clusterlib import ColdKeyCounter
+from cardano_node_tests.utils.clusterlib import ColdKeyPair
 from cardano_node_tests.utils.clusterlib import KeyPair
 from cardano_node_tests.utils.clusterlib import PoolData
 from cardano_node_tests.utils.clusterlib import TxFiles
@@ -129,7 +129,7 @@ def load_pools_data():
             "stake_addr_registration_cert": read_address_from_file(
                 addr_data_dir / "stake.reg.cert"
             ),
-            "cold_key_counter": ColdKeyCounter(
+            "cold_key_pair": ColdKeyPair(
                 vkey_file=addr_data_dir / "cold.vkey",
                 skey_file=addr_data_dir / "cold.skey",
                 counter_file=addr_data_dir / "cold.counter",

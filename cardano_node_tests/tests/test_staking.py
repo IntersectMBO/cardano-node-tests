@@ -95,7 +95,7 @@ class TestDelegateAddr:
             temp_dir,
             "addr_delegate_using_cert",
             stake_vkey_file=stake_addr.vkey_file,
-            node_cold_vkey_file=addrs_data_session["node-pool1"]["cold_key_counter"].vkey_file,
+            node_cold_vkey_file=addrs_data_session["node-pool1"]["cold_key_pair"].vkey_file,
         )
 
         src_address = payment_addr.address

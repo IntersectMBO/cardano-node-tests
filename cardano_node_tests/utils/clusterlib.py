@@ -29,7 +29,7 @@ class KeyPair(NamedTuple):
     skey_file: Path
 
 
-class ColdKeyCounter(NamedTuple):
+class ColdKeyPair(NamedTuple):
     vkey_file: Path
     skey_file: Path
     counter_file: Path
@@ -71,7 +71,7 @@ class PoolCreationArtifacts(NamedTuple):
     stake_pool_id: str
     kes_key_pair: KeyPair
     vrf_key_pair: KeyPair
-    cold_key_pair_and_counter: ColdKeyCounter
+    cold_key_pair_and_counter: ColdKeyPair
     pool_reg_cert_file: Path
 
 
@@ -307,7 +307,7 @@ class ClusterLib:
 
     def gen_cold_key_pair_and_counter(
         self, destination_dir: FileType, node_name: str
-    ) -> ColdKeyCounter:
+    ) -> ColdKeyPair:
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{node_name}_cold.vkey"
         skey = destination_dir / f"{node_name}_cold.skey"
@@ -326,7 +326,7 @@ class ClusterLib:
         )
 
         self._check_outfiles(vkey, skey, counter)
-        return ColdKeyCounter(vkey, skey, counter)
+        return ColdKeyPair(vkey, skey, counter)
 
     def gen_node_operational_cert(
         self,
@@ -967,7 +967,7 @@ class ClusterLib:
         pool_data: PoolData,
         pool_owner: PoolOwner,
         node_vrf_vkey_file: FileType,
-        node_cold_key_pair: ColdKeyCounter,
+        node_cold_key_pair: ColdKeyPair,
     ) -> Path:
         pool_reg_cert_file = self.gen_pool_registration_cert(
             destination_dir=destination_dir,
@@ -996,7 +996,7 @@ class ClusterLib:
         self,
         destination_dir: FileType,
         pool_owner: PoolOwner,
-        node_cold_key_pair: ColdKeyCounter,
+        node_cold_key_pair: ColdKeyPair,
         epoch: int,
         pool_name: str,
     ) -> Path:
@@ -1030,15 +1030,21 @@ class ClusterLib:
         self, destination_dir: FileType, pool_data: PoolData, pool_owner: PoolOwner,
     ) -> PoolCreationArtifacts:
         # create the KES key pair
-        node_kes = self.gen_kes_key_pair(destination_dir, pool_data.pool_name)
+        node_kes = self.gen_kes_key_pair(
+            destination_dir=destination_dir, node_name=pool_data.pool_name
+        )
         LOGGER.debug(f"KES keys created - {node_kes.vkey_file}; {node_kes.skey_file}")
 
         # create the VRF key pair
-        node_vrf = self.gen_vrf_key_pair(destination_dir, pool_data.pool_name)
+        node_vrf = self.gen_vrf_key_pair(
+            destination_dir=destination_dir, node_name=pool_data.pool_name
+        )
         LOGGER.debug(f"VRF keys created - {node_vrf.vkey_file}; {node_vrf.skey_file}")
 
         # create the cold key pair and node operational certificate counter
-        node_cold = self.gen_cold_key_pair_and_counter(destination_dir, pool_data.pool_name)
+        node_cold = self.gen_cold_key_pair_and_counter(
+            destination_dir=destination_dir, node_name=pool_data.pool_name
+        )
         LOGGER.debug(
             "Cold keys created and counter created - "
             f"{node_cold.vkey_file}; {node_cold.skey_file}; {node_cold.counter_file}"
