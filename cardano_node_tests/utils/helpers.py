@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import subprocess
@@ -9,6 +10,7 @@ from typing import Optional
 from cardano_node_tests.utils.clusterlib import ClusterLib
 from cardano_node_tests.utils.clusterlib import ColdKeyCounter
 from cardano_node_tests.utils.clusterlib import KeyPair
+from cardano_node_tests.utils.clusterlib import PoolData
 from cardano_node_tests.utils.clusterlib import TxFiles
 from cardano_node_tests.utils.clusterlib import TxOut
 from cardano_node_tests.utils.types import FileType
@@ -26,6 +28,12 @@ class AddressRecord(NamedTuple):
 def read_address_from_file(location: FileType):
     with open(Path(location).expanduser()) as in_file:
         return in_file.read().strip()
+
+
+def write_json(location: FileType, content: dict):
+    with open(Path(location).expanduser(), "w") as out_file:
+        out_file.write(json.dumps(content))
+    return location
 
 
 def run_shell_command(command: str, workdir: FileType = ""):
@@ -217,3 +225,63 @@ def stop_cluster():
         run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
     except Exception as exc:  # pylint: disable=broad-except
         LOGGER.debug(f"Failed to stop cluster: {exc}")
+
+
+def check_pool_data(pool_ledger_state: dict, pool_creation_data: PoolData) -> str:  # noqa: C901
+    errors_list = []
+
+    if pool_ledger_state["cost"] != pool_creation_data.pool_cost:
+        errors_list.append(
+            "'cost' value is different than expected; "
+            f"Expected: {pool_creation_data.pool_cost} vs Returned: {pool_ledger_state['cost']}"
+        )
+
+    if pool_ledger_state["margin"] != pool_creation_data.pool_margin:
+        errors_list.append(
+            "'margin' value is different than expected; "
+            f"Expected: {pool_creation_data.pool_margin} vs Returned: {pool_ledger_state['margin']}"
+        )
+
+    if pool_ledger_state["pledge"] != pool_creation_data.pool_pledge:
+        errors_list.append(
+            "'pledge' value is different than expected; "
+            f"Expected: {pool_creation_data.pool_pledge} vs Returned: {pool_ledger_state['pledge']}"
+        )
+
+    if pool_ledger_state["relays"] != (pool_creation_data.pool_relay_dns or []):
+        errors_list.append(
+            "'relays' value is different than expected; "
+            f"Expected: {pool_creation_data.pool_relay_dns} vs "
+            f"Returned: {pool_ledger_state['relays']}"
+        )
+
+    if pool_creation_data.pool_metadata_url and pool_creation_data.pool_metadata_hash:
+        metadata = pool_ledger_state.get("metadata") or {}
+
+        metadata_hash = metadata.get("hash")
+        if metadata_hash != pool_creation_data.pool_metadata_hash:
+            errors_list.append(
+                "'metadata hash' value is different than expected; "
+                f"Expected: {pool_creation_data.pool_metadata_hash} vs "
+                f"Returned: {metadata_hash}"
+            )
+
+        metadata_url = metadata.get("url")
+        if metadata_url != pool_creation_data.pool_metadata_url:
+            errors_list.append(
+                "'metadata url' value is different than expected; "
+                f"Expected: {pool_creation_data.pool_metadata_url} vs "
+                f"Returned: {metadata_url}"
+            )
+    elif pool_ledger_state["metadata"] is not None:
+        errors_list.append(
+            "'metadata' value is different than expected; "
+            f"Expected: None vs Returned: {pool_ledger_state['metadata']}"
+        )
+
+    if errors_list:
+        for err in errors_list:
+            LOGGER.error(err)
+        LOGGER.error(f"Stake Pool Details: \n{pool_ledger_state}")
+
+    return "\n\n".join(errors_list)

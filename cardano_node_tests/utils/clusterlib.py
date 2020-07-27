@@ -336,7 +336,7 @@ class ClusterLib:
         node_cold_skey_file: FileType,
         node_cold_counter_file: FileType,
     ) -> Path:
-        # this certificate is used when starting the node and not submitted throw a tx
+        # this certificate is used when starting the node and not submitted through a tx
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{node_name}.opcert"
         current_kes_period = self.get_current_kes_period()
