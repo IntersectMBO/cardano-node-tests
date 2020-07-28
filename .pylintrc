@@ -14,7 +14,7 @@ variable-rgx=[a-zA-Z_][a-zA-Z0-9_]{0,30}$
 
 [DESIGN]
 min-public-methods=0
-max-args=8
+max-args=10
 max-attributes=10
 
 

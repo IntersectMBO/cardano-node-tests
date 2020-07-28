@@ -23,11 +23,13 @@ def change_dir(tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def cluster_session(change_dir, request):
+    # pylint: disable=unused-argument
     return start_stop_cluster(request)
 
 
 @pytest.fixture
 def cluster(change_dir, request):
+    # pylint: disable=unused-argument
     return start_stop_cluster(request)
 
 
