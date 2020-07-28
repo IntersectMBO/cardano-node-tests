@@ -34,4 +34,5 @@ def test_update_proposal(cluster_session):
 
     _update_proposal(0.5)
     # revert to original value
+    time.sleep(sleep_time)
     _update_proposal(orig_value)

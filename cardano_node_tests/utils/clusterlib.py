@@ -78,10 +78,8 @@ class PoolCreationArtifacts(NamedTuple):
 class PoolOwner(NamedTuple):
     addr: str
     stake_addr: str
-    addr_vkey_file: FileType
-    addr_skey_file: FileType
-    stake_vkey_file: FileType
-    stake_skey_file: FileType
+    addr_key_pair: KeyPair
+    stake_key_pair: KeyPair
 
 
 class PoolData(NamedTuple):
@@ -635,6 +633,7 @@ class ClusterLib:
         txins: Optional[List[TxIn]] = None,
         txouts: Optional[List[TxOut]] = None,
         fee: int = 0,
+        deposit: Optional[int] = None,
     ) -> Tuple[list, list]:
         # pylint: disable=too-many-locals
         txins_copy = list(txins) if txins else []
@@ -657,7 +656,8 @@ class ClusterLib:
         total_input_amount = functools.reduce(lambda x, y: x + y[2], txins_copy, 0)
         total_output_amount = functools.reduce(lambda x, y: x + y[1], txouts_copy, 0)
 
-        funds_needed = total_output_amount + fee + self.get_tx_deposit(tx_files=tx_files)
+        tx_deposit = self.get_tx_deposit(tx_files=tx_files) if deposit is None else deposit
+        funds_needed = total_output_amount + fee + tx_deposit
         change = total_input_amount - funds_needed
         if change < 0:
             LOGGER.error(
@@ -718,12 +718,18 @@ class ClusterLib:
         tx_files: Optional[TxFiles] = None,
         fee: int = 0,
         ttl: Optional[int] = None,
+        deposit: Optional[int] = None,
     ) -> TxRawData:
         out_file = Path(out_file)
         tx_files = tx_files or TxFiles()
         ttl = ttl or self.calculate_tx_ttl()
         txins_copy, txouts_copy = self.get_tx_ins_outs(
-            src_address=src_address, tx_files=tx_files, txins=txins, txouts=txouts, fee=fee
+            src_address=src_address,
+            tx_files=tx_files,
+            txins=txins,
+            txouts=txouts,
+            fee=fee,
+            deposit=deposit,
         )
 
         tx_raw_data = self.build_raw_tx_bare(
@@ -797,6 +803,7 @@ class ClusterLib:
             tx_files=tx_files,
             fee=0,
             ttl=ttl,
+            deposit=0,
         )
 
         fee = self.estimate_fee(
@@ -851,6 +858,7 @@ class ClusterLib:
         tx_files: Optional[TxFiles] = None,
         fee: Optional[int] = None,
         ttl: Optional[int] = None,
+        deposit: Optional[int] = None,
     ) -> TxRawData:
         """Build, Sign and Send TX to chain."""
         tx_files = tx_files or TxFiles()
@@ -868,6 +876,7 @@ class ClusterLib:
             tx_files=tx_files,
             fee=fee,
             ttl=ttl,
+            deposit=deposit,
         )
         self.sign_tx(
             tx_body_file="tx.body",
@@ -911,9 +920,15 @@ class ClusterLib:
         tx_files: Optional[TxFiles] = None,
         fee: Optional[int] = None,
         ttl: Optional[int] = None,
+        deposit: Optional[int] = None,
     ) -> TxRawData:
         return self.send_tx(
-            src_address=src_address, txouts=destinations, tx_files=tx_files, ttl=ttl, fee=fee
+            src_address=src_address,
+            txouts=destinations,
+            tx_files=tx_files,
+            ttl=ttl,
+            fee=fee,
+            deposit=deposit,
         )
 
     def wait_for_new_tip(self, slots_to_wait: int = 1):
@@ -969,26 +984,27 @@ class ClusterLib:
         pool_owner: PoolOwner,
         node_vrf_vkey_file: FileType,
         node_cold_key_pair: ColdKeyPair,
+        deposit: Optional[int] = None,
     ) -> Path:
         pool_reg_cert_file = self.gen_pool_registration_cert(
             destination_dir=destination_dir,
             pool_data=pool_data,
             node_vrf_vkey_file=node_vrf_vkey_file,
             node_cold_vkey_file=node_cold_key_pair.vkey_file,
-            owner_stake_vkey_files=[pool_owner.stake_vkey_file],
+            owner_stake_vkey_files=[pool_owner.stake_key_pair.vkey_file],
         )
 
         # submit the pool registration certificate through a tx
         tx_files = TxFiles(
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
-                pool_owner.addr_vkey_file,
-                pool_owner.stake_skey_file,
+                pool_owner.addr_key_pair.skey_file,
+                pool_owner.stake_key_pair.skey_file,
                 node_cold_key_pair.skey_file,
             ],
         )
 
-        self.send_tx(src_address=pool_owner.addr, tx_files=tx_files)
+        self.send_tx(src_address=pool_owner.addr, tx_files=tx_files, deposit=deposit)
         self.wait_for_new_tip(slots_to_wait=2)
 
         return pool_reg_cert_file
@@ -1016,8 +1032,8 @@ class ClusterLib:
         tx_files = TxFiles(
             certificate_files=[pool_dereg_cert_file],
             signing_key_files=[
-                pool_owner.addr_vkey_file,
-                pool_owner.stake_skey_file,
+                pool_owner.addr_key_pair.skey_file,
+                pool_owner.stake_key_pair.skey_file,
                 node_cold_key_pair.skey_file,
             ],
         )
