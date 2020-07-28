@@ -255,6 +255,13 @@ def stop_cluster():
         LOGGER.debug(f"Failed to stop cluster: {exc}")
 
 
+def start_stop_cluster(request: FixtureRequest):
+    stop_cluster()
+    request.addfinalizer(stop_cluster)
+    cluster_obj = setup_cluster()
+    return cluster_obj
+
+
 def check_pool_data(pool_ledger_state: dict, pool_creation_data: PoolData) -> str:  # noqa: C901
     errors_list = []
 

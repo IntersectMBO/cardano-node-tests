@@ -3,9 +3,8 @@ import os
 
 import pytest
 
-from cardano_node_tests.utils.helpers import setup_cluster
 from cardano_node_tests.utils.helpers import setup_test_addrs
-from cardano_node_tests.utils.helpers import stop_cluster
+from cardano_node_tests.utils.helpers import start_stop_cluster
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,23 +22,13 @@ def change_dir(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def cluster_session(change_dir):
-    stop_cluster()
-    try:
-        cluster_obj = setup_cluster()
-        yield cluster_obj
-    finally:
-        stop_cluster()
+def cluster_session(change_dir, request):
+    return start_stop_cluster(request)
 
 
 @pytest.fixture
-def cluster(change_dir):
-    stop_cluster()
-    try:
-        cluster_obj = setup_cluster()
-        yield cluster_obj
-    finally:
-        stop_cluster()
+def cluster(change_dir, request):
+    return start_stop_cluster(request)
 
 
 @pytest.fixture(scope="session")
