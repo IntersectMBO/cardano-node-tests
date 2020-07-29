@@ -1,6 +1,9 @@
 name: lint
 
-on: [push]
+on:
+  push:
+    paths:
+    - '**.py'
 
 jobs:
   build:
@@ -15,4 +18,4 @@ jobs:
     - name: Install dependencies
       run: make install
     - name: Run lint
-      run: make lint
+      run: make lint || { git diff; false; }
