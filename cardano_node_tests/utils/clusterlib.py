@@ -73,6 +73,7 @@ class PoolCreationArtifacts(NamedTuple):
     vrf_key_pair: KeyPair
     cold_key_pair_and_counter: ColdKeyPair
     pool_reg_cert_file: Path
+    tx_raw_data: TxRawData
 
 
 class PoolOwner(NamedTuple):
@@ -797,7 +798,7 @@ class ClusterLib:
 
         txouts_filled = txouts or [TxOut(address=r, amount=1) for r in (dst_addresses or ())]
 
-        tx_info = self.build_raw_tx(
+        tx_raw_data = self.build_raw_tx(
             out_file,
             src_address=src_address,
             txins=txins,
@@ -810,8 +811,8 @@ class ClusterLib:
 
         fee = self.estimate_fee(
             out_file,
-            txin_count=len(tx_info.txins),
-            txout_count=len(tx_info.txouts),
+            txin_count=len(tx_raw_data.txins),
+            txout_count=len(tx_raw_data.txouts),
             witness_count=len(tx_files.signing_key_files),
         )
 
@@ -871,7 +872,7 @@ class ClusterLib:
                 src_address=src_address, txins=txins, txouts=txouts, tx_files=tx_files, ttl=ttl,
             )
 
-        tx_data = self.build_raw_tx(
+        tx_raw_data = self.build_raw_tx(
             out_file="tx.body",
             src_address=src_address,
             txins=txins,
@@ -888,9 +889,9 @@ class ClusterLib:
         )
         self.submit_tx(tx_file="tx.signed")
 
-        return tx_data
+        return tx_raw_data
 
-    def submit_update_proposal(self, cli_args: UnpackableSequence, epoch: int):
+    def submit_update_proposal(self, cli_args: UnpackableSequence, epoch: int) -> TxRawData:
         out_file = Path("update.proposal")
         self.cli(
             [
@@ -908,7 +909,7 @@ class ClusterLib:
 
         self._check_outfiles(out_file)
 
-        self.send_tx(
+        return self.send_tx(
             src_address=self.genesis_utxo_addr,
             tx_files=TxFiles(
                 proposal_files=[out_file],
@@ -988,7 +989,7 @@ class ClusterLib:
         node_vrf_vkey_file: FileType,
         node_cold_key_pair: ColdKeyPair,
         deposit: Optional[int] = None,
-    ) -> Path:
+    ) -> Tuple[Path, TxRawData]:
         pool_reg_cert_file = self.gen_pool_registration_cert(
             destination_dir=destination_dir,
             pool_data=pool_data,
@@ -1007,10 +1008,10 @@ class ClusterLib:
             ],
         )
 
-        self.send_tx(src_address=pool_owner.addr, tx_files=tx_files, deposit=deposit)
+        tx_raw_data = self.send_tx(src_address=pool_owner.addr, tx_files=tx_files, deposit=deposit)
         self.wait_for_new_tip(slots_to_wait=2)
 
-        return pool_reg_cert_file
+        return pool_reg_cert_file, tx_raw_data
 
     def deregister_stake_pool(
         self,
@@ -1019,7 +1020,7 @@ class ClusterLib:
         node_cold_key_pair: ColdKeyPair,
         epoch: int,
         pool_name: str,
-    ) -> Path:
+    ) -> Tuple[Path, TxRawData]:
         LOGGER.debug(
             f"Deregistering stake pool starting with epoch: {epoch}; "
             f"Current epoch is: {self.get_last_block_epoch()}"
@@ -1041,10 +1042,10 @@ class ClusterLib:
             ],
         )
 
-        self.send_tx(src_address=pool_owner.addr, tx_files=tx_files)
+        tx_raw_data = self.send_tx(src_address=pool_owner.addr, tx_files=tx_files)
         self.wait_for_new_tip(slots_to_wait=2)
 
-        return pool_dereg_cert_file
+        return pool_dereg_cert_file, tx_raw_data
 
     def create_stake_pool(
         self, destination_dir: FileType, pool_data: PoolData, pool_owner: PoolOwner,
@@ -1070,7 +1071,7 @@ class ClusterLib:
             f"{node_cold.vkey_file}; {node_cold.skey_file}; {node_cold.counter_file}"
         )
 
-        pool_reg_cert_file = self.register_stake_pool(
+        pool_reg_cert_file, tx_raw_data = self.register_stake_pool(
             destination_dir=destination_dir,
             pool_data=pool_data,
             pool_owner=pool_owner,
@@ -1084,4 +1085,5 @@ class ClusterLib:
             vrf_key_pair=node_vrf,
             cold_key_pair_and_counter=node_cold,
             pool_reg_cert_file=pool_reg_cert_file,
+            tx_raw_data=tx_raw_data,
         )
