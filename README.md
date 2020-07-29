@@ -12,6 +12,8 @@ $ python3 -m venv .env
 $ . .env/bin/activate
 # install this package together with dev requirements
 $ pip install -r requirements-dev.txt
+# or
+$ make install
 ```
 
 Usage
