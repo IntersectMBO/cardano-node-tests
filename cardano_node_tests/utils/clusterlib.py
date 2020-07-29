@@ -178,7 +178,9 @@ class ClusterLib:
         return sum(([flag, str(x)] for x in contents), [])
 
     def query_cli(self, cli_args: UnpackableSequence) -> str:
-        stdout = self.cli(["query", *cli_args, "--testnet-magic", str(self.network_magic)]).stdout
+        stdout = self.cli(
+            ["query", *cli_args, "--testnet-magic", str(self.network_magic), "--shelley-mode"]
+        ).stdout
         stdout_dec = stdout.decode("utf-8") if stdout else ""
         return stdout_dec
 
@@ -847,6 +849,7 @@ class ClusterLib:
                 str(self.network_magic),
                 "--tx-file",
                 str(tx_file),
+                "--shelley-mode",
             ]
         )
 

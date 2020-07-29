@@ -2,11 +2,13 @@ import json
 import logging
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import List
 from typing import NamedTuple
 from typing import Optional
 
+import pytest
 from _pytest.fixtures import FixtureRequest
 
 from cardano_node_tests.utils.clusterlib import CLIError
@@ -26,6 +28,19 @@ class AddressRecord(NamedTuple):
     address: str
     vkey_file: Path
     skey_file: Path
+
+
+def wait_for(func, delay=5, num_sec=180, message=None):
+    """Wait for success of `func` for `num_sec`."""
+    end_time = time.time() + num_sec
+
+    while time.time() < end_time:
+        response = func()
+        if response:
+            return response
+        time.sleep(delay)
+
+    pytest.fail(f"Failed to {message or 'finish'} in time.")
 
 
 def read_address_from_file(location: FileType):
@@ -226,7 +241,7 @@ def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict
 
     LOGGER.debug("Funding created addresses." "")
     fund_from_genesis(
-        cluster_obj, *[d["payment_addr"] for d in addrs_data.values()], amount=10_000_000_000
+        cluster_obj, *[d["payment_addr"] for d in addrs_data.values()], amount=20_000_000_000
     )
 
     pools_data = load_pools_data()
@@ -239,6 +254,7 @@ def setup_cluster() -> ClusterLib:
 
     LOGGER.info("Starting cluster.")
     run_shell_command("start-cluster", workdir=cluster_env["work_dir"])
+    LOGGER.info("Cluster started.")
 
     cluster_obj = ClusterLib(cluster_env["state_dir"])
     cluster_obj.refresh_pparams()
