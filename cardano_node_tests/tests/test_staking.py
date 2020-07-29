@@ -59,7 +59,7 @@ class TestDelegateAddr:
             cluster.get_address_balance(src_address)
             == src_init_balance - tx_raw_data.fee - cluster.get_key_deposit()
         ), f"Incorrect balance for source address `{src_address}`"
-        src_init_balance = cluster.get_address_balance(src_address)
+        src_register_balance = cluster.get_address_balance(src_address)
 
         first_pool_id_in_stake_dist = list(wait_for_stake_distribution(cluster))[0]
         delegation_fee = cluster.calculate_tx_fee(src_address, tx_files=tx_files)
@@ -78,7 +78,7 @@ class TestDelegateAddr:
 
         # check that the balance for source address was correctly updated
         assert (
-            cluster.get_address_balance(src_address) == src_init_balance - delegation_fee
+            cluster.get_address_balance(src_address) == src_register_balance - delegation_fee
         ), f"Incorrect balance for source address `{src_address}`"
 
         wait_for_stake_distribution(cluster)
@@ -299,6 +299,8 @@ class TestStakePool:
         fund_from_faucet(
             cluster, addrs_data["user1"], payment_addr, amount=1_000_000_000, request=request,
         )
+        src_address = payment_addr.address
+        src_init_balance = cluster.get_address_balance(src_address)
 
         pool_owner = PoolOwner(
             addr=payment_addr.address,
@@ -336,9 +338,6 @@ class TestStakePool:
                 pool_artifacts.cold_key_pair_and_counter.skey_file,
             ],
         )
-
-        src_address = payment_addr.address
-        src_init_balance = cluster.get_address_balance(src_address)
 
         # register and delegate stake address
         tx_raw_data = cluster.send_tx(src_address, tx_files=tx_files)
@@ -473,7 +472,6 @@ class TestStakePool:
             amount=900_000_000,
             request=request,
         )
-
         src_address = payment_addrs[0].address
         src_init_balance = cluster.get_address_balance(src_address)
 
@@ -542,8 +540,10 @@ class TestStakePool:
             request=request,
         )
 
+        src_register_balance = cluster.get_address_balance(pool_owner.addr)
+
         # deregister stake pool
-        cluster.deregister_stake_pool(
+        __, tx_raw_data = cluster.deregister_stake_pool(
             destination_dir=temp_dir,
             pool_owner=pool_owner,
             node_cold_key_pair=pool_artifacts.cold_key_pair_and_counter,
@@ -558,7 +558,10 @@ class TestStakePool:
             num_sec=3 * cluster.epoch_length,
             message="deregister stake pool",
         )
-        # TODO: check deposit
+        # TODO: what about pool deposit?
+        assert src_register_balance - tx_raw_data.fee == cluster.get_address_balance(
+            pool_owner.addr
+        )
 
     def test_update_stake_pool_metadata(
         self, cluster_session, addrs_data_session, temp_dir, request
