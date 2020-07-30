@@ -1,4 +1,4 @@
-name: lint
+name: python_lint
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
     - '**.py'
 
 jobs:
-  build:
+  lint:
 
     runs-on: ubuntu-latest
 

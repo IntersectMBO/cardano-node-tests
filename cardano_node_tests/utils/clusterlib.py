@@ -1,5 +1,4 @@
 """Wrapper for cardano-cli."""
-# pylint: disable=too-many-lines
 import functools
 import json
 import logging
@@ -110,7 +109,7 @@ class CLIError(Exception):
 class ClusterLib:
     """Cluster Lib."""
 
-    # pylint: disable=too-many-instance-attributes,too-many-public-methods
+    # pylint: disable=too-many-public-methods
 
     def __init__(self, state_dir: Union[str, Path]):
         self.state_dir = Path(state_dir).expanduser().resolve()
@@ -638,7 +637,6 @@ class ClusterLib:
         fee: int = 0,
         deposit: Optional[int] = None,
     ) -> Tuple[list, list]:
-        # pylint: disable=too-many-locals
         txins_copy = list(txins) if txins else []
         txouts_copy = list(txouts) if txouts else []
         max_address = None

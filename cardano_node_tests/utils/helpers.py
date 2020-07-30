@@ -267,7 +267,7 @@ def stop_cluster():
     cluster_env = get_cluster_env()
     try:
         run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception as exc:
         LOGGER.debug(f"Failed to stop cluster: {exc}")
 
 
