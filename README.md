@@ -11,8 +11,6 @@ Installation
 $ python3 -m venv .env
 $ . .env/bin/activate
 # install this package together with dev requirements
-$ pip install -r requirements-dev.txt
-# or
 $ make install
 ```
 
@@ -42,3 +40,10 @@ $ . .env/bin/activate
 # run linter
 $ make lint
 ```
+
+Contributing
+------------
+
+Install this package and its dependencies as described above.
+
+Run `pre-commit install` to set up the git hook scripts that will check you changes before every commit. Alternatively run `make lint` manually before pushing your changes.
