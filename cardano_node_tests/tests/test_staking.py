@@ -38,20 +38,20 @@ class TestDelegateAddr:
             temp_dir, f"addr0_{temp_template}", stake_addr.vkey_file
         )
 
-        src_address = payment_addr.address
-
         # fund source address
         fund_from_faucet(cluster, addrs_data_session["user1"], payment_addr, request=request)
-        src_init_balance = cluster.get_address_balance(src_address)
 
         tx_files = TxFiles(
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[payment_addr.skey_file, stake_addr.skey_file],
         )
 
+        src_address = payment_addr.address
+        src_init_balance = cluster.get_address_balance(src_address)
+
         # register stake address
         tx_raw_data = cluster.send_tx(src_address, tx_files=tx_files)
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -73,7 +73,7 @@ class TestDelegateAddr:
         except CLIError as excinfo:
             if "command not implemented yet" in str(excinfo):
                 return
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -91,16 +91,6 @@ class TestDelegateAddr:
         assert (
             first_pool_id_in_stake_dist == stake_addr_info.delegation
         ), "Stake address delegated to wrong pool"
-
-        pool_ledger_state = cluster.get_registered_stake_pools_ledger_state().get(
-            first_pool_id_in_stake_dist
-        )
-        # TODO: change this once 'stake_addr_info' contain stake address, not hash
-        assert (
-            # strip 'e0' from the beginning of the address hash
-            stake_addr_info.address_hash[2:]
-            in pool_ledger_state["owners"]
-        ), "'owner' value is different than expected"
 
     def test_delegate_using_cert(self, cluster_session, addrs_data_session, temp_dir, request):
         """Submit registration certificate and delegate to pool using certificate."""
@@ -126,20 +116,20 @@ class TestDelegateAddr:
             node_cold_vkey_file=node_cold.vkey_file,
         )
 
-        src_address = payment_addr.address
-
         # fund source address
         fund_from_faucet(cluster, addrs_data_session["user1"], payment_addr, request=request)
-        src_init_balance = cluster.get_address_balance(src_address)
 
         tx_files = TxFiles(
             certificate_files=[stake_addr_reg_cert_file, stake_addr_deleg_cert_file],
             signing_key_files=[payment_addr.skey_file, stake_addr.skey_file],
         )
 
+        src_address = payment_addr.address
+        src_init_balance = cluster.get_address_balance(src_address)
+
         # register stake address and delegate it to pool
         tx_raw_data = cluster.send_tx(src_address, tx_files=tx_files)
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -157,14 +147,6 @@ class TestDelegateAddr:
 
         stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
         assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
-
-        pool_ledger_state = cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id)
-        # TODO: change this once 'stake_addr_info' contain stake address, not hash
-        assert (
-            # strip 'e0' from the beginning of the address hash
-            stake_addr_info.address_hash[2:]
-            in pool_ledger_state["owners"]
-        ), "'owner' value is different than expected"
 
 
 class TestStakePool:
@@ -202,7 +184,7 @@ class TestStakePool:
             # TODO: change this once 'stake_addr_info' contain stake address, not hash
             assert (
                 # strip 'e0' from the beginning of the address hash
-                stake_addr_info.address_hash[2:]
+                stake_addr_info.addr_hash[2:]
                 in pool_ledger_state["owners"]
             ), "'owner' value is different than expected"
 
@@ -245,13 +227,10 @@ class TestStakePool:
             node_cold_vkey_file=node_cold.vkey_file,
         )
 
-        src_address = payment_addr.address
-
         # fund source address
         fund_from_faucet(
             cluster, addrs_data["user1"], payment_addr, amount=900_000_000, request=request
         )
-        src_init_balance = cluster.get_address_balance(src_address)
 
         tx_files = TxFiles(
             certificate_files=[
@@ -262,9 +241,12 @@ class TestStakePool:
             signing_key_files=[payment_addr.skey_file, stake_addr.skey_file, node_cold.skey_file],
         )
 
+        src_address = payment_addr.address
+        src_init_balance = cluster.get_address_balance(src_address)
+
         # register and delegate stake address, create and register pool
         tx_raw_data = cluster.send_tx(src_address, tx_files=tx_files)
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -298,8 +280,6 @@ class TestStakePool:
         fund_from_faucet(
             cluster, addrs_data["user1"], payment_addr, amount=1_000_000_000, request=request,
         )
-        src_address = payment_addr.address
-        src_init_balance = cluster.get_address_balance(src_address)
 
         pool_owner = PoolOwner(
             addr=payment_addr.address,
@@ -338,9 +318,12 @@ class TestStakePool:
             ],
         )
 
+        src_address = payment_addr.address
+        src_init_balance = cluster.get_address_balance(src_address)
+
         # register and delegate stake address
         tx_raw_data = cluster.send_tx(src_address, tx_files=tx_files)
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -471,8 +454,6 @@ class TestStakePool:
             amount=900_000_000,
             request=request,
         )
-        src_address = payment_addrs[0].address
-        src_init_balance = cluster.get_address_balance(src_address)
 
         tx_files = TxFiles(
             certificate_files=[
@@ -487,9 +468,12 @@ class TestStakePool:
             ],
         )
 
+        src_address = payment_addrs[0].address
+        src_init_balance = cluster.get_address_balance(src_address)
+
         # register and delegate stake addresses, create and register pool
         tx_raw_data = cluster.send_tx(src_address, tx_files=tx_files)
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
