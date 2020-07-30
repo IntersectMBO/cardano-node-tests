@@ -1,4 +1,3 @@
-# pylint: disable=too-many-locals
 import logging
 
 import pytest

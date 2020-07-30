@@ -107,7 +107,6 @@ class Test10InOut:
 
         Test 10 different UTXOs in addr0.
         """
-        # pylint: disable=too-many-locals
         cluster = cluster_session
         no_of_transactions = len(payment_addrs) - 1
 
@@ -228,7 +227,6 @@ class TestNotBalanced:
         self, cluster_session, addrs_data_session, payment_addr, temp_dir, amounts
     ):
         """Build a transaction with unbalanced change."""
-        # pylint: disable=too-many-locals
         cluster = cluster_session
         src_address = addrs_data_session["user1"]["payment_addr"]
         dst_address = payment_addr.address
