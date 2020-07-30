@@ -5,12 +5,12 @@ import subprocess
 import time
 from pathlib import Path
 from typing import List
-from typing import NamedTuple
 from typing import Optional
 
 import pytest
 from _pytest.fixtures import FixtureRequest
 
+from cardano_node_tests.utils.clusterlib import AddressRecord
 from cardano_node_tests.utils.clusterlib import CLIError
 from cardano_node_tests.utils.clusterlib import ClusterLib
 from cardano_node_tests.utils.clusterlib import ColdKeyPair
@@ -22,12 +22,6 @@ from cardano_node_tests.utils.types import FileType
 from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
-
-
-class AddressRecord(NamedTuple):
-    address: str
-    vkey_file: Path
-    skey_file: Path
 
 
 def wait_for(func, delay=5, num_sec=180, message=None):
@@ -43,12 +37,14 @@ def wait_for(func, delay=5, num_sec=180, message=None):
     pytest.fail(f"Failed to {message or 'finish'} in time.")
 
 
-def read_address_from_file(location: FileType):
+def read_address_from_file(location: FileType) -> str:
+    """Read address stored in file."""
     with open(Path(location).expanduser()) as in_file:
         return in_file.read().strip()
 
 
-def write_json(location: FileType, content: dict):
+def write_json(location: FileType, content: dict) -> FileType:
+    """Write distionary content to JSON file."""
     with open(Path(location).expanduser(), "w") as out_file:
         out_file.write(json.dumps(content))
     return location
@@ -73,13 +69,16 @@ def fund_from_genesis(
         signing_key_files=[cluster_obj.delegate_skey, cluster_obj.genesis_utxo_skey]
     )
     cluster_obj.send_funds(cluster_obj.genesis_utxo_addr, fund_dst, tx_files=fund_tx_files)
-    cluster_obj.wait_for_new_tip(slots_to_wait=2)
+    cluster_obj.wait_for_new_tip(new_blocks=2)
 
 
 def return_funds_to_faucet(
     cluster_obj: ClusterLib, faucet_addr: str, *src_addrs: AddressRecord, amount: int = -1,
 ):
-    """Send `amount` from all `src_addrs` to `faucet_addr`."""
+    """Send `amount` from all `src_addrs` to `faucet_addr`.
+
+    The amount of "-1" means all available funds.
+    """
     try:
         logging.disable(logging.ERROR)
         for src in src_addrs:
@@ -92,7 +91,7 @@ def return_funds_to_faucet(
                 pass
     finally:
         logging.disable(logging.NOTSET)
-    cluster_obj.wait_for_new_tip(slots_to_wait=2)
+    cluster_obj.wait_for_new_tip(new_blocks=2)
 
 
 def fund_from_faucet(
@@ -111,7 +110,7 @@ def fund_from_faucet(
     fund_dst = [TxOut(address=d.address, amount=amount) for d in dst_addrs]
     fund_tx_files = TxFiles(signing_key_files=[faucet_data["payment_key_pair"].skey_file])
     cluster_obj.send_funds(faucet_data["payment_addr"], fund_dst, tx_files=fund_tx_files)
-    cluster_obj.wait_for_new_tip(slots_to_wait=2)
+    cluster_obj.wait_for_new_tip(new_blocks=2)
 
 
 def create_payment_addrs(
@@ -121,15 +120,12 @@ def create_payment_addrs(
     stake_vkey_file: Optional[FileType] = None,
 ) -> List[AddressRecord]:
     """Create new payment address(es)."""
-    addrs = []
-    for name in names:
-        key_pair = cluster_obj.gen_payment_key_pair(temp_dir, name)
-        addr = cluster_obj.get_payment_addr(
-            payment_vkey_file=key_pair.vkey_file, stake_vkey_file=stake_vkey_file
+    addrs = [
+        cluster_obj.gen_payment_addr_and_keys(
+            destination_dir=temp_dir, name=name, stake_vkey_file=stake_vkey_file
         )
-        addrs.append(
-            AddressRecord(address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file)
-        )
+        for name in names
+    ]
 
     LOGGER.debug(f"Created {len(addrs)} payment address(es)")
     return addrs
@@ -139,19 +135,16 @@ def create_stake_addrs(
     cluster_obj: ClusterLib, temp_dir: FileType, *names: UnpackableSequence
 ) -> List[AddressRecord]:
     """Create new stake address(es)."""
-    addrs = []
-    for name in names:
-        key_pair = cluster_obj.gen_stake_key_pair(temp_dir, name)
-        addr = cluster_obj.get_stake_addr(stake_vkey_file=key_pair.vkey_file)
-        addrs.append(
-            AddressRecord(address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file)
-        )
+    addrs = [
+        cluster_obj.gen_stake_addr_and_keys(destination_dir=temp_dir, name=name) for name in names
+    ]
 
     LOGGER.debug(f"Created {len(addrs)} stake address(es)")
     return addrs
 
 
-def load_pools_data():
+def load_devops_pools_data():
+    """Load data for pools existing in the devops environment."""
     data_dir = get_cluster_env()["state_dir"] / "nodes"
     pools = ("node-pool1", "node-pool2")
 
@@ -183,6 +176,7 @@ def load_pools_data():
 
 
 def get_cluster_env() -> dict:
+    """Get cardano cluster environment."""
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
     state_dir = socket_path.parent
     work_dir = state_dir.parent
@@ -198,11 +192,12 @@ def get_cluster_env() -> dict:
 
 
 def wait_for_stake_distribution(cluster_obj: ClusterLib):
+    """Wait to 3rd epoch (if necessary) and return stake distribution info."""
     last_block_epoch = cluster_obj.get_last_block_epoch()
     if last_block_epoch < 3:
-        epochs_to_wait = 3 - last_block_epoch
-        LOGGER.info(f"Waiting {epochs_to_wait} epoch(s) to get stake distribution.")
-        cluster_obj.wait_for_new_epoch(epochs_to_wait=epochs_to_wait)
+        new_epochs = 3 - last_block_epoch
+        LOGGER.info(f"Waiting {new_epochs} epoch(s) to get stake distribution.")
+        cluster_obj.wait_for_new_epoch(new_epochs=new_epochs)
     return cluster_obj.get_stake_distribution()
 
 
@@ -221,10 +216,10 @@ def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict
         stake_key_pair = cluster_obj.gen_stake_key_pair(
             destination_dir=destination_dir, key_name=addr_name
         )
-        payment_addr = cluster_obj.get_payment_addr(
+        payment_addr = cluster_obj.gen_payment_addr(
             payment_vkey_file=payment_key_pair.vkey_file, stake_vkey_file=stake_key_pair.vkey_file,
         )
-        stake_addr = cluster_obj.get_stake_addr(stake_vkey_file=stake_key_pair.vkey_file)
+        stake_addr = cluster_obj.gen_stake_addr(stake_vkey_file=stake_key_pair.vkey_file)
         stake_addr_registration_cert = cluster_obj.gen_stake_addr_registration_cert(
             destination_dir=destination_dir,
             addr_name=addr_name,
@@ -244,25 +239,23 @@ def setup_test_addrs(cluster_obj: ClusterLib, destination_dir: FileType) -> dict
         cluster_obj, *[d["payment_addr"] for d in addrs_data.values()], amount=20_000_000_000
     )
 
-    pools_data = load_pools_data()
+    pools_data = load_devops_pools_data()
     return {**addrs_data, **pools_data}
 
 
-def setup_cluster() -> ClusterLib:
-    """Prepare env and start cluster."""
+def start_cluster() -> ClusterLib:
+    """Start cluster."""
     cluster_env = get_cluster_env()
 
     LOGGER.info("Starting cluster.")
     run_shell_command("start-cluster", workdir=cluster_env["work_dir"])
     LOGGER.info("Cluster started.")
 
-    cluster_obj = ClusterLib(cluster_env["state_dir"])
-    cluster_obj.refresh_pparams()
-
-    return cluster_obj
+    return ClusterLib(cluster_env["state_dir"])
 
 
 def stop_cluster():
+    """Stop cluster."""
     LOGGER.info("Stopping cluster.")
     cluster_env = get_cluster_env()
     try:
@@ -271,14 +264,16 @@ def stop_cluster():
         LOGGER.debug(f"Failed to stop cluster: {exc}")
 
 
-def start_stop_cluster(request: FixtureRequest):
+def start_stop_cluster(request: FixtureRequest) -> ClusterLib:
+    """Stop cluster if needed, start fresh cluster, stop cluster at scope end."""
     stop_cluster()
     request.addfinalizer(stop_cluster)
-    cluster_obj = setup_cluster()
+    cluster_obj = start_cluster()
     return cluster_obj
 
 
 def check_pool_data(pool_ledger_state: dict, pool_creation_data: PoolData) -> str:  # noqa: C901
+    """Check that actual pool state corresponds with pool creation data."""
     errors_list = []
 
     if pool_ledger_state["cost"] != pool_creation_data.pool_cost:

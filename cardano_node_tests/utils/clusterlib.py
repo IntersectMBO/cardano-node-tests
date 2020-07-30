@@ -34,8 +34,14 @@ class ColdKeyPair(NamedTuple):
     counter_file: Path
 
 
+class AddressRecord(NamedTuple):
+    address: str
+    vkey_file: Path
+    skey_file: Path
+
+
 class StakeAddrInfo(NamedTuple):
-    address_hash: str
+    addr_hash: str
     delegation: Optional[str]
     reward_account_balance: Optional[int]
 
@@ -131,12 +137,10 @@ class ClusterLib:
         self.slots_per_kes_period = self.genesis["slotsPerKESPeriod"]
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
 
-        self.genesis_utxo_addr = self.get_genesis_addr(vkey_file=self.genesis_utxo_vkey)
-
-        self.pparams: dict = {}
-        self.refresh_pparams()
+        self.genesis_utxo_addr = self.gen_genesis_addr(vkey_file=self.genesis_utxo_vkey)
 
     def _check_state_dir(self):
+        """Check that all files expected by `__init__` are present."""
         if not self.state_dir.exists():
             raise CLIError(f"The state dir `{self.state_dir}` doesn't exist.")
 
@@ -152,6 +156,7 @@ class ClusterLib:
 
     @staticmethod
     def _check_outfiles(*out_files):
+        """Check that the expected output files were created."""
         for out_file in out_files:
             out_file = Path(out_file).expanduser()
             if not out_file.exists():
@@ -159,6 +164,7 @@ class ClusterLib:
 
     @staticmethod
     def cli(cli_args) -> CLIOut:
+        """Run the `cardano-cli` command."""
         cmd = ["cardano-cli", "shelley", *cli_args]
         cmd_str = " ".join(cmd)
 
@@ -175,39 +181,38 @@ class ClusterLib:
 
     @staticmethod
     def _prepend_flag(flag: str, contents: UnpackableSequence) -> list:
+        """Prepend flag to every item of the sequence.
+
+        >>> ClusterLib._prepend_flag("--foo", [1, 2, 3])
+        ['--foo', '1', '--foo', '2', '--foo', '3']
+        """
         return sum(([flag, str(x)] for x in contents), [])
 
     def query_cli(self, cli_args: UnpackableSequence) -> str:
+        """Run the `cardano-cli query` command."""
         stdout = self.cli(
             ["query", *cli_args, "--testnet-magic", str(self.network_magic), "--shelley-mode"]
         ).stdout
         stdout_dec = stdout.decode("utf-8") if stdout else ""
         return stdout_dec
 
-    def refresh_pparams(self):
+    def refresh_pparams_file(self):
+        """Refresh protocol parameters file."""
         self.query_cli(["protocol-parameters", "--out-file", str(self.pparams_file)])
-        with open(self.pparams_file) as in_json:
-            self.pparams = json.load(in_json)
 
-    def get_payment_addr(
-        self,
-        payment_vkey_file: FileType,
-        *args: UnpackableSequence,
-        stake_vkey_file: Optional[FileType] = None,
-    ) -> str:
-        cli_args = ["--payment-verification-key-file", str(payment_vkey_file)]
-        if stake_vkey_file:
-            cli_args.extend(["--stake-verification-key-file", str(stake_vkey_file)])
-
-        return (
-            self.cli(
-                ["address", "build", "--testnet-magic", str(self.network_magic), *cli_args, *args]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
+    def get_utxo(self, address: str) -> dict:
+        """Return UTXO info for payment address."""
+        utxo = json.loads(
+            self.query_cli(["utxo", "--address", address, "--out-file", "/dev/stdout"])
         )
+        return utxo
 
-    def get_genesis_addr(self, vkey_file: FileType, *args: UnpackableSequence) -> str:
+    def get_tip(self) -> dict:
+        """Return current tip - last block successfully applied to the ledger."""
+        return json.loads(self.query_cli(["tip"]))
+
+    def gen_genesis_addr(self, vkey_file: FileType, *args: UnpackableSequence) -> str:
+        """Generate genesis address."""
         return (
             self.cli(
                 [
@@ -224,16 +229,45 @@ class ClusterLib:
             .decode("ascii")
         )
 
-    def get_utxo(self, address: str) -> dict:
-        utxo = json.loads(
-            self.query_cli(["utxo", "--address", address, "--out-file", "/dev/stdout"])
-        )
-        return utxo
+    def gen_payment_addr(
+        self,
+        payment_vkey_file: FileType,
+        *args: UnpackableSequence,
+        stake_vkey_file: Optional[FileType] = None,
+    ) -> str:
+        """Generate payment address."""
+        cli_args = ["--payment-verification-key-file", str(payment_vkey_file)]
+        if stake_vkey_file:
+            cli_args.extend(["--stake-verification-key-file", str(stake_vkey_file)])
 
-    def get_tip(self) -> dict:
-        return json.loads(self.query_cli(["tip"]))
+        return (
+            self.cli(
+                ["address", "build", "--testnet-magic", str(self.network_magic), *cli_args, *args]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
+    def gen_stake_addr(self, stake_vkey_file: FileType, *args: UnpackableSequence) -> str:
+        """Generate stake address."""
+        return (
+            self.cli(
+                [
+                    "stake-address",
+                    "build",
+                    "--stake-verification-key-file",
+                    str(stake_vkey_file),
+                    "--testnet-magic",
+                    str(self.network_magic),
+                    *args,
+                ]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
 
     def gen_payment_key_pair(self, destination_dir: FileType, key_name: str) -> KeyPair:
+        """Generate payment key pair."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{key_name}.vkey"
         skey = destination_dir / f"{key_name}.skey"
@@ -252,6 +286,7 @@ class ClusterLib:
         return KeyPair(vkey, skey)
 
     def gen_stake_key_pair(self, destination_dir: FileType, key_name: str) -> KeyPair:
+        """Generate stake key pair."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{key_name}_stake.vkey"
         skey = destination_dir / f"{key_name}_stake.skey"
@@ -269,7 +304,28 @@ class ClusterLib:
         self._check_outfiles(vkey, skey)
         return KeyPair(vkey, skey)
 
+    def gen_payment_addr_and_keys(
+        self, destination_dir: FileType, name: str, stake_vkey_file: Optional[FileType] = None
+    ) -> AddressRecord:
+        """Generate payment address and key pair."""
+        key_pair = self.gen_payment_key_pair(destination_dir=destination_dir, key_name=name)
+        addr = self.gen_payment_addr(
+            payment_vkey_file=key_pair.vkey_file, stake_vkey_file=stake_vkey_file
+        )
+        return AddressRecord(
+            address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
+        )
+
+    def gen_stake_addr_and_keys(self, destination_dir: FileType, name: str) -> AddressRecord:
+        """Generate stake address and key pair."""
+        key_pair = self.gen_stake_key_pair(destination_dir=destination_dir, key_name=name)
+        addr = self.gen_stake_addr(stake_vkey_file=key_pair.vkey_file)
+        return AddressRecord(
+            address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
+        )
+
     def gen_kes_key_pair(self, destination_dir: FileType, node_name: str) -> KeyPair:
+        """Generate KES key pair."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{node_name}_kes.vkey"
         skey = destination_dir / f"{node_name}_kes.skey"
@@ -288,6 +344,7 @@ class ClusterLib:
         return KeyPair(vkey, skey)
 
     def gen_vrf_key_pair(self, destination_dir: FileType, node_name: str) -> KeyPair:
+        """Generate VRF key pair."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{node_name}_vrf.vkey"
         skey = destination_dir / f"{node_name}_vrf.skey"
@@ -308,6 +365,7 @@ class ClusterLib:
     def gen_cold_key_pair_and_counter(
         self, destination_dir: FileType, node_name: str
     ) -> ColdKeyPair:
+        """Generate cold key pair and counter."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{node_name}_cold.vkey"
         skey = destination_dir / f"{node_name}_cold.skey"
@@ -336,7 +394,10 @@ class ClusterLib:
         node_cold_skey_file: FileType,
         node_cold_counter_file: FileType,
     ) -> Path:
-        # this certificate is used when starting the node and not submitted through a tx
+        """Generate node operational certificate.
+
+        This certificate is used when starting the node and not submitted through a transaction.
+        """
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{node_name}.opcert"
         current_kes_period = self.get_current_kes_period()
@@ -363,6 +424,7 @@ class ClusterLib:
     def gen_stake_addr_registration_cert(
         self, destination_dir: FileType, addr_name: str, stake_vkey_file: FileType
     ) -> Path:
+        """Generate stake address registration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake.reg.cert"
         self.cli(
@@ -386,6 +448,7 @@ class ClusterLib:
         stake_vkey_file: FileType,
         node_cold_vkey_file: FileType,
     ) -> Path:
+        """Generate stake address delegation certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake.deleg.cert"
         self.cli(
@@ -405,6 +468,7 @@ class ClusterLib:
         return out_file
 
     def gen_pool_metadata_hash(self, pool_metadata_file: FileType) -> str:
+        """Generate hash of pool metadata."""
         return (
             self.cli(
                 ["stake-pool", "metadata-hash", "--pool-metadata-file", str(pool_metadata_file)]
@@ -421,6 +485,7 @@ class ClusterLib:
         node_cold_vkey_file: FileType,
         owner_stake_vkey_files: List[FileType],
     ) -> Path:
+        """Generate pool registration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{pool_data.pool_name}_pool_reg.cert"
 
@@ -473,6 +538,7 @@ class ClusterLib:
     def gen_pool_deregistration_cert(
         self, destination_dir: FileType, pool_name: str, cold_vkey_file: FileType, epoch: int,
     ) -> Path:
+        """Generate pool de-registration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{pool_name}_pool_dereg.cert"
         self.cli(
@@ -492,15 +558,18 @@ class ClusterLib:
         return out_file
 
     def get_ledger_state(self) -> dict:
+        """Return ledger state info."""
         return json.loads(self.query_cli(["ledger-state"]))
 
     def get_registered_stake_pools_ledger_state(self) -> dict:
+        """Return ledger state info for registered stake pools."""
         registered_pools_details = self.get_ledger_state()["esLState"]["_delegationState"][
             "_pstate"
         ]["_pParams"]
         return registered_pools_details
 
     def get_stake_pool_id(self, pool_cold_vkey_file: FileType) -> str:
+        """Return ID of stake pool."""
         pool_id = (
             self.cli(["stake-pool", "id", "--verification-key-file", str(pool_cold_vkey_file)])
             .stdout.strip()
@@ -508,24 +577,8 @@ class ClusterLib:
         )
         return pool_id
 
-    def get_stake_addr(self, stake_vkey_file: FileType, *args: UnpackableSequence) -> str:
-        return (
-            self.cli(
-                [
-                    "stake-address",
-                    "build",
-                    "--stake-verification-key-file",
-                    str(stake_vkey_file),
-                    "--testnet-magic",
-                    str(self.network_magic),
-                    *args,
-                ]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
-        )
-
     def delegate_stake_addr(self, stake_addr_skey: FileType, pool_id: str, delegation_fee: int):
+        """Delegate stake address to stake pool."""
         cli_args = [
             "stake-address",
             "delegate",
@@ -545,28 +598,34 @@ class ClusterLib:
             )
 
     def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
+        """Return info about stake pool address."""
         output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
-        address_hash = list(output_json)[0]
-        address_rec = output_json[address_hash]
+        addr_hash = list(output_json)[0]
+        address_rec = output_json[addr_hash]
         delegation = address_rec.get("delegation")
         reward_account_balance = address_rec.get("rewardAccountBalance")
         return StakeAddrInfo(
-            address_hash=address_hash,
+            addr_hash=addr_hash,
             delegation=delegation,
             reward_account_balance=reward_account_balance,
         )
 
     def get_protocol_params(self) -> dict:
-        self.refresh_pparams()
-        return self.pparams
+        """Return up-to-date protocol parameters."""
+        self.refresh_pparams_file()
+        with open(self.pparams_file) as in_json:
+            return json.load(in_json)
 
     def get_key_deposit(self) -> int:
-        return self.get_protocol_params()["keyDeposit"]
+        """Return key deposit amount."""
+        return int(self.get_protocol_params()["keyDeposit"])
 
     def get_pool_deposit(self) -> int:
-        return self.get_protocol_params()["poolDeposit"]
+        """Return pool deposit amount."""
+        return int(self.get_protocol_params()["poolDeposit"])
 
     def get_stake_distribution(self) -> dict:
+        """Return info about stake distribution per stake pool."""
         # stake pool values are displayed starting with line 2 from the command output
         result = self.query_cli(["stake-distribution"]).splitlines()[2:]
         stake_distribution = {}
@@ -575,16 +634,20 @@ class ClusterLib:
             stake_distribution[pool_id] = stake
         return stake_distribution
 
-    def get_current_slot_no(self) -> int:
+    def get_last_block_slot_no(self) -> int:
+        """Return slot number of last block that was successfully applied to the ledger."""
         return int(self.get_tip()["slotNo"])
 
     def get_last_block_block_no(self) -> int:
+        """Return block number of last block that was successfully applied to the ledger."""
         return int(self.get_tip()["blockNo"])
 
     def get_last_block_epoch(self) -> int:
-        return int(self.get_current_slot_no() / self.epoch_length)
+        """Return epoch of last block that was successfully applied to the ledger."""
+        return int(self.get_last_block_slot_no() / self.epoch_length)
 
     def get_address_balance(self, address: str) -> int:
+        """Return total balance of an address (sum of all UTXO balances)."""
         available_utxos = self.get_utxo(address) or {}
         address_balance = functools.reduce(
             lambda x, y: x + y["amount"], available_utxos.values(), 0
@@ -592,6 +655,7 @@ class ClusterLib:
         return int(address_balance)
 
     def get_utxo_with_highest_amount(self, address: str) -> UTXORec:
+        """Return data for UTXO with highest amount."""
         utxo = self.get_utxo(address=address)
         highest_amount_rec = max(utxo.items(), key=lambda x: x[1].get("amount", 0))
         utxo_hash, utxo_ix = highest_amount_rec[0].split("#")
@@ -603,12 +667,15 @@ class ClusterLib:
         )
 
     def calculate_tx_ttl(self) -> int:
-        return self.get_current_slot_no() + 1000
+        """Calculate ttl for a transaction."""
+        return self.get_last_block_slot_no() + 1000
 
     def get_current_kes_period(self) -> int:
+        """Return current KES period."""
         return int(self.get_last_block_block_no() / self.slots_per_kes_period)
 
     def get_tx_deposit(self, tx_files: TxFiles) -> int:
+        """Return deposit amount for a transaction (based on certificates used for the TX)."""
         if not tx_files.certificate_files:
             return 0
 
@@ -637,6 +704,7 @@ class ClusterLib:
         fee: int = 0,
         deposit: Optional[int] = None,
     ) -> Tuple[list, list]:
+        """Return list of transaction's inputs and outputs."""
         txins_copy = list(txins) if txins else []
         txouts_copy = list(txouts) if txouts else []
         max_address = None
@@ -648,6 +716,7 @@ class ClusterLib:
                 txin = TxIn(txin[0], txin[1], v["amount"])
                 txins_copy.append(txin)
 
+        # the value "-1" means all available funds
         max_index = [idx for idx, val in enumerate(txouts_copy) if val[1] == -1]
         if len(max_index) > 1:
             raise CLIError("Cannot send all remaining funds to more than one address.")
@@ -684,6 +753,7 @@ class ClusterLib:
         fee: int,
         ttl: int,
     ) -> TxRawData:
+        """Build raw transaction."""
         out_file = Path(out_file)
         txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
         txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts]
@@ -721,6 +791,7 @@ class ClusterLib:
         ttl: Optional[int] = None,
         deposit: Optional[int] = None,
     ) -> TxRawData:
+        """Figure out all the missing data and build raw transaction."""
         out_file = Path(out_file)
         tx_files = tx_files or TxFiles()
         ttl = ttl or self.calculate_tx_ttl()
@@ -753,7 +824,8 @@ class ClusterLib:
         witness_count: int = 1,
         byron_witness_count: int = 0,
     ) -> int:
-        self.refresh_pparams()
+        """Estimate fee of a transaction."""
+        self.refresh_pparams_file()
         stdout = self.cli(
             [
                 "transaction",
@@ -786,6 +858,7 @@ class ClusterLib:
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
     ) -> int:
+        """Build "dummy" transaction and calculate it's fee."""
         tx_files = tx_files or TxFiles()
         out_file = Path("tx.body_estimate")
 
@@ -822,6 +895,7 @@ class ClusterLib:
         out_file: FileType = "tx.signed",
         signing_key_files: OptionalFiles = (),
     ):
+        """Sign transaction."""
         key_args = self._prepend_flag("--signing-key-file", signing_key_files)
         self.cli(
             [
@@ -840,6 +914,7 @@ class ClusterLib:
         self._check_outfiles(out_file)
 
     def submit_tx(self, tx_file: FileType = "tx.signed"):
+        """Submit transaction."""
         self.cli(
             [
                 "transaction",
@@ -862,7 +937,7 @@ class ClusterLib:
         ttl: Optional[int] = None,
         deposit: Optional[int] = None,
     ) -> TxRawData:
-        """Build, Sign and Send TX to chain."""
+        """Build, Sign and Send transaction to chain."""
         tx_files = tx_files or TxFiles()
 
         if fee is None:
@@ -890,6 +965,7 @@ class ClusterLib:
         return tx_raw_data
 
     def submit_update_proposal(self, cli_args: UnpackableSequence, epoch: int) -> TxRawData:
+        """Submit update proposal."""
         out_file = Path("update.proposal")
         self.cli(
             [
@@ -924,6 +1000,7 @@ class ClusterLib:
         ttl: Optional[int] = None,
         deposit: Optional[int] = None,
     ) -> TxRawData:
+        """Send funds - convenience function for `send_tx`."""
         return self.send_tx(
             src_address=src_address,
             txouts=destinations,
@@ -933,51 +1010,53 @@ class ClusterLib:
             deposit=deposit,
         )
 
-    def wait_for_new_tip(self, slots_to_wait: int = 1):
-        LOGGER.debug(f"Waiting for {slots_to_wait} new block(s) to be created.")
-        timeout_no_of_slots = 200 * slots_to_wait
-        current_slot_no = self.get_current_slot_no()
-        initial_slot_no = current_slot_no
-        expected_slot_no = initial_slot_no + slots_to_wait
+    def wait_for_new_tip(self, new_blocks: int = 1):
+        """Wait for new block(s) to be created."""
+        LOGGER.debug(f"Waiting for {new_blocks} new block(s) to be created.")
+        timeout_no_of_slots = 200 * new_blocks
+        last_block_slot_no = self.get_last_block_slot_no()
+        initial_slot_no = last_block_slot_no
+        expected_slot_no = initial_slot_no + new_blocks
 
         LOGGER.debug(f"Initial tip: {initial_slot_no}")
         for __ in range(timeout_no_of_slots):
             time.sleep(self.slot_length)
-            current_slot_no = self.get_current_slot_no()
-            if current_slot_no >= expected_slot_no:
+            last_block_slot_no = self.get_last_block_slot_no()
+            if last_block_slot_no >= expected_slot_no:
                 break
         else:
             raise CLIError(
-                f"Timeout waiting for {timeout_no_of_slots} sec for {slots_to_wait} slot(s)."
+                f"Timeout waiting for {timeout_no_of_slots} sec for {new_blocks} slot(s)."
             )
 
-        LOGGER.debug(f"New block was created; slot number: {current_slot_no}")
+        LOGGER.debug(f"New block was created; slot number: {last_block_slot_no}")
 
-    def wait_for_new_epoch(self, epochs_to_wait: int = 1):
-        current_slot_no = self.get_current_slot_no()
-        current_epoch_no = self.get_last_block_epoch()
+    def wait_for_new_epoch(self, new_epochs: int = 1):
+        """Wait for new epoch(s)."""
+        last_block_slot_no = self.get_last_block_slot_no()
+        last_block_epoch = self.get_last_block_epoch()
         LOGGER.debug(
-            f"Current epoch: {current_epoch_no}; Waiting the beginning of epoch: "
-            "{current_epoch_no + epochs_to_wait}"
+            f"Current epoch: {last_block_epoch}; Waiting the beginning of epoch: "
+            "{last_block_epoch + new_epochs}"
         )
 
-        timeout_no_of_epochs = epochs_to_wait + 1
-        expected_epoch_no = current_epoch_no + epochs_to_wait
+        timeout_no_of_epochs = new_epochs + 1
+        expected_epoch_no = last_block_epoch + new_epochs
 
         for __ in range(timeout_no_of_epochs):
-            sleep_slots = (current_epoch_no + 1) * self.epoch_length - current_slot_no
+            sleep_slots = (last_block_epoch + 1) * self.epoch_length - last_block_slot_no
             sleep_time = int(sleep_slots * self.slot_length) + 1
             time.sleep(sleep_time)
-            current_slot_no = self.get_current_slot_no()
-            current_epoch_no = self.get_last_block_epoch()
-            if current_epoch_no >= expected_epoch_no:
+            last_block_slot_no = self.get_last_block_slot_no()
+            last_block_epoch = self.get_last_block_epoch()
+            if last_block_epoch >= expected_epoch_no:
                 break
         else:
             raise CLIError(
-                f"Waited for {epochs_to_wait + 1} epochs and expected epoch no is not present"
+                f"Waited for {timeout_no_of_epochs} epochs and expected epoch is not present"
             )
 
-        LOGGER.debug(f"Expected epoch started; epoch number: {current_epoch_no}")
+        LOGGER.debug(f"Expected epoch started; epoch number: {last_block_epoch}")
 
     def register_stake_pool(
         self,
@@ -988,6 +1067,7 @@ class ClusterLib:
         node_cold_key_pair: ColdKeyPair,
         deposit: Optional[int] = None,
     ) -> Tuple[Path, TxRawData]:
+        """Register stake pool."""
         pool_reg_cert_file = self.gen_pool_registration_cert(
             destination_dir=destination_dir,
             pool_data=pool_data,
@@ -1007,7 +1087,7 @@ class ClusterLib:
         )
 
         tx_raw_data = self.send_tx(src_address=pool_owner.addr, tx_files=tx_files, deposit=deposit)
-        self.wait_for_new_tip(slots_to_wait=2)
+        self.wait_for_new_tip(new_blocks=2)
 
         return pool_reg_cert_file, tx_raw_data
 
@@ -1019,6 +1099,7 @@ class ClusterLib:
         epoch: int,
         pool_name: str,
     ) -> Tuple[Path, TxRawData]:
+        """De-register stake pool."""
         LOGGER.debug(
             f"Deregistering stake pool starting with epoch: {epoch}; "
             f"Current epoch is: {self.get_last_block_epoch()}"
@@ -1041,13 +1122,14 @@ class ClusterLib:
         )
 
         tx_raw_data = self.send_tx(src_address=pool_owner.addr, tx_files=tx_files)
-        self.wait_for_new_tip(slots_to_wait=2)
+        self.wait_for_new_tip(new_blocks=2)
 
         return pool_dereg_cert_file, tx_raw_data
 
     def create_stake_pool(
         self, destination_dir: FileType, pool_data: PoolData, pool_owner: PoolOwner,
     ) -> PoolCreationArtifacts:
+        """Create and register stake pool."""
         # create the KES key pair
         node_kes = self.gen_kes_key_pair(
             destination_dir=destination_dir, node_name=pool_data.pool_name

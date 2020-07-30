@@ -18,11 +18,6 @@ def temp_dir(tmp_path_factory):
     return tmp_path_factory.mktemp("test_transactions")
 
 
-@pytest.mark.clean_cluster
-def test_dummy_clean():
-    pass
-
-
 class TestBasic:
     @pytest.fixture(scope="class")
     def payment_addrs(self, cluster_session, addrs_data_session, temp_dir, request):
@@ -35,7 +30,7 @@ class TestBasic:
         return addrs
 
     def test_transfer_funds(self, cluster_session, addrs_data_session, payment_addrs):
-        """Send (tx_fee + 2000) Lovelace from user1 (the faucet) to addr0."""
+        """Send funds from faucet to payment address."""
         cluster = cluster_session
         amount = 2000
 
@@ -51,7 +46,7 @@ class TestBasic:
         )
 
         tx_raw_data = cluster.send_funds(src_address, destinations, tx_files=tx_files)
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -63,7 +58,7 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     def test_transfer_all_funds(self, cluster_session, payment_addrs):
-        """Send ALL funds from addr0 to addr1."""
+        """Send ALL funds from one payment address to another."""
         cluster = cluster_session
 
         src_address = payment_addrs[0].address
@@ -77,7 +72,7 @@ class TestBasic:
         tx_files = TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         tx_raw_data = cluster.send_funds(src_address, destinations, tx_files=tx_files)
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address) == 0
@@ -103,7 +98,7 @@ class Test10InOut:
         return addrs
 
     def test_10_transactions(self, cluster_session, addrs_data_session, payment_addrs):
-        """Send 10 transactions of (tx_fee / 10 + 1000) Lovelace from user1 (the faucet) to addr0.
+        """Send 10 transactions from faucet to payment address.
 
         Test 10 different UTXOs in addr0.
         """
@@ -129,7 +124,7 @@ class Test10InOut:
 
         for __ in range(no_of_transactions):
             cluster.send_funds(src_address, destinations, tx_files=tx_files, fee=fee, ttl=ttl)
-            cluster.wait_for_new_tip(slots_to_wait=2)
+            cluster.wait_for_new_tip(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -142,7 +137,7 @@ class Test10InOut:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     def test_transaction_to_10_addrs(self, cluster_session, payment_addrs):
-        """Send 1 transaction from addr0 to addr1..addr10"."""
+        """Send 1 transaction from one payment address to 10 payment addresses."""
         cluster = cluster_session
         src_address = payment_addrs[0].address
         # addr1..addr10
@@ -161,7 +156,7 @@ class Test10InOut:
         destinations = [TxOut(address=addr, amount=amount) for addr in dst_addresses]
 
         cluster.send_funds(src_address, destinations, tx_files=tx_files, fee=fee, ttl=ttl)
-        cluster.wait_for_new_tip(slots_to_wait=2)
+        cluster.wait_for_new_tip(new_blocks=2)
 
         assert cluster.get_address_balance(src_address) == src_init_balance - fee - amount * len(
             dst_addresses
@@ -307,7 +302,7 @@ def test_past_ttl(cluster_session, addrs_data_session, temp_dir):
         signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
     )
     destinations = [TxOut(address=payment_addr.address, amount=1)]
-    ttl = cluster.get_current_slot_no() - 1
+    ttl = cluster.get_last_block_slot_no() - 1
     fee = cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files, ttl=ttl)
 
     # it should be possible to build and sign a transaction with ttl in the past
