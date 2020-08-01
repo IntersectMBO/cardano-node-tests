@@ -1,9 +1,24 @@
 import logging
+import os
 import time
 
 import pytest
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="module")
+def temp_dir(tmp_path_factory):
+    curdir = os.getcwd()
+    tmp_path = tmp_path_factory.mktemp("test_update_proposal")
+    try:
+        os.chdir(tmp_path)
+        yield tmp_path
+    finally:
+        os.chdir(curdir)
+
+
+pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 @pytest.mark.clean_cluster
@@ -16,7 +31,7 @@ def test_update_proposal(cluster):
     time.sleep(sleep_time)
 
     cluster.submit_update_proposal(
-        ["--decentralization-parameter", str(param_value)], epoch=1,
+        cli_args=["--decentralization-parameter", str(param_value)], epoch=1,
     )
 
     LOGGER.info(
