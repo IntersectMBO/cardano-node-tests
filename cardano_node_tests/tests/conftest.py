@@ -16,7 +16,7 @@ def pytest_configure(config):
 @pytest.fixture(scope="session")
 def change_dir(tmp_path_factory):
     """Change CWD to temp directory before running tests."""
-    tmp_path = tmp_path_factory.mktemp("artifacts")
+    tmp_path = tmp_path_factory.getbasetemp()
     os.chdir(tmp_path)
     LOGGER.info(f"Changed CWD to '{tmp_path}'.")
 

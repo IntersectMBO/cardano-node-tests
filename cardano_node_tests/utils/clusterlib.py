@@ -14,9 +14,9 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-from .types import FileType
-from .types import OptionalFiles
-from .types import UnpackableSequence
+from cardano_node_tests.utils.types import FileType
+from cardano_node_tests.utils.types import OptionalFiles
+from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
@@ -172,16 +172,14 @@ class ClusterLib:
             if not file_name.exists():
                 raise CLIError(f"The file `{file_name}` doesn't exist.")
 
-    @staticmethod
-    def _check_outfiles(*out_files):
+    def _check_outfiles(self, *out_files):
         """Check that the expected output files were created."""
         for out_file in out_files:
             out_file = Path(out_file).expanduser()
             if not out_file.exists():
                 raise CLIError(f"The expected file `{out_file}` doesn't exist.")
 
-    @staticmethod
-    def cli(cli_args) -> CLIOut:
+    def cli(self, cli_args) -> CLIOut:
         """Run the `cardano-cli` command."""
         cmd = ["cardano-cli", "shelley", *cli_args]
         cmd_str = " ".join(cmd)
@@ -197,11 +195,10 @@ class ClusterLib:
 
         return CLIOut(stdout or b"", stderr or b"")
 
-    @staticmethod
-    def _prepend_flag(flag: str, contents: UnpackableSequence) -> list:
+    def _prepend_flag(self, flag: str, contents: UnpackableSequence) -> list:
         """Prepend flag to every item of the sequence.
 
-        >>> ClusterLib._prepend_flag("--foo", [1, 2, 3])
+        >>> ClusterLib._prepend_flag(None, "--foo", [1, 2, 3])
         ['--foo', '1', '--foo', '2', '--foo', '3']
         """
         return sum(([flag, str(x)] for x in contents), [])
