@@ -1,23 +1,22 @@
 import logging
-import os
 import time
 
 import pytest
+
+from cardano_node_tests.utils.helpers import change_cwd
 
 LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
 def temp_dir(tmp_path_factory):
-    curdir = os.getcwd()
+    """Create a temporary dir and change to it."""
     tmp_path = tmp_path_factory.mktemp("test_update_proposal")
-    try:
-        os.chdir(tmp_path)
+    with change_cwd(tmp_path):
         yield tmp_path
-    finally:
-        os.chdir(curdir)
 
 
+# use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
