@@ -77,6 +77,7 @@ class TestDelegateAddr:
         delegation_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
 
         # delegate the stake address to pool
+        # TODO: remove try..catch once the functionality is implemented
         try:
             cluster.delegate_stake_addr(
                 stake_addr_skey=stake_addr.skey_file,
@@ -85,7 +86,10 @@ class TestDelegateAddr:
             )
         except CLIError as excinfo:
             if "command not implemented yet" in str(excinfo):
-                return
+                pytest.xfail(
+                    "Delegating stake address using `cardano-cli shelley stake-address delegate` "
+                    "not implemented yet."
+                )
         cluster.wait_for_new_tip(new_blocks=2)
 
         # check that the balance for source address was correctly updated
