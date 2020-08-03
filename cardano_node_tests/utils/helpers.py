@@ -3,7 +3,9 @@ import logging
 import os
 import subprocess
 import time
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Generator
 from typing import List
 from typing import Optional
 
@@ -36,6 +38,19 @@ def wait_for(func, delay=5, num_sec=180, message=None):
         time.sleep(delay)
 
     pytest.fail(f"Failed to {message or 'finish'} in time.")
+
+
+@contextmanager
+def change_cwd(path: FileType) -> Generator[FileType, None, None]:
+    """Change and restore CWD - context manager."""
+    orig_cwd = os.getcwd()
+    os.chdir(path)
+    LOGGER.debug(f"Changed CWD to '{path}'.")
+    try:
+        yield path
+    finally:
+        os.chdir(orig_cwd)
+        LOGGER.debug(f"Restored CWD to '{orig_cwd}'.")
 
 
 def read_address_from_file(location: FileType) -> str:

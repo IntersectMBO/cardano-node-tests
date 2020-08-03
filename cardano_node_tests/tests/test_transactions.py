@@ -1,5 +1,4 @@
 import logging
-import os
 
 import pytest
 
@@ -7,6 +6,7 @@ from cardano_node_tests.utils.clusterlib import CLIError
 from cardano_node_tests.utils.clusterlib import TxFiles
 from cardano_node_tests.utils.clusterlib import TxIn
 from cardano_node_tests.utils.clusterlib import TxOut
+from cardano_node_tests.utils.helpers import change_cwd
 from cardano_node_tests.utils.helpers import create_payment_addrs
 from cardano_node_tests.utils.helpers import create_stake_addrs
 from cardano_node_tests.utils.helpers import fund_from_faucet
@@ -16,15 +16,13 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def temp_dir(tmp_path_factory):
-    curdir = os.getcwd()
+    """Create a temporary dir and change to it."""
     tmp_path = tmp_path_factory.mktemp("test_transactions")
-    try:
-        os.chdir(tmp_path)
+    with change_cwd(tmp_path):
         yield tmp_path
-    finally:
-        os.chdir(curdir)
 
 
+# use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
