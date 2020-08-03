@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from cardano_node_tests.utils.helpers import change_cwd
+from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
@@ -12,7 +12,7 @@ LOGGER = logging.getLogger(__name__)
 def temp_dir(tmp_path_factory):
     """Create a temporary dir and change to it."""
     tmp_path = tmp_path_factory.mktemp("test_update_proposal")
-    with change_cwd(tmp_path):
+    with helpers.change_cwd(tmp_path):
         yield tmp_path
 
 
