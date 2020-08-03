@@ -1131,7 +1131,7 @@ class ClusterLib:
     def register_stake_pool(
         self,
         pool_data: PoolData,
-        pool_owner: PoolOwner,
+        pool_owners: List[PoolOwner],
         node_vrf_vkey_file: FileType,
         node_cold_key_pair: ColdKeyPair,
         tx_name: Optional[str] = None,
@@ -1143,7 +1143,7 @@ class ClusterLib:
             pool_data=pool_data,
             node_vrf_vkey_file=node_vrf_vkey_file,
             node_cold_vkey_file=node_cold_key_pair.vkey_file,
-            owner_stake_vkey_files=[pool_owner.stake_key_pair.vkey_file],
+            owner_stake_vkey_files=[p.stake_key_pair.vkey_file for p in pool_owners],
             destination_dir=destination_dir,
         )
 
@@ -1151,14 +1151,14 @@ class ClusterLib:
         tx_files = TxFiles(
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
-                pool_owner.addr_key_pair.skey_file,
-                pool_owner.stake_key_pair.skey_file,
+                *[p.addr_key_pair.skey_file for p in pool_owners],
+                *[p.stake_key_pair.skey_file for p in pool_owners],
                 node_cold_key_pair.skey_file,
             ],
         )
 
         tx_raw_data = self.send_tx(
-            src_address=pool_owner.addr,
+            src_address=pool_owners[0].addr,
             tx_name=tx_name,
             tx_files=tx_files,
             deposit=deposit,
@@ -1170,7 +1170,7 @@ class ClusterLib:
 
     def deregister_stake_pool(
         self,
-        pool_owner: PoolOwner,
+        pool_owners: List[PoolOwner],
         node_cold_key_pair: ColdKeyPair,
         epoch: int,
         pool_name: str,
@@ -1193,14 +1193,14 @@ class ClusterLib:
         tx_files = TxFiles(
             certificate_files=[pool_dereg_cert_file],
             signing_key_files=[
-                pool_owner.addr_key_pair.skey_file,
-                pool_owner.stake_key_pair.skey_file,
+                *[p.addr_key_pair.skey_file for p in pool_owners],
+                *[p.stake_key_pair.skey_file for p in pool_owners],
                 node_cold_key_pair.skey_file,
             ],
         )
 
         tx_raw_data = self.send_tx(
-            src_address=pool_owner.addr,
+            src_address=pool_owners[0].addr,
             tx_name=tx_name,
             tx_files=tx_files,
             destination_dir=destination_dir,
@@ -1210,7 +1210,7 @@ class ClusterLib:
         return pool_dereg_cert_file, tx_raw_data
 
     def create_stake_pool(
-        self, pool_data: PoolData, pool_owner: PoolOwner, destination_dir: FileType = "."
+        self, pool_data: PoolData, pool_owners: List[PoolOwner], destination_dir: FileType = "."
     ) -> PoolCreationArtifacts:
         """Create and register stake pool."""
         # create the KES key pair
@@ -1236,7 +1236,7 @@ class ClusterLib:
 
         pool_reg_cert_file, tx_raw_data = self.register_stake_pool(
             pool_data=pool_data,
-            pool_owner=pool_owner,
+            pool_owners=pool_owners,
             node_vrf_vkey_file=node_vrf.vkey_file,
             node_cold_key_pair=node_cold,
             destination_dir=destination_dir,
