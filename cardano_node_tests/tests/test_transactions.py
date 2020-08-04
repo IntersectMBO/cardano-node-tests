@@ -98,6 +98,22 @@ class TestBasic:
             == dst_init_balance + src_init_balance - tx_raw_data.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+    def test_get_txid(self, cluster_session, addrs_data_session, payment_addrs):
+        """Get txid from transaction body."""
+        cluster = cluster_session
+
+        src_address = addrs_data_session["user1"]["payment_addr"]
+        dst_address = payment_addrs[0].address
+
+        destinations = [clusterlib.TxOut(address=dst_address, amount=2000)]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
+        )
+        tx_raw_data = cluster.build_raw_tx(
+            src_address=src_address, txouts=destinations, tx_files=tx_files, fee=20_000
+        )
+        assert len(cluster.get_txid(tx_raw_data.out_file)) == 64
+
 
 class Test10InOut:
     @pytest.fixture(scope="class")
