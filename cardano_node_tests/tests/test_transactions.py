@@ -1,5 +1,7 @@
 import logging
 
+import hypothesis
+import hypothesis.strategies as st
 import pytest
 
 from cardano_node_tests.utils import clusterlib
@@ -243,27 +245,38 @@ class TestNotBalanced:
             )
         assert "option --tx-out: Failed reading" in str(excinfo.value)
 
-    @pytest.mark.parametrize("amounts", [(1, 0), (-1, 2), (-5, 3)])
+    @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
     def test_wrong_balance(
-        self, cluster_session, addrs_data_session, payment_addr, temp_dir, amounts
+        self,
+        cluster_session,
+        addrs_data_session,
+        payment_addr,
+        temp_dir,
+        transfer_add,
+        change_amount,
     ):
         """Build a transaction with unbalanced change."""
+        # we want to test only unbalanced transactions
+        hypothesis.assume((transfer_add + change_amount) != 0)
+
         cluster = cluster_session
+
         src_address = addrs_data_session["user1"]["payment_addr"]
         dst_address = payment_addr.address
 
-        out_file_tx = temp_dir / "tx.body"
+        src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
+        fee = 200_000
 
+        # add to `transferred_amount` the value from test's parameter to unbalance the transaction
+        transferred_amount = src_addr_highest_utxo.amount - fee + transfer_add
+        # make sure the change amount is valid
+        hypothesis.assume(0 <= transferred_amount <= src_addr_highest_utxo.amount)
+
+        out_file_tx = temp_dir / f"{clusterlib.get_timestamped_rand_str()}_tx.body"
         tx_files = clusterlib.TxFiles(
             signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
         )
         ttl = cluster.calculate_tx_ttl()
-
-        fee = cluster.calculate_tx_fee(
-            src_address, dst_addresses=[dst_address], tx_files=tx_files, ttl=ttl,
-        )
-
-        src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
 
         # use only the UTXO with highest amount
         txins = [
@@ -273,12 +286,10 @@ class TestNotBalanced:
                 amount=src_addr_highest_utxo.amount,
             )
         ]
-        transfered_amount = src_addr_highest_utxo.amount - fee
-        # Add to `transfered_amount` and change amount values from test's parameter.
-        # Since correct change amount is 0, the value from test's parameter is used directly.
-        transfer_add, change_amount = amounts
         txouts = [
-            clusterlib.TxOut(address=dst_address, amount=transfered_amount + transfer_add),
+            clusterlib.TxOut(address=dst_address, amount=transferred_amount),
+            # Add the value from test's parameter to unbalance the transaction. Since the correct
+            # change amount here is 0, the value from test's parameter can be used directly.
             clusterlib.TxOut(address=src_address, amount=change_amount),
         ]
 
