@@ -142,7 +142,6 @@ class ClusterLib:
     # pylint: disable=too-many-public-methods
 
     def __init__(self, state_dir: Union[str, Path], protocol: str = Protocols.SHELLEY.value):
-        self.protocol = protocol
         self.state_dir = Path(state_dir).expanduser().resolve()
         self.genesis_json = self.state_dir / "shelley" / "genesis.json"
         self.genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
@@ -150,7 +149,6 @@ class ClusterLib:
         self.genesis_vkeys = list(self.state_dir.glob("shelley/genesis-keys/genesis?.vkey"))
         self.delegate_skeys = list(self.state_dir.glob("shelley/delegate-keys/delegate?.skey"))
         self.pparams_file = self.state_dir / "pparams.json"
-
         self._check_state_dir()
 
         with open(self.genesis_json) as in_json:
@@ -161,9 +159,12 @@ class ClusterLib:
         self.epoch_length = self.genesis["epochLength"]
         self.slots_per_kes_period = self.genesis["slotsPerKESPeriod"]
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
-        self.ttl_length = 1000
 
+        self.ttl_length = 1000
         self.genesis_utxo_addr = self.gen_genesis_addr(vkey_file=self.genesis_utxo_vkey)
+
+        self.protocol = protocol
+        self._check_protocol()
 
     def _check_state_dir(self):
         """Check that all files expected by `__init__` are present."""
@@ -181,6 +182,18 @@ class ClusterLib:
         ):
             if not file_name.exists():
                 raise CLIError(f"The file `{file_name}` doesn't exist.")
+
+    def _check_protocol(self):
+        """Check that the cluster is running with the expected protocol."""
+        try:
+            self.refresh_pparams_file()
+        except CLIError as excinfo:
+            if "SingleEraInfo" not in str(excinfo):
+                raise
+            raise CLIError(
+                f"The cluster is running with protocol different from '{self.protocol}':\n"
+                f"{excinfo}"
+            )
 
     def _check_outfiles(self, *out_files):
         """Check that the expected output files were created."""

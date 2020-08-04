@@ -315,8 +315,8 @@ def stop_cluster():
     cluster_env = get_cluster_env()
     try:
         run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
-    except Exception as exc:
-        LOGGER.debug(f"Failed to stop cluster: {exc}")
+    except Exception as excinfo:
+        LOGGER.debug(f"Failed to stop cluster: {excinfo}")
 
 
 def start_stop_cluster(request: FixtureRequest) -> clusterlib.ClusterLib:
