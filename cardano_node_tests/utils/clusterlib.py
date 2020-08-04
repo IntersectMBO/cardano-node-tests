@@ -13,7 +13,6 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 from cardano_node_tests.utils.types import FileType
 from cardano_node_tests.utils.types import OptionalFiles
@@ -135,7 +134,7 @@ class ClusterLib:
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, state_dir: Union[str, Path], protocol: str = Protocols.SHELLEY.value):
+    def __init__(self, state_dir: FileType, protocol: str = Protocols.SHELLEY.value):
         self.state_dir = Path(state_dir).expanduser().resolve()
         self.genesis_json = self.state_dir / "shelley" / "genesis.json"
         self.genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
@@ -712,6 +711,14 @@ class ClusterLib:
         """Return last block KES period."""
         return int(self.get_last_block_block_no() / self.slots_per_kes_period)
 
+    def get_txid(self, tx_body_file: FileType) -> str:
+        """Get txid trom transaction body."""
+        return (
+            self.cli(["transaction", "txid", "--tx-body-file", str(tx_body_file)])
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
     def get_tx_deposit(self, tx_files: TxFiles) -> int:
         """Return deposit amount for a transaction (based on certificates used for the TX)."""
         if not tx_files.certificate_files:
@@ -832,9 +839,11 @@ class ClusterLib:
     ) -> TxRawData:
         """Figure out all the missing data and build raw transaction."""
         tx_name = tx_name or get_timestamped_rand_str()
-        out_file = Path(destination_dir) / f"{tx_name}_tx.body"
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{tx_name}_tx.body"
         tx_files = tx_files or TxFiles()
         ttl = ttl or self.calculate_tx_ttl()
+
         txins_copy, txouts_copy = self.get_tx_ins_outs(
             src_address=src_address,
             tx_files=tx_files,
@@ -941,9 +950,9 @@ class ClusterLib:
         destination_dir: FileType = ".",
     ) -> Path:
         """Sign transaction."""
-        tx_body_file = Path(tx_body_file)
         tx_name = tx_name or get_timestamped_rand_str()
-        out_file = Path(destination_dir) / f"{tx_name}_tx.signed"
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{tx_name}_tx.signed"
 
         self.cli(
             [
@@ -1033,7 +1042,8 @@ class ClusterLib:
     ) -> Path:
         """Create update proposal."""
         tx_name = tx_name or get_timestamped_rand_str()
-        out_file = Path(destination_dir) / f"{tx_name}_update.proposal"
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{tx_name}_update.proposal"
 
         self.cli(
             [
