@@ -432,9 +432,7 @@ class TestStakePool:
             pool_cost=15,
             pool_margin=0.2,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(
-                pool_metadata_file=pool_metadata_file
-            ),
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         self._create_register_pool_delegate_stake_tx(
@@ -492,9 +490,7 @@ class TestStakePool:
             pool_cost=123,
             pool_margin=0.512,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(
-                pool_metadata_file=pool_metadata_file
-            ),
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         pool_artifacts, pool_owners = self._create_register_pool_tx_delegate_stake_tx(
@@ -584,16 +580,12 @@ class TestStakePool:
             pool_cost=3,
             pool_margin=0.01,
             pool_metadata_url="https://init_location.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(
-                pool_metadata_file=pool_metadata_file
-            ),
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         pool_data_updated = pool_data._replace(
             pool_metadata_url="https://www.updated_location.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(
-                pool_metadata_file=pool_metadata_updated_file
-            ),
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_updated_file),
         )
 
         pool_artifacts, pool_owners = self._create_register_pool_tx_delegate_stake_tx(
@@ -653,9 +645,7 @@ class TestStakePool:
             pool_cost=3,
             pool_margin=0.01,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(
-                pool_metadata_file=pool_metadata_file
-            ),
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         pool_data_updated = pool_data._replace(pool_pledge=1, pool_cost=1_000_000, pool_margin=0.9)

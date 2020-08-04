@@ -99,7 +99,10 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     def test_get_txid(self, cluster_session, addrs_data_session, payment_addrs):
-        """Get txid from transaction body."""
+        """Get transaction ID (txid) from transaction body.
+
+        Transaction ID is a hash of transaction body and doesn't change for a signed TX.
+        """
         cluster = cluster_session
 
         src_address = addrs_data_session["user1"]["payment_addr"]
@@ -109,10 +112,15 @@ class TestBasic:
         tx_files = clusterlib.TxFiles(
             signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
         )
-        tx_raw_data = cluster.build_raw_tx(
-            src_address=src_address, txouts=destinations, tx_files=tx_files, fee=20_000
+        tx_raw_data = cluster.send_funds(
+            src_address=src_address, destinations=destinations, tx_files=tx_files,
         )
-        assert len(cluster.get_txid(tx_raw_data.out_file)) == 64
+        cluster.wait_for_new_tip(new_blocks=2)
+
+        txid = cluster.get_txid(tx_raw_data.out_file)
+        utxo = cluster.get_utxo(src_address)
+        assert len(txid) == 64
+        assert txid in (u.utxo_hash for u in utxo)
 
 
 class Test10InOut:
@@ -307,7 +315,7 @@ class TestNotBalanced:
 
         # it should NOT be possible to submit an unbalanced transaction
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx(tx_file=out_file_signed)
+            cluster.submit_tx(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
 
@@ -354,7 +362,7 @@ def test_past_ttl(cluster_session, addrs_data_session):
 
     # it should NOT be possible to submit a transaction with ttl in the past
     with pytest.raises(clusterlib.CLIError) as excinfo:
-        cluster.submit_tx(tx_file=out_file_signed)
+        cluster.submit_tx(out_file_signed)
     assert "ExpiredUTxO" in str(excinfo.value)
 
 

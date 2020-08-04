@@ -237,11 +237,23 @@ class ClusterLib:
         """Refresh protocol parameters file."""
         self.query_cli(["protocol-parameters", "--out-file", str(self.pparams_file)])
 
-    def get_utxo(self, address: str) -> dict:
+    def get_utxo(self, address: str) -> List[UTXOData]:
         """Return UTXO info for payment address."""
-        utxo = json.loads(
+        utxo_dict = json.loads(
             self.query_cli(["utxo", "--address", address, "--out-file", "/dev/stdout"])
         )
+
+        utxo = []
+        for utxo_rec, utxo_data in utxo_dict.items():
+            utxo_hash, utxo_ix = utxo_rec.split("#")
+            utxo.append(
+                UTXOData(
+                    utxo_hash=utxo_hash,
+                    utxo_ix=utxo_ix,
+                    amount=utxo_data["amount"],
+                    address=utxo_data["address"],
+                )
+            )
         return utxo
 
     def get_tip(self) -> dict:
@@ -345,7 +357,7 @@ class ClusterLib:
         self, name: str, stake_vkey_file: Optional[FileType] = None, destination_dir: FileType = "."
     ) -> AddressRecord:
         """Generate payment address and key pair."""
-        key_pair = self.gen_payment_key_pair(key_name=name, destination_dir=destination_dir,)
+        key_pair = self.gen_payment_key_pair(key_name=name, destination_dir=destination_dir)
         addr = self.gen_payment_addr(
             payment_vkey_file=key_pair.vkey_file, stake_vkey_file=stake_vkey_file
         )
@@ -685,23 +697,15 @@ class ClusterLib:
 
     def get_address_balance(self, address: str) -> int:
         """Return total balance of an address (sum of all UTXO balances)."""
-        available_utxos = self.get_utxo(address) or {}
-        address_balance = functools.reduce(
-            lambda x, y: x + y["amount"], available_utxos.values(), 0
-        )
+        utxo = self.get_utxo(address)
+        address_balance = functools.reduce(lambda x, y: x + y.amount, utxo, 0)
         return int(address_balance)
 
     def get_utxo_with_highest_amount(self, address: str) -> UTXOData:
         """Return data for UTXO with highest amount."""
-        utxo = self.get_utxo(address=address)
-        highest_amount_rec = max(utxo.items(), key=lambda x: x[1].get("amount", 0))
-        utxo_hash, utxo_ix = highest_amount_rec[0].split("#")
-        return UTXOData(
-            utxo_hash=utxo_hash,
-            utxo_ix=utxo_ix,
-            amount=highest_amount_rec[1]["amount"],
-            address=highest_amount_rec[1]["address"],
-        )
+        utxo = self.get_utxo(address)
+        highest_amount_rec = max(utxo, key=lambda x: x.amount)
+        return highest_amount_rec
 
     def calculate_tx_ttl(self) -> int:
         """Calculate ttl for a transaction."""
@@ -750,16 +754,9 @@ class ClusterLib:
         deposit: Optional[int] = None,
     ) -> Tuple[list, list]:
         """Return list of transaction's inputs and outputs."""
-        txins_copy = list(txins) if txins else []
+        txins_copy = list(txins) if txins else self.get_utxo(src_address)
         txouts_copy = list(txouts) if txouts else []
         max_address = None
-
-        if not txins_copy:
-            utxo = self.get_utxo(address=src_address)
-            for k, v in utxo.items():
-                txin = k.split("#")
-                txin = UTXOData(utxo_hash=txin[0], utxo_ix=txin[1], amount=v["amount"])
-                txins_copy.append(txin)
 
         # the value "-1" means all available funds
         max_index = [idx for idx, val in enumerate(txouts_copy) if val[1] == -1]
@@ -1029,7 +1026,7 @@ class ClusterLib:
             signing_key_files=tx_files.signing_key_files,
             destination_dir=destination_dir,
         )
-        self.submit_tx(tx_file=tx_signed_file)
+        self.submit_tx(tx_signed_file)
 
         return tx_raw_data
 
