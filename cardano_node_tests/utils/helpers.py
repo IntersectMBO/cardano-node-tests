@@ -250,7 +250,7 @@ def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib):
     if last_block_epoch < 3:
         new_epochs = 3 - last_block_epoch
         LOGGER.info(f"Waiting {new_epochs} epoch(s) to get stake distribution.")
-        cluster_obj.wait_for_new_epoch(new_epochs=new_epochs)
+        cluster_obj.wait_for_new_epoch(new_epochs)
     return cluster_obj.get_stake_distribution()
 
 
