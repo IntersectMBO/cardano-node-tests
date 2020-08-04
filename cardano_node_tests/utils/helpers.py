@@ -80,7 +80,7 @@ def fund_from_genesis(
     tx_name = f"{tx_name}_genesis_funding"
     fund_dst = [clusterlib.TxOut(address=d, amount=amount) for d in dst_addrs]
     fund_tx_files = clusterlib.TxFiles(
-        signing_key_files=[cluster_obj.delegate_skey, cluster_obj.genesis_utxo_skey]
+        signing_key_files=[*cluster_obj.delegate_skeys, cluster_obj.genesis_utxo_skey]
     )
     cluster_obj.send_funds(
         src_address=cluster_obj.genesis_utxo_addr,
