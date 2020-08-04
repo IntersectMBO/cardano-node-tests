@@ -50,17 +50,11 @@ class StakeAddrInfo(NamedTuple):
     reward_account_balance: Optional[int]
 
 
-class UTXORec(NamedTuple):
+class UTXOData(NamedTuple):
     utxo_hash: str
     utxo_ix: str
     amount: int
-    address: str
-
-
-class TxIn(NamedTuple):
-    utxo_hash: str
-    utxo_ix: str
-    amount: int
+    address: Optional[str] = None
 
 
 class TxOut(NamedTuple):
@@ -69,7 +63,7 @@ class TxOut(NamedTuple):
 
 
 class TxRawData(NamedTuple):
-    txins: List[TxIn]
+    txins: List[UTXOData]
     txouts: List[TxOut]
     out_file: Path
     fee: int
@@ -698,12 +692,12 @@ class ClusterLib:
         )
         return int(address_balance)
 
-    def get_utxo_with_highest_amount(self, address: str) -> UTXORec:
+    def get_utxo_with_highest_amount(self, address: str) -> UTXOData:
         """Return data for UTXO with highest amount."""
         utxo = self.get_utxo(address=address)
         highest_amount_rec = max(utxo.items(), key=lambda x: x[1].get("amount", 0))
         utxo_hash, utxo_ix = highest_amount_rec[0].split("#")
-        return UTXORec(
+        return UTXOData(
             utxo_hash=utxo_hash,
             utxo_ix=utxo_ix,
             amount=highest_amount_rec[1]["amount"],
@@ -743,7 +737,7 @@ class ClusterLib:
         self,
         src_address: str,
         tx_files: TxFiles,
-        txins: Optional[List[TxIn]] = None,
+        txins: Optional[List[UTXOData]] = None,
         txouts: Optional[List[TxOut]] = None,
         fee: int = 0,
         deposit: Optional[int] = None,
@@ -757,7 +751,7 @@ class ClusterLib:
             utxo = self.get_utxo(address=src_address)
             for k, v in utxo.items():
                 txin = k.split("#")
-                txin = TxIn(txin[0], txin[1], v["amount"])
+                txin = UTXOData(utxo_hash=txin[0], utxo_ix=txin[1], amount=v["amount"])
                 txins_copy.append(txin)
 
         # the value "-1" means all available funds
@@ -779,7 +773,7 @@ class ClusterLib:
                 f"available: {total_input_amount}; needed {funds_needed}"
             )
         if change > 0:
-            txouts_copy.append(TxOut((max_address or src_address), change))
+            txouts_copy.append(TxOut(address=(max_address or src_address), amount=change))
 
         if not txins_copy:
             LOGGER.error("Cannot build transaction, empty `txins`.")
@@ -791,7 +785,7 @@ class ClusterLib:
     def build_raw_tx_bare(
         self,
         out_file: FileType,
-        txins: List[TxIn],
+        txins: List[UTXOData],
         txouts: List[TxOut],
         tx_files: TxFiles,
         fee: int,
@@ -828,7 +822,7 @@ class ClusterLib:
         self,
         src_address: str,
         tx_name: Optional[str] = None,
-        txins: Optional[List[TxIn]] = None,
+        txins: Optional[List[UTXOData]] = None,
         txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
         fee: int = 0,
@@ -900,7 +894,7 @@ class ClusterLib:
         src_address: str,
         tx_name: Optional[str] = None,
         dst_addresses: Optional[List[str]] = None,
-        txins: Optional[List[TxIn]] = None,
+        txins: Optional[List[UTXOData]] = None,
         txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
@@ -986,7 +980,7 @@ class ClusterLib:
         self,
         src_address: str,
         tx_name: Optional[str] = None,
-        txins: Optional[List[TxIn]] = None,
+        txins: Optional[List[UTXOData]] = None,
         txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
         fee: Optional[int] = None,

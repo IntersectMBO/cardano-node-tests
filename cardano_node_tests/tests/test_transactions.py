@@ -220,13 +220,7 @@ class TestNotBalanced:
         src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
 
         # use only the UTXO with highest amount
-        txins = [
-            clusterlib.TxIn(
-                utxo_hash=src_addr_highest_utxo.utxo_hash,
-                utxo_ix=src_addr_highest_utxo.utxo_ix,
-                amount=src_addr_highest_utxo.amount,
-            )
-        ]
+        txins = [src_addr_highest_utxo]
         # try to transfer +1 Lovelace more than available and use a negative change (-1)
         txouts = [
             clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee + 1),
@@ -279,13 +273,7 @@ class TestNotBalanced:
         ttl = cluster.calculate_tx_ttl()
 
         # use only the UTXO with highest amount
-        txins = [
-            clusterlib.TxIn(
-                utxo_hash=src_addr_highest_utxo.utxo_hash,
-                utxo_ix=src_addr_highest_utxo.utxo_ix,
-                amount=src_addr_highest_utxo.amount,
-            )
-        ]
+        txins = [src_addr_highest_utxo]
         txouts = [
             clusterlib.TxOut(address=dst_address, amount=transferred_amount),
             # Add the value from test's parameter to unbalance the transaction. Since the correct
