@@ -1,5 +1,6 @@
 """Wrapper for cardano-cli."""
 import datetime
+import enum
 import functools
 import json
 import logging
@@ -111,6 +112,11 @@ class TxFiles(NamedTuple):
     signing_key_files: OptionalFiles = ()
 
 
+class Protocols(enum.Enum):
+    CARDANO = "cardano"
+    SHELLEY = "shelley"
+
+
 class CLIError(Exception):
     pass
 
@@ -135,13 +141,14 @@ class ClusterLib:
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, state_dir: Union[str, Path]):
+    def __init__(self, state_dir: Union[str, Path], protocol: str = Protocols.SHELLEY.value):
+        self.protocol = protocol
         self.state_dir = Path(state_dir).expanduser().resolve()
         self.genesis_json = self.state_dir / "shelley" / "genesis.json"
         self.genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
         self.genesis_utxo_skey = self.state_dir / "shelley" / "genesis-utxo.skey"
-        self.genesis_vkey = self.state_dir / "shelley" / "genesis-keys" / "genesis1.vkey"
-        self.delegate_skey = self.state_dir / "shelley" / "delegate-keys" / "delegate1.skey"
+        self.genesis_vkeys = list(self.state_dir.glob("shelley/genesis-keys/genesis?.vkey"))
+        self.delegate_skeys = list(self.state_dir.glob("shelley/delegate-keys/delegate?.skey"))
         self.pparams_file = self.state_dir / "pparams.json"
 
         self._check_state_dir()
@@ -154,6 +161,7 @@ class ClusterLib:
         self.epoch_length = self.genesis["epochLength"]
         self.slots_per_kes_period = self.genesis["slotsPerKESPeriod"]
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
+        self.ttl_length = 1000
 
         self.genesis_utxo_addr = self.gen_genesis_addr(vkey_file=self.genesis_utxo_vkey)
 
@@ -161,13 +169,15 @@ class ClusterLib:
         """Check that all files expected by `__init__` are present."""
         if not self.state_dir.exists():
             raise CLIError(f"The state dir `{self.state_dir}` doesn't exist.")
+        if not self.genesis_vkeys:
+            raise CLIError("The genesis verification keys don't exist.")
+        if not self.delegate_skeys:
+            raise CLIError("The delegation signing keys don't exist.")
 
         for file_name in (
             self.genesis_json,
             self.genesis_utxo_vkey,
             self.genesis_utxo_skey,
-            self.genesis_vkey,
-            self.delegate_skey,
         ):
             if not file_name.exists():
                 raise CLIError(f"The file `{file_name}` doesn't exist.")
@@ -206,7 +216,13 @@ class ClusterLib:
     def query_cli(self, cli_args: UnpackableSequence) -> str:
         """Run the `cardano-cli query` command."""
         stdout = self.cli(
-            ["query", *cli_args, "--testnet-magic", str(self.network_magic), "--shelley-mode"]
+            [
+                "query",
+                *cli_args,
+                "--testnet-magic",
+                str(self.network_magic),
+                f"--{self.protocol}-mode",
+            ]
         ).stdout
         stdout_dec = stdout.decode("utf-8") if stdout else ""
         return stdout_dec
@@ -659,7 +675,7 @@ class ClusterLib:
 
     def get_last_block_epoch(self) -> int:
         """Return epoch of last block that was successfully applied to the ledger."""
-        return int(self.get_last_block_slot_no() / self.epoch_length)
+        return int(self.get_last_block_slot_no() // self.epoch_length)
 
     def get_address_balance(self, address: str) -> int:
         """Return total balance of an address (sum of all UTXO balances)."""
@@ -683,7 +699,7 @@ class ClusterLib:
 
     def calculate_tx_ttl(self) -> int:
         """Calculate ttl for a transaction."""
-        return self.get_last_block_slot_no() + 1000
+        return self.get_last_block_slot_no() + self.ttl_length
 
     def get_last_block_kes_period(self) -> int:
         """Return last block KES period."""
@@ -922,7 +938,6 @@ class ClusterLib:
         tx_name = tx_name or get_timestamped_rand_str()
         out_file = Path(destination_dir) / f"{tx_name}_tx.signed"
 
-        key_args = self._prepend_flag("--signing-key-file", signing_key_files)
         self.cli(
             [
                 "transaction",
@@ -933,7 +948,7 @@ class ClusterLib:
                 str(out_file),
                 "--testnet-magic",
                 str(self.network_magic),
-                *key_args,
+                *self._prepend_flag("--signing-key-file", signing_key_files),
             ]
         )
 
@@ -950,7 +965,7 @@ class ClusterLib:
                 str(self.network_magic),
                 "--tx-file",
                 str(tx_file),
-                "--shelley-mode",
+                f"--{self.protocol}-mode",
             ]
         )
 
@@ -1022,8 +1037,7 @@ class ClusterLib:
                 str(out_file),
                 "--epoch",
                 str(epoch),
-                "--genesis-verification-key-file",
-                str(self.genesis_vkey),
+                *self._prepend_flag("--genesis-verification-key-file", self.genesis_vkeys),
             ]
         )
 
@@ -1033,12 +1047,14 @@ class ClusterLib:
     def submit_update_proposal(
         self,
         cli_args: UnpackableSequence,
-        epoch: int,
+        epoch: Optional[int] = None,
         tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> TxRawData:
         """Submit update proposal."""
         tx_name = tx_name or get_timestamped_rand_str()
+        # TODO: assumption is update proposals submitted near beginning of epoch
+        epoch = epoch if epoch is not None else self.get_last_block_epoch()
 
         out_file = self.gen_update_proposal(
             cli_args=cli_args, tx_name=tx_name, epoch=epoch, destination_dir=destination_dir,
@@ -1049,7 +1065,7 @@ class ClusterLib:
             tx_name=tx_name,
             tx_files=TxFiles(
                 proposal_files=[out_file],
-                signing_key_files=[self.delegate_skey, self.genesis_utxo_skey],
+                signing_key_files=[*self.delegate_skeys, self.genesis_utxo_skey],
             ),
             destination_dir=destination_dir,
         )
