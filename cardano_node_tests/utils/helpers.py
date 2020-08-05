@@ -89,7 +89,7 @@ def fund_from_genesis(
         tx_files=fund_tx_files,
         destination_dir=destination_dir,
     )
-    cluster_obj.wait_for_new_tip(new_blocks=2)
+    cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def return_funds_to_faucet(
@@ -124,7 +124,7 @@ def return_funds_to_faucet(
                 pass
     finally:
         logging.disable(logging.NOTSET)
-    cluster_obj.wait_for_new_tip(new_blocks=2)
+    cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def fund_from_faucet(
@@ -162,7 +162,7 @@ def fund_from_faucet(
         tx_files=fund_tx_files,
         destination_dir=destination_dir,
     )
-    cluster_obj.wait_for_new_tip(new_blocks=2)
+    cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def create_payment_addrs(
