@@ -1,5 +1,4 @@
 import logging
-import time
 
 import pytest
 
@@ -24,20 +23,14 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 def test_update_proposal(cluster):
     """Submit update proposal."""
     param_value = 0.5
-    sleep_time = cluster.slot_length * cluster.epoch_length
 
-    LOGGER.info(f"Waiting 1 epoch to submit proposal ({sleep_time} seconds).")
-    time.sleep(sleep_time)
+    LOGGER.info("Waiting for new epoch to submit proposal.")
+    cluster.wait_for_new_epoch()
 
-    cluster.submit_update_proposal(
-        cli_args=["--decentralization-parameter", str(param_value)], epoch=1,
-    )
+    cluster.submit_update_proposal(cli_args=["--decentralization-parameter", str(param_value)])
 
-    LOGGER.info(
-        f"Update Proposal submited (param_value={param_value}). "
-        f"Sleeping until next epoch ({sleep_time} seconds)."
-    )
-    time.sleep(sleep_time + 15)
+    LOGGER.info(f"Update Proposal submited (param_value={param_value}). Sleeping until next epoch.")
+    cluster.wait_for_new_epoch()
 
     d = cluster.get_protocol_params()["decentralisationParam"]
     assert str(d) == str(
