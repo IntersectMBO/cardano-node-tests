@@ -57,7 +57,7 @@ class TestDelegateAddr:
 
         # register stake address
         tx_raw_data = cluster.send_tx(src_address=src_address, tx_files=tx_files)
-        cluster.wait_for_new_tip(new_blocks=2)
+        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -83,7 +83,7 @@ class TestDelegateAddr:
                     "Delegating stake address using `cardano-cli shelley stake-address delegate` "
                     "not implemented yet."
                 )
-        cluster.wait_for_new_tip(new_blocks=2)
+        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -143,7 +143,7 @@ class TestDelegateAddr:
 
         # register stake address and delegate it to pool
         tx_raw_data = cluster.send_tx(src_address=src_address, tx_files=tx_files)
-        cluster.wait_for_new_tip(new_blocks=2)
+        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -290,7 +290,7 @@ class TestStakePool:
 
         # register and delegate stake address, create and register pool
         tx_raw_data = cluster_obj.send_tx(src_address=src_address, tx_files=tx_files)
-        cluster_obj.wait_for_new_tip(new_blocks=2)
+        cluster_obj.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -390,7 +390,7 @@ class TestStakePool:
 
         # register and delegate stake address
         tx_raw_data = cluster_obj.send_tx(src_address=src_address, tx_files=tx_files)
-        cluster_obj.wait_for_new_tip(new_blocks=2)
+        cluster_obj.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -445,7 +445,7 @@ class TestStakePool:
         )
 
     @pytest.mark.parametrize("no_of_addr", [1, 3])
-    def test_stake_pool(self, cluster_session, addrs_data_session, no_of_addr, request):
+    def test_create_stake_pool(self, cluster_session, addrs_data_session, no_of_addr, request):
         """Create and register a stake pool."""
         cluster = cluster_session
         temp_template = f"test_stake_pool_{no_of_addr}owners"

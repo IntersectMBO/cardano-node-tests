@@ -1107,53 +1107,52 @@ class ClusterLib:
             destination_dir=destination_dir,
         )
 
-    def wait_for_new_tip(self, new_blocks: int = 1):
+    def wait_for_new_block(self, new_blocks: int = 1):
         """Wait for new block(s) to be created."""
         LOGGER.debug(f"Waiting for {new_blocks} new block(s) to be created.")
         timeout_no_of_slots = 200 * new_blocks
-        last_block_slot_no = self.get_last_block_slot_no()
-        initial_slot_no = last_block_slot_no
-        expected_slot_no = initial_slot_no + new_blocks
+        initial_block_no = self.get_last_block_block_no()
+        expected_block_no = initial_block_no + new_blocks
 
-        LOGGER.debug(f"Initial tip: {initial_slot_no}")
+        LOGGER.debug(f"Initial block no: {initial_block_no}")
         for __ in range(timeout_no_of_slots):
             time.sleep(self.slot_length)
-            last_block_slot_no = self.get_last_block_slot_no()
-            if last_block_slot_no >= expected_slot_no:
+            last_block_block_no = self.get_last_block_block_no()
+            if last_block_block_no >= expected_block_no:
                 break
         else:
             raise CLIError(
-                f"Timeout waiting for {timeout_no_of_slots} sec for {new_blocks} slot(s)."
+                f"Timeout waiting for {timeout_no_of_slots * self.slot_length} sec for "
+                f"{new_blocks} block(s)."
             )
 
-        LOGGER.debug(f"New block was created; slot number: {last_block_slot_no}")
+        LOGGER.debug(f"New block(s) were created; block number: {last_block_block_no}")
 
     def wait_for_new_epoch(self, new_epochs: int = 1):
         """Wait for new epoch(s)."""
-        last_block_slot_no = self.get_last_block_slot_no()
         last_block_epoch = self.get_last_block_epoch()
         LOGGER.debug(
             f"Current epoch: {last_block_epoch}; Waiting the beginning of epoch: "
             "{last_block_epoch + new_epochs}"
         )
 
-        timeout_no_of_epochs = new_epochs + 1
         expected_epoch_no = last_block_epoch + new_epochs
 
-        for __ in range(timeout_no_of_epochs):
-            sleep_slots = (last_block_epoch + 1) * self.epoch_length - last_block_slot_no
-            sleep_time = int(sleep_slots * self.slot_length) + 1
-            time.sleep(sleep_time)
-            last_block_slot_no = self.get_last_block_slot_no()
-            last_block_epoch = self.get_last_block_epoch()
-            if last_block_epoch >= expected_epoch_no:
-                break
-        else:
+        # how many seconds to wait until start of the expected epoch
+        sleep_slots = (
+            last_block_epoch + new_epochs
+        ) * self.epoch_length - self.get_last_block_slot_no()
+        sleep_time = int(sleep_slots * self.slot_length) + 1
+        time.sleep(sleep_time)
+
+        wakeup_epoch = self.get_last_block_epoch()
+        if wakeup_epoch != expected_epoch_no:
             raise CLIError(
-                f"Waited for {timeout_no_of_epochs} epochs and expected epoch is not present"
+                f"Waited for epoch number {expected_epoch_no} and current epoch is "
+                f"number {wakeup_epoch}"
             )
 
-        LOGGER.debug(f"Expected epoch started; epoch number: {last_block_epoch}")
+        LOGGER.debug(f"Expected epoch started; epoch number: {wakeup_epoch}")
 
     def register_stake_pool(
         self,
@@ -1191,7 +1190,7 @@ class ClusterLib:
             deposit=deposit,
             destination_dir=destination_dir,
         )
-        self.wait_for_new_tip(new_blocks=2)
+        self.wait_for_new_block(new_blocks=2)
 
         return pool_reg_cert_file, tx_raw_data
 
@@ -1232,7 +1231,7 @@ class ClusterLib:
             tx_files=tx_files,
             destination_dir=destination_dir,
         )
-        self.wait_for_new_tip(new_blocks=2)
+        self.wait_for_new_block(new_blocks=2)
 
         return pool_dereg_cert_file, tx_raw_data
 

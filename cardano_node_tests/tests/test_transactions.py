@@ -59,7 +59,7 @@ class TestBasic:
         tx_raw_data = cluster.send_funds(
             src_address=src_address, destinations=destinations, tx_files=tx_files,
         )
-        cluster.wait_for_new_tip(new_blocks=2)
+        cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -87,7 +87,7 @@ class TestBasic:
         tx_raw_data = cluster.send_funds(
             src_address=src_address, destinations=destinations, tx_files=tx_files,
         )
-        cluster.wait_for_new_tip(new_blocks=2)
+        cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address) == 0
@@ -115,7 +115,7 @@ class TestBasic:
         tx_raw_data = cluster.send_funds(
             src_address=src_address, destinations=destinations, tx_files=tx_files,
         )
-        cluster.wait_for_new_tip(new_blocks=2)
+        cluster.wait_for_new_block(new_blocks=2)
 
         txid = cluster.get_txid(tx_raw_data.out_file)
         utxo = cluster.get_utxo(src_address)
@@ -174,7 +174,7 @@ class Test10InOut:
                 fee=fee,
                 ttl=ttl,
             )
-            cluster.wait_for_new_tip(new_blocks=2)
+            cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -208,7 +208,7 @@ class Test10InOut:
         cluster.send_funds(
             src_address=src_address, destinations=destinations, tx_files=tx_files, fee=fee, ttl=ttl,
         )
-        cluster.wait_for_new_tip(new_blocks=2)
+        cluster.wait_for_new_block(new_blocks=2)
 
         assert cluster.get_address_balance(src_address) == src_init_balance - fee - amount * len(
             dst_addresses
