@@ -76,9 +76,16 @@ def fund_from_genesis(
     destination_dir: FileType = ".",
 ):
     """Send `amount` from genesis addr to all `dst_addrs`."""
+    fund_dst = [
+        clusterlib.TxOut(address=d, amount=amount)
+        for d in dst_addrs
+        if cluster_obj.get_address_balance(d) < amount
+    ]
+    if not fund_dst:
+        return
+
     tx_name = tx_name or clusterlib.get_timestamped_rand_str()
     tx_name = f"{tx_name}_genesis_funding"
-    fund_dst = [clusterlib.TxOut(address=d, amount=amount) for d in dst_addrs]
     fund_tx_files = clusterlib.TxFiles(
         signing_key_files=[*cluster_obj.delegate_skeys, cluster_obj.genesis_utxo_skey]
     )
@@ -137,6 +144,14 @@ def fund_from_faucet(
     destination_dir: FileType = ".",
 ):
     """Send `amount` from faucet addr to all `dst_addrs`."""
+    fund_dst = [
+        clusterlib.TxOut(address=d.address, amount=amount)
+        for d in dst_addrs
+        if cluster_obj.get_address_balance(d.address) < amount
+    ]
+    if not fund_dst:
+        return
+
     if request:
         request.addfinalizer(
             lambda: return_funds_to_faucet(
@@ -150,7 +165,6 @@ def fund_from_faucet(
 
     tx_name = tx_name or clusterlib.get_timestamped_rand_str()
     tx_name = f"{tx_name}_funding"
-    fund_dst = [clusterlib.TxOut(address=d.address, amount=amount) for d in dst_addrs]
     fund_tx_files = clusterlib.TxFiles(
         signing_key_files=[faucet_data["payment_key_pair"].skey_file]
     )
@@ -315,8 +329,8 @@ def stop_cluster():
     cluster_env = get_cluster_env()
     try:
         run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
-    except Exception as excinfo:
-        LOGGER.debug(f"Failed to stop cluster: {excinfo}")
+    except Exception as exc:
+        LOGGER.debug(f"Failed to stop cluster: {exc}")
 
 
 def start_stop_cluster(request: FixtureRequest) -> clusterlib.ClusterLib:
@@ -404,7 +418,7 @@ def update_params(
     cluster_obj.submit_update_proposal(cli_args=[cli_arg, str(param_value)])
 
     LOGGER.info(
-        f"Update Proposal submited (cli_arg={cli_arg}, param_value={param_value}). "
+        f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value}). "
         "Sleeping until next epoch."
     )
     cluster_obj.wait_for_new_epoch()
