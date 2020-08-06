@@ -92,7 +92,7 @@ def _check_staking(
 
         # check that the stake address was delegated
         assert (
-            stake_addr_info and stake_addr_info.delegation is not None
+            stake_addr_info and stake_addr_info.delegation
         ), f"Stake address was not delegated yet: {stake_addr_info}"
 
         assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
@@ -304,7 +304,7 @@ def _delegate_addr_using_cert(
     # check that the stake address was delegated
     stake_addr_info = cluster_obj.get_stake_addr_info(stake_addr_rec.address)
     assert (
-        stake_addr_info and stake_addr_info.delegation is not None
+        stake_addr_info and stake_addr_info.delegation
     ), f"Stake address was not delegated yet: {stake_addr_info}"
 
     stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
@@ -391,7 +391,7 @@ class TestDelegateAddr:
         # check that the stake address was delegated
         stake_addr_info = cluster.get_stake_addr_info(stake_addr_rec.address)
         assert (
-            stake_addr_info and stake_addr_info.delegation is not None
+            stake_addr_info and stake_addr_info.delegation
         ), f"Stake address was not delegated yet: {stake_addr_info}"
 
         assert (
@@ -616,6 +616,13 @@ class TestStakePool:
         pool_owner = pool_owners[0]
         src_register_balance = cluster.get_address_balance(pool_owner.payment.address)
 
+        src_register_stake_addr_info = cluster.get_stake_addr_info(pool_owner.stake.address)
+        src_register_reward = (
+            src_register_stake_addr_info.reward_account_balance
+            if src_register_stake_addr_info
+            else 0
+        )
+
         # deregister stake pool
         __, tx_raw_data = cluster.deregister_stake_pool(
             pool_owners=pool_owners,
@@ -633,9 +640,16 @@ class TestStakePool:
         )
 
         # check that the balance for source address was correctly updated
-        # TODO: what about pool deposit?
         assert src_register_balance - tx_raw_data.fee == cluster.get_address_balance(
             pool_owner.payment.address
+        )
+
+        # check that the deposit was returned to reward account
+        stake_addr_info = cluster.get_stake_addr_info(pool_owner.stake.address)
+        assert (
+            stake_addr_info
+            and stake_addr_info.reward_account_balance
+            == src_register_reward + cluster.get_pool_deposit()
         )
 
         # check that the pool was correctly de-registered on chain
@@ -651,9 +665,9 @@ class TestStakePool:
         for owner_rec in pool_owners:
             stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
 
-            # check that the stake address was delegated
+            # check that the stake address is no longer delegated
             assert (
-                stake_addr_info and stake_addr_info.delegation is None
+                stake_addr_info and not stake_addr_info.delegation
             ), f"Stake address is still delegated: {stake_addr_info}"
 
     @pytest.mark.parametrize("no_of_addr", [1, 2])

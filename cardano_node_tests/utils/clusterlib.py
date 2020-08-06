@@ -45,8 +45,8 @@ class AddressRecord(NamedTuple):
 
 class StakeAddrInfo(NamedTuple):
     addr_hash: str
-    delegation: Optional[str]
-    reward_account_balance: Optional[int]
+    delegation: str
+    reward_account_balance: int
 
 
 class UTXOData(NamedTuple):
@@ -668,8 +668,8 @@ class ClusterLib:
 
         addr_hash = list(output_json)[0]
         address_rec = output_json[addr_hash]
-        delegation = address_rec.get("delegation")
-        reward_account_balance = address_rec.get("rewardAccountBalance")
+        delegation = address_rec.get("delegation") or ""
+        reward_account_balance = address_rec.get("rewardAccountBalance") or 0
         return StakeAddrInfo(
             addr_hash=addr_hash,
             delegation=delegation,
