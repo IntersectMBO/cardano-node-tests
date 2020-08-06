@@ -264,6 +264,7 @@ class TestNotBalanced:
         assert "option --tx-out: Failed reading" in str(excinfo.value)
 
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
+    @hypothesis.settings(deadline=None)
     def test_wrong_balance(
         self,
         cluster_session,
