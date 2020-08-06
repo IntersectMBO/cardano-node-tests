@@ -469,11 +469,31 @@ class ClusterLib:
     ) -> Path:
         """Generate stake address registration certificate."""
         destination_dir = Path(destination_dir).expanduser()
-        out_file = destination_dir / f"{addr_name}_stake.reg.cert"
+        out_file = destination_dir / f"{addr_name}_stake_reg.cert"
         self.cli(
             [
                 "stake-address",
                 "registration-certificate",
+                "--stake-verification-key-file",
+                str(stake_vkey_file),
+                "--out-file",
+                str(out_file),
+            ]
+        )
+
+        self._check_outfiles(out_file)
+        return out_file
+
+    def gen_stake_addr_deregistration_cert(
+        self, addr_name: str, stake_vkey_file: FileType, destination_dir: FileType = "."
+    ) -> Path:
+        """Generate stake address de-registration certificate."""
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{addr_name}_stake_dereg.cert"
+        self.cli(
+            [
+                "stake-address",
+                "deregistration-certificate",
                 "--stake-verification-key-file",
                 str(stake_vkey_file),
                 "--out-file",
@@ -640,9 +660,12 @@ class ClusterLib:
                 f"command not implemented yet;\ncommand: {cmd}\nresult: {stdout.decode()}"
             )
 
-    def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
+    def get_stake_addr_info(self, stake_addr: str) -> Optional[StakeAddrInfo]:
         """Return info about stake pool address."""
         output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
+        if not output_json:
+            return None
+
         addr_hash = list(output_json)[0]
         address_rec = output_json[addr_hash]
         delegation = address_rec.get("delegation")
@@ -735,6 +758,8 @@ class ClusterLib:
                 deposit += key_deposit
             elif "Stake Pool Registration" in description:
                 deposit += pool_deposit
+            elif "Stake Address Deregistration" in description:
+                deposit -= key_deposit
 
         return deposit
 
