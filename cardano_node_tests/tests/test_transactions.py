@@ -26,7 +26,7 @@ class TestBasic:
     @pytest.fixture(scope="class")
     def payment_addrs(self, cluster_session, addrs_data_session, request):
         """Create 2 new payment addresses."""
-        addrs = helpers.create_payment_addrs(
+        addrs = helpers.create_payment_addr_records(
             "addr_basic0", "addr_basic1", cluster_obj=cluster_session
         )
 
@@ -127,7 +127,7 @@ class Test10InOut:
     @pytest.fixture(scope="class")
     def payment_addrs(self, cluster_session, addrs_data_session, request):
         """Create 11 new payment addresses."""
-        addrs = helpers.create_payment_addrs(
+        addrs = helpers.create_payment_addr_records(
             *[f"addr_10_in_out{i}" for i in range(11)], cluster_obj=cluster_session,
         )
 
@@ -222,15 +222,17 @@ class Test10InOut:
 
 class TestNotBalanced:
     @pytest.fixture(scope="class")
-    def payment_addr(self, cluster_session):
+    def payment_addr_rec(self, cluster_session):
         """Create 1 new payment address."""
-        return helpers.create_payment_addrs("addr_not_balanced0", cluster_obj=cluster_session)[0]
+        return helpers.create_payment_addr_records(
+            "addr_not_balanced0", cluster_obj=cluster_session
+        )[0]
 
-    def test_negative_change(self, cluster_session, addrs_data_session, payment_addr, temp_dir):
+    def test_negative_change(self, cluster_session, addrs_data_session, payment_addr_rec, temp_dir):
         """Build a transaction with a negative change."""
         cluster = cluster_session
         src_address = addrs_data_session["user1"]["payment_addr"]
-        dst_address = payment_addr.address
+        dst_address = payment_addr_rec.address
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
@@ -269,7 +271,7 @@ class TestNotBalanced:
         self,
         cluster_session,
         addrs_data_session,
-        payment_addr,
+        payment_addr_rec,
         temp_dir,
         transfer_add,
         change_amount,
@@ -281,7 +283,7 @@ class TestNotBalanced:
         cluster = cluster_session
 
         src_address = addrs_data_session["user1"]["payment_addr"]
-        dst_address = payment_addr.address
+        dst_address = payment_addr_rec.address
 
         src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
         fee = 200_000
@@ -323,15 +325,15 @@ class TestNotBalanced:
 def test_negative_fee(cluster_session, addrs_data_session):
     """Send a transaction with negative fee (-1)."""
     cluster = cluster_session
-    payment_addr = helpers.create_payment_addrs("addr_negative_fee0", cluster_obj=cluster_session)[
-        0
-    ]
+    payment_addr_rec = helpers.create_payment_addr_records(
+        "addr_negative_fee0", cluster_obj=cluster_session
+    )[0]
     src_address = addrs_data_session["user1"]["payment_addr"]
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
     )
-    destinations = [clusterlib.TxOut(address=payment_addr.address, amount=10)]
+    destinations = [clusterlib.TxOut(address=payment_addr_rec.address, amount=10)]
 
     with pytest.raises(clusterlib.CLIError) as excinfo:
         cluster.send_funds(
@@ -343,13 +345,13 @@ def test_negative_fee(cluster_session, addrs_data_session):
 def test_past_ttl(cluster_session, addrs_data_session):
     """Send a transaction with ttl in the past."""
     cluster = cluster_session
-    payment_addr = helpers.create_payment_addrs("addr_past_ttl0", cluster_obj=cluster)[0]
+    payment_addr_rec = helpers.create_payment_addr_records("addr_past_ttl0", cluster_obj=cluster)[0]
     src_address = addrs_data_session["user1"]["payment_addr"]
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
     )
-    destinations = [clusterlib.TxOut(address=payment_addr.address, amount=1)]
+    destinations = [clusterlib.TxOut(address=payment_addr_rec.address, amount=1)]
     ttl = cluster.get_last_block_slot_no() - 1
     fee = cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files, ttl=ttl)
 
@@ -371,26 +373,29 @@ def test_send_funds_to_reward_address(cluster_session, addrs_data_session, reque
     """Send funds from payment address to stake address."""
     cluster = cluster_session
 
-    stake_addr = helpers.create_stake_addrs(
+    stake_addr_rec = helpers.create_stake_addr_records(
         "addr_send_funds_to_reward_address0", cluster_obj=cluster
     )[0]
-    payment_addr = helpers.create_payment_addrs(
+    payment_addr_rec = helpers.create_payment_addr_records(
         "addr_send_funds_to_reward_address0",
         cluster_obj=cluster,
-        stake_vkey_file=stake_addr.vkey_file,
+        stake_vkey_file=stake_addr_rec.vkey_file,
     )[0]
 
     # fund source address
     helpers.fund_from_faucet(
-        payment_addr, cluster_obj=cluster, faucet_data=addrs_data_session["user1"], request=request,
+        payment_addr_rec,
+        cluster_obj=cluster,
+        faucet_data=addrs_data_session["user1"],
+        request=request,
     )
 
-    tx_files = clusterlib.TxFiles(signing_key_files=[stake_addr.skey_file])
-    destinations = [clusterlib.TxOut(address=stake_addr.address, amount=1000)]
+    tx_files = clusterlib.TxFiles(signing_key_files=[stake_addr_rec.skey_file])
+    destinations = [clusterlib.TxOut(address=stake_addr_rec.address, amount=1000)]
 
     # it should NOT be possible to build a transaction using a stake address
     with pytest.raises(clusterlib.CLIError) as excinfo:
         cluster.build_raw_tx(
-            src_address=payment_addr.address, txouts=destinations, tx_files=tx_files, fee=0,
+            src_address=payment_addr_rec.address, txouts=destinations, tx_files=tx_files, fee=0,
         )
     assert "invalid address" in str(excinfo.value)

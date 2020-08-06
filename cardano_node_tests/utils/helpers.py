@@ -5,6 +5,8 @@ import os
 import subprocess
 import time
 from pathlib import Path
+from typing import Any
+from typing import Dict
 from typing import Generator
 from typing import List
 from typing import Optional
@@ -14,7 +16,6 @@ from _pytest.fixtures import FixtureRequest
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils.types import FileType
-from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def run_shell_command(command: str, workdir: FileType = ""):
 
 
 def fund_from_genesis(
-    *dst_addrs: UnpackableSequence,
+    *dst_addrs: str,
     cluster_obj: clusterlib.ClusterLib,
     amount: int = 2_000_000,
     tx_name: Optional[str] = None,
@@ -179,8 +180,8 @@ def fund_from_faucet(
     cluster_obj.wait_for_new_block(new_blocks=2)
 
 
-def create_payment_addrs(
-    *names: UnpackableSequence,
+def create_payment_addr_records(
+    *names: str,
     cluster_obj: clusterlib.ClusterLib,
     stake_vkey_file: Optional[FileType] = None,
     destination_dir: FileType = ".",
@@ -197,8 +198,8 @@ def create_payment_addrs(
     return addrs
 
 
-def create_stake_addrs(
-    *names: UnpackableSequence, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".",
+def create_stake_addr_records(
+    *names: str, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".",
 ) -> List[clusterlib.AddressRecord]:
     """Create new stake address(es)."""
     addrs = [
@@ -275,7 +276,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     addrs = ("user1", "pool-owner1")
 
     LOGGER.debug("Creating addresses and keys for tests.")
-    addrs_data = {}
+    addrs_data: Dict[str, Dict[str, Any]] = {}
     for addr_name in addrs:
         payment_key_pair = cluster_obj.gen_payment_key_pair(
             key_name=addr_name, destination_dir=destination_dir,
@@ -404,9 +405,7 @@ def check_pool_data(  # noqa: C901
     return "\n\n".join(errors_list)
 
 
-def update_params(
-    cluster_obj: clusterlib.ClusterLib, cli_arg: UnpackableSequence, param_name: str, param_value
-):
+def update_params(cluster_obj: clusterlib.ClusterLib, cli_arg: str, param_name: str, param_value):
     """Update params using update proposal."""
     if str(cluster_obj.get_protocol_params()[param_name]) == str(param_value):
         LOGGER.info(f"Value for '{param_name}' is already {param_value}. Nothing to do.")
