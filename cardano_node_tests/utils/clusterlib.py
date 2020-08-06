@@ -79,10 +79,8 @@ class PoolCreationArtifacts(NamedTuple):
 
 
 class PoolOwner(NamedTuple):
-    addr: str
-    stake_addr: str
-    addr_key_pair: KeyPair
-    stake_key_pair: KeyPair
+    payment: AddressRecord
+    stake: AddressRecord
 
 
 class PoolData(NamedTuple):
@@ -259,7 +257,7 @@ class ClusterLib:
         """Return current tip - last block successfully applied to the ledger."""
         return json.loads(self.query_cli(["tip"]))
 
-    def gen_genesis_addr(self, vkey_file: FileType, *args: UnpackableSequence) -> str:
+    def gen_genesis_addr(self, vkey_file: FileType, *args: str) -> str:
         """Generate genesis address."""
         return (
             self.cli(
@@ -278,10 +276,7 @@ class ClusterLib:
         )
 
     def gen_payment_addr(
-        self,
-        payment_vkey_file: FileType,
-        *args: UnpackableSequence,
-        stake_vkey_file: Optional[FileType] = None,
+        self, payment_vkey_file: FileType, *args: str, stake_vkey_file: Optional[FileType] = None,
     ) -> str:
         """Generate payment address."""
         cli_args = ["--payment-verification-key-file", str(payment_vkey_file)]
@@ -296,7 +291,7 @@ class ClusterLib:
             .decode("ascii")
         )
 
-    def gen_stake_addr(self, stake_vkey_file: FileType, *args: UnpackableSequence) -> str:
+    def gen_stake_addr(self, stake_vkey_file: FileType, *args: str) -> str:
         """Generate stake address."""
         return (
             self.cli(
@@ -1168,7 +1163,7 @@ class ClusterLib:
             pool_data=pool_data,
             node_vrf_vkey_file=node_vrf_vkey_file,
             node_cold_vkey_file=node_cold_key_pair.vkey_file,
-            owner_stake_vkey_files=[p.stake_key_pair.vkey_file for p in pool_owners],
+            owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
             destination_dir=destination_dir,
         )
 
@@ -1176,14 +1171,14 @@ class ClusterLib:
         tx_files = TxFiles(
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
-                *[p.addr_key_pair.skey_file for p in pool_owners],
-                *[p.stake_key_pair.skey_file for p in pool_owners],
+                *[p.payment.skey_file for p in pool_owners],
+                *[p.stake.skey_file for p in pool_owners],
                 node_cold_key_pair.skey_file,
             ],
         )
 
         tx_raw_data = self.send_tx(
-            src_address=pool_owners[0].addr,
+            src_address=pool_owners[0].payment.address,
             tx_name=tx_name,
             tx_files=tx_files,
             deposit=deposit,
@@ -1218,14 +1213,14 @@ class ClusterLib:
         tx_files = TxFiles(
             certificate_files=[pool_dereg_cert_file],
             signing_key_files=[
-                *[p.addr_key_pair.skey_file for p in pool_owners],
-                *[p.stake_key_pair.skey_file for p in pool_owners],
+                *[p.payment.skey_file for p in pool_owners],
+                *[p.stake.skey_file for p in pool_owners],
                 node_cold_key_pair.skey_file,
             ],
         )
 
         tx_raw_data = self.send_tx(
-            src_address=pool_owners[0].addr,
+            src_address=pool_owners[0].payment.address,
             tx_name=tx_name,
             tx_files=tx_files,
             destination_dir=destination_dir,
