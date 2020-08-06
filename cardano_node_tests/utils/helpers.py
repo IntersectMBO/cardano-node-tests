@@ -5,6 +5,8 @@ import os
 import subprocess
 import time
 from pathlib import Path
+from typing import Any
+from typing import Dict
 from typing import Generator
 from typing import List
 from typing import Optional
@@ -14,7 +16,6 @@ from _pytest.fixtures import FixtureRequest
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils.types import FileType
-from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
@@ -69,16 +70,23 @@ def run_shell_command(command: str, workdir: FileType = ""):
 
 
 def fund_from_genesis(
-    *dst_addrs: UnpackableSequence,
+    *dst_addrs: str,
     cluster_obj: clusterlib.ClusterLib,
     amount: int = 2_000_000,
     tx_name: Optional[str] = None,
     destination_dir: FileType = ".",
 ):
     """Send `amount` from genesis addr to all `dst_addrs`."""
+    fund_dst = [
+        clusterlib.TxOut(address=d, amount=amount)
+        for d in dst_addrs
+        if cluster_obj.get_address_balance(d) < amount
+    ]
+    if not fund_dst:
+        return
+
     tx_name = tx_name or clusterlib.get_timestamped_rand_str()
     tx_name = f"{tx_name}_genesis_funding"
-    fund_dst = [clusterlib.TxOut(address=d, amount=amount) for d in dst_addrs]
     fund_tx_files = clusterlib.TxFiles(
         signing_key_files=[*cluster_obj.delegate_skeys, cluster_obj.genesis_utxo_skey]
     )
@@ -137,6 +145,14 @@ def fund_from_faucet(
     destination_dir: FileType = ".",
 ):
     """Send `amount` from faucet addr to all `dst_addrs`."""
+    fund_dst = [
+        clusterlib.TxOut(address=d.address, amount=amount)
+        for d in dst_addrs
+        if cluster_obj.get_address_balance(d.address) < amount
+    ]
+    if not fund_dst:
+        return
+
     if request:
         request.addfinalizer(
             lambda: return_funds_to_faucet(
@@ -150,7 +166,6 @@ def fund_from_faucet(
 
     tx_name = tx_name or clusterlib.get_timestamped_rand_str()
     tx_name = f"{tx_name}_funding"
-    fund_dst = [clusterlib.TxOut(address=d.address, amount=amount) for d in dst_addrs]
     fund_tx_files = clusterlib.TxFiles(
         signing_key_files=[faucet_data["payment_key_pair"].skey_file]
     )
@@ -165,8 +180,8 @@ def fund_from_faucet(
     cluster_obj.wait_for_new_block(new_blocks=2)
 
 
-def create_payment_addrs(
-    *names: UnpackableSequence,
+def create_payment_addr_records(
+    *names: str,
     cluster_obj: clusterlib.ClusterLib,
     stake_vkey_file: Optional[FileType] = None,
     destination_dir: FileType = ".",
@@ -183,8 +198,8 @@ def create_payment_addrs(
     return addrs
 
 
-def create_stake_addrs(
-    *names: UnpackableSequence, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".",
+def create_stake_addr_records(
+    *names: str, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".",
 ) -> List[clusterlib.AddressRecord]:
     """Create new stake address(es)."""
     addrs = [
@@ -261,7 +276,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     addrs = ("user1", "pool-owner1")
 
     LOGGER.debug("Creating addresses and keys for tests.")
-    addrs_data = {}
+    addrs_data: Dict[str, Dict[str, Any]] = {}
     for addr_name in addrs:
         payment_key_pair = cluster_obj.gen_payment_key_pair(
             key_name=addr_name, destination_dir=destination_dir,
@@ -315,8 +330,8 @@ def stop_cluster():
     cluster_env = get_cluster_env()
     try:
         run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
-    except Exception as excinfo:
-        LOGGER.debug(f"Failed to stop cluster: {excinfo}")
+    except Exception as exc:
+        LOGGER.debug(f"Failed to stop cluster: {exc}")
 
 
 def start_stop_cluster(request: FixtureRequest) -> clusterlib.ClusterLib:
@@ -390,9 +405,7 @@ def check_pool_data(  # noqa: C901
     return "\n\n".join(errors_list)
 
 
-def update_params(
-    cluster_obj: clusterlib.ClusterLib, cli_arg: UnpackableSequence, param_name: str, param_value
-):
+def update_params(cluster_obj: clusterlib.ClusterLib, cli_arg: str, param_name: str, param_value):
     """Update params using update proposal."""
     if str(cluster_obj.get_protocol_params()[param_name]) == str(param_value):
         LOGGER.info(f"Value for '{param_name}' is already {param_value}. Nothing to do.")
@@ -404,7 +417,7 @@ def update_params(
     cluster_obj.submit_update_proposal(cli_args=[cli_arg, str(param_value)])
 
     LOGGER.info(
-        f"Update Proposal submited (cli_arg={cli_arg}, param_value={param_value}). "
+        f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value}). "
         "Sleeping until next epoch."
     )
     cluster_obj.wait_for_new_epoch()

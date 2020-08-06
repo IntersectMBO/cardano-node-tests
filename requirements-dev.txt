@@ -1,4 +1,5 @@
 -e .
 
+mypy
 pre-commit
 pylint
