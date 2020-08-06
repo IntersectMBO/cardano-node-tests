@@ -180,12 +180,11 @@ class ClusterLib:
         """Check that the cluster is running with the expected protocol."""
         try:
             self.refresh_pparams_file()
-        except CLIError as excinfo:
-            if "SingleEraInfo" not in str(excinfo):
+        except CLIError as exc:
+            if "SingleEraInfo" not in str(exc):
                 raise
             raise CLIError(
-                f"The cluster is running with protocol different from '{self.protocol}':\n"
-                f"{excinfo}"
+                f"The cluster is running with protocol different from '{self.protocol}':\n" f"{exc}"
             )
 
     def _check_outfiles(self, *out_files):
