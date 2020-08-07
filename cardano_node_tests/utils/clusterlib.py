@@ -114,6 +114,8 @@ class CLIError(Exception):
 
 def get_rand_str(length: int = 8) -> str:
     """Return random string."""
+    if length < 1:
+        return ""
     return "".join(random.choice(string.ascii_lowercase) for i in range(length))
 
 
@@ -124,7 +126,9 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
     True
     """
     timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S%f")[:-3]
-    return f"{timestamp}_{get_rand_str(rand_str_length)}"
+    rand_str_component = get_rand_str(rand_str_length)
+    rand_str_component = rand_str_component and f"_{rand_str_component}"
+    return f"{timestamp}{rand_str_component}"
 
 
 class ClusterLib:
@@ -133,6 +137,8 @@ class ClusterLib:
     # pylint: disable=too-many-public-methods
 
     def __init__(self, state_dir: FileType, protocol: str = Protocols.SHELLEY.value):
+        self.cli_coverage: dict = {}
+
         self.state_dir = Path(state_dir).expanduser().resolve()
         self.genesis_json = self.state_dir / "shelley" / "genesis.json"
         self.genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
@@ -192,9 +198,33 @@ class ClusterLib:
             if not out_file.exists():
                 raise CLIError(f"The expected file `{out_file}` doesn't exist.")
 
+    def record_cli_coverage(self, cli_args: List[str]):
+        """Record CLI coverage info."""
+        parent_dict = self.cli_coverage
+        prev_arg = ""
+        for arg in cli_args:
+            # if the current argument is a parameter to an option, skip it
+            if prev_arg.startswith("--") and not arg.startswith("--"):
+                continue
+            prev_arg = arg
+
+            cur_dict = parent_dict.get(arg)
+            # initialize record if it doesn't exist yet
+            if not cur_dict:
+                parent_dict[arg] = {"_count": 0}
+                cur_dict = parent_dict[arg]
+
+            # increment count
+            cur_dict["_count"] += 1
+
+            # set new parent dict
+            if not arg.startswith("--"):
+                parent_dict = cur_dict
+
     def cli(self, cli_args) -> CLIOut:
         """Run the `cardano-cli` command."""
         cmd = ["cardano-cli", "shelley", *cli_args]
+        self.record_cli_coverage(cmd)
         cmd_str = " ".join(cmd)
 
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
