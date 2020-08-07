@@ -56,7 +56,7 @@ def read_address_from_file(location: FileType) -> str:
 def write_json(location: FileType, content: dict) -> FileType:
     """Write dictionary content to JSON file."""
     with open(Path(location).expanduser(), "w") as out_file:
-        out_file.write(json.dumps(content))
+        out_file.write(json.dumps(content, indent=4))
     return location
 
 
@@ -318,8 +318,16 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 def check_dir_arg(dir_path: str) -> Path:
     """Check that the dir passed as argparse parameter is a valid existing dir."""
     abs_path = Path(dir_path).expanduser().resolve()
-    if not abs_path.exists():
+    if not (abs_path.exists() and abs_path.is_dir()):
         raise argparse.ArgumentTypeError(f"check_dir_arg: directory '{dir_path}' doesn't exist")
+    return abs_path
+
+
+def check_file_arg(file_path: str) -> Path:
+    """Check that the file passed as argparse parameter is a valid existing file."""
+    abs_path = Path(file_path).expanduser().resolve()
+    if not abs_path.exists():
+        raise argparse.ArgumentTypeError(f"check_dir_arg: directory '{file_path}' doesn't exist")
     return abs_path
 
 
