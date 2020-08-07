@@ -3,14 +3,23 @@ import os
 
 import pytest
 
-from cardano_node_tests.utils.helpers import setup_test_addrs
-from cardano_node_tests.utils.helpers import start_stop_cluster
+from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "clean_cluster: mark that the test needs clean cluster.")
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--cli-coverage-dir",
+        action="store",
+        type=helpers.check_dir_arg,
+        default="",
+        help="Path to directory for storing coverage info",
+    )
 
 
 # session scoped fixtures
@@ -27,13 +36,13 @@ def change_dir(tmp_path_factory):
 @pytest.fixture(scope="session")
 def cluster_session(change_dir, request):
     # pylint: disable=unused-argument
-    return start_stop_cluster(request)
+    return helpers.start_stop_cluster(request)
 
 
 @pytest.fixture(scope="session")
 def addrs_data_session(cluster_session, tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("addrs_data")
-    return setup_test_addrs(cluster_session, tmp_path)
+    return helpers.setup_test_addrs(cluster_session, tmp_path)
 
 
 # class scoped fixtures
@@ -42,13 +51,13 @@ def addrs_data_session(cluster_session, tmp_path_factory):
 @pytest.fixture(scope="class")
 def cluster_class(change_dir, request):
     # pylint: disable=unused-argument
-    return start_stop_cluster(request)
+    return helpers.start_stop_cluster(request)
 
 
 @pytest.fixture(scope="class")
 def addrs_data_class(cluster_class, tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("addrs_data")
-    return setup_test_addrs(cluster_class, tmp_path)
+    return helpers.setup_test_addrs(cluster_class, tmp_path)
 
 
 # function scoped fixtures
@@ -57,10 +66,10 @@ def addrs_data_class(cluster_class, tmp_path_factory):
 @pytest.fixture
 def cluster(change_dir, request):
     # pylint: disable=unused-argument
-    return start_stop_cluster(request)
+    return helpers.start_stop_cluster(request)
 
 
 @pytest.fixture
 def addrs_data(cluster, tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("addrs_data")
-    return setup_test_addrs(cluster, tmp_path)
+    return helpers.setup_test_addrs(cluster, tmp_path)

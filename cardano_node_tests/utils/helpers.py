@@ -1,3 +1,4 @@
+import argparse
 import contextlib
 import json
 import logging
@@ -34,13 +35,13 @@ def wait_for(func, delay=5, num_sec=180, message=None):
 
 
 @contextlib.contextmanager
-def change_cwd(path: FileType) -> Generator[FileType, None, None]:
+def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
     """Change and restore CWD - context manager."""
     orig_cwd = os.getcwd()
-    os.chdir(path)
-    LOGGER.debug(f"Changed CWD to '{path}'.")
+    os.chdir(dir_path)
+    LOGGER.debug(f"Changed CWD to '{dir_path}'.")
     try:
-        yield path
+        yield dir_path
     finally:
         os.chdir(orig_cwd)
         LOGGER.debug(f"Restored CWD to '{orig_cwd}'.")
@@ -53,7 +54,7 @@ def read_address_from_file(location: FileType) -> str:
 
 
 def write_json(location: FileType, content: dict) -> FileType:
-    """Write distionary content to JSON file."""
+    """Write dictionary content to JSON file."""
     with open(Path(location).expanduser(), "w") as out_file:
         out_file.write(json.dumps(content))
     return location
@@ -314,6 +315,27 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     return {**addrs_data, **pools_data}
 
 
+def check_dir_arg(dir_path: str) -> Path:
+    """Check that the dir passed as argparse parameter is a valid existing dir."""
+    abs_path = Path(dir_path).expanduser().resolve()
+    if not abs_path.exists():
+        raise argparse.ArgumentTypeError(f"check_dir_arg: directory '{dir_path}' doesn't exist")
+    return abs_path
+
+
+def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, request: FixtureRequest):
+    """Save CLI coverage info."""
+    cli_coverage_dir = request.config.getoption("--cli-coverage-dir")
+    if not (cli_coverage_dir and cluster_obj.cli_coverage):
+        return None
+
+    json_file = f"cli_coverage_{clusterlib.get_timestamped_rand_str(0)}.json"
+    with open(cli_coverage_dir / json_file, "w") as out_json:
+        json.dump(cluster_obj.cli_coverage, out_json, indent=4)
+    LOGGER.info(f"Coverage files saved to '{cli_coverage_dir}'.")
+    return None
+
+
 def start_cluster() -> clusterlib.ClusterLib:
     """Start cluster."""
     LOGGER.info("Starting cluster.")
@@ -339,6 +361,7 @@ def start_stop_cluster(request: FixtureRequest) -> clusterlib.ClusterLib:
     stop_cluster()
     request.addfinalizer(stop_cluster)
     cluster_obj = start_cluster()
+    request.addfinalizer(lambda: save_cli_coverage(cluster_obj=cluster_obj, request=request))
     return cluster_obj
 
 
