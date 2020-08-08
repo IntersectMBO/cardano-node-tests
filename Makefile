@@ -5,8 +5,9 @@ install:
 
 # run all tests
 tests:
-	pytest -m "not clean_cluster"
-	pytest -m "clean_cluster"
+	[ ! -e .cli_coverage ] && mkdir .cli_coverage
+	pytest -m "not clean_cluster" --cli-coverage-dir .cli_coverage/ cardano_node_tests
+	pytest -m "clean_cluster" --cli-coverage-dir .cli_coverage/ cardano_node_tests
 
 lint:
 	pre-commit run -a
