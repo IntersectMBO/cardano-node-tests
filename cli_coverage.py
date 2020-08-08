@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import argparse
+import copy
 import json
 import subprocess
+from pathlib import Path
+from typing import List
 
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import UnpackableSequence
@@ -19,7 +22,7 @@ def get_args(args=None):
         help="Path to coverage files",
     )
     parser.add_argument(
-        "-o", "--output-file", required=True, help="Path to result file",
+        "-o", "--output-file", required=True, help="File where to save coverage results",
     )
     parser.add_argument(
         "-a", "--all", action="store_true", help="Output all results, not only uncovered",
@@ -27,7 +30,7 @@ def get_args(args=None):
     return parser.parse_args(args)
 
 
-def merge_dicts(dict_a, dict_b):
+def merge_dicts(dict_a: dict, dict_b: dict) -> dict:
     """Merge dict_b into dict_a."""
     if not (isinstance(dict_a, dict) and isinstance(dict_b, dict)):
         return dict_a
@@ -48,12 +51,18 @@ def merge_dicts(dict_a, dict_b):
     return dict_a
 
 
-def parse_out(out: str):
-    """Parse command output."""
-    lines = out.splitlines()
+def cli(cli_args: UnpackableSequence) -> str:
+    """Run the `cardano-cli` command."""
+    p = subprocess.Popen(cli_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    __, stderr = p.communicate()
+    return stderr.decode()
+
+
+def parse_cmd_output(output: str) -> List[str]:
+    """Parse cardano-cli command output, return sub-commands and options names."""
     section_start = False
-    items = []
-    for line in lines:
+    cli_args = []
+    for line in output.splitlines():
         if "Available " in line:
             section_start = True
             continue
@@ -65,70 +74,63 @@ def parse_out(out: str):
             if not line:
                 continue
             item = line.split(" ")[0]
-            items.append(item)
-    return items
+            cli_args.append(item)
+
+    return cli_args
 
 
-def get_available_commands(cmd_db: dict, cli_args: UnpackableSequence):
-    """Recursively get all available commands and arguments."""
-    out = cli(cli_args)
-    items = parse_out(out)
-    for item in items:
-        if item.startswith("-"):
-            cmd_db[item] = {"_count": 0}
+def get_available_commands(cli_args: UnpackableSequence) -> dict:
+    """Get all available cardano-cli sub-commands and options."""
+    cli_out = cli(cli_args)
+    new_cli_args = parse_cmd_output(cli_out)
+    command_dict: dict = {"_count": 0}
+    for arg in new_cli_args:
+        if arg.startswith("-"):
+            command_dict[arg] = {"_count": 0}
             continue
-        item_dict: dict = {"_count": 0}
-        cmd_db[item] = item_dict
-        get_available_commands(item_dict, [*cli_args, item])
+        command_dict[arg] = get_available_commands([*cli_args, arg])
+
+    return command_dict
 
 
-def cli(cli_args) -> str:
-    """Run the `cardano-cli` command."""
-    cmd = ["cardano-cli", "shelley", *cli_args]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    __, stderr = p.communicate()
-    return stderr.decode()
-
-
-def get_result(input_files, cmd_db):
+def get_coverage(input_jsons: List[Path], available_commands: dict) -> dict:
     """Get coverage result by merging available data."""
-    for in_file in input_files:
-        with open(in_file) as in_json:
-            coverage = json.load(in_json)
-        merge_dicts(cmd_db, coverage)
-    return cmd_db
+    coverage_dict = copy.deepcopy(available_commands)
+    for in_json in input_jsons:
+        with open(in_json) as infile:
+            coverage = json.load(infile)
+        coverage_dict = merge_dicts(coverage_dict, coverage)
+
+    return coverage_dict
 
 
-def filter_uncovered(results_db):
-    """Return only uncovered commands/arguments."""
-    this_db = {}
-    for key, value in results_db.items():
+def get_uncovered(coverage: dict) -> dict:
+    """Filter out only uncovered commands/arguments."""
+    uncovered_db: dict = {}
+    for key, value in coverage.items():
         if key == "_count":
             continue
         if len(value) != 1:
-            ret_db = filter_uncovered(value)
+            ret_db = get_uncovered(value)
             if ret_db:
-                this_db[key] = ret_db
+                uncovered_db[key] = ret_db
                 continue
         if value["_count"] == 0:
-            this_db[key] = False
-    return this_db
+            uncovered_db[key] = False
+
+    return uncovered_db
 
 
 def main():
     args = get_args()
 
-    shelley = {"_count": 0}
-    cmd_db = {"cardano-cli": {"shelley": shelley}}
+    available_commands = {
+        "cardano-cli": {"_count": 0, "shelley": get_available_commands(["cardano-cli", "shelley"])}
+    }
+    coverage = get_coverage(args.input_files, available_commands)
 
-    get_available_commands(shelley, [])
-    get_result(args.input_files, cmd_db)
-
-    if args.all:
-        out_content = cmd_db
-    else:
-        out_content = {"cardano-cli": filter_uncovered(cmd_db["cardano-cli"])}
-    helpers.write_json(args.output_file, out_content)
+    out_file_content = coverage if args.all else get_uncovered(coverage)
+    helpers.write_json(args.output_file, out_file_content)
 
 
 if __name__ == "__main__":
