@@ -41,6 +41,15 @@ $ . .env/bin/activate
 $ make lint
 ```
 
+Test coverage of cardano-cli commands
+-------------------------------------
+
+To get test coverage of cardano-cli commands, run tests as usual (`make tests`) and generate the coverage report JSON file with
+
+```
+./cli_coverage.py -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
+```
+
 Contributing
 ------------
 
