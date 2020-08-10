@@ -1,5 +1,5 @@
 # Testing artifacts
-results/*
+.cli_coverage/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
