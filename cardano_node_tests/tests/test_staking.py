@@ -70,11 +70,11 @@ def _check_staking(
     pool_data: clusterlib.PoolData,
 ):
     """Check that pool and staking were correctly setup."""
-    LOGGER.info("Waiting up to 2 epochs for stake pool to be registered.")
+    LOGGER.info("Waiting up to 3 epochs for stake pool to be registered.")
     helpers.wait_for(
         lambda: stake_pool_id in cluster_obj.get_stake_distribution(),
         delay=10,
-        num_sec=2 * cluster_obj.epoch_length,
+        num_sec=3 * cluster_obj.epoch_length_sec,
         message="register stake pool",
     )
 
@@ -146,6 +146,10 @@ def _create_register_pool_delegate_stake_tx(
         owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
     )
 
+    src_address = pool_owners[0].payment.address
+    src_init_balance = cluster_obj.get_address_balance(src_address)
+
+    # register and delegate stake address, create and register pool
     tx_files = clusterlib.TxFiles(
         certificate_files=[
             pool_reg_cert_file,
@@ -158,11 +162,6 @@ def _create_register_pool_delegate_stake_tx(
             node_cold.skey_file,
         ],
     )
-
-    src_address = pool_owners[0].payment.address
-    src_init_balance = cluster_obj.get_address_balance(src_address)
-
-    # register and delegate stake address, create and register pool
     tx_raw_data = cluster_obj.send_tx(src_address=src_address, tx_files=tx_files)
     cluster_obj.wait_for_new_block(new_blocks=2)
 
@@ -179,6 +178,16 @@ def _create_register_pool_delegate_stake_tx(
     stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
     _check_staking(
         pool_owners, cluster_obj=cluster_obj, stake_pool_id=stake_pool_id, pool_data=pool_data,
+    )
+
+    return clusterlib.PoolCreationArtifacts(
+        stake_pool_id=stake_pool_id,
+        vrf_key_pair=node_vrf,
+        cold_key_pair_and_counter=node_cold,
+        pool_reg_cert_file=pool_reg_cert_file,
+        pool_data=pool_data,
+        pool_owners=pool_owners,
+        tx_raw_data=tx_raw_data,
     )
 
 
@@ -213,6 +222,10 @@ def _create_register_pool_tx_delegate_stake_tx(
         for i, p in enumerate(pool_owners)
     ]
 
+    src_address = pool_owners[0].payment.address
+    src_init_balance = cluster_obj.get_address_balance(src_address)
+
+    # register and delegate stake address
     tx_files = clusterlib.TxFiles(
         certificate_files=[*stake_addr_reg_cert_files, *stake_addr_deleg_cert_files],
         signing_key_files=[
@@ -221,11 +234,6 @@ def _create_register_pool_tx_delegate_stake_tx(
             pool_artifacts.cold_key_pair_and_counter.skey_file,
         ],
     )
-
-    src_address = pool_owners[0].payment.address
-    src_init_balance = cluster_obj.get_address_balance(src_address)
-
-    # register and delegate stake address
     tx_raw_data = cluster_obj.send_tx(src_address=src_address, tx_files=tx_files)
     cluster_obj.wait_for_new_block(new_blocks=2)
 
@@ -281,15 +289,14 @@ def _delegate_addr_using_cert(
         payment_addr_rec, cluster_obj=cluster_obj, faucet_data=addrs_data["user1"], request=request,
     )
 
-    tx_files = clusterlib.TxFiles(
-        certificate_files=[stake_addr_reg_cert_file, stake_addr_deleg_cert_file],
-        signing_key_files=[payment_addr_rec.skey_file, stake_addr_rec.skey_file],
-    )
-
     src_address = payment_addr_rec.address
     src_init_balance = cluster_obj.get_address_balance(src_address)
 
     # register stake address and delegate it to pool
+    tx_files = clusterlib.TxFiles(
+        certificate_files=[stake_addr_reg_cert_file, stake_addr_deleg_cert_file],
+        signing_key_files=[payment_addr_rec.skey_file, stake_addr_rec.skey_file],
+    )
     tx_raw_data = cluster_obj.send_tx(src_address=src_address, tx_files=tx_files)
     cluster_obj.wait_for_new_block(new_blocks=2)
 
@@ -343,15 +350,14 @@ class TestDelegateAddr:
             request=request,
         )
 
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[stake_addr_reg_cert_file],
-            signing_key_files=[payment_addr_rec.skey_file, stake_addr_rec.skey_file],
-        )
-
         src_address = payment_addr_rec.address
         src_init_balance = cluster.get_address_balance(src_address)
 
         # register stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_reg_cert_file],
+            signing_key_files=[payment_addr_rec.skey_file, stake_addr_rec.skey_file],
+        )
         tx_raw_data = cluster.send_tx(src_address=src_address, tx_files=tx_files)
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -438,15 +444,14 @@ class TestDelegateAddr:
             addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
         )
 
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[stake_addr_dereg_cert],
-            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
-        )
-
         src_address = pool_user.payment.address
         src_init_balance = cluster.get_address_balance(src_address)
 
         # de-register stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_dereg_cert],
+            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+        )
         tx_raw_data = cluster.send_tx(src_address=src_address, tx_files=tx_files)
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -633,9 +638,12 @@ class TestStakePool:
 
         LOGGER.info("Waiting up to 3 epochs for stake pool to be deregistered.")
         helpers.wait_for(
-            lambda: pool_artifacts.stake_pool_id not in cluster.get_stake_distribution(),
+            lambda: cluster.get_registered_stake_pools_ledger_state().get(
+                pool_artifacts.stake_pool_id
+            )
+            is None,
             delay=10,
-            num_sec=3 * cluster.epoch_length,
+            num_sec=3 * cluster.epoch_length_sec,
             message="deregister stake pool",
         )
 
@@ -643,6 +651,13 @@ class TestStakePool:
         assert src_register_balance - tx_raw_data.fee == cluster.get_address_balance(
             pool_owner.payment.address
         )
+
+        # check that the stake addresses are no longer delegated
+        for owner_rec in pool_owners:
+            stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
+            assert (
+                stake_addr_info and not stake_addr_info.delegation
+            ), f"Stake address is still delegated: {stake_addr_info}"
 
         # check that the deposit was returned to reward account
         stake_addr_info = cluster.get_stake_addr_info(pool_owner.stake.address)
@@ -652,23 +667,128 @@ class TestStakePool:
             == src_register_reward + cluster.get_pool_deposit()
         )
 
-        # check that the pool was correctly de-registered on chain
-        pool_ledger_state = cluster.get_registered_stake_pools_ledger_state().get(
-            pool_artifacts.stake_pool_id
-        )
-        assert not pool_ledger_state, (
-            "The de-registered stake pool id is still shown inside the available stake pools;\n"
-            f"Pool ID: {pool_artifacts.stake_pool_id} vs Existing IDs: "
-            f"{list(cluster.get_registered_stake_pools_ledger_state())}"
+    def test_reregister_stake_pool(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        temp_dir: Path,
+        request: FixtureRequest,
+    ):
+        """Re-register stake pool."""
+        cluster = cluster_session
+        temp_template = "test_reregister_stake_pool"
+
+        pool_metadata = {
+            "name": "QA E2E test",
+            "description": "Shelley QA E2E test Test",
+            "ticker": "QA1",
+            "homepage": "www.test1.com",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / "poolR_registration_metadata.json", pool_metadata
         )
 
+        pool_data = clusterlib.PoolData(
+            pool_name="poolR",
+            pool_pledge=222,
+            pool_cost=123,
+            pool_margin=0.512,
+            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+        )
+
+        # create pool owners
+        pool_owners = _create_pool_owners(cluster_obj=cluster, temp_template=temp_template,)
+
+        # fund source address
+        helpers.fund_from_faucet(
+            pool_owners[0].payment,
+            cluster_obj=cluster,
+            faucet_data=addrs_data_session["user1"],
+            amount=1_500_000_000,
+            request=request,
+        )
+
+        # register pool and delegate stake address
+        pool_artifacts = _create_register_pool_delegate_stake_tx(
+            cluster_obj=cluster,
+            pool_owners=pool_owners,
+            temp_template=temp_template,
+            pool_data=pool_data,
+        )
+
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            node_cold_key_pair=pool_artifacts.cold_key_pair_and_counter,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+        )
+
+        LOGGER.info("Waiting up to 3 epochs for stake pool to be deregistered.")
+        helpers.wait_for(
+            lambda: cluster.get_registered_stake_pools_ledger_state().get(
+                pool_artifacts.stake_pool_id
+            )
+            is None,
+            delay=10,
+            num_sec=3 * cluster.epoch_length_sec,
+            message="deregister stake pool",
+        )
+
+        # check that the stake addresses are no longer delegated
         for owner_rec in pool_owners:
             stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
-
-            # check that the stake address is no longer delegated
             assert (
                 stake_addr_info and not stake_addr_info.delegation
             ), f"Stake address is still delegated: {stake_addr_info}"
+
+        src_address = pool_owners[0].payment.address
+        src_init_balance = cluster.get_address_balance(src_address)
+
+        # re-register the pool by resubmitting the pool registration certificate,
+        # delegate stake address to pool again (the address is already registered)
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[
+                pool_artifacts.pool_reg_cert_file,
+                *list(temp_dir.glob(f"*{temp_template}_stake_deleg.cert")),
+            ],
+            signing_key_files=pool_artifacts.tx_raw_data.tx_files.signing_key_files,
+        )
+        tx_raw_data = cluster.send_tx(src_address=src_address, tx_files=tx_files)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_data.fee - cluster.get_pool_deposit()
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        LOGGER.info("Waiting up to 5 epochs for stake pool to be re-registered.")
+        helpers.wait_for(
+            lambda: pool_artifacts.stake_pool_id in cluster.get_stake_distribution(),
+            delay=10,
+            num_sec=5 * cluster.epoch_length_sec,
+            message="re-register stake pool",
+        )
+
+        # check that pool was correctly setup
+        updated_pool_ledger_state = (
+            cluster.get_registered_stake_pools_ledger_state().get(pool_artifacts.stake_pool_id)
+            or {}
+        )
+        assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data)
+
+        # check that the stake addresses were delegated
+        for owner_rec in pool_owners:
+            stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
+            assert (
+                stake_addr_info and stake_addr_info.delegation
+            ), f"Stake address is not delegated yet: {stake_addr_info}"
+
+            assert (
+                pool_artifacts.stake_pool_id == stake_addr_info.delegation
+            ), "Stake address delegated to wrong pool"
 
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_metadata(
@@ -746,17 +866,10 @@ class TestStakePool:
             pool_owners=pool_owners,
             node_vrf_vkey_file=pool_artifacts.vrf_key_pair.vkey_file,
             node_cold_key_pair=pool_artifacts.cold_key_pair_and_counter,
+            pool_reg_cert_file=pool_artifacts.pool_reg_cert_file,
             deposit=0,  # no additional deposit, the pool is already registered
         )
         cluster.wait_for_new_epoch()
-
-        # check that the pool has it's original ID after updating the metadata
-        new_stake_pool_id = cluster.get_stake_pool_id(
-            pool_artifacts.cold_key_pair_and_counter.vkey_file
-        )
-        assert (
-            pool_artifacts.stake_pool_id == new_stake_pool_id
-        ), "New pool ID was generated after updating the pool metadata"
 
         # check that the pool parameters were correctly updated on chain
         updated_pool_ledger_state = (
@@ -827,17 +940,10 @@ class TestStakePool:
             pool_owners=pool_owners,
             node_vrf_vkey_file=pool_artifacts.vrf_key_pair.vkey_file,
             node_cold_key_pair=pool_artifacts.cold_key_pair_and_counter,
+            pool_reg_cert_file=pool_artifacts.pool_reg_cert_file,
             deposit=0,  # no additional deposit, the pool is already registered
         )
         cluster.wait_for_new_epoch()
-
-        # check that the pool has it's original ID after updating the parameters
-        new_stake_pool_id = cluster.get_stake_pool_id(
-            pool_artifacts.cold_key_pair_and_counter.vkey_file
-        )
-        assert (
-            pool_artifacts.stake_pool_id == new_stake_pool_id
-        ), "New pool ID was generated after updating the pool parameters"
 
         # check that the pool parameters were correctly updated on chain
         updated_pool_ledger_state = (

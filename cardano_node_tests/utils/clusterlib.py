@@ -61,21 +61,22 @@ class TxOut(NamedTuple):
     amount: int
 
 
+class TxFiles(NamedTuple):
+    certificate_files: OptionalFiles = ()
+    proposal_files: OptionalFiles = ()
+    metadata_json_files: OptionalFiles = ()
+    metadata_cbor_files: OptionalFiles = ()
+    withdrawal_files: OptionalFiles = ()
+    signing_key_files: OptionalFiles = ()
+
+
 class TxRawData(NamedTuple):
     txins: List[UTXOData]
     txouts: List[TxOut]
+    tx_files: TxFiles
     out_file: Path
     fee: int
     ttl: int
-
-
-class PoolCreationArtifacts(NamedTuple):
-    stake_pool_id: str
-    kes_key_pair: KeyPair
-    vrf_key_pair: KeyPair
-    cold_key_pair_and_counter: ColdKeyPair
-    pool_reg_cert_file: Path
-    tx_raw_data: TxRawData
 
 
 class PoolOwner(NamedTuple):
@@ -94,13 +95,15 @@ class PoolData(NamedTuple):
     pool_relay_port: int = 0
 
 
-class TxFiles(NamedTuple):
-    certificate_files: OptionalFiles = ()
-    proposal_files: OptionalFiles = ()
-    metadata_json_files: OptionalFiles = ()
-    metadata_cbor_files: OptionalFiles = ()
-    withdrawal_files: OptionalFiles = ()
-    signing_key_files: OptionalFiles = ()
+class PoolCreationArtifacts(NamedTuple):
+    stake_pool_id: str
+    vrf_key_pair: KeyPair
+    cold_key_pair_and_counter: ColdKeyPair
+    pool_reg_cert_file: Path
+    pool_data: PoolData
+    pool_owners: List[PoolOwner]
+    tx_raw_data: TxRawData
+    kes_key_pair: Optional[KeyPair] = None
 
 
 class Protocols(enum.Enum):
@@ -154,6 +157,7 @@ class ClusterLib:
         self.network_magic = self.genesis["networkMagic"]
         self.slot_length = self.genesis["slotLength"]
         self.epoch_length = self.genesis["epochLength"]
+        self.epoch_length_sec = self.epoch_length * self.slot_length
         self.slots_per_kes_period = self.genesis["slotsPerKESPeriod"]
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
 
@@ -543,7 +547,7 @@ class ClusterLib:
     ) -> Path:
         """Generate stake address delegation certificate."""
         destination_dir = Path(destination_dir).expanduser()
-        out_file = destination_dir / f"{addr_name}_stake.deleg.cert"
+        out_file = destination_dir / f"{addr_name}_stake_deleg.cert"
         self.cli(
             [
                 "stake-address",
@@ -869,7 +873,9 @@ class ClusterLib:
             ]
         )
 
-        return TxRawData(txins=txins, txouts=txouts, out_file=out_file, fee=fee, ttl=ttl)
+        return TxRawData(
+            txins=txins, txouts=txouts, tx_files=tx_files, out_file=out_file, fee=fee, ttl=ttl
+        )
 
     def build_raw_tx(
         self,
@@ -1209,17 +1215,21 @@ class ClusterLib:
         pool_owners: List[PoolOwner],
         node_vrf_vkey_file: FileType,
         node_cold_key_pair: ColdKeyPair,
+        pool_reg_cert_file: Optional[FileType] = None,
         tx_name: Optional[str] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawData]:
         """Register stake pool."""
-        pool_reg_cert_file = self.gen_pool_registration_cert(
-            pool_data=pool_data,
-            node_vrf_vkey_file=node_vrf_vkey_file,
-            node_cold_vkey_file=node_cold_key_pair.vkey_file,
-            owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
-            destination_dir=destination_dir,
+        pool_reg_cert_file = Path(
+            pool_reg_cert_file
+            or self.gen_pool_registration_cert(
+                pool_data=pool_data,
+                node_vrf_vkey_file=node_vrf_vkey_file,
+                node_cold_vkey_file=node_cold_key_pair.vkey_file,
+                owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
+                destination_dir=destination_dir,
+            )
         )
 
         # submit the pool registration certificate through a tx
@@ -1319,9 +1329,11 @@ class ClusterLib:
 
         return PoolCreationArtifacts(
             stake_pool_id=self.get_stake_pool_id(node_cold.vkey_file),
-            kes_key_pair=node_kes,
             vrf_key_pair=node_vrf,
             cold_key_pair_and_counter=node_cold,
             pool_reg_cert_file=pool_reg_cert_file,
+            pool_data=pool_data,
+            pool_owners=pool_owners,
             tx_raw_data=tx_raw_data,
+            kes_key_pair=node_kes,
         )
