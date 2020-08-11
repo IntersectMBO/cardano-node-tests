@@ -866,7 +866,6 @@ class TestStakePool:
             pool_owners=pool_owners,
             node_vrf_vkey_file=pool_artifacts.vrf_key_pair.vkey_file,
             node_cold_key_pair=pool_artifacts.cold_key_pair_and_counter,
-            pool_reg_cert_file=pool_artifacts.pool_reg_cert_file,
             deposit=0,  # no additional deposit, the pool is already registered
         )
         cluster.wait_for_new_epoch()
@@ -940,7 +939,6 @@ class TestStakePool:
             pool_owners=pool_owners,
             node_vrf_vkey_file=pool_artifacts.vrf_key_pair.vkey_file,
             node_cold_key_pair=pool_artifacts.cold_key_pair_and_counter,
-            pool_reg_cert_file=pool_artifacts.pool_reg_cert_file,
             deposit=0,  # no additional deposit, the pool is already registered
         )
         cluster.wait_for_new_epoch()
