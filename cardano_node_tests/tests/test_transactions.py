@@ -220,7 +220,6 @@ class Test10InOut:
             ), f"Incorrect balance for destination address `{addr}`"
 
 
-@pytest.mark.first
 class TestNotBalanced:
     @pytest.fixture(scope="class")
     def payment_addr_rec(self, cluster_session):
@@ -343,7 +342,6 @@ def test_negative_fee(cluster_session, addrs_data_session):
     assert "option --fee: cannot parse value" in str(excinfo.value)
 
 
-@pytest.mark.first
 def test_past_ttl(cluster_session, addrs_data_session):
     """Send a transaction with ttl in the past."""
     cluster = cluster_session

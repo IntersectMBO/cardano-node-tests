@@ -65,9 +65,23 @@ def run_shell_command(command: str, workdir: FileType = ""):
     cmd = f"bash -c '{command}'"
     cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    __, stderr = p.communicate()
+    stdout, stderr = p.communicate()
     if p.returncode != 0:
         raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
+    return stdout
+
+
+def get_cardano_version():
+    out = run_shell_command("cardano-node --version").decode().strip()
+    env_info, git_info, *__ = out.splitlines()
+    node, platform, ghc, *__ = env_info.split(" - ")
+    version = {
+        "cardano-node": node.split(" ")[-1],
+        "platform": platform,
+        "ghc": ghc,
+        "git_rev": git_info.split(" ")[-1],
+    }
+    return version
 
 
 def fund_from_genesis(
