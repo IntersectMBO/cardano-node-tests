@@ -71,7 +71,8 @@ def run_shell_command(command: str, workdir: FileType = ""):
     return stdout
 
 
-def get_cardano_version():
+def get_cardano_version() -> dict:
+    """Return version info for cardano-node."""
     out = run_shell_command("cardano-node --version").decode().strip()
     env_info, git_info, *__ = out.splitlines()
     node, platform, ghc, *__ = env_info.split(" - ")
