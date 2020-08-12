@@ -5,7 +5,7 @@ install:
 
 # run all tests
 tests:
-	./run_tests.sh
+	pytest --cli-coverage-dir .cli_coverage/ --html=report.html --self-contained-html cardano_node_tests
 
 lint:
 	pre-commit run -a
