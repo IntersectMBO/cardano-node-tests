@@ -18,6 +18,20 @@ def pytest_addoption(parser):
     )
 
 
+def pytest_html_report_title(report):
+    cardano_version = helpers.get_cardano_version()
+    report.title = (
+        f"cardano-node {cardano_version['cardano-node']} (git rev {cardano_version['git_rev']})"
+    )
+
+
+def pytest_configure(config):
+    cardano_version = helpers.get_cardano_version()
+    config._metadata["cardano-node"] = cardano_version["cardano-node"]
+    config._metadata["cardano-node rev"] = cardano_version["git_rev"]
+    config._metadata["ghc"] = cardano_version["ghc"]
+
+
 # session scoped fixtures
 
 
