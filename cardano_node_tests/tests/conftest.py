@@ -8,10 +8,6 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-def pytest_configure(config):
-    config.addinivalue_line("markers", "clean_cluster: mark that the test needs clean cluster.")
-
-
 def pytest_addoption(parser):
     parser.addoption(
         "--cli-coverage-dir",

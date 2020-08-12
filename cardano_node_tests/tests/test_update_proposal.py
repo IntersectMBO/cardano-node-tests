@@ -19,7 +19,7 @@ def temp_dir(tmp_path_factory):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-@pytest.mark.clean_cluster
+@pytest.mark.first
 def test_update_proposal(cluster):
     """Submit update proposal."""
     helpers.update_params(

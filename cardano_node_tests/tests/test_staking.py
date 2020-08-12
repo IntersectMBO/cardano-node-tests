@@ -698,7 +698,7 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = _create_pool_owners(cluster_obj=cluster, temp_template=temp_template,)
+        pool_owners = _create_pool_owners(cluster_obj=cluster, temp_template=temp_template)
 
         # fund source address
         helpers.fund_from_faucet(
@@ -951,7 +951,7 @@ class TestStakePool:
         assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data_updated)
 
 
-@pytest.mark.clean_cluster
+@pytest.mark.first
 @pytest.mark.usefixtures("temp_dir", "update_pool_cost")
 class TestPoolCost:
     @pytest.fixture(scope="class")
