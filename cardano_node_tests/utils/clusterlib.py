@@ -1215,21 +1215,17 @@ class ClusterLib:
         pool_owners: List[PoolOwner],
         node_vrf_vkey_file: FileType,
         node_cold_key_pair: ColdKeyPair,
-        pool_reg_cert_file: Optional[FileType] = None,
         tx_name: Optional[str] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawData]:
         """Register stake pool."""
-        pool_reg_cert_file = Path(
-            pool_reg_cert_file
-            or self.gen_pool_registration_cert(
-                pool_data=pool_data,
-                node_vrf_vkey_file=node_vrf_vkey_file,
-                node_cold_vkey_file=node_cold_key_pair.vkey_file,
-                owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
-                destination_dir=destination_dir,
-            )
+        pool_reg_cert_file = self.gen_pool_registration_cert(
+            pool_data=pool_data,
+            node_vrf_vkey_file=node_vrf_vkey_file,
+            node_cold_vkey_file=node_cold_key_pair.vkey_file,
+            owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
+            destination_dir=destination_dir,
         )
 
         # submit the pool registration certificate through a tx
