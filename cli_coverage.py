@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import List
+from typing import Tuple
 
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import UnpackableSequence
@@ -27,10 +28,16 @@ def get_args(args=None):
         help="Path to coverage files",
     )
     parser.add_argument(
-        "-o", "--output-file", required=True, help="File where to save coverage results",
+        "-o", "--output-file", help="File where to save coverage results",
     )
     parser.add_argument(
         "-u", "--uncovered-only", action="store_true", help="Report only uncovered arguments",
+    )
+    parser.add_argument(
+        "-p", "--print-coverage", action="store_true", help="Print coverage percentage",
+    )
+    parser.add_argument(
+        "-b", "--badge-icon-url", action="store_true", help="Print badge icon URL",
     )
     return parser.parse_args(args)
 
@@ -116,31 +123,64 @@ def get_coverage(input_jsons: List[Path], available_commands: dict) -> dict:
     return coverage_dict
 
 
-def get_report(arg_name: str, coverage: dict, uncovered_only: bool = False) -> dict:
+def get_report(
+    arg_name: str, coverage: dict, uncovered_only: bool = False
+) -> Tuple[dict, int, int]:
     """Generate coverage report."""
     uncovered_db: dict = {}
+    covered_count = 0
+    uncovered_count = 0
     for key, value in coverage.items():
         if key == "_count":
             continue
         if len(value) != 1:
-            ret_db = get_report(key, value, uncovered_only=uncovered_only)
+            ret_db, ret_covered_count, ret_uncovered_count = get_report(
+                key, value, uncovered_only=uncovered_only
+            )
+            covered_count += ret_covered_count
+            uncovered_count += ret_uncovered_count
             if ret_db:
                 uncovered_db[key] = ret_db
-                continue
+            continue
         count = value["_count"]
         if count == 0:
             uncovered_db[key] = 0
-        elif not uncovered_only:
+            uncovered_count += 1
+        else:
+            covered_count += 1
+        if count and not uncovered_only:
             uncovered_db[key] = count
 
     if uncovered_db and "_count" in coverage:
         uncovered_db[f"_count_{arg_name}"] = coverage["_count"]
+        uncovered_db[f"_coverage_{arg_name}"] = (
+            (100 / ((covered_count + uncovered_count) / covered_count)) if covered_count else 0
+        )
 
-    return uncovered_db
+    return uncovered_db, covered_count, uncovered_count
+
+
+def get_badge_icon(report: dict) -> str:
+    """Return URL of badge icon."""
+    coverage_percentage = report["cardano-cli"]["_coverage_cardano-cli"]
+    color = "green"
+    if coverage_percentage < 50:
+        color = "red"
+    elif coverage_percentage < 90:
+        color = "yellow"
+    icon_url = (
+        "https://img.shields.io/static/v1?label=cli%20coverage&"
+        f"message={coverage_percentage:.2f}%&color={color}&style=for-the-badge"
+    )
+    return icon_url
 
 
 def main() -> int:
     args = get_args()
+
+    if not (args.output_file or args.print_coverage or args.badge_icon_url):
+        LOGGER.error("One of --output-file, --print-coverage or --badge-icon-url is needed")
+        return 1
 
     available_commands = {
         "cardano-cli": {"_count": 0, "shelley": get_available_commands(["cardano-cli", "shelley"])}
@@ -151,8 +191,14 @@ def main() -> int:
         LOGGER.error(str(exc))
         return 1
 
-    report = get_report("cardano-cli", coverage, uncovered_only=args.uncovered_only)
-    helpers.write_json(args.output_file, report)
+    report, *__ = get_report("cardano-cli", coverage, uncovered_only=args.uncovered_only)
+
+    if args.output_file:
+        helpers.write_json(args.output_file, report)
+    if args.print_coverage:
+        print(report["cardano-cli"]["_coverage_cardano-cli"])
+    if args.badge_icon_url:
+        print(get_badge_icon(report))
     return 0
 
 
