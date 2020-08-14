@@ -322,24 +322,106 @@ class TestNotBalanced:
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
 
-def test_negative_fee(cluster_session, addrs_data_session):
-    """Send a transaction with negative fee (-1)."""
-    cluster = cluster_session
-    payment_addr_rec = helpers.create_payment_addr_records(
-        "addr_negative_fee0", cluster_obj=cluster_session
-    )[0]
-    src_address = addrs_data_session["user1"]["payment_addr"]
+class TestFee:
+    @pytest.fixture(scope="class")
+    def payment_addr_rec(self, cluster_session: clusterlib.ClusterLib) -> clusterlib.AddressRecord:
+        return helpers.create_payment_addr_records("addr_test_fee0", cluster_obj=cluster_session)[0]
 
-    tx_files = clusterlib.TxFiles(
-        signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
-    )
-    destinations = [clusterlib.TxOut(address=payment_addr_rec.address, amount=10)]
+    @hypothesis.given(fee=st.integers(max_value=-1))
+    @hypothesis.settings(deadline=None)
+    def test_negative_fee(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        payment_addr_rec: clusterlib.AddressRecord,
+        fee: int,
+    ):
+        """Send a transaction with negative fee."""
+        cluster = cluster_session
+        src_address = addrs_data_session["user1"]["payment_addr"]
 
-    with pytest.raises(clusterlib.CLIError) as excinfo:
-        cluster.send_funds(
-            src_address=src_address, destinations=destinations, tx_files=tx_files, fee=-1,
+        destinations = [clusterlib.TxOut(address=payment_addr_rec.address, amount=10)]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
         )
-    assert "option --fee: cannot parse value" in str(excinfo.value)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_funds(
+                src_address=src_address, destinations=destinations, tx_files=tx_files, fee=fee,
+            )
+        assert "option --fee: cannot parse value" in str(excinfo.value)
+
+    @pytest.mark.parametrize("fee_change", [0, 1.1, 1.5, 2])
+    def test_smaller_fee(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        payment_addr_rec: clusterlib.AddressRecord,
+        fee_change: float,
+    ):
+        """Send a transaction with smaller-than-expected fee."""
+        cluster = cluster_session
+        src_address = addrs_data_session["user1"]["payment_addr"]
+
+        destinations = [clusterlib.TxOut(address=payment_addr_rec.address, amount=10)]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
+        )
+
+        fee = 0.0
+        if fee_change:
+            fee = (
+                cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files)
+                / fee_change
+            )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_funds(
+                src_address=src_address, destinations=destinations, tx_files=tx_files, fee=int(fee),
+            )
+        assert "FeeTooSmallUTxO" in str(excinfo.value)
+
+    @pytest.mark.parametrize("fee_add", [0, 1000, 1000_000, 10_000_000])
+    def test_expected_or_higher_fee(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        payment_addr_rec: clusterlib.AddressRecord,
+        fee_add: int,
+    ):
+        """Send a transaction fee that is same or higher than expected."""
+        cluster = cluster_session
+        amount = 100
+
+        src_address = addrs_data_session["user1"]["payment_addr"]
+        dst_address = payment_addr_rec.address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[addrs_data_session["user1"]["payment_key_pair"].skey_file]
+        )
+        fee = (
+            cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files) + fee_add
+        )
+
+        tx_raw_data = cluster.send_funds(
+            src_address=src_address, destinations=destinations, tx_files=tx_files, fee=fee,
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert tx_raw_data.fee == fee, "The actual fee doesn't match the specified fee"
+
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_data.fee - len(destinations) * amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
 
 
 def test_past_ttl(cluster_session, addrs_data_session):
