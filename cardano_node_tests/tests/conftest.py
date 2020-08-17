@@ -1,6 +1,8 @@
 import logging
 import os
 from pathlib import Path
+from typing import Any
+from typing import Generator
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -16,7 +18,7 @@ RUNNING_FILE = "cluster_running"
 FIRST_RAN = "first_ran"
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: Any) -> None:
     parser.addoption(
         "--cli-coverage-dir",
         action="store",
@@ -26,14 +28,14 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_html_report_title(report):
+def pytest_html_report_title(report: Any) -> None:
     cardano_version = helpers.get_cardano_version()
     report.title = (
         f"cardano-node {cardano_version['cardano-node']} (git rev {cardano_version['git_rev']})"
     )
 
 
-def pytest_configure(config):
+def pytest_configure(config: Any) -> None:
     cardano_version = helpers.get_cardano_version()
     config._metadata["cardano-node"] = cardano_version["cardano-node"]
     config._metadata["cardano-node rev"] = cardano_version["git_rev"]
@@ -42,7 +44,7 @@ def pytest_configure(config):
 
 def _fresh_cluster(
     change_dir: Path, tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
-):
+) -> Generator[clusterlib.ClusterLib, None, None]:
     """Run fresh cluster for each test marked with the "first" marker."""
     # pylint: disable=unused-argument
     # not executing with multiple workers
@@ -86,7 +88,7 @@ def _fresh_cluster(
             helpers.stop_cluster()
 
 
-def _wait_for_fresh(lock_dir: Path):
+def _wait_for_fresh(lock_dir: Path) -> None:
     """Wait until all tests marked as "first" are finished."""
     while True:
         # if the status files exists, the tests are still in progress
@@ -114,7 +116,7 @@ def _wait_for_fresh(lock_dir: Path):
 
 
 @pytest.fixture(scope="session")
-def change_dir(tmp_path_factory: TempdirFactory):
+def change_dir(tmp_path_factory: TempdirFactory) -> None:
     """Change CWD to temp directory before running tests."""
     tmp_path = tmp_path_factory.getbasetemp()
     os.chdir(tmp_path)
@@ -124,7 +126,7 @@ def change_dir(tmp_path_factory: TempdirFactory):
 @pytest.yield_fixture(scope="session")
 def cluster_session(
     change_dir: Path, tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
-):
+) -> Generator[clusterlib.ClusterLib, None, None]:
     # pylint: disable=unused-argument
     # not executing with multiple workers
     if not worker_id or worker_id == "master":
@@ -181,7 +183,7 @@ def cluster_session(
 
 
 @pytest.fixture(scope="session")
-def addrs_data_session(cluster_session: clusterlib.ClusterLib):
+def addrs_data_session(cluster_session: clusterlib.ClusterLib) -> dict:
     # pylint: disable=unused-argument
     return helpers.load_addrs_data()
 
@@ -193,7 +195,7 @@ cluster_class = pytest.yield_fixture(_fresh_cluster, scope="class")
 
 
 @pytest.fixture(scope="class")
-def addrs_data_class(cluster_class: clusterlib.ClusterLib):
+def addrs_data_class(cluster_class: clusterlib.ClusterLib) -> dict:
     # pylint: disable=unused-argument
     return helpers.load_addrs_data()
 
@@ -205,6 +207,6 @@ cluster_func = pytest.yield_fixture(_fresh_cluster)
 
 
 @pytest.fixture
-def addrs_data_func(cluster_func: clusterlib.ClusterLib):
+def addrs_data_func(cluster_func: clusterlib.ClusterLib) -> dict:
     # pylint: disable=unused-argument
     return helpers.load_addrs_data()

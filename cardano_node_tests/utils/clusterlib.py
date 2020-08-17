@@ -167,7 +167,7 @@ class ClusterLib:
         self.protocol = protocol
         self._check_protocol()
 
-    def _check_state_dir(self):
+    def _check_state_dir(self) -> None:
         """Check that all files expected by `__init__` are present."""
         if not self.state_dir.exists():
             raise CLIError(f"The state dir `{self.state_dir}` doesn't exist.")
@@ -184,7 +184,7 @@ class ClusterLib:
             if not file_name.exists():
                 raise CLIError(f"The file `{file_name}` doesn't exist.")
 
-    def _check_protocol(self):
+    def _check_protocol(self) -> None:
         """Check that the cluster is running with the expected protocol."""
         try:
             self.refresh_pparams_file()
@@ -195,14 +195,14 @@ class ClusterLib:
                 f"The cluster is running with protocol different from '{self.protocol}':\n" f"{exc}"
             )
 
-    def _check_outfiles(self, *out_files):
+    def _check_outfiles(self, *out_files: FileType) -> None:
         """Check that the expected output files were created."""
         for out_file in out_files:
             out_file = Path(out_file).expanduser()
             if not out_file.exists():
                 raise CLIError(f"The expected file `{out_file}` doesn't exist.")
 
-    def record_cli_coverage(self, cli_args: List[str]):
+    def record_cli_coverage(self, cli_args: List[str]) -> None:
         """Record CLI coverage info."""
         parent_dict = self.cli_coverage
         prev_arg = ""
@@ -225,7 +225,7 @@ class ClusterLib:
             if not arg.startswith("--"):
                 parent_dict = cur_dict
 
-    def cli(self, cli_args) -> CLIOut:
+    def cli(self, cli_args: List[str]) -> CLIOut:
         """Run the `cardano-cli` command."""
         cmd = ["cardano-cli", "shelley", *cli_args]
         self.record_cli_coverage(cmd)
@@ -264,7 +264,7 @@ class ClusterLib:
         stdout_dec = stdout.decode("utf-8") if stdout else ""
         return stdout_dec
 
-    def refresh_pparams_file(self):
+    def refresh_pparams_file(self) -> None:
         """Refresh protocol parameters file."""
         self.query_cli(["protocol-parameters", "--out-file", str(self.pparams_file)])
 
@@ -289,7 +289,7 @@ class ClusterLib:
 
     def get_tip(self) -> dict:
         """Return current tip - last block successfully applied to the ledger."""
-        return json.loads(self.query_cli(["tip"]))
+        return json.loads(self.query_cli(["tip"]))  # type: ignore
 
     def gen_genesis_addr(self, vkey_file: FileType, *args: str) -> str:
         """Generate genesis address."""
@@ -656,14 +656,14 @@ class ClusterLib:
 
     def get_ledger_state(self) -> dict:
         """Return ledger state info."""
-        return json.loads(self.query_cli(["ledger-state"]))
+        return json.loads(self.query_cli(["ledger-state"]))  # type: ignore
 
     def get_registered_stake_pools_ledger_state(self) -> dict:
         """Return ledger state info for registered stake pools."""
         registered_pools_details = self.get_ledger_state()["esLState"]["_delegationState"][
             "_pstate"
         ]["_pParams"]
-        return registered_pools_details
+        return registered_pools_details  # type: ignore
 
     def get_stake_pool_id(self, pool_cold_vkey_file: FileType) -> str:
         """Return ID of stake pool."""
@@ -674,7 +674,9 @@ class ClusterLib:
         )
         return pool_id
 
-    def delegate_stake_addr(self, stake_addr_skey: FileType, pool_id: str, delegation_fee: int):
+    def delegate_stake_addr(
+        self, stake_addr_skey: FileType, pool_id: str, delegation_fee: int
+    ) -> None:
         """Delegate stake address to stake pool."""
         cli_args = [
             "stake-address",
@@ -714,7 +716,7 @@ class ClusterLib:
         """Return up-to-date protocol parameters."""
         self.refresh_pparams_file()
         with open(self.pparams_file) as in_json:
-            return json.load(in_json)
+            return json.load(in_json)  # type: ignore
 
     def get_key_deposit(self) -> int:
         """Return key deposit amount."""
@@ -1023,7 +1025,7 @@ class ClusterLib:
         self._check_outfiles(out_file)
         return out_file
 
-    def submit_tx(self, tx_file: FileType):
+    def submit_tx(self, tx_file: FileType) -> None:
         """Submit transaction."""
         self.cli(
             [
@@ -1162,7 +1164,7 @@ class ClusterLib:
             destination_dir=destination_dir,
         )
 
-    def wait_for_new_block(self, new_blocks: int = 1):
+    def wait_for_new_block(self, new_blocks: int = 1) -> None:
         """Wait for new block(s) to be created."""
         LOGGER.debug(f"Waiting for {new_blocks} new block(s) to be created.")
         timeout_no_of_slots = 200 * new_blocks
@@ -1183,7 +1185,7 @@ class ClusterLib:
 
         LOGGER.debug(f"New block(s) were created; block number: {last_block_block_no}")
 
-    def wait_for_new_epoch(self, new_epochs: int = 1):
+    def wait_for_new_epoch(self, new_epochs: int = 1) -> None:
         """Wait for new epoch(s)."""
         last_block_epoch = self.get_last_block_epoch()
         LOGGER.debug(

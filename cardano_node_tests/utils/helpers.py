@@ -35,7 +35,7 @@ FileLockIfXdist = FileLock if os.environ.get("PYTEST_XDIST_TESTRUNUID") else con
 
 def wait_for(
     func: Callable, delay: int = 5, num_sec: int = 180, message: str = "", silent: bool = False
-):
+) -> Any:
     """Wait for success of `func` for `num_sec`."""
     end_time = time.time() + num_sec
 
@@ -107,7 +107,7 @@ def fund_from_genesis(
     amount: int = 2_000_000,
     tx_name: Optional[str] = None,
     destination_dir: FileType = ".",
-):
+) -> None:
     """Send `amount` from genesis addr to all `dst_addrs`."""
     fund_dst = [
         clusterlib.TxOut(address=d, amount=amount)
@@ -141,7 +141,7 @@ def return_funds_to_faucet(
     amount: int = -1,
     tx_name: Optional[str] = None,
     destination_dir: FileType = ".",
-):
+) -> None:
     """Send `amount` from all `src_addrs` to `faucet_addr`.
 
     The amount of "-1" means all available funds.
@@ -178,7 +178,7 @@ def fund_from_faucet(
     tx_name: Optional[str] = None,
     request: Optional[FixtureRequest] = None,
     destination_dir: FileType = ".",
-):
+) -> None:
     """Send `amount` from faucet addr to all `dst_addrs`."""
     fund_dst = [
         clusterlib.TxOut(address=d.address, amount=amount)
@@ -248,7 +248,7 @@ def create_stake_addr_records(
     return addrs
 
 
-def load_devops_pools_data():
+def load_devops_pools_data() -> dict:
     """Load data for pools existing in the devops environment."""
     data_dir = get_cluster_env()["state_dir"] / "nodes"
     pools = ("node-pool1", "node-pool2")
@@ -361,7 +361,7 @@ def load_addrs_data() -> dict:
     cluster_env = get_cluster_env()
     data_file = Path(cluster_env["state_dir"]) / ADDR_DATA
     with open(data_file, "rb") as in_data:
-        return pickle.load(in_data)
+        return pickle.load(in_data)  # type: ignore
 
 
 def check_dir_arg(dir_path: str) -> Path:
@@ -380,7 +380,7 @@ def check_file_arg(file_path: str) -> Path:
     return abs_path
 
 
-def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, request: FixtureRequest):
+def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, request: FixtureRequest) -> None:
     """Save CLI coverage info."""
     cli_coverage_dir = request.config.getoption("--cli-coverage-dir")
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
@@ -402,7 +402,7 @@ def start_cluster() -> clusterlib.ClusterLib:
     return clusterlib.ClusterLib(cluster_env["state_dir"])
 
 
-def stop_cluster():
+def stop_cluster() -> None:
     """Stop cluster."""
     LOGGER.info("Stopping cluster.")
     cluster_env = get_cluster_env()
@@ -475,7 +475,9 @@ def check_pool_data(  # noqa: C901
     return "\n\n".join(errors_list)
 
 
-def update_params(cluster_obj: clusterlib.ClusterLib, cli_arg: str, param_name: str, param_value):
+def update_params(
+    cluster_obj: clusterlib.ClusterLib, cli_arg: str, param_name: str, param_value: Any
+) -> None:
     """Update params using update proposal."""
     if str(cluster_obj.get_protocol_params()[param_name]) == str(param_value):
         LOGGER.info(f"Value for '{param_name}' is already {param_value}. Nothing to do.")
