@@ -6,6 +6,7 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from _pytest.fixtures import FixtureRequest
+from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
@@ -14,9 +15,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory):
+def temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir and change to it."""
-    tmp_path = tmp_path_factory.mktemp("test_staking")
+    tmp_path = Path(tmp_path_factory.mktemp("test_staking"))
     with helpers.change_cwd(tmp_path):
         yield tmp_path
 
