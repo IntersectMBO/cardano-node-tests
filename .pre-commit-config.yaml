@@ -16,8 +16,10 @@ repos:
   hooks:
   - id: trailing-whitespace
     language_version: python3
+    exclude_types: [html]
   - id: end-of-file-fixer
     language_version: python3
+    exclude_types: [html]
   - id: check-yaml
     language_version: python3
   - id: debug-statements
