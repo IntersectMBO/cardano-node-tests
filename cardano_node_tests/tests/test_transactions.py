@@ -551,7 +551,7 @@ class TestExpectedFees:
         return src_address, tx_files
 
     @pytest.mark.parametrize("addr_fee", [(1, 197929), (3, 234185), (5, 270441), (10, 361081)])
-    def test_pool_fees(
+    def test_pool_registration_fees(
         self,
         cluster_session: clusterlib.ClusterLib,
         temp_dir: Path,
@@ -570,7 +570,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"poolY_{no_of_addr}_registration_metadata.json", pool_metadata
+            temp_dir / f"poolXY_{no_of_addr}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -597,8 +597,67 @@ class TestExpectedFees:
         tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
-    @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 194629), (5, 210117), (10, 248837)])
-    def test_addr_deregister_using_cert(
+    @pytest.mark.parametrize("addr_fee", [(1, 185345), (3, 210337), (5, 235329), (10, 297809)])
+    def test_pool_deregistration_fees(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+        pool_owners: List[clusterlib.PoolOwner],
+        addr_fee: Tuple[int, int],
+    ):
+        """Test pool deregistration fees."""
+        cluster = cluster_session
+        no_of_addr, expected_fee = addr_fee
+        src_address = pool_owners[0].payment.address
+
+        pool_metadata = {
+            "name": "QA E2E test",
+            "description": "Shelley QA E2E test Test",
+            "ticker": "QA1",
+            "homepage": "www.test1.com",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"poolXY_{no_of_addr}_registration_metadata.json", pool_metadata
+        )
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"poolXY_{no_of_addr}",
+            pool_pledge=222,
+            pool_cost=123,
+            pool_margin=0.512,
+            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+        )
+
+        # create pool owners
+        selected_owners = pool_owners[:no_of_addr]
+
+        # create node cold key pair and counter
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        # create deregistration certificate
+        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+            pool_name=pool_data.pool_name,
+            cold_vkey_file=node_cold.vkey_file,
+            epoch=cluster.get_last_block_epoch() + 1,
+        )
+
+        # submit the pool deregistration certificate through a tx
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_dereg_cert_file],
+            signing_key_files=[
+                *[p.payment.skey_file for p in selected_owners],
+                *[p.stake.skey_file for p in selected_owners],
+                node_cold.skey_file,
+            ],
+        )
+
+        # calculate TX fee
+        tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
+        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
+
+    @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
+    def test_addr_deregistration_fees(
         self,
         cluster_session: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolOwner],
@@ -608,24 +667,22 @@ class TestExpectedFees:
         cluster = cluster_session
         no_of_addr, expected_fee = addr_fee
         temp_template = "test_addr_deregister_using_cert"
-        pool_user = pool_owners[0]
-        selected_users = pool_owners[:no_of_addr]
+        src_address = pool_owners[0].payment.address
+        selected_owners = pool_owners[:no_of_addr]
 
         stake_addr_dereg_certs = [
             cluster.gen_stake_addr_deregistration_cert(
                 addr_name=f"addr{i}_{temp_template}", stake_vkey_file=p.stake.vkey_file
             )
-            for i, p in enumerate(selected_users)
+            for i, p in enumerate(selected_owners)
         ]
-
-        src_address = pool_user.payment.address
 
         # create TX data
         tx_files = clusterlib.TxFiles(
             certificate_files=[*stake_addr_dereg_certs],
             signing_key_files=[
-                pool_user.payment.skey_file,
-                *[p.stake.skey_file for p in selected_users],
+                *[p.payment.skey_file for p in selected_owners],
+                *[p.stake.skey_file for p in selected_owners],
             ],
         )
 
