@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 from typing import List
+from typing import Tuple
 
 import hypothesis
 import hypothesis.strategies as st
@@ -8,6 +9,7 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
@@ -466,6 +468,133 @@ class TestFee:
         assert (
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
+
+
+class TestExpectedFees:
+    @pytest.fixture(scope="class")
+    def pool_owners(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        request: FixtureRequest,
+    ) -> List[clusterlib.PoolOwner]:
+        """Create pool owners."""
+        pool_owners = common.create_pool_owners(
+            cluster_obj=cluster_session, temp_template="test_expected_fees", no_of_addr=10,
+        )
+
+        # fund source addresses
+        helpers.fund_from_faucet(
+            pool_owners[0].payment,
+            cluster_obj=cluster_session,
+            faucet_data=addrs_data_session["user1"],
+            request=request,
+        )
+
+        return pool_owners
+
+    def _create_pool_certificates(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        pool_owners: List[clusterlib.PoolOwner],
+        temp_template: str,
+        pool_data: clusterlib.PoolData,
+    ) -> Tuple[str, clusterlib.TxFiles]:
+        """Create certificates for registering a stake pool, delegating stake address."""
+        # create node VRF key pair
+        node_vrf = cluster_obj.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        # create node cold key pair and counter
+        node_cold = cluster_obj.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        # create stake address registration certs
+        stake_addr_reg_cert_files = [
+            cluster_obj.gen_stake_addr_registration_cert(
+                addr_name=f"addr{i}_{temp_template}", stake_vkey_file=p.stake.vkey_file
+            )
+            for i, p in enumerate(pool_owners)
+        ]
+
+        # create stake address delegation cert
+        stake_addr_deleg_cert_files = [
+            cluster_obj.gen_stake_addr_delegation_cert(
+                addr_name=f"addr{i}_{temp_template}",
+                stake_vkey_file=p.stake.vkey_file,
+                node_cold_vkey_file=node_cold.vkey_file,
+            )
+            for i, p in enumerate(pool_owners)
+        ]
+
+        # create stake pool registration cert
+        pool_reg_cert_file = cluster_obj.gen_pool_registration_cert(
+            pool_data=pool_data,
+            node_vrf_vkey_file=node_vrf.vkey_file,
+            node_cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
+        )
+
+        src_address = pool_owners[0].payment.address
+
+        # register and delegate stake address, create and register pool
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[
+                pool_reg_cert_file,
+                *stake_addr_reg_cert_files,
+                *stake_addr_deleg_cert_files,
+            ],
+            signing_key_files=[
+                *[p.payment.skey_file for p in pool_owners],
+                *[p.stake.skey_file for p in pool_owners],
+                node_cold.skey_file,
+            ],
+        )
+
+        return src_address, tx_files
+
+    @pytest.mark.parametrize("addr_fee", [(1, 197929), (3, 234185), (5, 270441), (10, 361081)])
+    def test_pool_fees(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+        pool_owners: List[clusterlib.PoolOwner],
+        addr_fee: Tuple[int, int],
+    ):
+        cluster = cluster_session
+        no_of_addr, expected_fee = addr_fee
+        temp_template = f"test_pool_fees_{no_of_addr}owners"
+
+        pool_metadata = {
+            "name": "QA E2E test",
+            "description": "Shelley QA E2E test Test",
+            "ticker": "QA1",
+            "homepage": "www.test1.com",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"poolY_{no_of_addr}_registration_metadata.json", pool_metadata
+        )
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"poolXY_{no_of_addr}",
+            pool_pledge=1000,
+            pool_cost=15,
+            pool_margin=0.2,
+            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+        )
+
+        # create pool owners
+        selected_owners = pool_owners[:no_of_addr]
+
+        # create certificates
+        src_address, tx_files = self._create_pool_certificates(
+            cluster_obj=cluster,
+            pool_owners=selected_owners,
+            temp_template=temp_template,
+            pool_data=pool_data,
+        )
+
+        # calculate TX fee
+        tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
+        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
 
 def test_past_ttl(
