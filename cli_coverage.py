@@ -16,7 +16,7 @@ from cardano_node_tests.utils.types import UnpackableSequence
 LOGGER = logging.getLogger(__name__)
 
 
-def get_args(args=None):
+def get_args() -> argparse.Namespace:
     """Get script command line arguments."""
     parser = argparse.ArgumentParser(description="cli-coverage")
     parser.add_argument(
@@ -39,7 +39,7 @@ def get_args(args=None):
     parser.add_argument(
         "-b", "--badge-icon-url", action="store_true", help="Print badge icon URL",
     )
-    return parser.parse_args(args)
+    return parser.parse_args()
 
 
 def merge_coverage(dict_a: dict, dict_b: dict) -> dict:
