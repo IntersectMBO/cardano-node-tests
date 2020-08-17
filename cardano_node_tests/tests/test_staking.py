@@ -8,6 +8,7 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
@@ -35,33 +36,6 @@ def update_pool_cost(cluster_class: clusterlib.ClusterLib):
 
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
-
-
-def _create_pool_owners(
-    cluster_obj: clusterlib.ClusterLib, temp_template: str, no_of_addr: int = 1,
-) -> List[clusterlib.PoolOwner]:
-    """Create PoolOwners.
-
-    Common functionality for tests.
-    """
-    pool_owners = []
-    payment_addrs = []
-    for i in range(no_of_addr):
-        # create key pairs and addresses
-        stake_addr_rec = helpers.create_stake_addr_records(
-            f"addr{i}_{temp_template}", cluster_obj=cluster_obj
-        )[0]
-        payment_addr_rec = helpers.create_payment_addr_records(
-            f"addr{i}_{temp_template}",
-            cluster_obj=cluster_obj,
-            stake_vkey_file=stake_addr_rec.vkey_file,
-        )[0]
-        # create pool owner struct
-        pool_owner = clusterlib.PoolOwner(payment=payment_addr_rec, stake=stake_addr_rec)
-        payment_addrs.append(payment_addr_rec)
-        pool_owners.append(pool_owner)
-
-    return pool_owners
 
 
 def _check_staking(
@@ -503,7 +477,7 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = _create_pool_owners(
+        pool_owners = common.create_pool_owners(
             cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
         )
 
@@ -544,7 +518,7 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = _create_pool_owners(
+        pool_owners = common.create_pool_owners(
             cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
         )
 
@@ -598,7 +572,7 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = _create_pool_owners(
+        pool_owners = common.create_pool_owners(
             cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
         )
 
@@ -699,7 +673,7 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = _create_pool_owners(cluster_obj=cluster, temp_template=temp_template)
+        pool_owners = common.create_pool_owners(cluster_obj=cluster, temp_template=temp_template)
 
         # fund source address
         helpers.fund_from_faucet(
@@ -840,7 +814,7 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = _create_pool_owners(
+        pool_owners = common.create_pool_owners(
             cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
         )
 
@@ -913,7 +887,7 @@ class TestStakePool:
         pool_data_updated = pool_data._replace(pool_pledge=1, pool_cost=1_000_000, pool_margin=0.9)
 
         # create pool owners
-        pool_owners = _create_pool_owners(
+        pool_owners = common.create_pool_owners(
             cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
         )
 
@@ -963,7 +937,7 @@ class TestPoolCost:
         rand_str = clusterlib.get_rand_str()
         temp_template = f"test_pool_cost_class_{rand_str}"
 
-        pool_owners = _create_pool_owners(
+        pool_owners = common.create_pool_owners(
             cluster_obj=cluster_class, temp_template=temp_template, no_of_addr=1,
         )
 
@@ -1026,7 +1000,7 @@ class TestPoolCost:
         )
 
         # create pool owners
-        pool_owners = _create_pool_owners(
+        pool_owners = common.create_pool_owners(
             cluster_obj=cluster, temp_template=temp_template, no_of_addr=1,
         )
 
