@@ -148,7 +148,7 @@ class ClusterLib:
         self.genesis_utxo_skey = self.state_dir / "shelley" / "genesis-utxo.skey"
         self.genesis_vkeys = list(self.state_dir.glob("shelley/genesis-keys/genesis?.vkey"))
         self.delegate_skeys = list(self.state_dir.glob("shelley/delegate-keys/delegate?.skey"))
-        self.pparams_file = self.state_dir / "pparams.json"
+        self.pparams_file = self.state_dir / f"pparams-{get_rand_str(4)}.json"
         self._check_state_dir()
 
         with open(self.genesis_json) as in_json:

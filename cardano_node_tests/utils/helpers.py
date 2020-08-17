@@ -3,25 +3,39 @@ import contextlib
 import json
 import logging
 import os
+import pickle
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Generator
 from typing import List
 from typing import Optional
 
-import pytest
 from _pytest.fixtures import FixtureRequest
+from filelock import FileLock
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
+ADDR_DATA = "addr_data.json"
+
+TEST_TEMP_DIR = Path(tempfile.gettempdir()) / "cardano-node-tests"
+TEST_TEMP_DIR.mkdir(mode=0o700, exist_ok=True)
+
+# Use dummy locking if not executing with multiple workers.
+# When running with multiple workers, operations with shared resources (like faucet addresses)
+# need to be locked to single worker (otherwise e.g. ballances would not check).
+FileLockIfXdist = FileLock if os.environ.get("PYTEST_XDIST_TESTRUNUID") else contextlib.nullcontext
 
 
-def wait_for(func, delay=5, num_sec=180, message=None):
+def wait_for(
+    func: Callable, delay: int = 5, num_sec: int = 180, message: str = "", silent: bool = False
+):
     """Wait for success of `func` for `num_sec`."""
     end_time = time.time() + num_sec
 
@@ -31,7 +45,9 @@ def wait_for(func, delay=5, num_sec=180, message=None):
             return response
         time.sleep(delay)
 
-    pytest.fail(f"Failed to {message or 'finish'} in time.")
+    if not silent:
+        raise RuntimeError(f"Failed to {message or 'finish'} in time.")
+    return False
 
 
 @contextlib.contextmanager
@@ -60,7 +76,7 @@ def write_json(location: FileType, content: dict) -> FileType:
     return location
 
 
-def run_shell_command(command: str, workdir: FileType = ""):
+def run_shell_command(command: str, workdir: FileType = "") -> bytes:
     """Run command in shell."""
     cmd = f"bash -c '{command}'"
     cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
@@ -101,19 +117,21 @@ def fund_from_genesis(
     if not fund_dst:
         return
 
-    tx_name = tx_name or clusterlib.get_timestamped_rand_str()
-    tx_name = f"{tx_name}_genesis_funding"
-    fund_tx_files = clusterlib.TxFiles(
-        signing_key_files=[*cluster_obj.delegate_skeys, cluster_obj.genesis_utxo_skey]
-    )
-    cluster_obj.send_funds(
-        src_address=cluster_obj.genesis_utxo_addr,
-        destinations=fund_dst,
-        tx_name=tx_name,
-        tx_files=fund_tx_files,
-        destination_dir=destination_dir,
-    )
-    cluster_obj.wait_for_new_block(new_blocks=2)
+    with FileLockIfXdist(f"{TEST_TEMP_DIR}/{cluster_obj.genesis_utxo_addr}.lock"):
+        tx_name = tx_name or clusterlib.get_timestamped_rand_str()
+        tx_name = f"{tx_name}_genesis_funding"
+        fund_tx_files = clusterlib.TxFiles(
+            signing_key_files=[*cluster_obj.delegate_skeys, cluster_obj.genesis_utxo_skey]
+        )
+
+        cluster_obj.send_funds(
+            src_address=cluster_obj.genesis_utxo_addr,
+            destinations=fund_dst,
+            tx_name=tx_name,
+            tx_files=fund_tx_files,
+            destination_dir=destination_dir,
+        )
+        cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def return_funds_to_faucet(
@@ -130,25 +148,26 @@ def return_funds_to_faucet(
     """
     tx_name = tx_name or clusterlib.get_timestamped_rand_str()
     tx_name = f"{tx_name}_return_funds"
-    try:
-        logging.disable(logging.ERROR)
-        for src in src_addrs:
-            fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount)]
-            fund_tx_files = clusterlib.TxFiles(signing_key_files=[src.skey_file])
-            # try to return funds; don't mind if there's not enough funds for fees etc.
-            try:
-                cluster_obj.send_funds(
-                    src_address=src.address,
-                    destinations=fund_dst,
-                    tx_name=tx_name,
-                    tx_files=fund_tx_files,
-                    destination_dir=destination_dir,
-                )
-            except clusterlib.CLIError:
-                pass
-    finally:
-        logging.disable(logging.NOTSET)
-    cluster_obj.wait_for_new_block(new_blocks=2)
+    with FileLockIfXdist(f"{TEST_TEMP_DIR}/{faucet_addr}.lock"):
+        try:
+            logging.disable(logging.ERROR)
+            for src in src_addrs:
+                fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount)]
+                fund_tx_files = clusterlib.TxFiles(signing_key_files=[src.skey_file])
+                # try to return funds; don't mind if there's not enough funds for fees etc.
+                try:
+                    cluster_obj.send_funds(
+                        src_address=src.address,
+                        destinations=fund_dst,
+                        tx_name=tx_name,
+                        tx_files=fund_tx_files,
+                        destination_dir=destination_dir,
+                    )
+                except clusterlib.CLIError:
+                    pass
+        finally:
+            logging.disable(logging.NOTSET)
+        cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def fund_from_faucet(
@@ -180,20 +199,22 @@ def fund_from_faucet(
             )
         )
 
-    tx_name = tx_name or clusterlib.get_timestamped_rand_str()
-    tx_name = f"{tx_name}_funding"
-    fund_tx_files = clusterlib.TxFiles(
-        signing_key_files=[faucet_data["payment_key_pair"].skey_file]
-    )
+    src_address = faucet_data["payment_addr"]
+    with FileLockIfXdist(f"{TEST_TEMP_DIR}/{src_address}.lock"):
+        tx_name = tx_name or clusterlib.get_timestamped_rand_str()
+        tx_name = f"{tx_name}_funding"
+        fund_tx_files = clusterlib.TxFiles(
+            signing_key_files=[faucet_data["payment_key_pair"].skey_file]
+        )
 
-    cluster_obj.send_funds(
-        src_address=faucet_data["payment_addr"],
-        destinations=fund_dst,
-        tx_name=tx_name,
-        tx_files=fund_tx_files,
-        destination_dir=destination_dir,
-    )
-    cluster_obj.wait_for_new_block(new_blocks=2)
+        cluster_obj.send_funds(
+            src_address=src_address,
+            destinations=fund_dst,
+            tx_name=tx_name,
+            tx_files=fund_tx_files,
+            destination_dir=destination_dir,
+        )
+        cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def create_payment_addr_records(
@@ -275,7 +296,7 @@ def get_cluster_env() -> dict:
     return cluster_env
 
 
-def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib):
+def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Wait to 3rd epoch (if necessary) and return stake distribution info."""
     last_block_epoch = cluster_obj.get_last_block_epoch()
     if last_block_epoch < 3:
@@ -285,11 +306,11 @@ def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib):
     return cluster_obj.get_stake_distribution()
 
 
-def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".",) -> dict:
+def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".") -> Path:
     """Create addresses and their keys for usage in tests."""
     destination_dir = Path(destination_dir).expanduser()
     destination_dir.mkdir(parents=True, exist_ok=True)
-    addrs = ("user1", "pool-owner1")
+    addrs = ("user1",)
 
     LOGGER.debug("Creating addresses and keys for tests.")
     addrs_data: Dict[str, Dict[str, Any]] = {}
@@ -318,16 +339,29 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
             "stake_addr_registration_cert": stake_addr_registration_cert,
         }
 
-    LOGGER.debug("Funding created addresses." "")
+    LOGGER.debug("Funding created addresses.")
     fund_from_genesis(
         *[d["payment_addr"] for d in addrs_data.values()],
         cluster_obj=cluster_obj,
-        amount=20_000_000_000,
+        amount=40_000_000_000,
         destination_dir=destination_dir,
     )
 
     pools_data = load_devops_pools_data()
-    return {**addrs_data, **pools_data}
+
+    cluster_env = get_cluster_env()
+    data_file = Path(cluster_env["state_dir"]) / ADDR_DATA
+    with open(data_file, "wb") as out_data:
+        pickle.dump({**addrs_data, **pools_data}, out_data)
+    return data_file
+
+
+def load_addrs_data() -> dict:
+    """Load data about addresses and their keys for usage in tests."""
+    cluster_env = get_cluster_env()
+    data_file = Path(cluster_env["state_dir"]) / ADDR_DATA
+    with open(data_file, "rb") as in_data:
+        return pickle.load(in_data)
 
 
 def check_dir_arg(dir_path: str) -> Path:
@@ -350,13 +384,12 @@ def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, request: FixtureReques
     """Save CLI coverage info."""
     cli_coverage_dir = request.config.getoption("--cli-coverage-dir")
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
-        return None
+        return
 
     json_file = f"cli_coverage_{clusterlib.get_timestamped_rand_str(0)}.json"
     with open(cli_coverage_dir / json_file, "w") as out_json:
         json.dump(cluster_obj.cli_coverage, out_json, indent=4)
     LOGGER.info(f"Coverage files saved to '{cli_coverage_dir}'.")
-    return None
 
 
 def start_cluster() -> clusterlib.ClusterLib:
@@ -377,15 +410,6 @@ def stop_cluster():
         run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
     except Exception as exc:
         LOGGER.debug(f"Failed to stop cluster: {exc}")
-
-
-def start_stop_cluster(request: FixtureRequest) -> clusterlib.ClusterLib:
-    """Stop cluster if needed, start fresh cluster, stop cluster at scope end."""
-    stop_cluster()
-    request.addfinalizer(stop_cluster)
-    cluster_obj = start_cluster()
-    request.addfinalizer(lambda: save_cli_coverage(cluster_obj=cluster_obj, request=request))
-    return cluster_obj
 
 
 def check_pool_data(  # noqa: C901
