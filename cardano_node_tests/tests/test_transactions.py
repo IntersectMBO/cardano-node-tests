@@ -724,16 +724,50 @@ class TestExpectedFees:
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
+    def test_addr_registration_fees(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_owners: List[clusterlib.PoolOwner],
+        addr_fee: Tuple[int, int],
+    ):
+        """Test stake address registration fees."""
+        cluster = cluster_session
+        no_of_addr, expected_fee = addr_fee
+        temp_template = "test_addr_registration_fees"
+        src_address = pool_owners[0].payment.address
+        selected_owners = pool_owners[:no_of_addr]
+
+        stake_addr_reg_certs = [
+            cluster.gen_stake_addr_registration_cert(
+                addr_name=f"addr{i}_{temp_template}", stake_vkey_file=p.stake.vkey_file
+            )
+            for i, p in enumerate(selected_owners)
+        ]
+
+        # create TX data
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[*stake_addr_reg_certs],
+            signing_key_files=[
+                *[p.payment.skey_file for p in selected_owners],
+                *[p.stake.skey_file for p in selected_owners],
+            ],
+        )
+
+        # calculate TX fee
+        tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
+        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
+
+    @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
     def test_addr_deregistration_fees(
         self,
         cluster_session: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolOwner],
         addr_fee: Tuple[int, int],
     ):
-        """Test stake addr deregistration fees."""
+        """Test stake address deregistration fees."""
         cluster = cluster_session
         no_of_addr, expected_fee = addr_fee
-        temp_template = "test_addr_deregister_using_cert"
+        temp_template = "test_addr_deregistration_fees"
         src_address = pool_owners[0].payment.address
         selected_owners = pool_owners[:no_of_addr]
 
