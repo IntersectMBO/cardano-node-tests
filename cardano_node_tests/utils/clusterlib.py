@@ -70,15 +70,6 @@ class TxFiles(NamedTuple):
     signing_key_files: OptionalFiles = ()
 
 
-class TxRawData(NamedTuple):
-    txins: List[UTXOData]
-    txouts: List[TxOut]
-    tx_files: TxFiles
-    out_file: Path
-    fee: int
-    ttl: int
-
-
 class PoolOwner(NamedTuple):
     payment: AddressRecord
     stake: AddressRecord
@@ -95,14 +86,23 @@ class PoolData(NamedTuple):
     pool_relay_port: int = 0
 
 
-class PoolCreationArtifacts(NamedTuple):
+class TxRawOutput(NamedTuple):
+    txins: List[UTXOData]
+    txouts: List[TxOut]
+    tx_files: TxFiles
+    out_file: Path
+    fee: int
+    ttl: int
+
+
+class PoolCreationOutput(NamedTuple):
     stake_pool_id: str
     vrf_key_pair: KeyPair
     cold_key_pair_and_counter: ColdKeyPair
     pool_reg_cert_file: Path
     pool_data: PoolData
     pool_owners: List[PoolOwner]
-    tx_raw_data: TxRawData
+    tx_raw_output: TxRawOutput
     kes_key_pair: Optional[KeyPair] = None
 
 
@@ -845,7 +845,7 @@ class ClusterLib:
         tx_files: TxFiles,
         fee: int,
         ttl: int,
-    ) -> TxRawData:
+    ) -> TxRawOutput:
         """Build raw transaction."""
         out_file = Path(out_file)
         txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
@@ -871,7 +871,7 @@ class ClusterLib:
             ]
         )
 
-        return TxRawData(
+        return TxRawOutput(
             txins=txins, txouts=txouts, tx_files=tx_files, out_file=out_file, fee=fee, ttl=ttl
         )
 
@@ -886,7 +886,7 @@ class ClusterLib:
         ttl: Optional[int] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
-    ) -> TxRawData:
+    ) -> TxRawOutput:
         """Figure out all the missing data and build raw transaction."""
         tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
@@ -903,7 +903,7 @@ class ClusterLib:
             deposit=deposit,
         )
 
-        tx_raw_data = self.build_raw_tx_bare(
+        tx_raw_output = self.build_raw_tx_bare(
             out_file=out_file,
             txins=txins_copy,
             txouts=txouts_copy,
@@ -913,7 +913,7 @@ class ClusterLib:
         )
 
         self._check_outfiles(out_file)
-        return tx_raw_data
+        return tx_raw_output
 
     def estimate_fee(
         self,
@@ -971,7 +971,7 @@ class ClusterLib:
 
         txouts_filled = txouts or [TxOut(address=r, amount=1) for r in (dst_addresses or ())]
 
-        tx_raw_data = self.build_raw_tx(
+        tx_raw_output = self.build_raw_tx(
             src_address=src_address,
             tx_name=tx_name,
             txins=txins,
@@ -984,9 +984,9 @@ class ClusterLib:
         )
 
         fee = self.estimate_fee(
-            txbody_file=tx_raw_data.out_file,
-            txin_count=len(tx_raw_data.txins),
-            txout_count=len(tx_raw_data.txouts),
+            txbody_file=tx_raw_output.out_file,
+            txin_count=len(tx_raw_output.txins),
+            txout_count=len(tx_raw_output.txouts),
             witness_count=len(tx_files.signing_key_files),
         )
 
@@ -1046,7 +1046,7 @@ class ClusterLib:
         ttl: Optional[int] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
-    ) -> TxRawData:
+    ) -> TxRawOutput:
         """Build, Sign and Send transaction to chain."""
         tx_files = tx_files or TxFiles()
         tx_name = tx_name or get_timestamped_rand_str()
@@ -1062,7 +1062,7 @@ class ClusterLib:
                 destination_dir=destination_dir,
             )
 
-        tx_raw_data = self.build_raw_tx(
+        tx_raw_output = self.build_raw_tx(
             src_address=src_address,
             tx_name=tx_name,
             txins=txins,
@@ -1074,14 +1074,14 @@ class ClusterLib:
             destination_dir=destination_dir,
         )
         tx_signed_file = self.sign_tx(
-            tx_body_file=tx_raw_data.out_file,
+            tx_body_file=tx_raw_output.out_file,
             tx_name=tx_name,
             signing_key_files=tx_files.signing_key_files,
             destination_dir=destination_dir,
         )
         self.submit_tx(tx_signed_file)
 
-        return tx_raw_data
+        return tx_raw_output
 
     def gen_update_proposal(
         self,
@@ -1117,7 +1117,7 @@ class ClusterLib:
         epoch: Optional[int] = None,
         tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
-    ) -> TxRawData:
+    ) -> TxRawOutput:
         """Submit update proposal."""
         tx_name = tx_name or get_timestamped_rand_str()
         # TODO: assumption is update proposals submitted near beginning of epoch
@@ -1147,7 +1147,7 @@ class ClusterLib:
         ttl: Optional[int] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
-    ) -> TxRawData:
+    ) -> TxRawOutput:
         """Send funds - convenience function for `send_tx`."""
         return self.send_tx(
             src_address=src_address,
@@ -1216,7 +1216,7 @@ class ClusterLib:
         tx_name: Optional[str] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
-    ) -> Tuple[Path, TxRawData]:
+    ) -> Tuple[Path, TxRawOutput]:
         """Register stake pool."""
         pool_reg_cert_file = self.gen_pool_registration_cert(
             pool_data=pool_data,
@@ -1236,7 +1236,7 @@ class ClusterLib:
             ],
         )
 
-        tx_raw_data = self.send_tx(
+        tx_raw_output = self.send_tx(
             src_address=pool_owners[0].payment.address,
             tx_name=tx_name,
             tx_files=tx_files,
@@ -1245,7 +1245,7 @@ class ClusterLib:
         )
         self.wait_for_new_block(new_blocks=2)
 
-        return pool_reg_cert_file, tx_raw_data
+        return pool_reg_cert_file, tx_raw_output
 
     def deregister_stake_pool(
         self,
@@ -1255,7 +1255,7 @@ class ClusterLib:
         pool_name: str,
         tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
-    ) -> Tuple[Path, TxRawData]:
+    ) -> Tuple[Path, TxRawOutput]:
         """De-register stake pool."""
         LOGGER.debug(
             f"Deregistering stake pool starting with epoch: {epoch}; "
@@ -1278,7 +1278,7 @@ class ClusterLib:
             ],
         )
 
-        tx_raw_data = self.send_tx(
+        tx_raw_output = self.send_tx(
             src_address=pool_owners[0].payment.address,
             tx_name=tx_name,
             tx_files=tx_files,
@@ -1286,11 +1286,11 @@ class ClusterLib:
         )
         self.wait_for_new_block(new_blocks=2)
 
-        return pool_dereg_cert_file, tx_raw_data
+        return pool_dereg_cert_file, tx_raw_output
 
     def create_stake_pool(
         self, pool_data: PoolData, pool_owners: List[PoolOwner], destination_dir: FileType = "."
-    ) -> PoolCreationArtifacts:
+    ) -> PoolCreationOutput:
         """Create and register stake pool."""
         # create the KES key pair
         node_kes = self.gen_kes_key_pair(
@@ -1313,7 +1313,7 @@ class ClusterLib:
             f"{node_cold.vkey_file}; {node_cold.skey_file}; {node_cold.counter_file}"
         )
 
-        pool_reg_cert_file, tx_raw_data = self.register_stake_pool(
+        pool_reg_cert_file, tx_raw_output = self.register_stake_pool(
             pool_data=pool_data,
             pool_owners=pool_owners,
             node_vrf_vkey_file=node_vrf.vkey_file,
@@ -1321,13 +1321,13 @@ class ClusterLib:
             destination_dir=destination_dir,
         )
 
-        return PoolCreationArtifacts(
+        return PoolCreationOutput(
             stake_pool_id=self.get_stake_pool_id(node_cold.vkey_file),
             vrf_key_pair=node_vrf,
             cold_key_pair_and_counter=node_cold,
             pool_reg_cert_file=pool_reg_cert_file,
             pool_data=pool_data,
             pool_owners=pool_owners,
-            tx_raw_data=tx_raw_data,
+            tx_raw_output=tx_raw_output,
             kes_key_pair=node_kes,
         )

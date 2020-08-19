@@ -67,14 +67,14 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        tx_raw_data = cluster.send_funds(
+        tx_raw_output = cluster.send_funds(
             src_address=src_address, destinations=destinations, tx_files=tx_files,
         )
         cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_data.fee - len(destinations) * amount
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
@@ -97,7 +97,7 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
 
-        tx_raw_data = cluster.send_funds(
+        tx_raw_output = cluster.send_funds(
             src_address=src_address, destinations=destinations, tx_files=tx_files,
         )
         cluster.wait_for_new_block(new_blocks=2)
@@ -108,7 +108,7 @@ class TestBasic:
 
         assert (
             cluster.get_address_balance(dst_address)
-            == dst_init_balance + src_init_balance - tx_raw_data.fee
+            == dst_init_balance + src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     def test_get_txid(
@@ -125,12 +125,12 @@ class TestBasic:
 
         destinations = [clusterlib.TxOut(address=dst_address, amount=2000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        tx_raw_data = cluster.send_funds(
+        tx_raw_output = cluster.send_funds(
             src_address=src_address, destinations=destinations, tx_files=tx_files,
         )
         cluster.wait_for_new_block(new_blocks=2)
 
-        txid = cluster.get_txid(tx_raw_data.out_file)
+        txid = cluster.get_txid(tx_raw_output.out_file)
         utxo = cluster.get_utxo(src_address)
         assert len(txid) == 64
         assert txid in (u.utxo_hash for u in utxo)
@@ -453,16 +453,16 @@ class TestFee:
             cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files) + fee_add
         )
 
-        tx_raw_data = cluster.send_funds(
+        tx_raw_output = cluster.send_funds(
             src_address=src_address, destinations=destinations, tx_files=tx_files, fee=fee,
         )
         cluster.wait_for_new_block(new_blocks=2)
 
-        assert tx_raw_data.fee == fee, "The actual fee doesn't match the specified fee"
+        assert tx_raw_output.fee == fee, "The actual fee doesn't match the specified fee"
 
         assert (
             cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_data.fee - len(destinations) * amount
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
@@ -717,11 +717,11 @@ def test_past_ttl(
     fee = cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files, ttl=ttl)
 
     # it should be possible to build and sign a transaction with ttl in the past
-    tx_raw_data = cluster.build_raw_tx(
+    tx_raw_output = cluster.build_raw_tx(
         src_address=src_address, txouts=destinations, tx_files=tx_files, fee=fee, ttl=ttl,
     )
     out_file_signed = cluster.sign_tx(
-        tx_body_file=tx_raw_data.out_file, signing_key_files=tx_files.signing_key_files,
+        tx_body_file=tx_raw_output.out_file, signing_key_files=tx_files.signing_key_files,
     )
 
     # it should NOT be possible to submit a transaction with ttl in the past
