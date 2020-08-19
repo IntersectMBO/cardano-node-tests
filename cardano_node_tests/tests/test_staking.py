@@ -46,15 +46,17 @@ def _check_staking(
 ):
     """Check that pool and staking were correctly setup."""
     LOGGER.info("Waiting up to 3 epochs for stake pool to be registered.")
+    # TODO: remove once stake-distribution is bech32
+    stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
     helpers.wait_for(
-        lambda: stake_pool_id in cluster_obj.get_stake_distribution(),
+        lambda: stake_pool_id_dec in cluster_obj.get_stake_distribution(),
         delay=10,
         num_sec=3 * cluster_obj.epoch_length_sec,
         message="register stake pool",
     )
 
     # check that the pool was correctly registered on chain
-    pool_ledger_state = cluster_obj.get_registered_stake_pools_ledger_state().get(stake_pool_id)
+    pool_ledger_state = cluster_obj.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
     assert pool_ledger_state, (
         "The newly created stake pool id is not shown inside the available stake pools;\n"
         f"Pool ID: {stake_pool_id} vs Existing IDs: "
@@ -72,10 +74,9 @@ def _check_staking(
 
         assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
-        # TODO: change this once 'stake_addr_info' contain stake address, not hash
         assert (
             # strip 'e0' from the beginning of the address hash
-            stake_addr_info.addr_hash[2:]
+            helpers.decode_bech32(stake_addr_info.address)[2:]
             in pool_ledger_state["owners"]
         ), "'owner' value is different than expected"
 
@@ -355,11 +356,12 @@ class TestDelegateAddr:
                 delegation_fee=delegation_fee,
             )
         except clusterlib.CLIError as exc:
-            if "command not implemented yet" in str(exc):
+            if "Invalid argument" in str(exc):
                 pytest.xfail(
                     "Delegating stake address using `cardano-cli shelley stake-address delegate` "
                     "not implemented yet."
                 )
+            raise
         cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
@@ -612,10 +614,9 @@ class TestStakePool:
         )
 
         LOGGER.info("Waiting up to 3 epochs for stake pool to be deregistered.")
+        stake_pool_id_dec = helpers.decode_bech32(pool_artifacts.stake_pool_id)
         helpers.wait_for(
-            lambda: cluster.get_registered_stake_pools_ledger_state().get(
-                pool_artifacts.stake_pool_id
-            )
+            lambda: cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
             is None,
             delay=10,
             num_sec=3 * cluster.epoch_length_sec,
@@ -701,10 +702,9 @@ class TestStakePool:
         )
 
         LOGGER.info("Waiting up to 3 epochs for stake pool to be deregistered.")
+        stake_pool_id_dec = helpers.decode_bech32(pool_artifacts.stake_pool_id)
         helpers.wait_for(
-            lambda: cluster.get_registered_stake_pools_ledger_state().get(
-                pool_artifacts.stake_pool_id
-            )
+            lambda: cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
             is None,
             delay=10,
             num_sec=3 * cluster.epoch_length_sec,
@@ -741,7 +741,7 @@ class TestStakePool:
 
         LOGGER.info("Waiting up to 5 epochs for stake pool to be re-registered.")
         helpers.wait_for(
-            lambda: pool_artifacts.stake_pool_id in cluster.get_stake_distribution(),
+            lambda: stake_pool_id_dec in cluster.get_stake_distribution(),
             delay=10,
             num_sec=5 * cluster.epoch_length_sec,
             message="re-register stake pool",
@@ -749,8 +749,7 @@ class TestStakePool:
 
         # check that pool was correctly setup
         updated_pool_ledger_state = (
-            cluster.get_registered_stake_pools_ledger_state().get(pool_artifacts.stake_pool_id)
-            or {}
+            cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
         )
         assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data)
 
@@ -846,9 +845,9 @@ class TestStakePool:
         cluster.wait_for_new_epoch()
 
         # check that the pool parameters were correctly updated on chain
+        stake_pool_id_dec = helpers.decode_bech32(pool_artifacts.stake_pool_id)
         updated_pool_ledger_state = (
-            cluster.get_registered_stake_pools_ledger_state().get(pool_artifacts.stake_pool_id)
-            or {}
+            cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
         )
         assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data_updated)
 
@@ -919,9 +918,9 @@ class TestStakePool:
         cluster.wait_for_new_epoch()
 
         # check that the pool parameters were correctly updated on chain
+        stake_pool_id_dec = helpers.decode_bech32(pool_artifacts.stake_pool_id)
         updated_pool_ledger_state = (
-            cluster.get_registered_stake_pools_ledger_state().get(pool_artifacts.stake_pool_id)
-            or {}
+            cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
         )
         assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data_updated)
 
