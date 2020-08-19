@@ -2,6 +2,7 @@
 import datetime
 import enum
 import functools
+import itertools
 import json
 import logging
 import random
@@ -245,13 +246,13 @@ class ClusterLib:
         self.record_cli_coverage(cmd)
         return self.cli_base(cmd)
 
-    def _prepend_flag(self, flag: str, contents: UnpackableSequence) -> list:
+    def _prepend_flag(self, flag: str, contents: UnpackableSequence) -> List[str]:
         """Prepend flag to every item of the sequence.
 
         >>> ClusterLib._prepend_flag(None, "--foo", [1, 2, 3])
         ['--foo', '1', '--foo', '2', '--foo', '3']
         """
-        return sum(([flag, str(x)] for x in contents), [])
+        return list(itertools.chain.from_iterable([flag, str(x)] for x in contents))
 
     def query_cli(self, cli_args: UnpackableSequence) -> str:
         """Run the `cardano-cli query` command."""
