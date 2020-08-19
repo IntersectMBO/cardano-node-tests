@@ -547,12 +547,12 @@ class TestExpectedFees:
     ) -> List[clusterlib.PoolOwner]:
         """Create pool owners."""
         pool_owners = common.create_pool_owners(
-            cluster_obj=cluster_session, temp_template="test_expected_fees", no_of_addr=10,
+            cluster_obj=cluster_session, temp_template="test_expected_fees", no_of_addr=11,
         )
 
         # fund source addresses
         helpers.fund_from_faucet(
-            pool_owners[0].payment,
+            *[p.payment for p in pool_owners],
             cluster_obj=cluster_session,
             faucet_data=addrs_data_session["user1"],
             request=request,
@@ -789,6 +789,38 @@ class TestExpectedFees:
 
         # calculate TX fee
         tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
+        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
+
+    @pytest.mark.parametrize(
+        "amount_expected", [(1, 237397), (100, 237617), (11_000, 237837), (100_000, 238277)]
+    )
+    def test_transaction_to_5_addrs_from_5_addrs_fees(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_owners: List[clusterlib.PoolOwner],
+        amount_expected: Tuple[int, int],
+    ):
+        """Tests fees for 1 transaction from 5 payment address to 5 payment addresses."""
+        cluster = cluster_session
+        amount, expected_fee = amount_expected
+
+        src_address = pool_owners[0].payment.address
+        # addr1..addr5
+        from_addr_recs = [p.payment for p in pool_owners[1:6]]
+        # addr6..addr10
+        dst_addresses = [pool_owners[i].payment.address for i in range(6, 11)]
+
+        # create TX data
+        _txins = [cluster.get_utxo(r.address) for r in from_addr_recs]
+        # flatten the list of lists that is _txins
+        txins = list(itertools.chain.from_iterable(_txins))
+        txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
+        tx_files = clusterlib.TxFiles(signing_key_files=[r.skey_file for r in from_addr_recs])
+
+        # calculate TX fee
+        tx_fee = cluster.calculate_tx_fee(
+            src_address=src_address, txins=txins, txouts=txouts, tx_files=tx_files
+        )
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
 
