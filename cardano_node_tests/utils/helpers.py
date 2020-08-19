@@ -101,6 +101,11 @@ def get_cardano_version() -> dict:
     return version
 
 
+def decode_bech32(bech32: str) -> str:
+    """Convert from bech32 strings."""
+    return run_shell_command(f"echo '{bech32}' | bech32").decode().strip()
+
+
 def fund_from_genesis(
     *dst_addrs: str,
     cluster_obj: clusterlib.ClusterLib,

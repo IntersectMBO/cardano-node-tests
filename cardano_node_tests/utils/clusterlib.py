@@ -44,7 +44,7 @@ class AddressRecord(NamedTuple):
 
 
 class StakeAddrInfo(NamedTuple):
-    addr_hash: str
+    address: str
     delegation: str
     reward_account_balance: int
 
@@ -225,13 +225,10 @@ class ClusterLib:
             if not arg.startswith("--"):
                 parent_dict = cur_dict
 
-    def cli(self, cli_args: List[str]) -> CLIOut:
-        """Run the `cardano-cli` command."""
-        cmd = ["cardano-cli", "shelley", *cli_args]
-        self.record_cli_coverage(cmd)
-        cmd_str = " ".join(cmd)
-
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    def cli_base(self, cli_args: List[str]) -> CLIOut:
+        """Run command."""
+        p = subprocess.Popen(cli_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd_str = " ".join(cli_args)
         LOGGER.debug("Running `%s`", cmd_str)
 
         stdout, stderr = p.communicate()
@@ -241,6 +238,12 @@ class ClusterLib:
             )
 
         return CLIOut(stdout or b"", stderr or b"")
+
+    def cli(self, cli_args: List[str]) -> CLIOut:
+        """Run the `cardano-cli shelley` command."""
+        cmd = ["cardano-cli", "shelley", *cli_args]
+        self.record_cli_coverage(cmd)
+        return self.cli_base(cmd)
 
     def _prepend_flag(self, flag: str, contents: UnpackableSequence) -> list:
         """Prepend flag to every item of the sequence.
@@ -678,23 +681,18 @@ class ClusterLib:
         self, stake_addr_skey: FileType, pool_id: str, delegation_fee: int
     ) -> None:
         """Delegate stake address to stake pool."""
-        cli_args = [
-            "stake-address",
-            "delegate",
-            "--signing-key-file",
-            str(stake_addr_skey),
-            "--pool-id",
-            str(pool_id),
-            "--delegation-fee",
-            str(delegation_fee),
-        ]
-
-        stdout = self.cli(cli_args).stdout
-        if stdout and "runStakeAddressCmd" in stdout.decode():
-            cmd = " ".join(cli_args)
-            raise CLIError(
-                f"command not implemented yet;\ncommand: {cmd}\nresult: {stdout.decode()}"
-            )
+        self.cli(
+            [
+                "stake-address",
+                "delegate",
+                "--signing-key-file",
+                str(stake_addr_skey),
+                "--pool-id",
+                str(pool_id),
+                "--delegation-fee",
+                str(delegation_fee),
+            ]
+        )
 
     def get_stake_addr_info(self, stake_addr: str) -> Optional[StakeAddrInfo]:
         """Return info about stake pool address."""
@@ -702,14 +700,12 @@ class ClusterLib:
         if not output_json:
             return None
 
-        addr_hash = list(output_json)[0]
-        address_rec = output_json[addr_hash]
+        address_rec = list(output_json)[0]
+        address = address_rec.get("address") or ""
         delegation = address_rec.get("delegation") or ""
         reward_account_balance = address_rec.get("rewardAccountBalance") or 0
         return StakeAddrInfo(
-            addr_hash=addr_hash,
-            delegation=delegation,
-            reward_account_balance=reward_account_balance,
+            address=address, delegation=delegation, reward_account_balance=reward_account_balance,
         )
 
     def get_protocol_params(self) -> dict:
