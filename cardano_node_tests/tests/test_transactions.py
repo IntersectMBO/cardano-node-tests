@@ -1,3 +1,5 @@
+import functools
+import itertools
 import logging
 from pathlib import Path
 from typing import List
@@ -54,7 +56,7 @@ class TestBasic:
     def test_transfer_funds(
         self, cluster_session: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Send funds from faucet to payment address."""
+        """Send funds to payment address."""
         cluster = cluster_session
         amount = 2000
 
@@ -162,7 +164,7 @@ class Test10InOut:
     def test_10_transactions(
         self, cluster_session: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Send 10 transactions from faucet to payment address.
+        """Send 10 transactions to payment address.
 
         Test 10 different UTXOs in addr0.
         """
@@ -232,6 +234,71 @@ class Test10InOut:
 
         assert cluster.get_address_balance(src_address) == src_init_balance - fee - amount * len(
             dst_addresses
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        for addr in dst_addresses:
+            assert (
+                cluster.get_address_balance(addr) == dst_init_balances[addr] + amount
+            ), f"Incorrect balance for destination address `{addr}`"
+
+    def test_transaction_to_5_addrs_from_5_addrs(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
+    ):
+        """Send 1 transaction from 5 payment address to 5 payment addresses."""
+        cluster = cluster_session
+        src_address = payment_addrs[0].address
+        amount = 100
+        # addr1..addr5
+        from_addr_recs = payment_addrs[1:6]
+        # addr6..addr10
+        dst_addresses = [payment_addrs[i].address for i in range(6, 11)]
+
+        # fund from addresses
+        helpers.fund_from_faucet(
+            *from_addr_recs,
+            cluster_obj=cluster_session,
+            faucet_data=addrs_data_session["user1"],
+            request=request,
+        )
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        from_init_balance = functools.reduce(
+            lambda x, y: x + y, (cluster.get_address_balance(r.address) for r in from_addr_recs), 0
+        )
+        dst_init_balances = {addr: cluster.get_address_balance(addr) for addr in dst_addresses}
+
+        # send funds
+        _txins = [cluster.get_utxo(r.address) for r in from_addr_recs]
+        # flatten the list of lists that is _txins
+        txins = list(itertools.chain.from_iterable(_txins))
+        txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
+        tx_files = clusterlib.TxFiles(signing_key_files=[r.skey_file for r in from_addr_recs])
+
+        tx_raw_output = cluster.send_tx(
+            src_address=src_address, txins=txins, txouts=txouts, tx_files=tx_files,
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check balances
+        from_final_balance = functools.reduce(
+            lambda x, y: x + y, (cluster.get_address_balance(r.address) for r in from_addr_recs), 0
+        )
+        src_final_balance = cluster.get_address_balance(src_address)
+
+        assert (
+            from_final_balance == 0
+        ), f"The output addresses should have no balance, the have {from_final_balance}"
+
+        assert (
+            src_final_balance
+            == src_init_balance
+            + from_init_balance
+            - tx_raw_output.fee
+            - amount * len(dst_addresses)
         ), f"Incorrect balance for source address `{src_address}`"
 
         for addr in dst_addresses:
