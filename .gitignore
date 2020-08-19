@@ -78,3 +78,4 @@ ENV/
 
 # mkdocs documentation
 /site
+state-cluster
