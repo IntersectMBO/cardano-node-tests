@@ -546,20 +546,34 @@ class ClusterLib:
         self,
         addr_name: str,
         stake_vkey_file: FileType,
-        node_cold_vkey_file: FileType,
+        node_cold_vkey_file: Optional[FileType] = None,
+        stake_pool_id: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> Path:
         """Generate stake address delegation certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake_deleg.cert"
+
+        if node_cold_vkey_file:
+            pool_args = [
+                "--cold-verification-key-file",
+                str(node_cold_vkey_file),
+            ]
+        elif stake_pool_id:
+            pool_args = [
+                "--stake-pool-id",
+                str(stake_pool_id),
+            ]
+        else:
+            raise CLIError("Either `--cold-verification-key-file` or `--stake-pool-id` is needed.")
+
         self.cli(
             [
                 "stake-address",
                 "delegation-certificate",
                 "--stake-verification-key-file",
                 str(stake_vkey_file),
-                "--cold-verification-key-file",
-                str(node_cold_vkey_file),
+                *pool_args,
                 "--out-file",
                 str(out_file),
             ]
@@ -677,23 +691,6 @@ class ClusterLib:
             .decode("utf-8")
         )
         return pool_id
-
-    def delegate_stake_addr(
-        self, stake_addr_skey: FileType, pool_id: str, delegation_fee: int
-    ) -> None:
-        """Delegate stake address to stake pool."""
-        self.cli(
-            [
-                "stake-address",
-                "delegate",
-                "--signing-key-file",
-                str(stake_addr_skey),
-                "--pool-id",
-                str(pool_id),
-                "--delegation-fee",
-                str(delegation_fee),
-            ]
-        )
 
     def get_stake_addr_info(self, stake_addr: str) -> Optional[StakeAddrInfo]:
         """Return info about stake pool address."""
