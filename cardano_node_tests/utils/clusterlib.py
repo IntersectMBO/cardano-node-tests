@@ -601,6 +601,7 @@ class ClusterLib:
         node_vrf_vkey_file: FileType,
         node_cold_vkey_file: FileType,
         owner_stake_vkey_files: List[FileType],
+        reward_account_vkey_file: Optional[FileType] = None,
         destination_dir: FileType = ".",
     ) -> Path:
         """Generate pool registration certificate."""
@@ -637,7 +638,9 @@ class ClusterLib:
                 "--cold-verification-key-file",
                 str(node_cold_vkey_file),
                 "--pool-reward-account-verification-key-file",
-                str(owner_stake_vkey_files[0]),
+                str(reward_account_vkey_file)
+                if reward_account_vkey_file
+                else str(owner_stake_vkey_files[0]),
                 *self._prepend_flag(
                     "--pool-owner-stake-verification-key-file", owner_stake_vkey_files
                 ),

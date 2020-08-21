@@ -277,7 +277,7 @@ def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib) -> dict:
     return cluster_obj.get_stake_distribution()
 
 
-def load_devops_pools_data() -> dict:
+def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Load data for pools existing in the devops environment."""
     data_dir = get_cluster_env()["state_dir"] / "nodes"
     pools = ("node-pool1", "node-pool2")
@@ -295,6 +295,11 @@ def load_devops_pools_data() -> dict:
                 address=read_address_from_file(addr_data_dir / "owner-stake.addr"),
                 vkey_file=addr_data_dir / "owner-stake.vkey",
                 skey_file=addr_data_dir / "owner-stake.skey",
+            ),
+            "reward": clusterlib.AddressRecord(
+                address=cluster_obj.gen_stake_addr(stake_vkey_file=addr_data_dir / "reward.vkey"),
+                vkey_file=addr_data_dir / "reward.vkey",
+                skey_file=addr_data_dir / "reward.skey",
             ),
             "stake_addr_registration_cert": read_address_from_file(
                 addr_data_dir / "stake.reg.cert"
@@ -340,7 +345,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
         destination_dir=destination_dir,
     )
 
-    pools_data = load_devops_pools_data()
+    pools_data = load_devops_pools_data(cluster_obj)
 
     cluster_env = get_cluster_env()
     data_file = Path(cluster_env["state_dir"]) / ADDR_DATA

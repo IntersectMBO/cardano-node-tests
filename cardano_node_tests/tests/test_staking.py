@@ -30,10 +30,11 @@ def _delegate_stake_addr(
     addrs_data: dict,
     temp_template: str,
     request: FixtureRequest,
+    pool_name: str = "node-pool1",
     delegate_with_pool_id: bool = False,
 ):
     """Submit registration certificate and delegate to pool."""
-    node_cold = addrs_data["node-pool1"]["cold_key_pair"]
+    node_cold = addrs_data[pool_name]["cold_key_pair"]
     stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
 
     # create key pairs and addresses
@@ -189,6 +190,7 @@ class TestRewards:
     ):
         """Check that the stake address is receiving rewards."""
         cluster = cluster_session
+        pool_name = "node-pool1"
         temp_template = "test_reward"
 
         pool_user = _delegate_stake_addr(
@@ -196,6 +198,7 @@ class TestRewards:
             addrs_data=addrs_data_session,
             temp_template=temp_template,
             request=request,
+            pool_name=pool_name,
         )
 
         # wait for first reward
@@ -206,9 +209,21 @@ class TestRewards:
             message="receive rewards",
         )
 
+        # check that pool owner is also receiving rewards
+        owner_first_reward = cluster.get_stake_addr_info(
+            addrs_data_session[pool_name]["reward"].address
+        ).reward_account_balance
+        assert owner_first_reward, "Pool owner is not receiving rewards"
+
         # check that new reward is received every epoch
         cluster.wait_for_new_epoch()
         assert (
             cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
             > first_reward
         ), "New reward was not received"
+        assert (
+            cluster.get_stake_addr_info(
+                addrs_data_session[pool_name]["reward"].address
+            ).reward_account_balance
+            > owner_first_reward
+        ), "New reward was not received by pool owner"
