@@ -89,9 +89,7 @@ def _delegate_stake_addr(
 
     # check that the stake address was delegated
     stake_addr_info = cluster_obj.get_stake_addr_info(stake_addr_rec.address)
-    assert (
-        stake_addr_info and stake_addr_info.delegation
-    ), f"Stake address was not delegated yet: {stake_addr_info}"
+    assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
 
     assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
@@ -177,4 +175,6 @@ class TestDelegateAddr:
 
         # check that the stake address is no longer delegated
         stake_addr_info = cluster.get_stake_addr_info(pool_user.stake.address)
-        assert stake_addr_info is None, f"Stake address is still delegated: {stake_addr_info}"
+        assert (
+            not stake_addr_info.delegation
+        ), f"Stake address is still delegated: {stake_addr_info}"

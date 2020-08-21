@@ -67,10 +67,7 @@ def _check_staking(
         stake_addr_info = cluster_obj.get_stake_addr_info(owner.stake.address)
 
         # check that the stake address was delegated
-        assert (
-            stake_addr_info and stake_addr_info.delegation
-        ), f"Stake address was not delegated yet: {stake_addr_info}"
-
+        assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
         assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
         assert (
@@ -382,12 +379,9 @@ class TestStakePool:
         pool_owner = pool_owners[0]
         src_register_balance = cluster.get_address_balance(pool_owner.payment.address)
 
-        src_register_stake_addr_info = cluster.get_stake_addr_info(pool_owner.stake.address)
-        src_register_reward = (
-            src_register_stake_addr_info.reward_account_balance
-            if src_register_stake_addr_info
-            else 0
-        )
+        src_register_reward = cluster.get_stake_addr_info(
+            pool_owner.stake.address
+        ).reward_account_balance
 
         # deregister stake pool
         __, tx_raw_output = cluster.deregister_stake_pool(
@@ -416,14 +410,12 @@ class TestStakePool:
         for owner_rec in pool_owners:
             stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
             assert (
-                stake_addr_info and not stake_addr_info.delegation
+                not stake_addr_info.delegation
             ), f"Stake address is still delegated: {stake_addr_info}"
 
         # check that the deposit was returned to reward account
-        stake_addr_info = cluster.get_stake_addr_info(pool_owner.stake.address)
         assert (
-            stake_addr_info
-            and stake_addr_info.reward_account_balance
+            cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
             == src_register_reward + cluster.get_pool_deposit()
         )
 
@@ -499,7 +491,7 @@ class TestStakePool:
         for owner_rec in pool_owners:
             stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
             assert (
-                stake_addr_info and not stake_addr_info.delegation
+                not stake_addr_info.delegation
             ), f"Stake address is still delegated: {stake_addr_info}"
 
         src_address = pool_owners[0].payment.address
@@ -541,7 +533,7 @@ class TestStakePool:
         for owner_rec in pool_owners:
             stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
             assert (
-                stake_addr_info and stake_addr_info.delegation
+                stake_addr_info.delegation
             ), f"Stake address is not delegated yet: {stake_addr_info}"
 
             assert (

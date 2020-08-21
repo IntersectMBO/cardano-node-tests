@@ -49,6 +49,9 @@ class StakeAddrInfo(NamedTuple):
     delegation: str
     reward_account_balance: int
 
+    def __bool__(self) -> bool:
+        return bool(self.address)
+
 
 class UTXOData(NamedTuple):
     utxo_hash: str
@@ -692,11 +695,11 @@ class ClusterLib:
         )
         return pool_id
 
-    def get_stake_addr_info(self, stake_addr: str) -> Optional[StakeAddrInfo]:
+    def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
         """Return info about stake pool address."""
         output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
         if not output_json:
-            return None
+            return StakeAddrInfo(address="", delegation="", reward_account_balance=0)
 
         address_rec = list(output_json)[0]
         address = address_rec.get("address") or ""
