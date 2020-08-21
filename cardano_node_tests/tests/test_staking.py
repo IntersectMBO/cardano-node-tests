@@ -178,3 +178,37 @@ class TestDelegateAddr:
         assert (
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
+
+
+class TestRewards:
+    def test_reward(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        request: FixtureRequest,
+    ):
+        """Check that the stake address is receiving rewards."""
+        cluster = cluster_session
+        temp_template = "test_reward"
+
+        pool_user = _delegate_stake_addr(
+            cluster_obj=cluster,
+            addrs_data=addrs_data_session,
+            temp_template=temp_template,
+            request=request,
+        )
+
+        # wait for first reward
+        first_reward = helpers.wait_for(
+            lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
+            delay=10,
+            num_sec=3 * cluster.epoch_length_sec,
+            message="receive rewards",
+        )
+
+        # check that new reward is received every epoch
+        cluster.wait_for_new_epoch()
+        assert (
+            cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
+            > first_reward
+        ), "New reward was not received"
