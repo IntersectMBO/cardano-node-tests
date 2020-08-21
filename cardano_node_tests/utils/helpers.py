@@ -22,7 +22,7 @@ from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
-ADDR_DATA = "addr_data.json"
+ADDR_DATA = "addr_data.pickle"
 
 TEST_TEMP_DIR = Path(tempfile.gettempdir()) / "cardano-node-tests"
 TEST_TEMP_DIR.mkdir(mode=0o700, exist_ok=True)
