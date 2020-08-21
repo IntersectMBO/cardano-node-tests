@@ -196,8 +196,8 @@ class ClusterLib:
             if "SingleEraInfo" not in str(exc):
                 raise
             raise CLIError(
-                f"The cluster is running with protocol different from '{self.protocol}':\n" f"{exc}"
-            )
+                f"The cluster is running with protocol different from '{self.protocol}'."
+            ) from exc
 
     def _check_outfiles(self, *out_files: FileType) -> None:
         """Check that the expected output files were created."""
