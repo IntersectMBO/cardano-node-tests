@@ -198,19 +198,17 @@ def fund_from_faucet(
             lambda: return_funds_to_faucet(
                 *dst_addrs,
                 cluster_obj=cluster_obj,
-                faucet_addr=faucet_data["payment_addr"],
+                faucet_addr=faucet_data["payment"].address,
                 tx_name=tx_name,
                 destination_dir=destination_dir,
             )
         )
 
-    src_address = faucet_data["payment_addr"]
+    src_address = faucet_data["payment"].address
     with FileLockIfXdist(f"{TEST_TEMP_DIR}/{src_address}.lock"):
         tx_name = tx_name or clusterlib.get_timestamped_rand_str()
         tx_name = f"{tx_name}_funding"
-        fund_tx_files = clusterlib.TxFiles(
-            signing_key_files=[faucet_data["payment_key_pair"].skey_file]
-        )
+        fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])
 
         cluster_obj.send_funds(
             src_address=src_address,
@@ -245,44 +243,12 @@ def create_stake_addr_records(
 ) -> List[clusterlib.AddressRecord]:
     """Create new stake address(es)."""
     addrs = [
-        cluster_obj.gen_stake_addr_and_keys(name=name, destination_dir=destination_dir,)
+        cluster_obj.gen_stake_addr_and_keys(name=name, destination_dir=destination_dir)
         for name in names
     ]
 
     LOGGER.debug(f"Created {len(addrs)} stake address(es)")
     return addrs
-
-
-def load_devops_pools_data() -> dict:
-    """Load data for pools existing in the devops environment."""
-    data_dir = get_cluster_env()["state_dir"] / "nodes"
-    pools = ("node-pool1", "node-pool2")
-
-    addrs_data = {}
-    for addr_name in pools:
-        addr_data_dir = data_dir / addr_name
-        addrs_data[addr_name] = {
-            "payment_key_pair": clusterlib.KeyPair(
-                vkey_file=addr_data_dir / "owner-utxo.vkey",
-                skey_file=addr_data_dir / "owner-utxo.skey",
-            ),
-            "stake_key_pair": clusterlib.KeyPair(
-                vkey_file=addr_data_dir / "owner-stake.vkey",
-                skey_file=addr_data_dir / "owner-stake.skey",
-            ),
-            "payment_addr": read_address_from_file(addr_data_dir / "owner.addr"),
-            "stake_addr": read_address_from_file(addr_data_dir / "owner-stake.addr"),
-            "stake_addr_registration_cert": read_address_from_file(
-                addr_data_dir / "stake.reg.cert"
-            ),
-            "cold_key_pair": clusterlib.ColdKeyPair(
-                vkey_file=addr_data_dir / "cold.vkey",
-                skey_file=addr_data_dir / "cold.skey",
-                counter_file=addr_data_dir / "cold.counter",
-            ),
-        }
-
-    return addrs_data
 
 
 def get_cluster_env() -> dict:
@@ -311,6 +277,38 @@ def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib) -> dict:
     return cluster_obj.get_stake_distribution()
 
 
+def load_devops_pools_data() -> dict:
+    """Load data for pools existing in the devops environment."""
+    data_dir = get_cluster_env()["state_dir"] / "nodes"
+    pools = ("node-pool1", "node-pool2")
+
+    addrs_data = {}
+    for addr_name in pools:
+        addr_data_dir = data_dir / addr_name
+        addrs_data[addr_name] = {
+            "payment": clusterlib.AddressRecord(
+                address=read_address_from_file(addr_data_dir / "owner.addr"),
+                vkey_file=addr_data_dir / "owner-utxo.vkey",
+                skey_file=addr_data_dir / "owner-utxo.skey",
+            ),
+            "stake": clusterlib.AddressRecord(
+                address=read_address_from_file(addr_data_dir / "owner-stake.addr"),
+                vkey_file=addr_data_dir / "owner-stake.vkey",
+                skey_file=addr_data_dir / "owner-stake.skey",
+            ),
+            "stake_addr_registration_cert": read_address_from_file(
+                addr_data_dir / "stake.reg.cert"
+            ),
+            "cold_key_pair": clusterlib.ColdKeyPair(
+                vkey_file=addr_data_dir / "cold.vkey",
+                skey_file=addr_data_dir / "cold.skey",
+                counter_file=addr_data_dir / "cold.counter",
+            ),
+        }
+
+    return addrs_data
+
+
 def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".") -> Path:
     """Create addresses and their keys for usage in tests."""
     destination_dir = Path(destination_dir).expanduser()
@@ -320,33 +318,23 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     LOGGER.debug("Creating addresses and keys for tests.")
     addrs_data: Dict[str, Dict[str, Any]] = {}
     for addr_name in addrs:
-        payment_key_pair = cluster_obj.gen_payment_key_pair(
-            key_name=addr_name, destination_dir=destination_dir,
+        stake = cluster_obj.gen_stake_addr_and_keys(name=addr_name, destination_dir=destination_dir)
+        payment = cluster_obj.gen_payment_addr_and_keys(
+            name=addr_name, stake_vkey_file=stake.vkey_file, destination_dir=destination_dir
         )
-        stake_key_pair = cluster_obj.gen_stake_key_pair(
-            key_name=addr_name, destination_dir=destination_dir,
-        )
-        payment_addr = cluster_obj.gen_payment_addr(
-            payment_vkey_file=payment_key_pair.vkey_file, stake_vkey_file=stake_key_pair.vkey_file,
-        )
-        stake_addr = cluster_obj.gen_stake_addr(stake_vkey_file=stake_key_pair.vkey_file)
         stake_addr_registration_cert = cluster_obj.gen_stake_addr_registration_cert(
-            addr_name=addr_name,
-            stake_vkey_file=stake_key_pair.vkey_file,
-            destination_dir=destination_dir,
+            addr_name=addr_name, stake_vkey_file=stake.vkey_file, destination_dir=destination_dir,
         )
 
         addrs_data[addr_name] = {
-            "payment_key_pair": payment_key_pair,
-            "stake_key_pair": stake_key_pair,
-            "payment_addr": payment_addr,
-            "stake_addr": stake_addr,
+            "payment": payment,
+            "stake": stake,
             "stake_addr_registration_cert": stake_addr_registration_cert,
         }
 
     LOGGER.debug("Funding created addresses.")
     fund_from_genesis(
-        *[d["payment_addr"] for d in addrs_data.values()],
+        *[d["payment"].address for d in addrs_data.values()],
         cluster_obj=cluster_obj,
         amount=40_000_000_000,
         destination_dir=destination_dir,

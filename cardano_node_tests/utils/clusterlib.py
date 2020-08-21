@@ -402,7 +402,7 @@ class ClusterLib:
 
     def gen_stake_addr_and_keys(self, name: str, destination_dir: FileType = ".") -> AddressRecord:
         """Generate stake address and key pair."""
-        key_pair = self.gen_stake_key_pair(key_name=name, destination_dir=destination_dir,)
+        key_pair = self.gen_stake_key_pair(key_name=name, destination_dir=destination_dir)
         addr = self.gen_stake_addr(stake_vkey_file=key_pair.vkey_file)
         return AddressRecord(
             address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
