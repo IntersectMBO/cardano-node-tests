@@ -4,14 +4,14 @@ from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
 
-def create_pool_owners(
+def create_pool_users(
     cluster_obj: clusterlib.ClusterLib, temp_template: str, no_of_addr: int = 1,
-) -> List[clusterlib.PoolOwner]:
+) -> List[clusterlib.PoolUser]:
     """Create PoolOwners.
 
     Common functionality for tests.
     """
-    pool_owners = []
+    pool_users = []
     payment_addrs = []
     for i in range(no_of_addr):
         # create key pairs and addresses
@@ -24,8 +24,8 @@ def create_pool_owners(
             stake_vkey_file=stake_addr_rec.vkey_file,
         )[0]
         # create pool owner struct
-        pool_owner = clusterlib.PoolOwner(payment=payment_addr_rec, stake=stake_addr_rec)
+        pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
         payment_addrs.append(payment_addr_rec)
-        pool_owners.append(pool_owner)
+        pool_users.append(pool_user)
 
-    return pool_owners
+    return pool_users

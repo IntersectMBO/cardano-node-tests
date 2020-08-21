@@ -71,7 +71,7 @@ class TxFiles(NamedTuple):
     signing_key_files: OptionalFiles = ()
 
 
-class PoolOwner(NamedTuple):
+class PoolUser(NamedTuple):
     payment: AddressRecord
     stake: AddressRecord
 
@@ -102,7 +102,7 @@ class PoolCreationOutput(NamedTuple):
     cold_key_pair_and_counter: ColdKeyPair
     pool_reg_cert_file: Path
     pool_data: PoolData
-    pool_owners: List[PoolOwner]
+    pool_owners: List[PoolUser]
     tx_raw_output: TxRawOutput
     kes_key_pair: Optional[KeyPair] = None
 
@@ -1208,7 +1208,7 @@ class ClusterLib:
     def register_stake_pool(
         self,
         pool_data: PoolData,
-        pool_owners: List[PoolOwner],
+        pool_owners: List[PoolUser],
         node_vrf_vkey_file: FileType,
         node_cold_key_pair: ColdKeyPair,
         tx_name: Optional[str] = None,
@@ -1247,7 +1247,7 @@ class ClusterLib:
 
     def deregister_stake_pool(
         self,
-        pool_owners: List[PoolOwner],
+        pool_owners: List[PoolUser],
         node_cold_key_pair: ColdKeyPair,
         epoch: int,
         pool_name: str,
@@ -1287,7 +1287,7 @@ class ClusterLib:
         return pool_dereg_cert_file, tx_raw_output
 
     def create_stake_pool(
-        self, pool_data: PoolData, pool_owners: List[PoolOwner], destination_dir: FileType = "."
+        self, pool_data: PoolData, pool_owners: List[PoolUser], destination_dir: FileType = "."
     ) -> PoolCreationOutput:
         """Create and register stake pool."""
         # create the KES key pair
