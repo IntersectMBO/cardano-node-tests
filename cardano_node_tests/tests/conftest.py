@@ -14,8 +14,8 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 LOCK_FILE = "pytest_cluster.lock"
-RUNNING_FILE = "cluster_running"
-FIRST_RAN = "first_ran"
+RUNNING_FILE = ".cluster_running"
+MARK_FIRST_STARTED = ".mark_first_started"
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -66,9 +66,9 @@ def _fresh_cluster(
     # as the tests marked with "first" need fresh cluster, no other tests on
     # any other worker can run until the ones that requested this fixture are
     # finished
-    with FileLock(f"{lock_dir}/fresh_{LOCK_FILE}"):
+    with FileLock(f"{lock_dir}/.fresh_{LOCK_FILE}"):
         # indicate that tests marked as "first" were launched on this worker
-        open(lock_dir / FIRST_RAN, "a").close()
+        open(lock_dir / MARK_FIRST_STARTED, "a").close()
         # indicate that a tests marked as "first" is running on this worker
         open(lock_dir / f"{RUNNING_FILE}_fresh_{worker_id}", "a").close()
 
@@ -144,12 +144,12 @@ def cluster_session(
 
     # executing in parallel with multiple workers
     lock_dir = Path(tmp_path_factory.getbasetemp()).parent
-    first_ran = lock_dir / FIRST_RAN
+    mark_first_started = lock_dir / MARK_FIRST_STARTED
     # make sure this code is executed on single worker at a time
-    with FileLock(f"{lock_dir}/session_{LOCK_FILE}"):
+    with FileLock(f"{lock_dir}/.session_{LOCK_FILE}"):
         # make sure tests marked as "first" had enought time to start
-        if not first_ran.exists():
-            helpers.wait_for(first_ran.exists, delay=2, num_sec=10, silent=True)
+        if not mark_first_started.exists():
+            helpers.wait_for(mark_first_started.exists, delay=2, num_sec=10, silent=True)
 
         # wait until all tests marked as "first" are finished
         _wait_for_fresh(lock_dir)
@@ -172,7 +172,7 @@ def cluster_session(
     try:
         yield cluster_obj
     finally:
-        with FileLock(f"{lock_dir}/session_stop_{LOCK_FILE}"):
+        with FileLock(f"{lock_dir}/.session_stop_{LOCK_FILE}"):
             # indicate that tests are no longer running on this worker
             os.remove(lock_dir / f"{RUNNING_FILE}_session_{worker_id}")
             # save CLI coverage
