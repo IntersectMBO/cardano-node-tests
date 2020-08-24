@@ -277,6 +277,35 @@ def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib) -> dict:
     return cluster_obj.get_stake_distribution()
 
 
+def load_registered_pool_data(
+    cluster_obj: clusterlib.ClusterLib, pool_name: str, pool_id: str
+) -> clusterlib.PoolData:
+    """Load data of existing registered pool."""
+    if pool_id.startswith("pool"):
+        pool_id = decode_bech32(pool_id)
+
+    pool_state: dict = cluster_obj.get_registered_stake_pools_ledger_state().get(pool_id) or {}
+    metadata = pool_state.get("metadata") or {}
+
+    # TODO: extend to handle more relays records
+    relays_list = pool_state.get("relays") or []
+    relay = relays_list[0] if relays_list else {}
+    relay = relay.get("single host address") or {}
+
+    pool_data = clusterlib.PoolData(
+        pool_name=pool_name,
+        pool_pledge=pool_state["pledge"],
+        pool_cost=pool_state["cost"],
+        pool_margin=pool_state["margin"],
+        pool_metadata_url=metadata.get("url") or "",
+        pool_metadata_hash=metadata.get("hash") or "",
+        pool_relay_ipv4=relay.get("IPv4") or "",
+        pool_relay_port=relay.get("port") or 0,
+    )
+
+    return pool_data
+
+
 def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Load data for pools existing in the devops environment."""
     data_dir = get_cluster_env()["state_dir"] / "nodes"
@@ -308,6 +337,9 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
                 vkey_file=addr_data_dir / "cold.vkey",
                 skey_file=addr_data_dir / "cold.skey",
                 counter_file=addr_data_dir / "cold.counter",
+            ),
+            "vrf_key_pair": clusterlib.KeyPair(
+                vkey_file=addr_data_dir / "vrf.vkey", skey_file=addr_data_dir / "vrf.skey",
             ),
         }
 
