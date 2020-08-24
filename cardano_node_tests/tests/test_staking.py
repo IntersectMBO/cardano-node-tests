@@ -108,6 +108,7 @@ class TestDelegateAddr:
         cluster = cluster_session
         temp_template = "test_delegate_using_addr"
 
+        # submit registration certificate and delegate to pool
         _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=addrs_data_session,
@@ -126,6 +127,7 @@ class TestDelegateAddr:
         cluster = cluster_session
         temp_template = "test_delegate_using_cert"
 
+        # submit registration certificate and delegate to pool
         _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=addrs_data_session,
@@ -143,7 +145,7 @@ class TestDelegateAddr:
         cluster = cluster_session
         temp_template = "test_deregister_addr"
 
-        # submit registration certificate and delegate to pool using certificate
+        # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=addrs_data_session,
@@ -193,6 +195,7 @@ class TestRewards:
         pool_name = "node-pool1"
         temp_template = "test_reward"
 
+        # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=addrs_data_session,
@@ -227,3 +230,71 @@ class TestRewards:
             ).reward_account_balance
             > owner_first_reward
         ), "New reward was not received by pool owner"
+
+    def test_no_reward_high_pledge(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        request: FixtureRequest,
+    ):
+        """Check that the stake address is not receiving rewards.
+
+        When the pledge is higher than available funds, neither pool owners not those who
+        delegate to that pool receive rewards.
+        """
+        cluster = cluster_session
+        pool_name = "node-pool2"
+        temp_template = "test_no_reward"
+
+        helpers.wait_for_stake_distribution(cluster)
+
+        node_cold = addrs_data_session[pool_name]["cold_key_pair"]
+        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+
+        # load and update original pool data
+        loaded_data = helpers.load_registered_pool_data(
+            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=stake_pool_id
+        )
+        pool_data_updated = loaded_data._replace(pool_pledge=loaded_data.pool_pledge * 9)
+
+        # update the pool parameters by resubmitting the pool registration certificate
+        pool_rec = addrs_data_session[pool_name]
+        cluster.register_stake_pool(
+            pool_data=pool_data_updated,
+            pool_owners=[
+                clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"],)
+            ],
+            node_vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
+            node_cold_key_pair=pool_rec["cold_key_pair"],
+            deposit=0,  # no additional deposit, the pool is already registered
+        )
+
+        # submit registration certificate and delegate to pool
+        pool_user = _delegate_stake_addr(
+            cluster_obj=cluster,
+            addrs_data=addrs_data_session,
+            temp_template=temp_template,
+            request=request,
+            pool_name=pool_name,
+        )
+
+        cluster.wait_for_new_epoch(3)
+
+        orig_owner_reward = cluster.get_stake_addr_info(
+            addrs_data_session[pool_name]["reward"].address
+        ).reward_account_balance
+
+        # check that no new rewards are received
+        cluster.wait_for_new_epoch(3)
+
+        assert not cluster.get_stake_addr_info(
+            pool_user.stake.address
+        ).reward_account_balance, "Received unexpected rewards"
+
+        # check that pool owner is also not receiving rewards
+        assert (
+            orig_owner_reward
+            == cluster.get_stake_addr_info(
+                addrs_data_session[pool_name]["reward"].address
+            ).reward_account_balance
+        ), "Pool owner received unexpected rewards"

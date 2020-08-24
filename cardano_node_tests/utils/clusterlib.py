@@ -87,6 +87,7 @@ class PoolData(NamedTuple):
     pool_metadata_url: str = ""
     pool_metadata_hash: str = ""
     pool_relay_dns: str = ""
+    pool_relay_ipv4: str = ""
     pool_relay_port: int = 0
 
 
@@ -620,6 +621,8 @@ class ClusterLib:
         relay_cmd = []
         if pool_data.pool_relay_dns:
             relay_cmd.extend(["--single-host-pool-relay", pool_data.pool_relay_dns])
+        if pool_data.pool_relay_ipv4:
+            relay_cmd.extend(["--pool-relay-ipv4", pool_data.pool_relay_ipv4])
         if pool_data.pool_relay_port:
             relay_cmd.extend(["--pool-relay-port", str(pool_data.pool_relay_port)])
 
@@ -1166,6 +1169,9 @@ class ClusterLib:
 
     def wait_for_new_block(self, new_blocks: int = 1) -> None:
         """Wait for new block(s) to be created."""
+        if new_blocks < 1:
+            return
+
         LOGGER.debug(f"Waiting for {new_blocks} new block(s) to be created.")
         timeout_no_of_slots = 200 * new_blocks
         initial_block_no = self.get_last_block_block_no()
@@ -1187,6 +1193,9 @@ class ClusterLib:
 
     def wait_for_new_epoch(self, new_epochs: int = 1) -> None:
         """Wait for new epoch(s)."""
+        if new_epochs < 1:
+            return
+
         last_block_epoch = self.get_last_block_epoch()
         LOGGER.debug(
             f"Current epoch: {last_block_epoch}; Waiting the beginning of epoch: "
