@@ -14,6 +14,7 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 from cardano_node_tests.utils.types import FileType
 from cardano_node_tests.utils.types import OptionalFiles
@@ -65,12 +66,15 @@ class TxOut(NamedTuple):
     amount: int
 
 
+# list of `TxOut`s, empty list, or empty tuple
+OptionalTxOuts = Union[List[TxOut], Tuple[()]]
+
+
 class TxFiles(NamedTuple):
     certificate_files: OptionalFiles = ()
     proposal_files: OptionalFiles = ()
     metadata_json_files: OptionalFiles = ()
     metadata_cbor_files: OptionalFiles = ()
-    withdrawal_files: OptionalFiles = ()
     signing_key_files: OptionalFiles = ()
 
 
@@ -98,6 +102,7 @@ class TxRawOutput(NamedTuple):
     out_file: Path
     fee: int
     ttl: int
+    withdrawals: OptionalTxOuts
 
 
 class PoolCreationOutput(NamedTuple):
@@ -810,10 +815,12 @@ class ClusterLib:
         txouts: Optional[List[TxOut]] = None,
         fee: int = 0,
         deposit: Optional[int] = None,
+        withdrawals: OptionalTxOuts = (),
     ) -> Tuple[list, list]:
         """Return list of transaction's inputs and outputs."""
         txins_copy = list(txins) if txins else self.get_utxo(src_address)
         txouts_copy = list(txouts) if txouts else []
+        withdrawals_copy = list(withdrawals) if withdrawals else []
         max_address = None
 
         # the value "-1" means all available funds
@@ -825,10 +832,11 @@ class ClusterLib:
 
         total_input_amount = functools.reduce(lambda x, y: x + y[2], txins_copy, 0)
         total_output_amount = functools.reduce(lambda x, y: x + y[1], txouts_copy, 0)
+        total_withdrawals_amount = functools.reduce(lambda x, y: x + y[1], withdrawals_copy, 0)
 
         tx_deposit = self.get_tx_deposit(tx_files=tx_files) if deposit is None else deposit
         funds_needed = total_output_amount + fee + tx_deposit
-        change = total_input_amount - funds_needed
+        change = total_input_amount + total_withdrawals_amount - funds_needed
         if change < 0:
             LOGGER.error(
                 "Not enough funds to make a transaction - "
@@ -844,6 +852,19 @@ class ClusterLib:
 
         return txins_copy, txouts_copy
 
+    def get_withdrawals(self, withdrawals: List[TxOut]) -> List[TxOut]:
+        """Return list of withdrawals."""
+        resolved_withdrawals = []
+        for rec in withdrawals:
+            # the amount with value "-1" means all available balance
+            if rec[1] == -1:
+                balance = self.get_stake_addr_info(rec[0]).reward_account_balance
+                resolved_withdrawals.append(TxOut(address=rec[0], amount=balance))
+            else:
+                resolved_withdrawals.append(rec)
+
+        return resolved_withdrawals
+
     def build_raw_tx_bare(
         self,
         out_file: FileType,
@@ -852,11 +873,13 @@ class ClusterLib:
         tx_files: TxFiles,
         fee: int,
         ttl: int,
+        withdrawals: OptionalTxOuts = (),
     ) -> TxRawOutput:
         """Build raw transaction."""
         out_file = Path(out_file)
         txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
         txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts]
+        withdrawals_combined = [f"{x[0]}+{x[1]}" for x in withdrawals]
 
         self.cli(
             [
@@ -874,12 +897,18 @@ class ClusterLib:
                 *self._prepend_flag("--update-proposal-file", tx_files.proposal_files),
                 *self._prepend_flag("--metadata-json-file", tx_files.metadata_json_files),
                 *self._prepend_flag("--metadata-cbor-file", tx_files.metadata_cbor_files),
-                *self._prepend_flag("--withdrawal", tx_files.withdrawal_files),
+                *self._prepend_flag("--withdrawal", withdrawals_combined),
             ]
         )
 
         return TxRawOutput(
-            txins=txins, txouts=txouts, tx_files=tx_files, out_file=out_file, fee=fee, ttl=ttl
+            txins=txins,
+            txouts=txouts,
+            tx_files=tx_files,
+            out_file=out_file,
+            fee=fee,
+            ttl=ttl,
+            withdrawals=withdrawals,
         )
 
     def build_raw_tx(
@@ -891,15 +920,18 @@ class ClusterLib:
         tx_files: Optional[TxFiles] = None,
         fee: int = 0,
         ttl: Optional[int] = None,
+        withdrawals: OptionalTxOuts = (),
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Figure out all the missing data and build raw transaction."""
+        # pylint: disable=too-many-arguments
         tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.body"
         tx_files = tx_files or TxFiles()
         ttl = ttl or self.calculate_tx_ttl()
+        withdrawals = withdrawals and self.get_withdrawals(withdrawals)
 
         txins_copy, txouts_copy = self.get_tx_ins_outs(
             src_address=src_address,
@@ -908,6 +940,7 @@ class ClusterLib:
             txouts=txouts,
             fee=fee,
             deposit=deposit,
+            withdrawals=withdrawals,
         )
 
         tx_raw_output = self.build_raw_tx_bare(
@@ -917,6 +950,7 @@ class ClusterLib:
             tx_files=tx_files,
             fee=fee,
             ttl=ttl,
+            withdrawals=withdrawals,
         )
 
         self._check_outfiles(out_file)
@@ -964,6 +998,7 @@ class ClusterLib:
         txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
+        withdrawals: OptionalTxOuts = (),
         destination_dir: FileType = ".",
     ) -> int:
         """Build "dummy" transaction and calculate it's fee."""
@@ -986,6 +1021,7 @@ class ClusterLib:
             tx_files=tx_files,
             fee=0,
             ttl=ttl,
+            withdrawals=withdrawals,
             deposit=0,
             destination_dir=destination_dir,
         )
@@ -1051,10 +1087,12 @@ class ClusterLib:
         tx_files: Optional[TxFiles] = None,
         fee: Optional[int] = None,
         ttl: Optional[int] = None,
+        withdrawals: OptionalTxOuts = (),
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Build, Sign and Send transaction to chain."""
+        # pylint: disable=too-many-arguments
         tx_files = tx_files or TxFiles()
         tx_name = tx_name or get_timestamped_rand_str()
 
@@ -1077,6 +1115,7 @@ class ClusterLib:
             tx_files=tx_files,
             fee=fee,
             ttl=ttl,
+            withdrawals=withdrawals,
             deposit=deposit,
             destination_dir=destination_dir,
         )
@@ -1191,7 +1230,7 @@ class ClusterLib:
 
         LOGGER.debug(f"New block(s) were created; block number: {last_block_block_no}")
 
-    def wait_for_new_epoch(self, new_epochs: int = 1) -> None:
+    def wait_for_new_epoch(self, new_epochs: int = 1, padding_seconds: int = 0) -> None:
         """Wait for new epoch(s)."""
         if new_epochs < 1:
             return
@@ -1208,7 +1247,7 @@ class ClusterLib:
         sleep_slots = (
             last_block_epoch + new_epochs
         ) * self.epoch_length - self.get_last_block_slot_no()
-        sleep_time = int(sleep_slots * self.slot_length) + 1
+        sleep_time = int(sleep_slots * self.slot_length) + (padding_seconds or 1)
         time.sleep(sleep_time)
 
         wakeup_epoch = self.get_last_block_epoch()
