@@ -193,7 +193,7 @@ class TestDelegateAddr:
         helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
-            num_sec=3 * cluster.epoch_length_sec,
+            num_sec=4 * cluster.epoch_length_sec,
             message="receive rewards",
         )
 
@@ -283,7 +283,7 @@ class TestRewards:
                 owner_reward > prev_owner_reward_amount
             ), "New reward was not received by pool owner"
 
-            if prev_owner_reward_epoch == this_epoch - 1:
+            if prev_owner_reward_amount and prev_owner_reward_epoch == this_epoch - 1:
                 assert (
                     prev_owner_reward_amount * 1.2 < owner_reward < prev_owner_reward_amount * 2
                 ), "Unexpected reward amount for pool owner"
@@ -297,7 +297,7 @@ class TestRewards:
                 stake_reward > prev_stake_reward_amount
             ), "New reward was not received by stake address"
 
-            if prev_stake_reward_epoch == this_epoch - 1:
+            if prev_stake_reward_amount and prev_stake_reward_epoch == this_epoch - 1:
                 assert (
                     prev_stake_reward_amount * 1.2 < stake_reward < prev_stake_reward_amount * 2
                 ), "Unexpected reward amount for stake address"
