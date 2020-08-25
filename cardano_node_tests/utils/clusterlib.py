@@ -237,15 +237,27 @@ class ClusterLib:
 
     def cli_base(self, cli_args: List[str]) -> CLIOut:
         """Run command."""
-        p = subprocess.Popen(cli_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         cmd_str = " ".join(cli_args)
         LOGGER.debug("Running `%s`", cmd_str)
 
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise CLIError(
-                f"An error occurred running a CLI command `{cmd_str}`: {stderr.decode()}"
-            )
+        # re-run the command when running into
+        # Network.Socket.connect: <socket: X>: resource exhausted (Resource temporarily unavailable)
+        for __ in range(3):
+            p = subprocess.Popen(cli_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = p.communicate()
+
+            if p.returncode == 0:
+                break
+
+            stderr_dec = stderr.decode()
+            err_msg = f"An error occurred running a CLI command `{cmd_str}`: {stderr_dec}"
+            if "resource exhausted" in stderr_dec:
+                LOGGER.error(err_msg)
+                time.sleep(1)
+                continue
+            raise CLIError(err_msg)
+        else:
+            raise CLIError(err_msg)
 
         return CLIOut(stdout or b"", stderr or b"")
 

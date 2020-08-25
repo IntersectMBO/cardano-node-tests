@@ -259,7 +259,7 @@ class TestExpectedFees:
         self,
         cluster_session: clusterlib.ClusterLib,
         temp_dir: Path,
-        pool_owners: List[clusterlib.PoolUser],
+        pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
         """Test pool registration fees."""
@@ -287,7 +287,7 @@ class TestExpectedFees:
         )
 
         # create pool owners
-        selected_owners = pool_owners[:no_of_addr]
+        selected_owners = pool_users[:no_of_addr]
 
         # create certificates
         src_address, tx_files = self._create_pool_certificates(
@@ -306,13 +306,13 @@ class TestExpectedFees:
         self,
         cluster_session: clusterlib.ClusterLib,
         temp_dir: Path,
-        pool_owners: List[clusterlib.PoolUser],
+        pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
         """Test pool deregistration fees."""
         cluster = cluster_session
         no_of_addr, expected_fee = addr_fee
-        src_address = pool_owners[0].payment.address
+        src_address = pool_users[0].payment.address
 
         pool_metadata = {
             "name": "QA E2E test",
@@ -334,7 +334,7 @@ class TestExpectedFees:
         )
 
         # create pool owners
-        selected_owners = pool_owners[:no_of_addr]
+        selected_owners = pool_users[:no_of_addr]
 
         # create node cold key pair and counter
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
