@@ -184,16 +184,23 @@ class TestDelegateAddr:
 
 
 class TestRewards:
-    def test_reward(
+    def test_reward_amount(
         self,
         cluster_session: clusterlib.ClusterLib,
         addrs_data_session: dict,
         request: FixtureRequest,
     ):
-        """Check that the stake address is receiving rewards."""
+        """Check that the stake address and pool owner are receiving rewards."""
         cluster = cluster_session
         pool_name = "node-pool1"
-        temp_template = "test_reward"
+        temp_template = "test_reward_amount"
+        rewards_address = addrs_data_session[pool_name]["reward"].address
+        init_epoch = cluster.get_last_block_epoch()
+
+        stake_rewards = [(init_epoch, 0)]
+        owner_rewards = [
+            (init_epoch, cluster.get_stake_addr_info(rewards_address).reward_account_balance,)
+        ]
 
         # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
@@ -204,32 +211,44 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        # wait for first reward
-        first_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
-            delay=10,
-            num_sec=3 * cluster.epoch_length_sec,
-            message="receive rewards",
-        )
-
-        # check that pool owner is also receiving rewards
-        owner_first_reward = cluster.get_stake_addr_info(
-            addrs_data_session[pool_name]["reward"].address
-        ).reward_account_balance
-        assert owner_first_reward, "Pool owner is not receiving rewards"
-
         # check that new reward is received every epoch
-        cluster.wait_for_new_epoch()
-        assert (
-            cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
-            > first_reward
-        ), "New reward was not received"
-        assert (
-            cluster.get_stake_addr_info(
-                addrs_data_session[pool_name]["reward"].address
+        for __ in range(5):
+            cluster.wait_for_new_epoch()
+            this_epoch = cluster.get_last_block_epoch()
+            stake_reward = cluster.get_stake_addr_info(
+                pool_user.stake.address
             ).reward_account_balance
-            > owner_first_reward
-        ), "New reward was not received by pool owner"
+            owner_reward = cluster.get_stake_addr_info(rewards_address).reward_account_balance
+
+            prev_stake_reward_epoch, prev_stake_reward_amount = stake_rewards[-1]
+            prev_owner_reward_epoch, prev_owner_reward_amount = owner_rewards[-1]
+
+            stake_rewards.append((this_epoch, stake_reward))
+            owner_rewards.append((this_epoch, owner_reward))
+
+            # check that new reward was received by the pool owner
+            assert (
+                owner_reward > prev_owner_reward_amount
+            ), "New reward was not received by pool owner"
+
+            if prev_owner_reward_epoch == this_epoch - 1:
+                assert (
+                    prev_owner_reward_amount * 1.2 < owner_reward < prev_owner_reward_amount * 2
+                ), "Unexpected reward amount for pool owner"
+
+            # wait up to 3 epochs for first reward for stake address
+            if this_epoch - init_epoch < 4 and stake_reward == 0:
+                continue
+
+            # check that new reward was received by the stake address
+            assert (
+                stake_reward > prev_stake_reward_amount
+            ), "New reward was not received by stake address"
+
+            if prev_stake_reward_epoch == this_epoch - 1:
+                assert (
+                    prev_stake_reward_amount * 1.2 < stake_reward < prev_stake_reward_amount * 2
+                ), "Unexpected reward amount for stake address"
 
     def test_no_reward_high_pledge(
         self,
