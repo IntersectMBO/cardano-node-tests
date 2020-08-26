@@ -8,7 +8,6 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
-from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
@@ -260,8 +259,8 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = common.create_pool_users(
-            cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -301,8 +300,8 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = common.create_pool_users(
-            cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -355,8 +354,8 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = common.create_pool_users(
-            cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -450,7 +449,7 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = common.create_pool_users(cluster_obj=cluster, temp_template=temp_template)
+        pool_owners = helpers.create_pool_users(cluster_obj=cluster, name_template=temp_template)
 
         # fund source address
         helpers.fund_from_faucet(
@@ -589,8 +588,8 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = common.create_pool_users(
-            cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -662,8 +661,8 @@ class TestStakePool:
         pool_data_updated = pool_data._replace(pool_pledge=1, pool_cost=1_000_000, pool_margin=0.9)
 
         # create pool owners
-        pool_owners = common.create_pool_users(
-            cluster_obj=cluster, temp_template=temp_template, no_of_addr=no_of_addr,
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -712,8 +711,8 @@ class TestPoolCost:
         rand_str = clusterlib.get_rand_str()
         temp_template = f"test_pool_cost_class_{rand_str}"
 
-        pool_owners = common.create_pool_users(
-            cluster_obj=cluster_class, temp_template=temp_template, no_of_addr=1,
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster_class, name_template=temp_template, no_of_addr=1,
         )
 
         # fund source address
@@ -775,8 +774,8 @@ class TestPoolCost:
         )
 
         # create pool owners
-        pool_owners = common.create_pool_users(
-            cluster_obj=cluster, temp_template=temp_template, no_of_addr=1,
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template, no_of_addr=1,
         )
 
         # fund source address
