@@ -1,6 +1,7 @@
 import functools
 import itertools
 import logging
+import string
 from pathlib import Path
 from typing import List
 
@@ -14,6 +15,8 @@ from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
+
+ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
 @pytest.fixture(scope="module")
@@ -422,74 +425,181 @@ class TestNotBalanced:
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
 
-def test_past_ttl(
-    cluster_session: clusterlib.ClusterLib, addrs_data_session: dict, request: FixtureRequest
-):
-    """Send a transaction with ttl in the past."""
-    cluster = cluster_session
-    payment_addrs = helpers.create_payment_addr_records(
-        "addr_past_ttl0", "addr_past_ttl1", cluster_obj=cluster
-    )
-
-    # fund source addresses
-    helpers.fund_from_faucet(
-        payment_addrs[0],
-        cluster_obj=cluster_session,
-        faucet_data=addrs_data_session["user1"],
-        request=request,
-    )
-
-    src_address = payment_addrs[0].address
-    dst_address = payment_addrs[1].address
-
-    tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-    destinations = [clusterlib.TxOut(address=dst_address, amount=1)]
-    ttl = cluster.get_last_block_slot_no() - 1
-    fee = cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files, ttl=ttl)
-
-    # it should be possible to build and sign a transaction with ttl in the past
-    tx_raw_output = cluster.build_raw_tx(
-        src_address=src_address, txouts=destinations, tx_files=tx_files, fee=fee, ttl=ttl,
-    )
-    out_file_signed = cluster.sign_tx(
-        tx_body_file=tx_raw_output.out_file, signing_key_files=tx_files.signing_key_files,
-    )
-
-    # it should NOT be possible to submit a transaction with ttl in the past
-    with pytest.raises(clusterlib.CLIError) as excinfo:
-        cluster.submit_tx(out_file_signed)
-    assert "ExpiredUTxO" in str(excinfo.value)
-
-
-def test_send_funds_to_reward_address(
-    cluster_session: clusterlib.ClusterLib, addrs_data_session: dict, request: FixtureRequest
-):
-    """Send funds from payment address to stake address."""
-    cluster = cluster_session
-
-    stake_addr_rec = helpers.create_stake_addr_records(
-        "addr_send_funds_to_reward_address0", cluster_obj=cluster
-    )[0]
-    payment_addr_rec = helpers.create_payment_addr_records(
-        "addr_send_funds_to_reward_address0",
-        cluster_obj=cluster,
-        stake_vkey_file=stake_addr_rec.vkey_file,
-    )[0]
-
-    # fund source address
-    helpers.fund_from_faucet(
-        payment_addr_rec,
-        cluster_obj=cluster,
-        faucet_data=addrs_data_session["user1"],
-        request=request,
-    )
-
-    tx_files = clusterlib.TxFiles(signing_key_files=[stake_addr_rec.skey_file])
-    destinations = [clusterlib.TxOut(address=stake_addr_rec.address, amount=1000)]
-
-    # it should NOT be possible to build a transaction using a stake address
-    with pytest.raises(clusterlib.CLIError) as excinfo:
-        cluster.build_raw_tx(
-            src_address=payment_addr_rec.address, txouts=destinations, tx_files=tx_files, fee=0,
+class TestNegative:
+    @pytest.fixture(scope="class")
+    def pool_users(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        request: FixtureRequest,
+    ) -> List[clusterlib.PoolUser]:
+        """Create pool users."""
+        pool_users = helpers.create_pool_users(
+            cluster_obj=cluster_session, name_template="test_negative", no_of_addr=2,
         )
-    assert "invalid address" in str(excinfo.value)
+
+        # fund source addresses
+        helpers.fund_from_faucet(
+            pool_users[0],
+            cluster_obj=cluster_session,
+            faucet_data=addrs_data_session["user1"],
+            amount=1_000_000,
+            request=request,
+        )
+
+        return pool_users
+
+    def _send_funds_to_invalid_address(
+        self, cluster_obj: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser], addr: str
+    ):
+        """Send funds from payment address to invalid address."""
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=addr, amount=1000)]
+
+        # it should NOT be possible to build a transaction using a invalid address
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_obj.build_raw_tx(
+                src_address=pool_users[0].payment.address,
+                txouts=destinations,
+                tx_files=tx_files,
+                fee=0,
+            )
+        assert "invalid address" in str(excinfo.value)
+
+    def _send_funds_from_invalid_address(
+        self, cluster_obj: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser], addr: str
+    ):
+        """Send funds from invalid payment address."""
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000)]
+
+        # it should NOT be possible to build a transaction using a invalid address
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_obj.build_raw_tx(
+                src_address=addr, txouts=destinations, tx_files=tx_files, fee=0,
+            )
+        assert "invalid address" in str(excinfo.value)
+
+    def test_past_ttl(
+        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+    ):
+        """Send a transaction with ttl in the past."""
+        cluster = cluster_session
+
+        src_address = pool_users[0].payment.address
+        dst_address = pool_users[1].payment.address
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=dst_address, amount=1)]
+        ttl = cluster.get_last_block_slot_no() - 1
+        fee = cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files, ttl=ttl)
+
+        # it should be possible to build and sign a transaction with ttl in the past
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=src_address, txouts=destinations, tx_files=tx_files, fee=fee, ttl=ttl,
+        )
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file, signing_key_files=tx_files.signing_key_files,
+        )
+
+        # it should NOT be possible to submit a transaction with ttl in the past
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.submit_tx(out_file_signed)
+        assert "ExpiredUTxO" in str(excinfo.value)
+
+    def test_send_funds_to_reward_address(
+        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+    ):
+        """Send funds from payment address to stake address."""
+        addr = pool_users[0].stake.address
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
+        )
+
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
+    @hypothesis.settings(deadline=None)
+    def test_send_funds_to_non_existent_address(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Send funds from payment address to non-existent address."""
+        addr = f"addr_test1{addr}"
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
+        )
+
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
+    @hypothesis.settings(deadline=None)
+    def test_send_funds_to_invalid_length_address(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Send funds from payment address to address with invalid length."""
+        addr = f"addr_test1{addr}"
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
+        )
+
+    @hypothesis.given(
+        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98,)
+    )
+    @hypothesis.settings(deadline=None)
+    def test_send_funds_to_invalid_chars_address(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Send funds from payment address to address with invalid characters."""
+        addr = f"addr_test1{addr}"
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
+        )
+
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
+    @hypothesis.settings(deadline=None)
+    def test_send_funds_from_non_existent_address(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Send funds from non-existent address."""
+        addr = f"addr_test1{addr}"
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
+        )
+
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
+    @hypothesis.settings(deadline=None)
+    def test_send_funds_from_invalid_length_address(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Send funds from address with invalid length."""
+        addr = f"addr_test1{addr}"
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
+        )
+
+    @hypothesis.given(
+        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98,)
+    )
+    @hypothesis.settings(deadline=None)
+    def test_send_funds_from_invalid_chars_address(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Send funds from address with invalid characters."""
+        addr = f"addr_test1{addr}"
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
+        )
