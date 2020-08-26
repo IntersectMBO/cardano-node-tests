@@ -456,7 +456,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=addr, amount=1000)]
 
-        # it should NOT be possible to build a transaction using a invalid address
+        # it should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.build_raw_tx(
                 src_address=pool_users[0].payment.address,
@@ -473,7 +473,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000)]
 
-        # it should NOT be possible to build a transaction using a invalid address
+        # it should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.build_raw_tx(
                 src_address=addr, txouts=destinations, tx_files=tx_files, fee=0,
@@ -603,3 +603,97 @@ class TestNegative:
         self._send_funds_from_invalid_address(
             cluster_obj=cluster_session, pool_users=pool_users, addr=addr
         )
+
+
+class TestMetadata:
+    @pytest.fixture(scope="class")
+    def payment_addr(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        request: FixtureRequest,
+    ) -> clusterlib.AddressRecord:
+        """Create new payment address."""
+        addr = helpers.create_payment_addr_records(
+            "addr_test_metadata0", cluster_obj=cluster_session
+        )[0]
+
+        # fund source addresses
+        helpers.fund_from_faucet(
+            addr,
+            cluster_obj=cluster_session,
+            faucet_data=addrs_data_session["user1"],
+            request=request,
+        )
+
+        return addr
+
+    def test_tx_wrong_json_metadata_format(
+        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Build transaction with wrong fromat of metadata JSON."""
+        json_file = Path(__file__).parent / "data" / "tx_metadata_wrong.json"
+        assert json_file.exists()
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file], metadata_json_files=[json_file]
+        )
+
+        # it should NOT be possible to build a transaction using wrongly formatted metadata JSON
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_session.build_raw_tx(
+                src_address=payment_addr.address, tx_files=tx_files,
+            )
+        assert "The JSON metadata top level must be a map with unsigned integer keys" in str(
+            excinfo.value
+        )
+
+    def test_tx_invalid_json_metadata(
+        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Build transaction with invalid metadata JSON."""
+        json_file = Path(__file__).parent / "data" / "tx_metadata_invalid.json"
+        assert json_file.exists()
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file], metadata_json_files=[json_file]
+        )
+
+        # it should NOT be possible to build a transaction using an invalid metadata JSON
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_session.build_raw_tx(
+                src_address=payment_addr.address, tx_files=tx_files,
+            )
+        assert "Failed reading: satisfy" in str(excinfo.value)
+
+    def test_tx_too_long_metadata_json(
+        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Build transaction with metadata JSON longer than 64 bytes."""
+        json_file = Path(__file__).parent / "data" / "tx_metadata_long.json"
+        assert json_file.exists()
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file], metadata_json_files=[json_file]
+        )
+
+        # it should NOT be possible to build a transaction using too long metadata JSON
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_session.build_raw_tx(
+                src_address=payment_addr.address, tx_files=tx_files,
+            )
+        assert "JSON string is longer than 64 bytes" in str(excinfo.value)
+
+    def test_tx_metadata_json(
+        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Send transaction with metadata JSON."""
+        json_file = Path(__file__).parent / "data" / "tx_metadata.json"
+        assert json_file.exists()
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file], metadata_json_files=[json_file]
+        )
+        tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
+        assert tx_raw_output.fee, "Transaction had no fee"
+        # TODO: check that the data is on blockchain
