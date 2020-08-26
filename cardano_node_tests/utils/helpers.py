@@ -424,19 +424,23 @@ def load_addrs_data() -> dict:
         return pickle.load(in_data)  # type: ignore
 
 
-def check_dir_arg(dir_path: str) -> Path:
+def check_dir_arg(dir_path: str) -> Optional[Path]:
     """Check that the dir passed as argparse parameter is a valid existing dir."""
+    if not dir_path:
+        return None
     abs_path = Path(dir_path).expanduser().resolve()
     if not (abs_path.exists() and abs_path.is_dir()):
         raise argparse.ArgumentTypeError(f"check_dir_arg: directory '{dir_path}' doesn't exist")
     return abs_path
 
 
-def check_file_arg(file_path: str) -> Path:
+def check_file_arg(file_path: str) -> Optional[Path]:
     """Check that the file passed as argparse parameter is a valid existing file."""
+    if not file_path:
+        return None
     abs_path = Path(file_path).expanduser().resolve()
-    if not abs_path.exists():
-        raise argparse.ArgumentTypeError(f"check_dir_arg: directory '{file_path}' doesn't exist")
+    if not abs_path.exists() and abs_path.is_file():
+        raise argparse.ArgumentTypeError(f"check_file_arg: file '{file_path}' doesn't exist")
     return abs_path
 
 
