@@ -105,7 +105,7 @@ def _create_register_pool_delegate_stake_tx(
         cluster_obj.gen_stake_addr_delegation_cert(
             addr_name=f"addr{i}_{temp_template}",
             stake_vkey_file=p.stake.vkey_file,
-            node_cold_vkey_file=node_cold.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
         )
         for i, p in enumerate(pool_owners)
     ]
@@ -113,8 +113,8 @@ def _create_register_pool_delegate_stake_tx(
     # create stake pool registration cert
     pool_reg_cert_file = cluster_obj.gen_pool_registration_cert(
         pool_data=pool_data,
-        node_vrf_vkey_file=node_vrf.vkey_file,
-        node_cold_vkey_file=node_cold.vkey_file,
+        vrf_key_file=node_vrf.vkey_file,
+        cold_vkey_file=node_cold.vkey_file,
         owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
     )
 
@@ -155,7 +155,7 @@ def _create_register_pool_delegate_stake_tx(
     return clusterlib.PoolCreationOutput(
         stake_pool_id=stake_pool_id,
         vrf_key_pair=node_vrf,
-        cold_key_pair_and_counter=node_cold,
+        cold_key_pair=node_cold,
         pool_reg_cert_file=pool_reg_cert_file,
         pool_data=pool_data,
         pool_owners=pool_owners,
@@ -189,7 +189,7 @@ def _create_register_pool_tx_delegate_stake_tx(
         cluster_obj.gen_stake_addr_delegation_cert(
             addr_name=f"addr{i}_{temp_template}",
             stake_vkey_file=p.stake.vkey_file,
-            node_cold_vkey_file=pool_creation_out.cold_key_pair_and_counter.vkey_file,
+            cold_vkey_file=pool_creation_out.cold_key_pair.vkey_file,
         )
         for i, p in enumerate(pool_owners)
     ]
@@ -203,7 +203,7 @@ def _create_register_pool_tx_delegate_stake_tx(
         signing_key_files=[
             *[p.payment.skey_file for p in pool_owners],
             *[p.stake.skey_file for p in pool_owners],
-            pool_creation_out.cold_key_pair_and_counter.skey_file,
+            pool_creation_out.cold_key_pair.skey_file,
         ],
     )
     tx_raw_output = cluster_obj.send_tx(src_address=src_address, tx_files=tx_files)
@@ -386,7 +386,7 @@ class TestStakePool:
         # deregister stake pool
         __, tx_raw_output = cluster.deregister_stake_pool(
             pool_owners=pool_owners,
-            node_cold_key_pair=pool_creation_out.cold_key_pair_and_counter,
+            cold_key_pair=pool_creation_out.cold_key_pair,
             epoch=cluster.get_last_block_epoch() + 1,
             pool_name=pool_data.pool_name,
         )
@@ -472,7 +472,7 @@ class TestStakePool:
         # deregister stake pool
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
-            node_cold_key_pair=pool_creation_out.cold_key_pair_and_counter,
+            cold_key_pair=pool_creation_out.cold_key_pair,
             epoch=cluster.get_last_block_epoch() + 1,
             pool_name=pool_data.pool_name,
         )
@@ -614,8 +614,8 @@ class TestStakePool:
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=pool_owners,
-            node_vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
-            node_cold_key_pair=pool_creation_out.cold_key_pair_and_counter,
+            vrf_key_file=pool_creation_out.vrf_key_pair.vkey_file,
+            cold_key_pair=pool_creation_out.cold_key_pair,
             deposit=0,  # no additional deposit, the pool is already registered
         )
         cluster.wait_for_new_epoch()
@@ -687,8 +687,8 @@ class TestStakePool:
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=pool_owners,
-            node_vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
-            node_cold_key_pair=pool_creation_out.cold_key_pair_and_counter,
+            vrf_key_file=pool_creation_out.vrf_key_pair.vkey_file,
+            cold_key_pair=pool_creation_out.cold_key_pair,
             deposit=0,  # no additional deposit, the pool is already registered
         )
         cluster.wait_for_new_epoch()
