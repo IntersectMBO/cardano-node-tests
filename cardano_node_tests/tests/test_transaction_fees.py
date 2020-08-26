@@ -91,7 +91,9 @@ class TestFee:
         fee = 0.0
         if fee_change:
             fee = (
-                cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files)
+                cluster.calculate_tx_fee(
+                    src_address=src_address, txouts=destinations, tx_files=tx_files
+                )
                 / fee_change
             )
 
@@ -121,7 +123,10 @@ class TestFee:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         fee = (
-            cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files) + fee_add
+            cluster.calculate_tx_fee(
+                src_address=src_address, txouts=destinations, tx_files=tx_files
+            )
+            + fee_add
         )
 
         tx_raw_output = cluster.send_funds(
