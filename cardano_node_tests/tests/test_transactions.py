@@ -54,12 +54,15 @@ class TestBasic:
 
         return addrs
 
+    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     def test_transfer_funds(
-        self, cluster_session: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        amount: int,
     ):
         """Send funds to payment address."""
         cluster = cluster_session
-        amount = 2000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
