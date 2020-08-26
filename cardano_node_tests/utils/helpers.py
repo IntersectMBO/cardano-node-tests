@@ -403,7 +403,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     fund_from_genesis(
         *[d["payment"].address for d in addrs_data.values()],
         cluster_obj=cluster_obj,
-        amount=40_000_000_000,
+        amount=60_000_000_000,
         destination_dir=destination_dir,
     )
 

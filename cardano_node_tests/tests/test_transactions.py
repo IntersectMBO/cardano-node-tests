@@ -142,7 +142,7 @@ class TestBasic:
         assert txid in (u.utxo_hash for u in utxo)
 
 
-class Test10InOut:
+class TestMultiInOut:
     @pytest.fixture(scope="class")
     def payment_addrs(
         self,
@@ -152,7 +152,7 @@ class Test10InOut:
     ) -> List[clusterlib.AddressRecord]:
         """Create 11 new payment addresses."""
         addrs = helpers.create_payment_addr_records(
-            *[f"addr_10_in_out{i}" for i in range(11)], cluster_obj=cluster_session,
+            *[f"addr_multi_in_out{i}" for i in range(201)], cluster_obj=cluster_session,
         )
 
         # fund source addresses
@@ -160,10 +160,94 @@ class Test10InOut:
             addrs[0],
             cluster_obj=cluster_session,
             faucet_data=addrs_data_session["user1"],
+            amount=100_000_000,
             request=request,
         )
 
         return addrs
+
+    def _from_to_transactions(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        from_num: int,
+        to_num: int,
+        amount: int,
+    ):
+        """Test 1 tx from `from_num` payment addresses to `to_num` payment addresses."""
+        src_address = payment_addrs[0].address
+        # addr1..addr<from_num+1>
+        from_addr_recs = payment_addrs[1 : from_num + 1]
+        # addr<from_num+1>..addr<from_num+to_num+1>
+        dst_addresses = [
+            payment_addrs[i].address for i in range(from_num + 1, from_num + to_num + 1)
+        ]
+
+        # fund "from" addresses
+        # Using `src_address` to fund the "from" addresses. In `send_tx`, all remaining change is
+        # returned to `src_address`, so it should always have enough funds. The "from" addresses has
+        # zero balance after each test.
+        fund_amount = int(amount * len(dst_addresses) / len(from_addr_recs))
+        fund_dst = [
+            clusterlib.TxOut(address=d.address, amount=fund_amount) for d in from_addr_recs[:-1]
+        ]
+        # add more funds to the last "from" address so it can cover TX fee
+        last_from_addr_rec = from_addr_recs[-1]
+        fund_dst.append(
+            clusterlib.TxOut(address=last_from_addr_rec.address, amount=fund_amount + 5_000_000)
+        )
+        fund_tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        cluster_obj.send_funds(
+            src_address=src_address, destinations=fund_dst, tx_files=fund_tx_files,
+        )
+        cluster_obj.wait_for_new_block(new_blocks=2)
+
+        # record initial balances
+        src_init_balance = cluster_obj.get_address_balance(src_address)
+        from_init_balance = functools.reduce(
+            lambda x, y: x + y,
+            (cluster_obj.get_address_balance(r.address) for r in from_addr_recs),
+            0,
+        )
+        dst_init_balances = {addr: cluster_obj.get_address_balance(addr) for addr in dst_addresses}
+
+        # create TX data
+        _txins = [cluster_obj.get_utxo(r.address) for r in from_addr_recs]
+        # flatten the list of lists that is _txins
+        txins = list(itertools.chain.from_iterable(_txins))
+        txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
+        tx_files = clusterlib.TxFiles(signing_key_files=[r.skey_file for r in from_addr_recs])
+
+        # send TX - change is returned to `src_address`
+        tx_raw_output = cluster_obj.send_tx(
+            src_address=src_address, txins=txins, txouts=txouts, tx_files=tx_files,
+        )
+        cluster_obj.wait_for_new_block(new_blocks=2)
+
+        # check balances
+        from_final_balance = functools.reduce(
+            lambda x, y: x + y,
+            (cluster_obj.get_address_balance(r.address) for r in from_addr_recs),
+            0,
+        )
+        src_final_balance = cluster_obj.get_address_balance(src_address)
+
+        assert (
+            from_final_balance == 0
+        ), f"The output addresses should have no balance, the have {from_final_balance}"
+
+        assert (
+            src_final_balance
+            == src_init_balance
+            + from_init_balance
+            - tx_raw_output.fee
+            - amount * len(dst_addresses)
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        for addr in dst_addresses:
+            assert (
+                cluster_obj.get_address_balance(addr) == dst_init_balances[addr] + amount
+            ), f"Incorrect balance for destination address `{addr}`"
 
     def test_10_transactions(
         self, cluster_session: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
@@ -173,7 +257,7 @@ class Test10InOut:
         Test 10 different UTXOs in addr0.
         """
         cluster = cluster_session
-        no_of_transactions = len(payment_addrs) - 1
+        no_of_transactions = 10
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -210,105 +294,69 @@ class Test10InOut:
             == dst_init_balance + amount * no_of_transactions
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-    def test_transaction_to_10_addrs(
-        self, cluster_session: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
-    ):
-        """Send 1 transaction from one payment address to 10 payment addresses."""
-        cluster = cluster_session
-        src_address = payment_addrs[0].address
-        # addr1..addr10
-        dst_addresses = [payment_addrs[i].address for i in range(1, len(payment_addrs))]
-
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balances = {addr: cluster.get_address_balance(addr) for addr in dst_addresses}
-
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        ttl = cluster.calculate_tx_ttl()
-
-        fee = cluster.calculate_tx_fee(
-            src_address=src_address, dst_addresses=dst_addresses, tx_files=tx_files, ttl=ttl,
-        )
-        amount = int((cluster.get_address_balance(src_address) - fee) / len(dst_addresses))
-        destinations = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
-
-        cluster.send_funds(
-            src_address=src_address, destinations=destinations, tx_files=tx_files, fee=fee, ttl=ttl,
-        )
-        cluster.wait_for_new_block(new_blocks=2)
-
-        assert cluster.get_address_balance(src_address) == src_init_balance - fee - amount * len(
-            dst_addresses
-        ), f"Incorrect balance for source address `{src_address}`"
-
-        for addr in dst_addresses:
-            assert (
-                cluster.get_address_balance(addr) == dst_init_balances[addr] + amount
-            ), f"Incorrect balance for destination address `{addr}`"
-
-    def test_transaction_to_5_addrs_from_5_addrs(
+    @pytest.mark.parametrize("amount", [1, 100, 11_000])
+    def test_transaction_to_10_addrs_from_1_addr(
         self,
         cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
         payment_addrs: List[clusterlib.AddressRecord],
-        request: FixtureRequest,
+        amount: int,
     ):
-        """Send 1 transaction from 5 payment address to 5 payment addresses."""
-        cluster = cluster_session
-        src_address = payment_addrs[0].address
-        amount = 100
-        # addr1..addr5
-        from_addr_recs = payment_addrs[1:6]
-        # addr6..addr10
-        dst_addresses = [payment_addrs[i].address for i in range(6, 11)]
-
-        # fund from addresses
-        helpers.fund_from_faucet(
-            *from_addr_recs,
+        """Tests 1 tx from 1 payment address to 10 payment addresses."""
+        self._from_to_transactions(
             cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
-            request=request,
+            payment_addrs=payment_addrs,
+            from_num=1,
+            to_num=10,
+            amount=amount,
         )
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        from_init_balance = functools.reduce(
-            lambda x, y: x + y, (cluster.get_address_balance(r.address) for r in from_addr_recs), 0
+    @pytest.mark.parametrize("amount", [1, 100, 11_000, 100_000])
+    def test_transaction_to_1_addr_from_10_addrs(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        amount: int,
+    ):
+        """Tests 1 tx from 10 payment addresses to 1 payment address."""
+        self._from_to_transactions(
+            cluster_obj=cluster_session,
+            payment_addrs=payment_addrs,
+            from_num=10,
+            to_num=1,
+            amount=amount,
         )
-        dst_init_balances = {addr: cluster.get_address_balance(addr) for addr in dst_addresses}
 
-        # send funds
-        _txins = [cluster.get_utxo(r.address) for r in from_addr_recs]
-        # flatten the list of lists that is _txins
-        txins = list(itertools.chain.from_iterable(_txins))
-        txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
-        tx_files = clusterlib.TxFiles(signing_key_files=[r.skey_file for r in from_addr_recs])
-
-        tx_raw_output = cluster.send_tx(
-            src_address=src_address, txins=txins, txouts=txouts, tx_files=tx_files,
+    @pytest.mark.parametrize("amount", [1, 100, 11_000])
+    def test_transaction_to_10_addrs_from_10_addrs(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        amount: int,
+    ):
+        """Tests 1 tx from 10 payment addresses to 10 payment addresses."""
+        self._from_to_transactions(
+            cluster_obj=cluster_session,
+            payment_addrs=payment_addrs,
+            from_num=10,
+            to_num=10,
+            amount=amount,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
-        # check balances
-        from_final_balance = functools.reduce(
-            lambda x, y: x + y, (cluster.get_address_balance(r.address) for r in from_addr_recs), 0
+    @pytest.mark.parametrize("amount", [1, 100, 1000])
+    def test_transaction_to_100_addrs_from_50_addrs(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        amount: int,
+    ):
+        """Tests 1 tx from 100 payment addresses to 100 payment addresses."""
+        self._from_to_transactions(
+            cluster_obj=cluster_session,
+            payment_addrs=payment_addrs,
+            from_num=50,
+            to_num=100,
+            amount=amount,
         )
-        src_final_balance = cluster.get_address_balance(src_address)
-
-        assert (
-            from_final_balance == 0
-        ), f"The output addresses should have no balance, the have {from_final_balance}"
-
-        assert (
-            src_final_balance
-            == src_init_balance
-            + from_init_balance
-            - tx_raw_output.fee
-            - amount * len(dst_addresses)
-        ), f"Incorrect balance for source address `{src_address}`"
-
-        for addr in dst_addresses:
-            assert (
-                cluster.get_address_balance(addr) == dst_init_balances[addr] + amount
-            ), f"Incorrect balance for destination address `{addr}`"
 
 
 class TestNotBalanced:
