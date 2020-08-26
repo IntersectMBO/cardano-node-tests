@@ -108,7 +108,7 @@ class TxRawOutput(NamedTuple):
 class PoolCreationOutput(NamedTuple):
     stake_pool_id: str
     vrf_key_pair: KeyPair
-    cold_key_pair_and_counter: ColdKeyPair
+    cold_key_pair: ColdKeyPair
     pool_reg_cert_file: Path
     pool_data: PoolData
     pool_owners: List[PoolUser]
@@ -567,7 +567,7 @@ class ClusterLib:
         self,
         addr_name: str,
         stake_vkey_file: FileType,
-        node_cold_vkey_file: Optional[FileType] = None,
+        cold_vkey_file: Optional[FileType] = None,
         stake_pool_id: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> Path:
@@ -575,10 +575,10 @@ class ClusterLib:
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake_deleg.cert"
 
-        if node_cold_vkey_file:
+        if cold_vkey_file:
             pool_args = [
                 "--cold-verification-key-file",
-                str(node_cold_vkey_file),
+                str(cold_vkey_file),
             ]
         elif stake_pool_id:
             pool_args = [
@@ -616,8 +616,8 @@ class ClusterLib:
     def gen_pool_registration_cert(
         self,
         pool_data: PoolData,
-        node_vrf_vkey_file: FileType,
-        node_cold_vkey_file: FileType,
+        vrf_key_file: FileType,
+        cold_vkey_file: FileType,
         owner_stake_vkey_files: List[FileType],
         reward_account_vkey_file: Optional[FileType] = None,
         destination_dir: FileType = ".",
@@ -654,9 +654,9 @@ class ClusterLib:
                 "--pool-margin",
                 str(pool_data.pool_margin),
                 "--vrf-verification-key-file",
-                str(node_vrf_vkey_file),
+                str(vrf_key_file),
                 "--cold-verification-key-file",
-                str(node_cold_vkey_file),
+                str(cold_vkey_file),
                 "--pool-reward-account-verification-key-file",
                 str(reward_account_vkey_file)
                 if reward_account_vkey_file
@@ -1275,8 +1275,8 @@ class ClusterLib:
         self,
         pool_data: PoolData,
         pool_owners: List[PoolUser],
-        node_vrf_vkey_file: FileType,
-        node_cold_key_pair: ColdKeyPair,
+        vrf_key_file: FileType,
+        cold_key_pair: ColdKeyPair,
         tx_name: Optional[str] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
@@ -1284,8 +1284,8 @@ class ClusterLib:
         """Register stake pool."""
         pool_reg_cert_file = self.gen_pool_registration_cert(
             pool_data=pool_data,
-            node_vrf_vkey_file=node_vrf_vkey_file,
-            node_cold_vkey_file=node_cold_key_pair.vkey_file,
+            vrf_key_file=vrf_key_file,
+            cold_vkey_file=cold_key_pair.vkey_file,
             owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
             destination_dir=destination_dir,
         )
@@ -1296,7 +1296,7 @@ class ClusterLib:
             signing_key_files=[
                 *[p.payment.skey_file for p in pool_owners],
                 *[p.stake.skey_file for p in pool_owners],
-                node_cold_key_pair.skey_file,
+                cold_key_pair.skey_file,
             ],
         )
 
@@ -1314,7 +1314,7 @@ class ClusterLib:
     def deregister_stake_pool(
         self,
         pool_owners: List[PoolUser],
-        node_cold_key_pair: ColdKeyPair,
+        cold_key_pair: ColdKeyPair,
         epoch: int,
         pool_name: str,
         tx_name: Optional[str] = None,
@@ -1327,7 +1327,7 @@ class ClusterLib:
         )
         pool_dereg_cert_file = self.gen_pool_deregistration_cert(
             pool_name=pool_name,
-            cold_vkey_file=node_cold_key_pair.vkey_file,
+            cold_vkey_file=cold_key_pair.vkey_file,
             epoch=epoch,
             destination_dir=destination_dir,
         )
@@ -1338,7 +1338,7 @@ class ClusterLib:
             signing_key_files=[
                 *[p.payment.skey_file for p in pool_owners],
                 *[p.stake.skey_file for p in pool_owners],
-                node_cold_key_pair.skey_file,
+                cold_key_pair.skey_file,
             ],
         )
 
@@ -1380,15 +1380,15 @@ class ClusterLib:
         pool_reg_cert_file, tx_raw_output = self.register_stake_pool(
             pool_data=pool_data,
             pool_owners=pool_owners,
-            node_vrf_vkey_file=node_vrf.vkey_file,
-            node_cold_key_pair=node_cold,
+            vrf_key_file=node_vrf.vkey_file,
+            cold_key_pair=node_cold,
             destination_dir=destination_dir,
         )
 
         return PoolCreationOutput(
             stake_pool_id=self.get_stake_pool_id(node_cold.vkey_file),
             vrf_key_pair=node_vrf,
-            cold_key_pair_and_counter=node_cold,
+            cold_key_pair=node_cold,
             pool_reg_cert_file=pool_reg_cert_file,
             pool_data=pool_data,
             pool_owners=pool_owners,

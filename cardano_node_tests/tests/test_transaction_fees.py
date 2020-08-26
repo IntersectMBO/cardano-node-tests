@@ -191,7 +191,7 @@ class TestExpectedFees:
             cluster_obj.gen_stake_addr_delegation_cert(
                 addr_name=f"addr{i}_{temp_template}",
                 stake_vkey_file=p.stake.vkey_file,
-                node_cold_vkey_file=node_cold.vkey_file,
+                cold_vkey_file=node_cold.vkey_file,
             )
             for i, p in enumerate(pool_owners)
         ]
@@ -199,8 +199,8 @@ class TestExpectedFees:
         # create stake pool registration cert
         pool_reg_cert_file = cluster_obj.gen_pool_registration_cert(
             pool_data=pool_data,
-            node_vrf_vkey_file=node_vrf.vkey_file,
-            node_cold_vkey_file=node_cold.vkey_file,
+            vrf_key_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
         )
 

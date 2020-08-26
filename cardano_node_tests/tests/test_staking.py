@@ -60,7 +60,7 @@ def _delegate_stake_addr(
     if delegate_with_pool_id:
         deleg_kwargs["stake_pool_id"] = stake_pool_id
     else:
-        deleg_kwargs["node_cold_vkey_file"] = node_cold.vkey_file
+        deleg_kwargs["cold_vkey_file"] = node_cold.vkey_file
 
     stake_addr_deleg_cert_file = cluster_obj.gen_stake_addr_delegation_cert(**deleg_kwargs)
 
@@ -338,8 +338,8 @@ class TestRewards:
             pool_owners=[
                 clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"],)
             ],
-            node_vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
-            node_cold_key_pair=pool_rec["cold_key_pair"],
+            vrf_key_file=pool_rec["vrf_key_pair"].vkey_file,
+            cold_key_pair=pool_rec["cold_key_pair"],
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
