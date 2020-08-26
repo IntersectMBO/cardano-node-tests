@@ -182,7 +182,7 @@ class Test10InOut:
         ttl = cluster.calculate_tx_ttl()
 
         fee = cluster.calculate_tx_fee(
-            src_address, dst_addresses=[dst_address], tx_files=tx_files, ttl=ttl,
+            src_address=src_address, dst_addresses=[dst_address], tx_files=tx_files, ttl=ttl,
         )
         amount = int(fee / no_of_transactions + 1000)
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
@@ -223,7 +223,7 @@ class Test10InOut:
         ttl = cluster.calculate_tx_ttl()
 
         fee = cluster.calculate_tx_fee(
-            src_address, dst_addresses=dst_addresses, tx_files=tx_files, ttl=ttl,
+            src_address=src_address, dst_addresses=dst_addresses, tx_files=tx_files, ttl=ttl,
         )
         amount = int((cluster.get_address_balance(src_address) - fee) / len(dst_addresses))
         destinations = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
@@ -346,7 +346,7 @@ class TestNotBalanced:
         ttl = cluster.calculate_tx_ttl()
 
         fee = cluster.calculate_tx_fee(
-            src_address, dst_addresses=[dst_address], tx_files=tx_files, ttl=ttl,
+            src_address=src_address, dst_addresses=[dst_address], tx_files=tx_files, ttl=ttl,
         )
 
         src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
@@ -490,9 +490,11 @@ class TestNegative:
         dst_address = pool_users[1].payment.address
 
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=dst_address, amount=1)]
+        destinations = [clusterlib.TxOut(address=dst_address, amount=100)]
         ttl = cluster.get_last_block_slot_no() - 1
-        fee = cluster.calculate_tx_fee(src_address, txouts=destinations, tx_files=tx_files, ttl=ttl)
+        fee = cluster.calculate_tx_fee(
+            src_address=src_address, txouts=destinations, tx_files=tx_files, ttl=ttl
+        )
 
         # it should be possible to build and sign a transaction with ttl in the past
         tx_raw_output = cluster.build_raw_tx(
@@ -506,6 +508,51 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx(out_file_signed)
         assert "ExpiredUTxO" in str(excinfo.value)
+
+    def test_duplicated_tx(
+        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+    ):
+        """Send a single transaction twice."""
+        cluster = cluster_session
+        amount = 100
+
+        src_address = pool_users[0].payment.address
+        dst_address = pool_users[1].payment.address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        # build and sign a transaction
+        fee = cluster.calculate_tx_fee(
+            src_address=src_address, txouts=destinations, tx_files=tx_files,
+        )
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=src_address, txouts=destinations, tx_files=tx_files, fee=fee
+        )
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file, signing_key_files=tx_files.signing_key_files,
+        )
+
+        # submit a transaction for the first time
+        cluster.submit_tx(out_file_signed)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
+        # it should NOT be possible to submit a transaction twice
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.submit_tx(out_file_signed)
+        assert "ValueNotConservedUTxO" in str(excinfo.value)
 
     def test_send_funds_to_reward_address(
         self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
