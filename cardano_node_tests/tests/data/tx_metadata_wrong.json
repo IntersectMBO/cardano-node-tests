@@ -1,0 +1,7 @@
+{
+    "cardano-cli": {
+        "shelley": {
+            "-h,--help": 0
+        }
+    }
+}
