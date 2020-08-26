@@ -14,6 +14,7 @@ from typing import Dict
 from typing import Generator
 from typing import List
 from typing import Optional
+from typing import Union
 
 from _pytest.fixtures import FixtureRequest
 from filelock import FileLock
@@ -176,7 +177,7 @@ def return_funds_to_faucet(
 
 
 def fund_from_faucet(
-    *dst_addrs: clusterlib.AddressRecord,
+    *dst_addrs: Union[clusterlib.AddressRecord, clusterlib.PoolUser],
     cluster_obj: clusterlib.ClusterLib,
     faucet_data: dict,
     amount: int = 3_000_000,
@@ -185,9 +186,14 @@ def fund_from_faucet(
     destination_dir: FileType = ".",
 ) -> None:
     """Send `amount` from faucet addr to all `dst_addrs`."""
+    # get payment AddressRecord out of PoolUser
+    dst_addr_records: List[clusterlib.AddressRecord] = [
+        (r.payment if hasattr(r, "payment") else r) for r in dst_addrs  # type: ignore
+    ]
+
     fund_dst = [
         clusterlib.TxOut(address=d.address, amount=amount)
-        for d in dst_addrs
+        for d in dst_addr_records
         if cluster_obj.get_address_balance(d.address) < amount
     ]
     if not fund_dst:
@@ -196,7 +202,7 @@ def fund_from_faucet(
     if request:
         request.addfinalizer(
             lambda: return_funds_to_faucet(
-                *dst_addrs,
+                *dst_addr_records,
                 cluster_obj=cluster_obj,
                 faucet_addr=faucet_data["payment"].address,
                 tx_name=tx_name,
@@ -249,6 +255,30 @@ def create_stake_addr_records(
 
     LOGGER.debug(f"Created {len(addrs)} stake address(es)")
     return addrs
+
+
+def create_pool_users(
+    cluster_obj: clusterlib.ClusterLib, name_template: str, no_of_addr: int = 1,
+) -> List[clusterlib.PoolUser]:
+    """Create PoolUsers."""
+    pool_users = []
+    payment_addrs = []
+    for i in range(no_of_addr):
+        # create key pairs and addresses
+        stake_addr_rec = create_stake_addr_records(
+            f"addr{i}_{name_template}", cluster_obj=cluster_obj
+        )[0]
+        payment_addr_rec = create_payment_addr_records(
+            f"addr{i}_{name_template}",
+            cluster_obj=cluster_obj,
+            stake_vkey_file=stake_addr_rec.vkey_file,
+        )[0]
+        # create pool user struct
+        pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
+        payment_addrs.append(payment_addr_rec)
+        pool_users.append(pool_user)
+
+    return pool_users
 
 
 def get_cluster_env() -> dict:

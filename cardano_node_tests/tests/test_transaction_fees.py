@@ -10,7 +10,6 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
-from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
@@ -151,13 +150,13 @@ class TestExpectedFees:
         request: FixtureRequest,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        pool_users = common.create_pool_users(
-            cluster_obj=cluster_session, temp_template="test_expected_fees", no_of_addr=201,
+        pool_users = helpers.create_pool_users(
+            cluster_obj=cluster_session, name_template="test_expected_fees", no_of_addr=201,
         )
 
         # fund source addresses
         helpers.fund_from_faucet(
-            *[p.payment for p in pool_users[:10]],
+            *pool_users[:10],
             cluster_obj=cluster_session,
             faucet_data=addrs_data_session["user1"],
             request=request,
