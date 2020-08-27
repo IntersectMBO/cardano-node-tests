@@ -174,6 +174,8 @@ class TestDelegateAddr:
         """De-register stake address."""
         cluster = cluster_session
         temp_template = "test_deregister_addr"
+        pool_name = "node-pool1"
+        pool_rewards_address = addrs_data_session[pool_name]["reward"].address
 
         # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
@@ -181,23 +183,37 @@ class TestDelegateAddr:
             addrs_data=addrs_data_session,
             temp_template=temp_template,
             request=request,
+            pool_name=pool_name,
         )
-
-        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
-        )
+        helpers.wait_for_stake_distribution(cluster)
 
         src_address = pool_user.payment.address
+        init_pool_reward_balance = cluster.get_stake_addr_info(
+            pool_rewards_address
+        ).reward_account_balance
 
         # wait for first reward
-        helpers.wait_for(
+        stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
             num_sec=4 * cluster.epoch_length_sec,
             message="receive rewards",
+            silent=True,
         )
 
+        if (
+            not stake_reward
+            and cluster.get_stake_addr_info(pool_rewards_address).reward_account_balance
+            == init_pool_reward_balance
+        ):
+            pytest.skip(f"Pool '{pool_name}' hasn't received any reward, cannot continue.")
+
+        assert stake_reward, "Expected reward not received"
+
         # files for de-registering stake address
+        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
+        )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
             signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
@@ -244,11 +260,11 @@ class TestRewards:
         pool_name = "node-pool1"
         temp_template = "test_reward_amount"
         rewards_address = addrs_data_session[pool_name]["reward"].address
-        init_epoch = cluster.get_last_block_epoch()
 
+        init_epoch = cluster.get_last_block_epoch()
         stake_rewards = [(init_epoch, 0)]
         owner_rewards = [
-            (init_epoch, cluster.get_stake_addr_info(rewards_address).reward_account_balance,)
+            (init_epoch, cluster.get_stake_addr_info(rewards_address).reward_account_balance)
         ]
 
         # submit registration certificate and delegate to pool
@@ -259,6 +275,7 @@ class TestRewards:
             request=request,
             pool_name=pool_name,
         )
+        delegate_epoch = cluster.get_last_block_epoch()
 
         # check that new reward is received every epoch
         LOGGER.info("Checking rewards for 5 epochs.")
@@ -289,7 +306,7 @@ class TestRewards:
                 ), "Unexpected reward amount for pool owner"
 
             # wait up to 3 epochs for first reward for stake address
-            if this_epoch - init_epoch <= 3 and stake_reward == 0:
+            if this_epoch - delegate_epoch <= 3 and stake_reward == 0:
                 continue
 
             # check that new reward was received by the stake address
