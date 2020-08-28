@@ -605,6 +605,89 @@ class TestNegative:
             cluster.submit_tx(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
+    def test_wrong_signing_key(
+        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+    ):
+        """Send a transaction signed with wrong signing key."""
+        # use wrong signing key
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[1].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=100)]
+
+        # it should NOT be possible to submit a transaction with wrong signing key
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_session.send_tx(
+                src_address=pool_users[0].payment.address, txouts=destinations, tx_files=tx_files
+            )
+        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+
+    def test_extra_signing_keys(
+        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+    ):
+        """Send a transaction with extra signing key."""
+        cluster = cluster_session
+        amount = 100
+
+        src_address = pool_users[0].payment.address
+        dst_address = pool_users[1].payment.address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        # use extra signing key
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[pool_users[0].payment.skey_file, pool_users[1].payment.skey_file]
+        )
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        # it should be possible to submit a transaction with extra signing key
+        tx_raw_output = cluster.send_tx(
+            src_address=src_address, txouts=destinations, tx_files=tx_files
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
+    def test_duplicate_signing_keys(
+        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+    ):
+        """Send a transaction with duplicate signing key."""
+        cluster = cluster_session
+        amount = 100
+
+        src_address = pool_users[0].payment.address
+        dst_address = pool_users[1].payment.address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        # use extra signing key
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[pool_users[0].payment.skey_file, pool_users[0].payment.skey_file]
+        )
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        # it should be possible to submit a transaction with duplicate signing key
+        tx_raw_output = cluster.send_tx(
+            src_address=src_address, txouts=destinations, tx_files=tx_files
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
     def test_send_funds_to_reward_address(
         self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
     ):
