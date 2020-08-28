@@ -643,7 +643,7 @@ class TestNegative:
         )
 
     @hypothesis.given(
-        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98,)
+        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @hypothesis.settings(deadline=None)
     def test_send_funds_to_invalid_chars_address(
@@ -687,7 +687,7 @@ class TestNegative:
         )
 
     @hypothesis.given(
-        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98,)
+        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @hypothesis.settings(deadline=None)
     def test_send_funds_from_invalid_chars_address(
