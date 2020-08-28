@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import List
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -246,6 +247,132 @@ class TestDelegateAddr:
         assert (
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
+
+
+class TestNegative:
+    @pytest.fixture(scope="class")
+    def pool_users(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        request: FixtureRequest,
+    ) -> List[clusterlib.PoolUser]:
+        """Create pool users."""
+        pool_users = helpers.create_pool_users(
+            cluster_obj=cluster_session, name_template="test_negative", no_of_addr=2,
+        )
+
+        # fund source addresses
+        helpers.fund_from_faucet(
+            pool_users[0],
+            cluster_obj=cluster_session,
+            faucet_data=addrs_data_session["user1"],
+            amount=1_000_000,
+            request=request,
+        )
+
+        return pool_users
+
+    def test_registration_cert_with_wrong_key(
+        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+    ):
+        """Generate stake address registration certificate using wrong key."""
+        temp_template = "test_registration_cert_with_wrong_key"
+
+        # create stake address registration cert, use wrong stake vkey
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_session.gen_stake_addr_registration_cert(
+                addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_users[0].payment.vkey_file
+            )
+        assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
+
+    def test_delegation_cert_with_wrong_key(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addrs_data_session: dict,
+    ):
+        """Generate stake address delegation certificate using wrong key."""
+        pool_name = "node-pool1"
+        node_cold = addrs_data_session[pool_name]["cold_key_pair"]
+        temp_template = "test_delegation_cert_with_wrong_key"
+
+        # create stake address delegation cert, use wrong stake vkey
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_session.gen_stake_addr_delegation_cert(
+                addr_name=f"addr0_{temp_template}",
+                stake_vkey_file=pool_users[0].payment.vkey_file,
+                cold_vkey_file=node_cold.vkey_file,
+            )
+        assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
+
+    def test_register_addr_with_wrong_key(
+        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+    ):
+        """Register stake address using wrong key."""
+        cluster = cluster_session
+        temp_template = "test_register_addr_with_wrong_key"
+
+        pool_user = pool_users[0]
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
+        )
+
+        # register stake address, use wrong payment skey
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_reg_cert_file],
+            signing_key_files=[pool_users[1].payment.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
+        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+
+    def test_delegate_addr_with_wrong_key(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addrs_data_session: dict,
+    ):
+        """Delegate stake address using wrong key."""
+        cluster = cluster_session
+        pool_name = "node-pool1"
+        temp_template = "test_delegate_addr_with_wrong_key"
+        node_cold = addrs_data_session[pool_name]["cold_key_pair"]
+
+        pool_user = pool_users[0]
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
+        )
+
+        # register stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_reg_cert_file],
+            signing_key_files=[pool_user.payment.skey_file],
+        )
+        cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # create stake address delegation cert
+        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+            addr_name=f"addr0_{temp_template}",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+        )
+
+        # delegate stake address, use wrong payment skey
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_deleg_cert_file],
+            signing_key_files=[pool_users[1].payment.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
+        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
 
 class TestRewards:
