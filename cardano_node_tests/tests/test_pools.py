@@ -794,3 +794,163 @@ class TestPoolCost:
             temp_template=temp_template,
             pool_data=pool_data,
         )
+
+
+class TestNegative:
+    @pytest.fixture(scope="class")
+    def pool_users(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        request: FixtureRequest,
+    ) -> List[clusterlib.PoolUser]:
+        """Create pool users."""
+        pool_users = helpers.create_pool_users(
+            cluster_obj=cluster_session, name_template="test_negative", no_of_addr=2,
+        )
+
+        # fund source addresses
+        helpers.fund_from_faucet(
+            pool_users[0],
+            cluster_obj=cluster_session,
+            faucet_data=addrs_data_session["user1"],
+            amount=600_000_000,
+            request=request,
+        )
+
+        return pool_users
+
+    @pytest.fixture()
+    def pool_data(self) -> clusterlib.PoolData:
+        pool_data = clusterlib.PoolData(
+            pool_name=f"pool_{clusterlib.get_rand_str()}",
+            pool_pledge=5,
+            pool_cost=3,
+            pool_margin=0.01,
+        )
+        return pool_data
+
+    def test_pool_registration_cert_wrong_vrf(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Generate pool registration certificate using wrong VRF key."""
+        cluster = cluster_session
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_registration_cert(
+                pool_data=pool_data,
+                vrf_vkey_file=node_vrf.skey_file,  # skey instead of vkey
+                cold_vkey_file=node_cold.vkey_file,
+                owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+            )
+        assert "Expected: VrfVerificationKey_PraosVRF" in str(excinfo.value)
+
+    def test_pool_registration_cert_wrong_cold(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Generate pool registration certificate using wrong Cold key."""
+        cluster = cluster_session
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_registration_cert(
+                pool_data=pool_data,
+                vrf_vkey_file=node_vrf.vkey_file,
+                cold_vkey_file=node_cold.skey_file,  # skey instead of vkey
+                owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+            )
+        assert "Expected: StakePoolVerificationKey" in str(excinfo.value)
+
+    def test_pool_registration_cert_wrong_stake(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Generate pool registration certificate using wrong stake key."""
+        cluster = cluster_session
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_registration_cert(
+                pool_data=pool_data,
+                vrf_vkey_file=node_vrf.vkey_file,
+                cold_vkey_file=node_cold.vkey_file,
+                owner_stake_vkey_files=[pool_users[0].stake.skey_file],  # skey instead of vkey
+            )
+        assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
+
+    def test_pool_registration_missing_cold_skey(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Register pool using transaction with missing Cold skey."""
+        cluster = cluster_session
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file],
+            signing_key_files=[
+                pool_users[0].payment.skey_file,
+                # missing node_cold.vkey_file
+            ],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
+        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+
+    def test_pool_registration_missing_payment_skey(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Register pool using transaction with missing payment skey."""
+        cluster = cluster_session
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file],
+            signing_key_files=[
+                # missing payment skey file
+                node_cold.vkey_file,
+            ],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
+        assert "Expected one of" in str(excinfo.value)
