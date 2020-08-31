@@ -416,8 +416,8 @@ class TestRewards:
             ).reward_account_balance
             owner_reward = cluster.get_stake_addr_info(rewards_address).reward_account_balance
 
-            prev_stake_reward_epoch, prev_stake_reward_amount = stake_rewards[-1]
-            prev_owner_reward_epoch, prev_owner_reward_amount = owner_rewards[-1]
+            __, prev_stake_reward_amount = stake_rewards[-1]
+            __, prev_owner_reward_amount = owner_rewards[-1]
 
             stake_rewards.append((this_epoch, stake_reward))
             owner_rewards.append((this_epoch, owner_reward))
@@ -427,11 +427,6 @@ class TestRewards:
                 owner_reward > prev_owner_reward_amount
             ), "New reward was not received by pool owner"
 
-            if prev_owner_reward_amount and prev_owner_reward_epoch == this_epoch - 1:
-                assert (
-                    prev_owner_reward_amount * 1.2 < owner_reward < prev_owner_reward_amount * 2
-                ), "Unexpected reward amount for pool owner"
-
             # wait up to 3 epochs for first reward for stake address
             if this_epoch - delegate_epoch <= 3 and stake_reward == 0:
                 continue
@@ -440,11 +435,6 @@ class TestRewards:
             assert (
                 stake_reward > prev_stake_reward_amount
             ), "New reward was not received by stake address"
-
-            if prev_stake_reward_amount and prev_stake_reward_epoch == this_epoch - 1:
-                assert (
-                    prev_stake_reward_amount * 1.2 < stake_reward < prev_stake_reward_amount * 2
-                ), "Unexpected reward amount for stake address"
 
         # withdraw reward to payment address
         _withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
