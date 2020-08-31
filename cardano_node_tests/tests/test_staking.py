@@ -470,7 +470,7 @@ class TestRewards:
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=[clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])],
-            vrf_key_file=pool_rec["vrf_key_pair"].vkey_file,
+            vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
             cold_key_pair=pool_rec["cold_key_pair"],
             deposit=0,  # no additional deposit, the pool is already registered
         )

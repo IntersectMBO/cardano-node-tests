@@ -112,7 +112,7 @@ def _create_register_pool_delegate_stake_tx(
     # create stake pool registration cert
     pool_reg_cert_file = cluster_obj.gen_pool_registration_cert(
         pool_data=pool_data,
-        vrf_key_file=node_vrf.vkey_file,
+        vrf_vkey_file=node_vrf.vkey_file,
         cold_vkey_file=node_cold.vkey_file,
         owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
     )
@@ -613,7 +613,7 @@ class TestStakePool:
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=pool_owners,
-            vrf_key_file=pool_creation_out.vrf_key_pair.vkey_file,
+            vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
             cold_key_pair=pool_creation_out.cold_key_pair,
             deposit=0,  # no additional deposit, the pool is already registered
         )
@@ -686,7 +686,7 @@ class TestStakePool:
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=pool_owners,
-            vrf_key_file=pool_creation_out.vrf_key_pair.vkey_file,
+            vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
             cold_key_pair=pool_creation_out.cold_key_pair,
             deposit=0,  # no additional deposit, the pool is already registered
         )

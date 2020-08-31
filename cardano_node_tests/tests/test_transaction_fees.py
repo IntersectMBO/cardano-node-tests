@@ -203,7 +203,7 @@ class TestExpectedFees:
         # create stake pool registration cert
         pool_reg_cert_file = cluster_obj.gen_pool_registration_cert(
             pool_data=pool_data,
-            vrf_key_file=node_vrf.vkey_file,
+            vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
         )
