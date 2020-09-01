@@ -335,7 +335,10 @@ class ClusterLib:
         )
 
     def gen_payment_addr(
-        self, payment_vkey_file: FileType, *args: str, stake_vkey_file: Optional[FileType] = None,
+        self,
+        payment_vkey_file: FileType,
+        *args: str,
+        stake_vkey_file: Optional[FileType] = None,
     ) -> str:
         """Generate payment address."""
         cli_args = ["--payment-verification-key-file", str(payment_vkey_file)]
@@ -729,7 +732,9 @@ class ClusterLib:
         delegation = address_rec.get("delegation") or ""
         reward_account_balance = address_rec.get("rewardAccountBalance") or 0
         return StakeAddrInfo(
-            address=address, delegation=delegation, reward_account_balance=reward_account_balance,
+            address=address,
+            delegation=delegation,
+            reward_account_balance=reward_account_balance,
         )
 
     def get_protocol_params(self) -> dict:
@@ -1182,7 +1187,10 @@ class ClusterLib:
         epoch = epoch if epoch is not None else self.get_last_block_epoch()
 
         out_file = self.gen_update_proposal(
-            cli_args=cli_args, tx_name=tx_name, epoch=epoch, destination_dir=destination_dir,
+            cli_args=cli_args,
+            tx_name=tx_name,
+            epoch=epoch,
+            destination_dir=destination_dir,
         )
 
         return self.send_tx(
@@ -1358,19 +1366,22 @@ class ClusterLib:
         """Create and register stake pool."""
         # create the KES key pair
         node_kes = self.gen_kes_key_pair(
-            node_name=pool_data.pool_name, destination_dir=destination_dir,
+            node_name=pool_data.pool_name,
+            destination_dir=destination_dir,
         )
         LOGGER.debug(f"KES keys created - {node_kes.vkey_file}; {node_kes.skey_file}")
 
         # create the VRF key pair
         node_vrf = self.gen_vrf_key_pair(
-            node_name=pool_data.pool_name, destination_dir=destination_dir,
+            node_name=pool_data.pool_name,
+            destination_dir=destination_dir,
         )
         LOGGER.debug(f"VRF keys created - {node_vrf.vkey_file}; {node_vrf.skey_file}")
 
         # create the cold key pair and node operational certificate counter
         node_cold = self.gen_cold_key_pair_and_counter(
-            node_name=pool_data.pool_name, destination_dir=destination_dir,
+            node_name=pool_data.pool_name,
+            destination_dir=destination_dir,
         )
         LOGGER.debug(
             "Cold keys created and counter created - "

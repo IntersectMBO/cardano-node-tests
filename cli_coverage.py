@@ -28,16 +28,27 @@ def get_args() -> argparse.Namespace:
         help="Path to coverage files",
     )
     parser.add_argument(
-        "-o", "--output-file", help="File where to save coverage results",
+        "-o",
+        "--output-file",
+        help="File where to save coverage results",
     )
     parser.add_argument(
-        "-u", "--uncovered-only", action="store_true", help="Report only uncovered arguments",
+        "-u",
+        "--uncovered-only",
+        action="store_true",
+        help="Report only uncovered arguments",
     )
     parser.add_argument(
-        "-p", "--print-coverage", action="store_true", help="Print coverage percentage",
+        "-p",
+        "--print-coverage",
+        action="store_true",
+        help="Print coverage percentage",
     )
     parser.add_argument(
-        "-b", "--badge-icon-url", action="store_true", help="Print badge icon URL",
+        "-b",
+        "--badge-icon-url",
+        action="store_true",
+        help="Print badge icon URL",
     )
     return parser.parse_args()
 
@@ -204,6 +215,7 @@ def main() -> int:
 
 if __name__ == "__main__":
     logging.basicConfig(
-        format="%(name)s:%(levelname)s:%(message)s", level=logging.INFO,
+        format="%(name)s:%(levelname)s:%(message)s",
+        level=logging.INFO,
     )
     sys.exit(main())

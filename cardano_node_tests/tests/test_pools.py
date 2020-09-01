@@ -148,7 +148,10 @@ def _create_register_pool_delegate_stake_tx(
     # check that pool and staking were correctly setup
     stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
     _check_staking(
-        pool_owners, cluster_obj=cluster_obj, stake_pool_id=stake_pool_id, pool_data=pool_data,
+        pool_owners,
+        cluster_obj=cluster_obj,
+        stake_pool_id=stake_pool_id,
+        pool_data=pool_data,
     )
 
     return clusterlib.PoolCreationOutput(
@@ -260,7 +263,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -301,7 +306,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -355,7 +362,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -589,7 +598,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -662,7 +673,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -712,7 +725,9 @@ class TestPoolCost:
         temp_template = f"test_pool_cost_class_{rand_str}"
 
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster_class, name_template=temp_template, no_of_addr=1,
+            cluster_obj=cluster_class,
+            name_template=temp_template,
+            no_of_addr=1,
         )
 
         # fund source address
@@ -740,7 +755,10 @@ class TestPoolCost:
         temp_template = f"test_stake_pool_low_cost_{rand_str}"
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"pool_{rand_str}", pool_pledge=12345, pool_cost=pool_cost, pool_margin=0.123,
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=12345,
+            pool_cost=pool_cost,
+            pool_margin=0.123,
         )
 
         # register pool and delegate stake address, expect failure
@@ -770,12 +788,17 @@ class TestPoolCost:
         temp_template = f"test_stake_pool_cost_{rand_str}"
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"pool_{rand_str}", pool_pledge=12345, pool_cost=pool_cost, pool_margin=0.123,
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=12345,
+            pool_cost=pool_cost,
+            pool_margin=0.123,
         )
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=1,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=1,
         )
 
         # fund source address
@@ -806,7 +829,9 @@ class TestNegative:
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
         pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session, name_template="test_negative", no_of_addr=2,
+            cluster_obj=cluster_session,
+            name_template="test_negative",
+            no_of_addr=2,
         )
 
         # fund source addresses
@@ -954,3 +979,70 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
         assert "Expected one of" in str(excinfo.value)
+
+    def test_pool_registration_conflicting_certs(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Send both pool registration and deregistration certificates in single TX."""
+        cluster = cluster_session
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+        )
+
+        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+            pool_name=pool_data.pool_name,
+            cold_vkey_file=node_cold.vkey_file,
+            epoch=cluster.get_last_block_epoch() + 1,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file, pool_dereg_cert_file],
+            signing_key_files=[
+                pool_users[0].payment.vkey_file,
+                pool_users[0].payment.skey_file,
+                pool_users[0].stake.vkey_file,
+                pool_users[0].stake.skey_file,
+                node_cold.vkey_file,
+                node_cold.skey_file,
+            ],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
+        assert "TextView type error" in str(excinfo.value)
+
+    def test_pool_deregistration_not_registered(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Deregister pool that is not registered."""
+        cluster = cluster_session
+
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+            pool_name=pool_data.pool_name,
+            cold_vkey_file=node_cold.vkey_file,
+            epoch=cluster.get_last_block_epoch() + 2,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_dereg_cert_file],
+            signing_key_files=[pool_users[0].payment.skey_file, node_cold.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
+        assert "StakePoolNotRegisteredOnKeyPOOL" in str(excinfo.value)

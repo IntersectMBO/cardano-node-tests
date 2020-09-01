@@ -94,7 +94,9 @@ def _wait_for_fresh(lock_dir: Path) -> None:
         # if the status files exists, the tests are still in progress
         if list(lock_dir.glob(f"{RUNNING_FILE}_fresh_*")):
             helpers.wait_for(
-                lambda: not list(lock_dir.glob(f"{RUNNING_FILE}_fresh_*")), delay=5, num_sec=20_000,
+                lambda: not list(lock_dir.glob(f"{RUNNING_FILE}_fresh_*")),
+                delay=5,
+                num_sec=20_000,
             )
         # other session-scoped cluster tests are already running, i.e. the "first"
         # tests are already finished

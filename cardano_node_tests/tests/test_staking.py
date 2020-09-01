@@ -22,6 +22,30 @@ def temp_dir(tmp_path_factory: TempdirFactory):
         yield tmp_path
 
 
+@pytest.fixture(scope="module")
+def pool_users(
+    cluster_session: clusterlib.ClusterLib,
+    addrs_data_session: dict,
+    request: FixtureRequest,
+) -> List[clusterlib.PoolUser]:
+    """Create pool users."""
+    pool_users = helpers.create_pool_users(
+        cluster_obj=cluster_session,
+        name_template="test_staking",
+        no_of_addr=2,
+    )
+
+    # fund source addresses
+    helpers.fund_from_faucet(
+        pool_users[0],
+        cluster_obj=cluster_session,
+        faucet_data=addrs_data_session["user1"],
+        request=request,
+    )
+
+    return pool_users
+
+
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
@@ -43,7 +67,9 @@ def _delegate_stake_addr(
         f"addr0_{temp_template}", cluster_obj=cluster_obj
     )[0]
     payment_addr_rec = helpers.create_payment_addr_records(
-        f"addr0_{temp_template}", cluster_obj=cluster_obj, stake_vkey_file=stake_addr_rec.vkey_file,
+        f"addr0_{temp_template}",
+        cluster_obj=cluster_obj,
+        stake_vkey_file=stake_addr_rec.vkey_file,
     )[0]
 
     pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
@@ -67,7 +93,10 @@ def _delegate_stake_addr(
 
     # fund source address
     helpers.fund_from_faucet(
-        payment_addr_rec, cluster_obj=cluster_obj, faucet_data=addrs_data["user1"], request=request,
+        payment_addr_rec,
+        cluster_obj=cluster_obj,
+        faucet_data=addrs_data["user1"],
+        request=request,
     )
 
     src_address = payment_addr_rec.address
@@ -248,33 +277,132 @@ class TestDelegateAddr:
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
 
-
-class TestNegative:
-    @pytest.fixture(scope="class")
-    def pool_users(
+    def test_addr_registration_deregistration(
         self,
         cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
-    ) -> List[clusterlib.PoolUser]:
-        """Create pool users."""
-        pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session, name_template="test_negative", no_of_addr=2,
-        )
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Submit registration and deregistration certificates in single TX."""
+        cluster = cluster_session
+        temp_template = "test_addr_registration_deregistration"
 
-        # fund source addresses
-        helpers.fund_from_faucet(
-            pool_users[0],
+        user_registered = helpers.create_pool_users(
             cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
-            amount=1_000_000,
-            request=request,
+            name_template=f"{temp_template}_user_registered",
+            no_of_addr=1,
+        )[0]
+
+        pool_user = pool_users[0]
+        src_init_balance = cluster.get_address_balance(pool_user.payment.address)
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
         )
 
-        return pool_users
+        # create stake address deregistration cert
+        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+        )
 
+        # register and deregister stake address in single TX
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_reg_cert_file, stake_addr_dereg_cert],
+            signing_key_files=[pool_user.payment.skey_file, user_registered.stake.skey_file],
+        )
+        tx_raw_output = cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        assert (
+            cluster.get_address_balance(pool_user.payment.address)
+            == src_init_balance - tx_raw_output.fee
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+    def test_addr_delegation_deregistration(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addrs_data_session: dict,
+    ):
+        """Submit delegation and deregistration certificates in single TX."""
+        cluster = cluster_session
+        pool_name = "node-pool1"
+        temp_template = "test_addr_delegation_deregistration"
+        node_cold = addrs_data_session[pool_name]["cold_key_pair"]
+
+        user_registered = helpers.create_pool_users(
+            cluster_obj=cluster_session,
+            name_template=f"{temp_template}_user_registered",
+            no_of_addr=1,
+        )[0]
+
+        pool_user = pool_users[0]
+        src_init_balance = cluster.get_address_balance(pool_user.payment.address)
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+        )
+
+        # create stake address deregistration cert
+        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+        )
+
+        # register stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_reg_cert_file],
+            signing_key_files=[pool_user.payment.skey_file],
+        )
+        tx_raw_output_reg = cluster.send_tx(
+            src_address=pool_user.payment.address, tx_files=tx_files
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        assert (
+            cluster.get_address_balance(pool_user.payment.address)
+            == src_init_balance - tx_raw_output_reg.fee - cluster.get_key_deposit()
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        src_registered_balance = cluster.get_address_balance(pool_user.payment.address)
+
+        # create stake address delegation cert
+        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+            addr_name=f"addr0_{temp_template}",
+            stake_vkey_file=user_registered.stake.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+        )
+
+        # delegate and deregister stake address in single TX
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_deleg_cert_file, stake_addr_dereg_cert],
+            signing_key_files=[pool_users[0].payment.skey_file, user_registered.stake.skey_file],
+        )
+        tx_raw_output_deleg = cluster.send_tx(
+            src_address=pool_user.payment.address, tx_files=tx_files
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        assert (
+            cluster.get_address_balance(pool_user.payment.address)
+            == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_key_deposit()
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        helpers.wait_for_stake_distribution(cluster)
+
+        # check that the stake address was NOT delegated
+        stake_addr_info = cluster.get_stake_addr_info(user_registered.stake.address)
+        assert not stake_addr_info.delegation, f"Stake address was delegated: {stake_addr_info}"
+
+
+class TestNegative:
     def test_registration_cert_with_wrong_key(
-        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Generate stake address registration certificate using wrong key."""
         temp_template = "test_registration_cert_with_wrong_key"
@@ -307,7 +435,9 @@ class TestNegative:
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
     def test_register_addr_with_wrong_key(
-        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Register stake address using wrong key."""
         cluster = cluster_session
@@ -373,6 +503,61 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+
+    def test_delegate_unregistered_addr(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addrs_data_session: dict,
+    ):
+        """Delegate unregistered stake address."""
+        cluster = cluster_session
+        pool_name = "node-pool1"
+        temp_template = "test_delegate_unregistered_addr"
+        node_cold = addrs_data_session[pool_name]["cold_key_pair"]
+
+        pool_user = pool_users[0]
+
+        # create stake address delegation cert
+        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+            addr_name=f"addr0_{temp_template}",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+        )
+
+        # delegate unregistered stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_deleg_cert_file],
+            signing_key_files=[pool_users[0].payment.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
+        assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
+
+    def test_unregister_not_registered_addr(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Unregistered not registered stake address."""
+        cluster = cluster_session
+        temp_template = "test_unregister_not_registered_addr"
+
+        pool_user = pool_users[0]
+
+        # files for deregistering stake address
+        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
+        )
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_dereg_cert],
+            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
+        assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
 
 class TestRewards:
