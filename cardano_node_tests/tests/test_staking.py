@@ -43,7 +43,9 @@ def _delegate_stake_addr(
         f"addr0_{temp_template}", cluster_obj=cluster_obj
     )[0]
     payment_addr_rec = helpers.create_payment_addr_records(
-        f"addr0_{temp_template}", cluster_obj=cluster_obj, stake_vkey_file=stake_addr_rec.vkey_file,
+        f"addr0_{temp_template}",
+        cluster_obj=cluster_obj,
+        stake_vkey_file=stake_addr_rec.vkey_file,
     )[0]
 
     pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
@@ -67,7 +69,10 @@ def _delegate_stake_addr(
 
     # fund source address
     helpers.fund_from_faucet(
-        payment_addr_rec, cluster_obj=cluster_obj, faucet_data=addrs_data["user1"], request=request,
+        payment_addr_rec,
+        cluster_obj=cluster_obj,
+        faucet_data=addrs_data["user1"],
+        request=request,
     )
 
     src_address = payment_addr_rec.address
@@ -259,7 +264,9 @@ class TestNegative:
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
         pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session, name_template="test_negative", no_of_addr=2,
+            cluster_obj=cluster_session,
+            name_template="test_negative",
+            no_of_addr=2,
         )
 
         # fund source addresses
@@ -274,7 +281,9 @@ class TestNegative:
         return pool_users
 
     def test_registration_cert_with_wrong_key(
-        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Generate stake address registration certificate using wrong key."""
         temp_template = "test_registration_cert_with_wrong_key"
@@ -307,7 +316,9 @@ class TestNegative:
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
     def test_register_addr_with_wrong_key(
-        self, cluster_session: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser],
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Register stake address using wrong key."""
         cluster = cluster_session

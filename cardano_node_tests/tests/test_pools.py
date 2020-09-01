@@ -148,7 +148,10 @@ def _create_register_pool_delegate_stake_tx(
     # check that pool and staking were correctly setup
     stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
     _check_staking(
-        pool_owners, cluster_obj=cluster_obj, stake_pool_id=stake_pool_id, pool_data=pool_data,
+        pool_owners,
+        cluster_obj=cluster_obj,
+        stake_pool_id=stake_pool_id,
+        pool_data=pool_data,
     )
 
     return clusterlib.PoolCreationOutput(
@@ -260,7 +263,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -301,7 +306,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -355,7 +362,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -589,7 +598,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -662,7 +673,9 @@ class TestStakePool:
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=no_of_addr,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=no_of_addr,
         )
 
         # fund source address
@@ -712,7 +725,9 @@ class TestPoolCost:
         temp_template = f"test_pool_cost_class_{rand_str}"
 
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster_class, name_template=temp_template, no_of_addr=1,
+            cluster_obj=cluster_class,
+            name_template=temp_template,
+            no_of_addr=1,
         )
 
         # fund source address
@@ -740,7 +755,10 @@ class TestPoolCost:
         temp_template = f"test_stake_pool_low_cost_{rand_str}"
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"pool_{rand_str}", pool_pledge=12345, pool_cost=pool_cost, pool_margin=0.123,
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=12345,
+            pool_cost=pool_cost,
+            pool_margin=0.123,
         )
 
         # register pool and delegate stake address, expect failure
@@ -770,12 +788,17 @@ class TestPoolCost:
         temp_template = f"test_stake_pool_cost_{rand_str}"
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"pool_{rand_str}", pool_pledge=12345, pool_cost=pool_cost, pool_margin=0.123,
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=12345,
+            pool_cost=pool_cost,
+            pool_margin=0.123,
         )
 
         # create pool owners
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster, name_template=temp_template, no_of_addr=1,
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=1,
         )
 
         # fund source address
@@ -806,7 +829,9 @@ class TestNegative:
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
         pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session, name_template="test_negative", no_of_addr=2,
+            cluster_obj=cluster_session,
+            name_template="test_negative",
+            no_of_addr=2,
         )
 
         # fund source addresses

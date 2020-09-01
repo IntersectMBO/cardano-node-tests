@@ -235,7 +235,9 @@ def create_payment_addr_records(
     """Create new payment address(es)."""
     addrs = [
         cluster_obj.gen_payment_addr_and_keys(
-            name=name, stake_vkey_file=stake_vkey_file, destination_dir=destination_dir,
+            name=name,
+            stake_vkey_file=stake_vkey_file,
+            destination_dir=destination_dir,
         )
         for name in names
     ]
@@ -245,7 +247,9 @@ def create_payment_addr_records(
 
 
 def create_stake_addr_records(
-    *names: str, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".",
+    *names: str,
+    cluster_obj: clusterlib.ClusterLib,
+    destination_dir: FileType = ".",
 ) -> List[clusterlib.AddressRecord]:
     """Create new stake address(es)."""
     addrs = [
@@ -258,7 +262,9 @@ def create_stake_addr_records(
 
 
 def create_pool_users(
-    cluster_obj: clusterlib.ClusterLib, name_template: str, no_of_addr: int = 1,
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    no_of_addr: int = 1,
 ) -> List[clusterlib.PoolUser]:
     """Create PoolUsers."""
     pool_users = []
@@ -369,7 +375,8 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
                 counter_file=addr_data_dir / "cold.counter",
             ),
             "vrf_key_pair": clusterlib.KeyPair(
-                vkey_file=addr_data_dir / "vrf.vkey", skey_file=addr_data_dir / "vrf.skey",
+                vkey_file=addr_data_dir / "vrf.vkey",
+                skey_file=addr_data_dir / "vrf.skey",
             ),
         }
 
@@ -390,7 +397,9 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
             name=addr_name, stake_vkey_file=stake.vkey_file, destination_dir=destination_dir
         )
         stake_addr_registration_cert = cluster_obj.gen_stake_addr_registration_cert(
-            addr_name=addr_name, stake_vkey_file=stake.vkey_file, destination_dir=destination_dir,
+            addr_name=addr_name,
+            stake_vkey_file=stake.vkey_file,
+            destination_dir=destination_dir,
         )
 
         addrs_data[addr_name] = {

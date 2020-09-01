@@ -69,7 +69,10 @@ class TestFee:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_funds(
-                src_address=src_address, destinations=destinations, tx_files=tx_files, fee=fee,
+                src_address=src_address,
+                destinations=destinations,
+                tx_files=tx_files,
+                fee=fee,
             )
         assert "option --fee: cannot parse value" in str(excinfo.value)
 
@@ -99,7 +102,10 @@ class TestFee:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_funds(
-                src_address=src_address, destinations=destinations, tx_files=tx_files, fee=int(fee),
+                src_address=src_address,
+                destinations=destinations,
+                tx_files=tx_files,
+                fee=int(fee),
             )
         assert "FeeTooSmallUTxO" in str(excinfo.value)
 
@@ -130,7 +136,10 @@ class TestFee:
         )
 
         tx_raw_output = cluster.send_funds(
-            src_address=src_address, destinations=destinations, tx_files=tx_files, fee=fee,
+            src_address=src_address,
+            destinations=destinations,
+            tx_files=tx_files,
+            fee=fee,
         )
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -156,7 +165,9 @@ class TestExpectedFees:
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
         pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session, name_template="test_expected_fees", no_of_addr=201,
+            cluster_obj=cluster_session,
+            name_template="test_expected_fees",
+            no_of_addr=201,
         )
 
         # fund source addresses
