@@ -995,3 +995,29 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
         assert "TextView type error" in str(excinfo.value)
+
+    def test_pool_deregistration_not_registered(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Deregister pool that is not registered."""
+        cluster = cluster_session
+
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+            pool_name=pool_data.pool_name,
+            cold_vkey_file=node_cold.vkey_file,
+            epoch=cluster.get_last_block_epoch() + 2,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_dereg_cert_file],
+            signing_key_files=[pool_users[0].payment.skey_file, node_cold.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
+        assert "StakePoolNotRegisteredOnKeyPOOL" in str(excinfo.value)
