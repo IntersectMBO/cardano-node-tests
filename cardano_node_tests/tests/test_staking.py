@@ -22,6 +22,30 @@ def temp_dir(tmp_path_factory: TempdirFactory):
         yield tmp_path
 
 
+@pytest.fixture(scope="module")
+def pool_users(
+    cluster_session: clusterlib.ClusterLib,
+    addrs_data_session: dict,
+    request: FixtureRequest,
+) -> List[clusterlib.PoolUser]:
+    """Create pool users."""
+    pool_users = helpers.create_pool_users(
+        cluster_obj=cluster_session,
+        name_template="test_staking",
+        no_of_addr=2,
+    )
+
+    # fund source addresses
+    helpers.fund_from_faucet(
+        pool_users[0],
+        cluster_obj=cluster_session,
+        faucet_data=addrs_data_session["user1"],
+        request=request,
+    )
+
+    return pool_users
+
+
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
@@ -255,31 +279,6 @@ class TestDelegateAddr:
 
 
 class TestNegative:
-    @pytest.fixture(scope="class")
-    def pool_users(
-        self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
-    ) -> List[clusterlib.PoolUser]:
-        """Create pool users."""
-        pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session,
-            name_template="test_negative",
-            no_of_addr=2,
-        )
-
-        # fund source addresses
-        helpers.fund_from_faucet(
-            pool_users[0],
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
-            amount=1_000_000,
-            request=request,
-        )
-
-        return pool_users
-
     def test_registration_cert_with_wrong_key(
         self,
         cluster_session: clusterlib.ClusterLib,
