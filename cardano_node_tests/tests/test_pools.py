@@ -954,3 +954,44 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
         assert "Expected one of" in str(excinfo.value)
+
+    def test_pool_registration_conflicting_certs(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+    ):
+        """Send both pool registration and deregistration certificates in single TX."""
+        cluster = cluster_session
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+        )
+
+        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+            pool_name=pool_data.pool_name,
+            cold_vkey_file=node_cold.vkey_file,
+            epoch=cluster.get_last_block_epoch() + 1,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file, pool_dereg_cert_file],
+            signing_key_files=[
+                pool_users[0].payment.vkey_file,
+                pool_users[0].payment.skey_file,
+                pool_users[0].stake.vkey_file,
+                pool_users[0].stake.skey_file,
+                node_cold.vkey_file,
+                node_cold.skey_file,
+            ],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
+        assert "TextView type error" in str(excinfo.value)
