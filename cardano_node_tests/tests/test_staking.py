@@ -416,6 +416,30 @@ class TestNegative:
             cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
         assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
 
+    def test_unregister_not_registered_addr(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Unregistered not registered stake address."""
+        cluster = cluster_session
+        temp_template = "test_unregister_not_registered_addr"
+
+        pool_user = pool_users[0]
+
+        # files for deregistering stake address
+        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
+        )
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_dereg_cert],
+            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
+        assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
+
 
 class TestRewards:
     def test_reward_amount(
