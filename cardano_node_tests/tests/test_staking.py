@@ -374,6 +374,37 @@ class TestNegative:
             cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
+    def test_delegate_unregistered_addr(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addrs_data_session: dict,
+    ):
+        """Delegate unregistered stake address."""
+        cluster = cluster_session
+        pool_name = "node-pool1"
+        temp_template = "test_delegate_unregistered_addr"
+        node_cold = addrs_data_session[pool_name]["cold_key_pair"]
+
+        pool_user = pool_users[0]
+
+        # create stake address delegation cert
+        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+            addr_name=f"addr0_{temp_template}",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+        )
+
+        # delegate unregistered stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_deleg_cert_file],
+            signing_key_files=[pool_users[0].payment.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(src_address=pool_user.payment.address, tx_files=tx_files)
+        assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
+
 
 class TestRewards:
     def test_reward_amount(
