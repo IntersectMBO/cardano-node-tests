@@ -1,4 +1,5 @@
 # Testing artifacts
+.artifacts/*
 .cli_coverage/*
 .reports/*
 
