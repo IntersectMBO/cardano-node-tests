@@ -1,11 +1,13 @@
 import functools
 import itertools
+import json
 import logging
 import string
 from pathlib import Path
 from typing import List
 from typing import Tuple
 
+import cbor2
 import hypothesis
 import hypothesis.strategies as st
 import pytest
@@ -1095,3 +1097,44 @@ class TestMetadata:
         tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
         assert tx_raw_output.fee, "Transaction had no fee"
         # TODO: check that the data is on blockchain
+
+        with open(tx_raw_output.out_file) as body_fp:
+            tx_body_json = json.load(body_fp)
+
+        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
+        cbor_body_metadata = cbor2.loads(cbor_body)[1]
+        # dump it as JSON first, so keys are converted to strings
+        cbor_body_metadata = json.loads(json.dumps(cbor_body_metadata))
+
+        with open(json_file) as metadata_fp:
+            json_file_metadata = json.load(metadata_fp)
+
+        assert (
+            cbor_body_metadata == json_file_metadata
+        ), "Metadata in TX body doesn't match original metadata"
+
+    def test_tx_metadata_cbor(
+        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Send transaction with metadata cbor."""
+        cbor_file = Path(__file__).parent / "data" / "tx_metadata.cbor"
+        assert cbor_file.exists()
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file], metadata_cbor_files=[cbor_file]
+        )
+        tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
+        assert tx_raw_output.fee, "Transaction had no fee"
+
+        with open(tx_raw_output.out_file) as body_fp:
+            tx_body_json = json.load(body_fp)
+
+        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
+        cbor_body_metadata = cbor2.loads(cbor_body)[1]
+
+        with open(cbor_file, "rb") as metadata_fp:
+            cbor_file_metadata = cbor2.load(metadata_fp)
+
+        assert (
+            cbor_body_metadata == cbor_file_metadata
+        ), "Metadata in TX body doesn't match original metadata"
