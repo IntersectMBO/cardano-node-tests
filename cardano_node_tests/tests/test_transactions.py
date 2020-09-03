@@ -364,7 +364,7 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 tx from 100 payment addresses to 100 payment addresses."""
+        """Tests 1 tx from 100 payment addresses to 50 payment addresses."""
         self._from_to_transactions(
             cluster_obj=cluster_session,
             payment_addrs=payment_addrs,
