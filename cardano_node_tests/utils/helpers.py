@@ -4,6 +4,8 @@ import json
 import logging
 import os
 import pickle
+import re
+import shutil
 import subprocess
 import tempfile
 import time
@@ -14,8 +16,10 @@ from typing import Dict
 from typing import Generator
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
+import pytest
 from _pytest.fixtures import FixtureRequest
 from filelock import FileLock
 
@@ -27,6 +31,9 @@ ADDR_DATA = "addr_data.pickle"
 
 TEST_TEMP_DIR = Path(tempfile.gettempdir()) / "cardano-node-tests"
 TEST_TEMP_DIR.mkdir(mode=0o700, exist_ok=True)
+
+ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
+ERRORS_IGNORED_RE = re.compile("EKGServerStartupError|WithIPList SubscriptionTrace")
 
 # Use dummy locking if not executing with multiple workers.
 # When running with multiple workers, operations with shared resources (like faucet addresses)
@@ -573,3 +580,77 @@ def update_params(
             f"Cluster update proposal failed! Param value: {updated_value}.\n"
             f"Tip:{cluster_obj.get_tip()}"
         )
+
+
+def save_tests_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
+    """Save tests artifacts."""
+    pytest_tmp_dir = pytest_tmp_dir.resolve()
+    if not pytest_tmp_dir.is_dir():
+        return None
+
+    dest_dir = artifacts_dir / f"{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
+    if dest_dir.resolve().is_dir():
+        shutil.rmtree(dest_dir)
+    shutil.copytree(pytest_tmp_dir, dest_dir, symlinks=True, ignore_dangling_symlinks=True)
+
+    LOGGER.info(f"Tests artifacts saved to '{artifacts_dir}'.")
+    return dest_dir
+
+
+def save_cluster_artifacts(artifacts_dir: Path) -> Optional[Path]:
+    """Save cluster artifacts."""
+    cluster_env = get_cluster_env()
+    if not cluster_env.get("state_dir"):
+        return None
+
+    dest_dir = artifacts_dir / f"cluster_artifacts_{clusterlib.get_rand_str(8)}"
+    os.mkdir(dest_dir)
+
+    state_dir = Path(cluster_env["state_dir"])
+    files_list = list(state_dir.glob("*.std*"))
+    files_list.extend(list(state_dir.glob("*.json")))
+    dirs_to_copy = ("nodes", "shelley")
+
+    for fpath in files_list:
+        shutil.copy(fpath, dest_dir)
+    for dname in dirs_to_copy:
+        shutil.copytree(
+            state_dir / dname, dest_dir / dname, symlinks=True, ignore_dangling_symlinks=True
+        )
+
+    LOGGER.info(f"Cluster artifacts saved to '{dest_dir}'.")
+    return dest_dir
+
+
+def search_cluster_artifacts(artifacts_dir: Path) -> List[Tuple[Path, str]]:
+    """Search cluster artifacts for errors."""
+    errors = []
+    for fpath in artifacts_dir.glob("**/cluster_artifacts_*/*.std*"):
+        with open(fpath) as infile:
+            content = infile.readlines()
+            for line in content:
+                if ERRORS_RE.search(line) and not ERRORS_IGNORED_RE.search(line):
+                    errors.append((fpath, line))
+    return errors
+
+
+def report_artifacts_errors(errors: List[Tuple[Path, str]]) -> None:
+    """Report errors found in artifacts."""
+    err = [f"{e[0]}: {e[1]}" for e in errors]
+    err_joined = "\n".join(err)
+    pytest.fail(f"Errors found in cluster log files:\n{err_joined}")
+
+
+def process_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
+    """Process tests and cluster artifacts."""
+    artifacts_dir = request.config.getoption("--artifacts-base-dir")
+    if artifacts_dir:
+        artifacts_dir = Path(artifacts_dir)
+        # copy tests artifacts only when base directory was passed
+        save_tests_artifacts(pytest_tmp_dir, artifacts_dir)
+    else:
+        artifacts_dir = pytest_tmp_dir
+
+    errors = search_cluster_artifacts(artifacts_dir)
+    if errors:
+        report_artifacts_errors(errors)
