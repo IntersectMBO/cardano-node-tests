@@ -26,6 +26,13 @@ def pytest_addoption(parser: Any) -> None:
         default="",
         help="Path to directory for storing coverage info",
     )
+    parser.addoption(
+        "--artifacts-base-dir",
+        action="store",
+        type=helpers.check_dir_arg,
+        default="",
+        help="Path to directory for storing artifacts",
+    )
 
 
 def pytest_html_report_title(report: Any) -> None:
@@ -43,10 +50,16 @@ def pytest_configure(config: Any) -> None:
 
 
 def _fresh_cluster(
-    change_dir: Path, tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
+    change_dir: Path,
+    cluster_logs_session: Generator,
+    tmp_path_factory: TempdirFactory,
+    worker_id: str,
+    request: FixtureRequest,
 ) -> Generator[clusterlib.ClusterLib, None, None]:
     """Run fresh cluster for each test marked with the "first" marker."""
     # pylint: disable=unused-argument
+    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
+
     # not executing with multiple workers
     if not worker_id or worker_id == "master":
         helpers.stop_cluster()
@@ -57,12 +70,16 @@ def _fresh_cluster(
         try:
             yield cluster_obj
         finally:
+            # save CLI coverage
             helpers.save_cli_coverage(cluster_obj, request)
+            # stop the cluster
             helpers.stop_cluster()
+            # save artifacts
+            helpers.save_cluster_artifacts(artifacts_dir=pytest_tmp_dir)
         return
 
     # executing in parallel with multiple workers
-    lock_dir = Path(tmp_path_factory.getbasetemp()).parent
+    lock_dir = pytest_tmp_dir.parent
     # as the tests marked with "first" need fresh cluster, no other tests on
     # any other worker can run until the ones that requested this fixture are
     # finished
@@ -86,6 +103,8 @@ def _fresh_cluster(
             helpers.save_cli_coverage(cluster_obj, request)
             # stop the cluster
             helpers.stop_cluster()
+            # save artifacts
+            helpers.save_cluster_artifacts(artifacts_dir=pytest_tmp_dir)
 
 
 def _wait_for_fresh(lock_dir: Path) -> None:
@@ -126,10 +145,38 @@ def change_dir(tmp_path_factory: TempdirFactory) -> None:
 
 
 @pytest.yield_fixture(scope="session")
+def cluster_logs_session(
+    tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
+) -> Generator:
+    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
+
+    try:
+        yield
+    finally:
+        process_artifacts = True  # avoid return in finally
+
+        # process artifacts if this is a last worker that was running tests
+        if worker_id and worker_id != "master":
+            lock_dir = pytest_tmp_dir = pytest_tmp_dir.parent
+            with FileLock(f"{lock_dir}/.session_stop_{LOCK_FILE}"):
+                if list(lock_dir.glob(f"{RUNNING_FILE}_session_*")):
+                    process_artifacts = False
+
+        if process_artifacts:
+            helpers.process_artifacts(pytest_tmp_dir=pytest_tmp_dir, request=request)
+
+
+@pytest.yield_fixture(scope="session")
 def cluster_session(
-    change_dir: Path, tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
+    change_dir: Path,
+    cluster_logs_session: Generator,
+    tmp_path_factory: TempdirFactory,
+    worker_id: str,
+    request: FixtureRequest,
 ) -> Generator[clusterlib.ClusterLib, None, None]:
     # pylint: disable=unused-argument
+    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
+
     # not executing with multiple workers
     if not worker_id or worker_id == "master":
         helpers.stop_cluster()
@@ -140,12 +187,16 @@ def cluster_session(
         try:
             yield cluster_obj
         finally:
+            # save CLI coverage
             helpers.save_cli_coverage(cluster_obj, request)
+            # stop the cluster
             helpers.stop_cluster()
+            # save artifacts
+            helpers.save_cluster_artifacts(artifacts_dir=pytest_tmp_dir)
         return
 
     # executing in parallel with multiple workers
-    lock_dir = Path(tmp_path_factory.getbasetemp()).parent
+    lock_dir = pytest_tmp_dir.parent
     mark_first_started = lock_dir / MARK_FIRST_STARTED
     # make sure this code is executed on single worker at a time
     with FileLock(f"{lock_dir}/.session_{LOCK_FILE}"):
@@ -182,6 +233,8 @@ def cluster_session(
             # stop cluster if this is a last worker that was running tests
             if not list(lock_dir.glob(f"{RUNNING_FILE}_session_*")):
                 helpers.stop_cluster()
+            # save artifacts
+            helpers.save_cluster_artifacts(artifacts_dir=pytest_tmp_dir)
 
 
 @pytest.fixture(scope="session")
