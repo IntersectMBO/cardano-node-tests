@@ -10,6 +10,7 @@ from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.types import OptionalFiles
 
 LOGGER = logging.getLogger(__name__)
 
@@ -711,6 +712,116 @@ class TestStakePool:
             cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
         )
         assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data_updated)
+
+    def test_sign_in_multiple_stages(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        request: FixtureRequest,
+    ):
+        """Create and register a stake pool with TX signed in multiple stages."""
+        cluster = cluster_session
+        temp_template = "test_sign_in_multiple_stages"
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"pool_{clusterlib.get_rand_str()}",
+            pool_pledge=5,
+            pool_cost=3,
+            pool_margin=0.01,
+        )
+
+        # create pool owners
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=2,
+        )
+
+        # fund source address
+        helpers.fund_from_faucet(
+            pool_owners[0].payment,
+            cluster_obj=cluster,
+            faucet_data=addrs_data_session["user1"],
+            amount=900_000_000,
+            request=request,
+        )
+
+        # create node VRF key pair
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        # create node cold key pair and counter
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        # create stake pool registration cert
+        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
+        )
+
+        src_address = pool_owners[0].payment.address
+        src_init_balance = cluster.get_address_balance(src_address)
+
+        # keys to sign the TX with
+        witness_skeys = (
+            pool_owners[0].payment.skey_file,
+            pool_owners[1].payment.skey_file,
+            pool_owners[0].stake.skey_file,
+            pool_owners[1].stake.skey_file,
+            node_cold.skey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[
+                pool_reg_cert_file,
+            ],
+        )
+
+        fee = cluster.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            witness_count_add=len(witness_skeys),
+        )
+
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=src_address,
+            tx_files=tx_files,
+            fee=fee,
+        )
+
+        # create witness file for each key
+        witness_files: OptionalFiles = [
+            cluster.witness_tx(
+                tx_body_file=tx_raw_output.out_file, witness_signing_key_files=[skey]
+            )
+            for skey in witness_skeys
+        ]
+
+        # sign TX using witness files
+        tx_witnessed_file = cluster.sign_witness_tx(
+            tx_body_file=tx_raw_output.out_file, witness_files=witness_files
+        )
+
+        # create and register pool
+        cluster.submit_tx(tx_witnessed_file)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        cluster.wait_for_new_epoch()
+
+        # check that the pool parameters were correctly registered on chain
+        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+        stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
+        updated_pool_ledger_state = (
+            cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
+        )
+        assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data)
 
 
 @pytest.mark.first

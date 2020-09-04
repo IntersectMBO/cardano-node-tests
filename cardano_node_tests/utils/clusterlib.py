@@ -1016,9 +1016,11 @@ class ClusterLib:
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
+        witness_count_add: int = 0,
         destination_dir: FileType = ".",
     ) -> int:
         """Build "dummy" transaction and calculate it's fee."""
+        # pylint: disable=too-many-arguments
         tx_files = tx_files or TxFiles()
         tx_name = tx_name or get_timestamped_rand_str()
         tx_name = f"{tx_name}_estimate"
@@ -1047,7 +1049,7 @@ class ClusterLib:
             txbody_file=tx_raw_output.out_file,
             txin_count=len(tx_raw_output.txins),
             txout_count=len(tx_raw_output.txouts),
-            witness_count=len(tx_files.signing_key_files),
+            witness_count=len(tx_files.signing_key_files) + witness_count_add,
         )
 
         return fee
@@ -1055,8 +1057,8 @@ class ClusterLib:
     def sign_tx(
         self,
         tx_body_file: FileType,
+        signing_key_files: OptionalFiles,
         tx_name: Optional[str] = None,
-        signing_key_files: OptionalFiles = (),
         destination_dir: FileType = ".",
     ) -> Path:
         """Sign transaction."""
@@ -1075,6 +1077,62 @@ class ClusterLib:
                 "--testnet-magic",
                 str(self.network_magic),
                 *self._prepend_flag("--signing-key-file", signing_key_files),
+            ]
+        )
+
+        self._check_outfiles(out_file)
+        return out_file
+
+    def witness_tx(
+        self,
+        tx_body_file: FileType,
+        witness_signing_key_files: OptionalFiles,
+        tx_name: Optional[str] = None,
+        destination_dir: FileType = ".",
+    ) -> Path:
+        """Witness transaction."""
+        tx_name = tx_name or get_timestamped_rand_str()
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{tx_name}_tx.witness"
+
+        self.cli(
+            [
+                "transaction",
+                "witness",
+                "--tx-body-file",
+                str(tx_body_file),
+                "--out-file",
+                str(out_file),
+                "--testnet-magic",
+                str(self.network_magic),
+                *self._prepend_flag("--witness-signing-key-file", witness_signing_key_files),
+            ]
+        )
+
+        self._check_outfiles(out_file)
+        return out_file
+
+    def sign_witness_tx(
+        self,
+        tx_body_file: FileType,
+        witness_files: OptionalFiles,
+        tx_name: Optional[str] = None,
+        destination_dir: FileType = ".",
+    ) -> Path:
+        """Sign transaction."""
+        tx_name = tx_name or get_timestamped_rand_str()
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{tx_name}_tx.witnessed"
+
+        self.cli(
+            [
+                "transaction",
+                "sign-witness",
+                "--tx-body-file",
+                str(tx_body_file),
+                "--out-file",
+                str(out_file),
+                *self._prepend_flag("--witness-file", witness_files),
             ]
         )
 
