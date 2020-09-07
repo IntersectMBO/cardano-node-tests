@@ -18,10 +18,9 @@ from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
+DATA_DIR = Path(__file__).parent / "data"
 
 ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
-JSON_METADATA_FILE = Path(__file__).parent / "data" / "tx_metadata.json"
-CBOR_METADATA_FILE = Path(__file__).parent / "data" / "tx_metadata.cbor"
 
 
 @pytest.fixture(scope="module")
@@ -1005,6 +1004,12 @@ class TestNegative:
 
 
 class TestMetadata:
+    JSON_METADATA_FILE = DATA_DIR / "tx_metadata.json"
+    JSON_METADATA_WRONG_FILE = DATA_DIR / "tx_metadata_wrong.json"
+    JSON_METADATA_INVALID_FILE = DATA_DIR / "tx_metadata_invalid.json"
+    JSON_METADATA_LONG_FILE = DATA_DIR / "tx_metadata_long.json"
+    CBOR_METADATA_FILE = DATA_DIR / "tx_metadata.cbor"
+
     @pytest.fixture(scope="class")
     def payment_addr(
         self,
@@ -1031,10 +1036,9 @@ class TestMetadata:
         self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Build transaction with wrong fromat of metadata JSON."""
-        assert JSON_METADATA_FILE.exists()
-
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[payment_addr.skey_file], metadata_json_files=[JSON_METADATA_FILE]
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=[self.JSON_METADATA_WRONG_FILE],
         )
 
         # it should NOT be possible to build a transaction using wrongly formatted metadata JSON
@@ -1051,10 +1055,9 @@ class TestMetadata:
         self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Build transaction with invalid metadata JSON."""
-        assert JSON_METADATA_FILE.exists()
-
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[payment_addr.skey_file], metadata_json_files=[JSON_METADATA_FILE]
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=[self.JSON_METADATA_INVALID_FILE],
         )
 
         # it should NOT be possible to build a transaction using an invalid metadata JSON
@@ -1069,10 +1072,9 @@ class TestMetadata:
         self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Build transaction with metadata JSON longer than 64 bytes."""
-        assert JSON_METADATA_FILE.exists()
-
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[payment_addr.skey_file], metadata_json_files=[JSON_METADATA_FILE]
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=[self.JSON_METADATA_LONG_FILE],
         )
 
         # it should NOT be possible to build a transaction using too long metadata JSON
@@ -1088,7 +1090,8 @@ class TestMetadata:
     ):
         """Send transaction with metadata JSON."""
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[payment_addr.skey_file], metadata_json_files=[JSON_METADATA_FILE]
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=[self.JSON_METADATA_FILE],
         )
         tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
         cluster_session.wait_for_new_block(new_blocks=2)
@@ -1103,7 +1106,7 @@ class TestMetadata:
         # dump it as JSON first, so keys are converted to strings
         cbor_body_metadata = json.loads(json.dumps(cbor_body_metadata))
 
-        with open(JSON_METADATA_FILE) as metadata_fp:
+        with open(self.JSON_METADATA_FILE) as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
         assert (
@@ -1115,7 +1118,8 @@ class TestMetadata:
     ):
         """Send transaction with metadata CBOR."""
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[payment_addr.skey_file], metadata_cbor_files=[CBOR_METADATA_FILE]
+            signing_key_files=[payment_addr.skey_file],
+            metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
         tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
         cluster_session.wait_for_new_block(new_blocks=2)
@@ -1127,7 +1131,7 @@ class TestMetadata:
         cbor_body = bytes.fromhex(tx_body_json["cborHex"])
         cbor_body_metadata = cbor2.loads(cbor_body)[1]
 
-        with open(CBOR_METADATA_FILE, "rb") as metadata_fp:
+        with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp:
             cbor_file_metadata = cbor2.load(metadata_fp)
 
         assert (
@@ -1140,8 +1144,8 @@ class TestMetadata:
         """Send transaction with both metadata JSON and CBOR."""
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
-            metadata_json_files=[JSON_METADATA_FILE],
-            metadata_cbor_files=[CBOR_METADATA_FILE],
+            metadata_json_files=[self.JSON_METADATA_FILE],
+            metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
         tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
         cluster_session.wait_for_new_block(new_blocks=2)
@@ -1155,10 +1159,10 @@ class TestMetadata:
         # dump it as JSON first, so keys are converted to strings
         cbor_body_metadata = json.loads(json.dumps(cbor_body_metadata))
 
-        with open(JSON_METADATA_FILE) as metadata_fp_json:
+        with open(self.JSON_METADATA_FILE) as metadata_fp_json:
             json_file_metadata = json.load(metadata_fp_json)
 
-        with open(CBOR_METADATA_FILE, "rb") as metadata_fp_cbor:
+        with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp_cbor:
             cbor_file_metadata = cbor2.load(metadata_fp_cbor)
         cbor_file_metadata = json.loads(json.dumps(cbor_file_metadata))
 
