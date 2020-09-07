@@ -230,31 +230,88 @@ def _create_register_pool_tx_delegate_stake_tx(
 
 
 class TestStakePool:
-    @pytest.mark.parametrize("no_of_addr", [1, 3])
     def test_stake_pool_metadata(
         self,
         cluster_session: clusterlib.ClusterLib,
         addrs_data_session: dict,
         temp_dir: Path,
-        no_of_addr: int,
         request: FixtureRequest,
     ):
         """Create and register a stake pool with metadata."""
         cluster = cluster_session
-        temp_template = f"test_stake_pool_metadata_{no_of_addr}owners"
+        temp_template = "test_stake_pool_metadata"
 
+        pool_name = "cardano-node-tests"
         pool_metadata = {
-            "name": "QA E2E test",
+            "name": pool_name,
+            "description": "cardano-node-tests E2E tests",
+            "ticker": "IOGQA1",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+        )
+
+        pool_data = clusterlib.PoolData(
+            pool_name=pool_name,
+            pool_pledge=1000,
+            pool_cost=15,
+            pool_margin=0.2,
+            pool_metadata_url=(
+                "https://gist.githubusercontent.com/mkoura/328048d6164b9180633c2332653d0af8/raw/"
+                "6c25ce8ec489c7126d89be455dffb050995e09fc/cardano_node_tests_pool_metadata.json"
+            ),
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+        )
+
+        # create pool owners
+        pool_owners = helpers.create_pool_users(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=3,
+        )
+
+        # fund source address
+        helpers.fund_from_faucet(
+            pool_owners[0].payment,
+            cluster_obj=cluster,
+            faucet_data=addrs_data_session["user1"],
+            amount=900_000_000,
+            request=request,
+        )
+
+        # register pool and delegate stake address
+        _create_register_pool_delegate_stake_tx(
+            cluster_obj=cluster,
+            pool_owners=pool_owners,
+            temp_template=temp_template,
+            pool_data=pool_data,
+        )
+
+    def test_stake_pool_metadata_not_avail(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        addrs_data_session: dict,
+        temp_dir: Path,
+        request: FixtureRequest,
+    ):
+        """Create and register a stake pool with metadata file not available."""
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_not_avail"
+
+        pool_name = f"pool_{clusterlib.get_rand_str(8)}"
+        pool_metadata = {
+            "name": pool_name,
             "description": "Shelley QA E2E test Test",
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"poolY_{no_of_addr}_registration_metadata.json", pool_metadata
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"poolY_{no_of_addr}",
+            pool_name=pool_name,
             pool_pledge=1000,
             pool_cost=15,
             pool_margin=0.2,
@@ -266,7 +323,7 @@ class TestStakePool:
         pool_owners = helpers.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
-            no_of_addr=no_of_addr,
+            no_of_addr=1,
         )
 
         # fund source address
