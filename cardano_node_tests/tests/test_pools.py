@@ -38,13 +38,46 @@ def update_pool_cost(cluster_class: clusterlib.ClusterLib):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-def _check_staking(
-    pool_owners: List[clusterlib.PoolUser],
+def _get_pool_ledger_state(
+    cluster_obj: clusterlib.ClusterLib,
+    stake_pool_id: str,
+) -> dict:
+    """Get ledger state of the pool."""
+    stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
+    pool_ledger_state: dict = (
+        cluster_obj.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
+    )
+    return pool_ledger_state
+
+
+def _check_pool(
     cluster_obj: clusterlib.ClusterLib,
     stake_pool_id: str,
     pool_data: clusterlib.PoolData,
 ):
-    """Check that pool and staking were correctly setup."""
+    """Check and return ledger state of the pool."""
+    pool_ledger_state: dict = _get_pool_ledger_state(
+        cluster_obj=cluster_obj, stake_pool_id=stake_pool_id
+    )
+
+    assert pool_ledger_state, (
+        "The newly created stake pool id is not shown inside the available stake pools;\n"
+        f"Pool ID: {stake_pool_id} vs Existing IDs: "
+        f"{list(cluster_obj.get_registered_stake_pools_ledger_state())}"
+    )
+    assert not helpers.check_pool_data(pool_ledger_state, pool_data)
+
+
+def _check_staking(
+    pool_owners: List[clusterlib.PoolUser],
+    cluster_obj: clusterlib.ClusterLib,
+    stake_pool_id: str,
+):
+    """Check that staking was correctly setup."""
+    pool_ledger_state: dict = _get_pool_ledger_state(
+        cluster_obj=cluster_obj, stake_pool_id=stake_pool_id
+    )
+
     LOGGER.info("Waiting up to 3 epochs for stake pool to be registered.")
     helpers.wait_for(
         lambda: stake_pool_id in cluster_obj.get_stake_distribution(),
@@ -52,16 +85,6 @@ def _check_staking(
         num_sec=3 * cluster_obj.epoch_length_sec,
         message="register stake pool",
     )
-
-    # check that the pool was correctly registered on chain
-    stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
-    pool_ledger_state = cluster_obj.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
-    assert pool_ledger_state, (
-        "The newly created stake pool id is not shown inside the available stake pools;\n"
-        f"Pool ID: {stake_pool_id} vs Existing IDs: "
-        f"{list(cluster_obj.get_registered_stake_pools_ledger_state())}"
-    )
-    assert not helpers.check_pool_data(pool_ledger_state, pool_data)
 
     for owner in pool_owners:
         stake_addr_info = cluster_obj.get_stake_addr_info(owner.stake.address)
@@ -75,6 +98,37 @@ def _check_staking(
             helpers.decode_bech32(stake_addr_info.address)[2:]
             in pool_ledger_state["owners"]
         ), "'owner' value is different than expected"
+
+
+def _create_register_pool(
+    cluster_obj: clusterlib.ClusterLib,
+    pool_owners: List[clusterlib.PoolUser],
+    pool_data: clusterlib.PoolData,
+) -> clusterlib.PoolCreationOutput:
+    """Create and register a stake pool.
+
+    Common functionality for tests.
+    """
+    src_address = pool_owners[0].payment.address
+    src_init_balance = cluster_obj.get_address_balance(src_address)
+
+    # create and register pool
+    pool_creation_out = cluster_obj.create_stake_pool(pool_data=pool_data, pool_owners=pool_owners)
+
+    # check that the balance for source address was correctly updated
+    assert (
+        cluster_obj.get_address_balance(src_address)
+        == src_init_balance - pool_creation_out.tx_raw_output.fee - cluster_obj.get_pool_deposit()
+    ), f"Incorrect balance for source address `{src_address}`"
+
+    # check that pool was correctly setup
+    _check_pool(
+        cluster_obj=cluster_obj,
+        stake_pool_id=pool_creation_out.stake_pool_id,
+        pool_data=pool_data,
+    )
+
+    return pool_creation_out
 
 
 def _create_register_pool_delegate_stake_tx(
@@ -148,11 +202,11 @@ def _create_register_pool_delegate_stake_tx(
 
     # check that pool and staking were correctly setup
     stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
+    _check_pool(cluster_obj=cluster_obj, stake_pool_id=stake_pool_id, pool_data=pool_data)
     _check_staking(
         pool_owners,
         cluster_obj=cluster_obj,
         stake_pool_id=stake_pool_id,
-        pool_data=pool_data,
     )
 
     return clusterlib.PoolCreationOutput(
@@ -177,7 +231,9 @@ def _create_register_pool_tx_delegate_stake_tx(
     Common functionality for tests.
     """
     # create and register pool
-    pool_creation_out = cluster_obj.create_stake_pool(pool_data=pool_data, pool_owners=pool_owners)
+    pool_creation_out = _create_register_pool(
+        cluster_obj=cluster_obj, pool_owners=pool_owners, pool_data=pool_data
+    )
 
     # create stake address registration certs
     stake_addr_reg_cert_files = [
@@ -218,12 +274,11 @@ def _create_register_pool_tx_delegate_stake_tx(
         == src_init_balance - tx_raw_output.fee - len(pool_owners) * cluster_obj.get_key_deposit()
     ), f"Incorrect balance for source address `{src_address}`"
 
-    # check that pool and staking were correctly setup
+    # check that staking was correctly setup
     _check_staking(
         pool_owners,
         cluster_obj=cluster_obj,
         stake_pool_id=pool_creation_out.stake_pool_id,
-        pool_data=pool_data,
     )
 
     return pool_creation_out
@@ -336,7 +391,7 @@ class TestStakePool:
         )
 
         # register pool and delegate stake address
-        _create_register_pool_delegate_stake_tx(
+        _create_register_pool_tx_delegate_stake_tx(
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
@@ -378,11 +433,10 @@ class TestStakePool:
             request=request,
         )
 
-        # register pool and delegate stake address
-        _create_register_pool_delegate_stake_tx(
+        # register pool
+        _create_register_pool(
             cluster_obj=cluster,
             pool_owners=pool_owners,
-            temp_template=temp_template,
             pool_data=pool_data,
         )
 
@@ -590,21 +644,16 @@ class TestStakePool:
         )
 
         # check that pool was correctly setup
-        updated_pool_ledger_state = (
-            cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
+        _check_pool(
+            cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data
         )
-        assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data)
 
         # check that the stake addresses were delegated
-        for owner_rec in pool_owners:
-            stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
-            assert (
-                stake_addr_info.delegation
-            ), f"Stake address is not delegated yet: {stake_addr_info}"
-
-            assert (
-                pool_creation_out.stake_pool_id == stake_addr_info.delegation
-            ), "Stake address delegated to wrong pool"
+        _check_staking(
+            pool_owners=pool_owners,
+            cluster_obj=cluster,
+            stake_pool_id=pool_creation_out.stake_pool_id,
+        )
 
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_metadata(
@@ -670,11 +719,10 @@ class TestStakePool:
             request=request,
         )
 
-        # register pool and delegate stake address
-        pool_creation_out = _create_register_pool_tx_delegate_stake_tx(
+        # register pool
+        pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             pool_owners=pool_owners,
-            temp_template=temp_template,
             pool_data=pool_data,
         )
 
@@ -689,11 +737,11 @@ class TestStakePool:
         cluster.wait_for_new_epoch()
 
         # check that the pool parameters were correctly updated on chain
-        stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
-        updated_pool_ledger_state = (
-            cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
+        _check_pool(
+            cluster_obj=cluster,
+            stake_pool_id=pool_creation_out.stake_pool_id,
+            pool_data=pool_data_updated,
         )
-        assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data_updated)
 
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_parameters(
@@ -745,11 +793,10 @@ class TestStakePool:
             request=request,
         )
 
-        # register pool and delegate stake address
-        pool_creation_out = _create_register_pool_tx_delegate_stake_tx(
+        # register pool
+        pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             pool_owners=pool_owners,
-            temp_template=temp_template,
             pool_data=pool_data,
         )
 
@@ -764,11 +811,11 @@ class TestStakePool:
         cluster.wait_for_new_epoch()
 
         # check that the pool parameters were correctly updated on chain
-        stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
-        updated_pool_ledger_state = (
-            cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
+        _check_pool(
+            cluster_obj=cluster,
+            stake_pool_id=pool_creation_out.stake_pool_id,
+            pool_data=pool_data_updated,
         )
-        assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data_updated)
 
     def test_sign_in_multiple_stages(
         self,
@@ -874,11 +921,11 @@ class TestStakePool:
 
         # check that the pool parameters were correctly registered on chain
         stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
-        stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
-        updated_pool_ledger_state = (
-            cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
+        _check_pool(
+            cluster_obj=cluster,
+            stake_pool_id=stake_pool_id,
+            pool_data=pool_data,
         )
-        assert not helpers.check_pool_data(updated_pool_ledger_state, pool_data)
 
 
 @pytest.mark.first
@@ -920,7 +967,6 @@ class TestPoolCost:
         """Try to create and register a stake pool with pool cost lower than 'minPoolCost'."""
         cluster = cluster_class
         rand_str = clusterlib.get_rand_str()
-        temp_template = f"test_stake_pool_low_cost_{rand_str}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -929,12 +975,11 @@ class TestPoolCost:
             pool_margin=0.123,
         )
 
-        # register pool and delegate stake address, expect failure
+        # register pool, expect failure
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _create_register_pool_delegate_stake_tx(
+            _create_register_pool(
                 cluster_obj=cluster,
                 pool_owners=pool_owners,
-                temp_template=temp_template,
                 pool_data=pool_data,
             )
 
@@ -978,11 +1023,10 @@ class TestPoolCost:
             request=request,
         )
 
-        # register pool and delegate stake address
-        _create_register_pool_delegate_stake_tx(
+        # register pool
+        _create_register_pool(
             cluster_obj=cluster,
             pool_owners=pool_owners,
-            temp_template=temp_template,
             pool_data=pool_data,
         )
 
