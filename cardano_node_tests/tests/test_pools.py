@@ -312,10 +312,7 @@ class TestStakePool:
             pool_pledge=1000,
             pool_cost=15,
             pool_margin=0.2,
-            pool_metadata_url=(
-                "https://gist.githubusercontent.com/mkoura/328048d6164b9180633c2332653d0af8/raw/"
-                "6c25ce8ec489c7126d89be455dffb050995e09fc/cardano_node_tests_pool_metadata.json"
-            ),
+            pool_metadata_url="https://bit.ly/3bDUg9z",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
         )
 
