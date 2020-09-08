@@ -312,10 +312,7 @@ class TestStakePool:
             pool_pledge=1000,
             pool_cost=15,
             pool_margin=0.2,
-            pool_metadata_url=(
-                "https://gist.githubusercontent.com/mkoura/328048d6164b9180633c2332653d0af8/raw/"
-                "6c25ce8ec489c7126d89be455dffb050995e09fc/cardano_node_tests_pool_metadata.json"
-            ),
+            pool_metadata_url="https://bit.ly/3bDUg9z",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -1460,3 +1457,52 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert "Stake pool metadata must consist of at most 512 bytes" in str(excinfo.value)
+
+    def test_stake_pool_long_metadata_url(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        temp_dir: Path,
+    ):
+        """Test pool creation with the 'metadata-url' longer than allowed."""
+        cluster = cluster_session
+
+        pool_name = "cardano-node-tests"
+        pool_metadata = {
+            "name": pool_name,
+            "description": "cardano-node-tests E2E tests",
+            "ticker": "IOG2",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+        )
+
+        pool_data = clusterlib.PoolData(
+            pool_name=pool_name,
+            pool_pledge=1000,
+            pool_cost=15,
+            pool_margin=0.2,
+            pool_metadata_url=(
+                "https://gist.githubusercontent.com/mkoura/328048d6164b9180633c2332653d0af8/raw/"
+                "6c25ce8ec489c7126d89be455dffb050995e09fc/cardano_node_tests_pool_metadata.json"
+            ),
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+        )
+
+        # create node VRF key pair
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        # create node cold key pair and counter
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        # create stake pool registration cert
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_registration_cert(
+                pool_data=pool_data,
+                vrf_vkey_file=node_vrf.vkey_file,
+                cold_vkey_file=node_cold.vkey_file,
+                owner_stake_vkey_files=[p.stake.vkey_file for p in pool_users],
+            )
+        assert "option --metadata-url: The provided string must have at most 64 characters`" in str(
+            excinfo.value
+        )
