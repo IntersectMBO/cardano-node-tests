@@ -245,7 +245,7 @@ class TestStakePool:
         pool_metadata = {
             "name": pool_name,
             "description": "cardano-node-tests E2E tests",
-            "ticker": "IOGQA1",
+            "ticker": "IOG1",
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
@@ -1214,3 +1214,205 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
         assert "StakePoolNotRegisteredOnKeyPOOL" in str(excinfo.value)
+
+    def test_stake_pool_metadata_no_name(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+    ):
+        """Test pool metadata that is missing the 'name' key."""
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_no_name"
+
+        pool_metadata = {
+            "description": "cardano-node-tests E2E tests",
+            "ticker": "IOG1",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_metadata_hash(pool_metadata_file)
+        assert 'key "name" not found' in str(excinfo.value)
+
+    def test_stake_pool_metadata_no_description(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+    ):
+        """Test pool metadata that is missing the 'description' key."""
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_no_description"
+
+        pool_metadata = {
+            "name": "cardano-node-tests",
+            "ticker": "IOG1",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_metadata_hash(pool_metadata_file)
+        assert 'key "description" not found' in str(excinfo.value)
+
+    def test_stake_pool_metadata_no_ticker(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+    ):
+        """Test pool metadata that is missing the 'ticker' key."""
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_no_ticker"
+
+        pool_metadata = {
+            "name": "cardano-node-tests",
+            "description": "cardano-node-tests E2E tests",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_metadata_hash(pool_metadata_file)
+        assert 'key "ticker" not found' in str(excinfo.value)
+
+    def test_stake_pool_metadata_no_homepage(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+    ):
+        """Test pool metadata that is missing the 'homepage' key."""
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_no_homepage"
+
+        pool_metadata = {
+            "name": "cardano-node-tests",
+            "description": "cardano-node-tests E2E tests",
+            "ticker": "IOG1",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_metadata_hash(pool_metadata_file)
+        assert 'key "homepage" not found' in str(excinfo.value)
+
+    @hypothesis.given(pool_name=st.text(min_size=51))
+    @hypothesis.settings(deadline=None)
+    def test_stake_pool_metadata_long_name(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+        pool_name: str,
+    ):
+        """Test pool metadata with the 'name' value longer than allowed."""
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_long_name"
+
+        pool_metadata = {
+            "name": pool_name,
+            "description": "cardano-node-tests E2E tests",
+            "ticker": "IOG1",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_metadata_hash(pool_metadata_file)
+        err_value = str(excinfo.value)
+        assert (
+            "Stake pool metadata must consist of at most 512 bytes" in err_value
+            or '"name" must have at most 50 characters' in err_value
+        )
+
+    @hypothesis.given(pool_description=st.text(min_size=256))
+    @hypothesis.settings(deadline=None)
+    def test_stake_pool_metadata_long_description(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+        pool_description: str,
+    ):
+        """Test pool metadata with the 'description' value longer than allowed."""
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_long_description"
+
+        pool_metadata = {
+            "name": "cardano-node-tests",
+            "description": pool_description,
+            "ticker": "IOG1",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_metadata_hash(pool_metadata_file)
+        err_value = str(excinfo.value)
+        assert (
+            "Stake pool metadata must consist of at most 512 bytes" in err_value
+            or '"description" must have at most 255 characters' in err_value
+        )
+
+    @hypothesis.given(pool_ticker=st.text())
+    @hypothesis.settings(deadline=None)
+    def test_stake_pool_metadata_long_ticker(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+        pool_ticker: str,
+    ):
+        """Test pool metadata with the 'ticker' value longer than allowed."""
+        hypothesis.assume(not (3 <= len(pool_ticker) <= 5))
+
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_long_ticker"
+
+        pool_metadata = {
+            "name": "cardano-node-tests",
+            "description": "cardano-node-tests E2E tests",
+            "ticker": pool_ticker,
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_metadata_hash(pool_metadata_file)
+        assert '"ticker" must have at least 3 and at most 5 characters' in str(excinfo.value)
+
+    @hypothesis.given(pool_homepage=st.text(min_size=425))
+    @hypothesis.settings(deadline=None)
+    def test_stake_pool_metadata_long_homepage(
+        self,
+        cluster_session: clusterlib.ClusterLib,
+        temp_dir: Path,
+        pool_homepage: str,
+    ):
+        """Test pool metadata with the 'homepage' value longer than allowed."""
+        cluster = cluster_session
+        temp_template = "test_stake_pool_metadata_long_homepage"
+
+        pool_metadata = {
+            "name": "CND",
+            "description": "CND",
+            "ticker": "CND",
+            "homepage": pool_homepage,
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_pool_metadata_hash(pool_metadata_file)
+        assert "Stake pool metadata must consist of at most 512 bytes" in str(excinfo.value)
