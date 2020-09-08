@@ -1503,6 +1503,6 @@ class TestNegative:
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[p.stake.vkey_file for p in pool_users],
             )
-        assert "option --metadata-url: The provided string must have at most 64 characters`" in str(
+        assert "option --metadata-url: The provided string must have at most 64 characters" in str(
             excinfo.value
         )
