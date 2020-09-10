@@ -71,6 +71,59 @@ def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
         LOGGER.debug(f"Restored CWD to '{orig_cwd}'.")
 
 
+def withdraw_reward(cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser) -> None:
+    """Withdraw rewards to payment address."""
+    src_address = pool_user.payment.address
+    src_init_balance = cluster_obj.get_address_balance(src_address)
+
+    tx_files_withdrawal = clusterlib.TxFiles(
+        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+    )
+    tx_raw_withdrawal_output = cluster_obj.send_tx(
+        src_address=src_address,
+        tx_files=tx_files_withdrawal,
+        withdrawals=[clusterlib.TxOut(address=pool_user.stake.address, amount=-1)],
+    )
+    cluster_obj.wait_for_new_block(new_blocks=2)
+
+    # check that reward is 0
+    assert (
+        cluster_obj.get_stake_addr_info(pool_user.stake.address).reward_account_balance == 0
+    ), "Not all rewards were transfered"
+
+    # check that rewards were transfered
+    src_reward_balance = cluster_obj.get_address_balance(src_address)
+    assert (
+        src_reward_balance
+        == src_init_balance
+        - tx_raw_withdrawal_output.fee
+        + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
+    ), f"Incorrect balance for source address `{src_address}`"
+
+
+def deregister_stake_addr(
+    cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
+) -> clusterlib.TxRawOutput:
+    """Deregister stake address."""
+    # files for de-registering stake address
+    stake_addr_dereg_cert = cluster_obj.gen_stake_addr_deregistration_cert(
+        addr_name=f"addr0_{name_template}_dereg", stake_vkey_file=pool_user.stake.vkey_file
+    )
+    tx_files_deregister = clusterlib.TxFiles(
+        certificate_files=[stake_addr_dereg_cert],
+        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+    )
+
+    # withdraw rewards to payment address
+    withdraw_reward(cluster_obj=cluster_obj, pool_user=pool_user)
+
+    tx_raw_output = cluster_obj.send_tx(
+        src_address=pool_user.payment.address, tx_files=tx_files_deregister
+    )
+    cluster_obj.wait_for_new_block(new_blocks=2)
+    return tx_raw_output
+
+
 def read_address_from_file(location: FileType) -> str:
     """Read address stored in file."""
     with open(Path(location).expanduser()) as in_file:

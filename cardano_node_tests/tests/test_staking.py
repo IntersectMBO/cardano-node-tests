@@ -59,6 +59,17 @@ def pool_users_disposable(
     return pool_users
 
 
+def _cleanup_deregister_stake_addr(
+    cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
+) -> None:
+    try:
+        helpers.deregister_stake_addr(
+            cluster_obj=cluster_obj, pool_user=pool_user, name_template=name_template
+        )
+    except clusterlib.CLIError:
+        pass
+
+
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
@@ -124,6 +135,15 @@ def _delegate_stake_addr(
     tx_raw_output = cluster_obj.send_tx(src_address=src_address, tx_files=tx_files)
     cluster_obj.wait_for_new_block(new_blocks=2)
 
+    # deregister stake address in post-test cleanup
+    # TODO: change if this is supposed to run outside of devops cluster
+    if pool_name in ("node-pool1", "node-pool2"):
+        request.addfinalizer(
+            lambda: _cleanup_deregister_stake_addr(
+                cluster_obj=cluster_obj, pool_user=pool_user, name_template=temp_template
+            )
+        )
+
     # check that the balance for source address was correctly updated
     assert (
         cluster_obj.get_address_balance(src_address)
@@ -139,36 +159,6 @@ def _delegate_stake_addr(
     assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
     return pool_user
-
-
-def _withdraw_reward(cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser) -> None:
-    """Withdraw rewards to payment address."""
-    src_address = pool_user.payment.address
-    src_init_balance = cluster_obj.get_address_balance(src_address)
-
-    tx_files_withdrawal = clusterlib.TxFiles(
-        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
-    )
-    tx_raw_withdrawal_output = cluster_obj.send_tx(
-        src_address=src_address,
-        tx_files=tx_files_withdrawal,
-        withdrawals=[clusterlib.TxOut(address=pool_user.stake.address, amount=-1)],
-    )
-    cluster_obj.wait_for_new_block(new_blocks=2)
-
-    # check that reward is 0
-    assert (
-        cluster_obj.get_stake_addr_info(pool_user.stake.address).reward_account_balance == 0
-    ), "Not all rewards were transfered"
-
-    # check that rewards were transfered
-    src_reward_balance = cluster_obj.get_address_balance(src_address)
-    assert (
-        src_reward_balance
-        == src_init_balance
-        - tx_raw_withdrawal_output.fee
-        + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
-    ), f"Incorrect balance for source address `{src_address}`"
 
 
 class TestDelegateAddr:
@@ -269,7 +259,7 @@ class TestDelegateAddr:
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
         # withdraw rewards to payment address
-        _withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
+        helpers.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
 
         # de-register stake address
         src_reward_balance = cluster.get_address_balance(src_address)
@@ -632,7 +622,7 @@ class TestRewards:
             ), "New reward was not received by stake address"
 
         # withdraw rewards to payment address
-        _withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
+        helpers.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
 
     @pytest.mark.first
     def test_no_reward_unmet_pledge(
@@ -814,7 +804,7 @@ class TestRewards:
         )
 
         # withdraw rewards to payment address
-        _withdraw_reward(cluster_obj=cluster, pool_user=pool_reward)
+        helpers.withdraw_reward(cluster_obj=cluster, pool_user=pool_reward)
 
         # deregister reward address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
