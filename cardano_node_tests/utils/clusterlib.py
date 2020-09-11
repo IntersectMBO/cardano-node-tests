@@ -1343,6 +1343,7 @@ class ClusterLib:
         pool_owners: List[PoolUser],
         vrf_vkey_file: FileType,
         cold_key_pair: ColdKeyPair,
+        reward_account_vkey_file: Optional[FileType] = None,
         tx_name: Optional[str] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
@@ -1353,6 +1354,7 @@ class ClusterLib:
             vrf_vkey_file=vrf_vkey_file,
             cold_vkey_file=cold_key_pair.vkey_file,
             owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
+            reward_account_vkey_file=reward_account_vkey_file,
             destination_dir=destination_dir,
         )
 

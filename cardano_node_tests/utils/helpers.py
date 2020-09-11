@@ -244,6 +244,7 @@ def fund_from_faucet(
     tx_name: Optional[str] = None,
     request: Optional[FixtureRequest] = None,
     destination_dir: FileType = ".",
+    force: bool = False,
 ) -> None:
     """Send `amount` from faucet addr to all `dst_addrs`."""
     # get payment AddressRecord out of PoolUser
@@ -254,7 +255,7 @@ def fund_from_faucet(
     fund_dst = [
         clusterlib.TxOut(address=d.address, amount=amount)
         for d in dst_addr_records
-        if cluster_obj.get_address_balance(d.address) < amount
+        if force or cluster_obj.get_address_balance(d.address) < amount
     ]
     if not fund_dst:
         return
@@ -426,9 +427,9 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
                 vkey_file=addr_data_dir / "reward.vkey",
                 skey_file=addr_data_dir / "reward.skey",
             ),
-            "stake_addr_registration_cert": read_address_from_file(
-                addr_data_dir / "stake.reg.cert"
-            ),
+            "stake_addr_registration_cert": addr_data_dir / "stake.reg.cert",
+            "stake_addr_delegation_cert": addr_data_dir / "owner-stake.deleg.cert",
+            "reward_addr_registration_cert": addr_data_dir / "stake-reward.reg.cert",
             "cold_key_pair": clusterlib.ColdKeyPair(
                 vkey_file=addr_data_dir / "cold.vkey",
                 skey_file=addr_data_dir / "cold.skey",
