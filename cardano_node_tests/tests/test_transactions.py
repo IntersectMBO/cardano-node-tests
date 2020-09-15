@@ -11,11 +11,11 @@ import cbor2
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
@@ -36,24 +36,28 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 class TestBasic:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def payment_addrs(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
+        data_key = id(self.payment_addrs)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
         addrs = helpers.create_payment_addr_records(
-            "addr_basic0", "addr_basic1", cluster_obj=cluster_session
+            "addr_basic0", "addr_basic1", cluster_obj=cluster
         )
+        cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
         helpers.fund_from_faucet(
             *addrs,
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
-            request=request,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
         return addrs
@@ -61,13 +65,11 @@ class TestBasic:
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     def test_transfer_funds(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
         """Send funds to payment address."""
-        cluster = cluster_session
-
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -94,11 +96,9 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     def test_transfer_all_funds(
-        self, cluster_session: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Send ALL funds from one payment address to another."""
-        cluster = cluster_session
-
         src_address = payment_addrs[1].address
         dst_address = payment_addrs[0].address
 
@@ -126,14 +126,12 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     def test_get_txid(
-        self, cluster_session: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Get transaction ID (txid) from transaction body.
 
         Transaction ID is a hash of transaction body and doesn't change for a signed TX.
         """
-        cluster = cluster_session
-
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -153,26 +151,30 @@ class TestBasic:
 
 
 class TestMultiInOut:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def payment_addrs(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 11 new payment addresses."""
+        data_key = id(self.payment_addrs)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
         addrs = helpers.create_payment_addr_records(
             *[f"addr_multi_in_out{i}" for i in range(201)],
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
         )
+        cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
         helpers.fund_from_faucet(
             addrs[0],
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=100_000_000,
-            request=request,
         )
 
         return addrs
@@ -266,13 +268,12 @@ class TestMultiInOut:
             ), f"Incorrect balance for destination address `{addr}`"
 
     def test_10_transactions(
-        self, cluster_session: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Send 10 transactions to payment address.
 
         Test 10 different UTXOs in addr0.
         """
-        cluster = cluster_session
         no_of_transactions = 10
 
         src_address = payment_addrs[0].address
@@ -316,13 +317,13 @@ class TestMultiInOut:
     @pytest.mark.parametrize("amount", [1, 100, 11_000])
     def test_transaction_to_10_addrs_from_1_addr(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
         """Tests 1 tx from 1 payment address to 10 payment addresses."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             payment_addrs=payment_addrs,
             from_num=1,
             to_num=10,
@@ -332,13 +333,13 @@ class TestMultiInOut:
     @pytest.mark.parametrize("amount", [1, 100, 11_000, 100_000])
     def test_transaction_to_1_addr_from_10_addrs(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
         """Tests 1 tx from 10 payment addresses to 1 payment address."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             payment_addrs=payment_addrs,
             from_num=10,
             to_num=1,
@@ -348,13 +349,13 @@ class TestMultiInOut:
     @pytest.mark.parametrize("amount", [1, 100, 11_000])
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
         """Tests 1 tx from 10 payment addresses to 10 payment addresses."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             payment_addrs=payment_addrs,
             from_num=10,
             to_num=10,
@@ -364,13 +365,13 @@ class TestMultiInOut:
     @pytest.mark.parametrize("amount", [1, 100, 1000])
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
         """Tests 1 tx from 100 payment addresses to 50 payment addresses."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             payment_addrs=payment_addrs,
             from_num=50,
             to_num=100,
@@ -379,36 +380,39 @@ class TestMultiInOut:
 
 
 class TestNotBalanced:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def payment_addrs(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
+        data_key = id(self.payment_addrs)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
         addrs = helpers.create_payment_addr_records(
-            "addr_not_balanced0", "addr_not_balanced1", cluster_obj=cluster_session
+            "addr_not_balanced0", "addr_not_balanced1", cluster_obj=cluster
         )
+        cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
         helpers.fund_from_faucet(
             addrs[0],
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
-            request=request,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
         return addrs
 
     def test_negative_change(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         temp_dir: Path,
     ):
         """Build a transaction with a negative change."""
-        cluster = cluster_session
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -445,10 +449,10 @@ class TestNotBalanced:
         assert "option --tx-out: Failed reading" in str(excinfo.value)
 
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_wrong_balance(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         temp_dir: Path,
         transfer_add: int,
@@ -457,8 +461,6 @@ class TestNotBalanced:
         """Build a transaction with unbalanced change."""
         # we want to test only unbalanced transactions
         hypothesis.assume((transfer_add + change_amount) != 0)
-
-        cluster = cluster_session
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -505,30 +507,34 @@ class TestNotBalanced:
 
 
 class TestNegative:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def pool_users(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session,
+        data_key = id(self.pool_users)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        created_users = helpers.create_pool_users(
+            cluster_obj=cluster,
             name_template="test_negative",
             no_of_addr=2,
         )
+        cluster_manager.cache.test_data[data_key] = created_users
 
         # fund source addresses
         helpers.fund_from_faucet(
-            pool_users[0],
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
+            created_users[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=1_000_000,
-            request=request,
         )
 
-        return pool_users
+        return created_users
 
     def _send_funds_to_invalid_address(
         self, cluster_obj: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser], addr: str
@@ -612,12 +618,10 @@ class TestNegative:
 
     def test_past_ttl(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a transaction with ttl in the past."""
-        cluster = cluster_session
-
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
 
@@ -648,11 +652,10 @@ class TestNegative:
 
     def test_duplicated_tx(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a single transaction twice."""
-        cluster = cluster_session
         amount = 100
 
         src_address = pool_users[0].payment.address
@@ -698,7 +701,7 @@ class TestNegative:
 
     def test_wrong_signing_key(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a transaction signed with wrong signing key."""
@@ -708,18 +711,17 @@ class TestNegative:
 
         # it should NOT be possible to submit a transaction with wrong signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_session.send_tx(
+            cluster.send_tx(
                 src_address=pool_users[0].payment.address, txouts=destinations, tx_files=tx_files
             )
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     def test_extra_signing_keys(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a transaction with extra signing key."""
-        cluster = cluster_session
         amount = 100
 
         src_address = pool_users[0].payment.address
@@ -751,11 +753,10 @@ class TestNegative:
 
     def test_duplicate_signing_keys(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a transaction with duplicate signing key."""
-        cluster = cluster_session
         amount = 100
 
         src_address = pool_users[0].payment.address
@@ -787,112 +788,96 @@ class TestNegative:
 
     def test_send_funds_to_reward_address(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send funds from payment address to stake address."""
         addr = pool_users[0].stake.address
-        self._send_funds_to_invalid_address(
-            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
-        )
+        self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_send_funds_to_non_existent_address(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
         """Send funds from payment address to non-existent address."""
         addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(
-            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
-        )
+        self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_send_funds_to_invalid_length_address(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
         """Send funds from payment address to address with invalid length."""
         addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(
-            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
-        )
+        self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_send_funds_to_invalid_chars_address(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
         """Send funds from payment address to address with invalid characters."""
         addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(
-            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
-        )
+        self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_send_funds_from_non_existent_address(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
         """Send funds from non-existent address."""
         addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(
-            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
-        )
+        self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_send_funds_from_invalid_length_address(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
         """Send funds from address with invalid length."""
         addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(
-            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
-        )
+        self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_send_funds_from_invalid_chars_address(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
         """Send funds from address with invalid characters."""
         addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(
-            cluster_obj=cluster_session, pool_users=pool_users, addr=addr
-        )
+        self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     def test_missing_fee(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--fee` parameter."""
-        cluster = cluster_session
-
         tx_raw_output = self._get_raw_tx_values(
             cluster_obj=cluster, pool_users=pool_users, temp_dir=temp_dir
         )
@@ -915,13 +900,11 @@ class TestNegative:
 
     def test_missing_ttl(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--ttl` parameter."""
-        cluster = cluster_session
-
         tx_raw_output = self._get_raw_tx_values(
             cluster_obj=cluster, pool_users=pool_users, temp_dir=temp_dir
         )
@@ -944,13 +927,11 @@ class TestNegative:
 
     def test_missing_tx_in(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--tx-in` parameter."""
-        cluster = cluster_session
-
         tx_raw_output = self._get_raw_tx_values(
             cluster_obj=cluster, pool_users=pool_users, temp_dir=temp_dir
         )
@@ -974,13 +955,11 @@ class TestNegative:
 
     def test_missing_tx_out(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--tx-out` parameter."""
-        cluster = cluster_session
-
         tx_raw_output = self._get_raw_tx_values(
             cluster_obj=cluster, pool_users=pool_users, temp_dir=temp_dir
         )
@@ -1010,30 +989,32 @@ class TestMetadata:
     JSON_METADATA_LONG_FILE = DATA_DIR / "tx_metadata_long.json"
     CBOR_METADATA_FILE = DATA_DIR / "tx_metadata.cbor"
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def payment_addr(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""
-        addr = helpers.create_payment_addr_records(
-            "addr_test_metadata0", cluster_obj=cluster_session
-        )[0]
+        data_key = id(self.payment_addr)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        addr = helpers.create_payment_addr_records("addr_test_metadata0", cluster_obj=cluster)[0]
+        cluster_manager.cache.test_data[data_key] = addr
 
         # fund source addresses
         helpers.fund_from_faucet(
             addr,
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
-            request=request,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
         return addr
 
     def test_tx_wrong_json_metadata_format(
-        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Build transaction with wrong fromat of metadata JSON."""
         tx_files = clusterlib.TxFiles(
@@ -1043,16 +1024,14 @@ class TestMetadata:
 
         # it should NOT be possible to build a transaction using wrongly formatted metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_session.build_raw_tx(
+            cluster.build_raw_tx(
                 src_address=payment_addr.address,
                 tx_files=tx_files,
             )
-        assert "The JSON metadata top level must be a map with unsigned integer keys" in str(
-            excinfo.value
-        )
+        assert "The JSON metadata top level must be a map" in str(excinfo.value)
 
     def test_tx_invalid_json_metadata(
-        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Build transaction with invalid metadata JSON."""
         tx_files = clusterlib.TxFiles(
@@ -1062,14 +1041,14 @@ class TestMetadata:
 
         # it should NOT be possible to build a transaction using an invalid metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_session.build_raw_tx(
+            cluster.build_raw_tx(
                 src_address=payment_addr.address,
                 tx_files=tx_files,
             )
         assert "Failed reading: satisfy" in str(excinfo.value)
 
     def test_tx_too_long_metadata_json(
-        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Build transaction with metadata JSON longer than 64 bytes."""
         tx_files = clusterlib.TxFiles(
@@ -1079,22 +1058,24 @@ class TestMetadata:
 
         # it should NOT be possible to build a transaction using too long metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_session.build_raw_tx(
+            cluster.build_raw_tx(
                 src_address=payment_addr.address,
                 tx_files=tx_files,
             )
-        assert "JSON string is longer than 64 bytes" in str(excinfo.value)
+        assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(
+            excinfo.value
+        )
 
     def test_tx_metadata_json(
-        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Send transaction with metadata JSON."""
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_FILE],
         )
-        tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
-        cluster_session.wait_for_new_block(new_blocks=2)
+        tx_raw_output = cluster.send_tx(src_address=payment_addr.address, tx_files=tx_files)
+        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
         # TODO: check that the data is on blockchain
 
@@ -1114,15 +1095,15 @@ class TestMetadata:
         ), "Metadata in TX body doesn't match original metadata"
 
     def test_tx_metadata_cbor(
-        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Send transaction with metadata CBOR."""
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
-        tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
-        cluster_session.wait_for_new_block(new_blocks=2)
+        tx_raw_output = cluster.send_tx(src_address=payment_addr.address, tx_files=tx_files)
+        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 
         with open(tx_raw_output.out_file) as body_fp:
@@ -1139,7 +1120,7 @@ class TestMetadata:
         ), "Metadata in TX body doesn't match original metadata"
 
     def test_tx_metadata_both(
-        self, cluster_session: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Send transaction with both metadata JSON and CBOR."""
         tx_files = clusterlib.TxFiles(
@@ -1147,8 +1128,8 @@ class TestMetadata:
             metadata_json_files=[self.JSON_METADATA_FILE],
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
-        tx_raw_output = cluster_session.send_tx(src_address=payment_addr.address, tx_files=tx_files)
-        cluster_session.wait_for_new_block(new_blocks=2)
+        tx_raw_output = cluster.send_tx(src_address=payment_addr.address, tx_files=tx_files)
+        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 
         with open(tx_raw_output.out_file) as body_fp:

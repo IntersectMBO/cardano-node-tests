@@ -7,11 +7,11 @@ from typing import Tuple
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,38 +29,41 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 class TestFee:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def payment_addrs(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
+        data_key = id(self.payment_addrs)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
         addrs = helpers.create_payment_addr_records(
-            "addr_test_fee0", "addr_test_fee1", cluster_obj=cluster_session
+            "addr_test_fee0", "addr_test_fee1", cluster_obj=cluster
         )
+        cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
         helpers.fund_from_faucet(
             addrs[0],
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
-            request=request,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
         return addrs
 
     @hypothesis.given(fee=st.integers(max_value=-1))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_negative_fee(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         fee: int,
     ):
         """Send a transaction with negative fee."""
-        cluster = cluster_session
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -79,12 +82,11 @@ class TestFee:
     @pytest.mark.parametrize("fee_change", [0, 1.1, 1.5, 2])
     def test_smaller_fee(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         fee_change: float,
     ):
         """Send a transaction with smaller-than-expected fee."""
-        cluster = cluster_session
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -112,12 +114,11 @@ class TestFee:
     @pytest.mark.parametrize("fee_add", [0, 1000, 100_000, 1_000_000])
     def test_expected_or_higher_fee(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         fee_add: int,
     ):
         """Send a transaction fee that is same or higher than expected."""
-        cluster = cluster_session
         amount = 100
 
         src_address = payment_addrs[0].address
@@ -156,29 +157,33 @@ class TestFee:
 
 
 class TestExpectedFees:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def pool_users(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session,
+        data_key = id(self.pool_users)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        created_users = helpers.create_pool_users(
+            cluster_obj=cluster,
             name_template="test_expected_fees",
             no_of_addr=201,
         )
+        cluster_manager.cache.test_data[data_key] = created_users
 
         # fund source addresses
         helpers.fund_from_faucet(
-            *pool_users[:10],
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
-            request=request,
+            *created_users[:10],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
-        return pool_users
+        return created_users
 
     def _create_pool_certificates(
         self,
@@ -272,13 +277,12 @@ class TestExpectedFees:
     @pytest.mark.parametrize("addr_fee", [(1, 197929), (3, 234185), (5, 270441), (10, 361081)])
     def test_pool_registration_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
         """Test pool registration fees."""
-        cluster = cluster_session
         no_of_addr, expected_fee = addr_fee
         temp_template = f"test_pool_fees_{no_of_addr}owners"
 
@@ -319,13 +323,12 @@ class TestExpectedFees:
     @pytest.mark.parametrize("addr_fee", [(1, 185345), (3, 210337), (5, 235329), (10, 297809)])
     def test_pool_deregistration_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
         """Test pool deregistration fees."""
-        cluster = cluster_session
         no_of_addr, expected_fee = addr_fee
         src_address = pool_users[0].payment.address
 
@@ -378,12 +381,11 @@ class TestExpectedFees:
     @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
     def test_addr_registration_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
         """Test stake address registration fees."""
-        cluster = cluster_session
         no_of_addr, expected_fee = addr_fee
         temp_template = "test_addr_registration_fees"
         src_address = pool_users[0].payment.address
@@ -412,12 +414,11 @@ class TestExpectedFees:
     @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
     def test_addr_deregistration_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
         """Test stake address deregistration fees."""
-        cluster = cluster_session
         no_of_addr, expected_fee = addr_fee
         temp_template = "test_addr_deregistration_fees"
         src_address = pool_users[0].payment.address
@@ -448,13 +449,13 @@ class TestExpectedFees:
     )
     def test_transaction_to_1_addr_from_1_addr_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 1 payment address to 1 payment address."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             pool_users=pool_users,
             from_num=1,
             to_num=1,
@@ -466,13 +467,13 @@ class TestExpectedFees:
     )
     def test_transaction_to_10_addrs_from_1_addr_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 1 payment address to 10 payment addresses."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             pool_users=pool_users,
             from_num=1,
             to_num=10,
@@ -484,13 +485,13 @@ class TestExpectedFees:
     )
     def test_transaction_to_1_addr_from_10_addrs_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 10 payment addresses to 1 payment address."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             pool_users=pool_users,
             from_num=10,
             to_num=1,
@@ -502,13 +503,13 @@ class TestExpectedFees:
     )
     def test_transaction_to_10_addrs_from_10_addrs_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 10 payment addresses to 10 payment addresses."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             pool_users=pool_users,
             from_num=10,
             to_num=10,
@@ -520,13 +521,13 @@ class TestExpectedFees:
     )
     def test_transaction_to_100_addrs_from_100_addrs_fees(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 100 payment addresses to 100 payment addresses."""
         self._from_to_transactions(
-            cluster_obj=cluster_session,
+            cluster_obj=cluster,
             pool_users=pool_users,
             from_num=100,
             to_num=100,

@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import hashlib
 import json
 import logging
 import os
@@ -38,7 +39,17 @@ ERRORS_IGNORED_RE = re.compile("EKGServerStartupError|WithIPList SubscriptionTra
 # Use dummy locking if not executing with multiple workers.
 # When running with multiple workers, operations with shared resources (like faucet addresses)
 # need to be locked to single worker (otherwise e.g. ballances would not check).
-FileLockIfXdist = FileLock if os.environ.get("PYTEST_XDIST_TESTRUNUID") else contextlib.nullcontext
+if os.environ.get("PYTEST_XDIST_TESTRUNUID"):
+    IS_XDIST = True
+    FileLockIfXdist = FileLock
+    xdist_sleep = time.sleep
+else:
+    IS_XDIST = False
+    FileLockIfXdist = contextlib.nullcontext
+
+    def xdist_sleep(secs: float) -> None:
+        # pylint: disable=all
+        pass
 
 
 def wait_for(
@@ -54,7 +65,7 @@ def wait_for(
         time.sleep(delay)
 
     if not silent:
-        raise RuntimeError(f"Failed to {message or 'finish'} in time.")
+        raise AssertionError(f"Failed to {message or 'finish'} in time.")
     return False
 
 
@@ -69,6 +80,15 @@ def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
     finally:
         os.chdir(orig_cwd)
         LOGGER.debug(f"Restored CWD to '{orig_cwd}'.")
+
+
+def checksum(filename: FileType, blocksize: int = 65536) -> str:
+    """Return file checksum."""
+    hash = hashlib.blake2b()
+    with open(filename, "rb") as f:
+        for block in iter(lambda: f.read(blocksize), b""):
+            hash.update(block)
+    return hash.hexdigest()
 
 
 def withdraw_reward(cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser) -> None:
@@ -229,11 +249,11 @@ def return_funds_to_faucet(
                         tx_files=fund_tx_files,
                         destination_dir=destination_dir,
                     )
-                except clusterlib.CLIError:
+                    cluster_obj.wait_for_new_block(new_blocks=2)
+                except Exception:
                     pass
         finally:
             logging.disable(logging.NOTSET)
-        cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def fund_from_faucet(
@@ -473,7 +493,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     fund_from_genesis(
         *[d["payment"].address for d in addrs_data.values()],
         cluster_obj=cluster_obj,
-        amount=60_000_000_000,
+        amount=6_000_000_000_000,
         destination_dir=destination_dir,
     )
 
