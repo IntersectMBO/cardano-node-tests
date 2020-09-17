@@ -5,11 +5,11 @@ from typing import List
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import parallel_run
 from cardano_node_tests.utils.types import OptionalFiles
 
 LOGGER = logging.getLogger(__name__)
@@ -23,11 +23,17 @@ def temp_dir(tmp_path_factory: TempdirFactory):
         yield tmp_path
 
 
-@pytest.fixture(scope="class")
-def update_pool_cost(cluster_class: clusterlib.ClusterLib):
+@pytest.fixture
+def cluster_mincost(cluster_manager: parallel_run.ClusterManager) -> clusterlib.ClusterLib:
+    """Update "minPoolCost" to 5000."""
+    return cluster_manager.get(mark="minPoolCost", cleanup=True)
+
+
+@pytest.fixture
+def update_pool_cost(cluster_mincost: clusterlib.ClusterLib):
     """Update "minPoolCost" to 5000."""
     helpers.update_params(
-        cluster_obj=cluster_class,
+        cluster_obj=cluster_mincost,
         cli_arg="--min-pool-cost",
         param_name="minPoolCost",
         param_value=5000,
@@ -287,13 +293,11 @@ def _create_register_pool_tx_delegate_stake_tx(
 class TestStakePool:
     def test_stake_pool_metadata(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
-        request: FixtureRequest,
     ):
         """Create and register a stake pool with metadata."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata"
 
         pool_name = "cardano-node-tests"
@@ -327,9 +331,8 @@ class TestStakePool:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_session["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         # register pool and delegate stake address
@@ -342,13 +345,11 @@ class TestStakePool:
 
     def test_stake_pool_metadata_not_avail(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
-        request: FixtureRequest,
     ):
         """Create and register a stake pool with metadata file not available."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_not_avail"
 
         pool_name = f"pool_{clusterlib.get_rand_str(8)}"
@@ -382,9 +383,8 @@ class TestStakePool:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_session["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         # register pool and delegate stake address
@@ -398,13 +398,11 @@ class TestStakePool:
     @pytest.mark.parametrize("no_of_addr", [1, 3])
     def test_create_stake_pool(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
         no_of_addr: int,
-        request: FixtureRequest,
     ):
         """Create and register a stake pool."""
-        cluster = cluster_session
         temp_template = f"test_stake_pool_{no_of_addr}owners"
 
         pool_data = clusterlib.PoolData(
@@ -425,9 +423,8 @@ class TestStakePool:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_session["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         # register pool
@@ -440,14 +437,12 @@ class TestStakePool:
     @pytest.mark.parametrize("no_of_addr", [1, 3])
     def test_deregister_stake_pool(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         no_of_addr: int,
-        request: FixtureRequest,
     ):
         """Deregister stake pool."""
-        cluster = cluster_session
         temp_template = f"test_deregister_stake_pool_{no_of_addr}owners"
 
         pool_metadata = {
@@ -480,9 +475,8 @@ class TestStakePool:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_session["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         # register pool and delegate stake address
@@ -538,13 +532,11 @@ class TestStakePool:
 
     def test_reregister_stake_pool(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
-        request: FixtureRequest,
     ):
         """Re-register stake pool."""
-        cluster = cluster_session
         temp_template = "test_reregister_stake_pool"
 
         pool_metadata = {
@@ -573,9 +565,8 @@ class TestStakePool:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_session["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=1_500_000_000,
-            request=request,
         )
 
         # register pool and delegate stake address
@@ -655,14 +646,12 @@ class TestStakePool:
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_metadata(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         no_of_addr: int,
-        request: FixtureRequest,
     ):
         """Update stake pool metadata."""
-        cluster = cluster_session
         temp_template = f"test_update_stake_pool_metadata_{no_of_addr}owners"
 
         pool_metadata = {
@@ -711,9 +700,8 @@ class TestStakePool:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_session["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         # register pool
@@ -743,14 +731,12 @@ class TestStakePool:
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_parameters(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         no_of_addr: int,
-        request: FixtureRequest,
     ):
         """Update stake pool parameters."""
-        cluster = cluster_session
         temp_template = f"test_update_stake_pool_{no_of_addr}owners"
 
         pool_metadata = {
@@ -785,9 +771,8 @@ class TestStakePool:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_session["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         # register pool
@@ -816,12 +801,10 @@ class TestStakePool:
 
     def test_sign_in_multiple_stages(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ):
         """Create and register a stake pool with TX signed in multiple stages."""
-        cluster = cluster_session
         temp_template = "test_sign_in_multiple_stages"
 
         pool_data = clusterlib.PoolData(
@@ -842,9 +825,8 @@ class TestStakePool:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_session["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         # create node VRF key pair
@@ -925,44 +907,51 @@ class TestStakePool:
         )
 
 
-@pytest.mark.first
 @pytest.mark.usefixtures("temp_dir", "update_pool_cost")
 class TestPoolCost:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def pool_owners(
-        self, cluster_class: clusterlib.ClusterLib, addrs_data_class: dict, request: FixtureRequest
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster_mincost: clusterlib.ClusterLib,
     ):
         """Create class scoped pool owners."""
+        data_key = id(self.pool_owners)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str()
         temp_template = f"test_pool_cost_class_{rand_str}"
 
         pool_owners = helpers.create_pool_users(
-            cluster_obj=cluster_class,
+            cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=1,
         )
+        cluster_manager.cache.test_data[data_key] = pool_owners
 
         # fund source address
         helpers.fund_from_faucet(
             pool_owners[0].payment,
-            cluster_obj=cluster_class,
-            faucet_data=addrs_data_class["user1"],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         return pool_owners
 
     @hypothesis.given(pool_cost=st.integers(max_value=4999))  # minPoolCost is now 5000
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_stake_pool_low_cost(
         self,
-        cluster_class: clusterlib.ClusterLib,
+        cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
         pool_cost: int,
     ):
         """Try to create and register a stake pool with pool cost lower than 'minPoolCost'."""
-        cluster = cluster_class
+        cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str()
 
         pool_data = clusterlib.PoolData(
@@ -987,13 +976,13 @@ class TestPoolCost:
     @pytest.mark.parametrize("pool_cost", [5000, 9999999])
     def test_stake_pool_cost(
         self,
-        cluster_class: clusterlib.ClusterLib,
-        addrs_data_class: dict,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster_mincost: clusterlib.ClusterLib,
+        pool_owners: List[clusterlib.PoolUser],
         pool_cost: int,
-        request: FixtureRequest,
     ):
         """Create and register a stake pool with pool cost >= 'minPoolCost'."""
-        cluster = cluster_class
+        cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str()
         temp_template = f"test_stake_pool_cost_{rand_str}"
 
@@ -1015,9 +1004,8 @@ class TestPoolCost:
         helpers.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
-            faucet_data=addrs_data_class["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=900_000_000,
-            request=request,
         )
 
         # register pool
@@ -1029,32 +1017,36 @@ class TestPoolCost:
 
 
 class TestNegative:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def pool_users(
         self,
-        cluster_session: clusterlib.ClusterLib,
-        addrs_data_session: dict,
-        request: FixtureRequest,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        pool_users = helpers.create_pool_users(
-            cluster_obj=cluster_session,
+        data_key = id(self.pool_users)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        created_users = helpers.create_pool_users(
+            cluster_obj=cluster,
             name_template="test_negative",
             no_of_addr=2,
         )
+        cluster_manager.cache.test_data[data_key] = created_users
 
         # fund source addresses
         helpers.fund_from_faucet(
-            pool_users[0],
-            cluster_obj=cluster_session,
-            faucet_data=addrs_data_session["user1"],
+            created_users[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=600_000_000,
-            request=request,
         )
 
-        return pool_users
+        return created_users
 
-    @pytest.fixture()
+    @pytest.fixture
     def pool_data(self) -> clusterlib.PoolData:
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{clusterlib.get_rand_str()}",
@@ -1066,13 +1058,11 @@ class TestNegative:
 
     def test_pool_registration_cert_wrong_vrf(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Generate pool registration certificate using wrong VRF key."""
-        cluster = cluster_session
-
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1087,13 +1077,11 @@ class TestNegative:
 
     def test_pool_registration_cert_wrong_cold(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Generate pool registration certificate using wrong Cold key."""
-        cluster = cluster_session
-
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1108,13 +1096,11 @@ class TestNegative:
 
     def test_pool_registration_cert_wrong_stake(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Generate pool registration certificate using wrong stake key."""
-        cluster = cluster_session
-
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1129,13 +1115,11 @@ class TestNegative:
 
     def test_pool_registration_missing_cold_skey(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Register pool using transaction with missing Cold skey."""
-        cluster = cluster_session
-
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1160,13 +1144,11 @@ class TestNegative:
 
     def test_pool_registration_missing_payment_skey(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Register pool using transaction with missing payment skey."""
-        cluster = cluster_session
-
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1191,13 +1173,11 @@ class TestNegative:
 
     def test_pool_registration_conflicting_certs(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Send both pool registration and deregistration certificates in single TX."""
-        cluster = cluster_session
-
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1232,13 +1212,11 @@ class TestNegative:
 
     def test_pool_deregistration_not_registered(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Deregister pool that is not registered."""
-        cluster = cluster_session
-
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
@@ -1258,11 +1236,10 @@ class TestNegative:
 
     def test_stake_pool_metadata_no_name(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
         """Test pool metadata that is missing the 'name' key."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_no_name"
 
         pool_metadata = {
@@ -1280,11 +1257,10 @@ class TestNegative:
 
     def test_stake_pool_metadata_no_description(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
         """Test pool metadata that is missing the 'description' key."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_no_description"
 
         pool_metadata = {
@@ -1302,11 +1278,10 @@ class TestNegative:
 
     def test_stake_pool_metadata_no_ticker(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
         """Test pool metadata that is missing the 'ticker' key."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_no_ticker"
 
         pool_metadata = {
@@ -1324,11 +1299,10 @@ class TestNegative:
 
     def test_stake_pool_metadata_no_homepage(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
         """Test pool metadata that is missing the 'homepage' key."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_no_homepage"
 
         pool_metadata = {
@@ -1345,15 +1319,14 @@ class TestNegative:
         assert 'key "homepage" not found' in str(excinfo.value)
 
     @hypothesis.given(pool_name=st.text(min_size=51))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_stake_pool_metadata_long_name(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         pool_name: str,
     ):
         """Test pool metadata with the 'name' value longer than allowed."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_long_name"
 
         pool_metadata = {
@@ -1375,15 +1348,14 @@ class TestNegative:
         )
 
     @hypothesis.given(pool_description=st.text(min_size=256))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_stake_pool_metadata_long_description(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         pool_description: str,
     ):
         """Test pool metadata with the 'description' value longer than allowed."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_long_description"
 
         pool_metadata = {
@@ -1405,17 +1377,16 @@ class TestNegative:
         )
 
     @hypothesis.given(pool_ticker=st.text())
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_stake_pool_metadata_long_ticker(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         pool_ticker: str,
     ):
         """Test pool metadata with the 'ticker' value longer than allowed."""
         hypothesis.assume(not (3 <= len(pool_ticker) <= 5))
 
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_long_ticker"
 
         pool_metadata = {
@@ -1433,15 +1404,14 @@ class TestNegative:
         assert '"ticker" must have at least 3 and at most 5 characters' in str(excinfo.value)
 
     @hypothesis.given(pool_homepage=st.text(min_size=425))
-    @hypothesis.settings(deadline=None)
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     def test_stake_pool_metadata_long_homepage(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         pool_homepage: str,
     ):
         """Test pool metadata with the 'homepage' value longer than allowed."""
-        cluster = cluster_session
         temp_template = "test_stake_pool_metadata_long_homepage"
 
         pool_metadata = {
@@ -1460,13 +1430,11 @@ class TestNegative:
 
     def test_stake_pool_long_metadata_url(
         self,
-        cluster_session: clusterlib.ClusterLib,
+        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
         """Test pool creation with the 'metadata-url' longer than allowed."""
-        cluster = cluster_session
-
         pool_name = "cardano-node-tests"
         pool_metadata = {
             "name": pool_name,

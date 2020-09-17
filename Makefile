@@ -6,9 +6,9 @@ install:
 .dirs:
 	mkdir -p .artifacts .cli_coverage .reports
 
-# run all tests
+# run all tests, generate allure report
 tests: .dirs
-	pytest cardano_node_tests -n 8 --artifacts-base-dir=.artifacts/ --cli-coverage-dir=.cli_coverage/ --html=.reports/report.html
+	pytest cardano_node_tests -n 8 --dist loadscope --artifacts-base-dir=.artifacts/ --cli-coverage-dir=.cli_coverage/ --alluredir=.reports/
 
 lint:
 	pre-commit run -a
