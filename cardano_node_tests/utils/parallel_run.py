@@ -1,9 +1,11 @@
+import contextlib
 import dataclasses
 import datetime
 import logging
 import os
 import random
 from pathlib import Path
+from typing import Generator
 from typing import Optional
 
 from _pytest.fixtures import FixtureRequest
@@ -143,6 +145,15 @@ class ClusterManager:
         with helpers.FileLockIfXdist(self.cluster_lock):
             self._log("called `_set_needs_restart`")
             open(self.lock_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
+
+    @contextlib.contextmanager
+    def needs_restart_after_failure(self) -> Generator:
+        """Indicate that the cluster needs restart if command failed - context manager."""
+        try:
+            yield
+        except Exception:
+            self.set_needs_restart()
+            raise
 
     def _on_marked_test_stop(self) -> None:
         """Perform actions after marked tests are finished."""
