@@ -1,7 +1,10 @@
 # Testing artifacts
-.artifacts/*
-.cli_coverage/*
-.reports/*
+.artifacts/
+.cli_coverage/
+.reports/
+
+# Local temporary files
+tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
