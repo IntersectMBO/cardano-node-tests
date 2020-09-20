@@ -13,6 +13,7 @@ from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,6 +21,8 @@ CLUSTER_LOCK = ".cluster.lock"
 LOCK_LOG_FILE = ".lock.log"
 SESSION_RUNNING_FILE = ".session_running"
 TEST_SINGLETON_FILE = ".test_singleton"
+RESOURCE_LOCKED = ".resource_locked"
+RESOURCE_IN_USE = ".resource_in_use"
 RESTART_NEEDED_GLOB = ".needs_restart"
 RESTART_IN_PROGRESS_GLOB = ".restart_in_progress"
 RESTART_AFTER_MARK_GLOB = ".restart_after_mark"
@@ -177,10 +180,25 @@ class ClusterManager:
         with helpers.FileLockIfXdist(self.cluster_lock):
             self._log("called `on_test_stop`")
 
-            mark_files = list(self.lock_dir.glob(f"{TEST_RUNNING_MARK_GLOB}_*_{self.worker_id}"))
             # remove mark files created by the worker
+            mark_files = list(self.lock_dir.glob(f"{TEST_RUNNING_MARK_GLOB}_*_{self.worker_id}"))
             for f in mark_files:
                 os.remove(f)
+
+            # remove resource locking files created by the worker
+            resource_locking_files = list(
+                self.lock_dir.glob(f"{RESOURCE_LOCKED}_*_{self.worker_id}")
+            )
+            for f in resource_locking_files:
+                os.remove(f)
+
+            # remove "resource in use" files created by the worker
+            resource_in_use_files = list(
+                self.lock_dir.glob(f"{RESOURCE_IN_USE}_*_{self.worker_id}")
+            )
+            for f in resource_in_use_files:
+                os.remove(f)
+
             # remove file that indicates that a test is running on the worker
             os.remove(self.lock_dir / f"{TEST_RUNNING_GLOB}_{self.worker_id}")
 
@@ -194,6 +212,8 @@ class ClusterManager:
         self,
         singleton: bool = False,
         mark: str = "",
+        lock_resources: UnpackableSequence = (),
+        use_resources: UnpackableSequence = (),
         cleanup: bool = False,
     ) -> clusterlib.ClusterLib:
         # pylint: disable=too-many-statements,too-many-branches
@@ -211,7 +231,7 @@ class ClusterManager:
             first_iteration = False
 
             with helpers.FileLockIfXdist(self.cluster_lock):
-                # repeated call during test run, nothing to set up
+                # test is already running, nothing to set up
                 if first_iteration and test_running_file.exists() and cluster_obj:
                     self._log(f"{test_running_file} already exists")
                     return cluster_obj
@@ -251,6 +271,9 @@ class ClusterManager:
                     cluster_obj = self._restart()
                     self.cache.cluster_obj = cluster_obj
 
+                # "marked tests" = group of tests marked with a specific mark.
+                # While these tests are running, no unmarked test can start.
+                # Check if it is indicated that marked tests will start next.
                 marked_tests_starting = list(self.lock_dir.glob(f"{TEST_MARK_STARTING_GLOB}_*"))
                 if not mark_start_here and marked_tests_starting:
                     self._log("marked tests starting, cannot run")
@@ -268,13 +291,16 @@ class ClusterManager:
 
                 test_curr_mark = list(self.lock_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
 
+                # indicate that it is planned to start marked tests as soon as all currently running
+                # tests are finished
                 if mark and not test_curr_mark and started_tests:
-                    self._log("unmarked tests running, wants to start '{mark}'")
+                    self._log(f"unmarked tests running, wants to start '{mark}'")
                     mark_start_here = True
                     open(self.lock_dir / f"{TEST_MARK_STARTING_GLOB}_{self.worker_id}", "a").close()
                     sleep_delay = 2
                     no_tests_iteration = 0
                     continue
+                # no tests are running, can start marked test
                 if mark and not test_curr_mark:
                     self._log(f"no tests running, starting '{mark}'")
                     open(
@@ -283,7 +309,9 @@ class ClusterManager:
                     open(self.lock_dir / f"{TEST_CURR_MARK_GLOB}_{mark}", "a").close()
                     no_tests_iteration = 0
 
+                # marked tests are already running
                 if test_curr_mark:
+                    # check if there is a stale mark status file
                     if started_tests:
                         no_tests_iteration = 0
                     else:
@@ -297,6 +325,8 @@ class ClusterManager:
                         sleep_delay = 5
                         continue
 
+                    # check if this test has the same mark as currently running marked tests,
+                    # so it can run
                     active_mark_file = test_curr_mark[0].name
                     if f"{TEST_CURR_MARK_GLOB}_{mark}" not in active_mark_file:
                         self._log(f"marked tests running, I have different mark - {mark}")
@@ -308,6 +338,7 @@ class ClusterManager:
                         self.lock_dir / f"{TEST_RUNNING_MARK_GLOB}_{mark}_{self.worker_id}", "a"
                     ).close()
 
+                # this test is a singleton - not other test can run while this one is running
                 if singleton:
                     if started_tests:
                         self._log("tests are running, cannot start singleton")
@@ -317,12 +348,65 @@ class ClusterManager:
                     self._log("tests are not running, starting singleton")
                     open(self.lock_dir / TEST_SINGLETON_FILE, "a").close()
 
+                # this test wants to lock some resources, check if these are not locked or in use
+                if lock_resources:
+                    res_usable = False
+                    for res in lock_resources:
+                        res_locked = list(self.lock_dir.glob(f"{RESOURCE_LOCKED}_{res}_*"))
+                        if res_locked:
+                            self._log(f"resource '{res}' locked, cannot start")
+                            break
+                        res_used = list(self.lock_dir.glob(f"{RESOURCE_IN_USE}_{res}_*"))
+                        if res_used:
+                            self._log(f"resource '{res}' in use, cannot lock and start")
+                            break
+                    else:
+                        res_usable = True
+
+                    if not res_usable:
+                        sleep_delay = 5
+                        no_tests_iteration = 0
+                        continue
+                    self._log(
+                        "none of the resources in '{lock_resources}' locked or in use, "
+                        "starting and locking"
+                    )
+
+                    _ = [
+                        open(self.lock_dir / f"{RESOURCE_LOCKED}_{r}_{self.worker_id}", "a").close()
+                        for r in lock_resources
+                    ]
+
+                # filter out `lock_resources` from the list of `use_resources`
+                use_resources = list(set(use_resources) - set(lock_resources))
+
+                # this test wants to use some resources, check if these are not locked
+                if use_resources:
+                    res_locked = []
+                    for res in use_resources:
+                        res_locked = list(self.lock_dir.glob(f"{RESOURCE_LOCKED}_{res}_*"))
+                        if res_locked:
+                            self._log(f"resource '{res}' locked, cannot start")
+                            break
+                    if res_locked:
+                        sleep_delay = 5
+                        no_tests_iteration = 0
+                        continue
+                    self._log("none of the resources in '{use_resources}' locked, starting")
+                    _ = [
+                        open(self.lock_dir / f"{RESOURCE_IN_USE}_{r}_{self.worker_id}", "a").close()
+                        for r in use_resources
+                    ]
+
+                # cleanup = restart of cluster
                 if cleanup:
+                    # cleanup after group of test that are marked with a marker
                     if mark:
                         self._log("cleanup and mark")
                         open(
                             self.lock_dir / f"{RESTART_AFTER_MARK_GLOB}_{self.worker_id}", "a"
                         ).close()
+                    # cleanup after single test (e.g. singleton)
                     else:
                         self._log("cleanup and not mark")
                         open(self.lock_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
