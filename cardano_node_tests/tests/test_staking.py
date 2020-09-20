@@ -604,7 +604,6 @@ class TestRewards:
     def test_no_reward_unmet_pledge(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -614,6 +613,8 @@ class TestRewards:
         Increase the needed pledge amount by changing pool parameters.
         """
         pool_name = "node-pool2"
+        cluster = cluster_manager.get(lock_resources=[pool_name])
+
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = "test_no_reward_unmet_pledge"
@@ -717,7 +718,6 @@ class TestRewards:
     def test_no_reward_unmet_pledge2(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -727,6 +727,8 @@ class TestRewards:
         Withdraw part of pledge so the funds are lower than what is needed by the stake pool.
         """
         pool_name = "node-pool2"
+        cluster = cluster_manager.get(lock_resources=[pool_name])
+
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = "test_no_reward_unmet_pledge"
@@ -846,7 +848,6 @@ class TestRewards:
     def test_no_reward_unregistered_stake_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the pool is not receiving rewards when owner's stake address is unregistered.
 
@@ -854,6 +855,8 @@ class TestRewards:
         neither pool owners nor those who delegate to that pool receive rewards.
         """
         pool_name = "node-pool2"
+        cluster = cluster_manager.get(lock_resources=[pool_name])
+
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = "test_no_reward_unregistered_stake_addr"
@@ -987,15 +990,16 @@ class TestRewards:
     def test_no_reward_unregistered_reward_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the reward address is not receiving rewards when unregistered.
 
         The stake pool continues to operate normally and those who delegate to that pool receive
         rewards.
         """
-        temp_template = "test_no_reward_stake_unregistered"
         pool_name = "node-pool2"
+        cluster = cluster_manager.get(lock_resources=[pool_name])
+
+        temp_template = "test_no_reward_stake_unregistered"
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
 
