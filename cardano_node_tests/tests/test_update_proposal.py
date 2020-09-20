@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,10 +22,12 @@ def temp_dir(tmp_path_factory: TempdirFactory):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-def test_update_proposal(cluster_singleton_clean: clusterlib.ClusterLib):
+def test_update_proposal(cluster_manager: parallel_run.ClusterManager):
     """Submit update proposal."""
+    cluster = cluster_manager.get(singleton=True, cleanup=True)
+
     helpers.update_params(
-        cluster_obj=cluster_singleton_clean,
+        cluster_obj=cluster,
         cli_arg="--decentralization-parameter",
         param_name="decentralisationParam",
         param_value=0.5,
