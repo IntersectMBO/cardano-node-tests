@@ -37,6 +37,8 @@ def pytest_configure(config: Any) -> None:
     config._metadata["cardano-node"] = cardano_version["cardano-node"]
     config._metadata["cardano-node rev"] = cardano_version["git_rev"]
     config._metadata["ghc"] = cardano_version["ghc"]
+    config._metadata["tests rev"] = helpers.CURRENT_COMMIT
+    config._metadata["github url"] = helpers.GITHUB_URL
 
 
 @pytest.fixture(scope="session")
@@ -59,6 +61,8 @@ def _run_cluster_cleanup(
     cluster_manager_obj.stop()
     # process artifacts
     helpers.process_artifacts(pytest_tmp_dir=pytest_tmp_dir, request=request)
+    # save environment info for Allure
+    helpers.save_env_for_allure(request)
 
 
 @pytest.yield_fixture(scope="session")
