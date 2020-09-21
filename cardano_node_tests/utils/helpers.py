@@ -33,6 +33,8 @@ logging.getLogger("filelock").setLevel(logging.WARNING)
 
 
 LOGGER = logging.getLogger(__name__)
+
+LAUNCH_PATH = Path(os.getcwd())
 ADDR_DATA = "addr_data.pickle"
 
 TEST_TEMP_DIR = Path(tempfile.gettempdir()) / "cardano-node-tests"
@@ -69,6 +71,7 @@ def run_shell_command(command: str, workdir: FileType = "") -> bytes:
 
 
 CURRENT_COMMIT = run_shell_command("git rev-parse HEAD").decode().strip()
+GITHUB_URL = f"https://github.com/input-output-hk/cardano-node-tests/blob/{CURRENT_COMMIT}"
 
 
 def get_vcs_link() -> str:
@@ -77,10 +80,7 @@ def get_vcs_link() -> str:
     lineno = calling_frame.f_lineno + 1  # type: ignore
     fname = calling_frame.f_globals["__file__"]  # type: ignore
     fpart = fname[fname.find("cardano_node_tests") :]
-    url = (
-        f"https://github.com/input-output-hk/cardano-node-tests/blob/{CURRENT_COMMIT}"
-        f"/{fpart}#L{lineno}"
-    )
+    url = f"{GITHUB_URL}/{fpart}#L{lineno}"
     return url
 
 
@@ -747,3 +747,20 @@ def process_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
     errors = search_cluster_artifacts(artifacts_dir)
     if errors:
         report_artifacts_errors(errors)
+
+
+def save_env_for_allure(request: FixtureRequest) -> None:
+    """Save environment info in a format for Allure."""
+    alluredir = request.config.getoption("--alluredir")
+
+    if not alluredir:
+        return
+
+    alluredir = LAUNCH_PATH / alluredir
+    metadata: Dict[str, Any] = request.config._metadata  # type: ignore
+    with open(alluredir / "environment.properties", "w+") as infile:
+        for k, v in metadata.items():
+            if isinstance(v, dict):
+                continue
+            name = k.replace(" ", ".")
+            infile.write(f"{name}={v}\n")
