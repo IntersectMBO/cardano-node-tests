@@ -27,6 +27,10 @@ from filelock import FileLock
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils.types import FileType
 
+# suppress messages from filelock
+logging.getLogger("filelock").setLevel(logging.WARNING)
+
+
 LOGGER = logging.getLogger(__name__)
 ADDR_DATA = "addr_data.pickle"
 
