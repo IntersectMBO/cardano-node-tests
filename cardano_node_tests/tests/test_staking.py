@@ -669,7 +669,7 @@ class TestRewards:
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
-        cluster.wait_for_new_epoch(3, padding_seconds=30)
+        cluster.wait_for_new_epoch(4, padding_seconds=30)
 
         orig_owner_reward = cluster.get_stake_addr_info(
             pool_rec["reward"].address
@@ -713,7 +713,7 @@ class TestRewards:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
 
-            cluster.wait_for_new_epoch(4, padding_seconds=30)
+            cluster.wait_for_new_epoch(5, padding_seconds=30)
 
             # check that new rewards were received by those delegating to the pool
             assert (
@@ -789,7 +789,7 @@ class TestRewards:
             f"funds: {cluster.get_address_balance(pool_owner.payment.address)}"
         )
 
-        cluster.wait_for_new_epoch(3, padding_seconds=30)
+        cluster.wait_for_new_epoch(4, padding_seconds=30)
 
         orig_owner_reward = cluster.get_stake_addr_info(
             pool_rec["reward"].address
@@ -915,7 +915,7 @@ class TestRewards:
                 == src_init_balance - tx_raw_deregister_output.fee + cluster.get_key_deposit()
             ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
-            cluster.wait_for_new_epoch(3, padding_seconds=30)
+            cluster.wait_for_new_epoch(4, padding_seconds=30)
 
             # check that the stake address is no longer delegated
             assert not cluster.get_stake_addr_info(
@@ -1060,7 +1060,7 @@ class TestRewards:
                 == src_init_balance - tx_raw_deregister_output.fee + cluster.get_key_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
-            cluster.wait_for_new_epoch(3, padding_seconds=30)
+            cluster.wait_for_new_epoch(4, padding_seconds=30)
 
             # check that the reward address is no longer delegated
             assert not cluster.get_stake_addr_info(
