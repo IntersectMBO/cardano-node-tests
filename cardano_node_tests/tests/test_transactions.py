@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List
 from typing import Tuple
 
+import allure
 import cbor2
 import hypothesis
 import hypothesis.strategies as st
@@ -63,6 +64,7 @@ class TestBasic:
         return addrs
 
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
+    @allure.link(helpers.get_vcs_link())
     def test_transfer_funds(
         self,
         cluster: clusterlib.ClusterLib,
@@ -95,6 +97,7 @@ class TestBasic:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+    @allure.link(helpers.get_vcs_link())
     def test_transfer_all_funds(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -125,6 +128,7 @@ class TestBasic:
             == dst_init_balance + src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+    @allure.link(helpers.get_vcs_link())
     def test_get_txid(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -267,6 +271,7 @@ class TestMultiInOut:
                 cluster_obj.get_address_balance(addr) == dst_init_balances[addr] + amount
             ), f"Incorrect balance for destination address `{addr}`"
 
+    @allure.link(helpers.get_vcs_link())
     def test_10_transactions(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -315,6 +320,7 @@ class TestMultiInOut:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     @pytest.mark.parametrize("amount", [1, 100, 11_000])
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_10_addrs_from_1_addr(
         self,
         cluster: clusterlib.ClusterLib,
@@ -331,6 +337,7 @@ class TestMultiInOut:
         )
 
     @pytest.mark.parametrize("amount", [1, 100, 11_000, 100_000])
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_1_addr_from_10_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -347,6 +354,7 @@ class TestMultiInOut:
         )
 
     @pytest.mark.parametrize("amount", [1, 100, 11_000])
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -363,6 +371,7 @@ class TestMultiInOut:
         )
 
     @pytest.mark.parametrize("amount", [1, 100, 1000])
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -406,6 +415,7 @@ class TestNotBalanced:
 
         return addrs
 
+    @allure.link(helpers.get_vcs_link())
     def test_negative_change(
         self,
         cluster: clusterlib.ClusterLib,
@@ -450,6 +460,7 @@ class TestNotBalanced:
 
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_wrong_balance(
         self,
         cluster: clusterlib.ClusterLib,
@@ -616,6 +627,7 @@ class TestNegative:
         txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts]
         return txins_combined, txouts_combined
 
+    @allure.link(helpers.get_vcs_link())
     def test_past_ttl(
         self,
         cluster: clusterlib.ClusterLib,
@@ -650,6 +662,7 @@ class TestNegative:
             cluster.submit_tx(out_file_signed)
         assert "ExpiredUTxO" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_duplicated_tx(
         self,
         cluster: clusterlib.ClusterLib,
@@ -699,6 +712,7 @@ class TestNegative:
             cluster.submit_tx(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_wrong_signing_key(
         self,
         cluster: clusterlib.ClusterLib,
@@ -716,6 +730,7 @@ class TestNegative:
             )
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_extra_signing_keys(
         self,
         cluster: clusterlib.ClusterLib,
@@ -751,6 +766,7 @@ class TestNegative:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+    @allure.link(helpers.get_vcs_link())
     def test_duplicate_signing_keys(
         self,
         cluster: clusterlib.ClusterLib,
@@ -786,6 +802,7 @@ class TestNegative:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+    @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_reward_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -797,6 +814,7 @@ class TestNegative:
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_non_existent_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -809,6 +827,7 @@ class TestNegative:
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -823,6 +842,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -835,6 +855,7 @@ class TestNegative:
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_non_existent_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -847,6 +868,7 @@ class TestNegative:
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -861,6 +883,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -871,6 +894,7 @@ class TestNegative:
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
+    @allure.link(helpers.get_vcs_link())
     def test_missing_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -898,6 +922,7 @@ class TestNegative:
             )
         assert "Missing: --fee LOVELACE" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_missing_ttl(
         self,
         cluster: clusterlib.ClusterLib,
@@ -925,6 +950,7 @@ class TestNegative:
             )
         assert "Missing: --ttl SLOT" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_missing_tx_in(
         self,
         cluster: clusterlib.ClusterLib,
@@ -953,6 +979,7 @@ class TestNegative:
             )
         assert "Missing: --tx-in TX-IN" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_missing_tx_out(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1013,6 +1040,7 @@ class TestMetadata:
 
         return addr
 
+    @allure.link(helpers.get_vcs_link())
     def test_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1030,6 +1058,7 @@ class TestMetadata:
             )
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1047,6 +1076,7 @@ class TestMetadata:
             )
         assert "Failed reading: satisfy" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1066,6 +1096,7 @@ class TestMetadata:
             excinfo.value
         )
 
+    @allure.link(helpers.get_vcs_link())
     def test_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1094,6 +1125,7 @@ class TestMetadata:
             cbor_body_metadata == json_file_metadata
         ), "Metadata in TX body doesn't match original metadata"
 
+    @allure.link(helpers.get_vcs_link())
     def test_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1119,6 +1151,7 @@ class TestMetadata:
             cbor_body_metadata == cbor_file_metadata
         ), "Metadata in TX body doesn't match original metadata"
 
+    @allure.link(helpers.get_vcs_link())
     def test_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):

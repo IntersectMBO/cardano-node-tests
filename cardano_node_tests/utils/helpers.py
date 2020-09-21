@@ -1,6 +1,7 @@
 import argparse
 import contextlib
 import hashlib
+import inspect
 import json
 import logging
 import os
@@ -54,6 +55,33 @@ else:
     def xdist_sleep(secs: float) -> None:
         # pylint: disable=all
         pass
+
+
+def run_shell_command(command: str, workdir: FileType = "") -> bytes:
+    """Run command in shell."""
+    cmd = f"bash -c '{command}'"
+    cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
+    return stdout
+
+
+CURRENT_COMMIT = run_shell_command("git rev-parse HEAD").decode().strip()
+
+
+def get_vcs_link() -> str:
+    """Return link to the current+1 line in GitHub."""
+    calling_frame = inspect.currentframe().f_back  # type: ignore
+    lineno = calling_frame.f_lineno + 1  # type: ignore
+    fname = calling_frame.f_globals["__file__"]  # type: ignore
+    fpart = fname[fname.find("cardano_node_tests") :]
+    url = (
+        f"https://github.com/input-output-hk/cardano-node-tests/blob/{CURRENT_COMMIT}"
+        f"/{fpart}#L{lineno}"
+    )
+    return url
 
 
 def wait_for(
@@ -159,17 +187,6 @@ def write_json(location: FileType, content: dict) -> FileType:
     with open(Path(location).expanduser(), "w") as out_file:
         out_file.write(json.dumps(content, indent=4))
     return location
-
-
-def run_shell_command(command: str, workdir: FileType = "") -> bytes:
-    """Run command in shell."""
-    cmd = f"bash -c '{command}'"
-    cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    stdout, stderr = p.communicate()
-    if p.returncode != 0:
-        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
-    return stdout
 
 
 def get_cardano_version() -> dict:
