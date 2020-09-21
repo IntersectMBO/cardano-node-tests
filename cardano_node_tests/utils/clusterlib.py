@@ -1314,18 +1314,24 @@ class ClusterLib:
             return
 
         last_block_epoch = self.get_last_block_epoch()
-        LOGGER.debug(
-            f"Current epoch: {last_block_epoch}; Waiting the beginning of epoch: "
-            "{last_block_epoch + new_epochs}"
-        )
-
         expected_epoch_no = last_block_epoch + new_epochs
+
+        LOGGER.debug(
+            f"Current epoch: {last_block_epoch}; Waiting for the beginning of epoch: "
+            "{expected_epoch_no}"
+        )
 
         # how many seconds to wait until start of the expected epoch
         sleep_slots = (
             last_block_epoch + new_epochs
         ) * self.epoch_length - self.get_last_block_slot_no()
         sleep_time = int(sleep_slots * self.slot_length) + (padding_seconds or 1)
+
+        if sleep_time > 15:
+            LOGGER.info(
+                f"Waiting for {sleep_time} sec for start of the epoch no {expected_epoch_no}"
+            )
+
         time.sleep(sleep_time)
 
         wakeup_epoch = self.get_last_block_epoch()
