@@ -633,27 +633,28 @@ def update_params(
     cluster_obj: clusterlib.ClusterLib, cli_arg: str, param_name: str, param_value: Any
 ) -> None:
     """Update params using update proposal."""
-    if str(cluster_obj.get_protocol_params()[param_name]) == str(param_value):
-        LOGGER.info(f"Value for '{param_name}' is already {param_value}. Nothing to do.")
-        return
+    with FileLockIfXdist(f"{TEST_TEMP_DIR}/update_params.lock"):
+        if str(cluster_obj.get_protocol_params()[param_name]) == str(param_value):
+            LOGGER.info(f"Value for '{param_name}' is already {param_value}. Nothing to do.")
+            return
 
-    LOGGER.info("Waiting for new epoch to submit proposal.")
-    cluster_obj.wait_for_new_epoch()
+        LOGGER.info("Waiting for new epoch to submit proposal.")
+        cluster_obj.wait_for_new_epoch()
 
-    cluster_obj.submit_update_proposal(cli_args=[cli_arg, str(param_value)])
+        cluster_obj.submit_update_proposal(cli_args=[cli_arg, str(param_value)])
 
-    LOGGER.info(
-        f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value}). "
-        "Sleeping until next epoch."
-    )
-    cluster_obj.wait_for_new_epoch()
-
-    updated_value = cluster_obj.get_protocol_params()[param_name]
-    if str(updated_value) != str(param_value):
-        raise AssertionError(
-            f"Cluster update proposal failed! Param value: {updated_value}.\n"
-            f"Tip:{cluster_obj.get_tip()}"
+        LOGGER.info(
+            f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value}). "
+            "Sleeping until next epoch."
         )
+        cluster_obj.wait_for_new_epoch()
+
+        updated_value = cluster_obj.get_protocol_params()[param_name]
+        if str(updated_value) != str(param_value):
+            raise AssertionError(
+                f"Cluster update proposal failed! Param value: {updated_value}.\n"
+                f"Tip:{cluster_obj.get_tip()}"
+            )
 
 
 def save_tests_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
