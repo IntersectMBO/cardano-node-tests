@@ -4,6 +4,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 
+import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
@@ -155,6 +156,7 @@ def _delegate_stake_addr(
 
 
 class TestDelegateAddr:
+    @allure.link(helpers.get_vcs_link())
     def test_delegate_using_pool_id(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -174,6 +176,7 @@ class TestDelegateAddr:
             pool_name=pool_name,
         )
 
+    @allure.link(helpers.get_vcs_link())
     def test_delegate_using_vkey(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -192,6 +195,7 @@ class TestDelegateAddr:
             pool_name=pool_name,
         )
 
+    @allure.link(helpers.get_vcs_link())
     def test_deregister(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -262,6 +266,7 @@ class TestDelegateAddr:
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
 
+    @allure.link(helpers.get_vcs_link())
     def test_addr_registration_deregistration(
         self,
         cluster: clusterlib.ClusterLib,
@@ -299,6 +304,7 @@ class TestDelegateAddr:
             == src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
+    @allure.link(helpers.get_vcs_link())
     def test_addr_delegation_deregistration(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -371,6 +377,7 @@ class TestDelegateAddr:
 
 
 class TestNegative:
+    @allure.link(helpers.get_vcs_link())
     def test_registration_cert_with_wrong_key(
         self,
         cluster: clusterlib.ClusterLib,
@@ -386,6 +393,7 @@ class TestNegative:
             )
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_delegation_cert_with_wrong_key(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -407,6 +415,7 @@ class TestNegative:
             )
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_register_addr_with_wrong_key(
         self,
         cluster: clusterlib.ClusterLib,
@@ -434,6 +443,7 @@ class TestNegative:
             cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_delegate_addr_with_wrong_key(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -480,6 +490,7 @@ class TestNegative:
             cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_delegate_unregistered_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -513,6 +524,7 @@ class TestNegative:
             cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
         assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_unregister_not_registered_addr(
         self,
         cluster: clusterlib.ClusterLib,
@@ -540,6 +552,7 @@ class TestNegative:
 
 
 class TestRewards:
+    @allure.link(helpers.get_vcs_link())
     def test_reward_amount(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -601,6 +614,7 @@ class TestRewards:
         # withdraw rewards to payment address
         helpers.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
 
+    @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -716,6 +730,7 @@ class TestRewards:
                 < cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "New reward was not received by pool reward address"
 
+    @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge2(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -847,6 +862,7 @@ class TestRewards:
                 < cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "New reward was not received by pool reward address"
 
+    @allure.link(helpers.get_vcs_link())
     def test_no_reward_unregistered_stake_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -990,6 +1006,7 @@ class TestRewards:
                 < cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "New reward was not received by pool reward address"
 
+    @allure.link(helpers.get_vcs_link())
     def test_no_reward_unregistered_reward_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,

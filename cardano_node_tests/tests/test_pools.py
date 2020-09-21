@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import List
 
+import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
@@ -291,6 +292,7 @@ def _create_register_pool_tx_delegate_stake_tx(
 
 
 class TestStakePool:
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -343,6 +345,7 @@ class TestStakePool:
             pool_data=pool_data,
         )
 
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_not_avail(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -396,6 +399,7 @@ class TestStakePool:
         )
 
     @pytest.mark.parametrize("no_of_addr", [1, 3])
+    @allure.link(helpers.get_vcs_link())
     def test_create_stake_pool(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -435,6 +439,7 @@ class TestStakePool:
         )
 
     @pytest.mark.parametrize("no_of_addr", [1, 3])
+    @allure.link(helpers.get_vcs_link())
     def test_deregister_stake_pool(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -530,6 +535,7 @@ class TestStakePool:
             == src_register_reward + cluster.get_pool_deposit()
         )
 
+    @allure.link(helpers.get_vcs_link())
     def test_reregister_stake_pool(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -644,6 +650,7 @@ class TestStakePool:
         )
 
     @pytest.mark.parametrize("no_of_addr", [1, 2])
+    @allure.link(helpers.get_vcs_link())
     def test_update_stake_pool_metadata(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -729,6 +736,7 @@ class TestStakePool:
         )
 
     @pytest.mark.parametrize("no_of_addr", [1, 2])
+    @allure.link(helpers.get_vcs_link())
     def test_update_stake_pool_parameters(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -799,6 +807,7 @@ class TestStakePool:
             pool_data=pool_data_updated,
         )
 
+    @allure.link(helpers.get_vcs_link())
     def test_sign_in_multiple_stages(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -945,6 +954,7 @@ class TestPoolCost:
 
     @hypothesis.given(pool_cost=st.integers(max_value=4999))  # minPoolCost is now 5000
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_low_cost(
         self,
         cluster_mincost: clusterlib.ClusterLib,
@@ -975,6 +985,7 @@ class TestPoolCost:
         assert expected_msg in str(excinfo.value)
 
     @pytest.mark.parametrize("pool_cost", [5000, 9999999])
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_cost(
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -1057,6 +1068,7 @@ class TestNegative:
         )
         return pool_data
 
+    @allure.link(helpers.get_vcs_link())
     def test_pool_registration_cert_wrong_vrf(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1076,6 +1088,7 @@ class TestNegative:
             )
         assert "Expected: VrfVerificationKey_PraosVRF" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_pool_registration_cert_wrong_cold(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1095,6 +1108,7 @@ class TestNegative:
             )
         assert "Expected: StakePoolVerificationKey" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_pool_registration_cert_wrong_stake(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1114,6 +1128,7 @@ class TestNegative:
             )
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_pool_registration_missing_cold_skey(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1143,6 +1158,7 @@ class TestNegative:
             cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_pool_registration_missing_payment_skey(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1172,6 +1188,7 @@ class TestNegative:
             cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
         assert "Expected one of" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_pool_registration_conflicting_certs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1211,6 +1228,7 @@ class TestNegative:
             cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
         assert "TextView type error" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_pool_deregistration_not_registered(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1235,6 +1253,7 @@ class TestNegative:
             cluster.send_tx(src_address=pool_users[0].payment.address, tx_files=tx_files)
         assert "StakePoolNotRegisteredOnKeyPOOL" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_no_name(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1256,6 +1275,7 @@ class TestNegative:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert 'key "name" not found' in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_no_description(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1277,6 +1297,7 @@ class TestNegative:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert 'key "description" not found' in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_no_ticker(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1298,6 +1319,7 @@ class TestNegative:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert 'key "ticker" not found' in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_no_homepage(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1321,6 +1343,7 @@ class TestNegative:
 
     @hypothesis.given(pool_name=st.text(min_size=51))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_name(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1350,6 +1373,7 @@ class TestNegative:
 
     @hypothesis.given(pool_description=st.text(min_size=256))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_description(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1379,6 +1403,7 @@ class TestNegative:
 
     @hypothesis.given(pool_ticker=st.text())
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_ticker(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1406,6 +1431,7 @@ class TestNegative:
 
     @hypothesis.given(pool_homepage=st.text(min_size=425))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_homepage(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1429,6 +1455,7 @@ class TestNegative:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert "Stake pool metadata must consist of at most 512 bytes" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_long_metadata_url(
         self,
         cluster: clusterlib.ClusterLib,

@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
@@ -22,6 +23,7 @@ def temp_dir(tmp_path_factory: TempdirFactory):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
+@allure.link(helpers.get_vcs_link())
 def test_update_proposal(cluster_manager: parallel_run.ClusterManager):
     """Submit update proposal."""
     cluster = cluster_manager.get(singleton=True, cleanup=True)

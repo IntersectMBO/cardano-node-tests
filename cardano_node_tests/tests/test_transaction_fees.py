@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List
 from typing import Tuple
 
+import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
@@ -57,6 +58,7 @@ class TestFee:
 
     @hypothesis.given(fee=st.integers(max_value=-1))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @allure.link(helpers.get_vcs_link())
     def test_negative_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -80,6 +82,7 @@ class TestFee:
         assert "option --fee: cannot parse value" in str(excinfo.value)
 
     @pytest.mark.parametrize("fee_change", [0, 1.1, 1.5, 2])
+    @allure.link(helpers.get_vcs_link())
     def test_smaller_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -112,6 +115,7 @@ class TestFee:
         assert "FeeTooSmallUTxO" in str(excinfo.value)
 
     @pytest.mark.parametrize("fee_add", [0, 1000, 100_000, 1_000_000])
+    @allure.link(helpers.get_vcs_link())
     def test_expected_or_higher_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -275,6 +279,7 @@ class TestExpectedFees:
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 197929), (3, 234185), (5, 270441), (10, 361081)])
+    @allure.link(helpers.get_vcs_link())
     def test_pool_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -321,6 +326,7 @@ class TestExpectedFees:
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 185345), (3, 210337), (5, 235329), (10, 297809)])
+    @allure.link(helpers.get_vcs_link())
     def test_pool_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -379,6 +385,7 @@ class TestExpectedFees:
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
+    @allure.link(helpers.get_vcs_link())
     def test_addr_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -412,6 +419,7 @@ class TestExpectedFees:
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
+    @allure.link(helpers.get_vcs_link())
     def test_addr_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -447,6 +455,7 @@ class TestExpectedFees:
     @pytest.mark.parametrize(
         "amount_expected", [(1, 176853), (100, 176897), (11_000, 176941), (100_000, 177029)]
     )
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_1_addr_from_1_addr_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -465,6 +474,7 @@ class TestExpectedFees:
     @pytest.mark.parametrize(
         "amount_expected", [(1, 226749), (100, 227189), (11_000, 227629), (100_000, 228509)]
     )
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_10_addrs_from_1_addr_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -483,6 +493,7 @@ class TestExpectedFees:
     @pytest.mark.parametrize(
         "amount_expected", [(1, 259837), (100, 259881), (11_000, 259925), (100_000, 260013)]
     )
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_1_addr_from_10_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -501,6 +512,7 @@ class TestExpectedFees:
     @pytest.mark.parametrize(
         "amount_expected", [(1, 309733), (100, 310173), (11_000, 310613), (100_000, 311493)]
     )
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_10_addrs_from_10_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -519,6 +531,7 @@ class TestExpectedFees:
     @pytest.mark.parametrize(
         "amount_expected", [(1, 1371057), (100, 1375457), (11_000, 1379857), (100_000, 1388657)]
     )
+    @allure.link(helpers.get_vcs_link())
     def test_transaction_to_100_addrs_from_100_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
