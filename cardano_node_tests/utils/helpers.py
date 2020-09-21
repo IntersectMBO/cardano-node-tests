@@ -647,10 +647,7 @@ def update_params(
 
         cluster_obj.submit_update_proposal(cli_args=[cli_arg, str(param_value)])
 
-        LOGGER.info(
-            f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value}). "
-            "Sleeping until next epoch."
-        )
+        LOGGER.info(f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value})")
         cluster_obj.wait_for_new_epoch()
 
         updated_value = cluster_obj.get_protocol_params()[param_name]
