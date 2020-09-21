@@ -908,6 +908,7 @@ class TestStakePool:
 
 
 @pytest.mark.usefixtures("temp_dir", "update_pool_cost")
+@pytest.mark.run(order=1)
 class TestPoolCost:
     @pytest.fixture
     def pool_owners(
