@@ -373,7 +373,7 @@ class ClusterManager:
                         no_tests_iteration = 0
                         continue
                     self._log(
-                        "none of the resources in '{lock_resources}' locked or in use, "
+                        f"none of the resources in '{lock_resources}' locked or in use, "
                         "starting and locking"
                     )
 
@@ -401,7 +401,7 @@ class ClusterManager:
                         sleep_delay = 5
                         no_tests_iteration = 0
                         continue
-                    self._log("none of the resources in '{use_resources}' locked, starting")
+                    self._log(f"none of the resources in '{use_resources}' locked, starting")
 
                     # create status file for each in-use resource
                     _ = [
