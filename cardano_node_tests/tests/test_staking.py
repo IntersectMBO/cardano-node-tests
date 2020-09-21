@@ -201,7 +201,6 @@ class TestDelegateAddr:
         cluster = cluster_manager.get(use_resources=[pool_name])
 
         temp_template = "test_deregister_addr"
-        pool_rewards_address = cluster_manager.cache.addrs_data[pool_name]["reward"].address
 
         # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
@@ -213,29 +212,18 @@ class TestDelegateAddr:
         helpers.wait_for_stake_distribution(cluster)
 
         src_address = pool_user.payment.address
-        init_pool_reward_balance = cluster.get_stake_addr_info(
-            pool_rewards_address
-        ).reward_account_balance
 
         # wait for first reward
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
-            num_sec=3 * cluster.epoch_length_sec,
+            num_sec=4 * cluster.epoch_length_sec + 100,
             message="receive rewards",
             silent=True,
         )
         if not stake_reward:
+            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
-
-        if (
-            not stake_reward
-            and cluster.get_stake_addr_info(pool_rewards_address).reward_account_balance
-            == init_pool_reward_balance
-        ):
-            pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
-
-        assert stake_reward, "Expected rewards were not received"
 
         # files for de-registering stake address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -643,11 +631,12 @@ class TestRewards:
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
-            num_sec=4 * cluster.epoch_length_sec,
+            num_sec=4 * cluster.epoch_length_sec + 100,
             message="receive rewards",
             silent=True,
         )
         if not stake_reward:
+            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         node_cold = pool_rec["cold_key_pair"]
@@ -757,11 +746,12 @@ class TestRewards:
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
-            num_sec=4 * cluster.epoch_length_sec,
+            num_sec=4 * cluster.epoch_length_sec + 100,
             message="receive rewards",
             silent=True,
         )
         if not stake_reward:
+            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         node_cold = pool_rec["cold_key_pair"]
@@ -885,11 +875,12 @@ class TestRewards:
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
-            num_sec=4 * cluster.epoch_length_sec,
+            num_sec=4 * cluster.epoch_length_sec + 100,
             message="receive rewards",
             silent=True,
         )
         if not stake_reward:
+            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # deregister stake address
@@ -1027,11 +1018,12 @@ class TestRewards:
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
-            num_sec=3 * cluster.epoch_length_sec,
+            num_sec=4 * cluster.epoch_length_sec + 100,
             message="receive rewards",
             silent=True,
         )
         if not stake_reward:
+            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw rewards to payment address
