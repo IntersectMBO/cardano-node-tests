@@ -50,6 +50,7 @@ def change_dir(tmp_path_factory: TempdirFactory) -> None:
 def _run_cluster_cleanup(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest, pytest_tmp_dir: Path
 ) -> None:
+    """Cleanup after all tests are finished."""
     cluster_manager_obj = parallel_run.ClusterManager(
         tmp_path_factory=tmp_path_factory, worker_id=worker_id, request=request
     )
@@ -85,7 +86,7 @@ def cluster_cleanup(
 
     with helpers.FileLockIfXdist(f"{lock_dir}/.cluster_cleanup.lock"):
         os.remove(lock_dir / f".started_session_{worker_id}")
-        if lock_dir.glob(".started_session_*"):
+        if list(lock_dir.glob(".started_session_*")):
             return
 
     with helpers.FileLockIfXdist(f"{lock_dir}/{parallel_run.CLUSTER_LOCK}"):
