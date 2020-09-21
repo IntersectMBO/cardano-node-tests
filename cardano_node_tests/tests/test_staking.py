@@ -82,7 +82,7 @@ def _delegate_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     addrs_data: dict,
     temp_template: str,
-    pool_name: str = "node-pool1",
+    pool_name: str,
     delegate_with_pool_id: bool = False,
 ) -> clusterlib.PoolUser:
     """Submit registration certificate and delegate to pool."""
@@ -158,9 +158,11 @@ class TestDelegateAddr:
     def test_delegate_using_pool_id(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Submit registration certificate and delegate to pool using pool id."""
+        pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
         temp_template = "test_delegate_using_addr"
 
         # submit registration certificate and delegate to pool
@@ -169,14 +171,17 @@ class TestDelegateAddr:
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             delegate_with_pool_id=True,
+            pool_name=pool_name,
         )
 
     def test_delegate_using_vkey(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Submit registration certificate and delegate to pool using cold vkey."""
+        pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
         temp_template = "test_delegate_using_cert"
 
         # submit registration certificate and delegate to pool
@@ -184,16 +189,18 @@ class TestDelegateAddr:
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
+            pool_name=pool_name,
         )
 
     def test_deregister(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """De-register stake address."""
-        temp_template = "test_deregister_addr"
         pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
+        temp_template = "test_deregister_addr"
         pool_rewards_address = cluster_manager.cache.addrs_data[pool_name]["reward"].address
 
         # submit registration certificate and delegate to pool
@@ -307,12 +314,13 @@ class TestDelegateAddr:
     def test_addr_delegation_deregistration(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
         """Submit delegation and deregistration certificates in single TX."""
         pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
         temp_template = "test_addr_delegation_deregistration"
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
 
@@ -393,11 +401,12 @@ class TestNegative:
     def test_delegation_cert_with_wrong_key(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
         """Generate stake address delegation certificate using wrong key."""
         pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
         temp_template = "test_delegation_cert_with_wrong_key"
 
@@ -440,12 +449,13 @@ class TestNegative:
     def test_delegate_addr_with_wrong_key(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
         """Delegate stake address using wrong key."""
         pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
         temp_template = "test_delegate_addr_with_wrong_key"
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
 
@@ -485,12 +495,13 @@ class TestNegative:
     def test_delegate_unregistered_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
         """Delegate unregistered stake address."""
         pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
         temp_template = "test_delegate_unregistered_addr"
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
 
@@ -544,10 +555,11 @@ class TestRewards:
     def test_reward_amount(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the stake address and pool owner are receiving rewards."""
         pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
         temp_template = "test_reward_amount"
         rewards_address = cluster_manager.cache.addrs_data[pool_name]["reward"].address
 
@@ -604,7 +616,6 @@ class TestRewards:
     def test_no_reward_unmet_pledge(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -614,6 +625,8 @@ class TestRewards:
         Increase the needed pledge amount by changing pool parameters.
         """
         pool_name = "node-pool2"
+        cluster = cluster_manager.get(lock_resources=[pool_name])
+
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = "test_no_reward_unmet_pledge"
@@ -656,7 +669,7 @@ class TestRewards:
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
-        cluster.wait_for_new_epoch(3, padding_seconds=30)
+        cluster.wait_for_new_epoch(4, padding_seconds=30)
 
         orig_owner_reward = cluster.get_stake_addr_info(
             pool_rec["reward"].address
@@ -700,7 +713,7 @@ class TestRewards:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
 
-            cluster.wait_for_new_epoch(4, padding_seconds=30)
+            cluster.wait_for_new_epoch(5, padding_seconds=30)
 
             # check that new rewards were received by those delegating to the pool
             assert (
@@ -717,7 +730,6 @@ class TestRewards:
     def test_no_reward_unmet_pledge2(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -727,6 +739,8 @@ class TestRewards:
         Withdraw part of pledge so the funds are lower than what is needed by the stake pool.
         """
         pool_name = "node-pool2"
+        cluster = cluster_manager.get(lock_resources=[pool_name])
+
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = "test_no_reward_unmet_pledge"
@@ -775,7 +789,7 @@ class TestRewards:
             f"funds: {cluster.get_address_balance(pool_owner.payment.address)}"
         )
 
-        cluster.wait_for_new_epoch(3, padding_seconds=30)
+        cluster.wait_for_new_epoch(4, padding_seconds=30)
 
         orig_owner_reward = cluster.get_stake_addr_info(
             pool_rec["reward"].address
@@ -846,7 +860,6 @@ class TestRewards:
     def test_no_reward_unregistered_stake_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the pool is not receiving rewards when owner's stake address is unregistered.
 
@@ -854,6 +867,8 @@ class TestRewards:
         neither pool owners nor those who delegate to that pool receive rewards.
         """
         pool_name = "node-pool2"
+        cluster = cluster_manager.get(lock_resources=[pool_name])
+
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = "test_no_reward_unregistered_stake_addr"
@@ -900,7 +915,7 @@ class TestRewards:
                 == src_init_balance - tx_raw_deregister_output.fee + cluster.get_key_deposit()
             ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
-            cluster.wait_for_new_epoch(3, padding_seconds=30)
+            cluster.wait_for_new_epoch(4, padding_seconds=30)
 
             # check that the stake address is no longer delegated
             assert not cluster.get_stake_addr_info(
@@ -987,15 +1002,16 @@ class TestRewards:
     def test_no_reward_unregistered_reward_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
     ):
         """Check that the reward address is not receiving rewards when unregistered.
 
         The stake pool continues to operate normally and those who delegate to that pool receive
         rewards.
         """
-        temp_template = "test_no_reward_stake_unregistered"
         pool_name = "node-pool2"
+        cluster = cluster_manager.get(lock_resources=[pool_name])
+
+        temp_template = "test_no_reward_stake_unregistered"
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
 
@@ -1044,7 +1060,7 @@ class TestRewards:
                 == src_init_balance - tx_raw_deregister_output.fee + cluster.get_key_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
-            cluster.wait_for_new_epoch(3, padding_seconds=30)
+            cluster.wait_for_new_epoch(4, padding_seconds=30)
 
             # check that the reward address is no longer delegated
             assert not cluster.get_stake_addr_info(

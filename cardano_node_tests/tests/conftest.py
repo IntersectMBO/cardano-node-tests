@@ -122,17 +122,3 @@ def cluster(
     cluster_manager: parallel_run.ClusterManager,
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get()
-
-
-@pytest.fixture
-def cluster_singleton(
-    cluster_manager: parallel_run.ClusterManager,
-) -> clusterlib.ClusterLib:
-    return cluster_manager.get(singleton=True)
-
-
-@pytest.fixture
-def cluster_singleton_clean(
-    cluster_manager: parallel_run.ClusterManager,
-) -> clusterlib.ClusterLib:
-    return cluster_manager.get(singleton=True, cleanup=True)
