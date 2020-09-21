@@ -1,7 +1,6 @@
 import contextlib
 import dataclasses
 import datetime
-import logging
 import os
 import random
 from pathlib import Path
@@ -14,8 +13,6 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import UnpackableSequence
-
-LOGGER = logging.getLogger(__name__)
 
 CLUSTER_LOCK = ".cluster.lock"
 LOCK_LOG_FILE = ".lock.log"
