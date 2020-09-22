@@ -37,8 +37,8 @@ def pytest_configure(config: Any) -> None:
     config._metadata["cardano-node"] = cardano_version["cardano-node"]
     config._metadata["cardano-node rev"] = cardano_version["git_rev"]
     config._metadata["ghc"] = cardano_version["ghc"]
-    config._metadata["tests rev"] = helpers.CURRENT_COMMIT
-    config._metadata["github url"] = helpers.GITHUB_URL
+    config._metadata["cardano-node-tests rev"] = helpers.CURRENT_COMMIT
+    config._metadata["cardano-node-tests url"] = helpers.GITHUB_TREE_URL
 
 
 @pytest.fixture(scope="session")

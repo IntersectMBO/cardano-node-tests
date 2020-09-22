@@ -71,7 +71,9 @@ def run_shell_command(command: str, workdir: FileType = "") -> bytes:
 
 
 CURRENT_COMMIT = run_shell_command("git rev-parse HEAD").decode().strip()
-GITHUB_URL = f"https://github.com/input-output-hk/cardano-node-tests/blob/{CURRENT_COMMIT}"
+GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
+GITHUB_TREE_URL = f"{GITHUB_URL}/tree/{CURRENT_COMMIT}"
+GITHUB_BLOB_URL = f"{GITHUB_URL}/blob/{CURRENT_COMMIT}"
 
 
 def get_vcs_link() -> str:
@@ -80,7 +82,7 @@ def get_vcs_link() -> str:
     lineno = calling_frame.f_lineno + 1  # type: ignore
     fname = calling_frame.f_globals["__file__"]  # type: ignore
     fpart = fname[fname.find("cardano_node_tests") :]
-    url = f"{GITHUB_URL}/{fpart}#L{lineno}"
+    url = f"{GITHUB_BLOB_URL}/{fpart}#L{lineno}"
     return url
 
 
