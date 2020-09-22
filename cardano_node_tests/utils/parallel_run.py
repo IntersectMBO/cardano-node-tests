@@ -233,13 +233,14 @@ class ClusterManager:
         while True:
             if not first_iteration:
                 helpers.xdist_sleep(random.random() * sleep_delay)
-            first_iteration = False
 
             with helpers.FileLockIfXdist(self.cluster_lock):
                 # test is already running, nothing to set up
                 if first_iteration and test_running_file.exists() and cluster_obj:
                     self._log(f"{test_running_file} already exists")
                     return cluster_obj
+
+                first_iteration = False  # needs to be set here, before the first `continue`
 
                 # singleton test is running, so no other test can be started
                 if (self.lock_dir / TEST_SINGLETON_FILE).exists():
