@@ -192,21 +192,35 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_addr,
-            amount=2_000_000,
+            amount=5_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
-        # send funds from script address
+        # send funds from script address using single witness
         for i in range(5):
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=f"{temp_template}_from_{i}",
+                temp_template=f"{temp_template}_from_single_{i}",
                 src_address=script_addr,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
                 multisig_script=multisig_script,
                 payment_skey_files=[payment_skey_files[random.randrange(0, skeys_len)]],
+                script_is_src=True,
+            )
+
+        # send funds from script address using multiple witnesses
+        for i in range(5):
+            num_of_skeys = random.randrange(2, skeys_len)
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from_multi_{i}",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=1000,
+                multisig_script=multisig_script,
+                payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                 script_is_src=True,
             )
 
