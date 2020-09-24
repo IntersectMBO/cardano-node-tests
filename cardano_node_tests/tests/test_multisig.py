@@ -42,17 +42,24 @@ def multisig_tx(
 
     # create TX body
     destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+    witness_count_add = len(payment_skey_files)
+    if script_is_src:
+        witness_count_add += 5  # TODO: calculate based on script size?
+
+    ttl = cluster_obj.calculate_tx_ttl()
     fee = cluster_obj.calculate_tx_fee(
         src_address=src_address,
         tx_name=temp_template,
         txouts=destinations,
-        witness_count_add=len(payment_skey_files),
+        ttl=ttl,
+        witness_count_add=witness_count_add,
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
         tx_name=temp_template,
         txouts=destinations,
         fee=fee,
+        ttl=ttl,
     )
 
     # create witness file for each key
@@ -94,13 +101,13 @@ class TestBasic:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        data_key = id(self.payment_addrs)
+        data_key = id(TestBasic) + 1
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"multi_addr{i}" for i in range(5)], cluster_obj=cluster
+            *[f"multi_addr{i}" for i in range(20)], cluster_obj=cluster
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
@@ -109,6 +116,7 @@ class TestBasic:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=20_000_000,
         )
 
         return addrs
@@ -136,10 +144,10 @@ class TestBasic:
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
-            temp_template=temp_template,
+            temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_addr,
-            amount=300_000,
+            amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
@@ -147,7 +155,7 @@ class TestBasic:
         # send funds from script address
         multisig_tx(
             cluster_obj=cluster,
-            temp_template=temp_template,
+            temp_template=f"{temp_template}_from",
             src_address=script_addr,
             dst_address=payment_addrs[0].address,
             amount=1000,
@@ -166,6 +174,8 @@ class TestBasic:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
+        skeys_len = len(payment_skey_files)
+
         # create multisig script
         multisig_script = cluster.build_multisig_script(
             script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
@@ -179,25 +189,26 @@ class TestBasic:
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
-            temp_template=temp_template,
+            temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_addr,
-            amount=300_000,
+            amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
         # send funds from script address
-        multisig_tx(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            src_address=script_addr,
-            dst_address=payment_addrs[0].address,
-            amount=1000,
-            multisig_script=multisig_script,
-            payment_skey_files=[payment_skey_files[random.randrange(0, len(payment_skey_files))]],
-            script_is_src=True,
-        )
+        for i in range(5):
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from_{i}",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=1000,
+                multisig_script=multisig_script,
+                payment_skey_files=[payment_skey_files[random.randrange(0, skeys_len)]],
+                script_is_src=True,
+            )
 
     @allure.link(helpers.get_vcs_link())
     def test_multisig_atleast(
@@ -210,7 +221,7 @@ class TestBasic:
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
         skeys_len = len(payment_skey_files)
-        required = skeys_len // 2
+        required = skeys_len - 4
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -227,23 +238,24 @@ class TestBasic:
         num_of_skeys = random.randrange(required, skeys_len)
         multisig_tx(
             cluster_obj=cluster,
-            temp_template=temp_template,
+            temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_addr,
-            amount=300_000,
+            amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
         # send funds from script address
-        num_of_skeys = random.randrange(required, skeys_len)
-        multisig_tx(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            src_address=script_addr,
-            dst_address=payment_addrs[0].address,
-            amount=1000,
-            multisig_script=multisig_script,
-            payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
-            script_is_src=True,
-        )
+        for i in range(5):
+            num_of_skeys = random.randrange(required, skeys_len)
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from_{i}",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=1000,
+                multisig_script=multisig_script,
+                payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
+                script_is_src=True,
+            )
