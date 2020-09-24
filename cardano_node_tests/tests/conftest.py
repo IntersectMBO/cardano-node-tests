@@ -60,10 +60,10 @@ def _run_cluster_cleanup(
     cluster_manager_obj._log("running cluster cleanup")
     # stop cluster
     cluster_manager_obj.stop()
-    # process artifacts
-    devops_cluster.process_artifacts(pytest_tmp_dir=pytest_tmp_dir, request=request)
     # save environment info for Allure
     helpers.save_env_for_allure(request)
+    # process artifacts
+    devops_cluster.process_artifacts(pytest_tmp_dir=pytest_tmp_dir, request=request)
 
 
 @pytest.yield_fixture(scope="session")
