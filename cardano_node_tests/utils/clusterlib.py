@@ -1,6 +1,5 @@
 """Wrapper for cardano-cli."""
 import datetime
-import enum
 import functools
 import itertools
 import json
@@ -17,6 +16,7 @@ from typing import Tuple
 from typing import Union
 
 from cardano_node_tests.utils.types import FileType
+from cardano_node_tests.utils.types import FileTypeList
 from cardano_node_tests.utils.types import OptionalFiles
 from cardano_node_tests.utils.types import UnpackableSequence
 
@@ -116,9 +116,15 @@ class PoolCreationOutput(NamedTuple):
     kes_key_pair: Optional[KeyPair] = None
 
 
-class Protocols(enum.Enum):
+class Protocols:
     CARDANO = "cardano"
     SHELLEY = "shelley"
+
+
+class MultiSigTypeArgs:
+    ALL = "--all"
+    ANY = "--any"
+    AT_LEAST = "--at-least"
 
 
 class CLIError(Exception):
@@ -149,7 +155,7 @@ class ClusterLib:
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, state_dir: FileType, protocol: str = Protocols.SHELLEY.value):
+    def __init__(self, state_dir: FileType, protocol: str = Protocols.SHELLEY):
         self.cli_coverage: dict = {}
 
         self.state_dir = Path(state_dir).expanduser().resolve()
@@ -362,6 +368,24 @@ class ClusterLib:
                     "build",
                     "--stake-verification-key-file",
                     str(stake_vkey_file),
+                    "--testnet-magic",
+                    str(self.network_magic),
+                    *args,
+                ]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
+    def gen_script_addr(self, script_file: FileType, *args: str) -> str:
+        """Generate multi-signature address."""
+        return (
+            self.cli(
+                [
+                    "address",
+                    "build-script",
+                    "--script-file",
+                    str(script_file),
                     "--testnet-magic",
                     str(self.network_magic),
                     *args,
@@ -621,7 +645,7 @@ class ClusterLib:
         pool_data: PoolData,
         vrf_vkey_file: FileType,
         cold_vkey_file: FileType,
-        owner_stake_vkey_files: List[FileType],
+        owner_stake_vkey_files: FileTypeList,
         reward_account_vkey_file: Optional[FileType] = None,
         destination_dir: FileType = ".",
     ) -> Path:
@@ -1086,7 +1110,8 @@ class ClusterLib:
     def witness_tx(
         self,
         tx_body_file: FileType,
-        witness_signing_key_files: OptionalFiles,
+        signing_key_files: OptionalFiles = (),
+        script_file: Optional[FileType] = None,
         tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> Path:
@@ -1094,6 +1119,10 @@ class ClusterLib:
         tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.witness"
+
+        cli_args = []
+        if script_file:
+            cli_args = ["--script-file", str(script_file)]
 
         self.cli(
             [
@@ -1105,7 +1134,8 @@ class ClusterLib:
                 str(out_file),
                 "--testnet-magic",
                 str(self.network_magic),
-                *self._prepend_flag("--witness-signing-key-file", witness_signing_key_files),
+                *self._prepend_flag("--signing-key-file", signing_key_files),
+                *cli_args,
             ]
         )
 
@@ -1203,6 +1233,38 @@ class ClusterLib:
         self.submit_tx(tx_signed_file)
 
         return tx_raw_output
+
+    def build_multisig_script(
+        self,
+        script_type_arg: str,
+        payment_vkey_files: FileTypeList,
+        script_name: Optional[str] = None,
+        required: int = 0,
+        destination_dir: FileType = ".",
+    ) -> Path:
+        """Build multi-signature script."""
+        script_name = script_name or get_timestamped_rand_str()
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{script_name}_multisig.script"
+
+        cli_args = []
+        if script_type_arg == MultiSigTypeArgs.AT_LEAST:
+            cli_args = ["--required", str(required)]
+
+        self.cli(
+            [
+                "transaction",
+                "build-multisig",
+                script_type_arg,
+                *cli_args,
+                "--out-file",
+                str(out_file),
+                *self._prepend_flag("--payment-verification-key-file", payment_vkey_files),
+            ]
+        )
+
+        self._check_outfiles(out_file)
+        return out_file
 
     def gen_update_proposal(
         self,

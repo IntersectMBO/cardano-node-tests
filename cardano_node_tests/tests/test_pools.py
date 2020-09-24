@@ -11,7 +11,6 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
-from cardano_node_tests.utils.types import OptionalFiles
 
 LOGGER = logging.getLogger(__name__)
 
@@ -883,10 +882,8 @@ class TestStakePool:
         )
 
         # create witness file for each key
-        witness_files: OptionalFiles = [
-            cluster.witness_tx(
-                tx_body_file=tx_raw_output.out_file, witness_signing_key_files=[skey]
-            )
+        witness_files = [
+            cluster.witness_tx(tx_body_file=tx_raw_output.out_file, signing_key_files=[skey])
             for skey in witness_skeys
         ]
 
