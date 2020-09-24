@@ -273,3 +273,76 @@ class TestBasic:
                 payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                 script_is_src=True,
             )
+
+
+class TestNegative:
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        data_key = id(TestNegative) + 1
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"multi_neg_addr{i}" for i in range(10)], cluster_obj=cluster
+        )
+        cluster_manager.cache.test_data[data_key] = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addrs
+
+    @allure.link(helpers.get_vcs_link())
+    def test_multisig_all_missing_skey(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Send funds from script address using the "all" script, omit one skey."""
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            script_name=temp_template,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=300_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address, omit one skey
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=temp_template,
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=1000,
+                multisig_script=multisig_script,
+                payment_skey_files=payment_skey_files[:-1],
+                script_is_src=True,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
