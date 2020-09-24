@@ -45,7 +45,7 @@ class TestBasic:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        data_key = id(self.payment_addrs)
+        data_key = id(TestBasic)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
@@ -163,7 +163,7 @@ class TestMultiInOut:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 11 new payment addresses."""
-        data_key = id(self.payment_addrs)
+        data_key = id(TestMultiInOut)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
@@ -397,7 +397,7 @@ class TestNotBalanced:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        data_key = id(self.payment_addrs)
+        data_key = id(TestNotBalanced)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
@@ -526,7 +526,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        data_key = id(self.pool_users)
+        data_key = id(TestNegative)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
@@ -1024,7 +1024,7 @@ class TestMetadata:
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""
-        data_key = id(self.payment_addr)
+        data_key = id(TestMetadata)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore

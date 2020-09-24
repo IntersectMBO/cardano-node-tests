@@ -102,7 +102,7 @@ class TestBasic:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        data_key = id(TestBasic) + 1
+        data_key = id(TestBasic)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
@@ -284,7 +284,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        data_key = id(TestNegative) + 1
+        data_key = id(TestNegative)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore

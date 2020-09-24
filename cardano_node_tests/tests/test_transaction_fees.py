@@ -38,7 +38,7 @@ class TestFee:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        data_key = id(self.payment_addrs)
+        data_key = id(TestFee)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
@@ -169,7 +169,7 @@ class TestExpectedFees:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        data_key = id(self.pool_users)
+        data_key = id(TestExpectedFees)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
