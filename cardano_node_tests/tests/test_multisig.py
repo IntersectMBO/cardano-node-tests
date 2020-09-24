@@ -57,7 +57,7 @@ class TestMultisig:
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Send funds to and from script address using the "all" script."""
-        temp_template = "test_multisig_all"
+        temp_template = helpers.get_func_name()
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
