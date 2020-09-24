@@ -542,7 +542,7 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
-        """Re-register stake pool."""
+        """Reregister stake pool."""
         temp_template = helpers.get_func_name()
 
         pool_metadata = {
@@ -613,7 +613,7 @@ class TestStakePool:
         src_address = pool_owners[0].payment.address
         src_init_balance = cluster.get_address_balance(src_address)
 
-        # re-register the pool by resubmitting the pool registration certificate,
+        # reregister the pool by resubmitting the pool registration certificate,
         # delegate stake address to pool again (the address is already registered)
         tx_files = clusterlib.TxFiles(
             certificate_files=[
@@ -636,9 +636,8 @@ class TestStakePool:
             lambda: pool_creation_out.stake_pool_id in cluster.get_stake_distribution(),
             delay=10,
             num_sec=5 * cluster.epoch_length_sec,
-            message="re-register stake pool",
+            message="reregister stake pool",
         )
-
         # check that pool was correctly setup
         _check_pool(
             cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data

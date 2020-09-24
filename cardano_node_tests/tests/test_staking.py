@@ -65,17 +65,6 @@ def pool_users_disposable(
     return pool_users
 
 
-def _cleanup_deregister_stake_addr(
-    cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
-) -> None:
-    try:
-        clusterlib_utils.deregister_stake_addr(
-            cluster_obj=cluster_obj, pool_user=pool_user, name_template=name_template
-        )
-    except clusterlib.CLIError:
-        pass
-
-
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
@@ -199,7 +188,7 @@ class TestDelegateAddr:
         self,
         cluster_manager: parallel_run.ClusterManager,
     ):
-        """De-register stake address."""
+        """Deregister stake address."""
         pool_name = "node-pool1"
         cluster = cluster_manager.get(use_resources=[pool_name])
         temp_template = helpers.get_func_name()
@@ -227,7 +216,7 @@ class TestDelegateAddr:
             cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
-        # files for de-registering stake address
+        # files for deregistering stake address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
             addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
         )
@@ -236,7 +225,7 @@ class TestDelegateAddr:
             signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
         )
 
-        # de-registration is expected to fail because there are rewards in the stake address
+        # deregistration is expected to fail because there are rewards in the stake address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_tx(src_address=src_address, tx_files=tx_files_deregister)
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
@@ -244,7 +233,7 @@ class TestDelegateAddr:
         # withdraw rewards to payment address
         clusterlib_utils.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
 
-        # de-register stake address
+        # deregister stake address
         src_reward_balance = cluster.get_address_balance(src_address)
 
         tx_raw_deregister_output = cluster.send_tx(

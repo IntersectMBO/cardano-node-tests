@@ -573,7 +573,7 @@ class ClusterLib:
     def gen_stake_addr_deregistration_cert(
         self, addr_name: str, stake_vkey_file: FileType, destination_dir: FileType = "."
     ) -> Path:
-        """Generate stake address de-registration certificate."""
+        """Generate stake address deregistration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake_dereg.cert"
         self.cli(
@@ -706,7 +706,7 @@ class ClusterLib:
     def gen_pool_deregistration_cert(
         self, pool_name: str, cold_vkey_file: FileType, epoch: int, destination_dir: FileType = "."
     ) -> Path:
-        """Generate pool de-registration certificate."""
+        """Generate pool deregistration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{pool_name}_pool_dereg.cert"
         self.cli(
@@ -1456,7 +1456,7 @@ class ClusterLib:
         tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawOutput]:
-        """De-register stake pool."""
+        """Deregister stake pool."""
         LOGGER.debug(
             f"Deregistering stake pool starting with epoch: {epoch}; "
             f"Current epoch is: {self.get_last_block_epoch()}"

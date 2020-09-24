@@ -53,7 +53,7 @@ def deregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
 ) -> clusterlib.TxRawOutput:
     """Deregister stake address."""
-    # files for de-registering stake address
+    # files for deregistering stake address
     stake_addr_dereg_cert = cluster_obj.gen_stake_addr_deregistration_cert(
         addr_name=f"addr0_{name_template}_dereg", stake_vkey_file=pool_user.stake.vkey_file
     )
