@@ -86,7 +86,7 @@ def multisig_tx(
     ), f"Incorrect balance for script address `{dst_address}`"
 
 
-class TestMultisig:
+class TestBasic:
     @pytest.fixture
     def payment_addrs(
         self,
@@ -141,7 +141,7 @@ class TestMultisig:
             dst_address=script_addr,
             amount=300_000,
             multisig_script=multisig_script,
-            payment_skey_files=payment_skey_files,
+            payment_skey_files=[payment_skey_files[0]],
         )
 
         # send funds from script address
@@ -184,10 +184,7 @@ class TestMultisig:
             dst_address=script_addr,
             amount=300_000,
             multisig_script=multisig_script,
-            payment_skey_files=[
-                payment_skey_files[0],
-                payment_skey_files[random.randrange(1, len(payment_skey_files))],
-            ],
+            payment_skey_files=[payment_skey_files[0]],
         )
 
         # send funds from script address
@@ -235,10 +232,7 @@ class TestMultisig:
             dst_address=script_addr,
             amount=300_000,
             multisig_script=multisig_script,
-            payment_skey_files=[
-                payment_skey_files[0],
-                *random.sample(payment_skey_files[1:], k=num_of_skeys),
-            ],
+            payment_skey_files=[payment_skey_files[0]],
         )
 
         # send funds from script address
