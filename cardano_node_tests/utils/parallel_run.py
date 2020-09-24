@@ -11,6 +11,8 @@ from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
+from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import devops_cluster
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import UnpackableSequence
 
@@ -101,19 +103,19 @@ class ClusterManager:
             return
 
         # save CLI coverage
-        helpers.save_cli_coverage(cluster_obj, self.request)
+        clusterlib_utils.save_cli_coverage(cluster_obj, self.request)
         # save artifacts
-        helpers.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir)
+        devops_cluster.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir)
 
     def _restart(self) -> clusterlib.ClusterLib:
         """Restart cluster."""
         self._log("called `_restart`")
         self.stop()
-        cluster_obj = helpers.start_cluster()
+        cluster_obj = devops_cluster.start_cluster()
 
         # setup faucet addresses
         tmp_path = Path(self.tmp_path_factory.mktemp("addrs_data"))
-        helpers.setup_test_addrs(cluster_obj, tmp_path)
+        devops_cluster.setup_test_addrs(cluster_obj, tmp_path)
 
         # remove status files that are no longer valid after restart
         for f in self.lock_dir.glob(f"{RESTART_IN_PROGRESS_GLOB}_*"):
@@ -139,7 +141,7 @@ class ClusterManager:
     def stop(self) -> None:
         """Stop cluster."""
         self._log("called `_stop`")
-        helpers.stop_cluster()
+        devops_cluster.stop_cluster()
         self._save_cluster_data()
 
     def set_needs_restart(self) -> None:
@@ -428,16 +430,16 @@ class ClusterManager:
                 self._log(f"creating {test_running_file}")
                 open(test_running_file, "a").close()
 
-                cluster_env = helpers.get_cluster_env()
+                cluster_env = devops_cluster.get_cluster_env()
                 state_dir = Path(cluster_env["state_dir"])
 
                 # check if it is necessary to reload data
                 # must be lock-protected because `load_addrs_data` is reading file from disk
-                addrs_data_checksum = helpers.checksum(state_dir / helpers.ADDR_DATA)
+                addrs_data_checksum = helpers.checksum(state_dir / devops_cluster.ADDR_DATA)
                 if addrs_data_checksum != self.cache.last_checksum:
                     self.cache.cluster_obj = clusterlib.ClusterLib(state_dir)
                     self.cache.test_data = {}
-                    self.cache.addrs_data = helpers.load_addrs_data()
+                    self.cache.addrs_data = devops_cluster.load_addrs_data()
                     self.cache.last_checksum = addrs_data_checksum
 
                 cluster_obj = self.cache.cluster_obj

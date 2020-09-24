@@ -9,6 +9,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
@@ -32,7 +33,7 @@ def cluster_mincost(cluster_manager: parallel_run.ClusterManager) -> clusterlib.
 @pytest.fixture
 def update_pool_cost(cluster_mincost: clusterlib.ClusterLib):
     """Update "minPoolCost" to 5000."""
-    helpers.update_params(
+    clusterlib_utils.update_params(
         cluster_obj=cluster_mincost,
         cli_arg="--min-pool-cost",
         param_name="minPoolCost",
@@ -71,7 +72,7 @@ def _check_pool(
         f"Pool ID: {stake_pool_id} vs Existing IDs: "
         f"{list(cluster_obj.get_registered_stake_pools_ledger_state())}"
     )
-    assert not helpers.check_pool_data(pool_ledger_state, pool_data)
+    assert not clusterlib_utils.check_pool_data(pool_ledger_state, pool_data)
 
 
 def _check_staking(
@@ -322,14 +323,14 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=3,
         )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -375,14 +376,14 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=1,
         )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -416,14 +417,14 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=no_of_addr,
         )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -469,14 +470,14 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=no_of_addr,
         )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -564,10 +565,12 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(cluster_obj=cluster, name_template=temp_template)
+        pool_owners = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template
+        )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -696,14 +699,14 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=no_of_addr,
         )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -768,14 +771,14 @@ class TestStakePool:
         pool_data_updated = pool_data._replace(pool_pledge=1, pool_cost=1_000_000, pool_margin=0.9)
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=no_of_addr,
         )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -823,14 +826,14 @@ class TestStakePool:
         )
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=2,
         )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -932,7 +935,7 @@ class TestPoolCost:
         rand_str = clusterlib.get_rand_str()
         temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=1,
@@ -940,7 +943,7 @@ class TestPoolCost:
         cluster_manager.cache.test_data[data_key] = pool_owners
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -1003,14 +1006,14 @@ class TestPoolCost:
         )
 
         # create pool owners
-        pool_owners = helpers.create_pool_users(
+        pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=temp_template,
             no_of_addr=1,
         )
 
         # fund source address
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -1038,7 +1041,7 @@ class TestNegative:
         if cached_value:
             return cached_value  # type: ignore
 
-        created_users = helpers.create_pool_users(
+        created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template="test_negative",
             no_of_addr=2,
@@ -1046,7 +1049,7 @@ class TestNegative:
         cluster_manager.cache.test_data[data_key] = created_users
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             created_users[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],

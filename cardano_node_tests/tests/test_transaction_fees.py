@@ -11,6 +11,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
@@ -42,13 +43,13 @@ class TestFee:
         if cached_value:
             return cached_value  # type: ignore
 
-        addrs = helpers.create_payment_addr_records(
+        addrs = clusterlib_utils.create_payment_addr_records(
             "addr_test_fee0", "addr_test_fee1", cluster_obj=cluster
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -173,7 +174,7 @@ class TestExpectedFees:
         if cached_value:
             return cached_value  # type: ignore
 
-        created_users = helpers.create_pool_users(
+        created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template="test_expected_fees",
             no_of_addr=201,
@@ -181,7 +182,7 @@ class TestExpectedFees:
         cluster_manager.cache.test_data[data_key] = created_users
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             *created_users[:10],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],

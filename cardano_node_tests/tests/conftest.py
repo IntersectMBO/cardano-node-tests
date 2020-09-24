@@ -9,6 +9,7 @@ from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
+from cardano_node_tests.utils import devops_cluster
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
@@ -60,7 +61,7 @@ def _run_cluster_cleanup(
     # stop cluster
     cluster_manager_obj.stop()
     # process artifacts
-    helpers.process_artifacts(pytest_tmp_dir=pytest_tmp_dir, request=request)
+    devops_cluster.process_artifacts(pytest_tmp_dir=pytest_tmp_dir, request=request)
     # save environment info for Allure
     helpers.save_env_for_allure(request)
 

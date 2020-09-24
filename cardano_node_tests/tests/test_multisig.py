@@ -7,6 +7,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
@@ -38,13 +39,13 @@ class TestMultisig:
         if cached_value:
             return cached_value  # type: ignore
 
-        addrs = helpers.create_payment_addr_records(
+        addrs = clusterlib_utils.create_payment_addr_records(
             *[f"multi_addr{i}" for i in range(5)], cluster_obj=cluster
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],

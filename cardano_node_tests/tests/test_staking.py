@@ -9,6 +9,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
@@ -34,7 +35,7 @@ def pool_users(
     if cached_value:
         return cached_value  # type: ignore
 
-    created_users = helpers.create_pool_users(
+    created_users = clusterlib_utils.create_pool_users(
         cluster_obj=cluster,
         name_template="test_staking_pool_users",
         no_of_addr=2,
@@ -42,7 +43,7 @@ def pool_users(
     cluster_manager.cache.test_data[data_key] = created_users
 
     # fund source addresses
-    helpers.fund_from_faucet(
+    clusterlib_utils.fund_from_faucet(
         created_users[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -56,7 +57,7 @@ def pool_users_disposable(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.PoolUser]:
     """Create function scoped pool users."""
-    pool_users = helpers.create_pool_users(
+    pool_users = clusterlib_utils.create_pool_users(
         cluster_obj=cluster,
         name_template=f"test_staking_pool_users_{clusterlib.get_rand_str(3)}",
         no_of_addr=2,
@@ -68,7 +69,7 @@ def _cleanup_deregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
 ) -> None:
     try:
-        helpers.deregister_stake_addr(
+        clusterlib_utils.deregister_stake_addr(
             cluster_obj=cluster_obj, pool_user=pool_user, name_template=name_template
         )
     except clusterlib.CLIError:
@@ -91,10 +92,10 @@ def _delegate_stake_addr(
     stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
 
     # create key pairs and addresses
-    stake_addr_rec = helpers.create_stake_addr_records(
+    stake_addr_rec = clusterlib_utils.create_stake_addr_records(
         f"addr0_{temp_template}", cluster_obj=cluster_obj
     )[0]
-    payment_addr_rec = helpers.create_payment_addr_records(
+    payment_addr_rec = clusterlib_utils.create_payment_addr_records(
         f"addr0_{temp_template}",
         cluster_obj=cluster_obj,
         stake_vkey_file=stake_addr_rec.vkey_file,
@@ -120,7 +121,7 @@ def _delegate_stake_addr(
     stake_addr_deleg_cert_file = cluster_obj.gen_stake_addr_delegation_cert(**deleg_kwargs)
 
     # fund source address
-    helpers.fund_from_faucet(
+    clusterlib_utils.fund_from_faucet(
         payment_addr_rec,
         cluster_obj=cluster_obj,
         faucet_data=addrs_data["user1"],
@@ -144,7 +145,7 @@ def _delegate_stake_addr(
         == src_init_balance - tx_raw_output.fee - cluster_obj.get_key_deposit()
     ), f"Incorrect balance for source address `{src_address}`"
 
-    helpers.wait_for_stake_distribution(cluster_obj)
+    clusterlib_utils.wait_for_stake_distribution(cluster_obj)
 
     # check that the stake address was delegated
     stake_addr_info = cluster_obj.get_stake_addr_info(stake_addr_rec.address)
@@ -210,7 +211,7 @@ class TestDelegateAddr:
             temp_template=temp_template,
             pool_name=pool_name,
         )
-        helpers.wait_for_stake_distribution(cluster)
+        clusterlib_utils.wait_for_stake_distribution(cluster)
 
         src_address = pool_user.payment.address
 
@@ -241,7 +242,7 @@ class TestDelegateAddr:
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
         # withdraw rewards to payment address
-        helpers.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
+        clusterlib_utils.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
 
         # de-register stake address
         src_reward_balance = cluster.get_address_balance(src_address)
@@ -366,7 +367,7 @@ class TestDelegateAddr:
             == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_key_deposit()
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
-        helpers.wait_for_stake_distribution(cluster)
+        clusterlib_utils.wait_for_stake_distribution(cluster)
 
         # check that the stake address was NOT delegated
         stake_addr_info = cluster.get_stake_addr_info(user_registered.stake.address)
@@ -609,7 +610,7 @@ class TestRewards:
             ), "New reward was not received by stake address"
 
         # withdraw rewards to payment address
-        helpers.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
+        clusterlib_utils.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
 
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge(
@@ -654,7 +655,7 @@ class TestRewards:
         stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
         # load and update original pool data
-        loaded_data = helpers.load_registered_pool_data(
+        loaded_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=stake_pool_id
         )
         pool_data_updated = loaded_data._replace(pool_pledge=loaded_data.pool_pledge * 9)
@@ -694,7 +695,7 @@ class TestRewards:
             ), "Pool owner received unexpected rewards"
 
             # fund source (pledge) address
-            helpers.fund_from_faucet(
+            clusterlib_utils.fund_from_faucet(
                 pool_owner,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -770,7 +771,7 @@ class TestRewards:
         stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
         # load pool data
-        loaded_data = helpers.load_registered_pool_data(
+        loaded_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=stake_pool_id
         )
 
@@ -816,7 +817,7 @@ class TestRewards:
             ), "Pool owner received unexpected rewards"
 
             # fund user address so it has enough funds for fees etc.
-            helpers.fund_from_faucet(
+            clusterlib_utils.fund_from_faucet(
                 pool_user,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -948,7 +949,7 @@ class TestRewards:
             ), "Pool owner received unexpected rewards"
 
             # fund source address
-            helpers.fund_from_faucet(
+            clusterlib_utils.fund_from_faucet(
                 pool_owner,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -1041,7 +1042,7 @@ class TestRewards:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw rewards to payment address
-        helpers.withdraw_reward(cluster_obj=cluster, pool_user=pool_reward)
+        clusterlib_utils.withdraw_reward(cluster_obj=cluster, pool_user=pool_reward)
 
         # deregister reward address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -1095,7 +1096,7 @@ class TestRewards:
             ), "New reward was not received by stake address"
 
             # fund source address
-            helpers.fund_from_faucet(
+            clusterlib_utils.fund_from_faucet(
                 pool_reward,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
