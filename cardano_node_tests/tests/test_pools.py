@@ -299,7 +299,7 @@ class TestStakePool:
         temp_dir: Path,
     ):
         """Create and register a stake pool with metadata."""
-        temp_template = "test_stake_pool_metadata"
+        temp_template = helpers.get_func_name()
 
         pool_name = "cardano-node-tests"
         pool_metadata = {
@@ -352,7 +352,7 @@ class TestStakePool:
         temp_dir: Path,
     ):
         """Create and register a stake pool with metadata file not available."""
-        temp_template = "test_stake_pool_metadata_not_avail"
+        temp_template = helpers.get_func_name()
 
         pool_name = f"pool_{clusterlib.get_rand_str(8)}"
         pool_metadata = {
@@ -406,7 +406,7 @@ class TestStakePool:
         no_of_addr: int,
     ):
         """Create and register a stake pool."""
-        temp_template = f"test_stake_pool_{no_of_addr}owners"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"poolX_{no_of_addr}",
@@ -447,7 +447,7 @@ class TestStakePool:
         no_of_addr: int,
     ):
         """Deregister stake pool."""
-        temp_template = f"test_deregister_stake_pool_{no_of_addr}owners"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
 
         pool_metadata = {
             "name": "QA E2E test",
@@ -542,7 +542,7 @@ class TestStakePool:
         temp_dir: Path,
     ):
         """Re-register stake pool."""
-        temp_template = "test_reregister_stake_pool"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "name": "QA E2E test",
@@ -658,7 +658,7 @@ class TestStakePool:
         no_of_addr: int,
     ):
         """Update stake pool metadata."""
-        temp_template = f"test_update_stake_pool_metadata_{no_of_addr}owners"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
 
         pool_metadata = {
             "name": "QA E2E test",
@@ -744,7 +744,7 @@ class TestStakePool:
         no_of_addr: int,
     ):
         """Update stake pool parameters."""
-        temp_template = f"test_update_stake_pool_{no_of_addr}owners"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
 
         pool_metadata = {
             "name": "QA E2E test",
@@ -813,7 +813,7 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
     ):
         """Create and register a stake pool with TX signed in multiple stages."""
-        temp_template = "test_sign_in_multiple_stages"
+        temp_template = helpers.get_func_name()
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{clusterlib.get_rand_str()}",
@@ -930,7 +930,7 @@ class TestPoolCost:
 
         cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str()
-        temp_template = f"test_pool_cost_class_{rand_str}"
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
         pool_owners = helpers.create_pool_users(
             cluster_obj=cluster,
@@ -993,7 +993,7 @@ class TestPoolCost:
         """Create and register a stake pool with pool cost >= 'minPoolCost'."""
         cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str()
-        temp_template = f"test_stake_pool_cost_{rand_str}"
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -1257,7 +1257,7 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Test pool metadata that is missing the 'name' key."""
-        temp_template = "test_stake_pool_metadata_no_name"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "description": "cardano-node-tests E2E tests",
@@ -1279,7 +1279,7 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Test pool metadata that is missing the 'description' key."""
-        temp_template = "test_stake_pool_metadata_no_description"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -1301,7 +1301,7 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Test pool metadata that is missing the 'ticker' key."""
-        temp_template = "test_stake_pool_metadata_no_ticker"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -1323,7 +1323,7 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Test pool metadata that is missing the 'homepage' key."""
-        temp_template = "test_stake_pool_metadata_no_homepage"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -1348,7 +1348,7 @@ class TestNegative:
         pool_name: str,
     ):
         """Test pool metadata with the 'name' value longer than allowed."""
-        temp_template = "test_stake_pool_metadata_long_name"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "name": pool_name,
@@ -1378,7 +1378,7 @@ class TestNegative:
         pool_description: str,
     ):
         """Test pool metadata with the 'description' value longer than allowed."""
-        temp_template = "test_stake_pool_metadata_long_description"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -1410,7 +1410,7 @@ class TestNegative:
         """Test pool metadata with the 'ticker' value longer than allowed."""
         hypothesis.assume(not (3 <= len(pool_ticker) <= 5))
 
-        temp_template = "test_stake_pool_metadata_long_ticker"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -1436,7 +1436,7 @@ class TestNegative:
         pool_homepage: str,
     ):
         """Test pool metadata with the 'homepage' value longer than allowed."""
-        temp_template = "test_stake_pool_metadata_long_homepage"
+        temp_template = helpers.get_func_name()
 
         pool_metadata = {
             "name": "CND",

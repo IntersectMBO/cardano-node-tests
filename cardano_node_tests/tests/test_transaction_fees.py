@@ -289,7 +289,7 @@ class TestExpectedFees:
     ):
         """Test pool registration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"test_pool_fees_{no_of_addr}owners"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
 
         pool_metadata = {
             "name": "QA E2E test",
@@ -394,7 +394,7 @@ class TestExpectedFees:
     ):
         """Test stake address registration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = "test_addr_registration_fees"
+        temp_template = helpers.get_func_name()
         src_address = pool_users[0].payment.address
         selected_users = pool_users[:no_of_addr]
 
@@ -428,7 +428,7 @@ class TestExpectedFees:
     ):
         """Test stake address deregistration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = "test_addr_deregistration_fees"
+        temp_template = helpers.get_func_name()
         src_address = pool_users[0].payment.address
         selected_users = pool_users[:no_of_addr]
 
