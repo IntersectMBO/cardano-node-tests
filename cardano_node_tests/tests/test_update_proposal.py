@@ -5,6 +5,7 @@ import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
@@ -28,7 +29,7 @@ def test_update_proposal(cluster_manager: parallel_run.ClusterManager):
     """Submit update proposal."""
     cluster = cluster_manager.get(singleton=True, cleanup=True)
 
-    helpers.update_params(
+    clusterlib_utils.update_params(
         cluster_obj=cluster,
         cli_arg="--decentralization-parameter",
         param_name="decentralisationParam",

@@ -15,6 +15,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import clusterlib
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
@@ -49,13 +50,13 @@ class TestBasic:
         if cached_value:
             return cached_value  # type: ignore
 
-        addrs = helpers.create_payment_addr_records(
+        addrs = clusterlib_utils.create_payment_addr_records(
             "addr_basic0", "addr_basic1", cluster_obj=cluster
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -167,14 +168,14 @@ class TestMultiInOut:
         if cached_value:
             return cached_value  # type: ignore
 
-        addrs = helpers.create_payment_addr_records(
+        addrs = clusterlib_utils.create_payment_addr_records(
             *[f"addr_multi_in_out{i}" for i in range(201)],
             cluster_obj=cluster,
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -401,13 +402,13 @@ class TestNotBalanced:
         if cached_value:
             return cached_value  # type: ignore
 
-        addrs = helpers.create_payment_addr_records(
+        addrs = clusterlib_utils.create_payment_addr_records(
             "addr_not_balanced0", "addr_not_balanced1", cluster_obj=cluster
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -530,7 +531,7 @@ class TestNegative:
         if cached_value:
             return cached_value  # type: ignore
 
-        created_users = helpers.create_pool_users(
+        created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template="test_negative",
             no_of_addr=2,
@@ -538,7 +539,7 @@ class TestNegative:
         cluster_manager.cache.test_data[data_key] = created_users
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             created_users[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
@@ -1028,11 +1029,13 @@ class TestMetadata:
         if cached_value:
             return cached_value  # type: ignore
 
-        addr = helpers.create_payment_addr_records("addr_test_metadata0", cluster_obj=cluster)[0]
+        addr = clusterlib_utils.create_payment_addr_records(
+            "addr_test_metadata0", cluster_obj=cluster
+        )[0]
         cluster_manager.cache.test_data[data_key] = addr
 
         # fund source addresses
-        helpers.fund_from_faucet(
+        clusterlib_utils.fund_from_faucet(
             addr,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
