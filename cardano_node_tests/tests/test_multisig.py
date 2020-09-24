@@ -26,6 +26,65 @@ def temp_dir(tmp_path_factory: TempdirFactory):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
+def multisig_tx(
+    cluster_obj: clusterlib.ClusterLib,
+    temp_template: str,
+    src_address: str,
+    dst_address: str,
+    amount: int,
+    multisig_script: Path,
+    payment_skey_files: List[Path],
+    script_is_src=False,
+):
+    src_init_balance = cluster_obj.get_address_balance(src_address)
+    dst_init_balance = cluster_obj.get_address_balance(dst_address)
+
+    # create TX body
+    destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+    fee = cluster_obj.calculate_tx_fee(
+        src_address=src_address,
+        tx_name=temp_template,
+        txouts=destinations,
+        witness_count_add=len(payment_skey_files),
+    )
+    tx_raw_output = cluster_obj.build_raw_tx(
+        src_address=src_address,
+        tx_name=temp_template,
+        txouts=destinations,
+        fee=fee,
+    )
+
+    # create witness file for each key
+    witness_files = [
+        cluster_obj.witness_tx(tx_body_file=tx_raw_output.out_file, signing_key_files=[skey])
+        for skey in payment_skey_files
+    ]
+    if script_is_src:
+        witness_files.append(
+            cluster_obj.witness_tx(tx_body_file=tx_raw_output.out_file, script_file=multisig_script)
+        )
+
+    # sign TX using witness files
+    tx_witnessed_file = cluster_obj.sign_witness_tx(
+        tx_body_file=tx_raw_output.out_file,
+        witness_files=witness_files,
+        tx_name=temp_template,
+    )
+
+    # submit signed TX
+    cluster_obj.submit_tx(tx_witnessed_file)
+    cluster_obj.wait_for_new_block(new_blocks=2)
+
+    assert (
+        cluster_obj.get_address_balance(src_address)
+        == src_init_balance - tx_raw_output.fee - amount
+    ), f"Incorrect balance for source address `{src_address}`"
+
+    assert (
+        cluster_obj.get_address_balance(dst_address) == dst_init_balance + amount
+    ), f"Incorrect balance for script address `{dst_address}`"
+
+
 class TestMultisig:
     @pytest.fixture
     def payment_addrs(
@@ -73,64 +132,25 @@ class TestMultisig:
         # create script address
         script_addr = cluster.gen_script_addr(multisig_script)
 
-        def _multisig(src_address: str, dst_address: str, amount: int, witness_script=False):
-            src_init_balance = cluster.get_address_balance(src_address)
-            dst_init_balance = cluster.get_address_balance(dst_address)
-
-            # create TX body
-            destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
-            fee = cluster.calculate_tx_fee(
-                src_address=src_address,
-                tx_name=temp_template,
-                txouts=destinations,
-                witness_count_add=len(payment_skey_files),
-            )
-            tx_raw_output = cluster.build_raw_tx(
-                src_address=src_address,
-                tx_name=temp_template,
-                txouts=destinations,
-                fee=fee,
-            )
-
-            # create witness file for each key
-            witness_files = [
-                cluster.witness_tx(tx_body_file=tx_raw_output.out_file, signing_key_files=[skey])
-                for skey in payment_skey_files
-            ]
-            if witness_script:
-                witness_files.append(
-                    cluster.witness_tx(
-                        tx_body_file=tx_raw_output.out_file, script_file=multisig_script
-                    )
-                )
-
-            # sign TX using witness files
-            tx_witnessed_file = cluster.sign_witness_tx(
-                tx_body_file=tx_raw_output.out_file,
-                witness_files=witness_files,
-                tx_name=temp_template,
-            )
-
-            # submit signed TX
-            cluster.submit_tx(tx_witnessed_file)
-            cluster.wait_for_new_block(new_blocks=2)
-
-            assert (
-                cluster.get_address_balance(src_address)
-                == src_init_balance - tx_raw_output.fee - amount
-            ), f"Incorrect balance for source address `{src_address}`"
-
-            assert (
-                cluster.get_address_balance(dst_address) == dst_init_balance + amount
-            ), f"Incorrect balance for script address `{dst_address}`"
-
         # send funds to script address
-        _multisig(src_address=payment_addrs[0].address, dst_address=script_addr, amount=300_000)
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=300_000,
+            multisig_script=multisig_script,
+            payment_skey_files=payment_skey_files,
+        )
 
         # send funds from script address
-        _multisig(
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=temp_template,
             src_address=script_addr,
             dst_address=payment_addrs[0].address,
             amount=1000,
-            witness_script=True,
+            multisig_script=multisig_script,
+            payment_skey_files=payment_skey_files,
+            script_is_src=True,
         )
