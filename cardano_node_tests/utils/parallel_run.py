@@ -140,14 +140,14 @@ class ClusterManager:
 
     def stop(self) -> None:
         """Stop cluster."""
-        self._log("called `_stop`")
+        self._log("called `stop`")
         devops_cluster.stop_cluster()
         self._save_cluster_data()
 
     def set_needs_restart(self) -> None:
         """Indicate that the cluster needs restart."""
         with helpers.FileLockIfXdist(self.cluster_lock):
-            self._log("called `_set_needs_restart`")
+            self._log("called `set_needs_restart`")
             open(self.lock_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
 
     @contextlib.contextmanager
