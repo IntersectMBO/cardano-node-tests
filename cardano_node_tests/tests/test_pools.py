@@ -925,7 +925,7 @@ class TestPoolCost:
         cluster_mincost: clusterlib.ClusterLib,
     ):
         """Create class scoped pool owners."""
-        data_key = id(self.pool_owners)
+        data_key = id(TestPoolCost)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
@@ -1035,7 +1035,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        data_key = id(self.pool_users)
+        data_key = id(TestNegative)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
