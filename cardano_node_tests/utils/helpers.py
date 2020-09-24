@@ -80,10 +80,16 @@ def get_vcs_link() -> str:
     """Return link to the current+1 line in GitHub."""
     calling_frame = inspect.currentframe().f_back  # type: ignore
     lineno = calling_frame.f_lineno + 1  # type: ignore
-    fname = calling_frame.f_globals["__file__"]  # type: ignore
-    fpart = fname[fname.find("cardano_node_tests") :]
+    fpath = calling_frame.f_globals["__file__"]  # type: ignore
+    fpart = fpath[fpath.find("cardano_node_tests") :]
     url = f"{GITHUB_BLOB_URL}/{fpart}#L{lineno}"
     return url
+
+
+def get_id_for_mktemp(file_path: str) -> str:
+    """Return an id for mktemp based on file path."""
+    fpart = file_path[file_path.rfind("/") + 1 :].replace(".", "_")
+    return fpart
 
 
 def wait_for(

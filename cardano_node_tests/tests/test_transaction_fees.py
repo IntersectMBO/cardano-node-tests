@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir and change to it."""
-    tmp_path = Path(tmp_path_factory.mktemp("test_transaction_fees"))
+    tmp_path = Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__)))
     with helpers.change_cwd(tmp_path):
         yield tmp_path
 
