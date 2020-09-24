@@ -44,7 +44,8 @@ def multisig_tx(
     destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
     witness_count_add = len(payment_skey_files)
     if script_is_src:
-        witness_count_add += 5  # TODO: calculate based on script size?
+        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+        witness_count_add += 5
 
     ttl = cluster_obj.calculate_tx_ttl()
     fee = cluster_obj.calculate_tx_fee(
