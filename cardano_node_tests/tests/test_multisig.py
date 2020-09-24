@@ -201,3 +201,55 @@ class TestMultisig:
             payment_skey_files=[payment_skey_files[random.randrange(0, len(payment_skey_files))]],
             script_is_src=True,
         )
+
+    @allure.link(helpers.get_vcs_link())
+    def test_multisig_atleast(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Send funds to and from script address using the "atLeast" script."""
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        skeys_len = len(payment_skey_files)
+        required = skeys_len // 2
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
+            payment_vkey_files=payment_vkey_files,
+            script_name=temp_template,
+            required=required,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(multisig_script)
+
+        # send funds to script address
+        num_of_skeys = random.randrange(required, skeys_len)
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=300_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[
+                payment_skey_files[0],
+                *random.sample(payment_skey_files[1:], k=num_of_skeys),
+            ],
+        )
+
+        # send funds from script address
+        num_of_skeys = random.randrange(required, skeys_len)
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            src_address=script_addr,
+            dst_address=payment_addrs[0].address,
+            amount=1000,
+            multisig_script=multisig_script,
+            payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
+            script_is_src=True,
+        )
