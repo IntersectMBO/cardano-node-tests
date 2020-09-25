@@ -214,12 +214,12 @@ def report_artifacts_errors(errors: List[Tuple[Path, str]]) -> None:
 
 def process_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
     """Process tests and cluster artifacts."""
-    artifacts_dir = request.config.getoption("--artifacts-base-dir")
-    if artifacts_dir:
-        artifacts_dir = Path(artifacts_dir)
-        # copy tests artifacts only when base directory was passed
-        save_tests_artifacts(pytest_tmp_dir, artifacts_dir)
-    else:
+    artifacts_base_dir = request.config.getoption("--artifacts-base-dir")
+    artifacts_dir = None
+
+    if artifacts_base_dir:
+        artifacts_dir = save_tests_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))
+    if not artifacts_dir:
         artifacts_dir = pytest_tmp_dir
 
     errors = search_cluster_artifacts(artifacts_dir)
