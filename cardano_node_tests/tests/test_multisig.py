@@ -37,6 +37,7 @@ def multisig_tx(
     payment_skey_files: List[Path],
     script_is_src=False,
 ):
+    # record initial balances
     src_init_balance = cluster_obj.get_address_balance(src_address)
     dst_init_balance = cluster_obj.get_address_balance(dst_address)
 
@@ -84,6 +85,7 @@ def multisig_tx(
     cluster_obj.submit_tx(tx_witnessed_file)
     cluster_obj.wait_for_new_block(new_blocks=2)
 
+    # check final balances
     assert (
         cluster_obj.get_address_balance(src_address)
         == src_init_balance - tx_raw_output.fee - amount
@@ -299,6 +301,50 @@ class TestBasic:
                 payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                 script_is_src=True,
             )
+
+    @allure.link(helpers.get_vcs_link())
+    def test_normal_tx_to_script_addr(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Send funds to script address using TX signed with skeys (not using witness files)."""
+        temp_template = helpers.get_func_name()
+        src_address = payment_addrs[0].address
+        amount = 1000
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=[p.vkey_file for p in payment_addrs],
+            script_name=temp_template,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(multisig_script)
+
+        # record initial balances
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(script_addr)
+
+        # send funds to script address
+        destinations = [clusterlib.TxOut(address=script_addr, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        tx_raw_output = cluster.send_funds(
+            src_address=src_address,
+            destinations=destinations,
+            tx_files=tx_files,
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check final balances
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(script_addr) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{script_addr}`"
 
 
 class TestNegative:
