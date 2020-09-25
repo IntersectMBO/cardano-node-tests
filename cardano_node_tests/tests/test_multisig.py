@@ -123,6 +123,31 @@ class TestBasic:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    def test_script_addr_length(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Check that script address length is the same as lenght of other addresses.
+
+        There was an issue that script address was 32 bytes instead of 28 bytes.
+        """
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            script_name=temp_template,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(multisig_script)
+
+        # check script address length
+        assert len(script_addr) == len(payment_addrs[0].address)
+
+    @allure.link(helpers.get_vcs_link())
     def test_multisig_all(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
