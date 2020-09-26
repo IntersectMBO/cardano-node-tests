@@ -602,7 +602,7 @@ class TestRewards:
         clusterlib_utils.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
 
     @allure.link(helpers.get_vcs_link())
-    def test_no_reward_unmet_pledge(
+    def test_no_reward_unmet_pledge1(
         self,
         cluster_manager: parallel_run.ClusterManager,
     ):
