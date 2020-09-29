@@ -107,11 +107,11 @@ class ClusterManager:
         # save artifacts
         devops_cluster.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir)
 
-    def _restart(self) -> clusterlib.ClusterLib:
+    def _restart(self, start_cmd: str = "") -> clusterlib.ClusterLib:
         """Restart cluster."""
         self._log("called `_restart`")
         self.stop()
-        cluster_obj = devops_cluster.start_cluster()
+        cluster_obj = devops_cluster.start_cluster(cmd=start_cmd)
 
         # setup faucet addresses
         tmp_path = Path(self.tmp_path_factory.mktemp("addrs_data"))
@@ -216,6 +216,7 @@ class ClusterManager:
         lock_resources: UnpackableSequence = (),
         use_resources: UnpackableSequence = (),
         cleanup: bool = False,
+        start_cmd: str = "",
     ) -> clusterlib.ClusterLib:
         """Return the `clusterlib.ClusterLib` instance once we can start the test.
 
@@ -230,6 +231,14 @@ class ClusterManager:
         no_tests_iteration = 0
         test_running_file = self.lock_dir / f"{TEST_RUNNING_GLOB}_{self.worker_id}"
         cluster_obj = self.cache.cluster_obj
+
+        if start_cmd:
+            if not (singleton or mark):
+                raise AssertionError(
+                    "Custom start command can be used only together with `singleton` or `mark`"
+                )
+            # always clean after test(s) that started custom cluster
+            cleanup = True
 
         # iterate until it is possible to start the test
         while True:
@@ -276,7 +285,7 @@ class ClusterManager:
                         continue
                     self._log("calling restart")
                     restart_here = False
-                    cluster_obj = self._restart()
+                    cluster_obj = self._restart(start_cmd=start_cmd)
                     self.cache.cluster_obj = cluster_obj
 
                 # "marked tests" = group of tests marked with a specific mark.

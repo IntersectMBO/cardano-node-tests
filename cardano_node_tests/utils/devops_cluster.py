@@ -42,11 +42,12 @@ def get_cluster_env() -> dict:
     return cluster_env
 
 
-def start_cluster() -> clusterlib.ClusterLib:
+def start_cluster(cmd: str = "") -> clusterlib.ClusterLib:
     """Start cluster."""
-    LOGGER.info("Starting cluster.")
+    cmd = cmd or "start-cluster"
+    LOGGER.info(f"Starting cluster with `{cmd}`.")
     cluster_env = get_cluster_env()
-    helpers.run_shell_command("start-cluster", workdir=cluster_env["work_dir"])
+    helpers.run_shell_command(cmd, workdir=cluster_env["work_dir"])
     LOGGER.info("Cluster started.")
 
     return clusterlib.ClusterLib(cluster_env["state_dir"])
