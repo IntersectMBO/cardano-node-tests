@@ -1,7 +1,5 @@
 import json
 import logging
-import tempfile
-from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Optional
@@ -15,8 +13,7 @@ from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
-TEST_TEMP_DIR = Path(tempfile.gettempdir()) / "cardano-node-tests"
-TEST_TEMP_DIR.mkdir(mode=0o700, exist_ok=True)
+TEST_TEMP_DIR = helpers.get_tests_tempdir()
 
 
 def withdraw_reward(cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser) -> None:

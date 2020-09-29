@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,13 @@ CURRENT_COMMIT = run_shell_command("git rev-parse HEAD").decode().strip()
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 GITHUB_TREE_URL = f"{GITHUB_URL}/tree/{CURRENT_COMMIT}"
 GITHUB_BLOB_URL = f"{GITHUB_URL}/blob/{CURRENT_COMMIT}"
+
+
+def get_tests_tempdir() -> Path:
+    """Return temporary directory for tests artifacts."""
+    tempdir = Path(tempfile.gettempdir()) / "cardano-node-tests"
+    tempdir.mkdir(mode=0o700, exist_ok=True)
+    return tempdir
 
 
 def get_vcs_link() -> str:
