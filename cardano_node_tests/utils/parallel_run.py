@@ -63,9 +63,7 @@ class ClusterManager:
             self.range_num = 1
 
         self.cluster_lock = f"{self.lock_dir}/{CLUSTER_LOCK}"
-
-        lock_log = self.lock_dir.parent / LOCK_LOG_FILE
-        self.lock_log = lock_log if lock_log.is_file() else None
+        self.lock_log = (self.lock_dir.parent / LOCK_LOG_FILE).resolve()
 
     @property
     def cache(self) -> ClusterManagerCache:
@@ -73,14 +71,14 @@ class ClusterManager:
 
     def _log(self, msg: str) -> None:
         """Log message - needs to be called while having lock."""
-        if not self.lock_log:
+        if not self.lock_log.is_file():
             return
         with open(self.lock_log, "a") as logfile:
             logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
 
     def _locked_log(self, msg: str) -> None:
         """Log message - will obtain lock first."""
-        if not self.lock_log:
+        if not self.lock_log.is_file():
             return
         with helpers.FileLockIfXdist(self.cluster_lock):
             with open(self.lock_log, "a") as logfile:
