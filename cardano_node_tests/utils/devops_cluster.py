@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
 
@@ -26,6 +27,12 @@ ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
 ERRORS_IGNORED_RE = re.compile("failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace")
 
 
+class StartupFiles(NamedTuple):
+    start_script: Path
+    config: Path
+    genesis_spec: Path
+
+
 def get_cluster_env() -> dict:
     """Get cardano cluster environment."""
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
@@ -42,11 +49,12 @@ def get_cluster_env() -> dict:
     return cluster_env
 
 
-def start_cluster() -> clusterlib.ClusterLib:
+def start_cluster(cmd: str = "") -> clusterlib.ClusterLib:
     """Start cluster."""
-    LOGGER.info("Starting cluster.")
+    cmd = cmd or "start-cluster"
+    LOGGER.info(f"Starting cluster with `{cmd}`.")
     cluster_env = get_cluster_env()
-    helpers.run_shell_command("start-cluster", workdir=cluster_env["work_dir"])
+    helpers.run_shell_command(cmd, workdir=cluster_env["work_dir"])
     LOGGER.info("Cluster started.")
 
     return clusterlib.ClusterLib(cluster_env["state_dir"])
@@ -145,6 +153,55 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     return data_file
 
 
+def get_node_config_paths(start_script: Path) -> List[Path]:
+    """Return path of node config files in nix."""
+    with open(start_script) as infile:
+        content = infile.read()
+
+    node_config = re.findall(r"cp /nix/store/(.+\.json) ", content)
+    nix_store = Path("/nix/store")
+    node_config_paths = [nix_store / c for c in node_config]
+
+    return node_config_paths
+
+
+def copy_startup_files(destdir: Path) -> StartupFiles:
+    """Make a copy of the "start-cluster" script and cluster config files."""
+    start_script_orig = helpers.get_cmd_path("start-cluster")
+    shutil.copy(start_script_orig, destdir)
+    start_script = destdir / "start-cluster"
+    start_script.chmod(0o755)
+
+    node_config_paths = get_node_config_paths(start_script)
+    for fpath in node_config_paths:
+        conf_name_orig = str(fpath)
+        if conf_name_orig.endswith("node.json"):
+            conf_name = "config.json"
+        elif conf_name_orig.endswith("genesis.spec.json"):
+            conf_name = "genesis.spec.json"
+        else:
+            continue
+
+        dest_file = destdir / conf_name
+        shutil.copy(fpath, dest_file)
+        dest_file.chmod(0o644)
+
+        helpers.replace_str_in_file(
+            infile=start_script,
+            outfile=start_script,
+            orig_str=str(fpath),
+            new_str=str(dest_file),
+        )
+
+    config_json = destdir / "config.json"
+    genesis_spec_json = destdir / "genesis.spec.json"
+    assert config_json.exists() and genesis_spec_json.exists()
+
+    return StartupFiles(
+        start_script=start_script, config=config_json, genesis_spec=genesis_spec_json
+    )
+
+
 def load_addrs_data() -> dict:
     """Load data about addresses and their keys for usage in tests."""
     cluster_env = get_cluster_env()
@@ -175,7 +232,7 @@ def save_cluster_artifacts(artifacts_dir: Path) -> Optional[Path]:
         return None
 
     dest_dir = artifacts_dir / f"cluster_artifacts_{clusterlib.get_rand_str(8)}"
-    os.mkdir(dest_dir)
+    dest_dir.mkdir(parents=True)
 
     state_dir = Path(cluster_env["state_dir"])
     files_list = list(state_dir.glob("*.std*"))

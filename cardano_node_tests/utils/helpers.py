@@ -5,7 +5,9 @@ import inspect
 import json
 import logging
 import os
+import shutil
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -15,6 +17,7 @@ from typing import Generator
 from typing import Optional
 
 from _pytest.fixtures import FixtureRequest
+from _pytest.tmpdir import TempdirFactory
 from filelock import FileLock
 
 from cardano_node_tests.utils.types import FileType
@@ -58,6 +61,22 @@ CURRENT_COMMIT = run_shell_command("git rev-parse HEAD").decode().strip()
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 GITHUB_TREE_URL = f"{GITHUB_URL}/tree/{CURRENT_COMMIT}"
 GITHUB_BLOB_URL = f"{GITHUB_URL}/blob/{CURRENT_COMMIT}"
+
+
+def get_basetemp() -> Path:
+    """Return base temporary directory for tests artifacts."""
+    tempdir = Path(tempfile.gettempdir()) / "cardano-node-tests"
+    tempdir.mkdir(mode=0o700, exist_ok=True)
+    return tempdir
+
+
+def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
+    """Return global temporary directory for a single pytest run."""
+    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
+    basetemp = pytest_tmp_dir.parent if IS_XDIST else pytest_tmp_dir
+    basetemp = basetemp / "tmp"
+    basetemp.mkdir(exist_ok=True)
+    return basetemp
 
 
 def get_vcs_link() -> str:
@@ -188,3 +207,22 @@ def save_env_for_allure(request: FixtureRequest) -> None:
                 continue
             name = k.replace(" ", ".")
             infile.write(f"{name}={v}\n")
+
+
+def get_cmd_path(cmd: str) -> Path:
+    """Return file path of the command."""
+    start_script = shutil.which(cmd)
+    if not start_script:
+        raise AssertionError(f"The `{cmd}` not found on PATH")
+    return Path(start_script)
+
+
+def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str) -> None:
+    """Replace a string in file with another string."""
+    with open(infile) as in_fp:
+        content = in_fp.read()
+
+    replaced_content = content.replace(orig_str, new_str)
+
+    with open(outfile, "wt") as out_fp:
+        out_fp.write(replaced_content)
