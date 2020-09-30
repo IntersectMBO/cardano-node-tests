@@ -165,15 +165,11 @@ def get_node_config_paths(start_script: Path) -> List[Path]:
     return node_config_paths
 
 
-def copy_startup_files() -> StartupFiles:
+def copy_startup_files(destdir: Path) -> StartupFiles:
     """Make a copy of the "start-cluster" script and cluster config files."""
-    tests_tempdir = helpers.get_tests_tempdir()
-    dest_dir = tests_tempdir / f"start_script_{clusterlib.get_rand_str(5)}"
-    dest_dir.mkdir(mode=0o700)
-
     start_script_orig = helpers.get_cmd_path("start-cluster")
-    shutil.copy(start_script_orig, dest_dir)
-    start_script = dest_dir / "start-cluster"
+    shutil.copy(start_script_orig, destdir)
+    start_script = destdir / "start-cluster"
     start_script.chmod(0o755)
 
     node_config_paths = get_node_config_paths(start_script)
@@ -186,7 +182,7 @@ def copy_startup_files() -> StartupFiles:
         else:
             continue
 
-        dest_file = dest_dir / conf_name
+        dest_file = destdir / conf_name
         shutil.copy(fpath, dest_file)
         dest_file.chmod(0o644)
 
@@ -197,8 +193,8 @@ def copy_startup_files() -> StartupFiles:
             new_str=str(dest_file),
         )
 
-    config_json = dest_dir / "config.json"
-    genesis_spec_json = dest_dir / "genesis.spec.json"
+    config_json = destdir / "config.json"
+    genesis_spec_json = destdir / "genesis.spec.json"
     assert config_json.exists() and genesis_spec_json.exists()
 
     return StartupFiles(
@@ -236,7 +232,7 @@ def save_cluster_artifacts(artifacts_dir: Path) -> Optional[Path]:
         return None
 
     dest_dir = artifacts_dir / f"cluster_artifacts_{clusterlib.get_rand_str(8)}"
-    os.mkdir(dest_dir)
+    dest_dir.mkdir(parents=True)
 
     state_dir = Path(cluster_env["state_dir"])
     files_list = list(state_dir.glob("*.std*"))

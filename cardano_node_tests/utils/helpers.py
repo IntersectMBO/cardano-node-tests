@@ -17,6 +17,7 @@ from typing import Generator
 from typing import Optional
 
 from _pytest.fixtures import FixtureRequest
+from _pytest.tmpdir import TempdirFactory
 from filelock import FileLock
 
 from cardano_node_tests.utils.types import FileType
@@ -62,11 +63,20 @@ GITHUB_TREE_URL = f"{GITHUB_URL}/tree/{CURRENT_COMMIT}"
 GITHUB_BLOB_URL = f"{GITHUB_URL}/blob/{CURRENT_COMMIT}"
 
 
-def get_tests_tempdir() -> Path:
-    """Return temporary directory for tests artifacts."""
+def get_basetemp() -> Path:
+    """Return base temporary directory for tests artifacts."""
     tempdir = Path(tempfile.gettempdir()) / "cardano-node-tests"
     tempdir.mkdir(mode=0o700, exist_ok=True)
     return tempdir
+
+
+def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
+    """Return global temporary directory for a single pytest run."""
+    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
+    basetemp = pytest_tmp_dir.parent if IS_XDIST else pytest_tmp_dir
+    basetemp = basetemp / "tmp"
+    basetemp.mkdir(exist_ok=True)
+    return basetemp
 
 
 def get_vcs_link() -> str:

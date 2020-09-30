@@ -13,7 +13,7 @@ from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
-TEST_TEMP_DIR = helpers.get_tests_tempdir()
+TEST_TEMP_DIR = helpers.get_basetemp()
 
 
 def withdraw_reward(cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser) -> None:
