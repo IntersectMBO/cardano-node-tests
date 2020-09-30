@@ -215,7 +215,8 @@ class ClusterManager:
         mark_start_here = False
         first_iteration = True
         sleep_delay = 1
-        no_tests_iteration = 0
+        no_marked_tests_iter = 0
+        last_seen_mark = ""
         test_running_file = self.lock_dir / f"{TEST_RUNNING_GLOB}_{self.worker_id}"
         cluster_obj = self.cache.cluster_obj
 
@@ -242,16 +243,14 @@ class ClusterManager:
 
                 # singleton test is running, so no other test can be started
                 if (self.lock_dir / TEST_SINGLETON_FILE).exists():
-                    self._log("singleton file exists, cannot run")
+                    self._log("singleton test in progress, cannot run")
                     sleep_delay = 5
-                    no_tests_iteration = 0
                     continue
 
                 restart_in_progress = list(self.lock_dir.glob(f"{RESTART_IN_PROGRESS_GLOB}_*"))
                 # cluster restart planned, no new tests can start
                 if not restart_here and restart_in_progress:
                     self._log("restart in progress, cannot run")
-                    no_tests_iteration = 0
                     continue
 
                 started_tests = list(self.lock_dir.glob(f"{TEST_RUNNING_GLOB}_*"))
@@ -263,13 +262,11 @@ class ClusterManager:
                 if not mark_start_here and marked_tests_starting:
                     self._log("marked tests starting, cannot run")
                     sleep_delay = 2
-                    no_tests_iteration = 0
                     continue
                 if mark_start_here and marked_tests_starting:
                     if started_tests:
                         self._log("unmarked tests running, cannot start marked test")
                         sleep_delay = 2
-                        no_tests_iteration = 0
                         continue
                     os.remove(marked_tests_starting[0])
                     mark_start_here = False
@@ -284,19 +281,24 @@ class ClusterManager:
                     mark_start_here = True
                     open(self.lock_dir / f"{TEST_MARK_STARTING_GLOB}_{self.worker_id}", "a").close()
                     sleep_delay = 2
-                    no_tests_iteration = 0
                     continue
 
                 # marked tests are already running
                 if test_curr_mark:
+                    active_mark_file = test_curr_mark[0].name
+
                     # check if there is a stale mark status file
-                    if started_tests:
-                        no_tests_iteration = 0
+                    if started_tests or last_seen_mark != active_mark_file:
+                        no_marked_tests_iter = 0
                     else:
-                        no_tests_iteration += 1
-                    if no_tests_iteration >= 10:
-                        self._log("no tests running for a while, cleaning the mark status file")
+                        no_marked_tests_iter += 1
+                    if no_marked_tests_iter >= 10:
+                        self._log(
+                            "no marked tests running for a while, cleaning the mark status file"
+                        )
                         self._on_marked_test_stop()
+
+                    last_seen_mark = active_mark_file
 
                     if not mark:
                         self._log("marked tests running, I don't have mark")
@@ -305,7 +307,6 @@ class ClusterManager:
 
                     # check if this test has the same mark as currently running marked tests,
                     # so it can run
-                    active_mark_file = test_curr_mark[0].name
                     if f"{TEST_CURR_MARK_GLOB}_{mark}" not in active_mark_file:
                         self._log(f"marked tests running, I have different mark - {mark}")
                         sleep_delay = 5
@@ -313,11 +314,13 @@ class ClusterManager:
 
                     self._log(f"in marked tests branch, I have required mark '{mark}'")
 
+                # reset counter of cycles with no marked test running
+                no_marked_tests_iter = 0
+
                 # this test is a singleton - no other test can run while this one is running
                 if singleton and started_tests:
                     self._log("tests are running, cannot start singleton")
                     sleep_delay = 5
-                    no_tests_iteration = 0
                     continue
 
                 # this test wants to lock some resources, check if these are not locked or in use
@@ -337,7 +340,6 @@ class ClusterManager:
 
                     if not res_usable:
                         sleep_delay = 5
-                        no_tests_iteration = 0
                         continue
                     self._log(
                         f"none of the resources in '{lock_resources}' locked or in use, "
@@ -358,7 +360,6 @@ class ClusterManager:
                             break
                     if res_locked:
                         sleep_delay = 5
-                        no_tests_iteration = 0
                         continue
                     self._log(f"none of the resources in '{use_resources}' locked, can start")
 
@@ -376,7 +377,6 @@ class ClusterManager:
                     if started_tests:
                         self._log("tests are running, cannot restart")
                         sleep_delay = 2
-                        no_tests_iteration = 0
                         continue
                     self._log("calling restart")
                     restart_here = False
