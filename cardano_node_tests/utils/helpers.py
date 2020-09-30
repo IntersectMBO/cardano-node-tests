@@ -5,6 +5,7 @@ import inspect
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -196,3 +197,22 @@ def save_env_for_allure(request: FixtureRequest) -> None:
                 continue
             name = k.replace(" ", ".")
             infile.write(f"{name}={v}\n")
+
+
+def get_cmd_path(cmd: str) -> Path:
+    """Return file path of the command."""
+    start_script = shutil.which(cmd)
+    if not start_script:
+        raise AssertionError(f"The `{cmd}` not found on PATH")
+    return Path(start_script)
+
+
+def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str) -> None:
+    """Replace a string in file with another string."""
+    with open(infile) as in_fp:
+        content = in_fp.read()
+
+    replaced_content = content.replace(orig_str, new_str)
+
+    with open(outfile, "wt") as out_fp:
+        out_fp.write(replaced_content)

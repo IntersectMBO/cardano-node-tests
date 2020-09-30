@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
 
@@ -24,6 +25,12 @@ ADDR_DATA = "addr_data.pickle"
 
 ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
 ERRORS_IGNORED_RE = re.compile("failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace")
+
+
+class StartupFiles(NamedTuple):
+    start_script: Path
+    config: Path
+    genesis_spec: Path
 
 
 def get_cluster_env() -> dict:
@@ -144,6 +151,59 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
     return data_file
+
+
+def get_node_config_paths(start_script: Path) -> List[Path]:
+    """Return path of node config files in nix."""
+    with open(start_script) as infile:
+        content = infile.read()
+
+    node_config = re.findall(r"cp /nix/store/(.+\.json) ", content)
+    nix_store = Path("/nix/store")
+    node_config_paths = [nix_store / c for c in node_config]
+
+    return node_config_paths
+
+
+def copy_startup_files() -> StartupFiles:
+    """Make a copy of the "start-cluster" script and cluster config files."""
+    tests_tempdir = helpers.get_tests_tempdir()
+    dest_dir = tests_tempdir / f"start_script_{clusterlib.get_rand_str(5)}"
+    dest_dir.mkdir(mode=0o700)
+
+    start_script_orig = helpers.get_cmd_path("start-cluster")
+    shutil.copy(start_script_orig, dest_dir)
+    start_script = dest_dir / "start-cluster"
+    start_script.chmod(0o755)
+
+    node_config_paths = get_node_config_paths(start_script)
+    for fpath in node_config_paths:
+        conf_name_orig = str(fpath)
+        if conf_name_orig.endswith("node.json"):
+            conf_name = "config.json"
+        elif conf_name_orig.endswith("genesis.spec.json"):
+            conf_name = "genesis.spec.json"
+        else:
+            continue
+
+        dest_file = dest_dir / conf_name
+        shutil.copy(fpath, dest_file)
+        dest_file.chmod(0o644)
+
+        helpers.replace_str_in_file(
+            infile=start_script,
+            outfile=start_script,
+            orig_str=str(fpath),
+            new_str=str(dest_file),
+        )
+
+    config_json = dest_dir / "config.json"
+    genesis_spec_json = dest_dir / "genesis.spec.json"
+    assert config_json.exists() and genesis_spec_json.exists()
+
+    return StartupFiles(
+        start_script=start_script, config=config_json, genesis_spec=genesis_spec_json
+    )
 
 
 def load_addrs_data() -> dict:
