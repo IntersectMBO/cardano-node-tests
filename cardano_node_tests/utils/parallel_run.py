@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Generator
 from typing import Optional
 
+import pytest
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 
@@ -106,9 +107,13 @@ class ClusterManager:
 
     def _restart(self, start_cmd: str = "") -> clusterlib.ClusterLib:
         """Restart cluster."""
-        self._log("called `_restart`")
+        self._log(f"called `_restart`, start_cmd='{start_cmd}'")
         self.stop()
-        cluster_obj = devops_cluster.start_cluster(cmd=start_cmd)
+
+        try:
+            cluster_obj = devops_cluster.start_cluster(cmd=start_cmd)
+        except Exception:
+            pytest.exit(msg="Failed to start cluster", returncode=1)
 
         # setup faucet addresses
         tmp_path = Path(self.tmp_path_factory.mktemp("addrs_data"))
@@ -157,7 +162,7 @@ class ClusterManager:
         if restart_after_mark_files:
             for f in restart_after_mark_files:
                 os.remove(f)
-            self._log("in `_on_marked_test_stop`, creating restart needed")
+            self._log("in `_on_marked_test_stop`, creating 'restart needed' file")
             open(self.lock_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
 
         # remove file that indicates that tests with the mark are running
