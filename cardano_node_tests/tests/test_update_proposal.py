@@ -5,6 +5,7 @@ import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
@@ -20,17 +21,20 @@ def temp_dir(tmp_path_factory: TempdirFactory):
         yield tmp_path
 
 
+@pytest.fixture
+def cluster_update_proposal(cluster_manager: parallel_run.ClusterManager) -> clusterlib.ClusterLib:
+    return cluster_manager.get(singleton=True, cleanup=True)
+
+
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 @allure.link(helpers.get_vcs_link())
-def test_update_proposal(cluster_manager: parallel_run.ClusterManager):
+def test_update_proposal(cluster_update_proposal: clusterlib.ClusterLib):
     """Submit update proposal."""
-    cluster = cluster_manager.get(singleton=True, cleanup=True)
-
     clusterlib_utils.update_params(
-        cluster_obj=cluster,
+        cluster_obj=cluster_update_proposal,
         cli_arg="--decentralization-parameter",
         param_name="decentralisationParam",
         param_value=0.5,
