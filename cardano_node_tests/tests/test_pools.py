@@ -176,7 +176,7 @@ def _create_register_pool_delegate_stake_tx(
     # create stake address registration certs
     stake_addr_reg_cert_files = [
         cluster_obj.gen_stake_addr_registration_cert(
-            addr_name=f"addr{i}_{temp_template}", stake_vkey_file=p.stake.vkey_file
+            addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
         )
         for i, p in enumerate(pool_owners)
     ]
@@ -184,7 +184,7 @@ def _create_register_pool_delegate_stake_tx(
     # create stake address delegation cert
     stake_addr_deleg_cert_files = [
         cluster_obj.gen_stake_addr_delegation_cert(
-            addr_name=f"addr{i}_{temp_template}",
+            addr_name=f"{temp_template}_addr{i}",
             stake_vkey_file=p.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
         )
@@ -265,7 +265,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     # create stake address registration certs
     stake_addr_reg_cert_files = [
         cluster_obj.gen_stake_addr_registration_cert(
-            addr_name=f"addr{i}_{temp_template}", stake_vkey_file=p.stake.vkey_file
+            addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
         )
         for i, p in enumerate(pool_owners)
     ]
@@ -273,7 +273,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     # create stake address delegation cert
     stake_addr_deleg_cert_files = [
         cluster_obj.gen_stake_addr_delegation_cert(
-            addr_name=f"addr{i}_{temp_template}",
+            addr_name=f"{temp_template}_addr{i}",
             stake_vkey_file=p.stake.vkey_file,
             cold_vkey_file=pool_creation_out.cold_key_pair.vkey_file,
         )

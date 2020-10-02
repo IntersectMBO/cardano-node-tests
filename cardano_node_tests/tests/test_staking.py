@@ -82,10 +82,10 @@ def _delegate_stake_addr(
 
     # create key pairs and addresses
     stake_addr_rec = clusterlib_utils.create_stake_addr_records(
-        f"addr0_{temp_template}", cluster_obj=cluster_obj
+        f"{temp_template}_addr0", cluster_obj=cluster_obj
     )[0]
     payment_addr_rec = clusterlib_utils.create_payment_addr_records(
-        f"addr0_{temp_template}",
+        f"{temp_template}_addr0",
         cluster_obj=cluster_obj,
         stake_vkey_file=stake_addr_rec.vkey_file,
     )[0]
@@ -94,12 +94,12 @@ def _delegate_stake_addr(
 
     # create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.gen_stake_addr_registration_cert(
-        addr_name=f"addr0_{temp_template}", stake_vkey_file=stake_addr_rec.vkey_file
+        addr_name=f"{temp_template}_addr0", stake_vkey_file=stake_addr_rec.vkey_file
     )
 
     # create stake address delegation cert
     deleg_kwargs: Dict[str, Any] = {
-        "addr_name": f"addr0_{temp_template}",
+        "addr_name": f"{temp_template}_addr0",
         "stake_vkey_file": stake_addr_rec.vkey_file,
     }
     if delegate_with_pool_id:
@@ -218,7 +218,7 @@ class TestDelegateAddr:
 
         # files for deregistering stake address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_user.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_user.stake.vkey_file
         )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
@@ -269,12 +269,12 @@ class TestDelegateAddr:
 
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # create stake address deregistration cert
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # register and deregister stake address in single TX
@@ -311,12 +311,12 @@ class TestDelegateAddr:
 
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # create stake address deregistration cert
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # register stake address
@@ -337,7 +337,7 @@ class TestDelegateAddr:
 
         # create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
-            addr_name=f"addr0_{temp_template}",
+            addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
         )
@@ -376,7 +376,7 @@ class TestNegative:
         # create stake address registration cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.gen_stake_addr_registration_cert(
-                addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_users[0].payment.vkey_file
+                addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_users[0].payment.vkey_file
             )
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
@@ -396,7 +396,7 @@ class TestNegative:
         # create stake address delegation cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.gen_stake_addr_delegation_cert(
-                addr_name=f"addr0_{temp_template}",
+                addr_name=f"{temp_template}_addr0",
                 stake_vkey_file=pool_users[0].payment.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
             )
@@ -417,7 +417,7 @@ class TestNegative:
 
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # register stake address, use wrong payment skey
@@ -449,7 +449,7 @@ class TestNegative:
 
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # register stake address
@@ -462,7 +462,7 @@ class TestNegative:
 
         # create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
-            addr_name=f"addr0_{temp_template}",
+            addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
         )
@@ -496,7 +496,7 @@ class TestNegative:
 
         # create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
-            addr_name=f"addr0_{temp_template}",
+            addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
         )
@@ -526,7 +526,7 @@ class TestNegative:
 
         # files for deregistering stake address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
@@ -888,7 +888,7 @@ class TestRewards:
 
         # deregister stake address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_owner.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_owner.stake.vkey_file
         )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
@@ -1035,7 +1035,7 @@ class TestRewards:
 
         # deregister reward address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
-            addr_name=f"addr0_{temp_template}", stake_vkey_file=pool_reward.stake.vkey_file
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_reward.stake.vkey_file
         )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
@@ -1100,7 +1100,7 @@ class TestRewards:
 
             # reregister stake address and delegate it to pool
             reward_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
-                addr_name=f"addr0_{temp_template}",
+                addr_name=f"{temp_template}_addr0",
                 stake_vkey_file=pool_reward.stake.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
             )

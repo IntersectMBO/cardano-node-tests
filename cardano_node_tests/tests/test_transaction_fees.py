@@ -206,7 +206,7 @@ class TestExpectedFees:
         # create stake address registration certs
         stake_addr_reg_cert_files = [
             cluster_obj.gen_stake_addr_registration_cert(
-                addr_name=f"addr{i}_{temp_template}", stake_vkey_file=p.stake.vkey_file
+                addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
             )
             for i, p in enumerate(pool_owners)
         ]
@@ -214,7 +214,7 @@ class TestExpectedFees:
         # create stake address delegation cert
         stake_addr_deleg_cert_files = [
             cluster_obj.gen_stake_addr_delegation_cert(
-                addr_name=f"addr{i}_{temp_template}",
+                addr_name=f"{temp_template}_addr{i}",
                 stake_vkey_file=p.stake.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
             )
@@ -401,7 +401,7 @@ class TestExpectedFees:
 
         stake_addr_reg_certs = [
             cluster.gen_stake_addr_registration_cert(
-                addr_name=f"addr{i}_{temp_template}", stake_vkey_file=p.stake.vkey_file
+                addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
             )
             for i, p in enumerate(selected_users)
         ]
@@ -435,7 +435,7 @@ class TestExpectedFees:
 
         stake_addr_dereg_certs = [
             cluster.gen_stake_addr_deregistration_cert(
-                addr_name=f"addr{i}_{temp_template}", stake_vkey_file=p.stake.vkey_file
+                addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
             )
             for i, p in enumerate(selected_users)
         ]
