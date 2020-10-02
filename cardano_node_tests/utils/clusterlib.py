@@ -122,9 +122,9 @@ class Protocols:
 
 
 class MultiSigTypeArgs:
-    ALL = "--all"
-    ANY = "--any"
-    AT_LEAST = "--at-least"
+    ALL = "all"
+    ANY = "any"
+    AT_LEAST = "atLeast"
 
 
 class CLIError(Exception):
@@ -725,6 +725,19 @@ class ClusterLib:
         self._check_outfiles(out_file)
         return out_file
 
+    def get_payment_vkey_hash(
+        self,
+        payment_vkey_file: FileType,
+    ) -> str:
+        """Return payment vkey hash."""
+        return (
+            self.cli(
+                ["address", "key-hash", "--payment-verification-key-file", str(payment_vkey_file)]
+            )
+            .stdout.rstrip()
+            .decode("ascii")
+        )
+
     def get_ledger_state(self) -> dict:
         """Return ledger state info."""
         return json.loads(self.query_cli(["ledger-state"]))  # type: ignore
@@ -1157,7 +1170,7 @@ class ClusterLib:
         self.cli(
             [
                 "transaction",
-                "sign-witness",
+                "assemble",
                 "--tx-body-file",
                 str(tx_body_file),
                 "--out-file",
@@ -1247,23 +1260,25 @@ class ClusterLib:
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{script_name}_multisig.script"
 
-        cli_args = []
+        script: dict = {
+            "scripts": [
+                {"keyHash": self.get_payment_vkey_hash(f), "type": "sig"}
+                for f in payment_vkey_files
+            ],
+            "type": script_type_arg,
+        }
+
         if script_type_arg == MultiSigTypeArgs.AT_LEAST:
-            cli_args = ["--required", str(required)]
+            if not required:
+                raise AssertionError(
+                    "Non-zero value for 'required' needed when "
+                    f"`{script_type_arg}` == `{MultiSigTypeArgs.AT_LEAST}`"
+                )
+            script["required"] = required
 
-        self.cli(
-            [
-                "transaction",
-                "build-multisig",
-                script_type_arg,
-                *cli_args,
-                "--out-file",
-                str(out_file),
-                *self._prepend_flag("--payment-verification-key-file", payment_vkey_files),
-            ]
-        )
+        with open(out_file, "wt") as fp_out:
+            json.dump(script, fp_out, indent=4)
 
-        self._check_outfiles(out_file)
         return out_file
 
     def gen_update_proposal(
