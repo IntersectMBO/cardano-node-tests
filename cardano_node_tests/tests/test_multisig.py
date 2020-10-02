@@ -75,7 +75,7 @@ def multisig_tx(
         )
 
     # sign TX using witness files
-    tx_witnessed_file = cluster_obj.sign_witness_tx(
+    tx_witnessed_file = cluster_obj.assemble_tx(
         tx_body_file=tx_raw_output.out_file,
         witness_files=witness_files,
         tx_name=temp_template,
@@ -514,24 +514,6 @@ class TestNegative:
                     script_is_src=True,
                 )
             assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    def test_multisig_atleast_one_required(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
-    ):
-        """Build the "atLeast" multisig script where required is 1."""
-        temp_template = helpers.get_func_name()
-        payment_vkey_files = [p.vkey_file for p in payment_addrs]
-
-        # create multisig script
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_multisig_script(
-                script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
-                payment_vkey_files=payment_vkey_files,
-                script_name=temp_template,
-                required=1,
-            )
-        assert 'you should use the "any" multi-signature script' in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_normal_tx_from_script_addr(

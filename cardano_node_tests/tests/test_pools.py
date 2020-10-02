@@ -910,7 +910,7 @@ class TestStakePool:
         ]
 
         # sign TX using witness files
-        tx_witnessed_file = cluster.sign_witness_tx(
+        tx_witnessed_file = cluster.assemble_tx(
             tx_body_file=tx_raw_output.out_file, witness_files=witness_files
         )
 
