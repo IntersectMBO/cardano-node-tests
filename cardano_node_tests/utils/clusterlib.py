@@ -1155,14 +1155,14 @@ class ClusterLib:
         self._check_outfiles(out_file)
         return out_file
 
-    def sign_witness_tx(
+    def assemble_tx(
         self,
         tx_body_file: FileType,
         witness_files: OptionalFiles,
         tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> Path:
-        """Sign transaction."""
+        """Assemble transaction from TX body and a set of witnesses."""
         tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.witnessed"

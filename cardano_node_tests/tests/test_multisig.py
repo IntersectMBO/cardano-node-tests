@@ -75,7 +75,7 @@ def multisig_tx(
         )
 
     # sign TX using witness files
-    tx_witnessed_file = cluster_obj.sign_witness_tx(
+    tx_witnessed_file = cluster_obj.assemble_tx(
         tx_body_file=tx_raw_output.out_file,
         witness_files=witness_files,
         tx_name=temp_template,
