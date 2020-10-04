@@ -67,6 +67,8 @@ class TestFee:
         fee: int,
     ):
         """Send a transaction with negative fee."""
+        temp_template = f"{helpers.get_func_name()}_{clusterlib.get_timestamped_rand_str()}"
+
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -77,6 +79,7 @@ class TestFee:
             cluster.send_funds(
                 src_address=src_address,
                 destinations=destinations,
+                tx_name=temp_template,
                 tx_files=tx_files,
                 fee=fee,
             )
@@ -91,6 +94,8 @@ class TestFee:
         fee_change: float,
     ):
         """Send a transaction with smaller-than-expected fee."""
+        temp_template = f"{helpers.get_func_name()}_{fee_change}"
+
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -101,7 +106,10 @@ class TestFee:
         if fee_change:
             fee = (
                 cluster.calculate_tx_fee(
-                    src_address=src_address, txouts=destinations, tx_files=tx_files
+                    src_address=src_address,
+                    tx_name=temp_template,
+                    txouts=destinations,
+                    tx_files=tx_files,
                 )
                 / fee_change
             )
@@ -110,6 +118,7 @@ class TestFee:
             cluster.send_funds(
                 src_address=src_address,
                 destinations=destinations,
+                tx_name=temp_template,
                 tx_files=tx_files,
                 fee=int(fee),
             )
@@ -124,6 +133,7 @@ class TestFee:
         fee_add: int,
     ):
         """Send a transaction fee that is same or higher than expected."""
+        temp_template = f"{helpers.get_func_name()}_{fee_add}"
         amount = 100
 
         src_address = payment_addrs[0].address
@@ -136,7 +146,10 @@ class TestFee:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         fee = (
             cluster.calculate_tx_fee(
-                src_address=src_address, txouts=destinations, tx_files=tx_files
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=destinations,
+                tx_files=tx_files,
             )
             + fee_add
         )
@@ -144,6 +157,7 @@ class TestFee:
         tx_raw_output = cluster.send_funds(
             src_address=src_address,
             destinations=destinations,
+            tx_name=temp_template,
             tx_files=tx_files,
             fee=fee,
         )
@@ -250,6 +264,7 @@ class TestExpectedFees:
     def _from_to_transactions(
         self,
         cluster_obj: clusterlib.ClusterLib,
+        tx_name: str,
         pool_users: List[clusterlib.PoolUser],
         from_num: int,
         to_num: int,
@@ -275,7 +290,7 @@ class TestExpectedFees:
 
         # calculate TX fee
         tx_fee = cluster_obj.calculate_tx_fee(
-            src_address=src_address, txins=txins, txouts=txouts, tx_files=tx_files
+            src_address=src_address, tx_name=tx_name, txins=txins, txouts=txouts, tx_files=tx_files
         )
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
@@ -323,7 +338,9 @@ class TestExpectedFees:
         )
 
         # calculate TX fee
-        tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
+        tx_fee = cluster.calculate_tx_fee(
+            src_address=src_address, tx_name=temp_template, tx_files=tx_files
+        )
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 185345), (3, 210337), (5, 235329), (10, 297809)])
@@ -337,6 +354,7 @@ class TestExpectedFees:
     ):
         """Test pool deregistration fees."""
         no_of_addr, expected_fee = addr_fee
+        temp_template = f"{helpers.get_func_name()}_{addr_fee}"
         src_address = pool_users[0].payment.address
 
         pool_metadata = {
@@ -382,7 +400,9 @@ class TestExpectedFees:
         )
 
         # calculate TX fee
-        tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
+        tx_fee = cluster.calculate_tx_fee(
+            src_address=src_address, tx_name=temp_template, tx_files=tx_files
+        )
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
@@ -395,7 +415,7 @@ class TestExpectedFees:
     ):
         """Test stake address registration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{addr_fee}"
         src_address = pool_users[0].payment.address
         selected_users = pool_users[:no_of_addr]
 
@@ -416,7 +436,9 @@ class TestExpectedFees:
         )
 
         # calculate TX fee
-        tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
+        tx_fee = cluster.calculate_tx_fee(
+            src_address=src_address, tx_name=temp_template, tx_files=tx_files
+        )
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 179141), (3, 207125), (5, 235109), (10, 305069)])
@@ -429,7 +451,7 @@ class TestExpectedFees:
     ):
         """Test stake address deregistration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{addr_fee}"
         src_address = pool_users[0].payment.address
         selected_users = pool_users[:no_of_addr]
 
@@ -450,7 +472,9 @@ class TestExpectedFees:
         )
 
         # calculate TX fee
-        tx_fee = cluster.calculate_tx_fee(src_address=src_address, tx_files=tx_files)
+        tx_fee = cluster.calculate_tx_fee(
+            src_address=src_address, tx_name=temp_template, tx_files=tx_files
+        )
         assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize(
@@ -464,8 +488,11 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 1 payment address to 1 payment address."""
+        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+
         self._from_to_transactions(
             cluster_obj=cluster,
+            tx_name=temp_template,
             pool_users=pool_users,
             from_num=1,
             to_num=1,
@@ -483,8 +510,11 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 1 payment address to 10 payment addresses."""
+        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+
         self._from_to_transactions(
             cluster_obj=cluster,
+            tx_name=temp_template,
             pool_users=pool_users,
             from_num=1,
             to_num=10,
@@ -502,8 +532,11 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 10 payment addresses to 1 payment address."""
+        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+
         self._from_to_transactions(
             cluster_obj=cluster,
+            tx_name=temp_template,
             pool_users=pool_users,
             from_num=10,
             to_num=1,
@@ -521,8 +554,11 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 10 payment addresses to 10 payment addresses."""
+        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+
         self._from_to_transactions(
             cluster_obj=cluster,
+            tx_name=temp_template,
             pool_users=pool_users,
             from_num=10,
             to_num=10,
@@ -540,8 +576,11 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 100 payment addresses to 100 payment addresses."""
+        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+
         self._from_to_transactions(
             cluster_obj=cluster,
+            tx_name=temp_template,
             pool_users=pool_users,
             from_num=100,
             to_num=100,

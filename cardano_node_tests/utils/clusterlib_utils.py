@@ -235,10 +235,10 @@ def create_pool_users(
     for i in range(no_of_addr):
         # create key pairs and addresses
         stake_addr_rec = create_stake_addr_records(
-            f"addr{i}_{name_template}", cluster_obj=cluster_obj
+            f"{name_template}_addr{i}", cluster_obj=cluster_obj
         )[0]
         payment_addr_rec = create_payment_addr_records(
-            f"addr{i}_{name_template}",
+            f"{name_template}_addr{i}",
             cluster_obj=cluster_obj,
             stake_vkey_file=stake_addr_rec.vkey_file,
         )[0]
