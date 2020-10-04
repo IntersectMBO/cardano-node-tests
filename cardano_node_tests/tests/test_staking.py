@@ -125,7 +125,9 @@ def _delegate_stake_addr(
         certificate_files=[stake_addr_reg_cert_file, stake_addr_deleg_cert_file],
         signing_key_files=[payment_addr_rec.skey_file, stake_addr_rec.skey_file],
     )
-    tx_raw_output = cluster_obj.send_tx(src_address=src_address, tx_files=tx_files)
+    tx_raw_output = cluster_obj.send_tx(
+        src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
+    )
     cluster_obj.wait_for_new_block(new_blocks=2)
 
     # check that the balance for source address was correctly updated
@@ -227,17 +229,25 @@ class TestDelegateAddr:
 
         # deregistration is expected to fail because there are rewards in the stake address
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(src_address=src_address, tx_files=tx_files_deregister)
+            cluster.send_tx(
+                src_address=src_address,
+                tx_name=f"{temp_template}_dereg_fail",
+                tx_files=tx_files_deregister,
+            )
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
         # withdraw rewards to payment address
-        clusterlib_utils.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
+        clusterlib_utils.withdraw_reward(
+            cluster_obj=cluster, pool_user=pool_user, name_template=temp_template
+        )
 
         # deregister stake address
         src_reward_balance = cluster.get_address_balance(src_address)
 
         tx_raw_deregister_output = cluster.send_tx(
-            src_address=src_address, tx_files=tx_files_deregister
+            src_address=src_address,
+            tx_name=f"{temp_template}_dereg",
+            tx_files=tx_files_deregister,
         )
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -282,7 +292,11 @@ class TestDelegateAddr:
             certificate_files=[stake_addr_reg_cert_file, stake_addr_dereg_cert],
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
-        tx_raw_output = cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
+        tx_raw_output = cluster.send_tx(
+            src_address=user_payment.address,
+            tx_name=f"{temp_template}_reg_dereg",
+            tx_files=tx_files,
+        )
         cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
@@ -324,7 +338,11 @@ class TestDelegateAddr:
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[user_payment.skey_file],
         )
-        tx_raw_output_reg = cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
+        tx_raw_output_reg = cluster.send_tx(
+            src_address=user_payment.address,
+            tx_name=f"{temp_template}_reg",
+            tx_files=tx_files,
+        )
         cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
@@ -347,7 +365,11 @@ class TestDelegateAddr:
             certificate_files=[stake_addr_deleg_cert_file, stake_addr_dereg_cert],
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
-        tx_raw_output_deleg = cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
+        tx_raw_output_deleg = cluster.send_tx(
+            src_address=user_payment.address,
+            tx_name=f"{temp_template}_deleg_dereg",
+            tx_files=tx_files,
+        )
         cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
@@ -427,7 +449,9 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
+            cluster.send_tx(
+                src_address=user_payment.address, tx_name=temp_template, tx_files=tx_files
+            )
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -457,7 +481,9 @@ class TestNegative:
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[user_payment.skey_file],
         )
-        cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
+        cluster.send_tx(
+            src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
+        )
         cluster.wait_for_new_block(new_blocks=2)
 
         # create stake address delegation cert
@@ -474,7 +500,11 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
+            cluster.send_tx(
+                src_address=user_payment.address,
+                tx_name=f"{temp_template}_deleg",
+                tx_files=tx_files,
+            )
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -508,7 +538,11 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
+            cluster.send_tx(
+                src_address=user_payment.address,
+                tx_name=f"{temp_template}_deleg_unreg",
+                tx_files=tx_files,
+            )
         assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -534,7 +568,11 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(src_address=user_payment.address, tx_files=tx_files)
+            cluster.send_tx(
+                src_address=user_payment.address,
+                tx_name=f"{temp_template}_dereg_fail",
+                tx_files=tx_files,
+            )
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
 
@@ -599,7 +637,9 @@ class TestRewards:
             ), "New reward was not received by stake address"
 
         # withdraw rewards to payment address
-        clusterlib_utils.withdraw_reward(cluster_obj=cluster, pool_user=pool_user)
+        clusterlib_utils.withdraw_reward(
+            cluster_obj=cluster, pool_user=pool_user, name_template=temp_template
+        )
 
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge1(
@@ -656,6 +696,7 @@ class TestRewards:
             vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
             cold_key_pair=pool_rec["cold_key_pair"],
             reward_account_vkey_file=pool_rec["reward"].vkey_file,
+            tx_name=f"{temp_template}_update_param",
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
@@ -700,6 +741,7 @@ class TestRewards:
                 vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
                 cold_key_pair=pool_rec["cold_key_pair"],
                 reward_account_vkey_file=pool_rec["reward"].vkey_file,
+                tx_name=f"{temp_template}_update_to_orig",
                 deposit=0,  # no additional deposit, the pool is already registered
             )
 
@@ -772,6 +814,7 @@ class TestRewards:
         cluster.send_funds(
             src_address=pool_owner.payment.address,
             destinations=destinations,
+            tx_name=f"{temp_template}_withdraw_pledge",
             tx_files=tx_files,
         )
         cluster.wait_for_new_block(new_blocks=2)
@@ -824,6 +867,7 @@ class TestRewards:
             cluster.send_funds(
                 src_address=pool_user.payment.address,
                 destinations=destinations,
+                tx_name=f"{temp_template}_return_pledge",
                 tx_files=tx_files,
             )
             cluster.wait_for_new_block(new_blocks=2)
@@ -898,7 +942,9 @@ class TestRewards:
         src_init_balance = cluster.get_address_balance(pool_owner.payment.address)
 
         tx_raw_deregister_output = cluster.send_tx(
-            src_address=pool_owner.payment.address, tx_files=tx_files_deregister
+            src_address=pool_owner.payment.address,
+            tx_name=f"{temp_template}_dereg",
+            tx_files=tx_files_deregister,
         )
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -957,7 +1003,9 @@ class TestRewards:
                 signing_key_files=[pool_owner.payment.skey_file, pool_owner.stake.skey_file],
             )
             tx_raw_output = cluster.send_tx(
-                src_address=pool_owner.payment.address, tx_files=tx_files
+                src_address=pool_owner.payment.address,
+                tx_name=f"{temp_template}_rereg_deleg",
+                tx_files=tx_files,
             )
             cluster.wait_for_new_block(new_blocks=2)
 
@@ -1031,7 +1079,9 @@ class TestRewards:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw rewards to payment address
-        clusterlib_utils.withdraw_reward(cluster_obj=cluster, pool_user=pool_reward)
+        clusterlib_utils.withdraw_reward(
+            cluster_obj=cluster, pool_user=pool_reward, name_template=temp_template
+        )
 
         # deregister reward address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -1045,7 +1095,9 @@ class TestRewards:
         src_init_balance = cluster.get_address_balance(pool_reward.payment.address)
 
         tx_raw_deregister_output = cluster.send_tx(
-            src_address=pool_reward.payment.address, tx_files=tx_files_deregister
+            src_address=pool_reward.payment.address,
+            tx_name=f"{temp_template}_dereg_reward",
+            tx_files=tx_files_deregister,
         )
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -1112,7 +1164,9 @@ class TestRewards:
                 signing_key_files=[pool_reward.payment.skey_file, pool_reward.stake.skey_file],
             )
             tx_raw_output = cluster.send_tx(
-                src_address=pool_reward.payment.address, tx_files=tx_files
+                src_address=pool_reward.payment.address,
+                tx_name=f"{temp_template}_rereg_deleg",
+                tx_files=tx_files,
             )
             cluster.wait_for_new_block(new_blocks=2)
 
