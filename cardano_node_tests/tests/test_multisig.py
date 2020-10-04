@@ -66,12 +66,20 @@ def multisig_tx(
 
     # create witness file for each key
     witness_files = [
-        cluster_obj.witness_tx(tx_body_file=tx_raw_output.out_file, signing_key_files=[skey])
-        for skey in payment_skey_files
+        cluster_obj.witness_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=[skey],
+            tx_name=f"{temp_template}_skey{idx}",
+        )
+        for idx, skey in enumerate(payment_skey_files)
     ]
     if script_is_src:
         witness_files.append(
-            cluster_obj.witness_tx(tx_body_file=tx_raw_output.out_file, script_file=multisig_script)
+            cluster_obj.witness_tx(
+                tx_body_file=tx_raw_output.out_file,
+                script_file=multisig_script,
+                tx_name=f"{temp_template}_script",
+            )
         )
 
     # sign TX using witness files
@@ -331,6 +339,7 @@ class TestBasic:
 
         tx_raw_output = cluster.send_funds(
             src_address=src_address,
+            tx_name=temp_template,
             destinations=destinations,
             tx_files=tx_files,
         )
@@ -554,6 +563,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_funds(
                 src_address=script_addr,
+                tx_name=temp_template,
                 destinations=destinations_from,
                 tx_files=tx_files_from,
             )
