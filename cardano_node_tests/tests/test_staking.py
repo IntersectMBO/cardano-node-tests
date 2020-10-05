@@ -691,12 +691,12 @@ class TestRewards:
 
         # update the pool parameters by resubmitting the pool registration certificate
         cluster.register_stake_pool(
+            tx_name=f"{temp_template}_update_param",
             pool_data=pool_data_updated,
             pool_owners=[pool_owner],
             vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
             cold_key_pair=pool_rec["cold_key_pair"],
             reward_account_vkey_file=pool_rec["reward"].vkey_file,
-            tx_name=f"{temp_template}_update_param",
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
@@ -736,12 +736,12 @@ class TestRewards:
             # update the pool to original parameters by resubmitting
             # the pool registration certificate
             cluster.register_stake_pool(
+                tx_name=f"{temp_template}_update_to_orig",
                 pool_data=loaded_data,
                 pool_owners=[pool_owner],
                 vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
                 cold_key_pair=pool_rec["cold_key_pair"],
                 reward_account_vkey_file=pool_rec["reward"].vkey_file,
-                tx_name=f"{temp_template}_update_to_orig",
                 deposit=0,  # no additional deposit, the pool is already registered
             )
 

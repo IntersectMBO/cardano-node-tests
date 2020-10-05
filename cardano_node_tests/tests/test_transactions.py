@@ -583,6 +583,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.build_raw_tx(
                 src_address=pool_users[0].payment.address,
+                tx_name="to_invalid",
                 txouts=destinations,
                 tx_files=tx_files,
                 fee=0,
@@ -600,6 +601,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.build_raw_tx(
                 src_address=addr,
+                tx_name="from_invalid",
                 txouts=destinations,
                 tx_files=tx_files,
                 fee=0,
@@ -1113,6 +1115,7 @@ class TestMetadata:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_raw_tx(
                 src_address=payment_addr.address,
+                tx_name="wrong_json_format",
                 tx_files=tx_files,
             )
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
@@ -1131,6 +1134,7 @@ class TestMetadata:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_raw_tx(
                 src_address=payment_addr.address,
+                tx_name="invalid_metadata",
                 tx_files=tx_files,
             )
         assert "Failed reading: satisfy" in str(excinfo.value)
@@ -1149,6 +1153,7 @@ class TestMetadata:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_raw_tx(
                 src_address=payment_addr.address,
+                tx_name="too_long_metadata",
                 tx_files=tx_files,
             )
         assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(

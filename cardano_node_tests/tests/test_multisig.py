@@ -68,8 +68,8 @@ def multisig_tx(
     witness_files = [
         cluster_obj.witness_tx(
             tx_body_file=tx_raw_output.out_file,
-            signing_key_files=[skey],
             tx_name=f"{temp_template}_skey{idx}",
+            signing_key_files=[skey],
         )
         for idx, skey in enumerate(payment_skey_files)
     ]
@@ -77,8 +77,8 @@ def multisig_tx(
         witness_files.append(
             cluster_obj.witness_tx(
                 tx_body_file=tx_raw_output.out_file,
-                script_file=multisig_script,
                 tx_name=f"{temp_template}_script",
+                script_file=multisig_script,
             )
         )
 
@@ -146,9 +146,9 @@ class TestBasic:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files,
-            script_name=temp_template,
         )
 
         # create script address
@@ -169,9 +169,9 @@ class TestBasic:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files,
-            script_name=temp_template,
         )
 
         # create script address
@@ -214,9 +214,9 @@ class TestBasic:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
             payment_vkey_files=payment_vkey_files,
-            script_name=temp_template,
         )
 
         # create script address
@@ -275,9 +275,9 @@ class TestBasic:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
             payment_vkey_files=payment_vkey_files,
-            script_name=temp_template,
             required=required,
         )
 
@@ -321,9 +321,9 @@ class TestBasic:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=[p.vkey_file for p in payment_addrs],
-            script_name=temp_template,
         )
 
         # create script address
@@ -395,9 +395,9 @@ class TestNegative:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files,
-            script_name=temp_template,
         )
 
         # create script address
@@ -440,9 +440,9 @@ class TestNegative:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
             payment_vkey_files=payment_vkey_files,
-            script_name=temp_template,
         )
 
         # create script address
@@ -488,9 +488,9 @@ class TestNegative:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
             payment_vkey_files=payment_vkey_files,
-            script_name=temp_template,
             required=required,
         )
 
@@ -536,9 +536,9 @@ class TestNegative:
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
             payment_vkey_files=payment_vkey_files,
-            script_name=temp_template,
         )
 
         # create script address

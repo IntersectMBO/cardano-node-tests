@@ -369,7 +369,10 @@ def update_params(
         LOGGER.info("Waiting for new epoch to submit proposal.")
         cluster_obj.wait_for_new_epoch()
 
-        cluster_obj.submit_update_proposal(cli_args=[cli_arg, str(param_value)])
+        cluster_obj.submit_update_proposal(
+            tx_name=f"{param_name}_{clusterlib.get_timestamped_rand_str()}",
+            cli_args=[cli_arg, str(param_value)],
+        )
 
         LOGGER.info(f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value})")
         cluster_obj.wait_for_new_epoch()

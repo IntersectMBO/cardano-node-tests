@@ -138,6 +138,7 @@ def get_rand_str(length: int = 8) -> str:
     return "".join(random.choice(string.ascii_lowercase) for i in range(length))
 
 
+# TODO: move
 def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
     """Return random string prefixed with timestamp.
 
@@ -968,7 +969,7 @@ class ClusterLib:
     def build_raw_tx(
         self,
         src_address: str,
-        tx_name: Optional[str] = None,
+        tx_name: str,
         txins: Optional[List[UTXOData]] = None,
         txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
@@ -980,7 +981,6 @@ class ClusterLib:
     ) -> TxRawOutput:
         """Figure out all the missing data and build raw transaction."""
         # pylint: disable=too-many-arguments
-        tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.body"
         tx_files = tx_files or TxFiles()
@@ -1046,7 +1046,7 @@ class ClusterLib:
     def calculate_tx_fee(
         self,
         src_address: str,
-        tx_name: Optional[str] = None,
+        tx_name: str,
         dst_addresses: Optional[List[str]] = None,
         txins: Optional[List[UTXOData]] = None,
         txouts: Optional[List[TxOut]] = None,
@@ -1059,7 +1059,6 @@ class ClusterLib:
         """Build "dummy" transaction and calculate it's fee."""
         # pylint: disable=too-many-arguments
         tx_files = tx_files or TxFiles()
-        tx_name = tx_name or get_timestamped_rand_str()
         tx_name = f"{tx_name}_estimate"
 
         if dst_addresses and txouts:
@@ -1095,11 +1094,10 @@ class ClusterLib:
         self,
         tx_body_file: FileType,
         signing_key_files: OptionalFiles,
-        tx_name: Optional[str] = None,
+        tx_name: str,
         destination_dir: FileType = ".",
     ) -> Path:
         """Sign transaction."""
-        tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.signed"
 
@@ -1123,13 +1121,12 @@ class ClusterLib:
     def witness_tx(
         self,
         tx_body_file: FileType,
+        tx_name: str,
         signing_key_files: OptionalFiles = (),
         script_file: Optional[FileType] = None,
-        tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> Path:
         """Witness transaction."""
-        tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.witness"
 
@@ -1159,11 +1156,10 @@ class ClusterLib:
         self,
         tx_body_file: FileType,
         witness_files: OptionalFiles,
-        tx_name: Optional[str] = None,
+        tx_name: str,
         destination_dir: FileType = ".",
     ) -> Path:
         """Assemble transaction from TX body and a set of witnesses."""
-        tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.witnessed"
 
@@ -1199,7 +1195,7 @@ class ClusterLib:
     def send_tx(
         self,
         src_address: str,
-        tx_name: Optional[str] = None,
+        tx_name: str,
         txins: Optional[List[UTXOData]] = None,
         txouts: Optional[List[TxOut]] = None,
         tx_files: Optional[TxFiles] = None,
@@ -1212,7 +1208,6 @@ class ClusterLib:
         """Build, Sign and Send transaction to chain."""
         # pylint: disable=too-many-arguments
         tx_files = tx_files or TxFiles()
-        tx_name = tx_name or get_timestamped_rand_str()
 
         if fee is None:
             fee = self.calculate_tx_fee(
@@ -1249,14 +1244,13 @@ class ClusterLib:
 
     def build_multisig_script(
         self,
+        script_name: str,
         script_type_arg: str,
         payment_vkey_files: FileTypeList,
-        script_name: Optional[str] = None,
         required: int = 0,
         destination_dir: FileType = ".",
     ) -> Path:
         """Build multi-signature script."""
-        script_name = script_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{script_name}_multisig.script"
 
@@ -1283,13 +1277,12 @@ class ClusterLib:
 
     def gen_update_proposal(
         self,
-        cli_args: UnpackableSequence,
+        tx_name: str,
         epoch: int,
-        tx_name: Optional[str] = None,
+        cli_args: UnpackableSequence,
         destination_dir: FileType = ".",
     ) -> Path:
         """Create update proposal."""
-        tx_name = tx_name or get_timestamped_rand_str()
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_update.proposal"
 
@@ -1311,20 +1304,19 @@ class ClusterLib:
 
     def submit_update_proposal(
         self,
+        tx_name: str,
         cli_args: UnpackableSequence,
         epoch: Optional[int] = None,
-        tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Submit update proposal."""
-        tx_name = tx_name or get_timestamped_rand_str()
         # TODO: assumption is update proposals submitted near beginning of epoch
         epoch = epoch if epoch is not None else self.get_last_block_epoch()
 
         out_file = self.gen_update_proposal(
-            cli_args=cli_args,
             tx_name=tx_name,
             epoch=epoch,
+            cli_args=cli_args,
             destination_dir=destination_dir,
         )
 
@@ -1342,7 +1334,7 @@ class ClusterLib:
         self,
         src_address: str,
         destinations: List[TxOut],
-        tx_name: Optional[str] = None,
+        tx_name: str,
         tx_files: Optional[TxFiles] = None,
         fee: Optional[int] = None,
         ttl: Optional[int] = None,
@@ -1422,12 +1414,12 @@ class ClusterLib:
 
     def register_stake_pool(
         self,
+        tx_name: str,
         pool_data: PoolData,
         pool_owners: List[PoolUser],
         vrf_vkey_file: FileType,
         cold_key_pair: ColdKeyPair,
         reward_account_vkey_file: Optional[FileType] = None,
-        tx_name: Optional[str] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawOutput]:
@@ -1464,11 +1456,11 @@ class ClusterLib:
 
     def deregister_stake_pool(
         self,
+        tx_name: str,
         pool_owners: List[PoolUser],
         cold_key_pair: ColdKeyPair,
         epoch: int,
         pool_name: str,
-        tx_name: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawOutput]:
         """Deregister stake pool."""
@@ -1504,7 +1496,11 @@ class ClusterLib:
         return pool_dereg_cert_file, tx_raw_output
 
     def create_stake_pool(
-        self, pool_data: PoolData, pool_owners: List[PoolUser], destination_dir: FileType = "."
+        self,
+        tx_name: str,
+        pool_data: PoolData,
+        pool_owners: List[PoolUser],
+        destination_dir: FileType = ".",
     ) -> PoolCreationOutput:
         """Create and register stake pool."""
         # create the KES key pair
@@ -1532,6 +1528,7 @@ class ClusterLib:
         )
 
         pool_reg_cert_file, tx_raw_output = self.register_stake_pool(
+            tx_name=tx_name,
             pool_data=pool_data,
             pool_owners=pool_owners,
             vrf_vkey_file=node_vrf.vkey_file,
