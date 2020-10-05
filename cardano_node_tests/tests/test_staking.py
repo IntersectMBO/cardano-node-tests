@@ -642,6 +642,78 @@ class TestRewards:
         )
 
     @allure.link(helpers.get_vcs_link())
+    def test_no_reward_transfered_funds(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+    ):
+        """Check that the stake address is not receiving rewards when funds are transfered."""
+        pool_name = "node-pool1"
+        cluster = cluster_manager.get(use_resources=[pool_name])
+
+        temp_template = helpers.get_func_name()
+
+        # submit registration certificate and delegate to pool
+        pool_user = _delegate_stake_addr(
+            cluster_obj=cluster,
+            addrs_data=cluster_manager.cache.addrs_data,
+            temp_template=temp_template,
+            pool_name=pool_name,
+        )
+
+        # create destination address for rewards
+        dst_addr_record = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_dst_addr", cluster_obj=cluster
+        )[0]
+
+        # fund destination address
+        clusterlib_utils.fund_from_faucet(
+            dst_addr_record,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        # wait for first reward
+        stake_reward = helpers.wait_for(
+            lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
+            delay=10,
+            num_sec=4 * cluster.epoch_length_sec + 100,
+            message="receive rewards",
+            silent=True,
+        )
+        if not stake_reward:
+            cluster_manager.set_needs_restart()
+            pytest.skip(f"User '{pool_name}' hasn't received any rewards, cannot continue.")
+
+        # transfer all funds back to faucet
+        clusterlib_utils.return_funds_to_faucet(
+            pool_user.payment,
+            cluster_obj=cluster,
+            faucet_addr=cluster_manager.cache.addrs_data["user1"]["payment"].address,
+            tx_name=temp_template,
+        )
+        assert (
+            cluster.get_address_balance(pool_user.payment.address) == 0
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        # make sure user is not receiving rewards
+        for epoch in range(5):
+            # withdraw rewards to destination address
+            if cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance:
+                clusterlib_utils.withdraw_reward(
+                    cluster_obj=cluster,
+                    pool_user=pool_user,
+                    name_template=f"{temp_template}_ep{epoch}",
+                    dst_addr_record=dst_addr_record,
+                )
+            cluster.wait_for_new_epoch(padding_seconds=30)
+
+        # wait for two epochs and check that no new rewards were received
+        cluster.wait_for_new_epoch(2, padding_seconds=30)
+        assert cluster.get_stake_addr_info(
+            pool_user.stake.address
+        ).reward_account_balance, "Unexpected reward was received by stake address"
+
+    @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge1(
         self,
         cluster_manager: parallel_run.ClusterManager,

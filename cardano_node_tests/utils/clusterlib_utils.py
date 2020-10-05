@@ -30,17 +30,21 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
 
 
 def withdraw_reward(
-    cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
+    cluster_obj: clusterlib.ClusterLib,
+    pool_user: clusterlib.PoolUser,
+    name_template: str,
+    dst_addr_record: Optional[clusterlib.AddressRecord] = None,
 ) -> None:
     """Withdraw rewards to payment address."""
-    src_address = pool_user.payment.address
-    src_init_balance = cluster_obj.get_address_balance(src_address)
+    dst_addr_record = dst_addr_record or pool_user.payment
+    dst_address = dst_addr_record.address
+    src_init_balance = cluster_obj.get_address_balance(dst_address)
 
     tx_files_withdrawal = clusterlib.TxFiles(
-        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+        signing_key_files=[dst_addr_record.skey_file, pool_user.stake.skey_file],
     )
     tx_raw_withdrawal_output = cluster_obj.send_tx(
-        src_address=src_address,
+        src_address=dst_address,
         tx_name=f"{name_template}_reward_withdrawal",
         tx_files=tx_files_withdrawal,
         withdrawals=[clusterlib.TxOut(address=pool_user.stake.address, amount=-1)],
@@ -53,13 +57,13 @@ def withdraw_reward(
     ), "Not all rewards were transfered"
 
     # check that rewards were transfered
-    src_reward_balance = cluster_obj.get_address_balance(src_address)
+    src_reward_balance = cluster_obj.get_address_balance(dst_address)
     assert (
         src_reward_balance
         == src_init_balance
         - tx_raw_withdrawal_output.fee
         + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
-    ), f"Incorrect balance for source address `{src_address}`"
+    ), f"Incorrect balance for destination address `{dst_address}`"
 
 
 def deregister_stake_addr(
