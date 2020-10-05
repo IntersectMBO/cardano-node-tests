@@ -1,26 +1,14 @@
 {
     "cardano-node": {
-        "branch": "master",
+        "branch": "refs/tags/1.21.1",
         "description": "The core component that is used to participate in a Cardano decentralised blockchain.",
         "homepage": "https://cardano.org",
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "9e06d6f9a293a9656bf6e31b7e5d0a9f498163d1",
-        "sha256": "1kh2rnis2r7g7a40pffnnkzj5mra25581a57b2fgq21jk0g42cby",
+        "rev": "a819311473563cb2ab3cd91543cf0f63facdf43e",
+        "sha256": "1zj780z3j11rwbvazg79ja5110cgvskzdls81ms0dv3qy7lw4iyr",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-node/archive/9e06d6f9a293a9656bf6e31b7e5d0a9f498163d1.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "niv": {
-        "branch": "master",
-        "description": "Easy dependency management for Nix projects",
-        "homepage": "https://github.com/nmattia/niv",
-        "owner": "nmattia",
-        "repo": "niv",
-        "rev": "e82eb322ea32a747a51c431d7787221bcc6d9038",
-        "sha256": "1fy4dcr05d80diwlxmh42xnjm5ki1pkbky38smvlqjaky2y2f71f",
-        "type": "tarball",
-        "url": "https://github.com/nmattia/niv/archive/e82eb322ea32a747a51c431d7787221bcc6d9038.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-node/archive/a819311473563cb2ab3cd91543cf0f63facdf43e.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
