@@ -73,7 +73,7 @@ class TestBasic:
         amount: int,
     ):
         """Send funds to payment address."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{amount}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -87,7 +87,7 @@ class TestBasic:
         tx_raw_output = cluster.send_funds(
             src_address=src_address,
             destinations=destinations,
-            tx_name=f"{temp_template}_{amount}",
+            tx_name=temp_template,
             tx_files=tx_files,
         )
         cluster.wait_for_new_block(new_blocks=2)
@@ -335,7 +335,7 @@ class TestMultiInOut:
             == dst_init_balance + amount * no_of_transactions
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-    @pytest.mark.parametrize("amount", [1, 100, 11_000])
+    @pytest.mark.parametrize("amount", (1, 100, 11_000))
     @allure.link(helpers.get_vcs_link())
     def test_transaction_to_10_addrs_from_1_addr(
         self,
@@ -353,7 +353,7 @@ class TestMultiInOut:
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", [1, 100, 11_000, 100_000])
+    @pytest.mark.parametrize("amount", (1, 100, 11_000, 100_000))
     @allure.link(helpers.get_vcs_link())
     def test_transaction_to_1_addr_from_10_addrs(
         self,
@@ -371,7 +371,7 @@ class TestMultiInOut:
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", [1, 100, 11_000])
+    @pytest.mark.parametrize("amount", (1, 100, 11_000))
     @allure.link(helpers.get_vcs_link())
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
@@ -389,7 +389,7 @@ class TestMultiInOut:
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", [1, 100, 1000])
+    @pytest.mark.parametrize("amount", (1, 100, 1000))
     @allure.link(helpers.get_vcs_link())
     def test_transaction_to_100_addrs_from_50_addrs(
         self,

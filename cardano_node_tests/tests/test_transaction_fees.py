@@ -85,7 +85,7 @@ class TestFee:
             )
         assert "option --fee: cannot parse value" in str(excinfo.value)
 
-    @pytest.mark.parametrize("fee_change", [0, 1.1, 1.5, 2])
+    @pytest.mark.parametrize("fee_change", (0, 1.1, 1.5, 2))
     @allure.link(helpers.get_vcs_link())
     def test_smaller_fee(
         self,
@@ -124,7 +124,7 @@ class TestFee:
             )
         assert "FeeTooSmallUTxO" in str(excinfo.value)
 
-    @pytest.mark.parametrize("fee_add", [0, 1000, 100_000, 1_000_000])
+    @pytest.mark.parametrize("fee_add", (0, 1000, 100_000, 1_000_000))
     @allure.link(helpers.get_vcs_link())
     def test_expected_or_higher_fee(
         self,
@@ -305,7 +305,7 @@ class TestExpectedFees:
     ):
         """Test pool registration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}"
 
         pool_metadata = {
             "name": "QA E2E test",
@@ -354,7 +354,7 @@ class TestExpectedFees:
     ):
         """Test pool deregistration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"{helpers.get_func_name()}_{addr_fee}"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}"
         src_address = pool_users[0].payment.address
 
         pool_metadata = {
@@ -415,7 +415,7 @@ class TestExpectedFees:
     ):
         """Test stake address registration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"{helpers.get_func_name()}_{addr_fee}"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}"
         src_address = pool_users[0].payment.address
         selected_users = pool_users[:no_of_addr]
 
@@ -451,7 +451,7 @@ class TestExpectedFees:
     ):
         """Test stake address deregistration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"{helpers.get_func_name()}_{addr_fee}"
+        temp_template = f"{helpers.get_func_name()}_{no_of_addr}"
         src_address = pool_users[0].payment.address
         selected_users = pool_users[:no_of_addr]
 
@@ -488,7 +488,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 1 payment address to 1 payment address."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -510,7 +510,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 1 payment address to 10 payment addresses."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -532,7 +532,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 10 payment addresses to 1 payment address."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -554,7 +554,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 10 payment addresses to 10 payment addresses."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -576,7 +576,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Tests fees for 1 tx from 100 payment addresses to 100 payment addresses."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected}"
+        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
