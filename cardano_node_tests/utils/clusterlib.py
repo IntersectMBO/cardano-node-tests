@@ -1277,9 +1277,9 @@ class ClusterLib:
 
     def gen_update_proposal(
         self,
-        tx_name: str,
-        epoch: int,
         cli_args: UnpackableSequence,
+        epoch: int,
+        tx_name: str,
         destination_dir: FileType = ".",
     ) -> Path:
         """Create update proposal."""
@@ -1304,8 +1304,8 @@ class ClusterLib:
 
     def submit_update_proposal(
         self,
-        tx_name: str,
         cli_args: UnpackableSequence,
+        tx_name: str,
         epoch: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
@@ -1314,9 +1314,9 @@ class ClusterLib:
         epoch = epoch if epoch is not None else self.get_last_block_epoch()
 
         out_file = self.gen_update_proposal(
-            tx_name=tx_name,
-            epoch=epoch,
             cli_args=cli_args,
+            epoch=epoch,
+            tx_name=tx_name,
             destination_dir=destination_dir,
         )
 
@@ -1414,11 +1414,11 @@ class ClusterLib:
 
     def register_stake_pool(
         self,
-        tx_name: str,
         pool_data: PoolData,
         pool_owners: List[PoolUser],
         vrf_vkey_file: FileType,
         cold_key_pair: ColdKeyPair,
+        tx_name: str,
         reward_account_vkey_file: Optional[FileType] = None,
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
@@ -1456,11 +1456,11 @@ class ClusterLib:
 
     def deregister_stake_pool(
         self,
-        tx_name: str,
         pool_owners: List[PoolUser],
         cold_key_pair: ColdKeyPair,
         epoch: int,
         pool_name: str,
+        tx_name: str,
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawOutput]:
         """Deregister stake pool."""
@@ -1497,9 +1497,9 @@ class ClusterLib:
 
     def create_stake_pool(
         self,
-        tx_name: str,
         pool_data: PoolData,
         pool_owners: List[PoolUser],
+        tx_name: str,
         destination_dir: FileType = ".",
     ) -> PoolCreationOutput:
         """Create and register stake pool."""
@@ -1528,11 +1528,11 @@ class ClusterLib:
         )
 
         pool_reg_cert_file, tx_raw_output = self.register_stake_pool(
-            tx_name=tx_name,
             pool_data=pool_data,
             pool_owners=pool_owners,
             vrf_vkey_file=node_vrf.vkey_file,
             cold_key_pair=node_cold,
+            tx_name=tx_name,
             destination_dir=destination_dir,
         )
 

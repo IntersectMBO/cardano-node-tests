@@ -142,7 +142,7 @@ def _create_register_pool(
 
     # create and register pool
     pool_creation_out = cluster_obj.create_stake_pool(
-        tx_name=temp_template, pool_data=pool_data, pool_owners=pool_owners
+        pool_data=pool_data, pool_owners=pool_owners, tx_name=temp_template
     )
 
     # check that the balance for source address was correctly updated
@@ -532,11 +532,11 @@ class TestStakePool:
 
         # deregister stake pool
         __, tx_raw_output = cluster.deregister_stake_pool(
-            tx_name=temp_template,
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
             epoch=cluster.get_last_block_epoch() + 1,
             pool_name=pool_data.pool_name,
+            tx_name=temp_template,
         )
 
         LOGGER.info("Waiting up to 3 epochs for stake pool to be deregistered.")
@@ -619,11 +619,11 @@ class TestStakePool:
 
         # deregister stake pool
         cluster.deregister_stake_pool(
-            tx_name=temp_template,
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
             epoch=cluster.get_last_block_epoch() + 1,
             pool_name=pool_data.pool_name,
+            tx_name=temp_template,
         )
 
         LOGGER.info("Waiting up to 3 epochs for stake pool to be deregistered.")
@@ -757,11 +757,11 @@ class TestStakePool:
 
         # update the pool parameters by resubmitting the pool registration certificate
         cluster.register_stake_pool(
-            tx_name=temp_template,
             pool_data=pool_data_updated,
             pool_owners=pool_owners,
             vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
             cold_key_pair=pool_creation_out.cold_key_pair,
+            tx_name=temp_template,
             deposit=0,  # no additional deposit, the pool is already registered
         )
         cluster.wait_for_new_epoch()
@@ -831,11 +831,11 @@ class TestStakePool:
 
         # update the pool parameters by resubmitting the pool registration certificate
         cluster.register_stake_pool(
-            tx_name=temp_template,
             pool_data=pool_data_updated,
             pool_owners=pool_owners,
             vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
             cold_key_pair=pool_creation_out.cold_key_pair,
+            tx_name=temp_template,
             deposit=0,  # no additional deposit, the pool is already registered
         )
         cluster.wait_for_new_epoch()

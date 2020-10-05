@@ -370,8 +370,8 @@ def update_params(
         cluster_obj.wait_for_new_epoch()
 
         cluster_obj.submit_update_proposal(
-            tx_name=f"{param_name}_{clusterlib.get_timestamped_rand_str()}",
             cli_args=[cli_arg, str(param_value)],
+            tx_name=f"{param_name}_{clusterlib.get_timestamped_rand_str()}",
         )
 
         LOGGER.info(f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value})")
