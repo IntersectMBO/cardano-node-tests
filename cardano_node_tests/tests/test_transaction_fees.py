@@ -305,20 +305,22 @@ class TestExpectedFees:
     ):
         """Test pool registration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}"
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
+        pool_name = f"pool_{rand_str}"
         pool_metadata = {
-            "name": "QA E2E test",
+            "name": pool_name,
             "description": "Shelley QA E2E test Test",
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"poolXY_{no_of_addr}_registration_metadata.json", pool_metadata
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"poolXY_{no_of_addr}",
+            pool_name=pool_name,
             pool_pledge=1000,
             pool_cost=15,
             pool_margin=0.2,
@@ -354,21 +356,23 @@ class TestExpectedFees:
     ):
         """Test pool deregistration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}"
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
         src_address = pool_users[0].payment.address
 
+        pool_name = f"pool_{rand_str}"
         pool_metadata = {
-            "name": "QA E2E test",
+            "name": pool_name,
             "description": "Shelley QA E2E test Test",
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"poolXY_{no_of_addr}_registration_metadata.json", pool_metadata
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"poolXY_{no_of_addr}",
+            pool_name=pool_name,
             pool_pledge=222,
             pool_cost=123,
             pool_margin=0.512,

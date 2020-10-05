@@ -383,9 +383,10 @@ class TestStakePool:
         temp_dir: Path,
     ):
         """Create and register a stake pool with metadata file not available."""
-        temp_template = helpers.get_func_name()
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
-        pool_name = f"pool_{clusterlib.get_rand_str(8)}"
+        pool_name = f"pool_{rand_str}"
         pool_metadata = {
             "name": pool_name,
             "description": "Shelley QA E2E test Test",
@@ -437,10 +438,11 @@ class TestStakePool:
         no_of_addr: int,
     ):
         """Create and register a stake pool."""
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"poolX_{no_of_addr}",
+            pool_name=f"pool_{rand_str}",
             pool_pledge=12345,
             pool_cost=123456789,
             pool_margin=0.123,
@@ -479,20 +481,22 @@ class TestStakePool:
         no_of_addr: int,
     ):
         """Deregister stake pool."""
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
+        pool_name = f"pool_{rand_str}"
         pool_metadata = {
-            "name": "QA E2E test",
+            "name": pool_name,
             "description": "Shelley QA E2E test Test",
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"poolZ_{no_of_addr}_registration_metadata.json", pool_metadata
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"poolZ_{no_of_addr}",
+            pool_name=pool_name,
             pool_pledge=222,
             pool_cost=123,
             pool_margin=0.512,
@@ -575,20 +579,22 @@ class TestStakePool:
         temp_dir: Path,
     ):
         """Reregister stake pool."""
-        temp_template = helpers.get_func_name()
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
+        pool_name = f"pool_{rand_str}"
         pool_metadata = {
-            "name": "QA E2E test",
+            "name": pool_name,
             "description": "Shelley QA E2E test Test",
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / "poolR_registration_metadata.json", pool_metadata
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
-            pool_name="poolR",
+            pool_name=pool_name,
             pool_pledge=222,
             pool_cost=123,
             pool_margin=0.512,
@@ -695,31 +701,33 @@ class TestStakePool:
         no_of_addr: int,
     ):
         """Update stake pool metadata."""
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
+        pool_name = f"pool_{rand_str}"
         pool_metadata = {
-            "name": "QA E2E test",
+            "name": pool_name,
             "description": "Shelley QA E2E test Test",
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"poolA_{no_of_addr}_registration_metadata.json", pool_metadata
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_metadata_updated = {
-            "name": "QA_test_pool",
+            "name": f"{pool_name}_U",
             "description": "pool description update",
             "ticker": "QA22",
             "homepage": "www.qa22.com",
         }
         pool_metadata_updated_file = helpers.write_json(
-            temp_dir / f"poolA_{no_of_addr}_registration_metadata_updated.json",
+            temp_dir / f"{pool_name}_registration_metadata_updated.json",
             pool_metadata_updated,
         )
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"poolA_{no_of_addr}",
+            pool_name=pool_name,
             pool_pledge=4567,
             pool_cost=3,
             pool_margin=0.01,
@@ -783,20 +791,22 @@ class TestStakePool:
         no_of_addr: int,
     ):
         """Update stake pool parameters."""
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}owners"
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
+        pool_name = f"pool_{rand_str}"
         pool_metadata = {
-            "name": "QA E2E test",
+            "name": pool_name,
             "description": "Shelley QA E2E test Test",
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"poolB_{no_of_addr}_registration_metadata.json", pool_metadata
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"poolB_{no_of_addr}",
+            pool_name=pool_name,
             pool_pledge=4567,
             pool_cost=3,
             pool_margin=0.01,
@@ -854,10 +864,11 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
     ):
         """Create and register a stake pool with TX signed in multiple stages."""
-        temp_template = helpers.get_func_name()
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"pool_{clusterlib.get_rand_str()}",
+            pool_name=f"pool_{rand_str}",
             pool_pledge=5,
             pool_cost=3,
             pool_margin=0.01,
@@ -1002,8 +1013,8 @@ class TestPoolCost:
     ):
         """Try to create and register a stake pool with pool cost lower than 'minPoolCost'."""
         cluster = cluster_mincost
-        temp_template = "test_stake_pool_low_cost"
-        rand_str = clusterlib.get_rand_str()
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"test_stake_pool_low_cost_{rand_str}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -1016,7 +1027,7 @@ class TestPoolCost:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _create_register_pool(
                 cluster_obj=cluster,
-                temp_template=f"{temp_template}_{clusterlib.get_timestamped_rand_str()}",
+                temp_template=temp_template,
                 pool_owners=pool_owners,
                 pool_data=pool_data,
             )
@@ -1036,8 +1047,8 @@ class TestPoolCost:
     ):
         """Create and register a stake pool with pool cost >= 'minPoolCost'."""
         cluster = cluster_mincost
-        rand_str = clusterlib.get_rand_str()
-        temp_template = f"{helpers.get_func_name()}_{pool_cost}_cost"
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}_{pool_cost}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -1103,7 +1114,7 @@ class TestNegative:
     @pytest.fixture
     def pool_data(self) -> clusterlib.PoolData:
         pool_data = clusterlib.PoolData(
-            pool_name=f"pool_{clusterlib.get_rand_str()}",
+            pool_name=f"pool_{clusterlib.get_rand_str(4)}",
             pool_pledge=5,
             pool_cost=3,
             pool_margin=0.01,
@@ -1519,6 +1530,8 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Test pool creation with the 'metadata-url' longer than allowed."""
+        temp_template = helpers.get_func_name()
+
         pool_name = "cardano-node-tests"
         pool_metadata = {
             "name": pool_name,
@@ -1527,7 +1540,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
