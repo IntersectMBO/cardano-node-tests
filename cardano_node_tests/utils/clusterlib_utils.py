@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 from typing import Any
@@ -14,6 +15,18 @@ from cardano_node_tests.utils.types import FileType
 LOGGER = logging.getLogger(__name__)
 
 TEST_TEMP_DIR = helpers.get_basetemp()
+
+
+def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
+    """Return random string prefixed with timestamp.
+
+    >>> len(get_timestamped_rand_str()) == len("200801_002401314_cinf")
+    True
+    """
+    timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S%f")[:-3]
+    rand_str_component = clusterlib.get_rand_str(rand_str_length)
+    rand_str_component = rand_str_component and f"_{rand_str_component}"
+    return f"{timestamp}{rand_str_component}"
 
 
 def withdraw_reward(
@@ -91,7 +104,7 @@ def fund_from_genesis(
         return
 
     with helpers.FileLockIfXdist(f"{TEST_TEMP_DIR}/{cluster_obj.genesis_utxo_addr}.lock"):
-        tx_name = tx_name or clusterlib.get_timestamped_rand_str()
+        tx_name = tx_name or get_timestamped_rand_str()
         tx_name = f"{tx_name}_genesis_funding"
         fund_tx_files = clusterlib.TxFiles(
             signing_key_files=[*cluster_obj.delegate_skeys, cluster_obj.genesis_utxo_skey]
@@ -119,7 +132,7 @@ def return_funds_to_faucet(
 
     The amount of "-1" means all available funds.
     """
-    tx_name = tx_name or clusterlib.get_timestamped_rand_str()
+    tx_name = tx_name or get_timestamped_rand_str()
     tx_name = f"{tx_name}_return_funds"
     with helpers.FileLockIfXdist(f"{TEST_TEMP_DIR}/{faucet_addr}.lock"):
         try:
@@ -180,7 +193,7 @@ def fund_from_faucet(
 
     src_address = faucet_data["payment"].address
     with helpers.FileLockIfXdist(f"{TEST_TEMP_DIR}/{src_address}.lock"):
-        tx_name = tx_name or clusterlib.get_timestamped_rand_str()
+        tx_name = tx_name or get_timestamped_rand_str()
         tx_name = f"{tx_name}_funding"
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])
 
@@ -371,7 +384,7 @@ def update_params(
 
         cluster_obj.submit_update_proposal(
             cli_args=[cli_arg, str(param_value)],
-            tx_name=f"{param_name}_{clusterlib.get_timestamped_rand_str()}",
+            tx_name=f"{param_name}_{get_timestamped_rand_str()}",
         )
 
         LOGGER.info(f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value})")
@@ -391,7 +404,7 @@ def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, request: FixtureReques
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
         return
 
-    json_file = f"cli_coverage_{clusterlib.get_timestamped_rand_str(0)}.json"
+    json_file = f"cli_coverage_{get_timestamped_rand_str(0)}.json"
     with open(cli_coverage_dir / json_file, "w") as out_json:
         json.dump(cluster_obj.cli_coverage, out_json, indent=4)
     LOGGER.info(f"Coverage files saved to '{cli_coverage_dir}'.")

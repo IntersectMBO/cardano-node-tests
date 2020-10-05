@@ -472,7 +472,7 @@ class TestNotBalanced:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_raw_tx_bare(
-                out_file=temp_dir / f"{clusterlib.get_timestamped_rand_str()}_tx.body",
+                out_file=temp_dir / f"{clusterlib_utils.get_timestamped_rand_str()}_tx.body",
                 txins=txins,
                 txouts=txouts,
                 tx_files=tx_files,
@@ -507,7 +507,7 @@ class TestNotBalanced:
         # make sure the change amount is valid
         hypothesis.assume(0 <= transferred_amount <= src_addr_highest_utxo.amount)
 
-        tx_name = f"test_wrong_balance_{clusterlib.get_timestamped_rand_str()}"
+        tx_name = f"test_wrong_balance_{clusterlib_utils.get_timestamped_rand_str()}"
         out_file_tx = temp_dir / f"{tx_name}_tx.body"
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.calculate_tx_ttl()
@@ -637,7 +637,7 @@ class TestNegative:
         txouts = [
             clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee),
         ]
-        out_file = temp_dir / f"{clusterlib.get_timestamped_rand_str()}_tx.body"
+        out_file = temp_dir / f"{clusterlib_utils.get_timestamped_rand_str()}_tx.body"
 
         return clusterlib.TxRawOutput(
             txins=txins,
