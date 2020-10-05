@@ -73,6 +73,8 @@ class TestBasic:
         amount: int,
     ):
         """Send funds to payment address."""
+        temp_template = f"{helpers.get_func_name()}_{amount}"
+
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -85,6 +87,7 @@ class TestBasic:
         tx_raw_output = cluster.send_funds(
             src_address=src_address,
             destinations=destinations,
+            tx_name=temp_template,
             tx_files=tx_files,
         )
         cluster.wait_for_new_block(new_blocks=2)
@@ -103,6 +106,8 @@ class TestBasic:
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Send ALL funds from one payment address to another."""
+        temp_template = helpers.get_func_name()
+
         src_address = payment_addrs[1].address
         dst_address = payment_addrs[0].address
 
@@ -116,6 +121,7 @@ class TestBasic:
         tx_raw_output = cluster.send_funds(
             src_address=src_address,
             destinations=destinations,
+            tx_name=temp_template,
             tx_files=tx_files,
         )
         cluster.wait_for_new_block(new_blocks=2)
@@ -137,6 +143,8 @@ class TestBasic:
 
         Transaction ID is a hash of transaction body and doesn't change for a signed TX.
         """
+        temp_template = helpers.get_func_name()
+
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -145,6 +153,7 @@ class TestBasic:
         tx_raw_output = cluster.send_funds(
             src_address=src_address,
             destinations=destinations,
+            tx_name=temp_template,
             tx_files=tx_files,
         )
         cluster.wait_for_new_block(new_blocks=2)
@@ -169,7 +178,7 @@ class TestMultiInOut:
             return cached_value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"addr_multi_in_out{i}" for i in range(201)],
+            *[f"multi_in_out_addr{i}" for i in range(201)],
             cluster_obj=cluster,
         )
         cluster_manager.cache.test_data[data_key] = addrs
@@ -188,6 +197,7 @@ class TestMultiInOut:
         self,
         cluster_obj: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        tx_name: str,
         from_num: int,
         to_num: int,
         amount: int,
@@ -218,6 +228,7 @@ class TestMultiInOut:
         cluster_obj.send_funds(
             src_address=src_address,
             destinations=fund_dst,
+            tx_name=f"{tx_name}_add_funds",
             tx_files=fund_tx_files,
         )
         cluster_obj.wait_for_new_block(new_blocks=2)
@@ -241,6 +252,7 @@ class TestMultiInOut:
         # send TX - change is returned to `src_address`
         tx_raw_output = cluster_obj.send_tx(
             src_address=src_address,
+            tx_name=tx_name,
             txins=txins,
             txouts=txouts,
             tx_files=tx_files,
@@ -280,6 +292,7 @@ class TestMultiInOut:
 
         Test 10 different UTXOs in addr0.
         """
+        temp_template = helpers.get_func_name()
         no_of_transactions = 10
 
         src_address = payment_addrs[0].address
@@ -293,6 +306,7 @@ class TestMultiInOut:
 
         fee = cluster.calculate_tx_fee(
             src_address=src_address,
+            tx_name=temp_template,
             dst_addresses=[dst_address],
             tx_files=tx_files,
             ttl=ttl,
@@ -300,10 +314,11 @@ class TestMultiInOut:
         amount = int(fee / no_of_transactions + 1000)
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
-        for __ in range(no_of_transactions):
+        for i in range(no_of_transactions):
             cluster.send_funds(
                 src_address=src_address,
                 destinations=destinations,
+                tx_name=f"{temp_template}_{i}",
                 tx_files=tx_files,
                 fee=fee,
                 ttl=ttl,
@@ -320,7 +335,7 @@ class TestMultiInOut:
             == dst_init_balance + amount * no_of_transactions
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-    @pytest.mark.parametrize("amount", [1, 100, 11_000])
+    @pytest.mark.parametrize("amount", (1, 100, 11_000))
     @allure.link(helpers.get_vcs_link())
     def test_transaction_to_10_addrs_from_1_addr(
         self,
@@ -332,12 +347,13 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
+            tx_name=f"{helpers.get_func_name()}_{amount}",
             from_num=1,
             to_num=10,
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", [1, 100, 11_000, 100_000])
+    @pytest.mark.parametrize("amount", (1, 100, 11_000, 100_000))
     @allure.link(helpers.get_vcs_link())
     def test_transaction_to_1_addr_from_10_addrs(
         self,
@@ -349,12 +365,13 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
+            tx_name=f"{helpers.get_func_name()}_{amount}",
             from_num=10,
             to_num=1,
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", [1, 100, 11_000])
+    @pytest.mark.parametrize("amount", (1, 100, 11_000))
     @allure.link(helpers.get_vcs_link())
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
@@ -366,12 +383,13 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
+            tx_name=f"{helpers.get_func_name()}_{amount}",
             from_num=10,
             to_num=10,
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", [1, 100, 1000])
+    @pytest.mark.parametrize("amount", (1, 100, 1000))
     @allure.link(helpers.get_vcs_link())
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
@@ -383,6 +401,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
+            tx_name=f"{helpers.get_func_name()}_{amount}",
             from_num=50,
             to_num=100,
             amount=amount,
@@ -424,6 +443,8 @@ class TestNotBalanced:
         temp_dir: Path,
     ):
         """Build a transaction with a negative change."""
+        temp_template = helpers.get_func_name()
+
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
@@ -432,6 +453,7 @@ class TestNotBalanced:
 
         fee = cluster.calculate_tx_fee(
             src_address=src_address,
+            tx_name=temp_template,
             dst_addresses=[dst_address],
             tx_files=tx_files,
             ttl=ttl,
@@ -485,7 +507,8 @@ class TestNotBalanced:
         # make sure the change amount is valid
         hypothesis.assume(0 <= transferred_amount <= src_addr_highest_utxo.amount)
 
-        out_file_tx = temp_dir / f"{clusterlib.get_timestamped_rand_str()}_tx.body"
+        tx_name = f"test_wrong_balance_{clusterlib.get_timestamped_rand_str()}"
+        out_file_tx = temp_dir / f"{tx_name}_tx.body"
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.calculate_tx_ttl()
 
@@ -510,6 +533,7 @@ class TestNotBalanced:
         out_file_signed = cluster.sign_tx(
             tx_body_file=out_file_tx,
             signing_key_files=tx_files.signing_key_files,
+            tx_name=tx_name,
         )
 
         # it should NOT be possible to submit an unbalanced transaction
@@ -559,6 +583,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.build_raw_tx(
                 src_address=pool_users[0].payment.address,
+                tx_name="to_invalid",
                 txouts=destinations,
                 tx_files=tx_files,
                 fee=0,
@@ -576,6 +601,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.build_raw_tx(
                 src_address=addr,
+                tx_name="from_invalid",
                 txouts=destinations,
                 tx_files=tx_files,
                 fee=0,
@@ -585,6 +611,7 @@ class TestNegative:
     def _get_raw_tx_values(
         self,
         cluster_obj: clusterlib.ClusterLib,
+        tx_name: str,
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ) -> clusterlib.TxRawOutput:
@@ -597,6 +624,7 @@ class TestNegative:
 
         fee = cluster_obj.calculate_tx_fee(
             src_address=src_address,
+            tx_name=tx_name,
             dst_addresses=[dst_address],
             tx_files=tx_files,
             ttl=ttl,
@@ -635,6 +663,8 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a transaction with ttl in the past."""
+        temp_template = helpers.get_func_name()
+
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
 
@@ -642,12 +672,17 @@ class TestNegative:
         destinations = [clusterlib.TxOut(address=dst_address, amount=100)]
         ttl = cluster.get_last_block_slot_no() - 1
         fee = cluster.calculate_tx_fee(
-            src_address=src_address, txouts=destinations, tx_files=tx_files, ttl=ttl
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            ttl=ttl,
         )
 
         # it should be possible to build and sign a transaction with ttl in the past
         tx_raw_output = cluster.build_raw_tx(
             src_address=src_address,
+            tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
             fee=fee,
@@ -656,6 +691,7 @@ class TestNegative:
         out_file_signed = cluster.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
         )
 
         # it should NOT be possible to submit a transaction with ttl in the past
@@ -670,6 +706,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a single transaction twice."""
+        temp_template = helpers.get_func_name()
         amount = 100
 
         src_address = pool_users[0].payment.address
@@ -684,15 +721,21 @@ class TestNegative:
         # build and sign a transaction
         fee = cluster.calculate_tx_fee(
             src_address=src_address,
+            tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
         )
         tx_raw_output = cluster.build_raw_tx(
-            src_address=src_address, txouts=destinations, tx_files=tx_files, fee=fee
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
         )
         out_file_signed = cluster.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
         )
 
         # submit a transaction for the first time
@@ -720,6 +763,8 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a transaction signed with wrong signing key."""
+        temp_template = helpers.get_func_name()
+
         # use wrong signing key
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[1].payment.skey_file])
         destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=100)]
@@ -727,7 +772,10 @@ class TestNegative:
         # it should NOT be possible to submit a transaction with wrong signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_tx(
-                src_address=pool_users[0].payment.address, txouts=destinations, tx_files=tx_files
+                src_address=pool_users[0].payment.address,
+                tx_name=temp_template,
+                txouts=destinations,
+                tx_files=tx_files,
             )
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
@@ -738,6 +786,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a transaction with extra signing key."""
+        temp_template = helpers.get_func_name()
         amount = 100
 
         src_address = pool_users[0].payment.address
@@ -754,7 +803,7 @@ class TestNegative:
 
         # it should be possible to submit a transaction with extra signing key
         tx_raw_output = cluster.send_tx(
-            src_address=src_address, txouts=destinations, tx_files=tx_files
+            src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
         )
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -774,6 +823,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
     ):
         """Send a transaction with duplicate signing key."""
+        temp_template = helpers.get_func_name()
         amount = 100
 
         src_address = pool_users[0].payment.address
@@ -790,7 +840,7 @@ class TestNegative:
 
         # it should be possible to submit a transaction with duplicate signing key
         tx_raw_output = cluster.send_tx(
-            src_address=src_address, txouts=destinations, tx_files=tx_files
+            src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
         )
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -903,8 +953,10 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--fee` parameter."""
+        temp_template = helpers.get_func_name()
+
         tx_raw_output = self._get_raw_tx_values(
-            cluster_obj=cluster, pool_users=pool_users, temp_dir=temp_dir
+            cluster_obj=cluster, tx_name=temp_template, pool_users=pool_users, temp_dir=temp_dir
         )
         txins, txouts = self._get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -931,8 +983,10 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--ttl` parameter."""
+        temp_template = helpers.get_func_name()
+
         tx_raw_output = self._get_raw_tx_values(
-            cluster_obj=cluster, pool_users=pool_users, temp_dir=temp_dir
+            cluster_obj=cluster, tx_name=temp_template, pool_users=pool_users, temp_dir=temp_dir
         )
         txins, txouts = self._get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -959,8 +1013,10 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--tx-in` parameter."""
+        temp_template = helpers.get_func_name()
+
         tx_raw_output = self._get_raw_tx_values(
-            cluster_obj=cluster, pool_users=pool_users, temp_dir=temp_dir
+            cluster_obj=cluster, tx_name=temp_template, pool_users=pool_users, temp_dir=temp_dir
         )
         __, txouts = self._get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -988,8 +1044,10 @@ class TestNegative:
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--tx-out` parameter."""
+        temp_template = helpers.get_func_name()
+
         tx_raw_output = self._get_raw_tx_values(
-            cluster_obj=cluster, pool_users=pool_users, temp_dir=temp_dir
+            cluster_obj=cluster, tx_name=temp_template, pool_users=pool_users, temp_dir=temp_dir
         )
         txins, __ = self._get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -1057,6 +1115,7 @@ class TestMetadata:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_raw_tx(
                 src_address=payment_addr.address,
+                tx_name="wrong_json_format",
                 tx_files=tx_files,
             )
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
@@ -1075,6 +1134,7 @@ class TestMetadata:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_raw_tx(
                 src_address=payment_addr.address,
+                tx_name="invalid_metadata",
                 tx_files=tx_files,
             )
         assert "Failed reading: satisfy" in str(excinfo.value)
@@ -1093,6 +1153,7 @@ class TestMetadata:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_raw_tx(
                 src_address=payment_addr.address,
+                tx_name="too_long_metadata",
                 tx_files=tx_files,
             )
         assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(
@@ -1104,11 +1165,15 @@ class TestMetadata:
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Send transaction with metadata JSON."""
+        temp_template = helpers.get_func_name()
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_FILE],
         )
-        tx_raw_output = cluster.send_tx(src_address=payment_addr.address, tx_files=tx_files)
+        tx_raw_output = cluster.send_tx(
+            src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
+        )
         cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
         # TODO: check that the data is on blockchain
@@ -1133,11 +1198,15 @@ class TestMetadata:
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Send transaction with metadata CBOR."""
+        temp_template = helpers.get_func_name()
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
-        tx_raw_output = cluster.send_tx(src_address=payment_addr.address, tx_files=tx_files)
+        tx_raw_output = cluster.send_tx(
+            src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
+        )
         cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 
@@ -1159,12 +1228,16 @@ class TestMetadata:
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Send transaction with both metadata JSON and CBOR."""
+        temp_template = helpers.get_func_name()
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_FILE],
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
-        tx_raw_output = cluster.send_tx(src_address=payment_addr.address, tx_files=tx_files)
+        tx_raw_output = cluster.send_tx(
+            src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
+        )
         cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 

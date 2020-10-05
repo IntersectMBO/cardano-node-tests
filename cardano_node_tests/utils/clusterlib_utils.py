@@ -16,7 +16,9 @@ LOGGER = logging.getLogger(__name__)
 TEST_TEMP_DIR = helpers.get_basetemp()
 
 
-def withdraw_reward(cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser) -> None:
+def withdraw_reward(
+    cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
+) -> None:
     """Withdraw rewards to payment address."""
     src_address = pool_user.payment.address
     src_init_balance = cluster_obj.get_address_balance(src_address)
@@ -26,6 +28,7 @@ def withdraw_reward(cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.Po
     )
     tx_raw_withdrawal_output = cluster_obj.send_tx(
         src_address=src_address,
+        tx_name=f"{name_template}_reward_withdrawal",
         tx_files=tx_files_withdrawal,
         withdrawals=[clusterlib.TxOut(address=pool_user.stake.address, amount=-1)],
     )
@@ -52,7 +55,7 @@ def deregister_stake_addr(
     """Deregister stake address."""
     # files for deregistering stake address
     stake_addr_dereg_cert = cluster_obj.gen_stake_addr_deregistration_cert(
-        addr_name=f"addr0_{name_template}_dereg", stake_vkey_file=pool_user.stake.vkey_file
+        addr_name=f"{name_template}_addr0_dereg", stake_vkey_file=pool_user.stake.vkey_file
     )
     tx_files_deregister = clusterlib.TxFiles(
         certificate_files=[stake_addr_dereg_cert],
@@ -60,10 +63,12 @@ def deregister_stake_addr(
     )
 
     # withdraw rewards to payment address
-    withdraw_reward(cluster_obj=cluster_obj, pool_user=pool_user)
+    withdraw_reward(cluster_obj=cluster_obj, pool_user=pool_user, name_template=name_template)
 
     tx_raw_output = cluster_obj.send_tx(
-        src_address=pool_user.payment.address, tx_files=tx_files_deregister
+        src_address=pool_user.payment.address,
+        tx_name=f"{name_template}_dereg_stake_addr",
+        tx_files=tx_files_deregister,
     )
     cluster_obj.wait_for_new_block(new_blocks=2)
     return tx_raw_output
@@ -235,10 +240,10 @@ def create_pool_users(
     for i in range(no_of_addr):
         # create key pairs and addresses
         stake_addr_rec = create_stake_addr_records(
-            f"addr{i}_{name_template}", cluster_obj=cluster_obj
+            f"{name_template}_addr{i}", cluster_obj=cluster_obj
         )[0]
         payment_addr_rec = create_payment_addr_records(
-            f"addr{i}_{name_template}",
+            f"{name_template}_addr{i}",
             cluster_obj=cluster_obj,
             stake_vkey_file=stake_addr_rec.vkey_file,
         )[0]
@@ -364,7 +369,10 @@ def update_params(
         LOGGER.info("Waiting for new epoch to submit proposal.")
         cluster_obj.wait_for_new_epoch()
 
-        cluster_obj.submit_update_proposal(cli_args=[cli_arg, str(param_value)])
+        cluster_obj.submit_update_proposal(
+            cli_args=[cli_arg, str(param_value)],
+            tx_name=f"{param_name}_{clusterlib.get_timestamped_rand_str()}",
+        )
 
         LOGGER.info(f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value})")
         cluster_obj.wait_for_new_epoch()
