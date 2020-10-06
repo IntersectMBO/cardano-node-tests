@@ -57,7 +57,10 @@ def run_shell_command(command: str, workdir: FileType = "") -> bytes:
     return stdout
 
 
-CURRENT_COMMIT = run_shell_command("git rev-parse HEAD").decode().strip()
+if "GIT_REVISION" in os.environ:
+    CURRENT_COMMIT = os.getenv("GIT_REVISION")
+else:
+    CURRENT_COMMIT = run_shell_command("git rev-parse HEAD").decode().strip()
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 GITHUB_TREE_URL = f"{GITHUB_URL}/tree/{CURRENT_COMMIT}"
 GITHUB_BLOB_URL = f"{GITHUB_URL}/blob/{CURRENT_COMMIT}"
