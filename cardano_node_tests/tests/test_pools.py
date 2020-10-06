@@ -657,7 +657,7 @@ class TestStakePool:
         tx_files = clusterlib.TxFiles(
             certificate_files=[
                 pool_creation_out.pool_reg_cert_file,
-                *list(temp_dir.glob(f"*{temp_template}_stake_deleg.cert")),
+                *list(temp_dir.glob(f"{temp_template}*_stake_deleg.cert")),
             ],
             signing_key_files=pool_creation_out.tx_raw_output.tx_files.signing_key_files,
         )
@@ -937,9 +937,11 @@ class TestStakePool:
         # create witness file for each key
         witness_files = [
             cluster.witness_tx(
-                tx_body_file=tx_raw_output.out_file, tx_name=temp_template, signing_key_files=[skey]
+                tx_body_file=tx_raw_output.out_file,
+                tx_name=f"{temp_template}_skey{idx}",
+                signing_key_files=[skey],
             )
-            for skey in witness_skeys
+            for idx, skey in enumerate(witness_skeys)
         ]
 
         # sign TX using witness files
