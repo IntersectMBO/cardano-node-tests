@@ -22,6 +22,11 @@ Running tests:
 ```sh
 # cd to cardano-node repo
 $ cd /path/to/cardano-node
+# update and checkout the desired commit/tag
+$ git checkout master
+$ git pull origin master
+$ git fetch --all --tags
+$ git checkout tags/<tag>
 # launch devops shell
 $ nix-shell -A devops
 # cd to tests repo
@@ -49,6 +54,19 @@ To get test coverage of cardano-cli commands, run tests as usual (`make tests`) 
 ```
 ./cli_coverage.py -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
 ```
+
+
+Publishing testing results
+--------------------------
+
+1. install the `allure` command line tool - https://docs.qameta.io/allure/#_installing_a_commandline
+1. run tests (`make tests`)
+1. checkout the "test_reports" branch (`git checkout test_reports`)
+1. publish the results to https://input-output-hk.github.io/cardano-node-tests
+```
+$ ./publi.sh .reports/
+```
+
 
 Contributing
 ------------
