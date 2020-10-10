@@ -684,7 +684,7 @@ class TestRewards:
             cluster_manager.set_needs_restart()
             pytest.skip(f"User '{pool_name}' hasn't received any rewards, cannot continue.")
 
-        # transfer all funds back to faucet
+        # transfer all funds back to faucet, so no funds are staked
         clusterlib_utils.return_funds_to_faucet(
             pool_user.payment,
             cluster_obj=cluster,
@@ -695,23 +695,38 @@ class TestRewards:
             cluster.get_address_balance(pool_user.payment.address) == 0
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
-        # make sure user is not receiving rewards
-        for epoch in range(5):
-            # withdraw rewards to destination address
-            if cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance:
+        # keep withdrawing new rewards so reward ballance is 0
+        def _withdraw():
+            rewards = cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
+            if rewards:
+                epoch = cluster.get_last_block_epoch()
+                payment_balance = cluster.get_address_balance(pool_user.payment.address)
+                LOGGER.info(f"epoch {epoch} - reward: {rewards}, payment: {payment_balance}")
+                # TODO - check leder state wrt stake amount and expected reward
+                clusterlib_utils.save_ledger_state(
+                    cluster_obj=cluster, name_template=f"{temp_template}_{epoch}"
+                )
+                # withdraw rewards to destination address
                 clusterlib_utils.withdraw_reward(
                     cluster_obj=cluster,
                     pool_user=pool_user,
                     name_template=f"{temp_template}_ep{epoch}",
                     dst_addr_record=dst_addr_record,
                 )
-            cluster.wait_for_new_epoch(padding_seconds=30)
+
+        stake_reward = helpers.wait_for(
+            _withdraw,
+            delay=10,
+            num_sec=10 * cluster.epoch_length_sec + 100,
+            silent=True,
+        )
 
         # wait for two epochs and check that no new rewards were received
         cluster.wait_for_new_epoch(2, padding_seconds=30)
-        assert cluster.get_stake_addr_info(
-            pool_user.stake.address
-        ).reward_account_balance, "Unexpected reward was received by stake address"
+        end_rewards = cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
+        assert (
+            not end_rewards
+        ), "Unexpected reward amount {end_rewards} was received by stake address"
 
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge1(
