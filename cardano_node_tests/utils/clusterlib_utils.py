@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Optional
@@ -402,13 +403,28 @@ def update_params(
             )
 
 
-def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, request: FixtureRequest) -> None:
+def save_cli_coverage(
+    cluster_obj: clusterlib.ClusterLib, request: FixtureRequest
+) -> Optional[Path]:
     """Save CLI coverage info."""
     cli_coverage_dir = request.config.getoption("--cli-coverage-dir")
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
-        return
+        return None
 
-    json_file = f"cli_coverage_{get_timestamped_rand_str(0)}.json"
-    with open(cli_coverage_dir / json_file, "w") as out_json:
+    json_file = Path(cli_coverage_dir) / f"cli_coverage_{get_timestamped_rand_str(0)}.json"
+    with open(json_file, "w") as out_json:
         json.dump(cluster_obj.cli_coverage, out_json, indent=4)
     LOGGER.info(f"Coverage files saved to '{cli_coverage_dir}'.")
+    return json_file
+
+
+def save_ledger_state(
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    destination_dir: FileType = ".",
+) -> Path:
+    """Save ledger state."""
+    name_template = name_template or get_timestamped_rand_str(0)
+    json_file = Path(destination_dir) / f"{name_template}_ledger_state.json"
+    cluster_obj.query_cli(["ledger-state", "--out-file", json_file])
+    return json_file
