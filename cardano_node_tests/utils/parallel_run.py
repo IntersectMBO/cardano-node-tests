@@ -113,6 +113,7 @@ class ClusterManager:
         try:
             cluster_obj = devops_cluster.start_cluster(cmd=start_cmd)
         except Exception:
+            self._log("failed to start cluster, exiting pytest")
             pytest.exit(msg="Failed to start cluster", returncode=1)
 
         # setup faucet addresses
