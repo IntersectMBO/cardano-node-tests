@@ -35,7 +35,7 @@ LAUNCH_PATH = Path(os.getcwd())
 # need to be locked to single worker (otherwise e.g. ballances would not check).
 if os.environ.get("PYTEST_XDIST_TESTRUNUID"):
     IS_XDIST = True
-    FileLockIfXdist = FileLock
+    FileLockIfXdist: Any = FileLock
     xdist_sleep = time.sleep
 else:
     IS_XDIST = False
