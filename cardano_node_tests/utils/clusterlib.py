@@ -739,7 +739,7 @@ class ClusterLib:
     def get_stake_pool_id(self, pool_cold_vkey_file: FileType) -> str:
         """Return ID of stake pool."""
         pool_id = (
-            self.cli(["stake-pool", "id", "--verification-key-file", str(pool_cold_vkey_file)])
+            self.cli(["stake-pool", "id", "--cold-verification-key-file", str(pool_cold_vkey_file)])
             .stdout.strip()
             .decode("utf-8")
         )
