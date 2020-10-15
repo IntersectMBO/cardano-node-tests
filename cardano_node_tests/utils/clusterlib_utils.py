@@ -426,5 +426,5 @@ def save_ledger_state(
     """Save ledger state."""
     name_template = name_template or get_timestamped_rand_str(0)
     json_file = Path(destination_dir) / f"{name_template}_ledger_state.json"
-    cluster_obj.query_cli(["ledger-state", "--out-file", json_file])
+    cluster_obj.query_cli(["ledger-state", "--out-file", str(json_file)])
     return json_file
