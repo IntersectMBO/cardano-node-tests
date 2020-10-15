@@ -719,8 +719,8 @@ class TestRewards:
 
         stake_reward = helpers.wait_for(
             _withdraw,
-            delay=4,
-            num_sec=10 * cluster.epoch_length_sec + 100,
+            delay=10,
+            num_sec=4 * cluster.epoch_length_sec + 100,
             silent=True,
         )
 
