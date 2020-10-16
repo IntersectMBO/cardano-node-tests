@@ -60,6 +60,8 @@ def _run_cluster_cleanup(
     cluster_manager_obj._log("running cluster cleanup")
     # stop cluster
     cluster_manager_obj.stop()
+    # save CLI coverage info
+    cluster_manager_obj.save_cli_coverage()
     # save environment info for Allure
     helpers.save_env_for_allure(request)
     # process artifacts
