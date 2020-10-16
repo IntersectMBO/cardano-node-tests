@@ -11,4 +11,4 @@ jobs:
         with:
           ref: 'dorin/sync_tests'
       - name: sync test on testnet
-        run: ./.github/sync_tests/sync_times_ci_testnet.sh
+        run: ./sync_tests/sync_times_ci_testnet.sh
