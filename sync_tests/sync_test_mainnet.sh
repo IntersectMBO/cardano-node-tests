@@ -39,22 +39,22 @@ wget https://hydra.iohk.io/job/Cardano/cardano-node-pr-1983/cardano-node-linux/l
 tar -xzvf cardano-node-1.21.2-linux.tar.gz
 
 #	2. get the required node files
-wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-config.json
-wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-byron-genesis.json
-wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-shelley-genesis.json
-wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-topology.json
+wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/mainnet-config.json
+wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/mainnet-byron-genesis.json
+wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/mainnet-shelley-genesis.json
+wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/mainnet-topology.json
 
 #	3. start the node 
 tmux new -d -s mySession
 
 # Execute a command in the detached session
 tmux send-keys -t mySession.0 "$NODE run \
-	--topology testnet-topology.json \
+	--topology mainnet-topology.json \
 	--database-path db \
 	--socket-path db/node.socket \
 	--host-addr 0.0.0.0 \
 	--port 3000 \
-	--config testnet-config.json" Enter
+	--config mainnet-config.json" Enter
 
 sleep 20
 
@@ -82,13 +82,13 @@ echo "oldest_file: $oldest_file"
 sync_time_seconds=$(( $current_seconds - $oldest_file_seconds))
 echo "sync_time_seconds: $sync_time_seconds"
 
-current_block=$($CLI shelley query tip --testnet-magic 1097911063 | jq -r '.blockNo')
+current_block=$($CLI shelley query tip --mainnet | jq -r '.blockNo')
 echo "current_block: $current_block"
 
 sync_speed_bps=$(( current_block / sync_time_seconds ))
 echo "sync_speed_bps: $sync_speed_bps"
 
-#	6. clean up
-echo "Deleting the test folder - $SCRIPT_LOCATION"
-cd $SCRIPT_LOCATION
-rm -rf $TEST_LOCATION
+##	6. clean up
+#echo "Deleting the test folder - $SCRIPT_LOCATION"
+#cd $SCRIPT_LOCATION
+#rm -rf $TEST_LOCATION

@@ -1,14 +1,18 @@
-name: shell commands
+name: sync tests
 
 on: [push]
 
 jobs:
-  sync_testnet:
-    runs-on: ubuntu-latest
+  sync_mainnet:
+  runs-on: ${{ matrix.os }}
+  strategy:
+    matrix:
+      os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: checkout github repo
         uses: actions/checkout@v2
         with:
           ref: 'dorin/sync_tests'
-      - name: sync test on testnet
-        run: ./sync_tests/sync_times_ci_testnet.sh
+      - name: sync test
+        run: ./sync_tests/sync_test_mainnet.sh
+        shell: bash
