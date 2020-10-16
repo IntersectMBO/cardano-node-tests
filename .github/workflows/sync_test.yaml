@@ -7,7 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout github repo
-        uses: actions/checkout@v1
-        ref: 'dorin/sync_tests'
+        uses: actions/checkout@v2
+        with:
+          ref: 'dorin/sync_tests'
       - name: sync test on testnet
         run: ./.github/sync_tests/sync_times_ci_testnet.sh
