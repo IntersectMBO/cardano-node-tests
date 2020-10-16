@@ -1,16 +1,12 @@
 #!/bin/sh
 
-
 # Script steps:
 #	0. create a new directory for the current test 
-#	1. download and extract the pre-build cardano-node archieve
+#	1. download and extract the pre-build cardano-node archive
 #	2. get the required node files (genesis, config, topology)
 #	3. start the node 
 #	4. wait for the node to be fully synced
 #	5. calculate and return the sync speed (no of blocks per second = total no of blocks synced / time in seconds / 60)
-
-killall cardano-node
-tmux kill-server
 
 SCRIPT_LOCATION=$(pwd)
 TEST_LOCATION=$SCRIPT_LOCATION/env
@@ -18,10 +14,10 @@ CLI=$TEST_LOCATION/cardano-cli
 NODE=$TEST_LOCATION/cardano-node
 
 wait_node_to_sync() {
-	timeout_seconds=90 # 90
+	timeout_seconds=90
 	echo "Waiting for the node to be synced = 90 seconds without downloading any new chunk"
 	previous_chunk=$(ls -t | head -n1)
-	sleep 60 # 60
+	sleep 60
 	newest_chunk=$(ls -t | head -n1)
 	echo "  - previous_chunk: $previous_chunk"
 	echo "  - newest_chunk: $newest_chunk"
@@ -35,18 +31,18 @@ wait_node_to_sync() {
 }
 
 #	0. create a new directory for the current test 
-# mkdir $TEST_LOCATION
+mkdir $TEST_LOCATION
 cd $TEST_LOCATION
 
-# #	1. download and extract the pre-build cardano-node archieve
-# wget https://hydra.iohk.io/job/Cardano/cardano-node-pr-1983/cardano-node-linux/latest-finished/download/1/cardano-node-1.21.2-linux.tar.gz
-# tar -xzvf cardano-node-1.21.2-linux.tar.gz
+#	1. download and extract the pre-build cardano-node archieve
+wget https://hydra.iohk.io/job/Cardano/cardano-node-pr-1983/cardano-node-linux/latest-finished/download/1/cardano-node-1.21.2-linux.tar.gz
+tar -xzvf cardano-node-1.21.2-linux.tar.gz
 
-# #	2. get the required node files
-# wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-config.json
-# wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-byron-genesis.json
-# wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-shelley-genesis.json
-# wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-topology.json
+#	2. get the required node files
+wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-config.json
+wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-byron-genesis.json
+wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-shelley-genesis.json
+wget https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/testnet-topology.json
 
 #	3. start the node 
 tmux new -d -s mySession
@@ -94,5 +90,5 @@ echo "sync_speed_bps: $sync_speed_bps"
 
 #	6. clean up
 echo "Deleting the test folder - $SCRIPT_LOCATION"
-# cd $SCRIPT_LOCATION
-# rm -rf $TEST_LOCATION
+cd $SCRIPT_LOCATION
+rm -rf $TEST_LOCATION
