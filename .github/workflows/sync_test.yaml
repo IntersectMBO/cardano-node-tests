@@ -7,4 +7,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: sync test - testnet
-        run: ./sync_tests/sync_times_ci_testnet.sh
+        run: ../sync_tests/sync_times_ci_testnet.sh
