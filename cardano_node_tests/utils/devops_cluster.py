@@ -210,8 +210,8 @@ def load_addrs_data() -> dict:
         return pickle.load(in_data)  # type: ignore
 
 
-def save_tests_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
-    """Save tests artifacts."""
+def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
+    """Save collected tests and cluster artifacts."""
     pytest_tmp_dir = pytest_tmp_dir.resolve()
     if not pytest_tmp_dir.is_dir():
         return None
@@ -221,7 +221,7 @@ def save_tests_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[
         shutil.rmtree(dest_dir)
     shutil.copytree(pytest_tmp_dir, dest_dir, symlinks=True, ignore_dangling_symlinks=True)
 
-    LOGGER.info(f"Tests artifacts saved to '{artifacts_dir}'.")
+    LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
     return dest_dir
 
 
@@ -275,7 +275,7 @@ def process_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
     artifacts_dir = None
 
     if artifacts_base_dir:
-        artifacts_dir = save_tests_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))
+        artifacts_dir = save_collected_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))
     if not artifacts_dir:
         artifacts_dir = pytest_tmp_dir
 
