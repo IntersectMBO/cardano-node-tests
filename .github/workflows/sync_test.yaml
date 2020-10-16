@@ -8,5 +8,7 @@ jobs:
     steps:
       - name: Checkout github repo
         uses: actions/checkout@v1
+      - name: checkout branch
+        uses: git checkout -b dorin/sync_tests
       - name: sync test - testnet
         run: ./.github/sync_tests/sync_times_ci_testnet.sh
