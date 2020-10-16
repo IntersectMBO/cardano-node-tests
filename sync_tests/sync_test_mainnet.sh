@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 # Script steps:
 #	0. create a new directory for the current test 
 #	1. download and extract the pre-build cardano-node archive
