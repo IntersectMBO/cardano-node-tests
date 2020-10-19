@@ -1034,7 +1034,7 @@ class TestNegative:
                     *cluster._prepend_flag("--tx-out", txouts),
                 ]
             )
-        assert "Missing: --tx-in TX-IN" in str(excinfo.value)
+        assert "Missing: (--tx-in TX-IN)" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_missing_tx_out(
@@ -1065,7 +1065,7 @@ class TestNegative:
                     *cluster._prepend_flag("--tx-in", txins),
                 ]
             )
-        assert "Missing: --tx-out TX-OUT" in str(excinfo.value)
+        assert "Missing: (--tx-out TX-OUT)" in str(excinfo.value)
 
 
 class TestMetadata:
