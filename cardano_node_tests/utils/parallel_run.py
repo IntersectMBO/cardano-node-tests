@@ -18,7 +18,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import UnpackableSequence
 
 CLUSTER_LOCK = ".cluster.lock"
-LOCK_LOG_FILE = ".lock.log"
+RUN_LOG_FILE = ".parallel.log"
 SESSION_RUNNING_FILE = ".session_running"
 TEST_SINGLETON_FILE = ".test_singleton"
 RESOURCE_LOCKED_GLOB = ".resource_locked"
@@ -64,11 +64,20 @@ class ClusterManager:
             self.range_num = 1
 
         self.cluster_lock = f"{self.lock_dir}/{CLUSTER_LOCK}"
-        self.lock_log = (self.lock_dir.parent / LOCK_LOG_FILE).resolve()
+        self.lock_log = self._init_log()
 
     @property
     def cache(self) -> ClusterManagerCache:
         return self.get_cache()
+
+    def _init_log(self) -> Path:
+        """Return path to run log file."""
+        env_log = os.environ.get("PARALLEL_LOG")
+        run_log = Path(env_log or self.lock_dir / RUN_LOG_FILE).resolve()
+        # if PARALLEL_LOG env variable was set, create the log file if it doesn't exist
+        if env_log:
+            open(run_log, "a").close()
+        return run_log
 
     def _log(self, msg: str) -> None:
         """Log message - needs to be called while having lock."""
