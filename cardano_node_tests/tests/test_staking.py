@@ -717,7 +717,7 @@ class TestRewards:
                     dst_addr_record=dst_addr_record,
                 )
 
-        stake_reward = helpers.wait_for(
+        helpers.wait_for(
             _withdraw,
             delay=10,
             num_sec=4 * cluster.epoch_length_sec + 100,
