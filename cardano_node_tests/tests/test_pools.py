@@ -691,6 +691,118 @@ class TestStakePool:
             stake_pool_id=pool_creation_out.stake_pool_id,
         )
 
+    @allure.link(helpers.get_vcs_link())
+    def test_cancel_stake_pool_deregistration(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        temp_dir: Path,
+    ):
+        """Reregister a stake pool that is in course of being retired."""
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
+
+        pool_name = f"pool_{rand_str}"
+        pool_metadata = {
+            "name": pool_name,
+            "description": "Shelley QA E2E test Test",
+            "ticker": "QA1",
+            "homepage": "www.test1.com",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+        )
+
+        pool_data = clusterlib.PoolData(
+            pool_name=pool_name,
+            pool_pledge=222,
+            pool_cost=123,
+            pool_margin=0.512,
+            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+        )
+
+        # create pool owners
+        pool_owners = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template
+        )
+
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            pool_owners[0].payment,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=1_500_000_000,
+        )
+
+        # register pool and delegate stake address
+        pool_creation_out = _create_register_pool_delegate_stake_tx(
+            cluster_obj=cluster,
+            pool_owners=pool_owners,
+            temp_template=temp_template,
+            pool_data=pool_data,
+        )
+
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 2,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
+        cluster.wait_for_new_epoch()
+
+        src_address = pool_owners[0].payment.address
+        src_init_balance = cluster.get_address_balance(src_address)
+
+        # reregister the pool by resubmitting the pool registration certificate,
+        # delegate stake address to pool again (the address is already registered)
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[
+                pool_creation_out.pool_reg_cert_file,
+                *list(temp_dir.glob(f"{temp_template}*_stake_deleg.cert")),
+            ],
+            signing_key_files=pool_creation_out.tx_raw_output.tx_files.signing_key_files,
+        )
+        tx_raw_output = cluster.send_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            deposit=0,  # no additional deposit, the pool is already registered
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        # and no additional deposit was used
+        assert (
+            cluster.get_address_balance(src_address) == src_init_balance - tx_raw_output.fee
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        LOGGER.info("Checking for 3 epochs that the stake pool will NOT get deregistered.")
+        stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
+        pool_deregistered = helpers.wait_for(
+            lambda: cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
+            is None,
+            delay=10,
+            num_sec=3 * cluster.epoch_length_sec,
+            silent=True,
+        )
+        assert not pool_deregistered, "Pool got deregistered"
+
+        # check that pool is still correctly setup
+        _check_pool(
+            cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data
+        )
+
+        # check that the stake addresses is still delegated
+        _check_staking(
+            pool_owners=pool_owners,
+            cluster_obj=cluster,
+            stake_pool_id=pool_creation_out.stake_pool_id,
+        )
+
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     @allure.link(helpers.get_vcs_link())
     def test_update_stake_pool_metadata(
