@@ -72,12 +72,18 @@ class ClusterManager:
 
     def _init_log(self) -> Path:
         """Return path to run log file."""
-        env_log = os.environ.get("PARALLEL_LOG")
-        run_log = Path(env_log or self.lock_dir / RUN_LOG_FILE).resolve()
-        # if PARALLEL_LOG env variable was set, create the log file if it doesn't exist
+        env_log = os.environ.get("SCHEDULING_LOG")
         if env_log:
+            run_log = Path(env_log).expanduser()
+            if not run_log.is_absolute():
+                # the path is relative to LAUNCH_PATH (current path can differ)
+                run_log = helpers.LAUNCH_PATH / run_log
+            # create the log file if it doesn't exist
             open(run_log, "a").close()
-        return run_log
+        else:
+            run_log = self.lock_dir / RUN_LOG_FILE
+
+        return run_log.resolve()
 
     def _log(self, msg: str) -> None:
         """Log message - needs to be called while having lock."""
