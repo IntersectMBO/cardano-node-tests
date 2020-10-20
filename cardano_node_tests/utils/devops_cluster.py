@@ -97,6 +97,7 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
             "stake_addr_registration_cert": addr_data_dir / "stake.reg.cert",
             "stake_addr_delegation_cert": addr_data_dir / "owner-stake.deleg.cert",
             "reward_addr_registration_cert": addr_data_dir / "stake-reward.reg.cert",
+            "pool_registration_cert": addr_data_dir / "register.cert",
             "cold_key_pair": clusterlib.ColdKeyPair(
                 vkey_file=addr_data_dir / "cold.vkey",
                 skey_file=addr_data_dir / "cold.skey",
