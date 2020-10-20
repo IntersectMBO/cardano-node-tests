@@ -796,7 +796,7 @@ class TestRewards:
 
         cluster.wait_for_new_epoch(3)
 
-        with cluster_manager.needs_restart_after_failure():
+        with cluster_manager.restart_on_failure():
             # check that NO new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
@@ -920,7 +920,7 @@ class TestRewards:
 
         cluster.wait_for_new_epoch(3)
 
-        with cluster_manager.needs_restart_after_failure():
+        with cluster_manager.restart_on_failure():
             # check that NO new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
@@ -1033,7 +1033,7 @@ class TestRewards:
         )
         cluster.wait_for_new_block(new_blocks=2)
 
-        with cluster_manager.needs_restart_after_failure():
+        with cluster_manager.restart_on_failure():
             # check that the key deposit was returned
             assert (
                 cluster.get_address_balance(pool_owner.payment.address)
@@ -1186,7 +1186,7 @@ class TestRewards:
         )
         cluster.wait_for_new_block(new_blocks=2)
 
-        with cluster_manager.needs_restart_after_failure():
+        with cluster_manager.restart_on_failure():
             # check that the key deposit was returned
             assert (
                 cluster.get_address_balance(pool_reward.payment.address)

@@ -161,7 +161,7 @@ class ClusterManager:
             open(self.lock_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
 
     @contextlib.contextmanager
-    def needs_restart_after_failure(self) -> Generator:
+    def restart_on_failure(self) -> Generator:
         """Indicate that the cluster needs restart if command failed - context manager."""
         try:
             yield
