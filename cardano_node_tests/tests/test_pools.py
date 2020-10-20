@@ -672,7 +672,7 @@ class TestStakePool:
             == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
         ), f"Incorrect balance for source address `{src_address}`"
 
-        LOGGER.info("Waiting up to 5 epochs for stake pool to be re-registered.")
+        LOGGER.info("Waiting up to 5 epochs for stake pool to be reregistered.")
         helpers.wait_for(
             lambda: pool_creation_out.stake_pool_id in cluster.get_stake_distribution(),
             delay=10,
