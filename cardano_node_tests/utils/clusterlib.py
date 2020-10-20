@@ -1308,7 +1308,7 @@ class ClusterLib:
 
         return self.send_tx(
             src_address=self.genesis_utxo_addr,
-            tx_name=tx_name,
+            tx_name=f"{tx_name}_submit_proposal",
             tx_files=TxFiles(
                 proposal_files=[out_file],
                 signing_key_files=[*self.delegate_skeys, self.genesis_utxo_skey],
@@ -1410,6 +1410,7 @@ class ClusterLib:
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawOutput]:
         """Register stake pool."""
+        tx_name = f"{tx_name}_reg_pool"
         pool_reg_cert_file = self.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=vrf_vkey_file,
@@ -1450,6 +1451,7 @@ class ClusterLib:
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawOutput]:
         """Deregister stake pool."""
+        tx_name = f"{tx_name}_dereg_pool"
         LOGGER.debug(
             f"Deregistering stake pool starting with epoch: {epoch}; "
             f"Current epoch is: {self.get_last_block_epoch()}"
