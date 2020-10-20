@@ -809,6 +809,8 @@ class TestRewards:
                 == cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "Pool owner received unexpected rewards"
 
+            # Return the pool to the original state - restore pledge.
+
             # fund source (pledge) address
             clusterlib_utils.fund_from_faucet(
                 pool_owner,
@@ -932,6 +934,8 @@ class TestRewards:
                 orig_owner_reward
                 == cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "Pool owner received unexpected rewards"
+
+            # Return the pool to the original state - restore pledge.
 
             # fund user address so it has enough funds for fees etc.
             clusterlib_utils.fund_from_faucet(
@@ -1067,6 +1071,9 @@ class TestRewards:
                 orig_owner_reward
                 == cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "Pool owner received unexpected rewards"
+
+            # Return the pool to the original state - reregister stake address and
+            # delegate it to the pool.
 
             # fund source address
             clusterlib_utils.fund_from_faucet(
@@ -1221,6 +1228,9 @@ class TestRewards:
                 < cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
             ), "New reward was not received by stake address"
 
+            # Return the pool to the original state - reregister reward address and
+            # delegate it to the pool.
+
             # fund source address
             clusterlib_utils.fund_from_faucet(
                 pool_reward,
@@ -1264,14 +1274,14 @@ class TestRewards:
             cluster.wait_for_new_epoch(4, padding_seconds=30)
 
             # check that the reward address was delegated
-            stake_addr_info = cluster.get_stake_addr_info(pool_reward.stake.address)
+            reward_addr_info = cluster.get_stake_addr_info(pool_reward.stake.address)
             assert (
-                stake_addr_info.delegation
-            ), f"Stake address was not delegated yet: {stake_addr_info}"
+                reward_addr_info.delegation
+            ), f"Reward address was not delegated yet: {reward_addr_info}"
 
             assert (
-                stake_pool_id == stake_addr_info.delegation
-            ), "Stake address delegated to wrong pool"
+                stake_pool_id == reward_addr_info.delegation
+            ), "Reward address delegated to wrong pool"
 
             # check that new rewards were received by those delegating to the pool
             assert (
@@ -1281,6 +1291,6 @@ class TestRewards:
 
             # check that pool owner is also receiving rewards
             assert (
-                orig_user_reward
+                orig_pool_reward
                 < cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
             ), "New reward was not received by pool reward address"
