@@ -546,13 +546,13 @@ class TestNegative:
         assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    def test_unregister_not_registered_addr(
+    def test_deregister_not_registered_addr(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
-        """Unregistered not registered stake address."""
+        """Deregister not registered stake address."""
         temp_template = helpers.get_func_name()
 
         user_registered = pool_users_disposable[0]
@@ -979,13 +979,13 @@ class TestRewards:
             ), "New reward was not received by pool reward address"
 
     @allure.link(helpers.get_vcs_link())
-    def test_no_reward_unregistered_stake_addr(
+    def test_no_reward_deregistered_stake_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
     ):
-        """Check that the pool is not receiving rewards when owner's stake address is unregistered.
+        """Check that the pool is not receiving rewards when owner's stake address is deregistered.
 
-        When the owner's stake address is unregistered (i.e. owner's stake is lower than pledge),
+        When the owner's stake address is deregistered (i.e. owner's stake is lower than pledge),
         neither pool owners nor those who delegate to that pool receive rewards.
         """
         pool_name = "node-pool2"
@@ -1127,11 +1127,11 @@ class TestRewards:
             ), "New reward was not received by pool reward address"
 
     @allure.link(helpers.get_vcs_link())
-    def test_no_reward_unregistered_reward_addr(
+    def test_no_reward_deregistered_reward_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
     ):
-        """Check that the reward address is not receiving rewards when unregistered.
+        """Check that the reward address is not receiving rewards when deregistered.
 
         The stake pool continues to operate normally and those who delegate to that pool receive
         rewards.
@@ -1235,7 +1235,7 @@ class TestRewards:
             node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
             stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
-            # reregister stake address and delegate it to pool
+            # reregister reward address and delegate it to pool
             reward_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
                 addr_name=f"{temp_template}_addr0",
                 stake_vkey_file=pool_reward.stake.vkey_file,
@@ -1263,7 +1263,7 @@ class TestRewards:
 
             cluster.wait_for_new_epoch(4, padding_seconds=30)
 
-            # check that the stake address was delegated
+            # check that the reward address was delegated
             stake_addr_info = cluster.get_stake_addr_info(pool_reward.stake.address)
             assert (
                 stake_addr_info.delegation
@@ -1282,5 +1282,5 @@ class TestRewards:
             # check that pool owner is also receiving rewards
             assert (
                 orig_user_reward
-                < cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
+                < cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
             ), "New reward was not received by pool reward address"
