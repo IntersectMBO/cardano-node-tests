@@ -25,6 +25,16 @@ def temp_dir(tmp_path_factory: TempdirFactory):
 
 
 @pytest.fixture
+def cluster_use_pool1(cluster_manager: parallel_run.ClusterManager) -> clusterlib.ClusterLib:
+    return cluster_manager.get(use_resources=["node-pool1"])
+
+
+@pytest.fixture
+def cluster_lock_pool2(cluster_manager: parallel_run.ClusterManager) -> clusterlib.ClusterLib:
+    return cluster_manager.get(lock_resources=["node-pool2"])
+
+
+@pytest.fixture
 def pool_users(
     cluster_manager: parallel_run.ClusterManager,
     cluster: clusterlib.ClusterLib,
@@ -152,10 +162,11 @@ class TestDelegateAddr:
     def test_delegate_using_pool_id(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Submit registration certificate and delegate to pool using pool id."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
@@ -171,10 +182,11 @@ class TestDelegateAddr:
     def test_delegate_using_vkey(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Submit registration certificate and delegate to pool using cold vkey."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
@@ -189,10 +201,11 @@ class TestDelegateAddr:
     def test_deregister(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Deregister stake address."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
@@ -309,12 +322,13 @@ class TestDelegateAddr:
     def test_addr_delegation_deregistration(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
         """Submit delegation and deregistration certificates in single TX."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
 
         temp_template = helpers.get_func_name()
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
@@ -406,11 +420,12 @@ class TestNegative:
     def test_delegation_cert_with_wrong_key(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
         """Generate stake address delegation certificate using wrong key."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
 
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
         temp_template = helpers.get_func_name()
@@ -458,12 +473,13 @@ class TestNegative:
     def test_delegate_addr_with_wrong_key(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
         """Delegate stake address using wrong key."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
 
         temp_template = helpers.get_func_name()
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
@@ -511,12 +527,13 @@ class TestNegative:
     def test_delegate_unregistered_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
         """Delegate unregistered stake address."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
 
         temp_template = helpers.get_func_name()
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
@@ -581,10 +598,11 @@ class TestRewards:
     def test_reward_amount(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Check that the stake address and pool owner are receiving rewards."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
 
         temp_template = helpers.get_func_name()
         rewards_address = cluster_manager.cache.addrs_data[pool_name]["reward"].address
@@ -645,10 +663,11 @@ class TestRewards:
     def test_decreasing_reward_transfered_funds(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Check that rewards are gradually decreasing when funds are transfered."""
         pool_name = "node-pool1"
-        cluster = cluster_manager.get(use_resources=[pool_name])
+        cluster = cluster_use_pool1
 
         temp_template = helpers.get_func_name()
 
@@ -730,6 +749,7 @@ class TestRewards:
     def test_no_reward_unmet_pledge1(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -739,7 +759,7 @@ class TestRewards:
         Increase the needed pledge amount by changing pool parameters.
         """
         pool_name = "node-pool2"
-        cluster = cluster_manager.get(lock_resources=[pool_name])
+        cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -850,6 +870,7 @@ class TestRewards:
     def test_no_reward_unmet_pledge2(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -859,7 +880,7 @@ class TestRewards:
         Withdraw part of pledge so the funds are lower than what is needed by the stake pool.
         """
         pool_name = "node-pool2"
-        cluster = cluster_manager.get(lock_resources=[pool_name])
+        cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -986,6 +1007,7 @@ class TestRewards:
     def test_no_reward_deregistered_stake_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the pool is not receiving rewards when owner's stake address is deregistered.
 
@@ -993,7 +1015,7 @@ class TestRewards:
         neither pool owners nor those who delegate to that pool receive rewards.
         """
         pool_name = "node-pool2"
-        cluster = cluster_manager.get(lock_resources=[pool_name])
+        cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -1137,6 +1159,7 @@ class TestRewards:
     def test_no_reward_deregistered_reward_addr(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the reward address is not receiving rewards when deregistered.
 
@@ -1144,7 +1167,7 @@ class TestRewards:
         rewards.
         """
         pool_name = "node-pool2"
-        cluster = cluster_manager.get(lock_resources=[pool_name])
+        cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
@@ -1299,6 +1322,7 @@ class TestRewards:
     def test_deregister_reward_addr_retire_pool(
         self,
         cluster_manager: parallel_run.ClusterManager,
+        cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Test deregistering reward address and retiring stake pool.
 
@@ -1306,7 +1330,7 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements
         pool_name = "node-pool2"
-        cluster = cluster_manager.get(lock_resources=[pool_name])
+        cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
