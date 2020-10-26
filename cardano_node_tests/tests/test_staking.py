@@ -1265,19 +1265,10 @@ class TestRewards:
 
             src_updated_balance = cluster.get_address_balance(pool_reward.payment.address)
 
-            node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
-            stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
-
-            # reregister reward address and delegate it to pool
-            reward_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
-                addr_name=f"{temp_template}_addr0",
-                stake_vkey_file=pool_reward.stake.vkey_file,
-                cold_vkey_file=node_cold.vkey_file,
-            )
+            # reregister reward address
             tx_files = clusterlib.TxFiles(
                 certificate_files=[
                     pool_rec["reward_addr_registration_cert"],
-                    reward_addr_deleg_cert_file,
                 ],
                 signing_key_files=[pool_reward.payment.skey_file, pool_reward.stake.skey_file],
             )
@@ -1295,16 +1286,6 @@ class TestRewards:
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
             cluster.wait_for_new_epoch(4, padding_seconds=30)
-
-            # check that the reward address was delegated
-            reward_addr_info = cluster.get_stake_addr_info(pool_reward.stake.address)
-            assert (
-                reward_addr_info.delegation
-            ), f"Reward address was not delegated yet: {reward_addr_info}"
-
-            assert (
-                stake_pool_id == reward_addr_info.delegation
-            ), "Reward address delegated to wrong pool"
 
             # check that new rewards were received by those delegating to the pool
             assert (
@@ -1415,7 +1396,7 @@ class TestRewards:
                 pool_reward.stake.address
             ).reward_account_balance
 
-            node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
+            node_cold = pool_rec["cold_key_pair"]
             stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
             # deregister stake pool
@@ -1457,21 +1438,15 @@ class TestRewards:
 
             src_updated_balance = cluster.get_address_balance(pool_reward.payment.address)
 
-            node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
+            node_cold = pool_rec["cold_key_pair"]
             stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
             # reregister the pool by resubmitting the pool registration certificate,
-            # delegate stake address to pool again, reregister and delegate reward address
-            reward_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
-                addr_name=f"{temp_template}_addr0",
-                stake_vkey_file=pool_reward.stake.vkey_file,
-                cold_vkey_file=node_cold.vkey_file,
-            )
+            # delegate stake address to pool again, reregister reward address
             tx_files = clusterlib.TxFiles(
                 certificate_files=[
                     pool_rec["reward_addr_registration_cert"],
                     pool_rec["pool_registration_cert"],
-                    reward_addr_deleg_cert_file,
                     pool_rec["stake_addr_delegation_cert"],
                 ],
                 signing_key_files=[
@@ -1507,16 +1482,6 @@ class TestRewards:
 
             # wait before checking delegation and rewards
             cluster.wait_for_new_epoch(3, padding_seconds=30)
-
-            # check that the reward address was delegated
-            reward_addr_info = cluster.get_stake_addr_info(pool_reward.stake.address)
-            assert (
-                reward_addr_info.delegation
-            ), f"Reward address was not delegated yet: {reward_addr_info}"
-
-            assert (
-                stake_pool_id == reward_addr_info.delegation
-            ), "Reward address delegated to wrong pool"
 
             # check that the stake address was delegated
             stake_addr_info = cluster.get_stake_addr_info(pool_owner.stake.address)
