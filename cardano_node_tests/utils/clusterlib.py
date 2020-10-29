@@ -731,7 +731,7 @@ class ClusterLib:
 
     def get_registered_stake_pools_ledger_state(self) -> dict:
         """Return ledger state info for registered stake pools."""
-        registered_pools_details = self.get_ledger_state()["esLState"]["_delegationState"][
+        registered_pools_details = self.get_ledger_state()["nesEs"]["esLState"]["_delegationState"][
             "_pstate"
         ]["_pParams"]
         return registered_pools_details  # type: ignore
@@ -815,7 +815,7 @@ class ClusterLib:
 
     def get_last_block_kes_period(self) -> int:
         """Return last block KES period."""
-        return int(self.get_last_block_block_no() / self.slots_per_kes_period)
+        return int(self.get_last_block_slot_no() // self.slots_per_kes_period)
 
     def get_txid(self, tx_body_file: FileType) -> str:
         """Get txid trom transaction body."""

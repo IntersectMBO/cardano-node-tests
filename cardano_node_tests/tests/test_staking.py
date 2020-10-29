@@ -694,7 +694,7 @@ class TestRewards:
             clusterlib_utils.save_ledger_state(
                 cluster_obj=cluster, name_template=f"{temp_template}_{this_epoch}"
             )
-            es_snapshot: dict = cluster.get_ledger_state().get("esSnapshots") or {}
+            es_snapshot: dict = cluster.get_ledger_state()["nesEs"]["esSnapshots"]
             es_snapshots[this_epoch] = es_snapshot
 
             if loop_epoch == 2:
