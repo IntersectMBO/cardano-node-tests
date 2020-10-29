@@ -11,9 +11,10 @@ ALLURE_DIR ?= .reports/
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(ALLURE_DIR)
 
 # run all tests, generate allure report
+PYTEST_ARGS ?= ""
 TEST_THREADS ?= 8
 tests: .dirs
-	pytest cardano_node_tests -n $(TEST_THREADS) --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
+	pytest cardano_node_tests $(PYTEST_ARGS) -n $(TEST_THREADS) --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
 
 lint:
 	pre-commit run -a
