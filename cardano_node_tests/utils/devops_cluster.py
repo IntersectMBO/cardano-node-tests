@@ -26,8 +26,8 @@ ADDR_DATA = "addr_data.pickle"
 ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
 # TODO: proper error ignoring for expected errors
 ERRORS_IGNORED_RE = re.compile(
-    "failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace|"
-    "Could not obtain ledger view for slot|WrapForgeStateUpdateError"
+    "failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace"
+    "|Could not obtain ledger view for slot|WrapForgeStateUpdateError|InvalidKesSignatureOCERT"
 )
 
 
