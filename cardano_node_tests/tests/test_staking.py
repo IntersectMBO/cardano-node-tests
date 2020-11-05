@@ -866,7 +866,7 @@ class TestRewards:
         es_snapshots = {}
         rs_records = {}
         LOGGER.info("Checking rewards for 9 epochs.")
-        for __ in range(10):
+        for __ in range(9):
             # reward balances in previous epoch
             (
                 prev_epoch,
