@@ -101,6 +101,7 @@ def _delegate_stake_addr(
     temp_template: str,
     pool_name: str,
     delegate_with_pool_id: bool = False,
+    check_delegation: bool = True,
 ) -> clusterlib.PoolUser:
     """Submit registration certificate and delegate to pool."""
     node_cold = addrs_data[pool_name]["cold_key_pair"]
@@ -162,13 +163,12 @@ def _delegate_stake_addr(
         == src_init_balance - tx_raw_output.fee - cluster_obj.get_key_deposit()
     ), f"Incorrect balance for source address `{src_address}`"
 
-    clusterlib_utils.wait_for_stake_distribution(cluster_obj)
-
     # check that the stake address was delegated
-    stake_addr_info = cluster_obj.get_stake_addr_info(stake_addr_rec.address)
-    assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
-
-    assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
+    if check_delegation:
+        clusterlib_utils.wait_for_stake_distribution(cluster_obj)
+        stake_addr_info = cluster_obj.get_stake_addr_info(stake_addr_rec.address)
+        assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
+        assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
     return pool_user
 
@@ -623,8 +623,14 @@ class TestRewards:
 
         temp_template = helpers.get_func_name()
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
+        pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
-        reward_addr_dec = helpers.decode_bech32(pool_reward.stake.address)[2:]
+        pool_reward_addr_dec = helpers.decode_bech32(pool_reward.stake.address)[2:]
+        pool_stake_addr_dec = helpers.decode_bech32(pool_owner.stake.address)[2:]
+
+        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 8
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
         init_epoch = cluster.get_last_block_epoch()
         user_rewards = [(init_epoch, 0, 0)]
@@ -636,19 +642,43 @@ class TestRewards:
             )
         ]
 
+        # save ledger state
+        clusterlib_utils.save_ledger_state(
+            cluster_obj=cluster, name_template=f"{temp_template}_{init_epoch}"
+        )
+
         # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             pool_name=pool_name,
+            check_delegation=False,
         )
 
-        LOGGER.info("Checking rewards for 10 epochs.")
+        user_stake_addr_dec = helpers.decode_bech32(pool_user.stake.address)[2:]
+        user_payment_balance = cluster.get_address_balance(pool_user.payment.address)
+
         es_snapshots = {}
-        for loop_epoch in range(10):
-            # let's wait for new epoch and then some more seconds
-            cluster.wait_for_new_epoch(padding_seconds=30)
+        rs_records = {}
+        LOGGER.info("Checking rewards for 9 epochs.")
+        for __ in range(9):
+            # reward balances in previous epoch
+            prev_user_epoch, prev_user_reward, __ = user_rewards[-1]
+            (
+                prev_owner_epoch,
+                prev_owner_reward,
+                __,  # prev_abs_owner_reward
+            ) = owner_rewards[-1]
+
+            # wait for new epoch
+            if cluster.get_last_block_epoch() == prev_owner_epoch:
+                cluster.wait_for_new_epoch()
+
+            # sleep till the end of epoch
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 5
+            if sleep_time > 0:
+                time.sleep(sleep_time)
 
             this_epoch = cluster.get_last_block_epoch()
 
@@ -659,14 +689,6 @@ class TestRewards:
             owner_reward = cluster.get_stake_addr_info(
                 pool_reward.stake.address
             ).reward_account_balance
-
-            # reward balances in previous epoch
-            prev_user_epoch, prev_user_reward, __ = user_rewards[-1]
-            (
-                prev_owner_epoch,
-                prev_owner_reward,
-                prev_abs_owner_reward,
-            ) = owner_rewards[-1]
 
             # absolute reward amounts received this epoch
             abs_user_reward = (
@@ -692,90 +714,78 @@ class TestRewards:
                 )
             )
 
+            # save ledger state
             clusterlib_utils.save_ledger_state(
                 cluster_obj=cluster, name_template=f"{temp_template}_{this_epoch}"
             )
-            es_snapshot: dict = cluster.get_ledger_state()["nesEs"]["esSnapshots"]
+            ledger_state: dict = cluster.get_ledger_state()
+            es_snapshot: dict = ledger_state["nesEs"]["esSnapshots"]
             es_snapshots[this_epoch] = es_snapshot
+            rs_record: list = ledger_state["nesRu"]["rs"]
+            rs_records[this_epoch] = rs_record
 
-            if loop_epoch == 2:
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-
-                # delegate pool rewards address to pool
-                node_cold = pool_rec["cold_key_pair"]
-                reward_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
-                    addr_name=f"{temp_template}_addr0",
-                    stake_vkey_file=pool_reward.stake.vkey_file,
-                    cold_vkey_file=node_cold.vkey_file,
+            # Make sure reward amount corresponds with ledger state.
+            # Reward is received on epoch boundary, so check reward with record for previous epoch.
+            if abs_user_reward:
+                assert abs_user_reward == _get_val_for_key_hash(
+                    user_stake_addr_dec, rs_records[this_epoch - 1]
                 )
-                tx_files = clusterlib.TxFiles(
-                    certificate_files=[
-                        reward_addr_deleg_cert_file,
-                    ],
-                    signing_key_files=[
-                        pool_user.payment.skey_file,
-                        pool_reward.stake.skey_file,
-                        node_cold.skey_file,
-                    ],
+            if abs_owner_reward:
+                assert abs_owner_reward == _get_val_for_key_hash(
+                    pool_reward_addr_dec, rs_records[this_epoch - 1]
                 )
 
-                cluster_manager.set_needs_restart()  # changing pool configuration, restart needed
+            _pstake_mark = _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
+            _pstake_set = _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
+            _pstake_go = _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
 
-                cluster.send_tx(
-                    src_address=pool_user.payment.address,
-                    tx_name=f"{temp_template}_deleg_rewards",
-                    tx_files=tx_files,
-                )
-                cluster.wait_for_new_block(new_blocks=2)
+            if this_epoch == init_epoch + 2:
+                assert pool_stake_addr_dec in _pstake_mark
+                assert pool_stake_addr_dec in _pstake_set
+                assert pool_stake_addr_dec not in _pstake_go
 
-            if loop_epoch == 3:
-                # check snapshot records for reward address
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert user_stake_addr_dec in _pstake_mark
+                assert user_stake_addr_dec not in _pstake_set
+                assert user_stake_addr_dec not in _pstake_go
 
-            if loop_epoch == 4:
-                # check snapshot records for reward address
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+            if this_epoch == init_epoch + 3:
+                assert user_stake_addr_dec in _pstake_mark
+                assert user_stake_addr_dec in _pstake_set
+                assert user_stake_addr_dec not in _pstake_go
 
-            # wait 4 epochs for the first reward for user stake address
-            if loop_epoch >= 4:
+            if this_epoch >= init_epoch + 3:
+                assert pool_stake_addr_dec in _pstake_mark
+                assert pool_stake_addr_dec in _pstake_set
+                assert pool_stake_addr_dec in _pstake_go
+
+            if this_epoch >= init_epoch + 4:
+                assert user_stake_addr_dec in _pstake_mark
+                assert user_stake_addr_dec in _pstake_set
+                assert user_stake_addr_dec in _pstake_go
+
+            if this_epoch >= init_epoch + 5:
+                # wait 5 epochs for the first reward for user stake address
                 assert (
                     user_reward > prev_user_reward
                 ), "New reward was not received by stake address"
 
-            if loop_epoch >= 5:
-                # check snapshot records for reward address
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
-
+                # make sure ledger state and actual stake correspond
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeMark"]["_stake"])
-                    == owner_reward
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["_pstakeMark"]["_stake"])
+                    == user_reward + user_payment_balance
                 )
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeSet"]["_stake"])
-                    == prev_owner_reward
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["_pstakeSet"]["_stake"])
+                    == prev_user_reward + user_payment_balance
                 )
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeGo"]["_stake"])
-                    == owner_rewards[-3][1]
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["_pstakeGo"]["_stake"])
+                    == user_rewards[-3][1] + user_payment_balance
                 )
-
-            # the `loop_epoch` 6 is the first epoch where the delegated reward address amount takes
-            # effect, so the reward should increase every epoch from now on (reward is no longer
-            # calculated just from the pledge amnount, but also from the continuously growing reward
-            # amount)
-            if loop_epoch >= 6:
-                assert (
-                    abs_owner_reward > prev_abs_owner_reward
-                ), "Reward received by pool owner is lower than previous epoch"
 
             # check that new reward was received by the pool owner
-            assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
+            if this_epoch >= 4:
+                assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
 
         # withdraw rewards to payment address
         clusterlib_utils.withdraw_reward(
@@ -788,7 +798,10 @@ class TestRewards:
         cluster_manager: parallel_run.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
-        """Check that the rewards address can be delegated and receive rewards."""
+        """Check that the rewards address can be delegated and receive rewards.
+
+        Tests https://github.com/input-output-hk/cardano-node/issues/1964
+        """
         # pylint: disable=too-many-statements,too-many-locals
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
@@ -844,6 +857,11 @@ class TestRewards:
                 0,
             )
         ]
+
+        # save ledger state
+        clusterlib_utils.save_ledger_state(
+            cluster_obj=cluster, name_template=f"{temp_template}_{init_epoch}"
+        )
 
         es_snapshots = {}
         rs_records = {}
@@ -903,9 +921,13 @@ class TestRewards:
                     reward_addr_dec, rs_records[this_epoch - 1]
                 )
 
+            _pstake_mark = _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
+            _pstake_set = _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
+            _pstake_go = _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+
             if this_epoch == init_epoch + 2:
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
+                assert reward_addr_dec not in _pstake_mark
+                assert stake_addr_dec in _pstake_mark
 
                 # delegate pool rewards address to pool
                 node_cold = pool_rec["cold_key_pair"]
@@ -949,34 +971,35 @@ class TestRewards:
                 cluster.wait_for_new_block(new_blocks=2)
 
             if this_epoch == init_epoch + 3:
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert reward_addr_dec in _pstake_mark
+                assert reward_addr_dec not in _pstake_set
+                assert reward_addr_dec not in _pstake_go
 
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert stake_addr_dec in _pstake_mark
+                assert stake_addr_dec in _pstake_set
+                assert stake_addr_dec in _pstake_go
 
             if this_epoch == init_epoch + 4:
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert reward_addr_dec in _pstake_mark
+                assert reward_addr_dec in _pstake_set
+                assert reward_addr_dec not in _pstake_go
 
-                assert stake_addr_dec not in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert stake_addr_dec not in _pstake_mark
+                assert stake_addr_dec in _pstake_set
+                assert stake_addr_dec in _pstake_go
 
             if this_epoch == init_epoch + 5:
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert stake_addr_dec in _pstake_go
 
             if this_epoch >= init_epoch + 5:
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert reward_addr_dec in _pstake_mark
+                assert reward_addr_dec in _pstake_set
+                assert reward_addr_dec in _pstake_go
 
-                assert stake_addr_dec not in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert stake_addr_dec not in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
+                assert stake_addr_dec not in _pstake_mark
+                assert stake_addr_dec not in _pstake_set
 
+                # make sure ledger state and actual stake correspond
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeMark"]["_stake"])
                     == owner_reward
@@ -991,7 +1014,7 @@ class TestRewards:
                 )
 
             if this_epoch >= init_epoch + 6:
-                assert stake_addr_dec not in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert stake_addr_dec not in _pstake_go
 
     @allure.link(helpers.get_vcs_link())
     def test_decreasing_reward_transfered_funds(
@@ -1585,8 +1608,7 @@ class TestRewards:
                 < cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
             ), "New reward was not received by stake address"
 
-            # Return the pool to the original state - reregister reward address and
-            # delegate it to the pool.
+            # Return the pool to the original state - reregister reward address.
 
             # fund source address
             clusterlib_utils.fund_from_faucet(
@@ -1768,7 +1790,7 @@ class TestRewards:
             )
 
             # Return the pool to the original state - reregister the pool, register
-            # the reward address, delegate the stake and reward addresses to the pool.
+            # the reward address, delegate the stake address to the pool.
 
             src_updated_balance = cluster.get_address_balance(pool_reward.payment.address)
 
