@@ -283,6 +283,14 @@ def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib) -> dict:
     return cluster_obj.get_stake_distribution()
 
 
+def time_to_next_epoch_start(cluster_obj: clusterlib.ClusterLib) -> float:
+    """How many seconds to start of new epoch."""
+    slots_to_go = (
+        cluster_obj.get_last_block_epoch() + 1
+    ) * cluster_obj.epoch_length - cluster_obj.get_last_block_slot_no()
+    return float(slots_to_go * cluster_obj.slot_length)
+
+
 def load_registered_pool_data(
     cluster_obj: clusterlib.ClusterLib, pool_name: str, pool_id: str
 ) -> clusterlib.PoolData:
