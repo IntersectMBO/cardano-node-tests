@@ -798,7 +798,10 @@ class TestRewards:
         cluster_manager: parallel_run.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
-        """Check that the rewards address can be delegated and receive rewards."""
+        """Check that the rewards address can be delegated and receive rewards.
+
+        Tests https://github.com/input-output-hk/cardano-node/issues/1964
+        """
         # pylint: disable=too-many-statements,too-many-locals
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
@@ -854,6 +857,11 @@ class TestRewards:
                 0,
             )
         ]
+
+        # save ledger state
+        clusterlib_utils.save_ledger_state(
+            cluster_obj=cluster, name_template=f"{temp_template}_{init_epoch}"
+        )
 
         es_snapshots = {}
         rs_records = {}
@@ -913,9 +921,13 @@ class TestRewards:
                     reward_addr_dec, rs_records[this_epoch - 1]
                 )
 
+            _pstake_mark = _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
+            _pstake_set = _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
+            _pstake_go = _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+
             if this_epoch == init_epoch + 2:
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
+                assert reward_addr_dec not in _pstake_mark
+                assert stake_addr_dec in _pstake_mark
 
                 # delegate pool rewards address to pool
                 node_cold = pool_rec["cold_key_pair"]
@@ -959,34 +971,35 @@ class TestRewards:
                 cluster.wait_for_new_block(new_blocks=2)
 
             if this_epoch == init_epoch + 3:
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert reward_addr_dec in _pstake_mark
+                assert reward_addr_dec not in _pstake_set
+                assert reward_addr_dec not in _pstake_go
 
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert stake_addr_dec in _pstake_mark
+                assert stake_addr_dec in _pstake_set
+                assert stake_addr_dec in _pstake_go
 
             if this_epoch == init_epoch + 4:
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec not in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert reward_addr_dec in _pstake_mark
+                assert reward_addr_dec in _pstake_set
+                assert reward_addr_dec not in _pstake_go
 
-                assert stake_addr_dec not in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert stake_addr_dec not in _pstake_mark
+                assert stake_addr_dec in _pstake_set
+                assert stake_addr_dec in _pstake_go
 
             if this_epoch == init_epoch + 5:
-                assert stake_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert stake_addr_dec in _pstake_go
 
             if this_epoch >= init_epoch + 5:
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-                assert reward_addr_dec in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert reward_addr_dec in _pstake_mark
+                assert reward_addr_dec in _pstake_set
+                assert reward_addr_dec in _pstake_go
 
-                assert stake_addr_dec not in _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-                assert stake_addr_dec not in _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
+                assert stake_addr_dec not in _pstake_mark
+                assert stake_addr_dec not in _pstake_set
 
+                # make sure ledger state and actual stake correspond
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeMark"]["_stake"])
                     == owner_reward
@@ -1001,7 +1014,7 @@ class TestRewards:
                 )
 
             if this_epoch >= init_epoch + 6:
-                assert stake_addr_dec not in _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+                assert stake_addr_dec not in _pstake_go
 
     @allure.link(helpers.get_vcs_link())
     def test_decreasing_reward_transfered_funds(
