@@ -522,14 +522,21 @@ class TestNotBalanced:
         ]
 
         # it should be possible to build and sign an unbalanced transaction
-        cluster.build_raw_tx_bare(
-            out_file=out_file_tx,
-            txins=txins,
-            txouts=txouts,
-            tx_files=tx_files,
-            fee=fee,
-            ttl=ttl,
-        )
+        try:
+            cluster.build_raw_tx_bare(
+                out_file=out_file_tx,
+                txins=txins,
+                txouts=txouts,
+                tx_files=tx_files,
+                fee=fee,
+                ttl=ttl,
+            )
+        except clusterlib.CLIError as exc:
+            if change_amount >= 2 ** 64:
+                assert "out of bounds" in str(exc)
+                return
+            raise
+
         out_file_signed = cluster.sign_tx(
             tx_body_file=out_file_tx,
             signing_key_files=tx_files.signing_key_files,
