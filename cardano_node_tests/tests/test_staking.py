@@ -1608,8 +1608,7 @@ class TestRewards:
                 < cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
             ), "New reward was not received by stake address"
 
-            # Return the pool to the original state - reregister reward address and
-            # delegate it to the pool.
+            # Return the pool to the original state - reregister reward address.
 
             # fund source address
             clusterlib_utils.fund_from_faucet(
@@ -1791,7 +1790,7 @@ class TestRewards:
             )
 
             # Return the pool to the original state - reregister the pool, register
-            # the reward address, delegate the stake and reward addresses to the pool.
+            # the reward address, delegate the stake address to the pool.
 
             src_updated_balance = cluster.get_address_balance(pool_reward.payment.address)
 
