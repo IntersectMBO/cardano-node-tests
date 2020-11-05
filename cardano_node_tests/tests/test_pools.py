@@ -1081,6 +1081,91 @@ class TestStakePool:
             pool_data=pool_data,
         )
 
+    @allure.link(helpers.get_vcs_link())
+    def test_pool_registration_deregistration(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Send both pool registration and deregistration certificates in single TX."""
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=5,
+            pool_cost=3,
+            pool_margin=0.01,
+        )
+
+        # create pool owners
+        pool_owner = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=1,
+        )[0]
+
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            pool_owner.payment,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=900_000_000,
+        )
+
+        src_init_balance = cluster.get_address_balance(pool_owner.payment.address)
+        src_init_reward = cluster.get_stake_addr_info(
+            pool_owner.stake.address
+        ).reward_account_balance
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        # create pool registration cert
+        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_owner.stake.vkey_file],
+        )
+
+        # create pool deregistration cert
+        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+            pool_name=pool_data.pool_name,
+            cold_vkey_file=node_cold.vkey_file,
+            epoch=cluster.get_last_block_epoch() + 1,
+        )
+
+        # register and deregister stake pool in single TX
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file, pool_dereg_cert_file],
+            signing_key_files=[
+                pool_owner.payment.skey_file,
+                pool_owner.stake.skey_file,
+                node_cold.skey_file,
+            ],
+        )
+        tx_raw_output = cluster.send_tx(
+            src_address=pool_owner.payment.address,
+            tx_name="conflicting_certs",
+            tx_files=tx_files,
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        assert (
+            cluster.get_address_balance(pool_owner.payment.address)
+            == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
+        ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
+
+        # check that the deposit was NOT returned to reward account as the stake address
+        # is not registered
+        cluster.wait_for_new_epoch(3, padding_seconds=30)
+        assert (
+            cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
+            == src_init_reward
+        )
+
 
 @pytest.mark.run(order=1)
 class TestPoolCost:
@@ -1344,7 +1429,7 @@ class TestNegative:
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
                 pool_users[0].payment.skey_file,
-                # missing node_cold.vkey_file
+                # missing node_cold.skey_file
             ],
         )
 
@@ -1378,7 +1463,7 @@ class TestNegative:
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
                 # missing payment skey file
-                node_cold.vkey_file,
+                node_cold.skey_file,
             ],
         )
 
@@ -1386,51 +1471,7 @@ class TestNegative:
             cluster.send_tx(
                 src_address=pool_users[0].payment.address, tx_name="missing_skey", tx_files=tx_files
             )
-        assert "Expected one of" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    def test_pool_registration_conflicting_certs(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        pool_data: clusterlib.PoolData,
-    ):
-        """Send both pool registration and deregistration certificates in single TX."""
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
-
-        pool_reg_cert_file = cluster.gen_pool_registration_cert(
-            pool_data=pool_data,
-            vrf_vkey_file=node_vrf.vkey_file,
-            cold_vkey_file=node_cold.vkey_file,
-            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
-        )
-
-        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
-            pool_name=pool_data.pool_name,
-            cold_vkey_file=node_cold.vkey_file,
-            epoch=cluster.get_last_block_epoch() + 1,
-        )
-
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[pool_reg_cert_file, pool_dereg_cert_file],
-            signing_key_files=[
-                pool_users[0].payment.vkey_file,
-                pool_users[0].payment.skey_file,
-                pool_users[0].stake.vkey_file,
-                pool_users[0].stake.skey_file,
-                node_cold.vkey_file,
-                node_cold.skey_file,
-            ],
-        )
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
-                src_address=pool_users[0].payment.address,
-                tx_name="conflicting_certs",
-                tx_files=tx_files,
-            )
-        assert "TextView type error" in str(excinfo.value)
+        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_pool_deregistration_not_registered(
