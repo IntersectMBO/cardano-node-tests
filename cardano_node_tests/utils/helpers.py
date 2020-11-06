@@ -143,12 +143,6 @@ def checksum(filename: FileType, blocksize: int = 65536) -> str:
     return hash.hexdigest()
 
 
-def read_address_from_file(location: FileType) -> str:
-    """Read address stored in file."""
-    with open(Path(location).expanduser()) as in_file:
-        return in_file.read().strip()
-
-
 def write_json(location: FileType, content: dict) -> FileType:
     """Write dictionary content to JSON file."""
     with open(Path(location).expanduser(), "w") as out_file:

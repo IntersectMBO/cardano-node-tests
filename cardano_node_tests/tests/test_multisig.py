@@ -152,7 +152,7 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # check script address length
         assert len(script_addr) == len(payment_addrs[0].address)
@@ -175,7 +175,7 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
         multisig_tx(
@@ -220,7 +220,7 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
         multisig_tx(
@@ -282,7 +282,7 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
         num_of_skeys = random.randrange(required, skeys_len)
@@ -327,7 +327,7 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # record initial balances
         src_init_balance = cluster.get_address_balance(src_address)
@@ -401,7 +401,7 @@ class TestNegative:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
         multisig_tx(
@@ -446,7 +446,7 @@ class TestNegative:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
         multisig_tx(
@@ -495,7 +495,7 @@ class TestNegative:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
         num_of_skeys = random.randrange(required, skeys_len)
@@ -542,7 +542,7 @@ class TestNegative:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(multisig_script)
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
         multisig_tx(

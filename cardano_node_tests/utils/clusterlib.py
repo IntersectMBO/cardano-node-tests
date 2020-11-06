@@ -145,13 +145,15 @@ class ClusterLib:
     def __init__(self, state_dir: FileType, protocol: str = Protocols.SHELLEY):
         self.cli_coverage: dict = {}
 
+        _rand_str = get_rand_str(4)
+
         self.state_dir = Path(state_dir).expanduser().resolve()
         self.genesis_json = self.state_dir / "shelley" / "genesis.json"
         self.genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
         self.genesis_utxo_skey = self.state_dir / "shelley" / "genesis-utxo.skey"
         self.genesis_vkeys = list(self.state_dir.glob("shelley/genesis-keys/genesis?.vkey"))
         self.delegate_skeys = list(self.state_dir.glob("shelley/delegate-keys/delegate?.skey"))
-        self.pparams_file = self.state_dir / f"pparams-{get_rand_str(4)}.json"
+        self.pparams_file = self.state_dir / f"pparams-{_rand_str}.json"
         self._check_state_dir()
 
         with open(self.genesis_json) as in_json:
@@ -165,7 +167,11 @@ class ClusterLib:
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
 
         self.ttl_length = 1000
-        self.genesis_utxo_addr = self.gen_genesis_addr(vkey_file=self.genesis_utxo_vkey)
+        self.genesis_utxo_addr = self.gen_genesis_addr(
+            addr_name=f"genesis-{_rand_str}",
+            vkey_file=self.genesis_utxo_vkey,
+            destination_dir=self.state_dir,
+        )
 
         self.protocol = protocol
         self._check_protocol()
@@ -204,6 +210,11 @@ class ClusterLib:
             out_file = Path(out_file).expanduser()
             if not out_file.exists():
                 raise CLIError(f"The expected file `{out_file}` doesn't exist.")
+
+    def read_address_from_file(self, addr_file: FileType) -> str:
+        """Read address stored in file."""
+        with open(Path(addr_file).expanduser()) as in_file:
+            return in_file.read().strip()
 
     def record_cli_coverage(self, cli_args: List[str]) -> None:
         """Record CLI coverage info."""
@@ -309,78 +320,104 @@ class ClusterLib:
         """Return current tip - last block successfully applied to the ledger."""
         return json.loads(self.query_cli(["tip"]))  # type: ignore
 
-    def gen_genesis_addr(self, vkey_file: FileType, *args: str) -> str:
+    def gen_genesis_addr(
+        self, addr_name: str, vkey_file: FileType, destination_dir: FileType = "."
+    ) -> str:
         """Generate genesis address."""
-        return (
-            self.cli(
-                [
-                    "genesis",
-                    "initial-addr",
-                    "--testnet-magic",
-                    str(self.network_magic),
-                    "--verification-key-file",
-                    str(vkey_file),
-                    *args,
-                ]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{addr_name}_genesis.addr"
+
+        self.cli(
+            [
+                "genesis",
+                "initial-addr",
+                "--testnet-magic",
+                str(self.network_magic),
+                "--verification-key-file",
+                str(vkey_file),
+                "--out-file",
+                str(out_file),
+            ]
         )
+
+        self._check_outfiles(out_file)
+        return self.read_address_from_file(out_file)
 
     def gen_payment_addr(
         self,
+        addr_name: str,
         payment_vkey_file: FileType,
-        *args: str,
         stake_vkey_file: Optional[FileType] = None,
+        destination_dir: FileType = ".",
     ) -> str:
         """Generate payment address."""
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{addr_name}.addr"
+
         cli_args = ["--payment-verification-key-file", str(payment_vkey_file)]
         if stake_vkey_file:
             cli_args.extend(["--stake-verification-key-file", str(stake_vkey_file)])
 
-        return (
-            self.cli(
-                ["address", "build", "--testnet-magic", str(self.network_magic), *cli_args, *args]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
+        self.cli(
+            [
+                "address",
+                "build",
+                "--testnet-magic",
+                str(self.network_magic),
+                *cli_args,
+                "--out-file",
+                str(out_file),
+            ]
         )
 
-    def gen_stake_addr(self, stake_vkey_file: FileType, *args: str) -> str:
+        self._check_outfiles(out_file)
+        return self.read_address_from_file(out_file)
+
+    def gen_stake_addr(
+        self, addr_name: str, stake_vkey_file: FileType, destination_dir: FileType = "."
+    ) -> str:
         """Generate stake address."""
-        return (
-            self.cli(
-                [
-                    "stake-address",
-                    "build",
-                    "--stake-verification-key-file",
-                    str(stake_vkey_file),
-                    "--testnet-magic",
-                    str(self.network_magic),
-                    *args,
-                ]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{addr_name}_stake.addr"
+
+        self.cli(
+            [
+                "stake-address",
+                "build",
+                "--stake-verification-key-file",
+                str(stake_vkey_file),
+                "--testnet-magic",
+                str(self.network_magic),
+                "--out-file",
+                str(out_file),
+            ]
         )
 
-    def gen_script_addr(self, script_file: FileType, *args: str) -> str:
+        self._check_outfiles(out_file)
+        return self.read_address_from_file(out_file)
+
+    def gen_script_addr(
+        self, addr_name: str, script_file: FileType, destination_dir: FileType = "."
+    ) -> str:
         """Generate multi-signature address."""
-        return (
-            self.cli(
-                [
-                    "address",
-                    "build-script",
-                    "--script-file",
-                    str(script_file),
-                    "--testnet-magic",
-                    str(self.network_magic),
-                    *args,
-                ]
-            )
-            .stdout.rstrip()
-            .decode("ascii")
+        destination_dir = Path(destination_dir).expanduser()
+        out_file = destination_dir / f"{addr_name}_script.addr"
+
+        self.cli(
+            [
+                "address",
+                "build-script",
+                "--script-file",
+                str(script_file),
+                "--testnet-magic",
+                str(self.network_magic),
+                "--out-file",
+                str(out_file),
+            ]
         )
+
+        self._check_outfiles(out_file)
+        return self.read_address_from_file(out_file)
 
     def gen_payment_key_pair(self, key_name: str, destination_dir: FileType = ".") -> KeyPair:
         """Generate payment key pair."""
@@ -424,15 +461,13 @@ class ClusterLib:
         self, name: str, stake_vkey_file: Optional[FileType] = None, destination_dir: FileType = "."
     ) -> AddressRecord:
         """Generate payment address and key pair."""
-        destination_dir = Path(destination_dir).expanduser()
-        addr_file = destination_dir / f"{name}.addr"
-
         key_pair = self.gen_payment_key_pair(key_name=name, destination_dir=destination_dir)
         addr = self.gen_payment_addr(
-            payment_vkey_file=key_pair.vkey_file, stake_vkey_file=stake_vkey_file
+            addr_name=name,
+            payment_vkey_file=key_pair.vkey_file,
+            stake_vkey_file=stake_vkey_file,
+            destination_dir=destination_dir,
         )
-        with open(addr_file, "w") as fp_out:
-            fp_out.write(addr)
 
         return AddressRecord(
             address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
@@ -440,13 +475,10 @@ class ClusterLib:
 
     def gen_stake_addr_and_keys(self, name: str, destination_dir: FileType = ".") -> AddressRecord:
         """Generate stake address and key pair."""
-        destination_dir = Path(destination_dir).expanduser()
-        addr_file = destination_dir / f"{name}_stake.addr"
-
         key_pair = self.gen_stake_key_pair(key_name=name, destination_dir=destination_dir)
-        addr = self.gen_stake_addr(stake_vkey_file=key_pair.vkey_file)
-        with open(addr_file, "w") as fp_out:
-            fp_out.write(addr)
+        addr = self.gen_stake_addr(
+            addr_name=name, stake_vkey_file=key_pair.vkey_file, destination_dir=destination_dir
+        )
 
         return AddressRecord(
             address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
