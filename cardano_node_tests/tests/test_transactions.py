@@ -571,7 +571,7 @@ class TestNegative:
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
-            created_users[0],
+            *created_users,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=1_000_000,
@@ -869,6 +869,19 @@ class TestNegative:
         """Send funds from payment address to stake address."""
         addr = pool_users[0].stake.address
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_send_funds_to_utxo_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Send funds from payment address to UTXO address."""
+        dst_addr = pool_users[1].payment.address
+        utxo_addr = cluster.get_utxo(dst_addr)[0].utxo_hash
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=utxo_addr
+        )
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
