@@ -644,6 +644,9 @@ class TestRewards:
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster, name_template=f"{temp_template}_{init_epoch}"
         )
+        ledger_state: dict = cluster.get_ledger_state()
+        es_snapshots = {init_epoch: ledger_state["nesEs"]["esSnapshots"]}
+        rs_records = {init_epoch: ledger_state["nesRu"]["rs"]}
 
         # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
@@ -657,8 +660,6 @@ class TestRewards:
         user_stake_addr_dec = helpers.decode_bech32(pool_user.stake.address)[2:]
         user_payment_balance = cluster.get_address_balance(pool_user.payment.address)
 
-        es_snapshots = {}
-        rs_records = {}
         LOGGER.info("Checking rewards for 9 epochs.")
         for __ in range(9):
             # reward balances in previous epoch
@@ -716,7 +717,7 @@ class TestRewards:
             clusterlib_utils.save_ledger_state(
                 cluster_obj=cluster, name_template=f"{temp_template}_{this_epoch}"
             )
-            ledger_state: dict = cluster.get_ledger_state()
+            ledger_state = cluster.get_ledger_state()
             es_snapshot: dict = ledger_state["nesEs"]["esSnapshots"]
             es_snapshots[this_epoch] = es_snapshot
             rs_record: list = ledger_state["nesRu"]["rs"]
@@ -740,7 +741,6 @@ class TestRewards:
             if this_epoch == init_epoch + 2:
                 assert pool_stake_addr_dec in _pstake_mark
                 assert pool_stake_addr_dec in _pstake_set
-                assert pool_stake_addr_dec not in _pstake_go
 
                 assert user_stake_addr_dec in _pstake_mark
                 assert user_stake_addr_dec not in _pstake_set
@@ -860,9 +860,10 @@ class TestRewards:
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster, name_template=f"{temp_template}_{init_epoch}"
         )
+        ledger_state: dict = cluster.get_ledger_state()
+        es_snapshots = {init_epoch: ledger_state["nesEs"]["esSnapshots"]}
+        rs_records = {init_epoch: ledger_state["nesRu"]["rs"]}
 
-        es_snapshots = {}
-        rs_records = {}
         LOGGER.info("Checking rewards for 9 epochs.")
         for __ in range(9):
             # reward balances in previous epoch
@@ -906,7 +907,7 @@ class TestRewards:
             clusterlib_utils.save_ledger_state(
                 cluster_obj=cluster, name_template=f"{temp_template}_{this_epoch}"
             )
-            ledger_state: dict = cluster.get_ledger_state()
+            ledger_state = cluster.get_ledger_state()
             es_snapshot: dict = ledger_state["nesEs"]["esSnapshots"]
             es_snapshots[this_epoch] = es_snapshot
             rs_record: list = ledger_state["nesRu"]["rs"]
