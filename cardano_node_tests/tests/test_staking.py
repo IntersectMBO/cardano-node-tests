@@ -3,7 +3,6 @@ import time
 from pathlib import Path
 from typing import Any
 from typing import Dict
-from typing import Generator
 from typing import List
 
 import allure
@@ -81,10 +80,9 @@ def pool_users_disposable(
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-def _get_key_hashes(rec: dict) -> Generator:
+def _get_key_hashes(rec: dict) -> List[str]:
     """Get key hashes in ledger state snapshot record."""
-    for r in rec:
-        yield r[0]["key hash"]
+    return [r[0]["key hash"] for r in rec]
 
 
 def _get_val_for_key_hash(key_hash: str, rec: list) -> Any:
