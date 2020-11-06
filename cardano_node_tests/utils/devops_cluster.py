@@ -84,17 +84,21 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
         addr_data_dir = data_dir / addr_name
         addrs_data[addr_name] = {
             "payment": clusterlib.AddressRecord(
-                address=helpers.read_address_from_file(addr_data_dir / "owner.addr"),
+                address=cluster_obj.read_address_from_file(addr_data_dir / "owner.addr"),
                 vkey_file=addr_data_dir / "owner-utxo.vkey",
                 skey_file=addr_data_dir / "owner-utxo.skey",
             ),
             "stake": clusterlib.AddressRecord(
-                address=helpers.read_address_from_file(addr_data_dir / "owner-stake.addr"),
+                address=cluster_obj.read_address_from_file(addr_data_dir / "owner-stake.addr"),
                 vkey_file=addr_data_dir / "owner-stake.vkey",
                 skey_file=addr_data_dir / "owner-stake.skey",
             ),
             "reward": clusterlib.AddressRecord(
-                address=cluster_obj.gen_stake_addr(stake_vkey_file=addr_data_dir / "reward.vkey"),
+                address=cluster_obj.gen_stake_addr(
+                    addr_name="reward",
+                    stake_vkey_file=addr_data_dir / "reward.vkey",
+                    destination_dir=addr_data_dir,
+                ),
                 vkey_file=addr_data_dir / "reward.vkey",
                 skey_file=addr_data_dir / "reward.skey",
             ),
