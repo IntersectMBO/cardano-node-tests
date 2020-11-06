@@ -233,7 +233,7 @@ class TestDelegateAddr:
 
         src_address = pool_user.payment.address
 
-        # wait for first reward
+        LOGGER.info("Waiting up to 4 epochs for first reward.")
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
@@ -1046,7 +1046,7 @@ class TestRewards:
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
-        # wait for first reward
+        LOGGER.info("Waiting up to 4 epochs for first reward.")
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
@@ -1091,6 +1091,7 @@ class TestRewards:
                     dst_addr_record=dst_addr_record,
                 )
 
+        LOGGER.info("Withdrawing new rewards for 4 epochs.")
         helpers.wait_for(
             _withdraw,
             delay=10,
@@ -1128,7 +1129,7 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        # wait for first reward
+        LOGGER.info("Waiting up to 4 epochs for first reward.")
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
@@ -1249,7 +1250,7 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        # wait for first reward
+        LOGGER.info("Waiting up to 4 epochs for first reward.")
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
@@ -1384,7 +1385,7 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        # wait for first reward
+        LOGGER.info("Waiting up to 4 epochs for first reward.")
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
@@ -1536,7 +1537,7 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        # wait for first reward
+        LOGGER.info("Waiting up to 4 epochs for first reward.")
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance,
             delay=10,
@@ -1672,7 +1673,7 @@ class TestRewards:
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = helpers.get_func_name()
 
-        # wait for first reward
+        LOGGER.info("Waiting up to 4 epochs for first reward.")
         stake_reward = helpers.wait_for(
             lambda: cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance,
             delay=10,
