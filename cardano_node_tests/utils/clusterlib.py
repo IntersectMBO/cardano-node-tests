@@ -424,18 +424,30 @@ class ClusterLib:
         self, name: str, stake_vkey_file: Optional[FileType] = None, destination_dir: FileType = "."
     ) -> AddressRecord:
         """Generate payment address and key pair."""
+        destination_dir = Path(destination_dir).expanduser()
+        addr_file = destination_dir / f"{name}.addr"
+
         key_pair = self.gen_payment_key_pair(key_name=name, destination_dir=destination_dir)
         addr = self.gen_payment_addr(
             payment_vkey_file=key_pair.vkey_file, stake_vkey_file=stake_vkey_file
         )
+        with open(addr_file, "w") as fp_out:
+            fp_out.write(addr)
+
         return AddressRecord(
             address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
         )
 
     def gen_stake_addr_and_keys(self, name: str, destination_dir: FileType = ".") -> AddressRecord:
         """Generate stake address and key pair."""
+        destination_dir = Path(destination_dir).expanduser()
+        addr_file = destination_dir / f"{name}_stake.addr"
+
         key_pair = self.gen_stake_key_pair(key_name=name, destination_dir=destination_dir)
         addr = self.gen_stake_addr(stake_vkey_file=key_pair.vkey_file)
+        with open(addr_file, "w") as fp_out:
+            fp_out.write(addr)
+
         return AddressRecord(
             address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
         )
