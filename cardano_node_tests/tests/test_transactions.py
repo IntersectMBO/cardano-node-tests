@@ -453,7 +453,7 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 transaction from 1 payment address to 10 payment addresses.
+        """Test 1 transaction from 1 payment address to 10 payment addresses.
 
         * send funds from 1 source address to 10 destination addresses
         * check expected balances for both source and destination addresses
@@ -475,7 +475,7 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 transaction from 10 payment addresses to 1 payment address.
+        """Test 1 transaction from 10 payment addresses to 1 payment address.
 
         * send funds from 10 source addresses to 1 destination address
         * check expected balances for both source and destination addresses
@@ -497,7 +497,7 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 transaction from 10 payment addresses to 10 payment addresses.
+        """Test 1 transaction from 10 payment addresses to 10 payment addresses.
 
         * send funds from 10 source addresses to 10 destination addresses
         * check expected balances for both source and destination addresses
@@ -519,7 +519,7 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 transaction from 50 payment addresses to 100 payment addresses.
+        """Test 1 transaction from 50 payment addresses to 100 payment addresses.
 
         * send funds from 50 source addresses to 100 destination addresses
         * check expected balances for both source and destination addresses
@@ -535,7 +535,7 @@ class TestMultiInOut:
 
 
 class TestNotBalanced:
-    """Test not ballanced transactions."""
+    """Tests for not ballanced transactions."""
 
     @pytest.fixture
     def payment_addrs(
