@@ -1,5 +1,5 @@
-cardano-node-tests
-==================
+README for cardano-node-tests
+=============================
 
 Integration tests for cardano-node.
 
