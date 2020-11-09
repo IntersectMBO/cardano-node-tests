@@ -52,7 +52,7 @@ Test coverage of cardano-cli commands
 To get test coverage of cardano-cli commands, run tests as usual (`make tests`) and generate the coverage report JSON file with
 
 ```
-./cli_coverage.py -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
+$ ./cli_coverage.py -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
 ```
 
 
@@ -66,6 +66,18 @@ Publishing testing results
 ```
 $ ./publi.sh .reports/
 ```
+
+
+Building documentation
+----------------------
+
+To build documentation using Sphinx, run
+
+```
+$ make doc
+```
+
+The documentation is generated to `docs/build/html`.
 
 
 Contributing
