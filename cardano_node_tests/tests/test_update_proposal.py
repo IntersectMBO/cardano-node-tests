@@ -1,3 +1,4 @@
+"""Tests for update proposal."""
 import logging
 from pathlib import Path
 
@@ -32,7 +33,7 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 @allure.link(helpers.get_vcs_link())
 def test_update_proposal(cluster_update_proposal: clusterlib.ClusterLib):
-    """Submit update proposal."""
+    """Test changing "decentralisationParam" using update proposal ."""
     clusterlib_utils.update_params(
         cluster_obj=cluster_update_proposal,
         cli_arg="--decentralization-parameter",
