@@ -36,6 +36,7 @@ extensions = [
     "sphinx.ext.autosummary",
     # "sphinx.ext.doctest",
     # "sphinx.ext.coverage",
+    "sphinx.ext.githubpages",
     "sphinx.ext.linkcode",
     "numpydoc",
     # "sphinx.ext.napoleon",
