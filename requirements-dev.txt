@@ -1,5 +1,12 @@
 -e .
 
+# linting
 mypy
 pre-commit
 pylint
+
+# documentation
+Sphinx==3.2.1
+m2r2
+numpydoc
+sphinx_rtd_theme
