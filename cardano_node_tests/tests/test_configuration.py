@@ -1,3 +1,4 @@
+"""Tests for node configuration."""
 import json
 import logging
 import time
