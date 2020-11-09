@@ -1,3 +1,4 @@
+"""Tests for fees of various kinds of transactions."""
 import itertools
 import logging
 from pathlib import Path
@@ -31,6 +32,8 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 class TestFee:
+    """General fees tests."""
+
     @pytest.fixture
     def payment_addrs(
         self,
@@ -66,7 +69,7 @@ class TestFee:
         payment_addrs: List[clusterlib.AddressRecord],
         fee: int,
     ):
-        """Send a transaction with negative fee."""
+        """Try to send a transaction with negative fee (property-based test)."""
         temp_template = f"{helpers.get_func_name()}_{clusterlib_utils.get_timestamped_rand_str()}"
 
         src_address = payment_addrs[0].address
@@ -93,7 +96,7 @@ class TestFee:
         payment_addrs: List[clusterlib.AddressRecord],
         fee_change: float,
     ):
-        """Send a transaction with smaller-than-expected fee."""
+        """Try to send a transaction with smaller-than-expected fee."""
         temp_template = f"{helpers.get_func_name()}_{fee_change}"
 
         src_address = payment_addrs[0].address
@@ -132,7 +135,7 @@ class TestFee:
         payment_addrs: List[clusterlib.AddressRecord],
         fee_add: int,
     ):
-        """Send a transaction fee that is same or higher than expected."""
+        """Send a transaction with fee that is same or higher than expected."""
         temp_template = f"{helpers.get_func_name()}_{fee_add}"
         amount = 100
 
@@ -176,6 +179,8 @@ class TestFee:
 
 
 class TestExpectedFees:
+    """Test expected fees."""
+
     @pytest.fixture
     def pool_users(
         self,
@@ -491,7 +496,7 @@ class TestExpectedFees:
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
-        """Tests fees for 1 tx from 1 payment address to 1 payment address."""
+        """Test fees for 1 tx from 1 payment address to 1 payment address."""
         temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
@@ -513,7 +518,7 @@ class TestExpectedFees:
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
-        """Tests fees for 1 tx from 1 payment address to 10 payment addresses."""
+        """Test fees for 1 tx from 1 payment address to 10 payment addresses."""
         temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
@@ -535,7 +540,7 @@ class TestExpectedFees:
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
-        """Tests fees for 1 tx from 10 payment addresses to 1 payment address."""
+        """Test fees for 1 tx from 10 payment addresses to 1 payment address."""
         temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
@@ -557,7 +562,7 @@ class TestExpectedFees:
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
-        """Tests fees for 1 tx from 10 payment addresses to 10 payment addresses."""
+        """Test fees for 1 tx from 10 payment addresses to 10 payment addresses."""
         temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
@@ -579,7 +584,7 @@ class TestExpectedFees:
         pool_users: List[clusterlib.PoolUser],
         amount_expected: Tuple[int, int],
     ):
-        """Tests fees for 1 tx from 100 payment addresses to 100 payment addresses."""
+        """Test fees for 1 tx from 100 payment addresses to 100 payment addresses."""
         temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
 
         self._from_to_transactions(
