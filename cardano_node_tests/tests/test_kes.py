@@ -1,3 +1,4 @@
+"""Tests for KES period."""
 import json
 import logging
 import time
@@ -62,6 +63,8 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 class TestKES:
+    """Basic tests for KES period."""
+
     @allure.link(helpers.get_vcs_link())
     def test_expired_kes(
         self,
