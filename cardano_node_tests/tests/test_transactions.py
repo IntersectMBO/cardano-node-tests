@@ -1,3 +1,11 @@
+"""Tests for general transactions.
+
+* transfering funds (from 1 address to many, many to 1, many to many)
+* not ballanced transactions
+* other negative tests like duplicated transaction, sending funds to wrong addresses,
+  wrong fee, wrong ttl
+* transactions with metadata
+"""
 import functools
 import itertools
 import json
@@ -38,6 +46,8 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 class TestBasic:
+    """Test basic transactions - transfering funds, transaction IDs."""
+
     @pytest.fixture
     def payment_addrs(
         self,
@@ -72,7 +82,11 @@ class TestBasic:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Send funds to payment address."""
+        """Send funds to payment address.
+
+        * send funds from 1 source address to 1 destination address
+        * check expected balances for both source and destination addresses
+        """
         temp_template = f"{helpers.get_func_name()}_{amount}"
 
         src_address = payment_addrs[0].address
@@ -105,7 +119,12 @@ class TestBasic:
     def test_transfer_all_funds(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Send ALL funds from one payment address to another."""
+        """Send ALL funds from one payment address to another.
+
+        * send all available funds from 1 source address to 1 destination address
+        * check expected balance for destination addresses
+        * check that balance for source address is 0 Lovelace
+        """
         temp_template = helpers.get_func_name()
 
         src_address = payment_addrs[1].address
@@ -142,6 +161,11 @@ class TestBasic:
         """Get transaction ID (txid) from transaction body.
 
         Transaction ID is a hash of transaction body and doesn't change for a signed TX.
+
+        * send funds from 1 source address to 1 destination address
+        * get txid from transaction body
+        * check that txid has expected lenght
+        * check that the txid is listed in UTXO hashes for both source and destination addresses
         """
         temp_template = helpers.get_func_name()
 
@@ -159,12 +183,97 @@ class TestBasic:
         cluster.wait_for_new_block(new_blocks=2)
 
         txid = cluster.get_txid(tx_raw_output.out_file)
-        utxo = cluster.get_utxo(src_address)
+        utxo_src = cluster.get_utxo(src_address)
+        utxo_dst = cluster.get_utxo(dst_address)
         assert len(txid) == 64
-        assert txid in (u.utxo_hash for u in utxo)
+        assert txid in (u.utxo_hash for u in utxo_src)
+        assert txid in (u.utxo_hash for u in utxo_dst)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_extra_signing_keys(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Send a transaction with extra signing key.
+
+        Check that it is possible to use unneded signing key in addition to the necessary
+        signing keys for signing the transaction.
+        """
+        temp_template = helpers.get_func_name()
+        amount = 100
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        # use extra signing key
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file]
+        )
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        # it should be possible to submit a transaction with extra signing key
+        tx_raw_output = cluster.send_tx(
+            src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_duplicate_signing_keys(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Send a transaction with duplicate signing key.
+
+        Check that it is possible to specify the same signing key twice.
+        """
+        temp_template = helpers.get_func_name()
+        amount = 100
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        # use extra signing key
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[0].skey_file]
+        )
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        # it should be possible to submit a transaction with duplicate signing key
+        tx_raw_output = cluster.send_tx(
+            src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
 
 
 class TestMultiInOut:
+    """Test transactions with multiple txins and/or txouts."""
+
     @pytest.fixture
     def payment_addrs(
         self,
@@ -249,9 +358,9 @@ class TestMultiInOut:
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
         tx_files = clusterlib.TxFiles(signing_key_files=[r.skey_file for r in from_addr_recs])
 
-        # send TX - change is returned to `src_address`
+        # send TX
         tx_raw_output = cluster_obj.send_tx(
-            src_address=src_address,
+            src_address=src_address,  # change is returned to `src_address`
             tx_name=tx_name,
             txins=txins,
             txouts=txouts,
@@ -290,7 +399,8 @@ class TestMultiInOut:
     ):
         """Send 10 transactions to payment address.
 
-        Test 10 different UTXOs in addr0.
+        * send funds from 1 source address to 1 destination address in 10 separate transactions
+        * check expected balances for both source and destination addresses
         """
         temp_template = helpers.get_func_name()
         no_of_transactions = 10
@@ -343,7 +453,11 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 tx from 1 payment address to 10 payment addresses."""
+        """Tests 1 transaction from 1 payment address to 10 payment addresses.
+
+        * send funds from 1 source address to 10 destination addresses
+        * check expected balances for both source and destination addresses
+        """
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
@@ -361,7 +475,11 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 tx from 10 payment addresses to 1 payment address."""
+        """Tests 1 transaction from 10 payment addresses to 1 payment address.
+
+        * send funds from 10 source addresses to 1 destination address
+        * check expected balances for both source and destination addresses
+        """
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
@@ -379,7 +497,11 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 tx from 10 payment addresses to 10 payment addresses."""
+        """Tests 1 transaction from 10 payment addresses to 10 payment addresses.
+
+        * send funds from 10 source addresses to 10 destination addresses
+        * check expected balances for both source and destination addresses
+        """
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
@@ -397,7 +519,11 @@ class TestMultiInOut:
         payment_addrs: List[clusterlib.AddressRecord],
         amount: int,
     ):
-        """Tests 1 tx from 100 payment addresses to 50 payment addresses."""
+        """Tests 1 transaction from 50 payment addresses to 100 payment addresses.
+
+        * send funds from 50 source addresses to 100 destination addresses
+        * check expected balances for both source and destination addresses
+        """
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
@@ -409,6 +535,8 @@ class TestMultiInOut:
 
 
 class TestNotBalanced:
+    """Test not ballanced transactions."""
+
     @pytest.fixture
     def payment_addrs(
         self,
@@ -442,7 +570,10 @@ class TestNotBalanced:
         payment_addrs: List[clusterlib.AddressRecord],
         temp_dir: Path,
     ):
-        """Build a transaction with a negative change."""
+        """Try to build a transaction with a negative change.
+
+        Check that it is not possible to built such transaction.
+        """
         temp_template = helpers.get_func_name()
 
         src_address = payment_addrs[0].address
@@ -492,7 +623,11 @@ class TestNotBalanced:
         transfer_add: int,
         change_amount: int,
     ):
-        """Build a transaction with unbalanced change."""
+        """Build a transaction with unbalanced change (property-based test).
+
+        * build a not balanced transaction
+        * check that it is not possible to submit such transaction
+        """
         # we want to test only unbalanced transactions
         hypothesis.assume((transfer_add + change_amount) != 0)
 
@@ -550,6 +685,8 @@ class TestNotBalanced:
 
 
 class TestNegative:
+    """Transaction tests that are expected to fail."""
+
     @pytest.fixture
     def pool_users(
         self,
@@ -669,7 +806,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Send a transaction with ttl in the past."""
+        """Try to send a transaction with ttl in the past."""
         temp_template = helpers.get_func_name()
 
         src_address = pool_users[0].payment.address
@@ -712,7 +849,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Send a single transaction twice."""
+        """Try to send an identical transaction twice."""
         temp_template = helpers.get_func_name()
         amount = 100
 
@@ -769,7 +906,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Send a transaction signed with wrong signing key."""
+        """Try to send a transaction signed with wrong signing key."""
         temp_template = helpers.get_func_name()
 
         # use wrong signing key
@@ -787,86 +924,12 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    def test_extra_signing_keys(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-    ):
-        """Send a transaction with extra signing key."""
-        temp_template = helpers.get_func_name()
-        amount = 100
-
-        src_address = pool_users[0].payment.address
-        dst_address = pool_users[1].payment.address
-
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
-        # use extra signing key
-        tx_files = clusterlib.TxFiles(
-            signing_key_files=[pool_users[0].payment.skey_file, pool_users[1].payment.skey_file]
-        )
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
-
-        # it should be possible to submit a transaction with extra signing key
-        tx_raw_output = cluster.send_tx(
-            src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
-        )
-        cluster.wait_for_new_block(new_blocks=2)
-
-        assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
-        ), f"Incorrect balance for source address `{src_address}`"
-
-        assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
-        ), f"Incorrect balance for destination address `{dst_address}`"
-
-    @allure.link(helpers.get_vcs_link())
-    def test_duplicate_signing_keys(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-    ):
-        """Send a transaction with duplicate signing key."""
-        temp_template = helpers.get_func_name()
-        amount = 100
-
-        src_address = pool_users[0].payment.address
-        dst_address = pool_users[1].payment.address
-
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
-        # use extra signing key
-        tx_files = clusterlib.TxFiles(
-            signing_key_files=[pool_users[0].payment.skey_file, pool_users[0].payment.skey_file]
-        )
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
-
-        # it should be possible to submit a transaction with duplicate signing key
-        tx_raw_output = cluster.send_tx(
-            src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
-        )
-        cluster.wait_for_new_block(new_blocks=2)
-
-        assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
-        ), f"Incorrect balance for source address `{src_address}`"
-
-        assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
-        ), f"Incorrect balance for destination address `{dst_address}`"
-
-    @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_reward_address(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Send funds from payment address to stake address."""
+        """Try to send funds from payment address to stake address."""
         addr = pool_users[0].stake.address
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -876,7 +939,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Send funds from payment address to UTXO address."""
+        """Try to send funds from payment address to UTXO address."""
         dst_addr = pool_users[1].payment.address
         utxo_addr = cluster.get_utxo(dst_addr)[0].utxo_hash
         self._send_funds_to_invalid_address(
@@ -892,7 +955,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Send funds from payment address to non-existent address."""
+        """Try to send funds from payment address to non-existent address (property-based test)."""
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -905,7 +968,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Send funds from payment address to address with invalid length."""
+        """Try to send funds from payment address to address with invalid length.
+
+        Property-based test.
+        """
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -920,7 +986,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Send funds from payment address to address with invalid characters."""
+        """Try to send funds from payment address to address with invalid characters.
+
+        Property-based test.
+        """
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -933,7 +1002,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Send funds from non-existent address."""
+        """Try to send funds from non-existent address (property-based test)."""
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -946,7 +1015,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Send funds from address with invalid length."""
+        """Try to send funds from address with invalid length (property-based test)."""
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -961,7 +1030,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Send funds from address with invalid characters."""
+        """Try to send funds from address with invalid characters (property-based test)."""
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -972,7 +1041,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
-        """Build a transaction with a missing `--fee` parameter."""
+        """Try to build a transaction with a missing `--fee` parameter."""
         temp_template = helpers.get_func_name()
 
         tx_raw_output = self._get_raw_tx_values(
@@ -1002,7 +1071,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
-        """Build a transaction with a missing `--ttl` parameter."""
+        """Try to build a transaction with a missing `--ttl` parameter."""
         temp_template = helpers.get_func_name()
 
         tx_raw_output = self._get_raw_tx_values(
@@ -1032,7 +1101,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
-        """Build a transaction with a missing `--tx-in` parameter."""
+        """Try to build a transaction with a missing `--tx-in` parameter."""
         temp_template = helpers.get_func_name()
 
         tx_raw_output = self._get_raw_tx_values(
@@ -1063,7 +1132,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
-        """Build a transaction with a missing `--tx-out` parameter."""
+        """Try to build a transaction with a missing `--tx-out` parameter."""
         temp_template = helpers.get_func_name()
 
         tx_raw_output = self._get_raw_tx_values(
@@ -1089,6 +1158,8 @@ class TestNegative:
 
 
 class TestMetadata:
+    """Tests for transactions with metadata."""
+
     JSON_METADATA_FILE = DATA_DIR / "tx_metadata.json"
     JSON_METADATA_WRONG_FILE = DATA_DIR / "tx_metadata_wrong.json"
     JSON_METADATA_INVALID_FILE = DATA_DIR / "tx_metadata_invalid.json"
@@ -1125,7 +1196,10 @@ class TestMetadata:
     def test_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Build transaction with wrong fromat of metadata JSON."""
+        """Try to build a transaction with wrong fromat of metadata JSON.
+
+        The metadata file is a valid JSON, but not in a format that is expected.
+        """
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_WRONG_FILE],
@@ -1144,7 +1218,10 @@ class TestMetadata:
     def test_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Build transaction with invalid metadata JSON."""
+        """Try to build a transaction with invalid metadata JSON.
+
+        The metadata file is an invalid JSON.
+        """
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_INVALID_FILE],
@@ -1163,7 +1240,7 @@ class TestMetadata:
     def test_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Build transaction with metadata JSON longer than 64 bytes."""
+        """Try to build a transaction with metadata JSON longer than 64 bytes."""
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_LONG_FILE],
@@ -1184,7 +1261,10 @@ class TestMetadata:
     def test_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with metadata JSON."""
+        """Send transaction with metadata JSON.
+
+        Check that the metadata in TX body matches the original metadata.
+        """
         temp_template = helpers.get_func_name()
 
         tx_files = clusterlib.TxFiles(
@@ -1211,13 +1291,16 @@ class TestMetadata:
 
         assert (
             cbor_body_metadata == json_file_metadata
-        ), "Metadata in TX body doesn't match original metadata"
+        ), "Metadata in TX body doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
     def test_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with metadata CBOR."""
+        """Send transaction with metadata CBOR.
+
+        Check that the metadata in TX body matches the original metadata.
+        """
         temp_template = helpers.get_func_name()
 
         tx_files = clusterlib.TxFiles(
@@ -1247,7 +1330,10 @@ class TestMetadata:
     def test_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with both metadata JSON and CBOR."""
+        """Send transaction with both metadata JSON and CBOR.
+
+        Check that the metadata in TX body matches the original metadata.
+        """
         temp_template = helpers.get_func_name()
 
         tx_files = clusterlib.TxFiles(
