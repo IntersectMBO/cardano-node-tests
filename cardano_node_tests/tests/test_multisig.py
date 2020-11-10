@@ -165,7 +165,7 @@ class TestBasic:
     def test_multisig_all(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Send funds to and from script address using the "all" script."""
+        """Send funds to and from script address using the *all* script."""
         temp_template = helpers.get_func_name()
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
@@ -208,7 +208,7 @@ class TestBasic:
     def test_multisig_any(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Send funds using the "any" script.
+        """Send funds using the *any* script.
 
         * send funds to script address
         * send funds from script address using single witness
@@ -273,7 +273,7 @@ class TestBasic:
     def test_multisig_atleast(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Send funds to and from script address using the "atLeast" script."""
+        """Send funds to and from script address using the *atLeast* script."""
         temp_template = helpers.get_func_name()
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
@@ -398,7 +398,10 @@ class TestNegative:
     def test_multisig_all_missing_skey(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Try to send funds from script address using the "all" script, omit one skey."""
+        """Try to send funds from script address using the *all* script, omit one skey.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
@@ -443,7 +446,10 @@ class TestNegative:
     def test_multisig_any_unlisted_skey(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Try to send funds from script address using the "any" script with unlisted skey."""
+        """Try to send funds from script address using the *any* script with unlisted skey.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs[:-1]]
@@ -488,9 +494,9 @@ class TestNegative:
     def test_multisig_atleast_low_num_of_skeys(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Try to send funds from script address using the "atLeast" script.
+        """Try to send funds from script address using the *atLeast* script.
 
-        Num of skeys < required.
+        Num of skeys < required. Expect failure.
         """
         temp_template = helpers.get_func_name()
 

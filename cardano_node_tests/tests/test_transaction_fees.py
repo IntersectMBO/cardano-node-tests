@@ -69,7 +69,10 @@ class TestFee:
         payment_addrs: List[clusterlib.AddressRecord],
         fee: int,
     ):
-        """Try to send a transaction with negative fee (property-based test)."""
+        """Try to send a transaction with negative fee (property-based test).
+
+        Expect failure.
+        """
         temp_template = f"{helpers.get_func_name()}_{clusterlib_utils.get_timestamped_rand_str()}"
 
         src_address = payment_addrs[0].address
@@ -96,7 +99,10 @@ class TestFee:
         payment_addrs: List[clusterlib.AddressRecord],
         fee_change: float,
     ):
-        """Try to send a transaction with smaller-than-expected fee."""
+        """Try to send a transaction with smaller-than-expected fee.
+
+        Expect failure.
+        """
         temp_template = f"{helpers.get_func_name()}_{fee_change}"
 
         src_address = payment_addrs[0].address
