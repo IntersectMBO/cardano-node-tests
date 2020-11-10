@@ -46,6 +46,19 @@ else:
         pass
 
 
+@contextlib.contextmanager
+def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
+    """Change and restore CWD - context manager."""
+    orig_cwd = os.getcwd()
+    os.chdir(dir_path)
+    LOGGER.debug(f"Changed CWD to '{dir_path}'.")
+    try:
+        yield dir_path
+    finally:
+        os.chdir(orig_cwd)
+        LOGGER.debug(f"Restored CWD to '{orig_cwd}'.")
+
+
 def run_shell_command(command: str, workdir: FileType = "") -> bytes:
     """Run command in shell."""
     cmd = f"bash -c '{command}'"
@@ -57,10 +70,23 @@ def run_shell_command(command: str, workdir: FileType = "") -> bytes:
     return stdout
 
 
-if "GIT_REVISION" in os.environ:
-    CURRENT_COMMIT = os.getenv("GIT_REVISION")
-else:
-    CURRENT_COMMIT = run_shell_command("git rev-parse HEAD").decode().strip()
+def run_command(command: str, workdir: FileType = "") -> bytes:
+    """Run command."""
+    cmd = command.strip(" ")
+    if workdir:
+        with change_cwd(workdir):
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    else:
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
+    return stdout
+
+
+CURRENT_COMMIT = (
+    os.environ.get("GIT_REVISION") or run_shell_command("git rev-parse HEAD").decode().strip()
+)
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 GITHUB_TREE_URL = f"{GITHUB_URL}/tree/{CURRENT_COMMIT}"
 GITHUB_BLOB_URL = f"{GITHUB_URL}/blob/{CURRENT_COMMIT}"
@@ -119,19 +145,6 @@ def wait_for(
     if not silent:
         raise AssertionError(f"Failed to {message or 'finish'} in time.")
     return False
-
-
-@contextlib.contextmanager
-def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
-    """Change and restore CWD - context manager."""
-    orig_cwd = os.getcwd()
-    os.chdir(dir_path)
-    LOGGER.debug(f"Changed CWD to '{dir_path}'.")
-    try:
-        yield dir_path
-    finally:
-        os.chdir(orig_cwd)
-        LOGGER.debug(f"Restored CWD to '{orig_cwd}'.")
 
 
 def checksum(filename: FileType, blocksize: int = 65536) -> str:

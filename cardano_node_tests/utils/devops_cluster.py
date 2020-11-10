@@ -74,6 +74,16 @@ def stop_cluster() -> None:
         LOGGER.debug(f"Failed to stop cluster: {exc}")
 
 
+def restart_cluster_service(name: str) -> None:
+    """Restart single cluster service, e.g. a pool."""
+    LOGGER.info(f"Restarting cluster service `{name}`.")
+    cluster_env = get_cluster_env()
+    try:
+        helpers.run_command(f"supervisorctl restart {name}", workdir=cluster_env["work_dir"])
+    except Exception as exc:
+        LOGGER.debug(f"Failed to restart cluster service `{name}`: {exc}")
+
+
 def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Load data for pools existing in the devops environment."""
     data_dir = get_cluster_env()["state_dir"] / "nodes"
