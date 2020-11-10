@@ -1,3 +1,4 @@
+"""Tests for staking, rewards, blocks production on real block-producing pools."""
 import logging
 import time
 from pathlib import Path
@@ -172,13 +173,19 @@ def _delegate_stake_addr(
 
 
 class TestDelegateAddr:
+    """Tests for address delegation to stake pools."""
+
     @allure.link(helpers.get_vcs_link())
     def test_delegate_using_pool_id(
         self,
         cluster_manager: parallel_run.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
-        """Submit registration certificate and delegate to pool using pool id."""
+        """Submit registration certificate and delegate to pool using pool id.
+
+        * register stake address and delegate it to pool
+        * check that the stake address was delegated
+        """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
         temp_template = helpers.get_func_name()
@@ -198,7 +205,11 @@ class TestDelegateAddr:
         cluster_manager: parallel_run.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
-        """Submit registration certificate and delegate to pool using cold vkey."""
+        """Submit registration certificate and delegate to pool using cold vkey.
+
+        * register stake address and delegate it to pool
+        * check that the stake address was delegated
+        """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
         temp_template = helpers.get_func_name()
@@ -217,7 +228,16 @@ class TestDelegateAddr:
         cluster_manager: parallel_run.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
-        """Deregister stake address."""
+        """Deregister stake address.
+
+        * submit registration certificate and delegate to pool
+        * attempt to deregister the stake address - deregistration is expected to fail
+          because there are rewards in the stake address
+        * withdraw rewards to payment address
+        * deregister stake address
+        * check that the key deposit was returned
+        * check that the stake address is no longer delegated
+        """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
         temp_template = helpers.get_func_name()
@@ -254,7 +274,8 @@ class TestDelegateAddr:
             signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
         )
 
-        # deregistration is expected to fail because there are rewards in the stake address
+        # attempt to deregister the stake address - deregistration is expected to fail
+        # because there are rewards in the stake address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.send_tx(
                 src_address=src_address,
@@ -297,7 +318,14 @@ class TestDelegateAddr:
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
-        """Submit registration and deregistration certificates in single TX."""
+        """Submit registration and deregistration certificates in single TX.
+
+        * create stake address registration cert
+        * create stake address deregistration cert
+        * register and deregister stake address in single TX
+        * check that the balance for source address was correctly updated and that key deposit
+          was not needed
+        """
         temp_template = helpers.get_func_name()
 
         user_registered = pool_users_disposable[0]
@@ -326,7 +354,8 @@ class TestDelegateAddr:
         )
         cluster.wait_for_new_block(new_blocks=2)
 
-        # check that the balance for source address was correctly updated
+        # check that the balance for source address was correctly updated and that key deposit
+        # was not needed
         assert (
             cluster.get_address_balance(user_payment.address)
             == src_init_balance - tx_raw_output.fee
@@ -340,7 +369,17 @@ class TestDelegateAddr:
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
-        """Submit delegation and deregistration certificates in single TX."""
+        """Submit delegation and deregistration certificates in single TX.
+
+        * create stake address registration cert
+        * create stake address deregistration cert
+        * register stake address
+        * create stake address delegation cert
+        * delegate and deregister stake address in single TX
+        * check that the balance for source address was correctly updated and that the key
+          deposit was returned
+        * check that the stake address was NOT delegated
+        """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
@@ -400,7 +439,8 @@ class TestDelegateAddr:
         )
         cluster.wait_for_new_block(new_blocks=2)
 
-        # check that the balance for source address was correctly updated
+        # check that the balance for source address was correctly updated and that the key
+        # deposit was returned
         assert (
             cluster.get_address_balance(user_payment.address)
             == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_key_deposit()
@@ -414,13 +454,18 @@ class TestDelegateAddr:
 
 
 class TestNegative:
+    """Tests that are expected to fail."""
+
     @allure.link(helpers.get_vcs_link())
     def test_registration_cert_with_wrong_key(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Generate stake address registration certificate using wrong key."""
+        """Try to generate stake address registration certificate using wrong stake vkey.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         # create stake address registration cert, use wrong stake vkey
@@ -437,7 +482,10 @@ class TestNegative:
         cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Generate stake address delegation certificate using wrong key."""
+        """Try to generate stake address delegation certificate using wrong key.
+
+        Expect failure.
+        """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
@@ -460,7 +508,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
-        """Register stake address using wrong key."""
+        """Try to register stake address using wrong payment skey.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         user_registered = pool_users_disposable[0]
@@ -491,7 +542,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
-        """Delegate stake address using wrong key."""
+        """Try to delegate stake address using wrong payment skey.
+
+        Expect failure.
+        """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
@@ -545,7 +599,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
-        """Delegate unregistered stake address."""
+        """Try to delegate unregistered stake address.
+
+        Expect failure.
+        """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
@@ -608,13 +665,22 @@ class TestNegative:
 
 
 class TestRewards:
+    """Tests for checking expected rewards."""
+
     @allure.link(helpers.get_vcs_link())
     def test_reward_amount(  # noqa: C901
         self,
         cluster_manager: parallel_run.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
-        """Check that the stake address and pool owner are receiving rewards."""
+        """Check that the stake address and pool owner are receiving rewards.
+
+        * delegate to pool
+        * collect data for pool owner and pool users for 10 epochs
+        * each epoch check ledger state (expected data in `_pstake*`, delegation, stake amount)
+        * each epoch check received reward with reward in ledger state
+        * withdraw rewards to payment address
+        """
         # pylint: disable=too-many-statements,too-many-locals
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
@@ -799,6 +865,16 @@ class TestRewards:
         """Check that the rewards address can be delegated and receive rewards.
 
         Tests https://github.com/input-output-hk/cardano-node/issues/1964
+
+        The pool has a reward address that is different from pool owner's stake address.
+
+        * collect data for pool owner for 10 epochs
+        * delegate reward address to stake pool
+        * deregister pool owner's stake address
+        * each epoch check ledger state (expected data in `_pstake*`, delegation, stake amount)
+        * each epoch check received reward with reward in ledger state
+        * check that reward address still receives rewards for its staked amount even after
+          the pool owner's stake address is deregistered
         """
         # pylint: disable=too-many-statements,too-many-locals
         pool_name = "node-pool2"
@@ -1021,7 +1097,19 @@ class TestRewards:
         cluster_manager: parallel_run.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
-        """Check that rewards are gradually decreasing when funds are transfered."""
+        """Check that rewards are gradually decreasing when funds are being transfered.
+
+        Even though nothing is staked and rewards are being transfered from reward address, there
+        are still some funds staked on the reward address at the time ledger snapshot is taken. For
+        that reason the reward amount received every epoch is gradually decreasing over the period
+        of several epochs until it is finally 0.
+
+        * delegate stake address
+        * wait for first reward
+        * transfer all funds from payment address back to faucet, so no funds are staked
+        * keep withdrawing new rewards so reward ballance is 0
+        * check that reward amount is decreasing epoch after epoch
+        """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
@@ -1059,7 +1147,7 @@ class TestRewards:
             cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
-        # transfer all funds back to faucet, so no funds are staked
+        # transfer all funds from payment address back to faucet, so no funds are staked
         clusterlib_utils.return_funds_to_faucet(
             pool_user.payment,
             cluster_obj=cluster,
@@ -1113,7 +1201,15 @@ class TestRewards:
         When the pledge is higher than available funds, neither pool owners nor those who
         delegate to that pool receive rewards.
 
-        Increase the needed pledge amount by changing pool parameters.
+        * delegate stake address
+        * wait for first reward
+        * increase the needed pledge amount - update the pool parameters by resubmitting the pool
+          registration certificate - the funds are now lower than what is needed by the stake pool
+        * check that NO new rewards were received by those delegating to the pool
+        * check that pool owner is also NOT receiving rewards
+        * return the pool to the original state - restore pledge settings
+        * check that new rewards were received by those delegating to the pool
+        * check that pool owner is also receiving rewards
         """
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
@@ -1151,7 +1247,8 @@ class TestRewards:
         )
         pool_data_updated = loaded_data._replace(pool_pledge=loaded_data.pool_pledge * 9)
 
-        # update the pool parameters by resubmitting the pool registration certificate
+        # increase the needed pledge amount - update the pool parameters by resubmitting the pool
+        # registration certificate
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=[pool_owner],
@@ -1186,7 +1283,7 @@ class TestRewards:
                 == cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "Pool owner received unexpected rewards"
 
-            # Return the pool to the original state - restore pledge.
+            # Return the pool to the original state - restore pledge settings.
 
             # fund source (pledge) address
             clusterlib_utils.fund_from_faucet(
@@ -1234,7 +1331,14 @@ class TestRewards:
         When the pledge is higher than available funds, neither pool owners nor those who
         delegate to that pool receive rewards.
 
-        Withdraw part of pledge so the funds are lower than what is needed by the stake pool.
+        * delegate stake address
+        * wait for first reward
+        * withdraw part of the pledge - the funds are lower than what is needed by the stake pool
+        * check that NO new rewards were received by those delegating to the pool
+        * check that pool owner is also NOT receiving rewards
+        * return the pool to the original state - restore pledge funds
+        * check that new rewards were received by those delegating to the pool
+        * check that pool owner is also receiving rewards
         """
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
@@ -1313,7 +1417,7 @@ class TestRewards:
                 == cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "Pool owner received unexpected rewards"
 
-            # Return the pool to the original state - restore pledge.
+            # Return the pool to the original state - restore pledge funds.
 
             # fund user address so it has enough funds for fees etc.
             clusterlib_utils.fund_from_faucet(
@@ -1370,6 +1474,17 @@ class TestRewards:
 
         When the owner's stake address is deregistered (i.e. owner's stake is lower than pledge),
         neither pool owners nor those who delegate to that pool receive rewards.
+
+        * delegate stake address
+        * wait for first reward
+        * deregister stake address - owner's stake is lower than pledge
+        * check that the key deposit was returned
+        * check that NO new rewards were received by those delegating to the pool
+        * check that pool owner is also NOT receiving rewards
+        * return the pool to the original state - reregister stake address and
+          delegate it to the pool
+        * check that new rewards were received by those delegating to the pool
+        * check that pool owner is also receiving rewards
         """
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
@@ -1398,7 +1513,7 @@ class TestRewards:
             cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
-        # deregister stake address
+        # deregister stake address - owner's stake is lower than pledge
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_owner.stake.vkey_file
         )
@@ -1522,6 +1637,16 @@ class TestRewards:
 
         The stake pool continues to operate normally and those who delegate to that pool receive
         rewards.
+
+        * delegate stake address
+        * wait for first reward
+        * withdraw pool rewards to payment address
+        * deregister the pool reward address
+        * check that the key deposit was returned
+        * check that pool owner is NOT receiving rewards
+        * check that new rewards are received by those delegating to the pool
+        * return the pool to the original state - reregister reward address
+        * check that pool owner is receiving rewards
         """
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
@@ -1550,12 +1675,12 @@ class TestRewards:
             cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
-        # withdraw rewards to payment address
+        # withdraw pool rewards to payment address
         clusterlib_utils.withdraw_reward(
             cluster_obj=cluster, pool_user=pool_reward, name_template=temp_template
         )
 
-        # deregister reward address
+        # deregister the pool reward address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_reward.stake.vkey_file
         )
@@ -1596,13 +1721,13 @@ class TestRewards:
 
             cluster.wait_for_new_epoch(3)
 
-            # check that NO new rewards were received by pool owner
+            # check that pool owner is NOT receiving rewards
             assert (
                 orig_pool_reward
                 == cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
             ), "Pool owner received unexpected rewards"
 
-            # check that new rewards were received by those delegating to the pool
+            # check that new rewards are received by those delegating to the pool
             assert (
                 orig_user_reward
                 < cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
@@ -1664,6 +1789,17 @@ class TestRewards:
         """Test deregistering reward address and retiring stake pool.
 
         The pool deposit is lost when reward address is deregistered before the pool is retired.
+
+        * wait for first reward for the pool
+        * withdraw pool rewards to payment address
+        * deregister the pool reward address
+        * check that the key deposit was returned
+        * check that pool owner is NOT receiving rewards
+        * deregister stake pool
+        * check that the deposit was NOT returned to reward or stake address
+        * return the pool to the original state - reregister the pool, register
+          the reward address, delegate the stake address to the pool
+        * check that pool owner is receiving rewards
         """
         # pylint: disable=too-many-statements
         pool_name = "node-pool2"
@@ -1686,12 +1822,12 @@ class TestRewards:
             cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
-        # withdraw rewards to payment address
+        # withdraw pool rewards to payment address
         clusterlib_utils.withdraw_reward(
             cluster_obj=cluster, pool_user=pool_reward, name_template=temp_template
         )
 
-        # deregister reward address
+        # deregister the pool reward address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_reward.stake.vkey_file
         )
@@ -1729,7 +1865,7 @@ class TestRewards:
 
             cluster.wait_for_new_epoch(3)
 
-            # check that NO new rewards were received by pool owner
+            # check that pool owner is NOT receiving rewards
             assert (
                 orig_pool_reward
                 == cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
