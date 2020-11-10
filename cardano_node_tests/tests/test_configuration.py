@@ -26,7 +26,7 @@ def temp_dir(tmp_path_factory: TempdirFactory):
 
 @pytest.fixture(scope="module")
 def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
-    """Update "epochLength" to 1200."""
+    """Update *epochLength* to 1200."""
     pytest_globaltemp = helpers.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
@@ -52,7 +52,7 @@ def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
 @pytest.fixture(scope="module")
 def slot_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
-    """Update "slotLength" to 0.3."""
+    """Update *slotLength* to 0.3."""
     pytest_globaltemp = helpers.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
@@ -112,7 +112,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     def test_epoch_length(self, cluster_epoch_length: clusterlib.ClusterLib):
-        """Test the "epochLength" configuration."""
+        """Test the *epochLength* configuration."""
         cluster = cluster_epoch_length
 
         assert cluster.slot_length == 0.2
@@ -121,7 +121,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     def test_slot_length(self, cluster_slot_length: clusterlib.ClusterLib):
-        """Test the "slotLength" configuration."""
+        """Test the *slotLength* configuration."""
         cluster = cluster_slot_length
 
         assert cluster.slot_length == 0.3

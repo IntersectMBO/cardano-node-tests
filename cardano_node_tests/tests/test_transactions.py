@@ -806,7 +806,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to send a transaction with ttl in the past."""
+        """Try to send a transaction with ttl in the past.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         src_address = pool_users[0].payment.address
@@ -849,7 +852,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to send an identical transaction twice."""
+        """Try to send an identical transaction twice.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
         amount = 100
 
@@ -906,7 +912,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to send a transaction signed with wrong signing key."""
+        """Try to send a transaction signed with wrong signing key.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         # use wrong signing key
@@ -929,7 +938,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to send funds from payment address to stake address."""
+        """Try to send funds from payment address to stake address.
+
+        Expect failure.
+        """
         addr = pool_users[0].stake.address
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -939,7 +951,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to send funds from payment address to UTXO address."""
+        """Try to send funds from payment address to UTXO address.
+
+        Expect failure.
+        """
         dst_addr = pool_users[1].payment.address
         utxo_addr = cluster.get_utxo(dst_addr)[0].utxo_hash
         self._send_funds_to_invalid_address(
@@ -955,7 +970,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Try to send funds from payment address to non-existent address (property-based test)."""
+        """Try to send funds from payment address to non-existent address (property-based test).
+
+        Expect failure.
+        """
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -970,7 +988,7 @@ class TestNegative:
     ):
         """Try to send funds from payment address to address with invalid length.
 
-        Property-based test.
+        Expect failure. Property-based test.
         """
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
@@ -988,7 +1006,7 @@ class TestNegative:
     ):
         """Try to send funds from payment address to address with invalid characters.
 
-        Property-based test.
+        Expect failure. Property-based test.
         """
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
@@ -1002,7 +1020,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Try to send funds from non-existent address (property-based test)."""
+        """Try to send funds from non-existent address (property-based test).
+
+        Expect failure.
+        """
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -1015,7 +1036,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Try to send funds from address with invalid length (property-based test)."""
+        """Try to send funds from address with invalid length (property-based test).
+
+        Expect failure.
+        """
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -1030,7 +1054,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Try to send funds from address with invalid characters (property-based test)."""
+        """Try to send funds from address with invalid characters (property-based test).
+
+        Expect failure.
+        """
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
@@ -1041,7 +1068,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
-        """Try to build a transaction with a missing `--fee` parameter."""
+        """Try to build a transaction with a missing `--fee` parameter.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         tx_raw_output = self._get_raw_tx_values(
@@ -1071,7 +1101,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
-        """Try to build a transaction with a missing `--ttl` parameter."""
+        """Try to build a transaction with a missing `--ttl` parameter.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         tx_raw_output = self._get_raw_tx_values(
@@ -1101,7 +1134,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
-        """Try to build a transaction with a missing `--tx-in` parameter."""
+        """Try to build a transaction with a missing `--tx-in` parameter.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         tx_raw_output = self._get_raw_tx_values(
@@ -1132,7 +1168,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         temp_dir: Path,
     ):
-        """Try to build a transaction with a missing `--tx-out` parameter."""
+        """Try to build a transaction with a missing `--tx-out` parameter.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         tx_raw_output = self._get_raw_tx_values(

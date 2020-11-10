@@ -26,7 +26,7 @@ def temp_dir(tmp_path_factory: TempdirFactory):
 
 @pytest.fixture(scope="module")
 def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
-    """Update "slotsPerKESPeriod" and "maxKESEvolutions"."""
+    """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""
     pytest_globaltemp = helpers.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
