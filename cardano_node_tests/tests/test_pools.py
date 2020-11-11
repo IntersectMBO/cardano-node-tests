@@ -504,7 +504,7 @@ class TestStakePool:
 
         * deregister stake pool
         * check that the stake addresses are no longer delegated
-        * check that the deposit was returned to reward account
+        * check that the pool deposit was returned to reward account
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
@@ -590,7 +590,7 @@ class TestStakePool:
                 not stake_addr_info.delegation
             ), f"Stake address is still delegated: {stake_addr_info}"
 
-        # check that the deposit was returned to reward account
+        # check that the pool deposit was returned to reward account
         assert (
             cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
             == src_register_reward + cluster.get_pool_deposit()
@@ -607,7 +607,7 @@ class TestStakePool:
 
         * deregister stake pool
         * check that the stake addresses are no longer delegated
-        * reregister the pool by resubmitting the pool registration certificate,
+        * reregister the pool by resubmitting the pool registration certificate
         * delegate stake address to pool again (the address is already registered)
         * check that pool was correctly setup
         * check that the stake addresses were delegated
@@ -736,7 +736,7 @@ class TestStakePool:
         * deregister stake pool in epoch + 2
         * reregister the pool by resubmitting the pool registration certificate
         * delegate stake address to pool again (the address is already registered)
-        * check that no additional deposit was used
+        * check that no additional pool deposit was used
         * check that pool is still correctly setup
         * check that the stake addresses is still delegated
         """
@@ -816,7 +816,7 @@ class TestStakePool:
         cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
-        # and no additional deposit was used
+        # and no additional pool deposit was used
         assert (
             cluster.get_address_balance(src_address) == src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
@@ -857,7 +857,7 @@ class TestStakePool:
 
         * register pool
         * update the pool metadata by resubmitting the pool registration certificate
-        * check that the pool parameters were correctly updated on chain
+        * check that the pool metadata hash was correctly updated on chain
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
@@ -932,7 +932,7 @@ class TestStakePool:
         )
         cluster.wait_for_new_epoch()
 
-        # check that the pool parameters were correctly updated on chain
+        # check that the pool metadata hash was correctly updated on chain
         _check_pool(
             cluster_obj=cluster,
             stake_pool_id=pool_creation_out.stake_pool_id,
@@ -1032,7 +1032,7 @@ class TestStakePool:
         * create witness file for each signing key
         * sign TX using witness files
         * create and register pool
-        * check that the pool parameters were correctly registered on chain
+        * check that the pool was correctly registered on chain
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}"
@@ -1130,7 +1130,7 @@ class TestStakePool:
 
         cluster.wait_for_new_epoch()
 
-        # check that the pool parameters were correctly registered on chain
+        # check that the pool was correctly registered on chain
         stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
         _check_pool(
             cluster_obj=cluster,
@@ -1149,7 +1149,7 @@ class TestStakePool:
         * create pool registration cert
         * create pool deregistration cert
         * register and deregister stake pool in single TX
-        * check that the deposit was NOT returned to reward account as the stake address
+        * check that the pool deposit was NOT returned to reward account as the reward address
           is not registered (deposit is lost)
         """
         rand_str = clusterlib.get_rand_str(4)
@@ -1222,7 +1222,7 @@ class TestStakePool:
             == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
         ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
-        # check that the deposit was NOT returned to reward account as the stake address
+        # check that the pool deposit was NOT returned to reward account as the reward address
         # is not registered (deposit is lost)
         cluster.wait_for_new_epoch(3, padding_seconds=30)
         assert (
@@ -1448,7 +1448,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
-        """Try to generate pool registration certificate using wrong Cold key.
+        """Try to generate pool registration certificate using wrong Cold vkey.
 
         Expect failure.
         """
@@ -1471,7 +1471,7 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
-        """Try to generate pool registration certificate using wrong stake key.
+        """Try to generate pool registration certificate using wrong stake vkey.
 
         Expect failure.
         """
