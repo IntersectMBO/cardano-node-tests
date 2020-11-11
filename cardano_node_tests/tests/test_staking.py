@@ -677,8 +677,8 @@ class TestRewards:
 
         * delegate to pool
         * collect data for pool owner and pool users for 10 epochs
-        * each epoch check ledger state (expected data in `_pstake*`, delegation, stake amount)
-        * each epoch check received reward with reward in ledger state
+            - each epoch check ledger state (expected data in `_pstake*`, delegation, stake amount)
+            - each epoch check received reward with reward in ledger state
         * withdraw rewards to payment address
         """
         # pylint: disable=too-many-statements,too-many-locals
@@ -868,7 +868,7 @@ class TestRewards:
 
         The pool has a reward address that is different from pool owner's stake address.
 
-        * collect data for pool owner for 10 epochs
+        Collect data for pool owner for 10 epochs and:
         * delegate reward address to stake pool
         * deregister pool owner's stake address
         * each epoch check ledger state (expected data in `_pstake*`, delegation, stake amount)
