@@ -482,7 +482,7 @@ class TestNegative:
         cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to generate stake address delegation certificate using wrong key.
+        """Try to generate stake address delegation certificate using wrong stake vkey.
 
         Expect failure.
         """
@@ -1799,9 +1799,10 @@ class TestRewards:
         * check that the key deposit was returned
         * check that pool owner is NOT receiving rewards
         * deregister stake pool
-        * check that the deposit was NOT returned to reward or stake address
+        * check that the pool deposit was NOT returned to reward or stake address
         * return the pool to the original state - reregister the pool, register
           the reward address, delegate the stake address to the pool
+        * check that pool deposit was needed
         * check that pool owner is receiving rewards
         """
         # pylint: disable=too-many-statements
@@ -1918,7 +1919,7 @@ class TestRewards:
                 pool_owner.payment.address
             )
 
-            # check that the deposit was NOT returned to reward or stake address
+            # check that the pool deposit was NOT returned to reward or stake address
             assert (
                 cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
                 == stake_acount_balance
@@ -1958,7 +1959,8 @@ class TestRewards:
             )
             cluster.wait_for_new_block(new_blocks=2)
 
-            # check that the balance for source address was correctly updated
+            # check that the balance for source address was correctly updated and that the
+            # pool deposit was needed
             assert (
                 cluster.get_address_balance(pool_reward.payment.address)
                 == src_updated_balance
