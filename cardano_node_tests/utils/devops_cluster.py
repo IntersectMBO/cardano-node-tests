@@ -89,46 +89,46 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     data_dir = get_cluster_env()["state_dir"] / "nodes"
     pools = ("node-pool1", "node-pool2")
 
-    addrs_data = {}
-    for addr_name in pools:
-        addr_data_dir = data_dir / addr_name
-        addrs_data[addr_name] = {
+    pools_data = {}
+    for pool_name in pools:
+        pool_data_dir = data_dir / pool_name
+        pools_data[pool_name] = {
             "payment": clusterlib.AddressRecord(
-                address=cluster_obj.read_address_from_file(addr_data_dir / "owner.addr"),
-                vkey_file=addr_data_dir / "owner-utxo.vkey",
-                skey_file=addr_data_dir / "owner-utxo.skey",
+                address=cluster_obj.read_address_from_file(pool_data_dir / "owner.addr"),
+                vkey_file=pool_data_dir / "owner-utxo.vkey",
+                skey_file=pool_data_dir / "owner-utxo.skey",
             ),
             "stake": clusterlib.AddressRecord(
-                address=cluster_obj.read_address_from_file(addr_data_dir / "owner-stake.addr"),
-                vkey_file=addr_data_dir / "owner-stake.vkey",
-                skey_file=addr_data_dir / "owner-stake.skey",
+                address=cluster_obj.read_address_from_file(pool_data_dir / "owner-stake.addr"),
+                vkey_file=pool_data_dir / "owner-stake.vkey",
+                skey_file=pool_data_dir / "owner-stake.skey",
             ),
             "reward": clusterlib.AddressRecord(
-                address=cluster_obj.read_address_from_file(addr_data_dir / "reward_stake.addr"),
-                vkey_file=addr_data_dir / "reward.vkey",
-                skey_file=addr_data_dir / "reward.skey",
+                address=cluster_obj.read_address_from_file(pool_data_dir / "reward_stake.addr"),
+                vkey_file=pool_data_dir / "reward.vkey",
+                skey_file=pool_data_dir / "reward.skey",
             ),
-            "stake_addr_registration_cert": addr_data_dir / "stake.reg.cert",
-            "stake_addr_delegation_cert": addr_data_dir / "owner-stake.deleg.cert",
-            "reward_addr_registration_cert": addr_data_dir / "stake-reward.reg.cert",
-            "pool_registration_cert": addr_data_dir / "register.cert",
-            "pool_operational_cert": addr_data_dir / "op.cert",
+            "stake_addr_registration_cert": pool_data_dir / "stake.reg.cert",
+            "stake_addr_delegation_cert": pool_data_dir / "owner-stake.deleg.cert",
+            "reward_addr_registration_cert": pool_data_dir / "stake-reward.reg.cert",
+            "pool_registration_cert": pool_data_dir / "register.cert",
+            "pool_operational_cert": pool_data_dir / "op.cert",
             "cold_key_pair": clusterlib.ColdKeyPair(
-                vkey_file=addr_data_dir / "cold.vkey",
-                skey_file=addr_data_dir / "cold.skey",
-                counter_file=addr_data_dir / "cold.counter",
+                vkey_file=pool_data_dir / "cold.vkey",
+                skey_file=pool_data_dir / "cold.skey",
+                counter_file=pool_data_dir / "cold.counter",
             ),
             "vrf_key_pair": clusterlib.KeyPair(
-                vkey_file=addr_data_dir / "vrf.vkey",
-                skey_file=addr_data_dir / "vrf.skey",
+                vkey_file=pool_data_dir / "vrf.vkey",
+                skey_file=pool_data_dir / "vrf.skey",
             ),
             "kes_key_pair": clusterlib.KeyPair(
-                vkey_file=addr_data_dir / "kes.vkey",
-                skey_file=addr_data_dir / "kes.skey",
+                vkey_file=pool_data_dir / "kes.vkey",
+                skey_file=pool_data_dir / "kes.skey",
             ),
         }
 
-    return addrs_data
+    return pools_data
 
 
 def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".") -> Path:
