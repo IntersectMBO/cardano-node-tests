@@ -552,6 +552,7 @@ class ClusterLib:
         node_kes_vkey_file: FileType,
         node_cold_skey_file: FileType,
         node_cold_counter_file: FileType,
+        kes_period: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> Path:
         """Generate node operational certificate.
@@ -560,7 +561,7 @@ class ClusterLib:
         """
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{node_name}.opcert"
-        last_block_kes_period = self.get_last_block_kes_period()
+        kes_period = kes_period if kes_period is not None else self.get_last_block_kes_period()
         self.cli(
             [
                 "node",
@@ -572,7 +573,7 @@ class ClusterLib:
                 "--operational-certificate-issue-counter",
                 str(node_cold_counter_file),
                 "--kes-period",
-                str(last_block_kes_period),
+                str(kes_period),
                 "--out-file",
                 str(out_file),
             ]

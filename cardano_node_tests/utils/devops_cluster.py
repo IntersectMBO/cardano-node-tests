@@ -28,6 +28,7 @@ ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
 ERRORS_IGNORED_RE = re.compile(
     "failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace"
     "|Could not obtain ledger view for slot|WrapForgeStateUpdateError|InvalidKesSignatureOCERT"
+    "|TPraosCannotForgeKeyNotUsableYet"
 )
 
 
@@ -74,14 +75,14 @@ def stop_cluster() -> None:
         LOGGER.debug(f"Failed to stop cluster: {exc}")
 
 
-def restart_cluster_service(name: str) -> None:
-    """Restart single cluster service, e.g. a pool."""
-    LOGGER.info(f"Restarting cluster service `{name}`.")
+def restart_node(node_name: str) -> None:
+    """Restart single node of the running cluster."""
+    LOGGER.info(f"Restarting cluster node `{node_name}`.")
     cluster_env = get_cluster_env()
     try:
-        helpers.run_command(f"supervisorctl restart {name}", workdir=cluster_env["work_dir"])
+        helpers.run_command(f"supervisorctl restart {node_name}", workdir=cluster_env["work_dir"])
     except Exception as exc:
-        LOGGER.debug(f"Failed to restart cluster service `{name}`: {exc}")
+        LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
 
 
 def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
@@ -104,7 +105,11 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
                 skey_file=pool_data_dir / "owner-stake.skey",
             ),
             "reward": clusterlib.AddressRecord(
-                address=cluster_obj.read_address_from_file(pool_data_dir / "reward_stake.addr"),
+                address=cluster_obj.gen_stake_addr(
+                    addr_name="reward",
+                    stake_vkey_file=pool_data_dir / "reward.vkey",
+                    destination_dir=pool_data_dir,
+                ),
                 vkey_file=pool_data_dir / "reward.vkey",
                 skey_file=pool_data_dir / "reward.skey",
             ),
