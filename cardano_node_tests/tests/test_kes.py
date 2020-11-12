@@ -81,11 +81,9 @@ class TestKES:
         time.sleep(expire_timeout)
 
         init_slot = cluster.get_last_block_slot_no()
-        init_kes_period = cluster.get_last_block_kes_period()
 
         kes_period_timeout = int(cluster.slots_per_kes_period * cluster.slot_length + 1)
         LOGGER.info(f"Waiting for {kes_period_timeout} sec for next KES period.")
         time.sleep(kes_period_timeout)
 
         assert cluster.get_last_block_slot_no() == init_slot, "Unexpected new slots"
-        assert cluster.get_last_block_kes_period() == init_kes_period, "Unexpected new KES period"
