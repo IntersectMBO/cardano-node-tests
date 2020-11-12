@@ -28,6 +28,7 @@ ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
 ERRORS_IGNORED_RE = re.compile(
     "failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace"
     "|Could not obtain ledger view for slot|WrapForgeStateUpdateError|InvalidKesSignatureOCERT"
+    "|TPraosCannotForgeKeyNotUsableYet"
 )
 
 
