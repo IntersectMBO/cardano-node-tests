@@ -104,7 +104,11 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
                 skey_file=pool_data_dir / "owner-stake.skey",
             ),
             "reward": clusterlib.AddressRecord(
-                address=cluster_obj.read_address_from_file(pool_data_dir / "reward_stake.addr"),
+                address=cluster_obj.gen_stake_addr(
+                    addr_name="reward",
+                    stake_vkey_file=pool_data_dir / "reward.vkey",
+                    destination_dir=pool_data_dir,
+                ),
                 vkey_file=pool_data_dir / "reward.vkey",
                 skey_file=pool_data_dir / "reward.skey",
             ),
