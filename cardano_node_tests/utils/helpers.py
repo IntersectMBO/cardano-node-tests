@@ -72,7 +72,7 @@ def run_shell_command(command: str, workdir: FileType = "") -> bytes:
 
 def run_command(command: str, workdir: FileType = "") -> bytes:
     """Run command."""
-    cmd = command.strip(" ")
+    cmd = command.split(" ")
     if workdir:
         with change_cwd(workdir):
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
