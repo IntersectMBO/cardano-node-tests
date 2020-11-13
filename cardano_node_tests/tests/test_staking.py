@@ -683,7 +683,7 @@ class TestRewards:
 
         * withdraw rewards to payment address
         """
-        # pylint: disable=too-many-statements,too-many-locals
+        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
@@ -854,6 +854,8 @@ class TestRewards:
                 assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
 
         # withdraw rewards to payment address
+        if this_epoch == cluster.get_last_block_epoch():
+            cluster.wait_for_new_epoch()
         clusterlib_utils.withdraw_reward(
             cluster_obj=cluster, pool_user=pool_user, name_template=temp_template
         )
