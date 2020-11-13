@@ -44,6 +44,9 @@ def withdraw_reward(
     tx_files_withdrawal = clusterlib.TxFiles(
         signing_key_files=[dst_addr_record.skey_file, pool_user.stake.skey_file],
     )
+
+    this_epoch = cluster_obj.get_last_block_epoch()
+
     tx_raw_withdrawal_output = cluster_obj.send_tx(
         src_address=dst_address,
         tx_name=f"{name_template}_reward_withdrawal",
@@ -52,10 +55,13 @@ def withdraw_reward(
     )
     cluster_obj.wait_for_new_block(new_blocks=2)
 
-    # check that reward is 0
-    assert (
-        cluster_obj.get_stake_addr_info(pool_user.stake.address).reward_account_balance == 0
-    ), "Not all rewards were transfered"
+    if this_epoch != cluster_obj.get_last_block_epoch():
+        LOGGER.warning("New epoch during rewards withdrawal! Reward account may not be empty.")
+    else:
+        # check that reward is 0
+        assert (
+            cluster_obj.get_stake_addr_info(pool_user.stake.address).reward_account_balance == 0
+        ), "Not all rewards were transfered"
 
     # check that rewards were transfered
     src_reward_balance = cluster_obj.get_address_balance(dst_address)
