@@ -1,7 +1,16 @@
+"""Tests for operations with stake pools.
+
+* pool registration
+* pool deregistration
+* pool update
+* pool metadata
+* pool reregistration
+"""
 import json
 import logging
 from pathlib import Path
 from typing import List
+from typing import Tuple
 
 import allure
 import hypothesis
@@ -28,7 +37,7 @@ def temp_dir(tmp_path_factory: TempdirFactory):
 
 @pytest.fixture(scope="module")
 def pool_cost_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
-    """Update "minPoolCost" to 500."""
+    """Update *minPoolCost* to 500."""
     pytest_globaltemp = helpers.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
@@ -322,6 +331,8 @@ def _create_register_pool_tx_delegate_stake_tx(
 
 
 class TestStakePool:
+    """General tests for stake pools."""
+
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata(
         self,
@@ -329,7 +340,10 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
-        """Create and register a stake pool with metadata."""
+        """Create and register a stake pool with metadata.
+
+        Check that pool was registered and stake address delegated.
+        """
         temp_template = helpers.get_func_name()
 
         pool_name = "cardano-node-tests"
@@ -382,7 +396,10 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
-        """Create and register a stake pool with metadata file not available."""
+        """Create and register a stake pool with metadata file not available.
+
+        Check that pool was registered and stake address delegated.
+        """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
@@ -437,7 +454,10 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
         no_of_addr: int,
     ):
-        """Create and register a stake pool."""
+        """Create and register a stake pool (without metadata).
+
+        Check that pool was registered.
+        """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
@@ -480,7 +500,12 @@ class TestStakePool:
         temp_dir: Path,
         no_of_addr: int,
     ):
-        """Deregister stake pool."""
+        """Deregister stake pool.
+
+        * deregister stake pool
+        * check that the stake addresses are no longer delegated
+        * check that the pool deposit was returned to reward account
+        """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
@@ -565,7 +590,7 @@ class TestStakePool:
                 not stake_addr_info.delegation
             ), f"Stake address is still delegated: {stake_addr_info}"
 
-        # check that the deposit was returned to reward account
+        # check that the pool deposit was returned to reward account
         assert (
             cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
             == src_register_reward + cluster.get_pool_deposit()
@@ -578,7 +603,15 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
-        """Reregister stake pool."""
+        """Reregister stake pool.
+
+        * deregister stake pool
+        * check that the stake addresses are no longer delegated
+        * reregister the pool by resubmitting the pool registration certificate
+        * delegate stake address to pool again (the address is already registered)
+        * check that pool was correctly setup
+        * check that the stake addresses were delegated
+        """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
@@ -672,7 +705,7 @@ class TestStakePool:
             == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
         ), f"Incorrect balance for source address `{src_address}`"
 
-        LOGGER.info("Waiting up to 5 epochs for stake pool to be re-registered.")
+        LOGGER.info("Waiting up to 5 epochs for stake pool to be reregistered.")
         helpers.wait_for(
             lambda: pool_creation_out.stake_pool_id in cluster.get_stake_distribution(),
             delay=10,
@@ -691,6 +724,126 @@ class TestStakePool:
             stake_pool_id=pool_creation_out.stake_pool_id,
         )
 
+    @allure.link(helpers.get_vcs_link())
+    def test_cancel_stake_pool_deregistration(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        temp_dir: Path,
+    ):
+        """Reregister a stake pool that is in course of being retired.
+
+        * deregister stake pool in epoch + 2
+        * reregister the pool by resubmitting the pool registration certificate
+        * delegate stake address to pool again (the address is already registered)
+        * check that no additional pool deposit was used
+        * check that pool is still correctly setup
+        * check that the stake addresses is still delegated
+        """
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
+
+        pool_name = f"pool_{rand_str}"
+        pool_metadata = {
+            "name": pool_name,
+            "description": "Shelley QA E2E test Test",
+            "ticker": "QA1",
+            "homepage": "www.test1.com",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+        )
+
+        pool_data = clusterlib.PoolData(
+            pool_name=pool_name,
+            pool_pledge=222,
+            pool_cost=123,
+            pool_margin=0.512,
+            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+        )
+
+        # create pool owners
+        pool_owners = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster, name_template=temp_template
+        )
+
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            pool_owners[0].payment,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=1_500_000_000,
+        )
+
+        # register pool and delegate stake address
+        pool_creation_out = _create_register_pool_delegate_stake_tx(
+            cluster_obj=cluster,
+            pool_owners=pool_owners,
+            temp_template=temp_template,
+            pool_data=pool_data,
+        )
+
+        # deregister stake pool in epoch + 2
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 2,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
+        cluster.wait_for_new_epoch()
+
+        src_address = pool_owners[0].payment.address
+        src_init_balance = cluster.get_address_balance(src_address)
+
+        # reregister the pool by resubmitting the pool registration certificate,
+        # delegate stake address to pool again (the address is already registered)
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[
+                pool_creation_out.pool_reg_cert_file,
+                *list(temp_dir.glob(f"{temp_template}*_stake_deleg.cert")),
+            ],
+            signing_key_files=pool_creation_out.tx_raw_output.tx_files.signing_key_files,
+        )
+        tx_raw_output = cluster.send_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            deposit=0,  # no additional deposit, the pool is already registered
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        # and no additional pool deposit was used
+        assert (
+            cluster.get_address_balance(src_address) == src_init_balance - tx_raw_output.fee
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        LOGGER.info("Checking for 3 epochs that the stake pool will NOT get deregistered.")
+        stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
+        pool_deregistered = helpers.wait_for(
+            lambda: cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
+            is None,
+            delay=10,
+            num_sec=3 * cluster.epoch_length_sec,
+            silent=True,
+        )
+        assert not pool_deregistered, "Pool got deregistered"
+
+        # check that pool is still correctly setup
+        _check_pool(
+            cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data
+        )
+
+        # check that the stake addresses is still delegated
+        _check_staking(
+            pool_owners=pool_owners,
+            cluster_obj=cluster,
+            stake_pool_id=pool_creation_out.stake_pool_id,
+        )
+
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     @allure.link(helpers.get_vcs_link())
     def test_update_stake_pool_metadata(
@@ -700,7 +853,12 @@ class TestStakePool:
         temp_dir: Path,
         no_of_addr: int,
     ):
-        """Update stake pool metadata."""
+        """Update stake pool metadata.
+
+        * register pool
+        * update the pool metadata by resubmitting the pool registration certificate
+        * check that the pool metadata hash was correctly updated on chain
+        """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
@@ -763,7 +921,7 @@ class TestStakePool:
             pool_data=pool_data,
         )
 
-        # update the pool parameters by resubmitting the pool registration certificate
+        # update the pool metadata by resubmitting the pool registration certificate
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=pool_owners,
@@ -774,7 +932,7 @@ class TestStakePool:
         )
         cluster.wait_for_new_epoch()
 
-        # check that the pool parameters were correctly updated on chain
+        # check that the pool metadata hash was correctly updated on chain
         _check_pool(
             cluster_obj=cluster,
             stake_pool_id=pool_creation_out.stake_pool_id,
@@ -790,7 +948,12 @@ class TestStakePool:
         temp_dir: Path,
         no_of_addr: int,
     ):
-        """Update stake pool parameters."""
+        """Update stake pool parameters.
+
+        * register pool
+        * update the pool parameters by resubmitting the pool registration certificate
+        * check that the pool parameters were correctly updated on chain
+        """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
 
@@ -863,7 +1026,14 @@ class TestStakePool:
         cluster_manager: parallel_run.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ):
-        """Create and register a stake pool with TX signed in multiple stages."""
+        """Create and register a stake pool with TX signed in multiple stages.
+
+        * create stake pool registration cert
+        * create witness file for each signing key
+        * sign TX using witness files
+        * create and register pool
+        * check that the pool was correctly registered on chain
+        """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}"
 
@@ -934,7 +1104,7 @@ class TestStakePool:
             fee=fee,
         )
 
-        # create witness file for each key
+        # create witness file for each signing key
         witness_files = [
             cluster.witness_tx(
                 tx_body_file=tx_raw_output.out_file,
@@ -960,7 +1130,7 @@ class TestStakePool:
 
         cluster.wait_for_new_epoch()
 
-        # check that the pool parameters were correctly registered on chain
+        # check that the pool was correctly registered on chain
         stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
         _check_pool(
             cluster_obj=cluster,
@@ -968,9 +1138,103 @@ class TestStakePool:
             pool_data=pool_data,
         )
 
+    @allure.link(helpers.get_vcs_link())
+    def test_pool_registration_deregistration(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Send both pool registration and deregistration certificates in single TX.
+
+        * create pool registration cert
+        * create pool deregistration cert
+        * register and deregister stake pool in single TX
+        * check that the pool deposit was NOT returned to reward account as the reward address
+          is not registered (deposit is lost)
+        """
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{helpers.get_func_name()}_{rand_str}"
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=5,
+            pool_cost=3,
+            pool_margin=0.01,
+        )
+
+        # create pool owners
+        pool_owner = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            no_of_addr=1,
+        )[0]
+
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            pool_owner.payment,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=900_000_000,
+        )
+
+        src_init_balance = cluster.get_address_balance(pool_owner.payment.address)
+        src_init_reward = cluster.get_stake_addr_info(
+            pool_owner.stake.address
+        ).reward_account_balance
+
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        # create pool registration cert
+        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_owner.stake.vkey_file],
+        )
+
+        # create pool deregistration cert
+        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+            pool_name=pool_data.pool_name,
+            cold_vkey_file=node_cold.vkey_file,
+            epoch=cluster.get_last_block_epoch() + 1,
+        )
+
+        # register and deregister stake pool in single TX
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file, pool_dereg_cert_file],
+            signing_key_files=[
+                pool_owner.payment.skey_file,
+                pool_owner.stake.skey_file,
+                node_cold.skey_file,
+            ],
+        )
+        tx_raw_output = cluster.send_tx(
+            src_address=pool_owner.payment.address,
+            tx_name="conflicting_certs",
+            tx_files=tx_files,
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # check that the balance for source address was correctly updated
+        assert (
+            cluster.get_address_balance(pool_owner.payment.address)
+            == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
+        ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
+
+        # check that the pool deposit was NOT returned to reward account as the reward address
+        # is not registered (deposit is lost)
+        cluster.wait_for_new_epoch(3, padding_seconds=30)
+        assert (
+            cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
+            == src_init_reward
+        )
+
 
 @pytest.mark.run(order=1)
 class TestPoolCost:
+    """Tests for stake pool cost."""
+
     @pytest.fixture
     def pool_owners(
         self,
@@ -1013,7 +1277,10 @@ class TestPoolCost:
         pool_owners: List[clusterlib.PoolUser],
         pool_cost: int,
     ):
-        """Try to create and register a stake pool with pool cost lower than 'minPoolCost'."""
+        """Try to create and register a stake pool with pool cost lower than *minPoolCost*.
+
+        Expect failure. Property-based test.
+        """
         cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"test_stake_pool_low_cost_{rand_str}"
@@ -1047,7 +1314,7 @@ class TestPoolCost:
         pool_owners: List[clusterlib.PoolUser],
         pool_cost: int,
     ):
-        """Create and register a stake pool with pool cost >= 'minPoolCost'."""
+        """Create and register a stake pool with *pool cost* >= *minPoolCost*."""
         cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{helpers.get_func_name()}_{rand_str}_{pool_cost}"
@@ -1084,6 +1351,8 @@ class TestPoolCost:
 
 
 class TestNegative:
+    """Stake pool tests that are expected to fail."""
+
     @pytest.fixture
     def pool_users(
         self,
@@ -1123,6 +1392,32 @@ class TestNegative:
         )
         return pool_data
 
+    @pytest.fixture
+    def gen_pool_registration_cert_data(
+        self,
+        cluster: clusterlib.ClusterLib,
+        temp_dir: Path,
+    ) -> Tuple[str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair]:
+        pool_name = f"pool_{clusterlib.get_rand_str(4)}"
+
+        pool_metadata = {
+            "name": pool_name,
+            "description": "cardano-node-tests E2E tests",
+            "ticker": "IOG2",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+        }
+        pool_metadata_file = helpers.write_json(
+            temp_dir / "hypothesis_metadata_registration_metadata.json", pool_metadata
+        )
+        pool_metadata_hash = cluster.gen_pool_metadata_hash(pool_metadata_file)
+
+        # create node VRF key pair
+        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_name)
+        # create node cold key pair and counter
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_name)
+
+        return pool_name, pool_metadata_hash, node_vrf, node_cold
+
     @allure.link(helpers.get_vcs_link())
     def test_pool_registration_cert_wrong_vrf(
         self,
@@ -1130,7 +1425,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
-        """Generate pool registration certificate using wrong VRF key."""
+        """Try to generate pool registration certificate using wrong VRF key.
+
+        Expect failure.
+        """
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1150,7 +1448,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
-        """Generate pool registration certificate using wrong Cold key."""
+        """Try to generate pool registration certificate using wrong Cold vkey.
+
+        Expect failure.
+        """
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1170,7 +1471,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
-        """Generate pool registration certificate using wrong stake key."""
+        """Try to generate pool registration certificate using wrong stake vkey.
+
+        Expect failure.
+        """
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1190,7 +1494,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
-        """Register pool using transaction with missing Cold skey."""
+        """Try to register pool using transaction with missing Cold skey.
+
+        Expect failure.
+        """
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1205,7 +1512,7 @@ class TestNegative:
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
                 pool_users[0].payment.skey_file,
-                # missing node_cold.vkey_file
+                # missing node_cold.skey_file
             ],
         )
 
@@ -1224,7 +1531,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
-        """Register pool using transaction with missing payment skey."""
+        """Try to register pool using transaction with missing payment skey.
+
+        Expect failure.
+        """
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1239,7 +1549,7 @@ class TestNegative:
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
                 # missing payment skey file
-                node_cold.vkey_file,
+                node_cold.skey_file,
             ],
         )
 
@@ -1247,51 +1557,7 @@ class TestNegative:
             cluster.send_tx(
                 src_address=pool_users[0].payment.address, tx_name="missing_skey", tx_files=tx_files
             )
-        assert "Expected one of" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    def test_pool_registration_conflicting_certs(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        pool_data: clusterlib.PoolData,
-    ):
-        """Send both pool registration and deregistration certificates in single TX."""
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
-
-        pool_reg_cert_file = cluster.gen_pool_registration_cert(
-            pool_data=pool_data,
-            vrf_vkey_file=node_vrf.vkey_file,
-            cold_vkey_file=node_cold.vkey_file,
-            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
-        )
-
-        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
-            pool_name=pool_data.pool_name,
-            cold_vkey_file=node_cold.vkey_file,
-            epoch=cluster.get_last_block_epoch() + 1,
-        )
-
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[pool_reg_cert_file, pool_dereg_cert_file],
-            signing_key_files=[
-                pool_users[0].payment.vkey_file,
-                pool_users[0].payment.skey_file,
-                pool_users[0].stake.vkey_file,
-                pool_users[0].stake.skey_file,
-                node_cold.vkey_file,
-                node_cold.skey_file,
-            ],
-        )
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
-                src_address=pool_users[0].payment.address,
-                tx_name="conflicting_certs",
-                tx_files=tx_files,
-            )
-        assert "TextView type error" in str(excinfo.value)
+        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_pool_deregistration_not_registered(
@@ -1300,7 +1566,10 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
-        """Deregister pool that is not registered."""
+        """Try to deregister pool that is not registered.
+
+        Expect failure.
+        """
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
@@ -1328,7 +1597,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
-        """Test pool metadata that is missing the 'name' key."""
+        """Try to create pool metadata hash when missing the *name* key.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         pool_metadata = {
@@ -1350,7 +1622,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
-        """Test pool metadata that is missing the 'description' key."""
+        """Try to create pool metadata hash when missing the *description* key.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         pool_metadata = {
@@ -1372,7 +1647,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
-        """Test pool metadata that is missing the 'ticker' key."""
+        """Try to create pool metadata hash when missing the *ticker* key.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         pool_metadata = {
@@ -1394,7 +1672,10 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
-        """Test pool metadata that is missing the 'homepage' key."""
+        """Try to create pool metadata hash when missing the *homepage* key.
+
+        Expect failure.
+        """
         temp_template = helpers.get_func_name()
 
         pool_metadata = {
@@ -1419,7 +1700,10 @@ class TestNegative:
         temp_dir: Path,
         pool_name: str,
     ):
-        """Test pool metadata with the 'name' value longer than allowed."""
+        """Try to create pool metadata hash when the *name* value is longer than allowed.
+
+        Expect failure. Property-based test.
+        """
         temp_template = "test_stake_pool_metadata_long_name"
 
         pool_metadata = {
@@ -1449,7 +1733,10 @@ class TestNegative:
         temp_dir: Path,
         pool_description: str,
     ):
-        """Test pool metadata with the 'description' value longer than allowed."""
+        """Try to create pool metadata hash when the *description* value is longer than allowed.
+
+        Expect failure. Property-based test.
+        """
         temp_template = "test_stake_pool_metadata_long_description"
 
         pool_metadata = {
@@ -1479,7 +1766,10 @@ class TestNegative:
         temp_dir: Path,
         pool_ticker: str,
     ):
-        """Test pool metadata with the 'ticker' value longer than allowed."""
+        """Try to create pool metadata hash when the *ticker* value is longer than allowed.
+
+        Expect failure. Property-based test.
+        """
         hypothesis.assume(not (3 <= len(pool_ticker) <= 5))
 
         temp_template = "test_stake_pool_metadata_long_ticker"
@@ -1507,7 +1797,10 @@ class TestNegative:
         temp_dir: Path,
         pool_homepage: str,
     ):
-        """Test pool metadata with the 'homepage' value longer than allowed."""
+        """Try to create pool metadata hash when the *homepage* value is longer than allowed.
+
+        Expect failure. Property-based test.
+        """
         temp_template = "test_stake_pool_metadata_long_homepage"
 
         pool_metadata = {
@@ -1524,43 +1817,34 @@ class TestNegative:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert "Stake pool metadata must consist of at most 512 bytes" in str(excinfo.value)
 
+    @hypothesis.given(
+        metadata_url=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=25)
+    )
+    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_long_metadata_url(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        gen_pool_registration_cert_data: Tuple[
+            str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair
+        ],
+        metadata_url: str,
     ):
-        """Test pool creation with the 'metadata-url' longer than allowed."""
-        temp_template = helpers.get_func_name()
+        """Try to create pool registration cert when the *metadata-url* is longer than allowed.
 
-        pool_name = "cardano-node-tests"
-        pool_metadata = {
-            "name": pool_name,
-            "description": "cardano-node-tests E2E tests",
-            "ticker": "IOG2",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
-        }
-        pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
-        )
+        Expect failure. Property-based test.
+        """
+        pool_name, pool_metadata_hash, node_vrf, node_cold = gen_pool_registration_cert_data
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1000,
             pool_cost=15,
             pool_margin=0.2,
-            pool_metadata_url=(
-                "https://gist.githubusercontent.com/mkoura/328048d6164b9180633c2332653d0af8/raw/"
-                "6c25ce8ec489c7126d89be455dffb050995e09fc/cardano_node_tests_pool_metadata.json"
-            ),
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_url=(f"https://gist.githubusercontent.com/{metadata_url}.json"),
+            pool_metadata_hash=pool_metadata_hash,
         )
-
-        # create node VRF key pair
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        # create node cold key pair and counter
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         # create stake pool registration cert
         with pytest.raises(clusterlib.CLIError) as excinfo:

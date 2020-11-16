@@ -18,7 +18,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import UnpackableSequence
 
 CLUSTER_LOCK = ".cluster.lock"
-LOCK_LOG_FILE = ".lock.log"
+RUN_LOG_FILE = ".parallel.log"
 SESSION_RUNNING_FILE = ".session_running"
 TEST_SINGLETON_FILE = ".test_singleton"
 RESOURCE_LOCKED_GLOB = ".resource_locked"
@@ -64,11 +64,26 @@ class ClusterManager:
             self.range_num = 1
 
         self.cluster_lock = f"{self.lock_dir}/{CLUSTER_LOCK}"
-        self.lock_log = (self.lock_dir.parent / LOCK_LOG_FILE).resolve()
+        self.lock_log = self._init_log()
 
     @property
     def cache(self) -> ClusterManagerCache:
         return self.get_cache()
+
+    def _init_log(self) -> Path:
+        """Return path to run log file."""
+        env_log = os.environ.get("SCHEDULING_LOG")
+        if env_log:
+            run_log = Path(env_log).expanduser()
+            if not run_log.is_absolute():
+                # the path is relative to LAUNCH_PATH (current path can differ)
+                run_log = helpers.LAUNCH_PATH / run_log
+            # create the log file if it doesn't exist
+            open(run_log, "a").close()
+        else:
+            run_log = self.lock_dir / RUN_LOG_FILE
+
+        return run_log.resolve()
 
     def _log(self, msg: str) -> None:
         """Log message - needs to be called while having lock."""
@@ -93,17 +108,23 @@ class ClusterManager:
             return True
         return False
 
-    def _save_cluster_data(self) -> None:
-        """Save cluster artifacts generated during running the tests."""
-        self._log("called `_save_cluster_data`")
+    def _save_cluster_artifacts(self) -> None:
+        """Save cluster artifacts (logs, certs, etc.) to pytest temp dir."""
+        self._log("called `_save_cluster_artifacts`")
         cluster_obj = self.cache.cluster_obj
         if not cluster_obj:
             return
 
-        # save CLI coverage
-        clusterlib_utils.save_cli_coverage(cluster_obj, self.request)
-        # save artifacts
         devops_cluster.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir)
+
+    def save_cli_coverage(self) -> None:
+        """Save CLI coverage info collected by this `cluster_obj` instance."""
+        self._log("called `save_cli_coverage`")
+        cluster_obj = self.cache.cluster_obj
+        if not cluster_obj:
+            return
+
+        clusterlib_utils.save_cli_coverage(cluster_obj, self.request)
 
     def _restart(self, start_cmd: str = "") -> clusterlib.ClusterLib:
         """Restart cluster."""
@@ -137,7 +158,7 @@ class ClusterManager:
         """Stop cluster."""
         self._log("called `stop`")
         devops_cluster.stop_cluster()
-        self._save_cluster_data()
+        self._save_cluster_artifacts()
 
     def set_needs_restart(self) -> None:
         """Indicate that the cluster needs restart."""
@@ -146,7 +167,7 @@ class ClusterManager:
             open(self.lock_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
 
     @contextlib.contextmanager
-    def needs_restart_after_failure(self) -> Generator:
+    def restart_on_failure(self) -> Generator:
         """Indicate that the cluster needs restart if command failed - context manager."""
         try:
             yield
@@ -386,8 +407,7 @@ class ClusterManager:
                         continue
                     self._log("calling restart")
                     restart_here = False
-                    cluster_obj = self._restart(start_cmd=start_cmd)
-                    self.cache.cluster_obj = cluster_obj
+                    self._restart(start_cmd=start_cmd)
 
                 # from this point on, all conditions needed to start the test are met
 
@@ -440,6 +460,9 @@ class ClusterManager:
                 # must be lock-protected because `load_addrs_data` is reading file from disk
                 addrs_data_checksum = helpers.checksum(state_dir / devops_cluster.ADDR_DATA)
                 if addrs_data_checksum != self.cache.last_checksum:
+                    # save CLI coverage collected by the old `cluster_obj` instance
+                    self.save_cli_coverage()
+                    # replace the old `cluster_obj` instance and reload data
                     self.cache.cluster_obj = clusterlib.ClusterLib(state_dir)
                     self.cache.test_data = {}
                     self.cache.addrs_data = devops_cluster.load_addrs_data()

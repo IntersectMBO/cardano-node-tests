@@ -1,3 +1,4 @@
+"""Tests for update proposal."""
 import logging
 from pathlib import Path
 
@@ -30,12 +31,15 @@ def cluster_update_proposal(cluster_manager: parallel_run.ClusterManager) -> clu
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-@allure.link(helpers.get_vcs_link())
-def test_update_proposal(cluster_update_proposal: clusterlib.ClusterLib):
-    """Submit update proposal."""
-    clusterlib_utils.update_params(
-        cluster_obj=cluster_update_proposal,
-        cli_arg="--decentralization-parameter",
-        param_name="decentralisationParam",
-        param_value=0.5,
-    )
+class TestBasic:
+    """Basic tests for update proposal."""
+
+    @allure.link(helpers.get_vcs_link())
+    def test_update_proposal(self, cluster_update_proposal: clusterlib.ClusterLib):
+        """Test changing *decentralisationParam* using update proposal ."""
+        clusterlib_utils.update_params(
+            cluster_obj=cluster_update_proposal,
+            cli_arg="--decentralization-parameter",
+            param_name="decentralisationParam",
+            param_value=0.5,
+        )

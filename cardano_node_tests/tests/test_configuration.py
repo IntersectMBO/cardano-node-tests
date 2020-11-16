@@ -1,3 +1,4 @@
+"""Tests for node configuration."""
 import json
 import logging
 import time
@@ -25,7 +26,7 @@ def temp_dir(tmp_path_factory: TempdirFactory):
 
 @pytest.fixture(scope="module")
 def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
-    """Update "epochLength" to 1200."""
+    """Update *epochLength* to 1200."""
     pytest_globaltemp = helpers.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
@@ -51,7 +52,7 @@ def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
 @pytest.fixture(scope="module")
 def slot_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
-    """Update "slotLength" to 0.3."""
+    """Update *slotLength* to 0.3."""
     pytest_globaltemp = helpers.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
@@ -106,21 +107,23 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
     assert epoch_no + 1 == cluster_obj.get_last_block_epoch()
 
 
-@allure.link(helpers.get_vcs_link())
-def test_epoch_length(cluster_epoch_length: clusterlib.ClusterLib):
-    """Test the "epochLength" configuration."""
-    cluster = cluster_epoch_length
+class TestBasic:
+    """Basic tests for node configuration."""
 
-    assert cluster.slot_length == 0.2
-    assert cluster.epoch_length == 1200
-    check_epoch_length(cluster)
+    @allure.link(helpers.get_vcs_link())
+    def test_epoch_length(self, cluster_epoch_length: clusterlib.ClusterLib):
+        """Test the *epochLength* configuration."""
+        cluster = cluster_epoch_length
 
+        assert cluster.slot_length == 0.2
+        assert cluster.epoch_length == 1200
+        check_epoch_length(cluster)
 
-@allure.link(helpers.get_vcs_link())
-def test_slot_length(cluster_slot_length: clusterlib.ClusterLib):
-    """Test the "slotLength" configuration."""
-    cluster = cluster_slot_length
+    @allure.link(helpers.get_vcs_link())
+    def test_slot_length(self, cluster_slot_length: clusterlib.ClusterLib):
+        """Test the *slotLength* configuration."""
+        cluster = cluster_slot_length
 
-    assert cluster.slot_length == 0.3
-    assert cluster.epoch_length == 1000
-    check_epoch_length(cluster)
+        assert cluster.slot_length == 0.3
+        assert cluster.epoch_length == 1000
+        check_epoch_length(cluster)

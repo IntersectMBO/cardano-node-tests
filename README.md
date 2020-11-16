@@ -1,5 +1,5 @@
-cardano-node-tests
-==================
+README for cardano-node-tests
+=============================
 
 Integration tests for cardano-node.
 
@@ -52,20 +52,42 @@ Test coverage of cardano-cli commands
 To get test coverage of cardano-cli commands, run tests as usual (`make tests`) and generate the coverage report JSON file with
 
 ```
-./cli_coverage.py -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
+$ ./cli_coverage.py -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
 ```
 
 
 Publishing testing results
 --------------------------
 
-1. install the `allure` command line tool - https://docs.qameta.io/allure/#_installing_a_commandline
-1. run tests (`make tests`)
-1. checkout the "test_reports" branch (`git checkout test_reports`)
-1. publish the results to https://input-output-hk.github.io/cardano-node-tests
+Clone https://github.com/mkoura/cardano-node-tests-reports and see its [README](https://github.com/mkoura/cardano-node-tests-reports/blob/main/README.md).
+
+
+Building documentation
+----------------------
+
+To build documentation using Sphinx, run
+
 ```
-$ ./publi.sh .reports/
+$ make doc
 ```
+
+The documentation is generated to `docs/build/html`.
+
+To publish documentation to https://input-output-hk.github.io/cardano-node-tests/, run:
+
+```sh
+# checkout the "test_reports" branch
+$ git checkout test_reports
+# copy/move content of docs/build/html to docs
+$ mv docs/build/html/* docs/
+# stage changes
+$ git add docs
+# commit changes
+$ git commit
+# push to origin/test_reports (upstream/test_reports)
+$ git push origin/test_reports
+```
+
 
 
 Contributing

@@ -24,7 +24,12 @@ LOGGER = logging.getLogger(__name__)
 ADDR_DATA = "addr_data.pickle"
 
 ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
-ERRORS_IGNORED_RE = re.compile("failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace")
+# TODO: proper error ignoring for expected errors
+ERRORS_IGNORED_RE = re.compile(
+    "failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace"
+    "|Could not obtain ledger view for slot|WrapForgeStateUpdateError|InvalidKesSignatureOCERT"
+    "|TPraosCannotForgeKeyNotUsableYet"
+)
 
 
 class StartupFiles(NamedTuple):
@@ -70,45 +75,65 @@ def stop_cluster() -> None:
         LOGGER.debug(f"Failed to stop cluster: {exc}")
 
 
+def restart_node(node_name: str) -> None:
+    """Restart single node of the running cluster."""
+    LOGGER.info(f"Restarting cluster node `{node_name}`.")
+    cluster_env = get_cluster_env()
+    try:
+        helpers.run_command(f"supervisorctl restart {node_name}", workdir=cluster_env["work_dir"])
+    except Exception as exc:
+        LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
+
+
 def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Load data for pools existing in the devops environment."""
     data_dir = get_cluster_env()["state_dir"] / "nodes"
     pools = ("node-pool1", "node-pool2")
 
-    addrs_data = {}
-    for addr_name in pools:
-        addr_data_dir = data_dir / addr_name
-        addrs_data[addr_name] = {
+    pools_data = {}
+    for pool_name in pools:
+        pool_data_dir = data_dir / pool_name
+        pools_data[pool_name] = {
             "payment": clusterlib.AddressRecord(
-                address=helpers.read_address_from_file(addr_data_dir / "owner.addr"),
-                vkey_file=addr_data_dir / "owner-utxo.vkey",
-                skey_file=addr_data_dir / "owner-utxo.skey",
+                address=cluster_obj.read_address_from_file(pool_data_dir / "owner.addr"),
+                vkey_file=pool_data_dir / "owner-utxo.vkey",
+                skey_file=pool_data_dir / "owner-utxo.skey",
             ),
             "stake": clusterlib.AddressRecord(
-                address=helpers.read_address_from_file(addr_data_dir / "owner-stake.addr"),
-                vkey_file=addr_data_dir / "owner-stake.vkey",
-                skey_file=addr_data_dir / "owner-stake.skey",
+                address=cluster_obj.read_address_from_file(pool_data_dir / "owner-stake.addr"),
+                vkey_file=pool_data_dir / "owner-stake.vkey",
+                skey_file=pool_data_dir / "owner-stake.skey",
             ),
             "reward": clusterlib.AddressRecord(
-                address=cluster_obj.gen_stake_addr(stake_vkey_file=addr_data_dir / "reward.vkey"),
-                vkey_file=addr_data_dir / "reward.vkey",
-                skey_file=addr_data_dir / "reward.skey",
+                address=cluster_obj.gen_stake_addr(
+                    addr_name="reward",
+                    stake_vkey_file=pool_data_dir / "reward.vkey",
+                    destination_dir=pool_data_dir,
+                ),
+                vkey_file=pool_data_dir / "reward.vkey",
+                skey_file=pool_data_dir / "reward.skey",
             ),
-            "stake_addr_registration_cert": addr_data_dir / "stake.reg.cert",
-            "stake_addr_delegation_cert": addr_data_dir / "owner-stake.deleg.cert",
-            "reward_addr_registration_cert": addr_data_dir / "stake-reward.reg.cert",
+            "stake_addr_registration_cert": pool_data_dir / "stake.reg.cert",
+            "stake_addr_delegation_cert": pool_data_dir / "owner-stake.deleg.cert",
+            "reward_addr_registration_cert": pool_data_dir / "stake-reward.reg.cert",
+            "pool_registration_cert": pool_data_dir / "register.cert",
+            "pool_operational_cert": pool_data_dir / "op.cert",
             "cold_key_pair": clusterlib.ColdKeyPair(
-                vkey_file=addr_data_dir / "cold.vkey",
-                skey_file=addr_data_dir / "cold.skey",
-                counter_file=addr_data_dir / "cold.counter",
+                vkey_file=pool_data_dir / "cold.vkey",
+                skey_file=pool_data_dir / "cold.skey",
+                counter_file=pool_data_dir / "cold.counter",
             ),
             "vrf_key_pair": clusterlib.KeyPair(
-                vkey_file=addr_data_dir / "vrf.vkey",
-                skey_file=addr_data_dir / "vrf.skey",
+                vkey_file=pool_data_dir / "vrf.vkey",
+                skey_file=pool_data_dir / "vrf.skey",
+            ),
+            "kes_key_pair": clusterlib.KeyPair(
+                vkey_file=pool_data_dir / "kes.vkey",
+                skey_file=pool_data_dir / "kes.skey",
             ),
         }
 
-    return addrs_data
+    return pools_data
 
 
 def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".") -> Path:
@@ -210,8 +235,8 @@ def load_addrs_data() -> dict:
         return pickle.load(in_data)  # type: ignore
 
 
-def save_tests_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
-    """Save tests artifacts."""
+def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
+    """Save collected tests and cluster artifacts."""
     pytest_tmp_dir = pytest_tmp_dir.resolve()
     if not pytest_tmp_dir.is_dir():
         return None
@@ -221,7 +246,7 @@ def save_tests_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[
         shutil.rmtree(dest_dir)
     shutil.copytree(pytest_tmp_dir, dest_dir, symlinks=True, ignore_dangling_symlinks=True)
 
-    LOGGER.info(f"Tests artifacts saved to '{artifacts_dir}'.")
+    LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
     return dest_dir
 
 
@@ -275,7 +300,7 @@ def process_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
     artifacts_dir = None
 
     if artifacts_base_dir:
-        artifacts_dir = save_tests_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))
+        artifacts_dir = save_collected_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))
     if not artifacts_dir:
         artifacts_dir = pytest_tmp_dir
 
