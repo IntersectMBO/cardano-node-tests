@@ -99,6 +99,9 @@ def get_basetemp() -> Path:
     return tempdir
 
 
+TEST_TEMP_DIR = get_basetemp()
+
+
 def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
     """Return global temporary directory for a single pytest run."""
     pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())

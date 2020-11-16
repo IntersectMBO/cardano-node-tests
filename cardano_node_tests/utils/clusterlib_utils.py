@@ -15,8 +15,6 @@ from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
-TEST_TEMP_DIR = helpers.get_basetemp()
-
 
 def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
     """Return random string prefixed with timestamp.
@@ -114,7 +112,7 @@ def fund_from_genesis(
     if not fund_dst:
         return
 
-    with helpers.FileLockIfXdist(f"{TEST_TEMP_DIR}/{cluster_obj.genesis_utxo_addr}.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{cluster_obj.genesis_utxo_addr}.lock"):
         tx_name = tx_name or get_timestamped_rand_str()
         tx_name = f"{tx_name}_genesis_funding"
         fund_tx_files = clusterlib.TxFiles(
@@ -145,7 +143,7 @@ def return_funds_to_faucet(
     """
     tx_name = tx_name or get_timestamped_rand_str()
     tx_name = f"{tx_name}_return_funds"
-    with helpers.FileLockIfXdist(f"{TEST_TEMP_DIR}/{faucet_addr}.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{faucet_addr}.lock"):
         try:
             logging.disable(logging.ERROR)
             for src in src_addrs:
@@ -203,7 +201,7 @@ def fund_from_faucet(
         )
 
     src_address = faucet_data["payment"].address
-    with helpers.FileLockIfXdist(f"{TEST_TEMP_DIR}/{src_address}.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{src_address}.lock"):
         tx_name = tx_name or get_timestamped_rand_str()
         tx_name = f"{tx_name}_funding"
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])
@@ -393,7 +391,7 @@ def update_params(
     cluster_obj: clusterlib.ClusterLib, cli_arg: str, param_name: str, param_value: Any
 ) -> None:
     """Update params using update proposal."""
-    with helpers.FileLockIfXdist(f"{TEST_TEMP_DIR}/update_params.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/update_params.lock"):
         if str(cluster_obj.get_protocol_params()[param_name]) == str(param_value):
             LOGGER.info(f"Value for '{param_name}' is already {param_value}. Nothing to do.")
             return
