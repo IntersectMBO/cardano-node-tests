@@ -33,8 +33,8 @@ class RotableLog(NamedTuple):
 def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> List[RotableLog]:
     """Return list of versions of the log file (list of `RotableLog`).
 
-    When the seek position was recorded for a log file and the log file was rotated,
-    the seek position now belongs to the rotated file and the "live" log file has seek position 0.
+    When the seek offset was recorded for a log file and the log file was rotated,
+    the seek offset now belongs to the rotated file and the "live" log file has seek offset 0.
     """
     # get logfile including rotated versions
     logfiles = list(logfile.parent.glob(f"{logfile.name}*"))
@@ -86,8 +86,8 @@ def expect_errors(regex_pair: List[Tuple[str, str]]) -> Generator:
     _expanded_paths = [list(state_dir.glob(glob_item)) for glob_item in glob_list]
     # flatten the list
     expanded_paths = list(itertools.chain.from_iterable(_expanded_paths))
-    # record each end-of-file as a starting position for searching the log file
-    seek_positions = {str(p): helpers.get_last_line_position(p) for p in expanded_paths}
+    # record each end-of-file as a starting offset for searching the log file
+    seek_offsets = {str(p): helpers.get_eof_offset(p) for p in expanded_paths}
 
     timestamp = time.time()
 
@@ -95,15 +95,15 @@ def expect_errors(regex_pair: List[Tuple[str, str]]) -> Generator:
 
     for files_glob, regex in regex_pair:
         regex_comp = re.compile(regex)
-        # get list of records (file names and positions) for given glob
-        matching_files = fnmatch.filter(seek_positions, f"{state_dir}/{files_glob}")
+        # get list of records (file names and offsets) for given glob
+        matching_files = fnmatch.filter(seek_offsets, f"{state_dir}/{files_glob}")
         for logfile in matching_files:
             # skip if the log file is rotated log, it will be handled by `get_rotated_logs`
             if ROTATED_RE.match(logfile):
                 continue
 
             # search for the expected error
-            seek = seek_positions.get(logfile) or 0
+            seek = seek_offsets.get(logfile) or 0
             line_found = False
             for logfile_rec in get_rotated_logs(
                 logfile=Path(logfile), seek=seek, timestamp=timestamp
@@ -164,14 +164,14 @@ def search_cluster_artifacts() -> List[Tuple[Path, str]]:
     errors = []
     for logfile in state_dir.glob("*.std*"):
         # skip if the log file is status file or rotated log
-        if logfile.name.endswith(".lastpos") or ROTATED_RE.match(logfile.name):
+        if logfile.name.endswith(".offset") or ROTATED_RE.match(logfile.name):
             continue
 
-        # read seek position (from where to start searching) and timestamp of last search
-        lastpos_file = logfile.parent / f".{logfile.name}.lastpos"
-        if lastpos_file.exists():
-            seek = _get_seek(lastpos_file)
-            timestamp = os.path.getmtime(lastpos_file)
+        # read seek offset (from where to start searching) and timestamp of last search
+        offset_file = logfile.parent / f".{logfile.name}.offset"
+        if offset_file.exists():
+            seek = _get_seek(offset_file)
+            timestamp = os.path.getmtime(offset_file)
         else:
             seek = 0
             timestamp = 0.0
@@ -180,20 +180,16 @@ def search_cluster_artifacts() -> List[Tuple[Path, str]]:
             get_ignore_regex(ignore_rules=ignore_rules, regexes=ERRORS_IGNORED, logfile=logfile)
         )
 
-        cur_position = 0
+        # record offset for the "live" log file
+        with open(offset_file, "w") as outfile:
+            outfile.write(str(helpers.get_eof_offset(logfile)))
+
         for logfile_rec in get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp):
             with open(logfile_rec.logfile) as infile:
                 infile.seek(seek)
                 for line in infile:
                     if ERRORS_RE.search(line) and not errors_ignored_re.search(line):
                         errors.append((logfile, line))
-                # record position only for the "live" log file, rotated versions are just archives
-                if logfile_rec.logfile == logfile:
-                    cur_position = infile.tell()
-
-        if cur_position:
-            with open(lastpos_file, "w") as outfile:
-                outfile.write(str(cur_position))
 
     return errors
 

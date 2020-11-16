@@ -242,7 +242,7 @@ def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str
         out_fp.write(replaced_content)
 
 
-def get_last_line_position(infile: Path) -> int:
+def get_eof_offset(infile: Path) -> int:
     """Return position of the current end of the file."""
     with open(infile, "rb") as in_fp:
         in_fp.seek(0, io.SEEK_END)
