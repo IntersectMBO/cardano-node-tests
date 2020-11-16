@@ -1,18 +1,76 @@
-name: sync tests
+name: sync tests from clean and existing state
 
-on: [push]
+on:
+  workflow_dispatch:
+    inputs:
+      tag_no1:
+        description: tag number1 - used for initial sync, from clean state
+        required: true
+      tag_no2:
+        description: tag number2 - used for final sync, from existing state
+        required: false
+        default: "None"
 
 jobs:
-  sync_mainnet:
-    runs-on: ${{ matrix.os }}
+  sync_test:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        env: [testnet, staging, mainnet]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: checkout github repo
+      - name: checkout cardano-node-tests repo
         uses: actions/checkout@v2
         with:
-          ref: 'dorin/sync_tests'
-      - name: sync test
-        run: ./sync_tests/sync_test_mainnet.sh
-        shell: bash
+          path: cardano-node-tests
+      - name: checkout cardano-node repo
+        uses: actions/checkout@v2
+        with:
+          repository: input-output-hk/cardano-node
+          path: cardano-node
+      - name: print test details
+        run: |
+          echo "tag_no1: ${{ github.event.inputs.tag_no1 }}"
+          echo "tag_no2: ${{ github.event.inputs.tag_no2 }}"
+      - name: cardano-node - fetch all tags
+        run: |
+          cd cardano-node
+          git checkout master
+          git fetch --all --tags
+      - name: run actions/setup-python@v2
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          pip install requests
+          pip install psutil
+          pip install sqlite-utils>=2.18
+          sqlite-utils --version
+      - name: run sync test
+        run: |
+          cd cardano-node-tests
+          cd ..
+          python cardano-node-tests/sync_tests/sync_test.py -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -e ${{ matrix.env }}
+      - name: commit and push DB changes for the sync test
+        run: |
+          cd cardano-node-tests
+          git config --global user.name "dorin100"
+          git config --global user.email "dorin.solomon@iohk.io"
+          git config pull.rebase true
+          git pull origin master
+
+          python sync_tests/write_values_to_db.py -e ${{ matrix.env }}
+
+          git add sync_tests/sync_results.db
+          git commit -m "added sync values for tag ${{ github.event.inputs.tag_no1 }} ${{ github.event.inputs.tag_no2 }} - ${{ matrix.env }} - ${{ matrix.os }}"
+          git push origin master
+      - name: generate artifacts
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: node_logs_${{ matrix.env }}_${{ matrix.os }}
+          path: cardano-node-tests/logfile.log
+
+
