@@ -95,7 +95,9 @@ def wait_for_node_to_start():
         count += 1
         tip = get_current_tip(True)
         if count >= 540:  # 90 mins
-            print(" **************  ERROR: waited 90 mins and CLI is still not usable ************** ")
+            print(
+                " **************  ERROR: waited 90 mins and CLI is still not usable ************** "
+            )
             print(f"      TIP: {get_current_tip()}")
             exit(1)
     print(f"************** CLI became available after: {count * 10} seconds **************")
@@ -160,13 +162,13 @@ def start_node_windows(env):
 
     try:
         subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.PIPE)
-        print(f"waiting for db folder to be created")
+        print("waiting for db folder to be created")
         count = 0
         while not os.path.isdir(current_directory / "db"):
             time.sleep(3)
             count += 1
             if count > 9:
-                print(f"ERROR: waited 30 seconds and the DB folder was not created yet")
+                print("ERROR: waited 30 seconds and the DB folder was not created yet")
                 exit(1)
 
         secs_to_start = wait_for_node_to_start()
@@ -195,13 +197,13 @@ def start_node_unix(env):
 
     try:
         subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=subprocess.PIPE)
-        print(f"waiting for db folder to be created")
+        print("waiting for db folder to be created")
         count = 0
         while not os.path.isdir(current_directory / "db"):
             time.sleep(3)
             count += 1
             if count > 10:
-                print(f"ERROR: waited 30 seconds and the DB folder was not created yet")
+                print("ERROR: waited 30 seconds and the DB folder was not created yet")
                 break
 
         secs_to_start = wait_for_node_to_start()
@@ -523,7 +525,7 @@ def main():
     elif "windows" in platform_system.lower():
         secs_to_start1 = start_node_windows(env)
 
-    print(f" - waiting for the node to sync")
+    print(" - waiting for the node to sync")
     (
         newest_chunk1,
         byron_sync_time_seconds1,
@@ -573,7 +575,7 @@ def main():
         stop_node()
 
         print(
-            f"   ============================== Delete the previous node files ================================="
+            "   ============================== Delete the previous node files ================================="
         )
         delete_node_files()
 
@@ -638,7 +640,7 @@ def main():
         total_chunks2 = int(newest_chunk1.split(".")[0])
         print(f"downloaded chunks2: {total_chunks2}")
 
-    print(f"move to 'cardano_node_tests_path/scripts'")
+    print("move to 'cardano_node_tests_path/scripts'")
     os.chdir(Path(CARDANO_NODE_TESTS_PATH) / "sync_tests")
     current_directory = Path.cwd()
     print(f" - sync_tests listdir: {os.listdir(current_directory)}")
