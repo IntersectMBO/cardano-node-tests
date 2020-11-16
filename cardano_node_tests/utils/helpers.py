@@ -2,6 +2,7 @@ import argparse
 import contextlib
 import hashlib
 import inspect
+import io
 import json
 import logging
 import os
@@ -239,3 +240,11 @@ def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str
 
     with open(outfile, "wt") as out_fp:
         out_fp.write(replaced_content)
+
+
+def get_last_line_position(infile: Path) -> int:
+    """Return position of the current end of the file."""
+    with open(infile, "rb") as in_fp:
+        in_fp.seek(0, io.SEEK_END)
+        last_line_pos = in_fp.tell()
+    return last_line_pos
