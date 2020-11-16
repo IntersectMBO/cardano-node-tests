@@ -16,29 +16,29 @@ from psutil import process_iter
 
 NODE = "./cardano-node"
 CLI = "./cardano-cli"
-root_test_path = ""
-cardano_node_path = ""
-cardano_node_tests_path = ""
+ROOT_TEST_PATH = ""
+CARDANO_NODE_PATH = ""
+CARDANO_NODE_TESTS_PATH = ""
 
 
 def set_repo_paths():
-    global cardano_node_path
-    global cardano_node_tests_path
-    global root_test_path
+    global CARDANO_NODE_PATH
+    global CARDANO_NODE_TESTS_PATH
+    global ROOT_TEST_PATH
 
-    root_test_path = Path.cwd()
+    ROOT_TEST_PATH = Path.cwd()
 
     os.chdir("cardano-node")
-    cardano_node_path = Path.cwd()
+    CARDANO_NODE_PATH = Path.cwd()
 
     os.chdir("..")
     os.chdir("cardano-node-tests")
-    cardano_node_tests_path = Path.cwd()
+    CARDANO_NODE_TESTS_PATH = Path.cwd()
     os.chdir("..")
 
 
 def git_get_last_pr_from_tag(tag_no):
-    os.chdir(Path(cardano_node_path))
+    os.chdir(Path(CARDANO_NODE_PATH))
     cmd = (
         "git log --merges --pretty=format:%s "
         + tag_no
@@ -50,7 +50,7 @@ def git_get_last_pr_from_tag(tag_no):
             .decode("utf-8")
             .strip()
         )
-        os.chdir(root_test_path)
+        os.chdir(ROOT_TEST_PATH)
         return str(output)
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
@@ -64,7 +64,7 @@ def set_node_socket_path_env_var():
     if "windows" in platform.system().lower():
         socket_path = "\\\\.\\pipe\\cardano-node"
     else:
-        socket_path = (Path(cardano_node_tests_path) / "db" / "node.socket").expanduser().absolute()
+        socket_path = (Path(CARDANO_NODE_TESTS_PATH) / "db" / "node.socket").expanduser().absolute()
 
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
 
@@ -95,9 +95,7 @@ def wait_for_node_to_start():
         count += 1
         tip = get_current_tip(True)
         if count >= 540:  # 90 mins
-            print(
-                f" **************  ERROR: waited 90 mins and CLI is still not usable ************** "
-            )
+            print(" **************  ERROR: waited 90 mins and CLI is still not usable ************** ")
             print(f"      TIP: {get_current_tip()}")
             exit(1)
     print(f"************** CLI became available after: {count * 10} seconds **************")
@@ -105,7 +103,7 @@ def wait_for_node_to_start():
 
 
 def get_current_tip(wait=False):
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     try:
         cmd = CLI + " shelley query tip " + get_testnet_value()
         output = (
@@ -127,7 +125,7 @@ def get_current_tip(wait=False):
 
 
 def get_node_version():
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     try:
         cmd = CLI + " --version"
         output = (
@@ -147,7 +145,7 @@ def get_node_version():
 
 
 def start_node_windows(env):
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = Path.cwd()
     cmd = (
         NODE
@@ -161,7 +159,7 @@ def start_node_windows(env):
     print(f"cmd: {cmd}")
 
     try:
-        p = subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.PIPE)
+        subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.PIPE)
         print(f"waiting for db folder to be created")
         count = 0
         while not os.path.isdir(current_directory / "db"):
@@ -185,10 +183,10 @@ def start_node_windows(env):
 
 
 def start_node_unix(env):
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = Path.cwd()
     cmd = (
-        f"{NODE} run --topology {env}-topology.json --database-path {Path(cardano_node_tests_path) / 'db'} "
+        f"{NODE} run --topology {env}-topology.json --database-path {Path(CARDANO_NODE_TESTS_PATH) / 'db'} "
         f"--host-addr 0.0.0.0 --port 3000 --config {env}-config.json --socket-path ./db/node.socket"
     )
 
@@ -246,7 +244,7 @@ def get_file_creation_date(path_to_file):
 
 
 def get_and_extract_linux_files(tag_no):
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = os.getcwd()
     print(f" - current_directory: {current_directory}")
 
@@ -270,7 +268,7 @@ def get_and_extract_linux_files(tag_no):
 
 
 def get_and_extract_macos_files(tag_no):
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = os.getcwd()
     print(f" - current_directory: {current_directory}")
 
@@ -294,7 +292,7 @@ def get_and_extract_macos_files(tag_no):
 
 
 def get_and_extract_windows_files(tag_no):
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = os.getcwd()
     print(f" - current_directory: {current_directory}")
 
@@ -319,7 +317,7 @@ def get_and_extract_windows_files(tag_no):
 
 def get_and_extract_node_files(tag_no):
     print(" - get and extract the pre-built node files")
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     platform_system, platform_release, platform_version = get_os_type()
     if "linux" in platform_system.lower():
         get_and_extract_linux_files(tag_no)
@@ -330,14 +328,14 @@ def get_and_extract_node_files(tag_no):
 
 
 def delete_node_files():
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     for p in Path(".").glob("cardano-*"):
         print(f" === deleting file: {p}")
         p.unlink(missing_ok=True)
 
 
 def get_node_config_files(env):
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
@@ -418,10 +416,10 @@ def wait_for_node_to_sync(env):
     }
     sync_details_dict[count] = value_dict
 
-    os.chdir(Path(cardano_node_tests_path) / "db" / "immutable")
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH) / "db" / "immutable")
     chunk_files = sorted(os.listdir(os.getcwd()), key=os.path.getmtime)
     newest_chunk = chunk_files[-1]
-    os.chdir(Path(cardano_node_tests_path))
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     print(f"Sync done!; newest_chunk: {newest_chunk}")
     return newest_chunk, byron_sync_time_seconds, shelley_sync_time_seconds, sync_details_dict
 
@@ -466,9 +464,9 @@ def main():
     secs_to_start1, secs_to_start2 = 0, 0
 
     set_repo_paths()
-    print(f"root_test_path          : {root_test_path}")
-    print(f"cardano_node_path       : {cardano_node_path}")
-    print(f"cardano_node_tests_path : {cardano_node_tests_path}")
+    print(f"root_test_path          : {ROOT_TEST_PATH}")
+    print(f"cardano_node_path       : {CARDANO_NODE_PATH}")
+    print(f"cardano_node_tests_path : {CARDANO_NODE_TESTS_PATH}")
 
     env = vars(args)["environment"]
     print(f"env: {env}")
@@ -494,8 +492,8 @@ def main():
         NODE = "cardano-node.exe"
         CLI = "cardano-cli.exe"
 
-    print(f"move to 'cardano_node_tests_path'")
-    os.chdir(Path(cardano_node_tests_path))
+    print("move to 'CARDANO_NODE_TESTS_PATH'")
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
 
     print("get the required node files")
     get_node_config_files(env)
@@ -641,7 +639,7 @@ def main():
         print(f"downloaded chunks2: {total_chunks2}")
 
     print(f"move to 'cardano_node_tests_path/scripts'")
-    os.chdir(Path(cardano_node_tests_path) / "sync_tests")
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH) / "sync_tests")
     current_directory = Path.cwd()
     print(f" - sync_tests listdir: {os.listdir(current_directory)}")
 
