@@ -14,6 +14,7 @@ from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import devops_cluster
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
@@ -85,14 +86,19 @@ class TestKES:
             cluster.slots_per_kes_period * cluster.slot_length * cluster.max_kes_evolutions + 1
         )
 
-        LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
-        time.sleep(expire_timeout)
+        expected_errors = [
+            ("pool*.stdout", "Could not obtain ledger view for slot"),
+            ("bft*.stdout", "Could not obtain ledger view for slot"),
+        ]
+        with logfiles.expect_errors(expected_errors):
+            LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
+            time.sleep(expire_timeout)
 
-        init_slot = cluster.get_last_block_slot_no()
+            init_slot = cluster.get_last_block_slot_no()
 
-        kes_period_timeout = int(cluster.slots_per_kes_period * cluster.slot_length + 1)
-        LOGGER.info(f"Waiting for {kes_period_timeout} sec for next KES period.")
-        time.sleep(kes_period_timeout)
+            kes_period_timeout = int(cluster.slots_per_kes_period * cluster.slot_length + 1)
+            LOGGER.info(f"Waiting for {kes_period_timeout} sec for next KES period.")
+            time.sleep(kes_period_timeout)
 
         assert cluster.get_last_block_slot_no() == init_slot, "Unexpected new slots"
 
@@ -137,32 +143,36 @@ class TestKES:
                 kes_period=cluster.get_last_block_kes_period() - 1,
             )
 
-            # restart the node with the new operational certificate
-            shutil.copy(new_opcert_file, opcert_file)
-            devops_cluster.restart_node(node_name)
+            expected_errors = [
+                (f"{node_name}.stdout", "TPraosCannotForgeKeyNotUsableYet"),
+            ]
+            with logfiles.expect_errors(expected_errors):
+                # restart the node with the new operational certificate
+                shutil.copy(new_opcert_file, opcert_file)
+                devops_cluster.restart_node(node_name)
 
-            LOGGER.info("Checking blocks production for 3 epochs.")
-            this_epoch = -1
-            for __ in range(3):
-                # wait for next epoch
-                if cluster.get_last_block_epoch() == this_epoch:
-                    cluster.wait_for_new_epoch()
+                LOGGER.info("Checking blocks production for 3 epochs.")
+                this_epoch = -1
+                for __ in range(3):
+                    # wait for next epoch
+                    if cluster.get_last_block_epoch() == this_epoch:
+                        cluster.wait_for_new_epoch()
 
-                # wait for the end of the epoch
-                time.sleep(clusterlib_utils.time_to_next_epoch_start(cluster) - 5)
-                this_epoch = cluster.get_last_block_epoch()
+                    # wait for the end of the epoch
+                    time.sleep(clusterlib_utils.time_to_next_epoch_start(cluster) - 5)
+                    this_epoch = cluster.get_last_block_epoch()
 
-                # save ledger state
-                clusterlib_utils.save_ledger_state(
-                    cluster_obj=cluster,
-                    name_template=f"{temp_template}_{this_epoch}",
-                )
+                    # save ledger state
+                    clusterlib_utils.save_ledger_state(
+                        cluster_obj=cluster,
+                        name_template=f"{temp_template}_{this_epoch}",
+                    )
 
-                # check that the pool is not producing any blocks
-                blocks_made = cluster.get_ledger_state()["nesBcur"]["unBlocksMade"]
-                assert (
-                    stake_pool_id_dec not in blocks_made
-                ), f"The pool '{pool_name}' has produced blocks in epoch {this_epoch}"
+                    # check that the pool is not producing any blocks
+                    blocks_made = cluster.get_ledger_state()["nesBcur"]["unBlocksMade"]
+                    assert (
+                        stake_pool_id_dec not in blocks_made
+                    ), f"The pool '{pool_name}' has produced blocks in epoch {this_epoch}"
 
             # restore the original operational certificate and restart the node
             os.remove(opcert_file)
