@@ -1,7 +1,7 @@
-import sqlite3
-from sqlite3 import Error
-from pathlib import Path
 import argparse
+import sqlite3
+from pathlib import Path
+from sqlite3 import Error
 
 database_name = r"sync_results.db"
 results_file_name = r"sync_results.log"
@@ -26,14 +26,16 @@ def add_test_values_into_db(env, test_values):
     conn = create_connection(database_path)
 
     try:
-        sql = f' INSERT INTO {env} ' \
-              f'(env, tag_no1, tag_no2, pr_no1, pr_no2, cardano_cli_version1, cardano_cli_version2, ' \
-              f'cardano_cli_git_rev1, cardano_cli_git_rev2, start_sync_time1, end_sync_time1, start_sync_time2, ' \
-              f'end_sync_time2, byron_sync_time_secs1, shelley_sync_time_secs1, shelley_sync_time_secs2, ' \
-              f'total_chunks1, total_chunks2, latest_block_no1, latest_block_no2, latest_slot_no1, latest_slot_no2, ' \
-              f'start_node_seconds1, start_node_seconds2, platform_system, platform_release, platform_version, ' \
-              f'sync_details1) ' \
-              f'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+        sql = (
+            f" INSERT INTO {env} "
+            f"(env, tag_no1, tag_no2, pr_no1, pr_no2, cardano_cli_version1, cardano_cli_version2, "
+            f"cardano_cli_git_rev1, cardano_cli_git_rev2, start_sync_time1, end_sync_time1, start_sync_time2, "
+            f"end_sync_time2, byron_sync_time_secs1, shelley_sync_time_secs1, shelley_sync_time_secs2, "
+            f"total_chunks1, total_chunks2, latest_block_no1, latest_block_no2, latest_slot_no1, latest_slot_no2, "
+            f"start_node_seconds1, start_node_seconds2, platform_system, platform_release, platform_version, "
+            f"sync_details1) "
+            f"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        )
 
         print(f"sql: {sql}")
 
@@ -73,8 +75,11 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Add sync test values into database\n\n")
 
-    parser.add_argument("-e", "--environment",
-                        help="The environment on which to run the tests - testnet, staging or mainnet.")
+    parser.add_argument(
+        "-e",
+        "--environment",
+        help="The environment on which to run the tests - testnet, staging or mainnet.",
+    )
 
     args = parser.parse_args()
 

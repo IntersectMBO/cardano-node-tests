@@ -121,11 +121,14 @@ def create_db_tables():
                                         sync_details1 text NOT NULL
                                     ); """
 
-
     # create a database connection
     conn = create_connection(DATABASE_NAME)
 
-    create_tables_list = [sql_create_testnet_table, sql_create_staging_table, sql_create_mainnet_table]
+    create_tables_list = [
+        sql_create_testnet_table,
+        sql_create_staging_table,
+        sql_create_mainnet_table,
+    ]
 
     # create tables
     if conn is not None:
@@ -137,5 +140,5 @@ def create_db_tables():
     conn.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     create_db_tables()

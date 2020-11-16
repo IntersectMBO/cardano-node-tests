@@ -72,5 +72,3 @@ jobs:
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.os }}
           path: cardano-node-tests/logfile.log
-
-
