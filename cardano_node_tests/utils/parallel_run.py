@@ -15,6 +15,7 @@ from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import devops_cluster
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.types import UnpackableSequence
 
 CLUSTER_LOCK = ".cluster.lock"
@@ -222,6 +223,11 @@ class ClusterManager:
                 os.remove(self.lock_dir / TEST_SINGLETON_FILE)
             except FileNotFoundError:
                 pass
+
+            # search for errors in cluster logfiles
+            errors = logfiles.search_cluster_artifacts()
+            if errors:
+                logfiles.report_artifacts_errors(errors)
 
     def get(  # noqa: C901
         self,
