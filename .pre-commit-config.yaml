@@ -1,3 +1,4 @@
+exclude: ^sync_tests/
 repos:
 - repo: https://github.com/asottile/reorder_python_imports
   rev: v2.3.6
@@ -35,13 +36,11 @@ repos:
   hooks:
   - id: pyupgrade
     language_version: python3
-    exclude: ^sync_tests/
 - repo: https://github.com/pycqa/pydocstyle
   rev: 5.1.1
   hooks:
   - id: pydocstyle
     language_version: python3
-    exclude: ^sync_tests/
 - repo: local
   hooks:
   - id: pylint
@@ -49,10 +48,8 @@ repos:
     entry: pylint
     language: system
     types: [python]
-    exclude: ^sync_tests/
   - id: mypy
     name: mypy
     entry: mypy
     language: system
     types: [python]
-    exclude: ^sync_tests/
