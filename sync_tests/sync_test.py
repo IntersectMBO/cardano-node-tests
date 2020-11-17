@@ -40,15 +40,15 @@ def set_repo_paths():
 def git_get_last_pr_from_tag(tag_no):
     os.chdir(Path(CARDANO_NODE_PATH))
     cmd = (
-        "git log --merges --pretty=format:%s "
-        + tag_no
-        + " | head -n1 | sed -n 's/.*#\\([0-9]*\\).*/\\1/p'"
+            "git log --merges --pretty=format:%s "
+            + tag_no
+            + " | head -n1 | sed -n 's/.*#\\([0-9]*\\).*/\\1/p'"
     )
     try:
         output = (
             subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-            .decode("utf-8")
-            .strip()
+                .decode("utf-8")
+                .strip()
         )
         os.chdir(ROOT_TEST_PATH)
         return str(output)
@@ -62,7 +62,7 @@ def git_get_last_pr_from_tag(tag_no):
 
 def set_node_socket_path_env_var():
     if "windows" in platform.system().lower():
-        socket_path = "\\\\.\\pipe\\cardano-node"
+        socket_path = "\\\\.\pipe\cardano-node"
     else:
         socket_path = (Path(CARDANO_NODE_TESTS_PATH) / "db" / "node.socket").expanduser().absolute()
 
@@ -87,7 +87,8 @@ def get_testnet_value():
 
 def wait_for_node_to_start():
     # when starting from clean state it might take ~30 secs for the cli to work
-    # when starting from existing state it might take >5 mins for the cli to work (opening db and replaying the ledger)
+    # when starting from existing state it might take >5 mins for the cli to work (opening db and
+    # replaying the ledger)
     tip = get_current_tip(True)
     count = 0
     while tip == 1:
@@ -95,9 +96,7 @@ def wait_for_node_to_start():
         count += 1
         tip = get_current_tip(True)
         if count >= 540:  # 90 mins
-            print(
-                " **************  ERROR: waited 90 mins and CLI is still not usable ************** "
-            )
+            print(" **************  ERROR: waited 90 mins and CLI is still not usable ********* ")
             print(f"      TIP: {get_current_tip()}")
             exit(1)
     print(f"************** CLI became available after: {count * 10} seconds **************")
@@ -110,8 +109,8 @@ def get_current_tip(wait=False):
         cmd = CLI + " shelley query tip " + get_testnet_value()
         output = (
             subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-            .decode("utf-8")
-            .strip()
+                .decode("utf-8")
+                .strip()
         )
         output_json = json.loads(output)
         return int(output_json["blockNo"]), output_json["headerHash"], int(output_json["slotNo"])
@@ -132,8 +131,8 @@ def get_node_version():
         cmd = CLI + " --version"
         output = (
             subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-            .decode("utf-8")
-            .strip()
+                .decode("utf-8")
+                .strip()
         )
         cardano_cli_version = output.split("git rev ")[0].strip()
         cardano_cli_git_rev = output.split("git rev ")[1].strip()
@@ -149,19 +148,18 @@ def get_node_version():
 def start_node_windows(env):
     os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = Path.cwd()
-    cmd = (
-        NODE
-        + " run --topology "
-        + env
-        + "-topology.json --database-path db --port 3000 --config "
-        + env
-        + "-config.json --socket-path \\\\.\\pipe\\cardano-node "
-    )
+    cmd = \
+        NODE + \
+        " run --topology " + \
+        env + \
+        "-topology.json --database-path db --port 3000 --config " + \
+        env + \
+        "-config.json --socket-path \\\\.\pipe\cardano-node "
     logfile = open("logfile.log", "w+")
     print(f"cmd: {cmd}")
 
     try:
-        subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.PIPE)
         print("waiting for db folder to be created")
         count = 0
         while not os.path.isdir(current_directory / "db"):
@@ -179,17 +177,17 @@ def start_node_windows(env):
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
             "command '{}' return with error (code {}): {}".format(
-                e.cmd, e.returncode, " ".join(str(e.output).split())
-            )
-        )
+                e.cmd, e.returncode, ' '.join(str(e.output).split())))
 
 
 def start_node_unix(env):
     os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = Path.cwd()
     cmd = (
-        f"{NODE} run --topology {env}-topology.json --database-path {Path(CARDANO_NODE_TESTS_PATH) / 'db'} "
-        f"--host-addr 0.0.0.0 --port 3000 --config {env}-config.json --socket-path ./db/node.socket"
+        f"{NODE} run --topology {env}-topology.json --database-path "
+        f"{Path(CARDANO_NODE_TESTS_PATH) / 'db'} "
+        f"--host-addr 0.0.0.0 --port 3000 --config "
+        f"{env}-config.json --socket-path ./db/node.socket"
     )
 
     logfile = open("logfile.log", "w+")
@@ -253,7 +251,8 @@ def get_and_extract_linux_files(tag_no):
     pr_no = git_get_last_pr_from_tag(tag_no)
     archive_name = f"cardano-node-{tag_no}-linux.tar.gz"
     node_files = (
-        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-{pr_no}/cardano-node-linux/latest-finished"
+        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-"
+        f"{pr_no}/cardano-node-linux/latest-finished"
         f"/download/1/{archive_name}"
     )
     urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
@@ -277,7 +276,8 @@ def get_and_extract_macos_files(tag_no):
     pr_no = git_get_last_pr_from_tag(tag_no)
     archive_name = f"cardano-node-{tag_no}-macos.tar.gz"
     node_files = (
-        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-{pr_no}/cardano-node-macos/latest-finished"
+        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-"
+        f"{pr_no}/cardano-node-macos/latest-finished"
         f"/download/1/{archive_name}"
     )
     urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
@@ -301,7 +301,8 @@ def get_and_extract_windows_files(tag_no):
     pr_no = git_get_last_pr_from_tag(tag_no)
     archive_name = f"cardano-node-{tag_no}-win64.zip"
     node_files = (
-        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-{pr_no}/cardano-node-win64/latest-finished"
+        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-"
+        f"{pr_no}/cardano-node-win64/latest-finished"
         f"/download/1/cardano-node-{archive_name}"
     )
     urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
@@ -343,25 +344,25 @@ def get_node_config_files(env):
         + env
         + "-config.json",
         env + "-config.json",
-    )
+        )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-byron-genesis.json",
         env + "-byron-genesis.json",
-    )
+        )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-shelley-genesis.json",
         env + "-shelley-genesis.json",
-    )
+        )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-topology.json",
         env + "-topology.json",
-    )
+        )
 
 
 def wait_for_node_to_sync(env):
@@ -380,7 +381,8 @@ def wait_for_node_to_sync(env):
         sync_details_dict[count] = value_dict
 
         print(
-            f"  - actual_slot_no (Byron era): {actual_slot_no} - {percentage(actual_slot_no, latest_slot_no)} % --> "
+            f"  - actual_slot_no (Byron era): "
+            f"{actual_slot_no} - {percentage(actual_slot_no, latest_slot_no)} % --> "
             f"{get_current_date_time()}"
         )
         time.sleep(60)
@@ -398,7 +400,8 @@ def wait_for_node_to_sync(env):
         sync_details_dict[count] = value_dict
 
         print(
-            f"  - actual_slot_no (Shelley era): {actual_slot_no} - {percentage(actual_slot_no, latest_slot_no)} % --> "
+            f"  - actual_slot_no (Shelley era): "
+            f"{actual_slot_no} - {percentage(actual_slot_no, latest_slot_no)} % --> "
             f"{get_current_date_time()}"
         )
         time.sleep(60)
@@ -500,15 +503,9 @@ def main():
     print("get the required node files")
     get_node_config_files(env)
 
-    print(
-        "====================================================================================================="
-    )
-    print(
-        f"================================== Start sync using tag_no1: {tag_no1} ============================="
-    )
-    print(
-        "====================================================================================================="
-    )
+    print("===================================================================================")
+    print(f"=========================== Start sync using tag_no1: {tag_no1} ==================")
+    print("===================================================================================")
     get_and_extract_node_files(tag_no1)
 
     print(" --- node version ---")
@@ -516,9 +513,7 @@ def main():
     print(f"  - cardano_cli_version1: {cardano_cli_version1}")
     print(f"  - cardano_cli_git_rev1: {cardano_cli_git_rev1}")
 
-    print(
-        f"   ============================== Start node using tag_no1: {tag_no1} ============================="
-    )
+    print(f"   ======================= Start node using tag_no1: {tag_no1} ====================")
     start_sync_time1 = get_current_date_time()
     if "linux" in platform_system.lower() or "darwin" in platform_system.lower():
         secs_to_start1 = start_node_unix(env)
@@ -539,11 +534,11 @@ def main():
     print(f"end_sync_time1            : {end_sync_time1}")
     print(f"byron_sync_time_seconds1  : {byron_sync_time_seconds1}")
     print(
-        f"byron_sync_time1          : {time.strftime('%H:%M:%S', time.gmtime(byron_sync_time_seconds1))}"
+        f"byron_sync_time1  : {time.strftime('%H:%M:%S', time.gmtime(byron_sync_time_seconds1))}"
     )
     print(f"shelley_sync_time_seconds1: {shelley_sync_time_seconds1}")
     print(
-        f"shelley_sync_time1        : {time.strftime('%H:%M:%S', time.gmtime(shelley_sync_time_seconds1))}"
+        f"shelley_sync_time1: {time.strftime('%H:%M:%S', time.gmtime(shelley_sync_time_seconds1))}"
     )
 
     latest_block_no1 = get_current_tip()[0]
@@ -569,34 +564,22 @@ def main():
         end_sync_time2,
     ) = (None, None, None, None, None, None, None, None)
     if tag_no2 != "None":
-        print(
-            f"   ============================== Stop node using tag_no1: {tag_no1} =============================="
-        )
+        print(f"   =============== Stop node using tag_no1: {tag_no1} ======================")
         stop_node()
 
-        print(
-            "   ============================== Delete the previous node files ================================="
-        )
+        print("   ================ Delete the previous node files =======================")
         delete_node_files()
 
-        print(
-            "===================================================================================================="
-        )
-        print(
-            f"================================== Start sync using tag_no2: {tag_no2} ============================"
-        )
-        print(
-            "===================================================================================================="
-        )
+        print("==============================================================================")
+        print(f"===================== Start sync using tag_no2: {tag_no2} ===================")
+        print("==============================================================================")
         get_and_extract_node_files(tag_no2)
 
         print(" --- node version ---")
         cardano_cli_version2, cardano_cli_git_rev2 = get_node_version()
         print(f"  - cardano_cli_version2: {cardano_cli_version2}")
         print(f"  - cardano_cli_git_rev2: {cardano_cli_git_rev2}")
-        print(
-            f"   ============================== Start node using tag_no2: {tag_no2} ================================"
-        )
+        print(f"   ================ Start node using tag_no2: {tag_no2} ====================")
         start_sync_time2 = get_current_date_time()
         if "linux" in platform_system.lower() or "darwin" in platform_system.lower():
             secs_to_start2 = start_node_unix(env)
@@ -616,13 +599,11 @@ def main():
         print(f"start_sync_time2  : {start_sync_time2}")
         print(f"end_sync_time2    : {end_sync_time2}")
         print(f"byron_sync_time_seconds2  : {byron_sync_time_seconds2}")
-        print(
-            f"byron_sync_time2          : {time.strftime('%H:%M:%S', time.gmtime(byron_sync_time_seconds2))}"
-        )
+        print(f"byron_sync_time2  : "
+              f"{time.strftime('%H:%M:%S', time.gmtime(byron_sync_time_seconds2))}")
         print(f"shelley_sync_time_seconds2: {shelley_sync_time_seconds2}")
-        print(
-            f"shelley_sync_time2        : {time.strftime('%H:%M:%S', time.gmtime(shelley_sync_time_seconds2))}"
-        )
+        print(f"shelley_sync_time2: "
+              f"{time.strftime('%H:%M:%S', time.gmtime(shelley_sync_time_seconds2))}")
 
         latest_block_no2 = get_current_tip()[0]
         latest_slot_no2 = get_current_tip()[2]
