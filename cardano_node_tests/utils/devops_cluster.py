@@ -9,9 +9,7 @@ from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
-from typing import Tuple
 
-import pytest
 from _pytest.fixtures import FixtureRequest
 
 from cardano_node_tests.utils import clusterlib
@@ -22,14 +20,6 @@ from cardano_node_tests.utils.types import FileType
 LOGGER = logging.getLogger(__name__)
 
 ADDR_DATA = "addr_data.pickle"
-
-ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
-# TODO: proper error ignoring for expected errors
-ERRORS_IGNORED_RE = re.compile(
-    "failedScripts|EKGServerStartupError|WithIPList SubscriptionTrace"
-    "|Could not obtain ledger view for slot|WrapForgeStateUpdateError|InvalidKesSignatureOCERT"
-    "|TPraosCannotForgeKeyNotUsableYet"
-)
 
 
 class StartupFiles(NamedTuple):
@@ -235,21 +225,6 @@ def load_addrs_data() -> dict:
         return pickle.load(in_data)  # type: ignore
 
 
-def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
-    """Save collected tests and cluster artifacts."""
-    pytest_tmp_dir = pytest_tmp_dir.resolve()
-    if not pytest_tmp_dir.is_dir():
-        return None
-
-    dest_dir = artifacts_dir / f"{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
-    if dest_dir.resolve().is_dir():
-        shutil.rmtree(dest_dir)
-    shutil.copytree(pytest_tmp_dir, dest_dir, symlinks=True, ignore_dangling_symlinks=True)
-
-    LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
-    return dest_dir
-
-
 def save_cluster_artifacts(artifacts_dir: Path) -> Optional[Path]:
     """Save cluster artifacts."""
     cluster_env = get_cluster_env()
@@ -275,35 +250,25 @@ def save_cluster_artifacts(artifacts_dir: Path) -> Optional[Path]:
     return dest_dir
 
 
-def search_cluster_artifacts(artifacts_dir: Path) -> List[Tuple[Path, str]]:
-    """Search cluster artifacts for errors."""
-    errors = []
-    for fpath in artifacts_dir.glob("**/cluster_artifacts_*/*.std*"):
-        with open(fpath) as infile:
-            content = infile.readlines()
-            for line in content:
-                if ERRORS_RE.search(line) and not ERRORS_IGNORED_RE.search(line):
-                    errors.append((fpath, line))
-    return errors
+def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
+    """Save collected tests and cluster artifacts."""
+    pytest_tmp_dir = pytest_tmp_dir.resolve()
+    if not pytest_tmp_dir.is_dir():
+        return None
+
+    dest_dir = artifacts_dir / f"{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
+    if dest_dir.resolve().is_dir():
+        shutil.rmtree(dest_dir)
+    shutil.copytree(pytest_tmp_dir, dest_dir, symlinks=True, ignore_dangling_symlinks=True)
+
+    LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
+    return dest_dir
 
 
-def report_artifacts_errors(errors: List[Tuple[Path, str]]) -> None:
-    """Report errors found in artifacts."""
-    err = [f"{e[0]}: {e[1]}" for e in errors]
-    err_joined = "\n".join(err)
-    pytest.fail(f"Errors found in cluster log files:\n{err_joined}")
-
-
-def process_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
-    """Process tests and cluster artifacts."""
+def save_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
+    """Save tests and cluster artifacts."""
     artifacts_base_dir = request.config.getoption("--artifacts-base-dir")
-    artifacts_dir = None
+    if not artifacts_base_dir:
+        return
 
-    if artifacts_base_dir:
-        artifacts_dir = save_collected_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))
-    if not artifacts_dir:
-        artifacts_dir = pytest_tmp_dir
-
-    errors = search_cluster_artifacts(artifacts_dir)
-    if errors:
-        report_artifacts_errors(errors)
+    save_collected_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))

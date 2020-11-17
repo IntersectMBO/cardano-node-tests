@@ -2,6 +2,7 @@ import argparse
 import contextlib
 import hashlib
 import inspect
+import io
 import json
 import logging
 import os
@@ -97,6 +98,9 @@ def get_basetemp() -> Path:
     tempdir = Path(tempfile.gettempdir()) / "cardano-node-tests"
     tempdir.mkdir(mode=0o700, exist_ok=True)
     return tempdir
+
+
+TEST_TEMP_DIR = get_basetemp()
 
 
 def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
@@ -236,3 +240,11 @@ def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str
 
     with open(outfile, "wt") as out_fp:
         out_fp.write(replaced_content)
+
+
+def get_eof_offset(infile: Path) -> int:
+    """Return position of the current end of the file."""
+    with open(infile, "rb") as in_fp:
+        in_fp.seek(0, io.SEEK_END)
+        last_line_pos = in_fp.tell()
+    return last_line_pos
