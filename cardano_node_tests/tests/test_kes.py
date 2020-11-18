@@ -178,3 +178,39 @@ class TestKES:
             os.remove(opcert_file)
             shutil.move(opcert_orig_file, opcert_file)
             devops_cluster.restart_node(node_name)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_no_kes_period_arg(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_manager: parallel_run.ClusterManager,
+        temp_dir: Path,
+    ):
+        """Try to generate new operational certificate without specifying the `--kes-period`.
+
+        Expect failure.
+        """
+        pool_name = "node-pool2"
+        pool_rec = cluster_manager.cache.addrs_data[pool_name]
+
+        temp_template = helpers.get_func_name()
+        out_file = temp_dir / f"{temp_template}_shouldnt_exist.opcert"
+
+        # try to generate new operational certificate without specifying the `--kes-period`
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "node",
+                    "issue-op-cert",
+                    "--kes-verification-key-file",
+                    str(pool_rec["kes_key_pair"].vkey_file),
+                    "--cold-signing-key-file",
+                    str(pool_rec["cold_key_pair"].skey_file),
+                    "--operational-certificate-issue-counter",
+                    str(pool_rec["cold_key_pair"].counter_file),
+                    "--out-file",
+                    str(out_file),
+                ]
+            )
+        assert "Missing: --kes-period NATURAL" in str(excinfo.value)
+        assert not out_file.exists(), "New operational certificate was generated"
