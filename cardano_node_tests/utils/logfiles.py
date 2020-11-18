@@ -176,9 +176,10 @@ def search_cluster_artifacts() -> List[Tuple[Path, str]]:
             seek = 0
             timestamp = 0.0
 
-        errors_ignored_re = re.compile(
-            get_ignore_regex(ignore_rules=ignore_rules, regexes=ERRORS_IGNORED, logfile=logfile)
+        errors_ignored = get_ignore_regex(
+            ignore_rules=ignore_rules, regexes=ERRORS_IGNORED, logfile=logfile
         )
+        errors_ignored_re = re.compile(errors_ignored)
 
         # record offset for the "live" log file
         with open(offset_file, "w") as outfile:
@@ -188,7 +189,9 @@ def search_cluster_artifacts() -> List[Tuple[Path, str]]:
             with open(logfile_rec.logfile) as infile:
                 infile.seek(seek)
                 for line in infile:
-                    if ERRORS_RE.search(line) and not errors_ignored_re.search(line):
+                    if ERRORS_RE.search(line) and not (
+                        errors_ignored and errors_ignored_re.search(line)
+                    ):
                         errors.append((logfile, line))
 
     return errors
