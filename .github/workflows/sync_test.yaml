@@ -48,6 +48,7 @@ jobs:
           pip install psutil
           pip install sqlite-utils>=2.18
           sqlite-utils --version
+          pip install pandas
       - name: run sync test
         run: |
           cd cardano-node-tests
@@ -64,6 +65,7 @@ jobs:
           python sync_tests/write_values_to_db.py -e ${{ matrix.env }}
 
           git add sync_tests/sync_results.db
+          git add sync_tests/csv_files
           git commit -m "added sync values for tag ${{ github.event.inputs.tag_no1 }} ${{ github.event.inputs.tag_no2 }} - ${{ matrix.env }} - ${{ matrix.os }}"
           git push origin master
       - name: generate artifacts
