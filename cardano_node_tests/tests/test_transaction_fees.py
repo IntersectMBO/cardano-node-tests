@@ -61,7 +61,7 @@ class TestFee:
         return addrs
 
     @hypothesis.given(fee=st.integers(max_value=-1))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_negative_fee(
         self,
