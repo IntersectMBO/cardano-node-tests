@@ -69,17 +69,18 @@ def add_ignore_rule(files_glob: str, regex: str) -> None:
 
 
 @contextlib.contextmanager
-def expect_errors(regex_pair: List[Tuple[str, str]]) -> Generator:
+def expect_errors(regex_pairs: List[Tuple[str, str]]) -> Generator:
     """Make sure expected errors are present in logs.
 
     Args:
-        regex_pair: (glob, regex) - regex that needs to be present in files described by the glob
+        regex_pairs: [(glob, regex)] - list of regexes that need to be present in files
+            described by the glob
     """
     cluster_env = devops_cluster.get_cluster_env()
     state_dir = cluster_env["state_dir"]
 
     glob_list = []
-    for files_glob, regex in regex_pair:
+    for files_glob, regex in regex_pairs:
         add_ignore_rule(files_glob, regex)  # don't report errors that are expected
         glob_list.append(files_glob)
     # resolve the globs
@@ -93,7 +94,7 @@ def expect_errors(regex_pair: List[Tuple[str, str]]) -> Generator:
 
     yield
 
-    for files_glob, regex in regex_pair:
+    for files_glob, regex in regex_pairs:
         regex_comp = re.compile(regex)
         # get list of records (file names and offsets) for given glob
         matching_files = fnmatch.filter(seek_offsets, f"{state_dir}/{files_glob}")
