@@ -1269,7 +1269,7 @@ class TestPoolCost:
         return pool_owners
 
     @hypothesis.given(pool_cost=st.integers(max_value=499))  # minPoolCost is now 500
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_low_cost(
         self,
@@ -1692,7 +1692,7 @@ class TestNegative:
         assert 'key "homepage" not found' in str(excinfo.value)
 
     @hypothesis.given(pool_name=st.text(min_size=51))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_name(
         self,
@@ -1725,7 +1725,7 @@ class TestNegative:
         )
 
     @hypothesis.given(pool_description=st.text(min_size=256))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_description(
         self,
@@ -1758,7 +1758,7 @@ class TestNegative:
         )
 
     @hypothesis.given(pool_ticker=st.text())
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_ticker(
         self,
@@ -1789,7 +1789,7 @@ class TestNegative:
         assert '"ticker" must have at least 3 and at most 5 characters' in str(excinfo.value)
 
     @hypothesis.given(pool_homepage=st.text(min_size=425))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_homepage(
         self,
@@ -1820,7 +1820,7 @@ class TestNegative:
     @hypothesis.given(
         metadata_url=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=25)
     )
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_long_metadata_url(
         self,

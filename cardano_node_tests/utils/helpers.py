@@ -17,6 +17,7 @@ from typing import Dict
 from typing import Generator
 from typing import Optional
 
+import hypothesis
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 from filelock import FileLock
@@ -30,6 +31,10 @@ logging.getLogger("filelock").setLevel(logging.WARNING)
 LOGGER = logging.getLogger(__name__)
 
 LAUNCH_PATH = Path(os.getcwd())
+
+HYPOTHESIS_SETTINGS = hypothesis.settings(
+    deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,)
+)
 
 # Use dummy locking if not executing with multiple workers.
 # When running with multiple workers, operations with shared resources (like faucet addresses)
