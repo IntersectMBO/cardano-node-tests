@@ -613,7 +613,7 @@ class TestNotBalanced:
         assert "option --tx-out: Failed reading" in str(excinfo.value)
 
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_wrong_balance(
         self,
@@ -962,7 +962,7 @@ class TestNegative:
         )
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_non_existent_address(
         self,
@@ -978,7 +978,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_invalid_length_address(
         self,
@@ -996,7 +996,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_invalid_chars_address(
         self,
@@ -1012,7 +1012,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_non_existent_address(
         self,
@@ -1028,7 +1028,7 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_invalid_length_address(
         self,
@@ -1046,7 +1046,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @hypothesis.settings(deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,))
+    @helpers.HYPOTHESIS_SETTINGS
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_invalid_chars_address(
         self,
