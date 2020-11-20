@@ -87,8 +87,9 @@ class TestKES:
         )
 
         expected_errors = [
-            ("pool*.stdout", "Could not obtain ledger view for slot"),
-            ("bft*.stdout", "Could not obtain ledger view for slot"),
+            ("*.stdout", "Could not obtain ledger view for slot"),
+            ("*.stdout", "KESKeyAlreadyPoisoned"),
+            ("*.stdout", "KESCouldNotEvolve"),
         ]
         with logfiles.expect_errors(expected_errors):
             LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
