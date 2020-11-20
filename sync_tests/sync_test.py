@@ -52,8 +52,7 @@ def git_get_last_pr_from_tag(tag_no):
         )
         os.chdir(ROOT_TEST_PATH)
 
-        print(f"output: {output}")
-        return str(output.split(" #")[1])
+        return str(output.splitlines()[0].split(" #")[1])
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
             "command '{}' return with error (code {}): {}".format(
@@ -257,12 +256,14 @@ def get_and_extract_linux_files(tag_no):
         f"{pr_no}/cardano-node-linux/latest-finished"
         f"/download/1/{archive_name}"
     )
+
+    print(f"pr_no       : {pr_no}")
+    print(f"tag_no      : {tag_no}")
+    print(f"archive_name: {archive_name}")
+    print(f"node_files  : {node_files}")
+
     urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
 
-    print(f"archive_name: {archive_name}")
-    print(f"node_files: {node_files}")
-    print(f"pr_no: {pr_no}")
-    print(f"tag_no: {tag_no}")
     print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
 
     tf = tarfile.open(Path(current_directory) / archive_name)
@@ -282,12 +283,14 @@ def get_and_extract_macos_files(tag_no):
         f"{pr_no}/cardano-node-macos/latest-finished"
         f"/download/1/{archive_name}"
     )
+
+    print(f"pr_no       : {pr_no}")
+    print(f"tag_no      : {tag_no}")
+    print(f"archive_name: {archive_name}")
+    print(f"node_files  : {node_files}")
+
     urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
 
-    print(f"archive_name: {archive_name}")
-    print(f"node_files: {node_files}")
-    print(f"pr_no: {pr_no}")
-    print(f"tag_no: {tag_no}")
     print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
 
     tf = tarfile.open(Path(current_directory) / archive_name)
@@ -307,12 +310,14 @@ def get_and_extract_windows_files(tag_no):
         f"{pr_no}/cardano-node-win64/latest-finished"
         f"/download/1/cardano-node-{archive_name}"
     )
+
+    print(f"pr_no       : {pr_no}")
+    print(f"tag_no      : {tag_no}")
+    print(f"archive_name: {archive_name}")
+    print(f"node_files  : {node_files}")
+
     urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
 
-    print(f"archive_name: {archive_name}")
-    print(f"node_files: {node_files}")
-    print(f"pr_no: {pr_no}")
-    print(f"tag_no: {tag_no}")
     print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
 
     with zipfile.ZipFile(Path(current_directory) / archive_name, "r") as zip_ref:
@@ -480,11 +485,11 @@ def main():
 
     set_node_socket_path_env_var()
 
-    tag_no1 = vars(args)["tag_number1"]
-    tag_no2 = vars(args)["tag_number2"]
+    tag_no1 = str(vars(args)["tag_number1"]).strip()
+    tag_no2 = str(vars(args)["tag_number2"]).strip()
     print(f"tag_no1: {tag_no1}")
     print(f"tag_no2: {tag_no2}")
-    pr_no1 = git_get_last_pr_from_tag(tag_no1)
+    pr_no1 = str(git_get_last_pr_from_tag(tag_no1)).strip()
     if tag_no2 == "None":
         pr_no2 = "None"
     else:
