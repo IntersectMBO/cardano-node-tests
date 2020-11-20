@@ -52,7 +52,6 @@ def git_get_last_pr_from_tag(tag_no):
         )
         os.chdir(ROOT_TEST_PATH)
 
-        print(f"output: {output}")
         return str(output.split(" #")[1])
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
@@ -480,11 +479,11 @@ def main():
 
     set_node_socket_path_env_var()
 
-    tag_no1 = vars(args)["tag_number1"]
-    tag_no2 = vars(args)["tag_number2"]
+    tag_no1 = str(vars(args)["tag_number1"]).strip()
+    tag_no2 = str(vars(args)["tag_number2"]).strip()
     print(f"tag_no1: {tag_no1}")
     print(f"tag_no2: {tag_no2}")
-    pr_no1 = git_get_last_pr_from_tag(tag_no1)
+    pr_no1 = str(git_get_last_pr_from_tag(tag_no1)).strip()
     if tag_no2 == "None":
         pr_no2 = "None"
     else:
