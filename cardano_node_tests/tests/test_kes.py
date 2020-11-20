@@ -197,7 +197,69 @@ class TestKES:
                 assert (
                     stake_pool_id_dec in blocks_made
                 ), f"The pool '{pool_name}' has not produced blocks in epoch {this_epoch}"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_update_valid_opcert(
+        self,
+        cluster_lock_pool2: clusterlib.ClusterLib,
+        cluster_manager: parallel_run.ClusterManager,
+    ):
+        """Update a valid operational certificate with another valid operational certificate.
+
+        * generate new operational certificate with valid `--kes-period`
+        * restart the node with the new operational certificate
+        * check that the pool is still producing blocks
+        """
+        pool_name = "node-pool2"
+        node_name = "pool2"
+        cluster = cluster_lock_pool2
+
+        temp_template = helpers.get_func_name()
+        pool_rec = cluster_manager.cache.addrs_data[pool_name]
+
+        node_cold = pool_rec["cold_key_pair"]
+        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+        stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
+
+        opcert_file = pool_rec["pool_operational_cert"]
+
+        with cluster_manager.restart_on_failure():
+            # generate new operational certificate with valid `--kes-period`
+            new_opcert_file = cluster.gen_node_operational_cert(
+                node_name=node_name,
+                node_kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+                node_cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+                node_cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+                kes_period=cluster.get_last_block_kes_period(),
+            )
+
+            # restart the node with the new operational certificate
+            shutil.copy(new_opcert_file, opcert_file)
             devops_cluster.restart_node(node_name)
+
+            LOGGER.info("Checking blocks production for 5 epochs.")
+            this_epoch = -1
+            for __ in range(5):
+                # wait for next epoch
+                if cluster.get_last_block_epoch() == this_epoch:
+                    cluster.wait_for_new_epoch()
+
+                # wait for the end of the epoch
+                time.sleep(clusterlib_utils.time_to_next_epoch_start(cluster) - 5)
+                this_epoch = cluster.get_last_block_epoch()
+
+                # save ledger state
+                clusterlib_utils.save_ledger_state(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_{this_epoch}",
+                )
+
+                # check that the pool is still producing blocks
+                blocks_made = cluster.get_ledger_state()["nesBcur"]["unBlocksMade"]
+                if blocks_made:
+                    assert (
+                        stake_pool_id_dec in blocks_made
+                    ), f"The pool '{pool_name}' has not produced blocks in epoch {this_epoch}"
 
     @allure.link(helpers.get_vcs_link())
     def test_no_kes_period_arg(
