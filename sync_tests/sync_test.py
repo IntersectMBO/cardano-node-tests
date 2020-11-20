@@ -256,6 +256,10 @@ def get_and_extract_linux_files(tag_no):
         f"{pr_no}/cardano-node-linux/latest-finished"
         f"/download/1/{archive_name}"
     )
+
+    print(f"node_files: {node_files}")
+    print(f"path      : {Path(current_directory) / archive_name}")
+
     urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
 
     print(f"archive_name: {archive_name}")
