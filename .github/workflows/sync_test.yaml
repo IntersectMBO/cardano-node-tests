@@ -37,6 +37,7 @@ jobs:
         run: |
           cd cardano-node
           git checkout master
+          git pull origin master
           git fetch --all --tags
       - name: run actions/setup-python@v2
         uses: actions/setup-python@v2

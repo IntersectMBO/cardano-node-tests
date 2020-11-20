@@ -51,6 +51,8 @@ def git_get_last_pr_from_tag(tag_no):
                 .strip()
         )
         os.chdir(ROOT_TEST_PATH)
+
+        print(f"output: {output}")
         return str(output.split(" #")[1])
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
