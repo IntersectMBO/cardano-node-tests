@@ -42,7 +42,7 @@ def git_get_last_pr_from_tag(tag_no):
     cmd = (
             "git log --merges --pretty=format:%s "
             + tag_no
-            + " | head -n1 | sed -n 's/.*#\\([0-9]*\\).*/\\1/p'"
+            + " | head -n1"
     )
     try:
         output = (
@@ -51,7 +51,7 @@ def git_get_last_pr_from_tag(tag_no):
                 .strip()
         )
         os.chdir(ROOT_TEST_PATH)
-        return str(output)
+        return str(output.split(" #")[1])
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
             "command '{}' return with error (code {}): {}".format(
