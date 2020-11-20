@@ -40,9 +40,9 @@ def set_repo_paths():
 def git_get_last_pr_from_tag(tag_no):
     os.chdir(Path(CARDANO_NODE_PATH))
     cmd = (
-            "git log --merges --pretty=format:%s "
+            "git log --pretty=format:%s "
             + tag_no
-            + " | head -n1"
+            + " | grep Merge | head -n1"
     )
     try:
         output = (
