@@ -28,11 +28,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir and change to it."""
-    tmp_path = Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__)))
-    with helpers.change_cwd(tmp_path):
-        yield tmp_path
+def create_temp_dir(tmp_path_factory: TempdirFactory):
+    """Create a temporary dir."""
+    return Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__))).resolve()
+
+
+@pytest.fixture
+def temp_dir(create_temp_dir: Path):
+    """Change to a temporary dir."""
+    with helpers.change_cwd(create_temp_dir):
+        yield create_temp_dir
 
 
 @pytest.fixture(scope="module")
@@ -1231,7 +1236,7 @@ class TestStakePool:
         )
 
 
-@pytest.mark.run(order=1)
+@pytest.mark.run(order=2)
 class TestPoolCost:
     """Tests for stake pool cost."""
 
@@ -1249,7 +1254,7 @@ class TestPoolCost:
 
         cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str()
-        temp_template = f"{helpers.get_func_name()}_{rand_str}"
+        temp_template = f"{helpers.get_func_name()}_{rand_str}_ci{cluster_manager.cluster_instance}"
 
         pool_owners = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
@@ -1367,7 +1372,7 @@ class TestNegative:
 
         created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
-            name_template="test_negative",
+            name_template=f"test_negative_ci{cluster_manager.cluster_instance}",
             no_of_addr=2,
         )
         cluster_manager.cache.test_data[data_key] = created_users
