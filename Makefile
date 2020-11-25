@@ -14,7 +14,7 @@ ALLURE_DIR ?= .reports/
 	mkdir -p docs/build
 
 # run all tests, generate allure report
-TEST_THREADS ?= 8
+TEST_THREADS ?= 15
 tests: .dirs
 	pytest cardano_node_tests $(PYTEST_ARGS) -n $(TEST_THREADS) --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
 
