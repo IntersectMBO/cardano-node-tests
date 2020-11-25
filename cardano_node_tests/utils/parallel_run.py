@@ -359,7 +359,9 @@ class ClusterManager:
             if errors:
                 logfiles.report_artifacts_errors(errors)
 
-    def _get_marked_tests_status(self, cache: dict, instance_num: int) -> MarkedTestsStatus:
+    def _get_marked_tests_status(
+        self, cache: Dict[int, MarkedTestsStatus], instance_num: int
+    ) -> MarkedTestsStatus:
         """Return marked tests status for cluster instance."""
         if instance_num not in cache:
             cache[instance_num] = MarkedTestsStatus()
@@ -460,7 +462,7 @@ class ClusterManager:
         mark_start_here = False
         first_iteration = True
         sleep_delay = 1
-        marked_tests_cache: dict = {}
+        marked_tests_cache: Dict[int, MarkedTestsStatus] = {}
 
         if start_cmd:
             if not (singleton or mark):
