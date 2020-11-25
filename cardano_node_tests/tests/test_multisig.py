@@ -17,11 +17,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir and change to it."""
-    tmp_path = Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__)))
-    with helpers.change_cwd(tmp_path):
-        yield tmp_path
+def create_temp_dir(tmp_path_factory: TempdirFactory):
+    """Create a temporary dir."""
+    return Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__))).resolve()
+
+
+@pytest.fixture
+def temp_dir(create_temp_dir: Path):
+    """Change to a temporary dir."""
+    with helpers.change_cwd(create_temp_dir):
+        yield create_temp_dir
 
 
 # use the "temp_dir" fixture for all tests automatically
@@ -122,7 +127,8 @@ class TestBasic:
             return cached_value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"multi_addr{i}" for i in range(20)], cluster_obj=cluster
+            *[f"multi_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(20)],
+            cluster_obj=cluster,
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
@@ -381,7 +387,8 @@ class TestNegative:
             return cached_value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"multi_neg_addr{i}" for i in range(10)], cluster_obj=cluster
+            *[f"multi_neg_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(10)],
+            cluster_obj=cluster,
         )
         cluster_manager.cache.test_data[data_key] = addrs
 

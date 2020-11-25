@@ -34,11 +34,16 @@ ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
 @pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir and change to it."""
-    tmp_path = Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__)))
-    with helpers.change_cwd(tmp_path):
-        yield tmp_path
+def create_temp_dir(tmp_path_factory: TempdirFactory):
+    """Create a temporary dir."""
+    return Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__))).resolve()
+
+
+@pytest.fixture
+def temp_dir(create_temp_dir: Path):
+    """Change to a temporary dir."""
+    with helpers.change_cwd(create_temp_dir):
+        yield create_temp_dir
 
 
 # use the "temp_dir" fixture for all tests automatically
@@ -61,7 +66,9 @@ class TestBasic:
             return cached_value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            "addr_basic0", "addr_basic1", cluster_obj=cluster
+            f"addr_basic_ci{cluster_manager.cluster_instance}_0",
+            f"addr_basic_ci{cluster_manager.cluster_instance}_1",
+            cluster_obj=cluster,
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
@@ -71,7 +78,6 @@ class TestBasic:
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
-
         return addrs
 
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
@@ -287,7 +293,7 @@ class TestMultiInOut:
             return cached_value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"multi_in_out_addr{i}" for i in range(201)],
+            *[f"multi_in_out_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(201)],
             cluster_obj=cluster,
         )
         cluster_manager.cache.test_data[data_key] = addrs
@@ -550,7 +556,9 @@ class TestNotBalanced:
             return cached_value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            "addr_not_balanced0", "addr_not_balanced1", cluster_obj=cluster
+            f"addr_not_balanced_ci{cluster_manager.cluster_instance}_0",
+            f"addr_not_balanced_ci{cluster_manager.cluster_instance}_1",
+            cluster_obj=cluster,
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
@@ -701,7 +709,7 @@ class TestNegative:
 
         created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
-            name_template="test_negative",
+            name_template=f"test_negative_ci{cluster_manager.cluster_instance}",
             no_of_addr=2,
         )
         cluster_manager.cache.test_data[data_key] = created_users
@@ -1218,7 +1226,7 @@ class TestMetadata:
             return cached_value  # type: ignore
 
         addr = clusterlib_utils.create_payment_addr_records(
-            "addr_test_metadata0", cluster_obj=cluster
+            f"addr_test_metadata_ci{cluster_manager.cluster_instance}_0", cluster_obj=cluster
         )[0]
         cluster_manager.cache.test_data[data_key] = addr
 
