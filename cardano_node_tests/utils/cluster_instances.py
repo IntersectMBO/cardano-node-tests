@@ -11,8 +11,6 @@ from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
-PORTS_OFFSET = 500
-
 
 class InstanceFiles(NamedTuple):
     start_script: Path
@@ -28,7 +26,6 @@ class InstancePorts(NamedTuple):
     supervisor: int
     ekg: int
     prometheus: int
-    offset: int
 
 
 def _get_nix_paths(infile: Path, search_str: str) -> List[Path]:
@@ -45,18 +42,17 @@ def _get_nix_paths(infile: Path, search_str: str) -> List[Path]:
 
 def get_instance_ports(instance_num: int) -> InstancePorts:
     """Return ports mapping for given cluster instance."""
-    offset = PORTS_OFFSET + instance_num
-    base = 3000 + offset
+    offset = (50 + instance_num) * 10
+    base = 30000 + offset
 
     ports = InstancePorts(
         webserver=base,
         bft1=base + 1,
         pool1=base + 2,
         pool2=base + 3,
-        supervisor=10001 + offset,
+        supervisor=12001 + instance_num,
         ekg=12588 + instance_num,
         prometheus=12898 + instance_num,
-        offset=offset,
     )
     return ports
 
@@ -74,7 +70,8 @@ def _reconfigure_file(infile: Path, destdir: Path, instance_num: int) -> Path:
 
     instance_ports = get_instance_ports(instance_num)
     new_content = content.replace("/state-cluster", f"/state-cluster{instance_num}")
-    new_content = new_content.replace("3000", str(3000 + instance_ports.offset))
+    # replace node port number strings, omitting the last digit
+    new_content = new_content.replace("3000", str(instance_ports.webserver // 10))
     new_content = new_content.replace("9001", str(instance_ports.supervisor))
     new_content = new_content.replace(
         "supervisorctl ", f"supervisorctl -s http://127.0.0.1:{instance_ports.supervisor} "
