@@ -50,18 +50,16 @@ def change_dir(tmp_path_factory: TempdirFactory) -> None:
     LOGGER.info(f"Changed CWD to '{tmp_path}'.")
 
 
-def _run_cluster_cleanup(
+def _stop_all_cluster_instances(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest, pytest_tmp_dir: Path
 ) -> None:
-    """Cleanup after all tests are finished."""
+    """Stop all cluster instances after all tests are finished."""
     cluster_manager_obj = parallel_run.ClusterManager(
         tmp_path_factory=tmp_path_factory, worker_id=worker_id, request=request
     )
-    cluster_manager_obj._log("running cluster cleanup")
-    # stop cluster
-    cluster_manager_obj.stop()
-    # save CLI coverage info
-    cluster_manager_obj.save_cli_coverage()
+    cluster_manager_obj._log("running `_stop_all_cluster_instances`")
+    # stop all cluster instances
+    cluster_manager_obj.stop_all_clusters()
     # save environment info for Allure
     helpers.save_env_for_allure(request)
     # save artifacts
@@ -76,7 +74,11 @@ def cluster_cleanup(
 
     if not worker_id or worker_id == "master":
         yield
-        _run_cluster_cleanup(
+        cluster_manager_obj = parallel_run.ClusterManager(
+            tmp_path_factory=tmp_path_factory, worker_id=worker_id, request=request
+        )
+        cluster_manager_obj.save_worker_cli_coverage()
+        _stop_all_cluster_instances(
             tmp_path_factory=tmp_path_factory,
             worker_id=worker_id,
             request=request,
@@ -86,23 +88,24 @@ def cluster_cleanup(
 
     lock_dir = pytest_tmp_dir = pytest_tmp_dir.parent
 
-    with helpers.FileLockIfXdist(f"{lock_dir}/.cluster_cleanup.lock"):
-        open(lock_dir / f".started_session_{worker_id}", "a").close()
+    open(lock_dir / f".started_session_{worker_id}", "a").close()
 
     yield
 
-    with helpers.FileLockIfXdist(f"{lock_dir}/.cluster_cleanup.lock"):
-        os.remove(lock_dir / f".started_session_{worker_id}")
-        if list(lock_dir.glob(".started_session_*")):
-            return
-
     with helpers.FileLockIfXdist(f"{lock_dir}/{parallel_run.CLUSTER_LOCK}"):
-        _run_cluster_cleanup(
-            tmp_path_factory=tmp_path_factory,
-            worker_id=worker_id,
-            request=request,
-            pytest_tmp_dir=pytest_tmp_dir,
+        cluster_manager_obj = parallel_run.ClusterManager(
+            tmp_path_factory=tmp_path_factory, worker_id=worker_id, request=request
         )
+        cluster_manager_obj.save_worker_cli_coverage()
+
+        os.remove(lock_dir / f".started_session_{worker_id}")
+        if not list(lock_dir.glob(".started_session_*")):
+            _stop_all_cluster_instances(
+                tmp_path_factory=tmp_path_factory,
+                worker_id=worker_id,
+                request=request,
+                pytest_tmp_dir=pytest_tmp_dir,
+            )
 
 
 @pytest.fixture(scope="session", autouse=True)

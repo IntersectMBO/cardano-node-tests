@@ -3,6 +3,7 @@ import functools
 import itertools
 import json
 import logging
+import os
 import random
 import string
 import subprocess
@@ -254,10 +255,13 @@ class ClusterLib:
                 break
 
             stderr_dec = stderr.decode()
-            err_msg = f"An error occurred running a CLI command `{cmd_str}`: {stderr_dec}"
+            err_msg = (
+                f"An error occurred running a CLI command `{cmd_str}` on path "
+                f"`{os.getcwd()}`: {stderr_dec}"
+            )
             if "resource exhausted" in stderr_dec:
                 LOGGER.error(err_msg)
-                time.sleep(1)
+                time.sleep(0.4)
                 continue
             raise CLIError(err_msg)
         else:
