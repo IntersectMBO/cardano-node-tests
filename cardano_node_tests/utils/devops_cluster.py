@@ -11,7 +11,7 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 
-from _pytest.fixtures import FixtureRequest
+from _pytest.config import Config
 
 from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import clusterlib
@@ -288,9 +288,9 @@ def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optio
     return dest_dir
 
 
-def save_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
+def save_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
     """Save tests and cluster artifacts."""
-    artifacts_base_dir = request.config.getoption("--artifacts-base-dir")
+    artifacts_base_dir = pytest_config.getoption("--artifacts-base-dir")
     if not artifacts_base_dir:
         return
 

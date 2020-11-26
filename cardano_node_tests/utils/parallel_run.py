@@ -11,7 +11,7 @@ from typing import Generator
 from typing import Optional
 
 import pytest
-from _pytest.fixtures import FixtureRequest
+from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import cluster_instances
@@ -24,7 +24,6 @@ from cardano_node_tests.utils.types import UnpackableSequence
 
 CLUSTER_LOCK = ".cluster.lock"
 RUN_LOG_FILE = ".parallel.log"
-SESSION_RUNNING_FILE = ".session_running"
 TEST_SINGLETON_FILE = ".test_singleton"
 RESOURCE_LOCKED_GLOB = ".resource_locked"
 RESOURCE_IN_USE_GLOB = ".resource_in_use"
@@ -38,6 +37,8 @@ TEST_MARK_STARTING_GLOB = ".starting_marked_tests"
 WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", 1))
 CLUSTERS_COUNT = WORKERS_COUNT if WORKERS_COUNT <= 9 else 9
 CLUSTER_DIR_TEMPLATE = "cluster"
+CLUSTER_RUNNING_FILE = ".cluster_running"
+CLUSTER_STOPPED_FILE = ".cluster_stopped"
 
 
 def _kill_supervisor(instance_num: int) -> None:
@@ -75,15 +76,15 @@ class ClusterManager:
         return cls.manager_cache
 
     def __init__(
-        self, tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
+        self, tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config
     ) -> None:
         self.cluster_obj: Optional[clusterlib.ClusterLib] = None
         self.worker_id = worker_id
-        self.request = request
+        self.pytest_config = pytest_config
         self.tmp_path_factory = tmp_path_factory
         self.pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
 
-        self.is_xdist = worker_id != "master"
+        self.is_xdist = helpers.IS_XDIST
         if self.is_xdist:
             self.lock_dir = self.pytest_tmp_dir.parent
             self.range_num = 5
@@ -163,7 +164,7 @@ class ClusterManager:
     def _is_restart_needed(self, instance_num: int) -> bool:
         """Check if it is necessary to restart cluster."""
         instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
-        if not (instance_dir / SESSION_RUNNING_FILE).exists():
+        if not (instance_dir / CLUSTER_RUNNING_FILE).exists():
             return True
         if list(instance_dir.glob(f"{RESTART_NEEDED_GLOB}_*")):
             return True
@@ -185,7 +186,9 @@ class ClusterManager:
         if not cluster_obj:
             return
 
-        clusterlib_utils.save_cli_coverage(cluster_obj, self.request)
+        clusterlib_utils.save_cli_coverage(
+            cluster_obj=cluster_obj, pytest_config=self.pytest_config
+        )
 
     def save_worker_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this pytest worker."""
@@ -196,7 +199,9 @@ class ClusterManager:
             if not cluster_obj:
                 continue
 
-            clusterlib_utils.save_cli_coverage(cluster_obj, self.request)
+            clusterlib_utils.save_cli_coverage(
+                cluster_obj=cluster_obj, pytest_config=self.pytest_config
+            )
 
     def _restart(  # noqa: C901
         self, start_cmd: str = "", stop_cmd: str = ""
@@ -253,10 +258,10 @@ class ClusterManager:
         for f in self.instance_dir.glob(f"{RESTART_NEEDED_GLOB}_*"):
             os.remove(f)
 
-        # create file that indicates that the session is running
-        session_running_file = self.instance_dir / SESSION_RUNNING_FILE
-        if not session_running_file.exists():
-            open(session_running_file, "a").close()
+        # create file that indicates that the cluster is running
+        cluster_running_file = self.instance_dir / CLUSTER_RUNNING_FILE
+        if not cluster_running_file.exists():
+            open(cluster_running_file, "a").close()
 
         return cluster_obj
 
@@ -271,7 +276,11 @@ class ClusterManager:
         self._log("called `stop_all_clusters`")
         for instance_num in range(self.num_of_instances):
             instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
-            if not (instance_dir / SESSION_RUNNING_FILE).exists():
+            if (
+                not (instance_dir / CLUSTER_RUNNING_FILE).exists()
+                or (instance_dir / CLUSTER_STOPPED_FILE).exists()
+            ):
+                self._log(f"cluster instance {instance_num} not running")
                 continue
 
             startup_files = cluster_instances.prepare_files(
@@ -284,6 +293,8 @@ class ClusterManager:
             )
             devops_cluster.stop_cluster(cmd=str(startup_files.stop_script))
             devops_cluster.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=True)
+            open(instance_dir / CLUSTER_STOPPED_FILE, "a").close()
+            self._log(f"stopped cluster instance {instance_num}")
 
     def set_needs_restart(self) -> None:
         """Indicate that the cluster needs restart."""
