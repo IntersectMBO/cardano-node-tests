@@ -5,8 +5,10 @@ from typing import Any
 from typing import Generator
 
 import pytest
+from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
+from xdist import workermanage
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import devops_cluster
@@ -14,6 +16,9 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
+
+# make sure there's enough time to stop all cluster instances at the end of session
+workermanage.NodeManager.EXIT_TIMEOUT = 30
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -50,22 +55,22 @@ def change_dir(tmp_path_factory: TempdirFactory) -> None:
     LOGGER.info(f"Changed CWD to '{tmp_path}'.")
 
 
-def _run_cluster_cleanup(
-    tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest, pytest_tmp_dir: Path
+def _stop_all_cluster_instances(
+    tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config, pytest_tmp_dir: Path
 ) -> None:
-    """Cleanup after all tests are finished."""
+    """Stop all cluster instances after all tests are finished."""
     cluster_manager_obj = parallel_run.ClusterManager(
-        tmp_path_factory=tmp_path_factory, worker_id=worker_id, request=request
+        tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=pytest_config
     )
-    cluster_manager_obj._log("running cluster cleanup")
-    # stop cluster
-    cluster_manager_obj.stop()
-    # save CLI coverage info
-    cluster_manager_obj.save_cli_coverage()
+    cluster_manager_obj._log("running `_stop_all_cluster_instances`")
+
+    # stop all cluster instances
+    with helpers.ignore_interrupt():
+        cluster_manager_obj.stop_all_clusters()
     # save environment info for Allure
-    helpers.save_env_for_allure(request)
+    helpers.save_env_for_allure(pytest_config)
     # save artifacts
-    devops_cluster.save_artifacts(pytest_tmp_dir=pytest_tmp_dir, request=request)
+    devops_cluster.save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
 @pytest.yield_fixture(scope="session")
@@ -76,33 +81,38 @@ def cluster_cleanup(
 
     if not worker_id or worker_id == "master":
         yield
-        _run_cluster_cleanup(
+        cluster_manager_obj = parallel_run.ClusterManager(
+            tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
+        )
+        cluster_manager_obj.save_worker_cli_coverage()
+        _stop_all_cluster_instances(
             tmp_path_factory=tmp_path_factory,
             worker_id=worker_id,
-            request=request,
+            pytest_config=request.config,
             pytest_tmp_dir=pytest_tmp_dir,
         )
         return
 
     lock_dir = pytest_tmp_dir = pytest_tmp_dir.parent
 
-    with helpers.FileLockIfXdist(f"{lock_dir}/.cluster_cleanup.lock"):
-        open(lock_dir / f".started_session_{worker_id}", "a").close()
+    open(lock_dir / f".started_session_{worker_id}", "a").close()
 
     yield
 
-    with helpers.FileLockIfXdist(f"{lock_dir}/.cluster_cleanup.lock"):
-        os.remove(lock_dir / f".started_session_{worker_id}")
-        if list(lock_dir.glob(".started_session_*")):
-            return
-
     with helpers.FileLockIfXdist(f"{lock_dir}/{parallel_run.CLUSTER_LOCK}"):
-        _run_cluster_cleanup(
-            tmp_path_factory=tmp_path_factory,
-            worker_id=worker_id,
-            request=request,
-            pytest_tmp_dir=pytest_tmp_dir,
+        cluster_manager_obj = parallel_run.ClusterManager(
+            tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )
+        cluster_manager_obj.save_worker_cli_coverage()
+
+        os.remove(lock_dir / f".started_session_{worker_id}")
+        if not list(lock_dir.glob(".started_session_*")):
+            _stop_all_cluster_instances(
+                tmp_path_factory=tmp_path_factory,
+                worker_id=worker_id,
+                pytest_config=request.config,
+                pytest_tmp_dir=pytest_tmp_dir,
+            )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -119,7 +129,7 @@ def cluster_manager(
     request: FixtureRequest,
 ) -> Generator[parallel_run.ClusterManager, None, None]:
     cluster_manager_obj = parallel_run.ClusterManager(
-        tmp_path_factory=tmp_path_factory, worker_id=worker_id, request=request
+        tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
     )
     yield cluster_manager_obj
     cluster_manager_obj.on_test_stop()
