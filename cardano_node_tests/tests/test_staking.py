@@ -228,6 +228,7 @@ class TestDelegateAddr:
             pool_name=pool_name,
         )
 
+    @pytest.mark.run(order=2)
     @allure.link(helpers.get_vcs_link())
     def test_deregister(
         self,

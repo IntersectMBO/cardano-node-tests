@@ -76,10 +76,10 @@ def cluster_kes(
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-@pytest.mark.run(order=3)
 class TestKES:
     """Basic tests for KES period."""
 
+    @pytest.mark.run(order=3)
     @allure.link(helpers.get_vcs_link())
     def test_expired_kes(
         self,
@@ -109,6 +109,7 @@ class TestKES:
 
         assert cluster.get_last_block_slot_no() == init_slot, "Unexpected new slots"
 
+    @pytest.mark.run(order=1)
     @allure.link(helpers.get_vcs_link())
     def test_opcert_past_kes_period(
         self,
@@ -204,6 +205,7 @@ class TestKES:
                     stake_pool_id_dec in blocks_made
                 ), f"The pool '{pool_name}' has not produced blocks in epoch {this_epoch}"
 
+    @pytest.mark.run(order=2)
     @allure.link(helpers.get_vcs_link())
     def test_update_valid_opcert(
         self,
