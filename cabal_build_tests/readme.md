@@ -13,4 +13,3 @@
 `./run-fedora.sh \<cardano-node tag>`
 
 If "Success" is shown at the end and exit with code 0 then build has completed successfully and verified with cardano-cli.
-
