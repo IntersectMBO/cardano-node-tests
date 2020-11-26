@@ -7,6 +7,7 @@ from typing import List
 from typing import Optional
 from typing import Union
 
+from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
 
 from cardano_node_tests.utils import clusterlib
@@ -415,11 +416,9 @@ def update_params(
             )
 
 
-def save_cli_coverage(
-    cluster_obj: clusterlib.ClusterLib, request: FixtureRequest
-) -> Optional[Path]:
+def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> Optional[Path]:
     """Save CLI coverage info."""
-    cli_coverage_dir = request.config.getoption("--cli-coverage-dir")
+    cli_coverage_dir = pytest_config.getoption("--cli-coverage-dir")
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
         return None
 

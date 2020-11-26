@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import tempfile
 import time
@@ -18,7 +19,7 @@ from typing import Generator
 from typing import Optional
 
 import hypothesis
-from _pytest.fixtures import FixtureRequest
+from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 from filelock import FileLock
 
@@ -63,6 +64,16 @@ def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
     finally:
         os.chdir(orig_cwd)
         LOGGER.debug(f"Restored CWD to '{orig_cwd}'.")
+
+
+@contextlib.contextmanager
+def ignore_interrupt() -> Generator:
+    """Ignore the KeyboardInterrupt signal."""
+    orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGINT, orig_handler)
 
 
 def run_shell_command(command: str, workdir: FileType = "") -> bytes:
@@ -211,15 +222,15 @@ def check_file_arg(file_path: str) -> Optional[Path]:
     return abs_path
 
 
-def save_env_for_allure(request: FixtureRequest) -> None:
+def save_env_for_allure(pytest_config: Config) -> None:
     """Save environment info in a format for Allure."""
-    alluredir = request.config.getoption("--alluredir")
+    alluredir = pytest_config.getoption("--alluredir")
 
     if not alluredir:
         return
 
     alluredir = LAUNCH_PATH / alluredir
-    metadata: Dict[str, Any] = request.config._metadata  # type: ignore
+    metadata: Dict[str, Any] = pytest_config._metadata  # type: ignore
     with open(alluredir / "environment.properties", "w+") as infile:
         for k, v in metadata.items():
             if isinstance(v, dict):
