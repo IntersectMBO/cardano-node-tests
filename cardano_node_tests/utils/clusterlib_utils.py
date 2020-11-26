@@ -422,7 +422,7 @@ def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config)
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
         return None
 
-    json_file = Path(cli_coverage_dir) / f"cli_coverage_{get_timestamped_rand_str(0)}.json"
+    json_file = Path(cli_coverage_dir) / f"cli_coverage_{get_timestamped_rand_str()}.json"
     with open(json_file, "w") as out_json:
         json.dump(cluster_obj.cli_coverage, out_json, indent=4)
     LOGGER.info(f"Coverage files saved to '{cli_coverage_dir}'.")

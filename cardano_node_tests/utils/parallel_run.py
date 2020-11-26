@@ -191,7 +191,11 @@ class ClusterManager:
         )
 
     def save_worker_cli_coverage(self) -> None:
-        """Save CLI coverage info collected by this pytest worker."""
+        """Save CLI coverage info collected by this pytest worker.
+
+        Must be done when session of the worker is about to finish, because there's no other job to
+        call `_reload_cluster_obj` and thus save CLI coverage of the old `cluster_obj` instance.
+        """
         self._log("called `save_worker_cli_coverage`")
         worker_cache = self.get_cache()
         for cache_instance in worker_cache.values():
