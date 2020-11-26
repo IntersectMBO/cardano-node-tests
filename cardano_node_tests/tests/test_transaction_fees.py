@@ -20,11 +20,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir and change to it."""
-    tmp_path = Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__)))
-    with helpers.change_cwd(tmp_path):
-        yield tmp_path
+def create_temp_dir(tmp_path_factory: TempdirFactory):
+    """Create a temporary dir."""
+    return Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__))).resolve()
+
+
+@pytest.fixture
+def temp_dir(create_temp_dir: Path):
+    """Change to a temporary dir."""
+    with helpers.change_cwd(create_temp_dir):
+        yield create_temp_dir
 
 
 # use the "temp_dir" fixture for all tests automatically
@@ -47,7 +52,9 @@ class TestFee:
             return cached_value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            "addr_test_fee0", "addr_test_fee1", cluster_obj=cluster
+            f"addr_test_fee_ci{cluster_manager.cluster_instance}_0",
+            f"addr_test_fee_ci{cluster_manager.cluster_instance}_1",
+            cluster_obj=cluster,
         )
         cluster_manager.cache.test_data[data_key] = addrs
 
@@ -201,7 +208,7 @@ class TestExpectedFees:
 
         created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
-            name_template="test_expected_fees",
+            name_template=f"test_expected_fees_ci{cluster_manager.cluster_instance}",
             no_of_addr=201,
         )
         cluster_manager.cache.test_data[data_key] = created_users

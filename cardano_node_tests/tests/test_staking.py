@@ -19,11 +19,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir and change to it."""
-    tmp_path = Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__)))
-    with helpers.change_cwd(tmp_path):
-        yield tmp_path
+def create_temp_dir(tmp_path_factory: TempdirFactory):
+    """Create a temporary dir."""
+    return Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__))).resolve()
+
+
+@pytest.fixture
+def temp_dir(create_temp_dir: Path):
+    """Change to a temporary dir."""
+    with helpers.change_cwd(create_temp_dir):
+        yield create_temp_dir
 
 
 @pytest.fixture
@@ -49,7 +54,7 @@ def pool_users(
 
     created_users = clusterlib_utils.create_pool_users(
         cluster_obj=cluster,
-        name_template="test_staking_pool_users",
+        name_template=f"test_staking_pool_users_ci{cluster_manager.cluster_instance}",
         no_of_addr=2,
     )
     cluster_manager.cache.test_data[data_key] = created_users
@@ -172,6 +177,7 @@ def _delegate_stake_addr(
     return pool_user
 
 
+@pytest.mark.run(order=3)
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
@@ -222,6 +228,7 @@ class TestDelegateAddr:
             pool_name=pool_name,
         )
 
+    @pytest.mark.run(order=2)
     @allure.link(helpers.get_vcs_link())
     def test_deregister(
         self,
@@ -664,6 +671,7 @@ class TestNegative:
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
 
+@pytest.mark.run(order=1)
 class TestRewards:
     """Tests for checking expected rewards."""
 

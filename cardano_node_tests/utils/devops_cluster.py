@@ -1,3 +1,4 @@
+"""Functionality for interacting with the DevOps cluster."""
 import logging
 import os
 import pickle
@@ -10,8 +11,9 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 
-from _pytest.fixtures import FixtureRequest
+from _pytest.config import Config
 
+from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -34,19 +36,20 @@ def get_cluster_env() -> dict:
     state_dir = socket_path.parent
     work_dir = state_dir.parent
     repo_dir = Path(os.environ.get("CARDANO_NODE_REPO_PATH") or work_dir)
+    instance_num = int(state_dir.name.replace("state-cluster", "") or 0)
 
     cluster_env = {
         "socket_path": socket_path,
         "state_dir": state_dir,
         "repo_dir": repo_dir,
         "work_dir": work_dir,
+        "instance_num": instance_num,
     }
     return cluster_env
 
 
-def start_cluster(cmd: str = "") -> clusterlib.ClusterLib:
+def start_cluster(cmd: str) -> clusterlib.ClusterLib:
     """Start cluster."""
-    cmd = cmd or "start-cluster"
     LOGGER.info(f"Starting cluster with `{cmd}`.")
     cluster_env = get_cluster_env()
     helpers.run_shell_command(cmd, workdir=cluster_env["work_dir"])
@@ -55,12 +58,12 @@ def start_cluster(cmd: str = "") -> clusterlib.ClusterLib:
     return clusterlib.ClusterLib(cluster_env["state_dir"])
 
 
-def stop_cluster() -> None:
+def stop_cluster(cmd: str) -> None:
     """Stop cluster."""
-    LOGGER.info("Stopping cluster.")
+    LOGGER.info(f"Stopping cluster with `{cmd}`.")
     cluster_env = get_cluster_env()
     try:
-        helpers.run_shell_command("stop-cluster", workdir=cluster_env["work_dir"])
+        helpers.run_shell_command(cmd, workdir=cluster_env["work_dir"])
     except Exception as exc:
         LOGGER.debug(f"Failed to stop cluster: {exc}")
 
@@ -69,8 +72,12 @@ def restart_node(node_name: str) -> None:
     """Restart single node of the running cluster."""
     LOGGER.info(f"Restarting cluster node `{node_name}`.")
     cluster_env = get_cluster_env()
+    supervisor_port = cluster_instances.get_instance_ports(cluster_env["instance_num"]).supervisor
     try:
-        helpers.run_command(f"supervisorctl restart {node_name}", workdir=cluster_env["work_dir"])
+        helpers.run_command(
+            f"supervisorctl -s http://localhost:{supervisor_port} restart {node_name}",
+            workdir=cluster_env["work_dir"],
+        )
     except Exception as exc:
         LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
 
@@ -130,17 +137,24 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     """Create addresses and their keys for usage in tests."""
     destination_dir = Path(destination_dir).expanduser()
     destination_dir.mkdir(parents=True, exist_ok=True)
+    cluster_env = get_cluster_env()
+    instance_num = cluster_env["instance_num"]
     addrs = ("user1",)
 
     LOGGER.debug("Creating addresses and keys for tests.")
     addrs_data: Dict[str, Dict[str, Any]] = {}
     for addr_name in addrs:
-        stake = cluster_obj.gen_stake_addr_and_keys(name=addr_name, destination_dir=destination_dir)
+        addr_name_instance = f"{addr_name}_ci{instance_num}"
+        stake = cluster_obj.gen_stake_addr_and_keys(
+            name=addr_name_instance, destination_dir=destination_dir
+        )
         payment = cluster_obj.gen_payment_addr_and_keys(
-            name=addr_name, stake_vkey_file=stake.vkey_file, destination_dir=destination_dir
+            name=addr_name_instance,
+            stake_vkey_file=stake.vkey_file,
+            destination_dir=destination_dir,
         )
         stake_addr_registration_cert = cluster_obj.gen_stake_addr_registration_cert(
-            addr_name=addr_name,
+            addr_name=addr_name_instance,
             stake_vkey_file=stake.vkey_file,
             destination_dir=destination_dir,
         )
@@ -161,7 +175,6 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 
     pools_data = load_devops_pools_data(cluster_obj)
 
-    cluster_env = get_cluster_env()
     data_file = Path(cluster_env["state_dir"]) / ADDR_DATA
     with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
@@ -191,7 +204,7 @@ def copy_startup_files(destdir: Path) -> StartupFiles:
     for fpath in node_config_paths:
         conf_name_orig = str(fpath)
         if conf_name_orig.endswith("node.json"):
-            conf_name = "config.json"
+            conf_name = "node.json"
         elif conf_name_orig.endswith("genesis.spec.json"):
             conf_name = "genesis.spec.json"
         else:
@@ -208,7 +221,7 @@ def copy_startup_files(destdir: Path) -> StartupFiles:
             new_str=str(dest_file),
         )
 
-    config_json = destdir / "config.json"
+    config_json = destdir / "node.json"
     genesis_spec_json = destdir / "genesis.spec.json"
     assert config_json.exists() and genesis_spec_json.exists()
 
@@ -225,7 +238,7 @@ def load_addrs_data() -> dict:
         return pickle.load(in_data)  # type: ignore
 
 
-def save_cluster_artifacts(artifacts_dir: Path) -> Optional[Path]:
+def save_cluster_artifacts(artifacts_dir: Path, clean: bool = False) -> Optional[Path]:
     """Save cluster artifacts."""
     cluster_env = get_cluster_env()
     if not cluster_env.get("state_dir"):
@@ -242,11 +255,21 @@ def save_cluster_artifacts(artifacts_dir: Path) -> Optional[Path]:
     for fpath in files_list:
         shutil.copy(fpath, dest_dir)
     for dname in dirs_to_copy:
-        shutil.copytree(
-            state_dir / dname, dest_dir / dname, symlinks=True, ignore_dangling_symlinks=True
-        )
+        src_dir = state_dir / dname
+        if not src_dir.exists():
+            continue
+        shutil.copytree(src_dir, dest_dir / dname, symlinks=True, ignore_dangling_symlinks=True)
+
+    if not os.listdir(dest_dir):
+        dest_dir.rmdir()
+        return None
 
     LOGGER.info(f"Cluster artifacts saved to '{dest_dir}'.")
+
+    if clean:
+        LOGGER.info(f"Cleaning cluster artifacts in '{state_dir}'.")
+        shutil.rmtree(state_dir, ignore_errors=True)
+
     return dest_dir
 
 
@@ -265,9 +288,9 @@ def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optio
     return dest_dir
 
 
-def save_artifacts(pytest_tmp_dir: Path, request: FixtureRequest) -> None:
+def save_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
     """Save tests and cluster artifacts."""
-    artifacts_base_dir = request.config.getoption("--artifacts-base-dir")
+    artifacts_base_dir = pytest_config.getoption("--artifacts-base-dir")
     if not artifacts_base_dir:
         return
 
