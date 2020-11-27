@@ -378,7 +378,7 @@ class TestMultiInOut:
         cluster_manager: parallel_run.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
-        """Create 11 new payment addresses."""
+        """Create 201 new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
@@ -444,7 +444,7 @@ class TestMultiInOut:
 
         # record initial balances
         src_init_balance = cluster_obj.get_address_balance(src_address)
-        from_init_balance = functools.reduce(
+        from_init_total_balance = functools.reduce(
             lambda x, y: x + y,
             (cluster_obj.get_address_balance(r.address) for r in from_addr_recs),
             0,
@@ -478,12 +478,12 @@ class TestMultiInOut:
 
         assert (
             from_final_balance == 0
-        ), f"The output addresses should have no balance, the have {from_final_balance}"
+        ), f"The output addresses should have no balance, they have {from_final_balance}"
 
         assert (
             src_final_balance
             == src_init_balance
-            + from_init_balance
+            + from_init_total_balance
             - tx_raw_output.fee
             - amount * len(dst_addresses)
         ), f"Incorrect balance for source address `{src_address}`"
