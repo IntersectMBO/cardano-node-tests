@@ -121,4 +121,4 @@ fi
 printf "\nSuccess\n\n"
 echo "You can use 'docker exec -it <container-id> /bin/bash' in a separate session to play in the environment."
 echo "Press any key to stop container."
-read
+read -r
