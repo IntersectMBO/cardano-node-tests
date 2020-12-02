@@ -113,6 +113,9 @@ def get_current_tip(wait=False):
                 .decode("utf-8")
                 .strip()
         )
+
+        print(f"output: {output}")
+
         output_json = json.loads(output)
         return int(output_json["blockNo"]), output_json["headerHash"], int(output_json["slotNo"])
     except subprocess.CalledProcessError as e:
