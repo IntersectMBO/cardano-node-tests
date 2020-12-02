@@ -45,7 +45,11 @@ class TestBasic:
         """Test changing *decentralisationParam* using update proposal ."""
         clusterlib_utils.update_params(
             cluster_obj=cluster_update_proposal,
-            cli_arg="--decentralization-parameter",
-            param_name="decentralisationParam",
-            param_value=0.5,
+            update_proposals=[
+                clusterlib_utils.UpdateProposal(
+                    arg="--decentralization-parameter",
+                    value=0.5,
+                    name="decentralisationParam",
+                )
+            ],
         )
