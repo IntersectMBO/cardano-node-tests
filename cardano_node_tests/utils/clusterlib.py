@@ -270,8 +270,8 @@ class ClusterLib:
         return CLIOut(stdout or b"", stderr or b"")
 
     def cli(self, cli_args: List[str]) -> CLIOut:
-        """Run the `cardano-cli shelley` command."""
-        cmd = ["cardano-cli", "shelley", *cli_args]
+        """Run the `cardano-cli` command."""
+        cmd = ["cardano-cli", *cli_args]
         self.record_cli_coverage(cmd)
         return self.cli_base(cmd)
 
@@ -920,7 +920,7 @@ class ClusterLib:
         if max_index:
             max_address = txouts_copy.pop(max_index[0]).address
 
-        total_input_amount = functools.reduce(lambda x, y: x + y[2], txins_copy, 0)
+        total_input_amount = functools.reduce(lambda x, y: x + y.amount, txins_copy, 0)
         total_output_amount = functools.reduce(lambda x, y: x + y[1], txouts_copy, 0)
         total_withdrawals_amount = functools.reduce(lambda x, y: x + y[1], withdrawals_copy, 0)
 

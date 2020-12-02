@@ -1,9 +1,11 @@
 import datetime
+import itertools
 import json
 import logging
 from pathlib import Path
 from typing import Any
 from typing import List
+from typing import NamedTuple
 from typing import Optional
 from typing import Union
 
@@ -15,6 +17,12 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
+
+
+class UpdateProposal(NamedTuple):
+    arg: str
+    value: Any
+    name: str = ""
 
 
 def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
@@ -389,31 +397,36 @@ def check_pool_data(  # noqa: C901
 
 
 def update_params(
-    cluster_obj: clusterlib.ClusterLib, cli_arg: str, param_name: str, param_value: Any
+    cluster_obj: clusterlib.ClusterLib, update_proposals: List[UpdateProposal]
 ) -> None:
     """Update params using update proposal."""
-    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/update_params.lock"):
-        if str(cluster_obj.get_protocol_params()[param_name]) == str(param_value):
-            LOGGER.info(f"Value for '{param_name}' is already {param_value}. Nothing to do.")
-            return
+    _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
+    cli_args = list(itertools.chain.from_iterable(_cli_args))
 
+    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/update_params.lock"):
         LOGGER.info("Waiting for new epoch to submit proposal.")
         cluster_obj.wait_for_new_epoch()
 
         cluster_obj.submit_update_proposal(
-            cli_args=[cli_arg, str(param_value)],
-            tx_name=f"{param_name}_{get_timestamped_rand_str()}",
+            cli_args=cli_args,
+            tx_name=get_timestamped_rand_str(),
         )
 
-        LOGGER.info(f"Update Proposal submitted (cli_arg={cli_arg}, param_value={param_value})")
+        LOGGER.info(f"Update Proposal submitted ({cli_args})")
         cluster_obj.wait_for_new_epoch()
 
-        updated_value = cluster_obj.get_protocol_params()[param_name]
-        if str(updated_value) != str(param_value):
-            raise AssertionError(
-                f"Cluster update proposal failed! Param value: {updated_value}.\n"
-                f"Tip:{cluster_obj.get_tip()}"
-            )
+        protocol_params = cluster_obj.get_protocol_params()
+        for u in update_proposals:
+            # TODO: handle nested dictionaries
+            if not u.name:
+                continue
+            updated_value = protocol_params[u.name]
+            if str(updated_value) != str(u.value):
+                raise AssertionError(
+                    f"Cluster update proposal failed! Param value for {u.name}: {updated_value}.\n"
+                    f"Expected: {u.value}\n"
+                    f"Tip: {cluster_obj.get_tip()}"
+                )
 
 
 def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> Optional[Path]:
