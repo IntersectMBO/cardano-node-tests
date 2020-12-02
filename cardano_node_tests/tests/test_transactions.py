@@ -1100,7 +1100,7 @@ class TestNegative:
                     *cluster._prepend_flag("--tx-out", txouts),
                 ]
             )
-        assert "Missing: --fee LOVELACE" in str(excinfo.value)
+        assert "fee must be specified" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_missing_ttl(
@@ -1133,7 +1133,7 @@ class TestNegative:
                     *cluster._prepend_flag("--tx-out", txouts),
                 ]
             )
-        assert "Missing: --ttl SLOT" in str(excinfo.value)
+        assert "TTL must be specified" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_missing_tx_in(
