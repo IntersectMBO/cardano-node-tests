@@ -32,8 +32,6 @@ def create_db_tables():
                                         env text NOT NULL,
                                         tag_no1 text NOT NULL,
                                         tag_no2 text,
-                                        pr_no1 text NOT NULL,
-                                        pr_no2 text,
                                         cardano_cli_version1 text NOT NULL,
                                         cardano_cli_version2 text,
                                         cardano_cli_git_rev1 text NOT NULL,
@@ -56,6 +54,7 @@ def create_db_tables():
                                         platform_system text NOT NULL,
                                         platform_release text NOT NULL,
                                         platform_version text NOT NULL,
+                                        chain_size text NOT NULL,
                                         sync_details1 text NOT NULL
                                     ); """
 
@@ -63,8 +62,6 @@ def create_db_tables():
                                         env text NOT NULL,
                                         tag_no1 text NOT NULL,
                                         tag_no2 text,
-                                        pr_no1 text NOT NULL,
-                                        pr_no2 text,
                                         cardano_cli_version1 text NOT NULL,
                                         cardano_cli_version2 text,
                                         cardano_cli_git_rev1 text NOT NULL,
@@ -87,6 +84,7 @@ def create_db_tables():
                                         platform_system text NOT NULL,
                                         platform_release text NOT NULL,
                                         platform_version text NOT NULL,
+                                        chain_size text NOT NULL,
                                         sync_details1 text NOT NULL
                                     ); """
 
@@ -94,8 +92,6 @@ def create_db_tables():
                                         env text NOT NULL,
                                         tag_no1 text NOT NULL,
                                         tag_no2 text,
-                                        pr_no1 text NOT NULL,
-                                        pr_no2 text,
                                         cardano_cli_version1 text NOT NULL,
                                         cardano_cli_version2 text,
                                         cardano_cli_git_rev1 text NOT NULL,
@@ -118,6 +114,7 @@ def create_db_tables():
                                         platform_system text NOT NULL,
                                         platform_release text NOT NULL,
                                         platform_version text NOT NULL,
+                                        chain_size text NOT NULL,
                                         sync_details1 text NOT NULL
                                     ); """
 
