@@ -5,6 +5,8 @@ import platform
 import signal
 import subprocess
 import tarfile
+
+import requests
 import time
 import urllib.request
 import zipfile
@@ -37,27 +39,190 @@ def set_repo_paths():
     os.chdir("..")
 
 
-def git_get_last_pr_from_tag(tag_no):
-    os.chdir(Path(CARDANO_NODE_PATH))
-    cmd = (
-            "git log --pretty=format:%s "
-            + tag_no
-            + " | grep Merge | head -n1"
-    )
-    try:
-        output = (
-            subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-                .decode("utf-8")
-                .strip()
-        )
-        os.chdir(ROOT_TEST_PATH)
+def git_get_commit_sha_for_tag_no(tag_no):
+    global jData
+    url = "https://api.github.com/repos/input-output-hk/cardano-node/tags"
+    response = requests.get(url)
+    if response.ok:
+        jData = json.loads(response.content)
+    else:
+        response.raise_for_status()
 
-        return str(output.splitlines()[0].split(" #")[1])
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(
-            "command '{}' return with error (code {}): {}".format(
-                e.cmd, e.returncode, " ".join(str(e.output).split())
-            )
+    for tag in jData:
+        if tag.get('name') == tag_no:
+            return tag.get('commit').get('sha')
+
+    print(f" ===== ERROR: The specified tag_no - {tag_no} - was not found ===== ")
+    print(json.dumps(jData, indent=4, sort_keys=True))
+    return None
+
+
+def git_get_hydra_eval_link_for_commit_sha(commit_sha):
+    global jData
+    url = f"https://api.github.com/repos/input-output-hk/cardano-node/commits/{commit_sha}/status"
+    response = requests.get(url)
+    if response.ok:
+        jData = json.loads(response.content)
+    else:
+        response.raise_for_status()
+
+    for status in jData.get('statuses'):
+        if "hydra.iohk.io/eval" in status.get("target_url"):
+            return status.get("target_url")
+
+    print(f" ===== ERROR: There is not eval link for the provided commit_sha - {commit_sha} =====")
+    print(json.dumps(jData, indent=4, sort_keys=True))
+    return None
+
+
+def get_hydra_build_download_url(eval_url, os_type):
+    global eval_jData, build_jData
+
+    expected_os_types = ["windows", "linux", "macos"]
+    if os_type not in expected_os_types:
+        raise Exception(
+            f" ===== ERROR: provided os_type - {os_type} - not expected - {expected_os_types}")
+
+    headers = {'Content-type': 'application/json'}
+    eval_response = requests.get(eval_url, headers=headers)
+
+    eval_jData = json.loads(eval_response.content)
+
+    if eval_response.ok:
+        eval_jData = json.loads(eval_response.content)
+    else:
+        eval_response.raise_for_status()
+
+    for build_no in eval_jData.get("builds"):
+        build_url = f"https://hydra.iohk.io/build/{build_no}"
+        build_response = requests.get(build_url, headers=headers)
+        if build_response.ok:
+            build_jData = json.loads(build_response.content)
+        else:
+            build_response.raise_for_status()
+
+        if os_type.lower() == "windows":
+            if build_jData.get("job") == "cardano-node-win64":
+                return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-win64.zip"
+        elif os_type.lower() == "linux":
+            if build_jData.get("job") == "cardano-node-linux":
+                return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-linux.tar.gz"
+        elif os_type.lower() == "macos":
+            if build_jData.get("job") == "cardano-node-macos":
+                return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-macos.tar.gz"
+
+    print(f" ===== ERROR: No build has found for the required os_type - {os_type} - {eval_url} ===")
+    return None
+
+
+def get_and_extract_node_files(tag_no):
+    print(" - get and extract the pre-built node files")
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
+    platform_system, platform_release, platform_version = get_os_type()
+
+    commit_sha = git_get_commit_sha_for_tag_no(tag_no)
+    eval_url = git_get_hydra_eval_link_for_commit_sha(commit_sha)
+
+    print(f"commit_sha  : {commit_sha}")
+    print(f"eval_url    : {eval_url}")
+
+    if "linux" in platform_system.lower():
+        download_url = get_hydra_build_download_url(eval_url, "linux")
+        get_and_extract_linux_files(download_url)
+    elif "darwin" in platform_system.lower():
+        download_url = get_hydra_build_download_url(eval_url, "macos")
+        get_and_extract_macos_files(download_url)
+    elif "windows" in platform_system.lower():
+        download_url = get_hydra_build_download_url(eval_url, "windows")
+        get_and_extract_windows_files(download_url)
+
+
+def get_and_extract_linux_files(download_url):
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
+    current_directory = os.getcwd()
+    print(f" - current_directory: {current_directory}")
+
+    archive_name = download_url.split("/")[-1].strip()
+
+    print(f"archive_name: {archive_name}")
+    print(f"download_url: {download_url}")
+
+    urllib.request.urlretrieve(download_url, Path(current_directory) / archive_name)
+
+    print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
+    tf = tarfile.open(Path(current_directory) / archive_name)
+    tf.extractall(Path(current_directory))
+    print(f" - listdir (after archive extraction): {os.listdir(current_directory)}")
+
+
+def get_and_extract_macos_files(download_url):
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
+    current_directory = os.getcwd()
+    print(f" - current_directory: {current_directory}")
+
+    archive_name = download_url.split("/")[-1].strip()
+
+    print(f"archive_name: {archive_name}")
+    print(f"download_url: {download_url}")
+
+    urllib.request.urlretrieve(download_url, Path(current_directory) / archive_name)
+
+    print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
+    tf = tarfile.open(Path(current_directory) / archive_name)
+    tf.extractall(Path(current_directory))
+    print(f" - listdir (after archive extraction): {os.listdir(current_directory)}")
+
+
+def get_and_extract_windows_files(download_url):
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
+    current_directory = os.getcwd()
+    print(f" - current_directory: {current_directory}")
+
+    archive_name = download_url.split("/")[-1].strip()
+
+    print(f"archive_name: {archive_name}")
+    print(f"download_url: {download_url}")
+
+    urllib.request.urlretrieve(download_url, Path(current_directory) / archive_name)
+
+    print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
+    with zipfile.ZipFile(Path(current_directory) / archive_name, "r") as zip_ref:
+        zip_ref.extractall(current_directory)
+    print(f" ------ listdir (after archive extraction): {os.listdir(current_directory)}")
+
+
+def delete_node_files():
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
+    for p in Path(".").glob("cardano-*"):
+        print(f" === deleting file: {p}")
+        p.unlink(missing_ok=True)
+
+
+def get_node_config_files(env):
+    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
+    urllib.request.urlretrieve(
+        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
+        + env
+        + "-config.json",
+        env + "-config.json",
+        )
+    urllib.request.urlretrieve(
+        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
+        + env
+        + "-byron-genesis.json",
+        env + "-byron-genesis.json",
+        )
+    urllib.request.urlretrieve(
+        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
+        + env
+        + "-shelley-genesis.json",
+        env + "-shelley-genesis.json",
+        )
+    urllib.request.urlretrieve(
+        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
+        + env
+        + "-topology.json",
+        env + "-topology.json",
         )
 
 
@@ -107,7 +272,7 @@ def wait_for_node_to_start():
 def get_current_tip(wait=False):
     os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     try:
-        cmd = CLI + " shelley query tip " + get_testnet_value()
+        cmd = CLI + " query tip " + get_testnet_value()
         output = (
             subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
                 .decode("utf-8")
@@ -244,138 +409,21 @@ def get_file_creation_date(path_to_file):
     return time.ctime(os.path.getmtime(path_to_file))
 
 
-def get_and_extract_linux_files(tag_no):
-    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
-    current_directory = os.getcwd()
-    print(f" - current_directory: {current_directory}")
-
-    pr_no = git_get_last_pr_from_tag(tag_no)
-    archive_name = f"cardano-node-{tag_no}-linux.tar.gz"
-    node_files = (
-        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-"
-        f"{pr_no}/cardano-node-linux/latest-finished"
-        f"/download/1/{archive_name}"
-    )
-
-    print(f"pr_no       : {pr_no}")
-    print(f"tag_no      : {tag_no}")
-    print(f"archive_name: {archive_name}")
-    print(f"node_files  : {node_files}")
-
-    urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
-
-    print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
-
-    tf = tarfile.open(Path(current_directory) / archive_name)
-    tf.extractall(Path(current_directory))
-    print(f" - listdir (after archive extraction): {os.listdir(current_directory)}")
-
-
-def get_and_extract_macos_files(tag_no):
-    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
-    current_directory = os.getcwd()
-    print(f" - current_directory: {current_directory}")
-
-    pr_no = git_get_last_pr_from_tag(tag_no)
-    archive_name = f"cardano-node-{tag_no}-macos.tar.gz"
-    node_files = (
-        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-"
-        f"{pr_no}/cardano-node-macos/latest-finished"
-        f"/download/1/{archive_name}"
-    )
-
-    print(f"pr_no       : {pr_no}")
-    print(f"tag_no      : {tag_no}")
-    print(f"archive_name: {archive_name}")
-    print(f"node_files  : {node_files}")
-
-    urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
-
-    print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
-
-    tf = tarfile.open(Path(current_directory) / archive_name)
-    tf.extractall(Path(current_directory))
-    print(f" - listdir (after archive extraction): {os.listdir(current_directory)}")
-
-
-def get_and_extract_windows_files(tag_no):
-    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
-    current_directory = os.getcwd()
-    print(f" - current_directory: {current_directory}")
-
-    pr_no = git_get_last_pr_from_tag(tag_no)
-    archive_name = f"cardano-node-{tag_no}-win64.zip"
-    node_files = (
-        f"https://hydra.iohk.io/job/Cardano/cardano-node-pr-"
-        f"{pr_no}/cardano-node-win64/latest-finished"
-        f"/download/1/cardano-node-{archive_name}"
-    )
-
-    print(f"pr_no       : {pr_no}")
-    print(f"tag_no      : {tag_no}")
-    print(f"archive_name: {archive_name}")
-    print(f"node_files  : {node_files}")
-
-    urllib.request.urlretrieve(node_files, Path(current_directory) / archive_name)
-
-    print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
-
-    with zipfile.ZipFile(Path(current_directory) / archive_name, "r") as zip_ref:
-        zip_ref.extractall(current_directory)
-    print(f" ------ listdir (after archive extraction): {os.listdir(current_directory)}")
-
-
-def get_and_extract_node_files(tag_no):
-    print(" - get and extract the pre-built node files")
-    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
-    platform_system, platform_release, platform_version = get_os_type()
-    if "linux" in platform_system.lower():
-        get_and_extract_linux_files(tag_no)
-    elif "darwin" in platform_system.lower():
-        get_and_extract_macos_files(tag_no)
-    elif "windows" in platform_system.lower():
-        get_and_extract_windows_files(tag_no)
-
-
-def delete_node_files():
-    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
-    for p in Path(".").glob("cardano-*"):
-        print(f" === deleting file: {p}")
-        p.unlink(missing_ok=True)
-
-
-def get_node_config_files(env):
-    os.chdir(Path(CARDANO_NODE_TESTS_PATH))
-    urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-config.json",
-        env + "-config.json",
-        )
-    urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-byron-genesis.json",
-        env + "-byron-genesis.json",
-        )
-    urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-shelley-genesis.json",
-        env + "-shelley-genesis.json",
-        )
-    urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-topology.json",
-        env + "-topology.json",
-        )
+def get_size(start_path='.'):
+    # returns directory size in bytes
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(start_path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
 
 
 def wait_for_node_to_sync(env):
     sync_details_dict = OrderedDict()
     count = 0
     last_byron_slot_no, latest_slot_no = get_calculated_slot_no(env)
+
     actual_slot_no = get_current_tip()[2]
     start_sync = time.perf_counter()
 
@@ -489,13 +537,6 @@ def main():
     tag_no2 = str(vars(args)["tag_number2"]).strip()
     print(f"tag_no1: {tag_no1}")
     print(f"tag_no2: {tag_no2}")
-    pr_no1 = str(git_get_last_pr_from_tag(tag_no1)).strip()
-    if tag_no2 == "None":
-        pr_no2 = "None"
-    else:
-        pr_no2 = git_get_last_pr_from_tag(tag_no2)
-    print(f"pr_no1: {pr_no1}")
-    print(f"pr_no2: {pr_no2}")
 
     platform_system, platform_release, platform_version = get_os_type()
     print(f"platform: {platform_system, platform_release, platform_version}")
@@ -628,6 +669,8 @@ def main():
         total_chunks2 = int(newest_chunk1.split(".")[0])
         print(f"downloaded chunks2: {total_chunks2}")
 
+    chain_size = get_size(Path(CARDANO_NODE_TESTS_PATH) / "db" )
+
     print("move to 'cardano_node_tests_path/scripts'")
     os.chdir(Path(CARDANO_NODE_TESTS_PATH) / "sync_tests")
     current_directory = Path.cwd()
@@ -637,8 +680,6 @@ def main():
         env,
         tag_no1,
         tag_no2,
-        pr_no1,
-        pr_no2,
         cardano_cli_version1,
         cardano_cli_version2,
         cardano_cli_git_rev1,
@@ -661,6 +702,7 @@ def main():
         platform_system,
         platform_release,
         platform_version,
+        chain_size,
         json.dumps(sync_details_dict1),
     )
 
@@ -685,7 +727,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-e",
         "--environment",
-        help="the environment on which to run the tests - staging or mainnet.",
+        help="the environment on which to run the tests - testnet, staging or mainnet.",
     )
 
     args = parser.parse_args()
