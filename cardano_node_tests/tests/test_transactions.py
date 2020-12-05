@@ -618,7 +618,8 @@ class TestNotBalanced:
                 fee=fee,
                 ttl=ttl,
             )
-        assert "option --tx-out: Failed reading" in str(excinfo.value)
+        exc_val = str(excinfo.value)
+        assert "option --tx-out: Failed reading" in exc_val or "TxOutAdaOnly" in exc_val
 
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
     @helpers.HYPOTHESIS_SETTINGS
@@ -676,7 +677,8 @@ class TestNotBalanced:
             )
         except clusterlib.CLIError as exc:
             if change_amount >= 2 ** 64:
-                assert "out of bounds" in str(exc)
+                exc_val = str(exc)
+                assert "out of bounds" in exc_val or "exceeds the max bound" in exc_val
                 return
             raise
 
@@ -740,7 +742,8 @@ class TestNegative:
                 tx_files=tx_files,
                 fee=0,
             )
-        assert "invalid address" in str(excinfo.value)
+        exc_val = str(excinfo.value)
+        assert "invalid address" in exc_val or "An error occurred" in exc_val  # TODO: better match
 
     def _send_funds_from_invalid_address(
         self, cluster_obj: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser], addr: str
@@ -852,7 +855,8 @@ class TestNegative:
         # it should NOT be possible to submit a transaction with ttl in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx(out_file_signed)
-        assert "ExpiredUTxO" in str(excinfo.value)
+        exc_val = str(excinfo.value)
+        assert "ExpiredUTxO" in exc_val or "ValidityIntervalUTxO" in exc_val
 
     @allure.link(helpers.get_vcs_link())
     def test_duplicated_tx(
@@ -1336,6 +1340,10 @@ class TestMetadata:
         with open(self.JSON_METADATA_FILE) as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
+        try:
+            cbor_body_metadata = cbor_body_metadata[0]
+        except KeyError:
+            pass
         assert (
             cbor_body_metadata == json_file_metadata
         ), "Metadata in TX body doesn't match the original metadata"
@@ -1369,6 +1377,10 @@ class TestMetadata:
         with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp:
             cbor_file_metadata = cbor2.load(metadata_fp)
 
+        try:
+            cbor_body_metadata = cbor_body_metadata[0]
+        except KeyError:
+            pass
         assert (
             cbor_body_metadata == cbor_file_metadata
         ), "Metadata in TX body doesn't match original metadata"
@@ -1409,6 +1421,10 @@ class TestMetadata:
             cbor_file_metadata = cbor2.load(metadata_fp_cbor)
         cbor_file_metadata = json.loads(json.dumps(cbor_file_metadata))
 
+        try:
+            cbor_body_metadata = cbor_body_metadata[0]
+        except KeyError:
+            pass
         assert cbor_body_metadata == {
             **json_file_metadata,
             **cbor_file_metadata,

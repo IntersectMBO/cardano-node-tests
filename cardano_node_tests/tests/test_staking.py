@@ -838,7 +838,8 @@ class TestRewards:
                 assert user_stake_addr_dec in _pstake_go
 
             if this_epoch >= init_epoch + 5:
-                # wait 5 epochs for the first reward for user stake address
+                # wait 5 epochs for first rewards
+                assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
                 assert (
                     user_reward > prev_user_reward
                 ), "New reward was not received by stake address"
@@ -856,10 +857,6 @@ class TestRewards:
                     _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["_pstakeGo"]["_stake"])
                     == user_rewards[-3][1] + user_payment_balance
                 )
-
-            # check that new reward was received by the pool owner
-            if this_epoch >= 4:
-                assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
 
         # withdraw rewards to payment address
         if this_epoch == cluster.get_last_block_epoch():
