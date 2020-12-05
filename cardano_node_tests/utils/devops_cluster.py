@@ -44,8 +44,25 @@ def get_cluster_env() -> dict:
         "repo_dir": repo_dir,
         "work_dir": work_dir,
         "instance_num": instance_num,
+        "cluster_era": cluster_instances.CLUSTER_ERA,
+        "tx_era": cluster_instances.TX_ERA,
     }
     return cluster_env
+
+
+def get_cluster_obj() -> clusterlib.ClusterLib:
+    """Return instance of `ClusterLib` (cluster_obj)."""
+    cluster_env = get_cluster_env()
+    if cluster_instances.CLUSTER_ERA == "shelley":
+        cluster_obj = clusterlib.ClusterLib(cluster_env["state_dir"])
+    else:
+        cluster_obj = clusterlib.ClusterLib(
+            cluster_env["state_dir"],
+            protocol=clusterlib.Protocols.CARDANO,
+            era=cluster_instances.CLUSTER_ERA,
+            tx_era=cluster_instances.TX_ERA,
+        )
+    return cluster_obj
 
 
 def start_cluster(cmd: str) -> clusterlib.ClusterLib:
@@ -54,8 +71,7 @@ def start_cluster(cmd: str) -> clusterlib.ClusterLib:
     cluster_env = get_cluster_env()
     helpers.run_shell_command(cmd, workdir=cluster_env["work_dir"])
     LOGGER.info("Cluster started.")
-
-    return clusterlib.ClusterLib(cluster_env["state_dir"])
+    return get_cluster_obj()
 
 
 def stop_cluster(cmd: str) -> None:
@@ -92,12 +108,12 @@ def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
         pool_data_dir = data_dir / pool_name
         pools_data[pool_name] = {
             "payment": clusterlib.AddressRecord(
-                address=cluster_obj.read_address_from_file(pool_data_dir / "owner.addr"),
+                address=clusterlib.read_address_from_file(pool_data_dir / "owner.addr"),
                 vkey_file=pool_data_dir / "owner-utxo.vkey",
                 skey_file=pool_data_dir / "owner-utxo.skey",
             ),
             "stake": clusterlib.AddressRecord(
-                address=cluster_obj.read_address_from_file(pool_data_dir / "owner-stake.addr"),
+                address=clusterlib.read_address_from_file(pool_data_dir / "owner-stake.addr"),
                 vkey_file=pool_data_dir / "owner-stake.vkey",
                 skey_file=pool_data_dir / "owner-stake.skey",
             ),
@@ -166,12 +182,38 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
         }
 
     LOGGER.debug("Funding created addresses.")
-    clusterlib_utils.fund_from_genesis(
-        *[d["payment"].address for d in addrs_data.values()],
-        cluster_obj=cluster_obj,
-        amount=6_000_000_000_000,
-        destination_dir=destination_dir,
-    )
+    if cluster_instances.CLUSTER_ERA == "shelley":
+        # fund from shelley genesis
+        clusterlib_utils.fund_from_genesis(
+            *[d["payment"].address for d in addrs_data.values()],
+            cluster_obj=cluster_obj,
+            amount=6_000_000_000_000,
+            destination_dir=destination_dir,
+        )
+    else:
+        to_fund = [d["payment"] for d in addrs_data.values()]
+        byron_dir = cluster_env["state_dir"] / "byron"
+        for b in range(3):
+            byron_addr = {
+                "payment": clusterlib.AddressRecord(
+                    address=clusterlib.read_address_from_file(
+                        byron_dir / f"address-00{b}-converted"
+                    ),
+                    vkey_file=byron_dir / f"payment-keys.00{b}-converted.vkey",
+                    skey_file=byron_dir / f"payment-keys.00{b}-converted.skey",
+                )
+            }
+            addrs_data[f"byron00{b}"] = byron_addr
+
+        # fund from converted byron address
+        clusterlib_utils.fund_from_faucet(
+            *to_fund,
+            cluster_obj=cluster_obj,
+            faucet_data=addrs_data["byron000"],
+            amount=6_000_000_000_000,
+            destination_dir=destination_dir,
+            force=True,
+        )
 
     pools_data = load_devops_pools_data(cluster_obj)
 
@@ -193,8 +235,8 @@ def get_node_config_paths(start_script: Path) -> List[Path]:
     return node_config_paths
 
 
-def copy_startup_files(destdir: Path) -> StartupFiles:
-    """Make a copy of the "start-cluster" script and cluster config files."""
+def _copy_nix_startup_files(destdir: Path) -> StartupFiles:
+    """Make copy of cluster startup files located on nix."""
     start_script_orig = helpers.get_cmd_path("start-cluster")
     shutil.copy(start_script_orig, destdir)
     start_script = destdir / "start-cluster"
@@ -228,6 +270,30 @@ def copy_startup_files(destdir: Path) -> StartupFiles:
     return StartupFiles(
         start_script=start_script, config=config_json, genesis_spec=genesis_spec_json
     )
+
+
+def _copy_local_startup_files(destdir: Path) -> StartupFiles:
+    """Make copy of cluster startup files located in this repository."""
+    scripts_dir = cluster_instances.SCRIPTS_DIR
+    shutil.copytree(
+        scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+    )
+
+    start_script = destdir / "start-cluster-hfc"
+    config_json = destdir / "node.json"
+    genesis_spec_json = destdir / "genesis.spec.json"
+    assert start_script.exists() and config_json.exists() and genesis_spec_json.exists()
+
+    return StartupFiles(
+        start_script=start_script, config=config_json, genesis_spec=genesis_spec_json
+    )
+
+
+def copy_startup_files(destdir: Path) -> StartupFiles:
+    """Make a copy of the "start-cluster" script and cluster config files."""
+    if cluster_instances.CLUSTER_ERA == "shelley":
+        return _copy_nix_startup_files(destdir=destdir)
+    return _copy_local_startup_files(destdir=destdir)
 
 
 def load_addrs_data() -> dict:

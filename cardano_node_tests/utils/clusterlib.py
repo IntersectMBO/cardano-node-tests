@@ -121,6 +121,12 @@ class Protocols:
     SHELLEY = "shelley"
 
 
+class Eras:
+    SHELLEY = "shelley"
+    ALLEGRA = "allegra"
+    MARY = "mary"
+
+
 class MultiSigTypeArgs:
     ALL = "all"
     ANY = "any"
@@ -138,12 +144,24 @@ def get_rand_str(length: int = 8) -> str:
     return "".join(random.choice(string.ascii_lowercase) for i in range(length))
 
 
+def read_address_from_file(addr_file: FileType) -> str:
+    """Read address stored in file."""
+    with open(Path(addr_file).expanduser()) as in_file:
+        return in_file.read().strip()
+
+
 class ClusterLib:
     """Cluster Lib."""
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, state_dir: FileType, protocol: str = Protocols.SHELLEY):
+    def __init__(
+        self,
+        state_dir: FileType,
+        protocol: str = Protocols.SHELLEY,
+        era: str = "",
+        tx_era: str = "",
+    ):
         self.cli_coverage: dict = {}
 
         _rand_str = get_rand_str(4)
@@ -173,6 +191,11 @@ class ClusterLib:
             vkey_file=self.genesis_utxo_vkey,
             destination_dir=self.state_dir,
         )
+
+        self.era = era
+        self.era_arg = [f"--{self.era}-era"] if self.era else []
+        self.tx_era = tx_era or self.era
+        self.tx_era_arg = [f"--{self.tx_era}-era"] if self.tx_era else []
 
         self.protocol = protocol
         self._check_protocol()
@@ -211,11 +234,6 @@ class ClusterLib:
             out_file = Path(out_file).expanduser()
             if not out_file.exists():
                 raise CLIError(f"The expected file `{out_file}` doesn't exist.")
-
-    def read_address_from_file(self, addr_file: FileType) -> str:
-        """Read address stored in file."""
-        with open(Path(addr_file).expanduser()) as in_file:
-            return in_file.read().strip()
 
     def record_cli_coverage(self, cli_args: List[str]) -> None:
         """Record CLI coverage info."""
@@ -299,12 +317,14 @@ class ClusterLib:
 
     def refresh_pparams_file(self) -> None:
         """Refresh protocol parameters file."""
-        self.query_cli(["protocol-parameters", "--out-file", str(self.pparams_file)])
+        self.query_cli(["protocol-parameters", *self.era_arg, "--out-file", str(self.pparams_file)])
 
     def get_utxo(self, address: str) -> List[UTXOData]:
         """Return UTXO info for payment address."""
         utxo_dict = json.loads(
-            self.query_cli(["utxo", "--address", address, "--out-file", "/dev/stdout"])
+            self.query_cli(
+                ["utxo", "--address", address, *self.era_arg, "--out-file", "/dev/stdout"]
+            )
         )
 
         utxo = []
@@ -345,7 +365,7 @@ class ClusterLib:
         )
 
         self._check_outfiles(out_file)
-        return self.read_address_from_file(out_file)
+        return read_address_from_file(out_file)
 
     def gen_payment_addr(
         self,
@@ -375,7 +395,7 @@ class ClusterLib:
         )
 
         self._check_outfiles(out_file)
-        return self.read_address_from_file(out_file)
+        return read_address_from_file(out_file)
 
     def gen_stake_addr(
         self, addr_name: str, stake_vkey_file: FileType, destination_dir: FileType = "."
@@ -398,7 +418,7 @@ class ClusterLib:
         )
 
         self._check_outfiles(out_file)
-        return self.read_address_from_file(out_file)
+        return read_address_from_file(out_file)
 
     def gen_script_addr(
         self, addr_name: str, script_file: FileType, destination_dir: FileType = "."
@@ -421,7 +441,7 @@ class ClusterLib:
         )
 
         self._check_outfiles(out_file)
-        return self.read_address_from_file(out_file)
+        return read_address_from_file(out_file)
 
     def gen_payment_key_pair(self, key_name: str, destination_dir: FileType = ".") -> KeyPair:
         """Generate payment key pair."""
@@ -776,7 +796,7 @@ class ClusterLib:
 
     def get_ledger_state(self) -> dict:
         """Return ledger state info."""
-        return json.loads(self.query_cli(["ledger-state"]))  # type: ignore
+        return json.loads(self.query_cli(["ledger-state", *self.era_arg]))  # type: ignore
 
     def get_registered_stake_pools_ledger_state(self) -> dict:
         """Return ledger state info for registered stake pools."""
@@ -796,7 +816,9 @@ class ClusterLib:
 
     def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
         """Return info about stake pool address."""
-        output_json = json.loads(self.query_cli(["stake-address-info", "--address", stake_addr]))
+        output_json = json.loads(
+            self.query_cli(["stake-address-info", *self.era_arg, "--address", stake_addr])
+        )
         if not output_json:
             return StakeAddrInfo(address="", delegation="", reward_account_balance=0)
 
@@ -827,7 +849,7 @@ class ClusterLib:
     def get_stake_distribution(self) -> dict:
         """Return info about stake distribution per stake pool."""
         # stake pool values are displayed starting with line 2 from the command output
-        result = self.query_cli(["stake-distribution"]).splitlines()[2:]
+        result = self.query_cli(["stake-distribution", *self.era_arg]).splitlines()[2:]
         stake_distribution = {}
         for pool in result:
             pool_id, *__, stake = pool.split(" ")
@@ -988,6 +1010,7 @@ class ClusterLib:
                 *self._prepend_flag("--metadata-json-file", tx_files.metadata_json_files),
                 *self._prepend_flag("--metadata-cbor-file", tx_files.metadata_cbor_files),
                 *self._prepend_flag("--withdrawal", withdrawals_combined),
+                *self.tx_era_arg,
             ]
         )
 
@@ -1340,6 +1363,8 @@ class ClusterLib:
     def submit_update_proposal(
         self,
         cli_args: UnpackableSequence,
+        src_address: str,
+        src_skey_file: FileType,
         tx_name: str,
         epoch: Optional[int] = None,
         destination_dir: FileType = ".",
@@ -1356,11 +1381,11 @@ class ClusterLib:
         )
 
         return self.send_tx(
-            src_address=self.genesis_utxo_addr,
+            src_address=src_address,
             tx_name=f"{tx_name}_submit_proposal",
             tx_files=TxFiles(
                 proposal_files=[out_file],
-                signing_key_files=[*self.delegate_skeys, self.genesis_utxo_skey],
+                signing_key_files=[*self.delegate_skeys, Path(src_skey_file)],
             ),
             destination_dir=destination_dir,
         )
