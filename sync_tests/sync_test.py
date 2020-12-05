@@ -251,28 +251,33 @@ def get_testnet_value():
         return None
 
 
-def wait_for_node_to_start():
+def wait_for_node_to_start(tag_no):
     # when starting from clean state it might take ~30 secs for the cli to work
     # when starting from existing state it might take >5 mins for the cli to work (opening db and
     # replaying the ledger)
-    tip = get_current_tip(True)
+    tip = get_current_tip(tag_no, True)
     count = 0
     while tip == 1:
         time.sleep(10)
         count += 1
-        tip = get_current_tip(True)
+        tip = get_current_tip(tag_no, True)
         if count >= 540:  # 90 mins
             print(" **************  ERROR: waited 90 mins and CLI is still not usable ********* ")
-            print(f"      TIP: {get_current_tip()}")
+            print(f"      TIP: {get_current_tip(tag_no)}")
             exit(1)
     print(f"************** CLI became available after: {count * 10} seconds **************")
     return count * 10
 
 
-def get_current_tip(wait=False):
+def get_current_tip(tag_no, wait=False):
+    # tag_no should have this format: 1.23.0, 1.24.1, etc
     os.chdir(Path(CARDANO_NODE_TESTS_PATH))
-    try:
+
+    if int(tag_no.split(".")[1]) < 24:
+        cmd = CLI + " shelley query tip " + get_testnet_value()
+    else:
         cmd = CLI + " query tip " + get_testnet_value()
+    try:
         output = (
             subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
                 .decode("utf-8")
@@ -311,7 +316,7 @@ def get_node_version():
         )
 
 
-def start_node_windows(env):
+def start_node_windows(env, tag_no):
     os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = Path.cwd()
     cmd = \
@@ -335,7 +340,7 @@ def start_node_windows(env):
                 print("ERROR: waited 30 seconds and the DB folder was not created yet")
                 exit(1)
 
-        secs_to_start = wait_for_node_to_start()
+        secs_to_start = wait_for_node_to_start(tag_no)
         print("DB folder was created")
         print(f" - listdir current_directory: {os.listdir(current_directory)}")
         print(f" - listdir db: {os.listdir(current_directory / 'db')}")
@@ -346,9 +351,10 @@ def start_node_windows(env):
                 e.cmd, e.returncode, ' '.join(str(e.output).split())))
 
 
-def start_node_unix(env):
+def start_node_unix(env, tag_no):
     os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     current_directory = Path.cwd()
+
     cmd = (
         f"{NODE} run --topology {env}-topology.json --database-path "
         f"{Path(CARDANO_NODE_TESTS_PATH) / 'db'} "
@@ -370,7 +376,7 @@ def start_node_unix(env):
                 print("ERROR: waited 30 seconds and the DB folder was not created yet")
                 break
 
-        secs_to_start = wait_for_node_to_start()
+        secs_to_start = wait_for_node_to_start(tag_no)
         print("DB folder was created")
         print(f" - listdir current_directory: {os.listdir(current_directory)}")
         print(f" - listdir db: {os.listdir(current_directory / 'db')}")
@@ -419,12 +425,12 @@ def get_size(start_path='.'):
     return total_size
 
 
-def wait_for_node_to_sync(env):
+def wait_for_node_to_sync(env, tag_no):
     sync_details_dict = OrderedDict()
     count = 0
     last_byron_slot_no, latest_slot_no = get_calculated_slot_no(env)
 
-    actual_slot_no = get_current_tip()[2]
+    actual_slot_no = get_current_tip(tag_no)[2]
     start_sync = time.perf_counter()
 
     while actual_slot_no <= last_byron_slot_no:
@@ -442,7 +448,7 @@ def wait_for_node_to_sync(env):
         )
         time.sleep(60)
         count += 1
-        actual_slot_no = get_current_tip()[2]
+        actual_slot_no = get_current_tip(tag_no)[2]
 
     end_byron_sync = time.perf_counter()
 
@@ -461,7 +467,7 @@ def wait_for_node_to_sync(env):
         )
         time.sleep(60)
         count += 1
-        actual_slot_no = get_current_tip()[2]
+        actual_slot_no = get_current_tip(tag_no)[2]
 
     end_shelley_sync = time.perf_counter()
 
@@ -564,9 +570,9 @@ def main():
     print(f"   ======================= Start node using tag_no1: {tag_no1} ====================")
     start_sync_time1 = get_current_date_time()
     if "linux" in platform_system.lower() or "darwin" in platform_system.lower():
-        secs_to_start1 = start_node_unix(env)
+        secs_to_start1 = start_node_unix(env, tag_no1)
     elif "windows" in platform_system.lower():
-        secs_to_start1 = start_node_windows(env)
+        secs_to_start1 = start_node_windows(env, tag_no1)
 
     print(" - waiting for the node to sync")
     (
@@ -574,7 +580,7 @@ def main():
         byron_sync_time_seconds1,
         shelley_sync_time_seconds1,
         sync_details_dict1,
-    ) = wait_for_node_to_sync(env)
+    ) = wait_for_node_to_sync(env, tag_no1)
 
     end_sync_time1 = get_current_date_time()
     print(f"secs_to_start1            : {secs_to_start1}")
@@ -589,8 +595,8 @@ def main():
         f"shelley_sync_time1: {time.strftime('%H:%M:%S', time.gmtime(shelley_sync_time_seconds1))}"
     )
 
-    latest_block_no1 = get_current_tip()[0]
-    latest_slot_no1 = get_current_tip()[2]
+    latest_block_no1 = get_current_tip(tag_no1)[0]
+    latest_slot_no1 = get_current_tip(tag_no1)[2]
     sync_speed_bps1 = int(
         latest_block_no1 / (byron_sync_time_seconds1 + shelley_sync_time_seconds1)
     )
@@ -630,9 +636,9 @@ def main():
         print(f"   ================ Start node using tag_no2: {tag_no2} ====================")
         start_sync_time2 = get_current_date_time()
         if "linux" in platform_system.lower() or "darwin" in platform_system.lower():
-            secs_to_start2 = start_node_unix(env)
+            secs_to_start2 = start_node_unix(env, tag_no2)
         elif "windows" in platform_system.lower():
-            secs_to_start2 = start_node_windows(env)
+            secs_to_start2 = start_node_windows(env, tag_no2)
 
         print(f" - waiting for the node to sync - using tag_no2: {tag_no2}")
         (
@@ -640,7 +646,7 @@ def main():
             byron_sync_time_seconds2,
             shelley_sync_time_seconds2,
             sync_details_dict2,
-        ) = wait_for_node_to_sync(env)
+        ) = wait_for_node_to_sync(env, tag_no2)
 
         end_sync_time2 = get_current_date_time()
         print(f"secs_to_start2    : {secs_to_start2}   = ledger revalidation time")
@@ -653,8 +659,8 @@ def main():
         print(f"shelley_sync_time2: "
               f"{time.strftime('%H:%M:%S', time.gmtime(shelley_sync_time_seconds2))}")
 
-        latest_block_no2 = get_current_tip()[0]
-        latest_slot_no2 = get_current_tip()[2]
+        latest_block_no2 = get_current_tip(tag_no2)[0]
+        latest_slot_no2 = get_current_tip(tag_no2)[2]
         sync_speed_bps2 = int(
             (latest_block_no2 - latest_block_no1)
             / (byron_sync_time_seconds2 + shelley_sync_time_seconds2)
