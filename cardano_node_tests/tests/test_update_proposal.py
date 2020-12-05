@@ -40,11 +40,43 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 class TestBasic:
     """Basic tests for update proposal."""
 
+    @pytest.fixture
+    def payment_addr(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster_update_proposal: clusterlib.ClusterLib,
+    ) -> clusterlib.AddressRecord:
+        """Create new payment address."""
+        data_key = id(TestBasic)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        cluster = cluster_update_proposal
+
+        addr = clusterlib_utils.create_payment_addr_records(
+            f"addr_test_basic_update_proposal_ci{cluster_manager.cluster_instance}_0",
+            cluster_obj=cluster,
+        )[0]
+        cluster_manager.cache.test_data[data_key] = addr
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addr,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addr
+
     @allure.link(helpers.get_vcs_link())
-    def test_update_proposal(self, cluster_update_proposal: clusterlib.ClusterLib):
+    def test_update_proposal(
+        self, cluster_update_proposal: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
         """Test changing *decentralisationParam* using update proposal ."""
         clusterlib_utils.update_params(
             cluster_obj=cluster_update_proposal,
+            src_addr_record=payment_addr,
             update_proposals=[
                 clusterlib_utils.UpdateProposal(
                     arg="--decentralization-parameter",
