@@ -58,8 +58,8 @@ jobs:
       - name: commit and push DB changes for the sync test
         run: |
           cd cardano-node-tests
-          git config --global user.name "dorin100"
-          git config --global user.email "dorin.solomon@iohk.io"
+          git config --global user.name "sync_tests"
+          git config --global user.email "action@github.com"
           git config pull.rebase true
           git pull origin master
 
