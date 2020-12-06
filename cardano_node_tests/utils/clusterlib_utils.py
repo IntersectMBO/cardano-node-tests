@@ -397,7 +397,9 @@ def check_pool_data(  # noqa: C901
 
 
 def update_params(
-    cluster_obj: clusterlib.ClusterLib, update_proposals: List[UpdateProposal]
+    cluster_obj: clusterlib.ClusterLib,
+    src_addr_record: clusterlib.AddressRecord,
+    update_proposals: List[UpdateProposal],
 ) -> None:
     """Update params using update proposal."""
     _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
@@ -409,6 +411,8 @@ def update_params(
 
         cluster_obj.submit_update_proposal(
             cli_args=cli_args,
+            src_address=src_addr_record.address,
+            src_skey_file=src_addr_record.skey_file,
             tx_name=get_timestamped_rand_str(),
         )
 
@@ -450,5 +454,5 @@ def save_ledger_state(
     """Save ledger state."""
     name_template = name_template or get_timestamped_rand_str(0)
     json_file = Path(destination_dir) / f"{name_template}_ledger_state.json"
-    cluster_obj.query_cli(["ledger-state", "--out-file", str(json_file)])
+    cluster_obj.query_cli(["ledger-state", *cluster_obj.era_arg, "--out-file", str(json_file)])
     return json_file

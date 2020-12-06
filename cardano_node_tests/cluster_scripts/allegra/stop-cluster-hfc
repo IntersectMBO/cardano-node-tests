@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -euo pipefail
+
+supervisorctl stop all
+
+if [ -f ./state-cluster/supervisord.pid ]
+then
+  kill "$(<./state-cluster/supervisord.pid)"
+  echo "Cluster terminated!"
+else
+  echo "Cluster is not running!"
+fi

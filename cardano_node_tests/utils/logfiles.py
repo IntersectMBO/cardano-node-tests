@@ -20,7 +20,11 @@ LOGGER = logging.getLogger(__name__)
 
 ROTATED_RE = re.compile(r".+\.[0-9]+")  # detect rotated log file
 ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
-ERRORS_IGNORED = ["failedScripts", "EKGServerStartupError", "WithIPList SubscriptionTrace"]
+ERRORS_IGNORED = [
+    "failedScripts",
+    "EKGServerStartupError",
+    "WithIPList SubscriptionTrace",
+]
 ERRORS_RULES_FILE_NAME = ".errors_rules"
 
 
