@@ -52,7 +52,6 @@ else
 	echo "$PATH already contains ~/.local/bin"
 fi
 
-
 cabal update
 
 if [[ $(cabal --version) != *"cabal-install version 3.2.0.0"* ]]
@@ -65,6 +64,9 @@ fi
 
 # Download and install GHC
 echo "Download and install GHC"
+
+mkdir -p ~/src || exit 1
+cd ~/src || exit 1
 wget https://downloads.haskell.org/ghc/8.10.2/ghc-8.10.2-x86_64-deb9-linux.tar.xz
 tar -xf ghc-8.10.2-x86_64-deb9-linux.tar.xz
 rm ghc-8.10.2-x86_64-deb9-linux.tar.xz
@@ -72,10 +74,11 @@ cd ghc-8.10.2 || exit 1
 ./configure
 make install
 
-cd ~ || exit 1
-
 # Install Libsodium
 echo "Install Lobsodium"
+
+mkdir -p ~/src || exit 1
+cd ~/src || exit 1
 git clone https://github.com/input-output-hk/libsodium
 cd libsodium || exit 1
 git checkout 66f017f1
@@ -89,10 +92,12 @@ export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 # Download the source code for cardano-node
 echo "Download the source code for cardano-node"
-cd ~ || exit 1
+
+mkdir -p ~/src || exit 1
+cd ~/src || exit 1
 git clone https://github.com/input-output-hk/cardano-node.git
 cd cardano-node || exit 1
-git fetch --all --tags
+git fetch --all --recurse-submodules --tags
 
 if [[ $(git tag) != *"$TAGGED_VERSION"* ]]
 then
@@ -102,11 +107,23 @@ fi
 
 git checkout "tags/$TAGGED_VERSION"
 
+# Configure and build options
+echo "Configure and build options"
+cabal configure --with-compiler=ghc-8.10.2
+echo "package cardano-crypto-praos" >>  cabal.project.local
+echo "  flags: -external-libsodium-vrf" >>  cabal.project.local
+
 # Build and install the node
 echo "Build and install the node"
 cabal build all
-cp -p "dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-$TAGGED_VERSION/x/cardano-node/build/cardano-node/cardano-node" ~/.local/bin/
-cp -p "dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-cli-$TAGGED_VERSION/x/cardano-cli/build/cardano-cli/cardano-cli" ~/.local/bin/
+cabal install all --bindir ~/.local/bin
+
+if [[ ! -d ~/.local/bin/dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-cli-$TAGGED_VERSION/x/ ]]
+then
+	echo "Cabal build's --binddir did not work! Manually copying to ~/.local/bin/"
+	cp -p "dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-$TAGGED_VERSION/x/cardano-node/build/cardano-node/cardano-node" ~/.local/bin/
+	cp -p "dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-cli-$TAGGED_VERSION/x/cardano-cli/build/cardano-cli/cardano-cli" ~/.local/bin/
+fi
 
 # Verify node is installed
 echo "Verify node is installed"
