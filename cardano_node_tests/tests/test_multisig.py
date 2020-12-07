@@ -1105,6 +1105,7 @@ class TestAuxiliaryScripts:
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
             payment_vkey_files=payment_vkey_files,
+            required=2,
             slot=1000,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
         )
