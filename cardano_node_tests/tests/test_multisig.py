@@ -617,7 +617,9 @@ class TestNegative:
 
 
 @pytest.mark.skipif(
-    cluster_instances.TX_ERA == "shelley" or helpers.NODE_VERSION < version.parse("1.24.0"),
+    cluster_instances.TX_ERA == "shelley"
+    or cluster_instances.CLUSTER_ERA == "shelley"
+    or helpers.NODE_VERSION < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Allegra+ TX",
 )
 class TestTimeLocking:
@@ -1003,7 +1005,9 @@ class TestTimeLocking:
 
 
 @pytest.mark.skipif(
-    cluster_instances.TX_ERA == "shelley" or helpers.NODE_VERSION < version.parse("1.24.0"),
+    cluster_instances.TX_ERA == "shelley"
+    or cluster_instances.CLUSTER_ERA == "shelley"
+    or helpers.NODE_VERSION < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Allegra+ TX",
 )
 class TestAuxiliaryScripts:
