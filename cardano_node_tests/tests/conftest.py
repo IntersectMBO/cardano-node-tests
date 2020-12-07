@@ -39,10 +39,9 @@ def pytest_addoption(parser: Any) -> None:
 
 
 def pytest_configure(config: Any) -> None:
-    cardano_version = helpers.get_cardano_version()
-    config._metadata["cardano-node"] = cardano_version["cardano-node"]
-    config._metadata["cardano-node rev"] = cardano_version["git_rev"]
-    config._metadata["ghc"] = cardano_version["ghc"]
+    config._metadata["cardano-node"] = helpers.CARDANO_VERSION["cardano-node"]
+    config._metadata["cardano-node rev"] = helpers.CARDANO_VERSION["git_rev"]
+    config._metadata["ghc"] = helpers.CARDANO_VERSION["ghc"]
     config._metadata["cardano-node-tests rev"] = helpers.CURRENT_COMMIT
     config._metadata["cardano-node-tests url"] = helpers.GITHUB_TREE_URL
 
