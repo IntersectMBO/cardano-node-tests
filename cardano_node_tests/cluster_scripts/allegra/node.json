@@ -1,7 +1,7 @@
 {
     "ByronGenesisFile": "byron/genesis.json",
     "LastKnownBlockVersion-Alt": 0,
-    "LastKnownBlockVersion-Major": 3,
+    "LastKnownBlockVersion-Major": 2,
     "LastKnownBlockVersion-Minor": 0,
     "PBftSignatureThreshold": 0.6,
     "Protocol": "Cardano",
@@ -145,6 +145,5 @@
             "scRotation": null
         }
     ],
-    "TestShelleyHardForkAtEpoch": 1,
-    "TestAllegraHardForkAtEpoch": 2
+    "TestShelleyHardForkAtEpoch": 1
 }

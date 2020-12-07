@@ -2,6 +2,7 @@
 import contextlib
 import dataclasses
 import datetime
+import logging
 import os
 import random
 import time
@@ -21,6 +22,8 @@ from cardano_node_tests.utils import devops_cluster
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.types import UnpackableSequence
+
+LOGGER = logging.getLogger(__name__)
 
 CLUSTER_LOCK = ".cluster.lock"
 RUN_LOG_FILE = ".parallel.log"
@@ -209,6 +212,7 @@ class ClusterManager:
             try:
                 cluster_obj = devops_cluster.start_cluster(cmd=str(startup_files.start_script))
             except Exception as err:
+                LOGGER.error(f"Failed to start cluster: {err}")
                 excp = err
             else:
                 break

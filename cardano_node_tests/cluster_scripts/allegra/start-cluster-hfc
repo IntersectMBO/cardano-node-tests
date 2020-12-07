@@ -3,7 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="${0%/*}"
-STATE_CLUSTER=./state-cluster
+SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+STATE_CLUSTER="${SOCKET_PATH%/*}"
 
 NETWORK_MAGIC=42
 BYRON_SECURITY_PARAM=100
@@ -237,36 +238,37 @@ do
     --tx "$STATE_CLUSTER/byron/tx$i.tx"
 done
 
-# Wait until we are in Allegra
 EPOCH_SEC="$(jq '.epochLength * .slotLength' < "$STATE_CLUSTER/shelley/genesis.json")"
-WAIT_SEC="$((EPOCH_SEC + 3))"
+WAIT_SEC="$((EPOCH_SEC + 2))"
 
 echo "Waiting $WAIT_SEC sec for Shelley era to start"
 sleep "$WAIT_SEC"
 
-echo "Waiting $WAIT_SEC sec for Allegra era to start"
-sleep "$WAIT_SEC"
+ALLEGRA_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-allegra.proposal"
 
-echo "In Allegra era, restarting cluster nodes"
-supervisorctl restart all
-sleep 5
+cardano-cli governance create-update-proposal \
+    --out-file "$ALLEGRA_HF_PROPOSAL" \
+    --epoch 1 \
+    --genesis-verification-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis1.vkey" \
+    --genesis-verification-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis2.vkey" \
+    --genesis-verification-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis3.vkey" \
+    --protocol-major-version 3 \
+    --protocol-minor-version 0
 
-# Tranfer funds, register pools and delegations, all in one big transaction:
+# Tranfer funds, register pools and delegations, submit update proposal, all in one big transaction:
 
 jq .protocolParams < "$STATE_CLUSTER/shelley/genesis.json" > "$STATE_CLUSTER/pparams.json"
 
 TXIN_ADDR="$(cat "$STATE_CLUSTER"/byron/address-001-converted)"
 UTXO="$(cardano-cli query utxo \
           --testnet-magic "$NETWORK_MAGIC" \
-          --allegra-era \
           --address "$TXIN_ADDR" |
-          sed -n 3p | { read -r h i l; echo "$h#$i;$l"; })"
+          sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
 TXIN="${UTXO%;*}"
 TXIN_AMOUNT="${UTXO#*;}"
 TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
 
 cardano-cli transaction build-raw \
-  --allegra-era \
   --ttl    "$TTL" \
   --fee    0 \
   --tx-in  "$TXIN" \
@@ -281,16 +283,17 @@ cardano-cli transaction build-raw \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake-reward.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/register.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/owner-stake.deleg.cert" \
-  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
+  --update-proposal-file "$ALLEGRA_HF_PROPOSAL" \
+  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody"
 
 FEE="$(cardano-cli transaction calculate-min-fee \
         --testnet-magic "$NETWORK_MAGIC" \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 3 \
-        --witness-count 7 \
+        --witness-count 9 \
         --byron-witness-count 0 \
-        --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" |
+        --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody" |
         cut -d' ' -f1)"
 
 DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' \
@@ -298,7 +301,6 @@ DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - (DEPOSITS + POOL_PLEDGE) * 2))"
 
 cardano-cli transaction build-raw \
-  --allegra-era \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   --tx-in  "$TXIN" \
@@ -313,6 +315,7 @@ cardano-cli transaction build-raw \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake-reward.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/register.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/owner-stake.deleg.cert" \
+  --update-proposal-file "$ALLEGRA_HF_PROPOSAL" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
 
 cardano-cli transaction sign \
@@ -323,6 +326,12 @@ cardano-cli transaction sign \
   --signing-key-file "$STATE_CLUSTER/nodes/node-pool2/reward.skey" \
   --signing-key-file "$STATE_CLUSTER/nodes/node-pool2/cold.skey" \
   --signing-key-file "$STATE_CLUSTER/byron/payment-keys.001-converted.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis1.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis2.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis3.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/delegate-keys/delegate1.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/delegate-keys/delegate2.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/delegate-keys/delegate3.skey" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
@@ -332,5 +341,14 @@ cardano-cli transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 sleep 5
+
+# echo "Restarting cluster nodes"
+# supervisorctl restart all
+# sleep 5
+
+# Wait until we are in Allegra
+ALLEGRA_WAIT="$((WAIT_SEC - 10))"
+echo "Waiting $ALLEGRA_WAIT sec for Allegra era to start"
+sleep "$ALLEGRA_WAIT"
 
 echo "Cluster started. Run \`stop-cluster\` to stop"
