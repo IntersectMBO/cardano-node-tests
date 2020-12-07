@@ -44,8 +44,8 @@ def multisig_tx(
     amount: int,
     multisig_script: Path,
     payment_skey_files: List[Path],
-    upper_bound: Optional[int] = None,
-    lower_bound: Optional[int] = None,
+    invalid_hereafter: Optional[int] = None,
+    invalid_before: Optional[int] = None,
     script_is_src=False,
 ):
     """Build and submit multisig transaction."""
@@ -74,8 +74,8 @@ def multisig_tx(
         txouts=destinations,
         fee=fee,
         ttl=ttl,
-        upper_bound=upper_bound,
-        lower_bound=lower_bound,
+        invalid_hereafter=invalid_hereafter,
+        invalid_before=invalid_before,
     )
 
     # create witness file for each key
@@ -689,8 +689,8 @@ class TestTimeLocking:
             amount=1000,
             multisig_script=multisig_script,
             payment_skey_files=payment_skey_files,
-            lower_bound=100,
-            upper_bound=cluster.get_tip()["slotNo"] + 1000,
+            invalid_before=100,
+            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
             script_is_src=True,
         )
 
@@ -738,8 +738,8 @@ class TestTimeLocking:
             amount=1000,
             multisig_script=multisig_script,
             payment_skey_files=payment_skey_files,
-            lower_bound=100,
-            upper_bound=cluster.get_tip()["slotNo"] + 1000,
+            invalid_before=100,
+            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
             script_is_src=True,
         )
 
@@ -791,8 +791,8 @@ class TestTimeLocking:
                 amount=10,
                 multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
-                lower_bound=1,
-                upper_bound=before_slot,
+                invalid_before=1,
+                invalid_hereafter=before_slot,
                 script_is_src=True,
             )
         assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
@@ -807,8 +807,8 @@ class TestTimeLocking:
                 amount=10,
                 multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
-                lower_bound=1,
-                upper_bound=before_slot + 1,
+                invalid_before=1,
+                invalid_hereafter=before_slot + 1,
                 script_is_src=True,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
@@ -861,8 +861,8 @@ class TestTimeLocking:
                 amount=10,
                 multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
-                lower_bound=1,
-                upper_bound=before_slot + 1,
+                invalid_before=1,
+                invalid_hereafter=before_slot + 1,
                 script_is_src=True,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
@@ -915,8 +915,8 @@ class TestTimeLocking:
                 amount=10,
                 multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
-                lower_bound=after_slot,
-                upper_bound=after_slot + 100,
+                invalid_before=after_slot,
+                invalid_hereafter=after_slot + 100,
                 script_is_src=True,
             )
         assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
@@ -931,8 +931,8 @@ class TestTimeLocking:
                 amount=10,
                 multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
-                lower_bound=1,
-                upper_bound=after_slot,
+                invalid_before=1,
+                invalid_hereafter=after_slot,
                 script_is_src=True,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
@@ -975,7 +975,8 @@ class TestTimeLocking:
             payment_skey_files=[payment_skey_files[0]],
         )
 
-        # send funds from script address - valid slot, invalid range - `upper_bound` is in the past
+        # send funds from script address - valid slot,
+        # invalid range - `invalid_hereafter` is in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -985,8 +986,8 @@ class TestTimeLocking:
                 amount=10,
                 multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
-                lower_bound=1,
-                upper_bound=after_slot,
+                invalid_before=1,
+                invalid_hereafter=after_slot,
                 script_is_src=True,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
