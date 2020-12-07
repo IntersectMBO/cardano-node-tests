@@ -991,8 +991,8 @@ class ClusterLib:
         fee: int,
         ttl: int,
         withdrawals: OptionalTxOuts = (),
-        upper_bound: Optional[int] = None,
-        lower_bound: Optional[int] = None,
+        invalid_hereafter: Optional[int] = None,
+        invalid_before: Optional[int] = None,
     ) -> TxRawOutput:
         """Build raw transaction."""
         out_file = Path(out_file)
@@ -1001,13 +1001,13 @@ class ClusterLib:
         withdrawals_combined = [f"{x[0]}+{x[1]}" for x in withdrawals]
 
         bound_args: list = []
-        if lower_bound is not None:
-            bound_args.extend(["--lower-bound", str(lower_bound)])
-        if upper_bound is None:
+        if invalid_before is not None:
+            bound_args.extend(["--invalid-before", str(invalid_before)])
+        if invalid_hereafter is None:
             # `--ttl` and `--upper-bound` are the same
             bound_args.extend(["--ttl", str(ttl)])
         else:
-            bound_args.extend(["--upper-bound", str(upper_bound)])
+            bound_args.extend(["--invalid-hereafter", str(invalid_hereafter)])
 
         self.cli(
             [
@@ -1050,8 +1050,8 @@ class ClusterLib:
         ttl: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
         deposit: Optional[int] = None,
-        upper_bound: Optional[int] = None,
-        lower_bound: Optional[int] = None,
+        invalid_hereafter: Optional[int] = None,
+        invalid_before: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Figure out all the missing data and build raw transaction."""
@@ -1080,8 +1080,8 @@ class ClusterLib:
             fee=fee,
             ttl=ttl,
             withdrawals=withdrawals,
-            upper_bound=upper_bound,
-            lower_bound=lower_bound,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
         )
 
         self._check_outfiles(out_file)
@@ -1280,8 +1280,8 @@ class ClusterLib:
         ttl: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
         deposit: Optional[int] = None,
-        upper_bound: Optional[int] = None,
-        lower_bound: Optional[int] = None,
+        invalid_hereafter: Optional[int] = None,
+        invalid_before: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Build, Sign and Send transaction to chain."""
@@ -1309,8 +1309,8 @@ class ClusterLib:
             ttl=ttl,
             withdrawals=withdrawals,
             deposit=deposit,
-            upper_bound=upper_bound,
-            lower_bound=lower_bound,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
             destination_dir=destination_dir,
         )
         tx_signed_file = self.sign_tx(
