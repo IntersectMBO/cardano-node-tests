@@ -75,6 +75,7 @@ class TxFiles(NamedTuple):
     proposal_files: OptionalFiles = ()
     metadata_json_files: OptionalFiles = ()
     metadata_cbor_files: OptionalFiles = ()
+    script_files: OptionalFiles = ()
     signing_key_files: OptionalFiles = ()
 
 
@@ -1023,6 +1024,7 @@ class ClusterLib:
                 *self._prepend_flag("--update-proposal-file", tx_files.proposal_files),
                 *self._prepend_flag("--metadata-json-file", tx_files.metadata_json_files),
                 *self._prepend_flag("--metadata-cbor-file", tx_files.metadata_cbor_files),
+                *self._prepend_flag("--script-file", tx_files.script_files),
                 *self._prepend_flag("--withdrawal", withdrawals_combined),
                 *bound_args,
                 *self.tx_era_arg,
