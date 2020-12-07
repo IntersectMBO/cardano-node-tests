@@ -126,7 +126,7 @@ class TestKES:
         * generate new operational certificate with `--kes-period` in the past
         * restart the node with the new operational certificate
         * check that the pool is not producing any blocks
-        * restore the original operational certificate and restart the node
+        * generate new operational certificate with valid `--kes-period` and restart the node
         """
         pool_name = "node-pool2"
         node_name = "pool2"
