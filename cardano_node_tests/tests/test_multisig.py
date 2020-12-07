@@ -3,6 +3,7 @@ import logging
 import random
 from pathlib import Path
 from typing import List
+from typing import Optional
 
 import allure
 import pytest
@@ -41,6 +42,8 @@ def multisig_tx(
     amount: int,
     multisig_script: Path,
     payment_skey_files: List[Path],
+    upper_bound: Optional[int] = None,
+    lower_bound: Optional[int] = None,
     script_is_src=False,
 ):
     """Build and submit multisig transaction."""
@@ -69,6 +72,8 @@ def multisig_tx(
         txouts=destinations,
         fee=fee,
         ttl=ttl,
+        upper_bound=upper_bound,
+        lower_bound=lower_bound,
     )
 
     # create witness file for each key
@@ -598,3 +603,384 @@ class TestNegative:
                 tx_files=tx_files_from,
             )
         assert "MissingScriptWitnessesUTXOW" in str(excinfo.value)
+
+
+class TestTimeLocking:
+    """Tests for time locking."""
+
+    # TODO: convert to property-based tests
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        data_key = id(TestTimeLocking)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[
+                f"multi_addr_time_locking_ci{cluster_manager.cluster_instance}_{i}"
+                for i in range(20)
+            ],
+            cluster_obj=cluster,
+        )
+        cluster_manager.cache.test_data[data_key] = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=20_000_000,
+        )
+
+        return addrs
+
+    @allure.link(helpers.get_vcs_link())
+    def test_script_after(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Check that it is possible to spend from script address after given slot."""
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=100,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=2_000_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_from",
+            src_address=script_addr,
+            dst_address=payment_addrs[0].address,
+            amount=1000,
+            multisig_script=multisig_script,
+            payment_skey_files=payment_skey_files,
+            lower_bound=100,
+            upper_bound=cluster.get_tip()["slotNo"] + 1000,
+            script_is_src=True,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    def test_script_before(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Check that it is possible to spend from script address before given slot."""
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        before_slot = cluster.get_tip()["slotNo"] + 10_000
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=2_000_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_from",
+            src_address=script_addr,
+            dst_address=payment_addrs[0].address,
+            amount=1000,
+            multisig_script=multisig_script,
+            payment_skey_files=payment_skey_files,
+            lower_bound=100,
+            upper_bound=cluster.get_tip()["slotNo"] + 1000,
+            script_is_src=True,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    def test_before_past(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Check that it's NOT possible to spend from the script address.
+
+        The "before" slot is in the past.
+        """
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        before_slot = cluster.get_tip()["slotNo"] - 1
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=500_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address - valid range, slot is already in the past
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=10,
+                multisig_script=multisig_script,
+                payment_skey_files=payment_skey_files,
+                lower_bound=1,
+                upper_bound=before_slot,
+                script_is_src=True,
+            )
+        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+
+        # send funds from script address - invalid range, slot is already in the past
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=10,
+                multisig_script=multisig_script,
+                payment_skey_files=payment_skey_files,
+                lower_bound=1,
+                upper_bound=before_slot + 1,
+                script_is_src=True,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_before_future(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Check that it's NOT possible to spend from the script address.
+
+        The "before" slot is in the future and the given range is invalid.
+        """
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        before_slot = cluster.get_tip()["slotNo"] + 10_000
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=500_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address - invalid range, slot is in the future
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=10,
+                multisig_script=multisig_script,
+                payment_skey_files=payment_skey_files,
+                lower_bound=1,
+                upper_bound=before_slot + 1,
+                script_is_src=True,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_after_future(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Check that it's NOT possible to spend from the script address.
+
+        The "after" slot is in the future and the given range is invalid.
+        """
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        after_slot = cluster.get_tip()["slotNo"] + 10_000
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=after_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=500_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address - valid range, slot is in the future
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=10,
+                multisig_script=multisig_script,
+                payment_skey_files=payment_skey_files,
+                lower_bound=after_slot,
+                upper_bound=after_slot + 100,
+                script_is_src=True,
+            )
+        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+
+        # send funds from script address - invalid range, slot is in the future
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=10,
+                multisig_script=multisig_script,
+                payment_skey_files=payment_skey_files,
+                lower_bound=1,
+                upper_bound=after_slot,
+                script_is_src=True,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_after_past(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Check that it's NOT possible to spend from the script address.
+
+        The "after" slot is in the past.
+        """
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        after_slot = cluster.get_tip()["slotNo"] - 1
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=after_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=500_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address - valid slot, invalid range - `upper_bound` is in the past
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_addr,
+                dst_address=payment_addrs[0].address,
+                amount=10,
+                multisig_script=multisig_script,
+                payment_skey_files=payment_skey_files,
+                lower_bound=1,
+                upper_bound=after_slot,
+                script_is_src=True,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
