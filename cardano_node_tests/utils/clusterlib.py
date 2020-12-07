@@ -133,6 +133,11 @@ class MultiSigTypeArgs:
     AT_LEAST = "atLeast"
 
 
+class MultiSlotTypeArgs:
+    BEFORE = "before"
+    AFTER = "after"
+
+
 class CLIError(Exception):
     pass
 
@@ -986,6 +991,8 @@ class ClusterLib:
         fee: int,
         ttl: int,
         withdrawals: OptionalTxOuts = (),
+        upper_bound: Optional[int] = None,
+        lower_bound: Optional[int] = None,
     ) -> TxRawOutput:
         """Build raw transaction."""
         out_file = Path(out_file)
@@ -993,12 +1000,19 @@ class ClusterLib:
         txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts]
         withdrawals_combined = [f"{x[0]}+{x[1]}" for x in withdrawals]
 
+        bound_args: list = []
+        if lower_bound is not None:
+            bound_args.extend(["--lower-bound", str(lower_bound)])
+        if upper_bound is None:
+            # `--ttl` and `--upper-bound` are the same
+            bound_args.extend(["--ttl", str(ttl)])
+        else:
+            bound_args.extend(["--upper-bound", str(upper_bound)])
+
         self.cli(
             [
                 "transaction",
                 "build-raw",
-                "--ttl",
-                str(ttl),
                 "--fee",
                 str(fee),
                 "--out-file",
@@ -1010,6 +1024,7 @@ class ClusterLib:
                 *self._prepend_flag("--metadata-json-file", tx_files.metadata_json_files),
                 *self._prepend_flag("--metadata-cbor-file", tx_files.metadata_cbor_files),
                 *self._prepend_flag("--withdrawal", withdrawals_combined),
+                *bound_args,
                 *self.tx_era_arg,
             ]
         )
@@ -1035,6 +1050,8 @@ class ClusterLib:
         ttl: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
         deposit: Optional[int] = None,
+        upper_bound: Optional[int] = None,
+        lower_bound: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Figure out all the missing data and build raw transaction."""
@@ -1063,6 +1080,8 @@ class ClusterLib:
             fee=fee,
             ttl=ttl,
             withdrawals=withdrawals,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
         )
 
         self._check_outfiles(out_file)
@@ -1261,6 +1280,8 @@ class ClusterLib:
         ttl: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
         deposit: Optional[int] = None,
+        upper_bound: Optional[int] = None,
+        lower_bound: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Build, Sign and Send transaction to chain."""
@@ -1288,6 +1309,8 @@ class ClusterLib:
             ttl=ttl,
             withdrawals=withdrawals,
             deposit=deposit,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
             destination_dir=destination_dir,
         )
         tx_signed_file = self.sign_tx(
@@ -1306,17 +1329,22 @@ class ClusterLib:
         script_type_arg: str,
         payment_vkey_files: FileTypeList,
         required: int = 0,
+        slot: int = 0,
+        slot_type_arg: str = "",
         destination_dir: FileType = ".",
     ) -> Path:
         """Build multi-signature script."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{script_name}_multisig.script"
 
+        scripts_l: List[dict] = [
+            {"keyHash": self.get_payment_vkey_hash(f), "type": "sig"} for f in payment_vkey_files
+        ]
+        if slot:
+            scripts_l.append({"slot": slot, "type": slot_type_arg})
+
         script: dict = {
-            "scripts": [
-                {"keyHash": self.get_payment_vkey_hash(f), "type": "sig"}
-                for f in payment_vkey_files
-            ],
+            "scripts": scripts_l,
             "type": script_type_arg,
         }
 
