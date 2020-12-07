@@ -8,7 +8,9 @@ from typing import Optional
 import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
+from packaging import version
 
+from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -605,6 +607,10 @@ class TestNegative:
         assert "MissingScriptWitnessesUTXOW" in str(excinfo.value)
 
 
+@pytest.mark.skipif(
+    cluster_instances.TX_ERA == "shelley" or helpers.NODE_VERSION < version.parse("1.24.0"),
+    reason="runs on version >= 1.24.0 and with Allegra+ TX",
+)
 class TestTimeLocking:
     """Tests for time locking."""
 

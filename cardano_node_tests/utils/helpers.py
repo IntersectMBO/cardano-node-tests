@@ -22,6 +22,7 @@ import hypothesis
 from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 from filelock import FileLock
+from packaging import version
 
 from cardano_node_tests.utils.types import FileType
 
@@ -53,6 +54,35 @@ else:
         pass
 
 
+def run_shell_command(command: str, workdir: FileType = "") -> bytes:
+    """Run command in shell."""
+    cmd = f"bash -c '{command}'"
+    cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
+    return stdout
+
+
+def get_cardano_version() -> dict:
+    """Return version info for cardano-node."""
+    out = run_shell_command("cardano-node --version").decode().strip()
+    env_info, git_info, *__ = out.splitlines()
+    node, platform, ghc, *__ = env_info.split(" - ")
+    version_db = {
+        "cardano-node": node.split(" ")[-1],
+        "platform": platform,
+        "ghc": ghc,
+        "git_rev": git_info.split(" ")[-1],
+    }
+    return version_db
+
+
+CARDANO_VERSION = get_cardano_version()
+NODE_VERSION = version.parse(CARDANO_VERSION["cardano-node"])
+
+
 @contextlib.contextmanager
 def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
     """Change and restore CWD - context manager."""
@@ -74,17 +104,6 @@ def ignore_interrupt() -> Generator:
         yield
     finally:
         signal.signal(signal.SIGINT, orig_handler)
-
-
-def run_shell_command(command: str, workdir: FileType = "") -> bytes:
-    """Run command in shell."""
-    cmd = f"bash -c '{command}'"
-    cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    stdout, stderr = p.communicate()
-    if p.returncode != 0:
-        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
-    return stdout
 
 
 def run_command(command: str, workdir: FileType = "") -> bytes:
@@ -181,20 +200,6 @@ def write_json(location: FileType, content: dict) -> FileType:
     with open(Path(location).expanduser(), "w") as out_file:
         out_file.write(json.dumps(content, indent=4))
     return location
-
-
-def get_cardano_version() -> dict:
-    """Return version info for cardano-node."""
-    out = run_shell_command("cardano-node --version").decode().strip()
-    env_info, git_info, *__ = out.splitlines()
-    node, platform, ghc, *__ = env_info.split(" - ")
-    version = {
-        "cardano-node": node.split(" ")[-1],
-        "platform": platform,
-        "ghc": ghc,
-        "git_rev": git_info.split(" ")[-1],
-    }
-    return version
 
 
 def decode_bech32(bech32: str) -> str:
