@@ -1178,7 +1178,7 @@ class TestRewards:
                 payment_balance = cluster.get_address_balance(pool_user.payment.address)
                 rewards_rec.append(rewards)
                 LOGGER.info(f"epoch {epoch} - reward: {rewards}, payment: {payment_balance}")
-                # TODO - check leder state wrt stake amount and expected reward
+                # TODO - check ledger state wrt stake amount and expected reward
                 clusterlib_utils.save_ledger_state(
                     cluster_obj=cluster, name_template=f"{temp_template}_{epoch}"
                 )
