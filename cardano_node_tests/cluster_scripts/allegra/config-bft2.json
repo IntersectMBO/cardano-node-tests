@@ -45,10 +45,10 @@
             "stdout"
         ]
     ],
-    "hasEKG": 12788,
+    "hasEKG": 30302,
     "hasPrometheus": [
         "127.0.0.1",
-        12798
+        30303
     ],
     "minSeverity": "Info",
     "options": {
@@ -66,6 +66,9 @@
                 "EKGViewBK"
             ],
             "cardano.node.metrics": [
+                "EKGViewBK"
+            ],
+            "cardano.node.resources": [
                 "EKGViewBK"
             ]
         },
