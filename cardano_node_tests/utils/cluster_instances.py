@@ -93,6 +93,11 @@ def _reconfigure_nix_file(infile: Path, destdir: Path, instance_num: int) -> Pat
     )
 
     if fname == "start-cluster":
+        # reconfigure pool margin
+        new_content = new_content.replace('"$(jq -n $POOL_MARGIN_NUM/10)"', "0.35")
+        # reconfigure pool cost
+        new_content = new_content.replace('"$(($RANDOM % 100000000))"', "600")
+
         # reconfigure path to supervisor config
         supervisor_conf = _get_nix_paths(infile, r"[^/]+-supervisor\.conf")[0]
         dest_supervisor_conf = (destdir / supervisor_conf.name).resolve()
