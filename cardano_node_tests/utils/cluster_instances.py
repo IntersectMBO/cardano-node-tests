@@ -36,28 +36,67 @@ class InstancePorts(NamedTuple):
     pool1: int
     pool2: int
     supervisor: int
-    ekg: int
-    prometheus: int
+    ekg_bft1: int
+    ekg_bft2: int
+    ekg_bft3: int
+    ekg_pool1: int
+    ekg_pool2: int
+    prometheus_bft1: int
+    prometheus_bft2: int
+    prometheus_bft3: int
+    prometheus_pool1: int
+    prometheus_pool2: int
 
 
 def get_instance_ports(instance_num: int) -> InstancePorts:
     """Return ports mapping for given cluster instance."""
     offset = (50 + instance_num) * 10
     base = 30000 + offset
+    metrics_base = 30300 + offset
 
-    pools_offset = 0 if CLUSTER_ERA == "shelley" else 2
+    if CLUSTER_ERA == "shelley":
+        ekg = 12588 + instance_num
+        prometheus = 12898 + instance_num
 
-    ports = InstancePorts(
-        webserver=base,
-        bft1=base + 1,
-        bft2=base + 2 if pools_offset else 0,
-        bft3=base + 3 if pools_offset else 0,
-        pool1=base + 2 + pools_offset,
-        pool2=base + 3 + pools_offset,
-        supervisor=12001 + instance_num,
-        ekg=12588 + instance_num,
-        prometheus=12898 + instance_num,
-    )
+        ports = InstancePorts(
+            webserver=base,
+            bft1=base + 1,
+            bft2=0,
+            bft3=0,
+            pool1=base + 2,
+            pool2=base + 3,
+            supervisor=12001 + instance_num,
+            ekg_bft1=ekg,
+            ekg_bft2=ekg,
+            ekg_bft3=ekg,
+            ekg_pool1=ekg,
+            ekg_pool2=ekg,
+            prometheus_bft1=prometheus,
+            prometheus_bft2=prometheus,
+            prometheus_bft3=prometheus,
+            prometheus_pool1=prometheus,
+            prometheus_pool2=prometheus,
+        )
+    else:
+        ports = InstancePorts(
+            webserver=base,
+            bft1=base + 1,
+            bft2=base + 2,
+            bft3=base + 3,
+            pool1=base + 4,
+            pool2=base + 5,
+            supervisor=12001 + instance_num,
+            ekg_bft1=metrics_base,
+            ekg_bft2=metrics_base + 2,
+            ekg_bft3=metrics_base + 4,
+            ekg_pool1=metrics_base + 6,
+            ekg_pool2=metrics_base + 8,
+            prometheus_bft1=metrics_base + 1,
+            prometheus_bft2=metrics_base + 3,
+            prometheus_bft3=metrics_base + 5,
+            prometheus_pool1=metrics_base + 7,
+            prometheus_pool2=metrics_base + 9,
+        )
     return ports
 
 
@@ -128,8 +167,8 @@ def _reconfigure_nix_file(infile: Path, destdir: Path, instance_num: int) -> Pat
         _reconfigure_nix_file(infile=topology_yaml, destdir=destdir, instance_num=instance_num)
     elif fname.endswith("node.json"):
         # reconfigure metrics ports in node.json
-        new_content = new_content.replace("12788", str(instance_ports.ekg))
-        new_content = new_content.replace("12798", str(instance_ports.prometheus))
+        new_content = new_content.replace("12788", str(instance_ports.ekg_bft1))
+        new_content = new_content.replace("12798", str(instance_ports.prometheus_bft1))
 
     dest_file = destdir / fname
     with open(dest_file, "w") as out_fp:
@@ -159,10 +198,9 @@ def _reconfigure_local(indir: Path, destdir: Path, instance_num: int) -> None:
             "supervisorctl ", f"supervisorctl -s http://127.0.0.1:{instance_ports.supervisor} "
         )
 
-        if fname.endswith("node.json"):
-            # reconfigure metrics ports in node.json
-            new_content = new_content.replace("12788", str(instance_ports.ekg))
-            new_content = new_content.replace("12798", str(instance_ports.prometheus))
+        if fname.startswith("config-"):
+            # reconfigure metrics ports in config-*.json
+            new_content = new_content.replace("3030", str(instance_ports.ekg_bft1 // 10))
 
         dest_file = destdir / fname
         with open(dest_file, "w") as out_fp:
