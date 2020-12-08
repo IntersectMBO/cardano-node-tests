@@ -1329,7 +1329,7 @@ class ClusterLib:
         self,
         script_name: str,
         script_type_arg: str,
-        payment_vkey_files: FileTypeList,
+        payment_vkey_files: OptionalFiles,
         required: int = 0,
         slot: int = 0,
         slot_type_arg: str = "",
@@ -1351,11 +1351,6 @@ class ClusterLib:
         }
 
         if script_type_arg == MultiSigTypeArgs.AT_LEAST:
-            if not required:
-                raise AssertionError(
-                    "Non-zero value for 'required' needed when "
-                    f"`{script_type_arg}` == `{MultiSigTypeArgs.AT_LEAST}`"
-                )
             script["required"] = required
 
         with open(out_file, "wt") as fp_out:
