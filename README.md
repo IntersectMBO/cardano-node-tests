@@ -46,7 +46,7 @@ $ . .env/bin/activate
 $ make lint
 ```
 
-Variables for `make install`
+Variables for `make tests`
 ----------------------------
 
 * `SCHEDULING_LOG` - specifies path to file where log messages for tests and cluster instance scheduler are stored
