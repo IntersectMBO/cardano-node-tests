@@ -19,9 +19,11 @@ fi
 rm -rf "$STATE_CLUSTER"
 mkdir -p "$STATE_CLUSTER"/{shelley,webserver}
 
+cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER/byron-params.json"
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
-cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER/byron-params.json"
+cp "$SCRIPT_DIR"/config-*.json "$STATE_CLUSTER"
+chmod u+w "$STATE_CLUSTER"/config-*.json
 
 NUM_BFT_NODES=3
 FUNDS_PER_GENESIS_ADDRESS="$((INIT_SUPPLY / NUM_BFT_NODES))"
@@ -56,9 +58,6 @@ cardano-cli genesis create \
   --gen-genesis-keys "$NUM_BFT_NODES" \
   --start-time "$START_TIME_SHELLEY" \
   --gen-utxo-keys 1
-
-cp "$SCRIPT_DIR/node.json" "$STATE_CLUSTER/config.json"
-chmod u+w "$STATE_CLUSTER/config.json"
 
 for i in {1..3}
 do
