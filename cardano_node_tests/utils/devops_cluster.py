@@ -26,8 +26,8 @@ ADDR_DATA = "addr_data.pickle"
 
 class StartupFiles(NamedTuple):
     start_script: Path
-    config: Path
     genesis_spec: Path
+    config_glob: str
 
 
 def get_cluster_env() -> dict:
@@ -263,12 +263,12 @@ def _copy_nix_startup_files(destdir: Path) -> StartupFiles:
             new_str=str(dest_file),
         )
 
-    config_json = destdir / "node.json"
+    config_glob = "node.json"
     genesis_spec_json = destdir / "genesis.spec.json"
-    assert config_json.exists() and genesis_spec_json.exists()
+    assert genesis_spec_json.exists()
 
     return StartupFiles(
-        start_script=start_script, config=config_json, genesis_spec=genesis_spec_json
+        start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
     )
 
 
@@ -280,12 +280,12 @@ def _copy_local_startup_files(destdir: Path) -> StartupFiles:
     )
 
     start_script = destdir / "start-cluster-hfc"
-    config_json = destdir / "node.json"
+    config_glob = "config-*.json"
     genesis_spec_json = destdir / "genesis.spec.json"
-    assert start_script.exists() and config_json.exists() and genesis_spec_json.exists()
+    assert start_script.exists() and genesis_spec_json.exists()
 
     return StartupFiles(
-        start_script=start_script, config=config_json, genesis_spec=genesis_spec_json
+        start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
     )
 
 
