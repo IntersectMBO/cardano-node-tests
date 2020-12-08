@@ -46,6 +46,21 @@ $ . .env/bin/activate
 $ make lint
 ```
 
+Variables for `make install`
+----------------------------
+
+* `SCHEDULING_LOG` - specifies path to file where log messages for tests and cluster instance scheduler are stored
+* `PYTEST_ARGS` - specifies additional arguments for pytest
+* `TEST_THREADS` - specifies number of pytest workers
+* `CLUSTER_ERA` - cluster era for cardano node - used for selecting correct cluster start script
+* `TX_ERA` - era for transactions - can be used for creating Shelley-era transactions on Allegra era
+
+E.g.
+```sh
+$ SCHEDULING_LOG=testrun_20201208_1.log TEST_THREADS=3 CLUSTER_ERA=allegra TX_ERA=shelley PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
+```
+
+
 Test coverage of cardano-cli commands
 -------------------------------------
 
