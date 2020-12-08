@@ -316,7 +316,6 @@ class TestBasic:
         script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
-        num_of_skeys = random.randrange(required, skeys_len)
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -385,6 +384,92 @@ class TestBasic:
         assert (
             cluster.get_address_balance(script_addr) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{script_addr}`"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_multisig_empty_all(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Send funds from script address using the *all* script with zero skeys."""
+        temp_template = helpers.get_func_name()
+
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=(),
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=2_000_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_from",
+            src_address=script_addr,
+            dst_address=payment_addrs[0].address,
+            amount=1000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+            script_is_src=True,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    def test_multisig_no_required_atleast(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Send funds from script address using the *atLeast* script with no required witnesses."""
+        temp_template = helpers.get_func_name()
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
+            payment_vkey_files=payment_vkey_files,
+            required=0,
+        )
+
+        # create script address
+        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_addr,
+            amount=2_000_000,
+            multisig_script=multisig_script,
+            payment_skey_files=[payment_skey_files[0]],
+        )
+
+        # send funds from script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_from",
+            src_address=script_addr,
+            dst_address=payment_addrs[0].address,
+            amount=1000,
+            multisig_script=multisig_script,
+            payment_skey_files=[],
+            script_is_src=True,
+        )
 
 
 class TestNegative:
@@ -541,7 +626,6 @@ class TestNegative:
         script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
         # send funds to script address
-        num_of_skeys = random.randrange(required, skeys_len)
         multisig_tx(
             cluster_obj=cluster,
             temp_template=temp_template,
