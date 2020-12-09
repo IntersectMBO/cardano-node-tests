@@ -351,4 +351,79 @@ echo "Waiting $WAIT_SEC sec for Allegra era to start"
 sleep "$WAIT_SEC"
 
 
+#
+# In Allegra era
+#
+
+echo "Submitting update proposal to transfer to Mary"
+
+MARY_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-mary.proposal"
+
+cardano-cli governance create-update-proposal \
+    --out-file "$MARY_HF_PROPOSAL" \
+    --epoch 2 \
+    --genesis-verification-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis1.vkey" \
+    --genesis-verification-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis2.vkey" \
+    --genesis-verification-key-file "$STATE_CLUSTER/shelley/genesis-keys/genesis3.vkey" \
+    --protocol-major-version 4 \
+    --protocol-minor-version 0
+
+jq .protocolParams < "$STATE_CLUSTER/shelley/genesis.json" > "$STATE_CLUSTER/pparams.json"
+
+TXIN_ADDR="$(cat "$STATE_CLUSTER"/byron/address-001-converted)"
+UTXO="$(cardano-cli query utxo \
+          --allegra-era \
+          --testnet-magic "$NETWORK_MAGIC" \
+          --address "$TXIN_ADDR" |
+          sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
+TXIN="${UTXO%;*}"
+TXIN_AMOUNT="${UTXO#*;}"
+TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+
+cardano-cli transaction build-raw \
+  --allegra-era \
+  --ttl    "$TTL" \
+  --fee    0 \
+  --tx-in  "$TXIN" \
+  --tx-out "$TXIN_ADDR+0" \
+  --update-proposal-file "$MARY_HF_PROPOSAL" \
+  --out-file "$STATE_CLUSTER/shelley/update-proposal-mary-fee-tx.txbody"
+
+FEE="$(cardano-cli transaction calculate-min-fee \
+        --testnet-magic "$NETWORK_MAGIC" \
+        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+        --tx-in-count 1 \
+        --tx-out-count 1 \
+        --witness-count 5 \
+        --byron-witness-count 0 \
+        --tx-body-file "$STATE_CLUSTER/shelley/update-proposal-mary-fee-tx.txbody" |
+        cut -d' ' -f1)"
+
+TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
+
+cardano-cli transaction build-raw \
+  --allegra-era \
+  --ttl    "$TTL" \
+  --fee    "$FEE" \
+  --tx-in  "$TXIN" \
+  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  --update-proposal-file "$MARY_HF_PROPOSAL" \
+  --out-file         "$STATE_CLUSTER/shelley/update-proposal-mary-tx.txbody"
+
+cardano-cli transaction sign \
+  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.001-converted.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/delegate-keys/delegate1.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/delegate-keys/delegate2.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/delegate-keys/delegate3.skey" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "$STATE_CLUSTER/shelley/update-proposal-mary-tx.txbody" \
+  --out-file         "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx"
+
+cardano-cli transaction submit \
+  --tx-file "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx" \
+  --testnet-magic "$NETWORK_MAGIC"
+
+echo "Waiting $WAIT_SEC sec for Mary era to start"
+sleep "$WAIT_SEC"
+
 echo "Cluster started. Run \`stop-cluster\` to stop"
