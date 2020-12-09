@@ -336,11 +336,9 @@ class ClusterLib:
         utxo = []
         for utxo_rec, utxo_data in utxo_dict.items():
             utxo_hash, utxo_ix = utxo_rec.split("#")
-            amount_rec = utxo_data["amount"]
-            if isinstance(amount_rec, int):
-                amount = amount_rec
-            else:
-                amount = amount_rec[0]  # TODO: how to tell if it is Lovelace?
+            amount = utxo_data["amount"]
+            if not isinstance(amount, int):
+                amount = amount[0]  # TODO: how to tell if it is Lovelace?
             utxo.append(
                 UTXOData(
                     utxo_hash=utxo_hash,
