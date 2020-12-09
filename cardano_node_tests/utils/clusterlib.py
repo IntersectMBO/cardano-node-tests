@@ -804,6 +804,16 @@ class ClusterLib:
         """Return ledger state info."""
         return json.loads(self.query_cli(["ledger-state", *self.era_arg]))  # type: ignore
 
+    def get_protocol_state(self) -> dict:
+        """Return protocol state info."""
+        return json.loads(self.query_cli(["protocol-state", *self.era_arg]))  # type: ignore
+
+    def get_protocol_params(self) -> dict:
+        """Return protocol parameters info."""
+        self.refresh_pparams_file()
+        with open(self.pparams_file) as in_json:
+            return json.load(in_json)  # type: ignore
+
     def get_registered_stake_pools_ledger_state(self) -> dict:
         """Return ledger state info for registered stake pools."""
         registered_pools_details = self.get_ledger_state()["nesEs"]["esLState"]["_delegationState"][
@@ -837,12 +847,6 @@ class ClusterLib:
             delegation=delegation,
             reward_account_balance=reward_account_balance,
         )
-
-    def get_protocol_params(self) -> dict:
-        """Return up-to-date protocol parameters."""
-        self.refresh_pparams_file()
-        with open(self.pparams_file) as in_json:
-            return json.load(in_json)  # type: ignore
 
     def get_key_deposit(self) -> int:
         """Return key deposit amount."""
