@@ -619,7 +619,11 @@ class TestNotBalanced:
                 ttl=ttl,
             )
         exc_val = str(excinfo.value)
-        assert "option --tx-out: Failed reading" in exc_val or "TxOutAdaOnly" in exc_val
+        assert (
+            "option --tx-out: Failed reading" in exc_val
+            or "TxOutAdaOnly" in exc_val
+            or "AdaAssetId,-1" in exc_val
+        )
 
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
     @helpers.HYPOTHESIS_SETTINGS
