@@ -243,6 +243,14 @@ WAIT_SEC="$((EPOCH_SEC + 2))"
 echo "Waiting $WAIT_SEC sec for Shelley era to start"
 sleep "$WAIT_SEC"
 
+
+#
+# In Shelley era
+#
+
+
+echo "Submitting update proposal to transfer to Allegra, transfering funds to pool owners, registering pools and delegations"
+
 ALLEGRA_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-allegra.proposal"
 
 cardano-cli governance create-update-proposal \
@@ -335,19 +343,12 @@ cardano-cli transaction sign \
   --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
 
-echo "Transfering funds to pool owners, registering pools and delegations"
 cardano-cli transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
-sleep 5
 
-# echo "Restarting cluster nodes"
-# supervisorctl restart all
-# sleep 5
+echo "Waiting $WAIT_SEC sec for Allegra era to start"
+sleep "$WAIT_SEC"
 
-# Wait until we are in Allegra
-ALLEGRA_WAIT="$((WAIT_SEC - 10))"
-echo "Waiting $ALLEGRA_WAIT sec for Allegra era to start"
-sleep "$ALLEGRA_WAIT"
 
 echo "Cluster started. Run \`stop-cluster\` to stop"
