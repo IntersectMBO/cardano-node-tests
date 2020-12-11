@@ -79,7 +79,14 @@ def cluster_cleanup(
     pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
 
     if not worker_id or worker_id == "master":
+        # cluster was started outside of test framework, do nothing
+        if parallel_run.DEV_CLUSTER_RUNNING:
+            # TODO: check if socket is open and print error of not
+            yield
+            return
+
         yield
+
         cluster_manager_obj = parallel_run.ClusterManager(
             tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )

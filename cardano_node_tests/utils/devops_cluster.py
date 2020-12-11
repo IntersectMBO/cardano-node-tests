@@ -21,7 +21,7 @@ from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
-ADDR_DATA = "addr_data.pickle"
+ADDRS_DATA = "addrs_data.pickle"
 
 
 class StartupFiles(NamedTuple):
@@ -217,7 +217,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 
     pools_data = load_devops_pools_data(cluster_obj)
 
-    data_file = Path(cluster_env["state_dir"]) / ADDR_DATA
+    data_file = Path(cluster_env["state_dir"]) / ADDRS_DATA
     with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
     return data_file
@@ -299,7 +299,7 @@ def copy_startup_files(destdir: Path) -> StartupFiles:
 def load_addrs_data() -> dict:
     """Load data about addresses and their keys for usage in tests."""
     cluster_env = get_cluster_env()
-    data_file = Path(cluster_env["state_dir"]) / ADDR_DATA
+    data_file = Path(cluster_env["state_dir"]) / ADDRS_DATA
     with open(data_file, "rb") as in_data:
         return pickle.load(in_data)  # type: ignore
 
