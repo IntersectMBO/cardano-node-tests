@@ -156,10 +156,10 @@ def create_db_tables():
     conn = create_connection(DATABASE_NAME)
 
     create_tables_list = [
-        sql_create_shelley_qa_table
-        # sql_create_testnet_table,
-        # sql_create_staging_table,
-        # sql_create_mainnet_table
+        sql_create_shelley_qa_table,
+        sql_create_testnet_table,
+        sql_create_staging_table,
+        sql_create_mainnet_table,
     ]
 
     # create tables
