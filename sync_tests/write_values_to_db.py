@@ -31,11 +31,11 @@ def add_test_values_into_db(env, test_values):
         sql = f' INSERT INTO {env} ' \
               f'(env, tag_no1, tag_no2, cardano_cli_version1, cardano_cli_version2, ' \
               f'cardano_cli_git_rev1, cardano_cli_git_rev2, start_sync_time1, end_sync_time1, start_sync_time2, ' \
-              f'end_sync_time2, byron_sync_time_secs1, shelley_sync_time_secs1, shelley_sync_time_secs2, ' \
-              f'total_chunks1, total_chunks2, latest_block_no1, latest_block_no2, latest_slot_no1, latest_slot_no2, ' \
-              f'start_node_seconds1, start_node_seconds2, platform_system, platform_release, platform_version, chain_size, ' \
-              f'sync_details1) ' \
-              f'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+              f'end_sync_time2, byron_sync_time_secs1, shelley_sync_time_secs1, allegra_sync_time_seconds1, ' \
+              f'sync_time_after_restart_seconds, total_chunks1, total_chunks2, latest_block_no1, latest_block_no2, ' \
+              f'latest_slot_no1, latest_slot_no2, start_node_seconds1, start_node_seconds2, platform_system, ' \
+              f'platform_release, platform_version, chain_size, sync_details1) ' \
+              f'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
 
         print(f"sql: {sql}")
 
@@ -99,7 +99,7 @@ def main():
         file_values = file.read()
         print(f"file_values: {file_values}")
 
-        test_values = file_values.replace("(", "").replace(")", "").replace("'", "").split(", ", 26)
+        test_values = file_values.replace("(", "").replace(")", "").replace("'", "").split(", ", 27)
 
     print(f"env: {env}")
     print(f"test_values: {test_values}")
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Add sync test values into database\n\n")
 
     parser.add_argument("-e", "--environment",
-                        help="The environment on which to run the tests - testnet, staging or mainnet.")
+                        help="The environment on which to run the tests - shelley_qa, testnet, staging or mainnet.")
 
     args = parser.parse_args()
 
