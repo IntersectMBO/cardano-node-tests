@@ -17,11 +17,11 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from packaging import version
 
-from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
+from cardano_node_tests.utils.devops_cluster import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -701,9 +701,7 @@ class TestNegative:
 
 
 @pytest.mark.skipif(
-    cluster_instances.TX_ERA == "shelley"
-    or cluster_instances.CLUSTER_ERA == "shelley"
-    or helpers.NODE_VERSION < version.parse("1.24.0"),
+    VERSIONS.transaction_era < VERSIONS.ALLEGRA or VERSIONS.node < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Allegra+ TX",
 )
 class TestTimeLocking:
@@ -1089,9 +1087,7 @@ class TestTimeLocking:
 
 
 @pytest.mark.skipif(
-    cluster_instances.TX_ERA == "shelley"
-    or cluster_instances.CLUSTER_ERA == "shelley"
-    or helpers.NODE_VERSION < version.parse("1.24.0"),
+    VERSIONS.transaction_era < VERSIONS.ALLEGRA or VERSIONS.node < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Allegra+ TX",
 )
 class TestAuxiliaryScripts:
