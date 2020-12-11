@@ -13,7 +13,8 @@ INIT_SUPPLY=45000000000000000
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]
 then
-  echo "Cluster already running. Please run \`stop-cluster\` first!"
+  echo "Cluster already running. Please run \`stop-cluster\` first!" >&2
+  exit 1
 fi
 
 rm -rf "$STATE_CLUSTER"
