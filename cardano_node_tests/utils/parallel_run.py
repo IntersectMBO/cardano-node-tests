@@ -43,6 +43,8 @@ CLUSTER_DIR_TEMPLATE = "cluster"
 CLUSTER_RUNNING_FILE = ".cluster_running"
 CLUSTER_STOPPED_FILE = ".cluster_stopped"
 
+DEV_CLUSTER_RUNNING = bool(os.environ.get("DEV_CLUSTER_RUNNING"))
+
 
 def _kill_supervisor(instance_num: int) -> None:
     """Kill supervisor process."""
@@ -176,6 +178,13 @@ class ClusterManager:
         self, start_cmd: str = "", stop_cmd: str = ""
     ) -> clusterlib.ClusterLib:
         """Restart cluster."""
+        # don't restart cluster if it was started outside of test framework
+        if self.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
+            cluster_obj = self.cache.cluster_obj
+            if not cluster_obj:
+                cluster_obj = devops_cluster.get_cluster_obj()
+            return cluster_obj
+
         # using `_locked_log` because restart is not called under global lock
         self._locked_log(
             f"c{self.cluster_instance}: called `_restart`, start_cmd='{start_cmd}', "
@@ -447,7 +456,7 @@ class ClusterManager:
 
     def _reload_cluster_obj(self, state_dir: Path) -> None:
         """Realod cluster data if necessary."""
-        addrs_data_checksum = helpers.checksum(state_dir / devops_cluster.ADDR_DATA)
+        addrs_data_checksum = helpers.checksum(state_dir / devops_cluster.ADDRS_DATA)
         if addrs_data_checksum == self.cache.last_checksum:
             return
 
@@ -458,6 +467,27 @@ class ClusterManager:
         self.cache.test_data = {}
         self.cache.addrs_data = devops_cluster.load_addrs_data()
         self.cache.last_checksum = addrs_data_checksum
+
+    def _reuse_dev_cluster(self) -> clusterlib.ClusterLib:
+        """Reuse cluster that was already started outside of test framework."""
+        self._cluster_instance = 0
+        cluster_env = devops_cluster.get_cluster_env()
+        state_dir = Path(cluster_env["state_dir"])
+
+        cluster_obj = self.cache.cluster_obj
+        if not cluster_obj:
+            cluster_obj = devops_cluster.get_cluster_obj()
+
+        # setup faucet addresses
+        if not (state_dir / devops_cluster.ADDRS_DATA).exists():
+            tmp_path = state_dir / "addrs_data"
+            tmp_path.mkdir(exist_ok=True, parents=True)
+            devops_cluster.setup_test_addrs(cluster_obj, tmp_path)
+
+        # check if it is necessary to reload data
+        self._reload_cluster_obj(state_dir=state_dir)
+
+        return cluster_obj
 
     def get(  # noqa: C901
         self,
@@ -474,6 +504,11 @@ class ClusterManager:
         right away.
         """
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
+
+        # don't start new cluster if it was already started outside of test framework
+        if self.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
+            return self._reuse_dev_cluster()
+
         selected_instance = -1
         restart_here = False
         restart_ready = False
