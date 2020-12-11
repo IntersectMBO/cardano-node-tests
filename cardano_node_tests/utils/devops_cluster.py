@@ -12,6 +12,7 @@ from typing import NamedTuple
 from typing import Optional
 
 from _pytest.config import Config
+from packaging import version
 
 from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import clusterlib
@@ -22,6 +23,30 @@ from cardano_node_tests.utils.types import FileType
 LOGGER = logging.getLogger(__name__)
 
 ADDRS_DATA = "addrs_data.pickle"
+
+
+class Versions:
+    BYRON = 1
+    SHELLEY = 2
+    ALLEGRA = 3
+    MARY = 4
+
+    def __init__(self) -> None:
+        cluster_era = cluster_instances.CLUSTER_ERA
+        transaction_era = cluster_instances.TX_ERA or cluster_era
+        self.cluster_era = getattr(self, cluster_era.upper(), 1)
+        self.transaction_era = getattr(self, transaction_era.upper(), 1)
+        self.node = version.parse(helpers.CARDANO_VERSION["cardano-node"])
+
+    def __repr__(self) -> str:
+        return (
+            f"<Versions: cluster_era={self.cluster_era}, "
+            f"transaction_era={self.transaction_era}, "
+            f"node={helpers.CARDANO_VERSION['cardano-node']}>"
+        )
+
+
+VERSIONS = Versions()
 
 
 class StartupFiles(NamedTuple):
