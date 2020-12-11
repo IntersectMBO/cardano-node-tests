@@ -267,7 +267,7 @@ cardano-cli governance create-update-proposal \
 
 jq .protocolParams < "$STATE_CLUSTER/shelley/genesis.json" > "$STATE_CLUSTER/pparams.json"
 
-TXIN_ADDR="$(cat "$STATE_CLUSTER"/byron/address-001-converted)"
+TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-001-converted)"
 UTXO="$(cardano-cli query utxo \
           --testnet-magic "$NETWORK_MAGIC" \
           --address "$TXIN_ADDR" |
@@ -281,12 +281,12 @@ cardano-cli transaction build-raw \
   --fee    0 \
   --tx-in  "$TXIN" \
   --tx-out "$TXIN_ADDR+0" \
-  --tx-out "$(cat "$STATE_CLUSTER/nodes/node-pool1/owner.addr")+$POOL_PLEDGE" \
+  --tx-out "$(<"$STATE_CLUSTER/nodes/node-pool1/owner.addr")+$POOL_PLEDGE" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool1/stake.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool1/stake-reward.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool1/register.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool1/owner-stake.deleg.cert" \
-  --tx-out "$(cat "$STATE_CLUSTER/nodes/node-pool2/owner.addr")+$POOL_PLEDGE" \
+  --tx-out "$(<"$STATE_CLUSTER/nodes/node-pool2/owner.addr")+$POOL_PLEDGE" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake-reward.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/register.cert" \
@@ -313,12 +313,12 @@ cardano-cli transaction build-raw \
   --fee    "$FEE" \
   --tx-in  "$TXIN" \
   --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
-  --tx-out "$(cat "$STATE_CLUSTER/nodes/node-pool1/owner.addr")+$POOL_PLEDGE" \
+  --tx-out "$(<"$STATE_CLUSTER/nodes/node-pool1/owner.addr")+$POOL_PLEDGE" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool1/stake.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool1/stake-reward.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool1/register.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool1/owner-stake.deleg.cert" \
-  --tx-out "$(cat "$STATE_CLUSTER/nodes/node-pool2/owner.addr")+$POOL_PLEDGE" \
+  --tx-out "$(<"$STATE_CLUSTER/nodes/node-pool2/owner.addr")+$POOL_PLEDGE" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake-reward.reg.cert" \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/register.cert" \
@@ -371,7 +371,7 @@ cardano-cli governance create-update-proposal \
 
 jq .protocolParams < "$STATE_CLUSTER/shelley/genesis.json" > "$STATE_CLUSTER/pparams.json"
 
-TXIN_ADDR="$(cat "$STATE_CLUSTER"/byron/address-001-converted)"
+TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-001-converted)"
 UTXO="$(cardano-cli query utxo \
           --allegra-era \
           --testnet-magic "$NETWORK_MAGIC" \
