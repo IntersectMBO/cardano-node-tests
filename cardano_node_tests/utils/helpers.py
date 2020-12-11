@@ -22,7 +22,6 @@ import hypothesis
 from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 from filelock import FileLock
-from packaging import version
 
 from cardano_node_tests.utils.types import FileType
 
@@ -80,7 +79,6 @@ def get_cardano_version() -> dict:
 
 
 CARDANO_VERSION = get_cardano_version()
-NODE_VERSION = version.parse(CARDANO_VERSION["cardano-node"])
 
 
 @contextlib.contextmanager
