@@ -205,25 +205,25 @@ def get_node_config_files(env):
         + env
         + "-config.json",
         env + "-config.json",
-        )
+    )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-byron-genesis.json",
         env + "-byron-genesis.json",
-        )
+    )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-shelley-genesis.json",
         env + "-shelley-genesis.json",
-        )
+    )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-topology.json",
         env + "-topology.json",
-        )
+    )
 
 
 def set_node_socket_path_env_var():
@@ -453,6 +453,7 @@ def wait_for_node_to_sync(env, tag_no):
         actual_slot_no = get_current_tip(tag_no)[2]
 
     end_byron_sync = time.perf_counter()
+    byron_sync_time_seconds = int(end_byron_sync - start_sync)
 
     while actual_slot_no <= last_shelley_slot_no:
         value_dict = {
@@ -472,29 +473,30 @@ def wait_for_node_to_sync(env, tag_no):
         actual_slot_no = get_current_tip(tag_no)[2]
 
     end_shelley_sync = time.perf_counter()
-
-    while actual_slot_no < latest_slot_no:
-        value_dict = {
-            "actual_slot_not": actual_slot_no,
-            "actual_sync_percent": percentage(actual_slot_no, latest_slot_no),
-            "actual_date_time": get_current_date_time(),
-        }
-        sync_details_dict[count] = value_dict
-
-        print(
-            f"  - actual_slot_no (Allegra era): "
-            f"{actual_slot_no} - {percentage(actual_slot_no, latest_slot_no)} % --> "
-            f"{get_current_date_time()}"
-        )
-        time.sleep(15)
-        count += 1
-        actual_slot_no = get_current_tip(tag_no)[2]
-
-    end_sync = time.perf_counter()
-
-    byron_sync_time_seconds = int(end_byron_sync - start_sync)
     shelley_sync_time_seconds = int(end_shelley_sync - end_byron_sync)
-    allegra_sync_time_seconds = int(end_sync - end_shelley_sync)
+
+    if last_shelley_slot_no != latest_slot_no:
+        while actual_slot_no < latest_slot_no:
+            value_dict = {
+                "actual_slot_not": actual_slot_no,
+                "actual_sync_percent": percentage(actual_slot_no, latest_slot_no),
+                "actual_date_time": get_current_date_time(),
+            }
+            sync_details_dict[count] = value_dict
+
+            print(
+                f"  - actual_slot_no (Allegra era): "
+                f"{actual_slot_no} - {percentage(actual_slot_no, latest_slot_no)} % --> "
+                f"{get_current_date_time()}"
+            )
+            time.sleep(15)
+            count += 1
+            actual_slot_no = get_current_tip(tag_no)[2]
+
+        end_allegra_sync = time.perf_counter()
+        allegra_sync_time_seconds = int(end_allegra_sync - end_shelley_sync)
+    else:
+        allegra_sync_time_seconds = 0
 
     # include also the last value into the db/dict (100%)
     value_dict = {
@@ -536,12 +538,18 @@ def get_calculated_slot_no(env):
         shelley_start_time = datetime.strptime("2020-08-17 17:00:00", "%Y-%m-%d %H:%M:%S")
         allegra_start_time = datetime.strptime("2020-12-07 19:00:00", "%Y-%m-%d %H:%M:%S")
 
-
     last_byron_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20)
-    last_shelley_slot_no = int(date_diff_in_seconds(allegra_start_time, shelley_start_time))
-    # last_allegra_slot_no = int(date_diff_in_seconds(mary_start_time, allegra_start_time))
+    last_shelley_slot_no = int(date_diff_in_seconds(allegra_start_time, shelley_start_time) +
+                               last_byron_slot_no)
+    if allegra_start_time != allegra_start_time:
+        last_allegra_slot_no = int(date_diff_in_seconds(current_time, allegra_start_time) +
+                                   last_byron_slot_no +
+                                   last_shelley_slot_no)
+    else:
+        last_allegra_slot_no = 0
 
-    latest_slot_no = int(date_diff_in_seconds(current_time, shelley_start_time) + last_byron_slot_no)
+    latest_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20) + \
+                     int(date_diff_in_seconds(current_time, shelley_start_time))
 
     print("----------------------------------------------------------------")
     print(f"byron_start_time        : {byron_start_time}")
@@ -550,6 +558,7 @@ def get_calculated_slot_no(env):
     print(f"current_utc_time        : {current_time}")
     print(f"last_byron_slot_no      : {last_byron_slot_no}")
     print(f"last_shelley_slot_no    : {last_shelley_slot_no}")
+    print(f"last_allegra_slot_no    : {last_allegra_slot_no}")
     print(f"latest_slot_no          : {latest_slot_no}")
     print("----------------------------------------------------------------")
 
@@ -636,10 +645,12 @@ def main():
     latest_block_no1 = get_current_tip(tag_no1)[0]
     latest_slot_no1 = get_current_tip(tag_no1)[2]
     sync_speed_bps1 = int(
-        latest_block_no1 / (byron_sync_time_seconds1 + shelley_sync_time_seconds1 + allegra_sync_time_seconds1)
+        latest_block_no1 / (
+                byron_sync_time_seconds1 + shelley_sync_time_seconds1 + allegra_sync_time_seconds1)
     )
     sync_speed_sps1 = int(
-        latest_slot_no1 / (byron_sync_time_seconds1 + shelley_sync_time_seconds1 + allegra_sync_time_seconds1)
+        latest_slot_no1 / (
+                byron_sync_time_seconds1 + shelley_sync_time_seconds1 + allegra_sync_time_seconds1)
     )
     print(f"sync_speed_bps1   : {sync_speed_bps1}")
     print(f"sync_speed_sps1   : {sync_speed_sps1}")
