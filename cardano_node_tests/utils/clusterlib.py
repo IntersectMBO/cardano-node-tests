@@ -9,6 +9,7 @@ import string
 import subprocess
 import time
 from pathlib import Path
+from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
@@ -21,6 +22,8 @@ from cardano_node_tests.utils.types import OptionalFiles
 from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
+
+DEFAULT_COIN = "lovelace"
 
 
 class CLIOut(NamedTuple):
@@ -59,11 +62,13 @@ class UTXOData(NamedTuple):
     utxo_ix: str
     amount: int
     address: Optional[str] = None
+    coin: str = DEFAULT_COIN
 
 
 class TxOut(NamedTuple):
     address: str
     amount: int
+    coin: str = DEFAULT_COIN
 
 
 # list of `TxOut`s, empty list, or empty tuple
@@ -325,7 +330,7 @@ class ClusterLib:
         """Refresh protocol parameters file."""
         self.query_cli(["protocol-parameters", *self.era_arg, "--out-file", str(self.pparams_file)])
 
-    def get_utxo(self, address: str) -> List[UTXOData]:
+    def get_utxo(self, address: str, coins: UnpackableSequence = ()) -> List[UTXOData]:
         """Return UTXO info for payment address."""
         utxo_dict = json.loads(
             self.query_cli(
@@ -333,20 +338,51 @@ class ClusterLib:
             )
         )
 
+        def _get_tokens_utxo(data: list) -> List[Tuple[int, str]]:
+            tokens_db = []
+            for policyid_rec in data:
+                policyid = policyid_rec[0]
+                for coin_rec in policyid_rec[1]:
+                    coin = coin_rec[0]
+                    coin = f".{coin}" if coin else ""
+                    amount = coin_rec[1]
+                    tokens_db.append((amount, f"{policyid}{coin}"))
+            return tokens_db
+
         utxo = []
         for utxo_rec, utxo_data in utxo_dict.items():
             utxo_hash, utxo_ix = utxo_rec.split("#")
             amount = utxo_data["amount"]
+
+            # check if there's native tokens info available
             if not isinstance(amount, int):
-                amount = amount[0]  # TODO: how to tell if it is Lovelace?
+                amount, tokens = amount[0], amount[1]
+                native_tokens = _get_tokens_utxo(tokens)
+                for token in native_tokens:
+                    utxo.append(
+                        UTXOData(
+                            utxo_hash=utxo_hash,
+                            utxo_ix=utxo_ix,
+                            amount=token[0],
+                            address=utxo_data["address"],
+                            coin=token[1],
+                        )
+                    )
+
             utxo.append(
                 UTXOData(
                     utxo_hash=utxo_hash,
                     utxo_ix=utxo_ix,
                     amount=amount,
                     address=utxo_data["address"],
+                    coin=DEFAULT_COIN,
                 )
             )
+
+        if coins:
+            filtered_utxo = [u for u in utxo if u.coin in coins]
+            return filtered_utxo
+
         return utxo
 
     def get_tip(self) -> dict:
@@ -881,15 +917,15 @@ class ClusterLib:
         """Return epoch of last block that was successfully applied to the ledger."""
         return int(self.get_last_block_slot_no() // self.epoch_length)
 
-    def get_address_balance(self, address: str) -> int:
+    def get_address_balance(self, address: str, coin: str = DEFAULT_COIN) -> int:
         """Return total balance of an address (sum of all UTXO balances)."""
-        utxo = self.get_utxo(address)
+        utxo = self.get_utxo(address, coins=[coin])
         address_balance = functools.reduce(lambda x, y: x + y.amount, utxo, 0)
         return int(address_balance)
 
-    def get_utxo_with_highest_amount(self, address: str) -> UTXOData:
+    def get_utxo_with_highest_amount(self, address: str, coin: str = DEFAULT_COIN) -> UTXOData:
         """Return data for UTXO with highest amount."""
-        utxo = self.get_utxo(address)
+        utxo = self.get_utxo(address, coins=[coin])
         highest_amount_rec = max(utxo, key=lambda x: x.amount)
         return highest_amount_rec
 
@@ -932,7 +968,16 @@ class ClusterLib:
 
         return deposit
 
-    def get_tx_ins_outs(
+    def _organize_tx_ins_outs(self, tx_list: Union[List[UTXOData], List[TxOut]]) -> Dict[str, list]:
+        """Organize transaction inputs or outputs by coin type."""
+        db: Dict[str, list] = {}
+        for rec in tx_list:
+            if rec.coin not in db:
+                db[rec.coin] = []
+            db[rec.coin].append(rec)
+        return db
+
+    def get_tx_ins_outs(  # noqa: C901
         self,
         src_address: str,
         tx_files: TxFiles,
@@ -941,41 +986,69 @@ class ClusterLib:
         fee: int = 0,
         deposit: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
+        mint: OptionalTxOuts = (),
     ) -> Tuple[list, list]:
         """Return list of transaction's inputs and outputs."""
-        txins_copy = list(txins) if txins else self.get_utxo(src_address)
-        txouts_copy = list(txouts) if txouts else []
+        # pylint: disable=too-many-branches
         withdrawals_copy = list(withdrawals) if withdrawals else []
-        max_address = None
 
-        # the value "-1" means all available funds
-        max_index = [idx for idx, val in enumerate(txouts_copy) if val[1] == -1]
-        if len(max_index) > 1:
-            raise CLIError("Cannot send all remaining funds to more than one address.")
-        if max_index:
-            max_address = txouts_copy.pop(max_index[0]).address
+        txouts_copy = list(txouts) if txouts else []
+        txouts_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(txouts_copy)
+        outcoins = [DEFAULT_COIN, *txouts_db.keys()]
 
-        total_input_amount = functools.reduce(lambda x, y: x + y.amount, txins_copy, 0)
-        total_output_amount = functools.reduce(lambda x, y: x + y[1], txouts_copy, 0)
-        total_withdrawals_amount = functools.reduce(lambda x, y: x + y[1], withdrawals_copy, 0)
+        txins_copy = list(txins) if txins else self.get_utxo(src_address, coins=outcoins)
+        txins_db: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs(txins_copy)
 
-        tx_deposit = self.get_tx_deposit(tx_files=tx_files) if deposit is None else deposit
-        funds_needed = total_output_amount + fee + tx_deposit
-        change = total_input_amount + total_withdrawals_amount - funds_needed
-        if change < 0:
-            LOGGER.error(
-                "Not enough funds to make a transaction - "
-                f"available: {total_input_amount}; needed {funds_needed}"
+        if not all(c in txins_db for c in outcoins):
+            LOGGER.error("Not all output coins are present in input UTxO.")
+
+        txins_result: List[UTXOData] = []
+        txouts_result: List[TxOut] = []
+
+        for coin in txins_db:
+            max_address = None
+            coin_txins = txins_db[coin]
+            coin_txouts = txouts_db.get(coin) or []
+
+            # the value "-1" means all available funds
+            max_index = [idx for idx, val in enumerate(coin_txouts) if val.amount == -1]
+            if len(max_index) > 1:
+                raise CLIError("Cannot send all remaining funds to more than one address.")
+            if max_index:
+                max_address = coin_txouts.pop(max_index[0]).address
+
+            total_input_amount = functools.reduce(lambda x, y: x + y.amount, coin_txins, 0)
+            total_output_amount = functools.reduce(lambda x, y: x + y.amount, coin_txouts, 0)
+            total_withdrawals_amount = functools.reduce(
+                lambda x, y: x + y.amount, withdrawals_copy, 0
             )
-        if change > 0:
-            txouts_copy.append(TxOut(address=(max_address or src_address), amount=change))
 
-        if not txins_copy:
+            tx_deposit = self.get_tx_deposit(tx_files=tx_files) if deposit is None else deposit
+            funds_needed = total_output_amount + fee + tx_deposit
+            change = total_input_amount + total_withdrawals_amount - funds_needed
+            if change < 0:
+                LOGGER.error(
+                    "Not enough funds to make a transaction - "
+                    f"available: {total_input_amount}; needed {funds_needed}"
+                )
+            if change > 0:
+                coin_txouts.append(
+                    TxOut(address=(max_address or src_address), amount=change, coin=coin)
+                )
+
+            txins_result.extend(coin_txins)
+            txouts_result.extend(coin_txouts)
+
+        for m in mint:
+            if m.amount > 0:
+                txouts_result.append(TxOut(address=m.address, amount=m.amount, coin=m.coin))
+
+        if not txins_result:
             LOGGER.error("Cannot build transaction, empty `txins`.")
-        if not txouts_copy:
+        if not txouts_result:
             LOGGER.error("Cannot build transaction, empty `txouts`.")
 
-        return txins_copy, txouts_copy
+        return txins_result, txouts_result
 
     def get_withdrawals(self, withdrawals: List[TxOut]) -> List[TxOut]:
         """Return list of withdrawals."""
@@ -1001,14 +1074,29 @@ class ClusterLib:
         withdrawals: OptionalTxOuts = (),
         invalid_hereafter: Optional[int] = None,
         invalid_before: Optional[int] = None,
+        mint: OptionalTxOuts = (),
     ) -> TxRawOutput:
         """Build raw transaction."""
+        # pylint: disable=too-many-arguments
         out_file = Path(out_file)
-        txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
-        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts]
-        withdrawals_combined = [f"{x[0]}+{x[1]}" for x in withdrawals]
 
-        bound_args: list = []
+        # aggregate TX outputs by address
+        txouts_by_addr: Dict[str, List[str]] = {}
+        for rec in txouts:
+            if rec.address not in txouts_by_addr:
+                txouts_by_addr[rec.address] = []
+            coin = f" {rec.coin}" if rec.coin and rec.coin != DEFAULT_COIN else ""
+            txouts_by_addr[rec.address].append(f"{rec.amount}{coin}")
+
+        txouts_combined: List[str] = []
+        for addr, amounts in txouts_by_addr.items():
+            amounts_joined = "+".join(amounts)
+            txouts_combined.append(f"{addr}+{amounts_joined}")
+
+        txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in txins]
+        withdrawals_combined = [f"{x.address}+{x.amount}" for x in withdrawals]
+
+        bound_args = []
         if invalid_before is not None:
             bound_args.extend(["--invalid-before", str(invalid_before)])
         if invalid_hereafter is None:
@@ -1016,6 +1104,10 @@ class ClusterLib:
             bound_args.extend(["--ttl", str(ttl)])
         else:
             bound_args.extend(["--invalid-hereafter", str(invalid_hereafter)])
+
+        mint_args = []
+        for m in mint:
+            mint_args.extend(["--mint", f"{m.amount} {m.coin}"])
 
         self.cli(
             [
@@ -1034,6 +1126,7 @@ class ClusterLib:
                 *self._prepend_flag("--script-file", tx_files.script_files),
                 *self._prepend_flag("--withdrawal", withdrawals_combined),
                 *bound_args,
+                *mint_args,
                 *self.tx_era_arg,
             ]
         )
@@ -1061,6 +1154,7 @@ class ClusterLib:
         deposit: Optional[int] = None,
         invalid_hereafter: Optional[int] = None,
         invalid_before: Optional[int] = None,
+        mint: OptionalTxOuts = (),
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Figure out all the missing data and build raw transaction."""
@@ -1079,6 +1173,7 @@ class ClusterLib:
             fee=fee,
             deposit=deposit,
             withdrawals=withdrawals,
+            mint=mint,
         )
 
         tx_raw_output = self.build_raw_tx_bare(
@@ -1091,6 +1186,7 @@ class ClusterLib:
             withdrawals=withdrawals,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
+            mint=mint,
         )
 
         self._check_outfiles(out_file)
@@ -1139,6 +1235,7 @@ class ClusterLib:
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
+        mint: OptionalTxOuts = (),
         witness_count_add: int = 0,
         destination_dir: FileType = ".",
     ) -> int:
@@ -1164,6 +1261,7 @@ class ClusterLib:
             ttl=ttl,
             withdrawals=withdrawals,
             deposit=0,
+            mint=mint,
             destination_dir=destination_dir,
         )
 
@@ -1364,6 +1462,17 @@ class ClusterLib:
             json.dump(script, fp_out, indent=4)
 
         return out_file
+
+    def get_policyid(
+        self,
+        script_file: FileType,
+    ) -> str:
+        """Calculate the PolicyId from the monetary policy script."""
+        return (
+            self.cli(["transaction", "policyid", "--script-file", str(script_file)])
+            .stdout.rstrip()
+            .decode("utf-8")
+        )
 
     def gen_update_proposal(
         self,
