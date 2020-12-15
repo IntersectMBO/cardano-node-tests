@@ -13,7 +13,7 @@ repos:
     language_version: python3
     require_serial: true
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.3.0
+  rev: v3.4.0
   hooks:
   - id: trailing-whitespace
     language_version: python3
