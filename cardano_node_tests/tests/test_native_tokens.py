@@ -187,3 +187,57 @@ class TestMinting:
 
         couttscoin_utxo = cluster.get_utxo(src_address, coins=[coin])
         assert not couttscoin_utxo, "The coin was not burnt"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_minting_and_partial_burning(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test minting and partial burning of coins."""
+        temp_template = helpers.get_func_name()
+        asset_name = f"counttscoin{clusterlib.get_rand_str(4)}"
+        amount = 50
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        src_address = payment_addrs[0].address
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files[1:],
+        )
+        policyid = cluster.get_policyid(multisig_script)
+        coin = f"{policyid}.{asset_name}"
+
+        assert not cluster.get_utxo(src_address, coins=[coin]), "The coin already exists"
+
+        # coin minting
+        _mint_or_burn(
+            cluster_obj=cluster,
+            payment_addrs=payment_addrs,
+            src_address=src_address,
+            amount=amount,
+            script=multisig_script,
+            asset_name=asset_name,
+            temp_template=f"{temp_template}_mint",
+        )
+
+        couttscoin_utxo = cluster.get_utxo(src_address, coins=[coin])
+        assert couttscoin_utxo and couttscoin_utxo[0].amount == amount, "The coin was not minted"
+
+        # coin burning
+        burn_amount = amount // 2
+        _mint_or_burn(
+            cluster_obj=cluster,
+            payment_addrs=payment_addrs,
+            src_address=src_address,
+            amount=-burn_amount,
+            script=multisig_script,
+            asset_name=asset_name,
+            temp_template=f"{temp_template}_burn",
+        )
+
+        couttscoin_utxo = cluster.get_utxo(src_address, coins=[coin])
+        assert (
+            couttscoin_utxo and couttscoin_utxo[0].amount == amount - burn_amount
+        ), "The coin was not burned"
