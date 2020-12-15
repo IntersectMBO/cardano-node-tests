@@ -19,6 +19,7 @@ jobs:
         env: [shelley_qa, testnet, staging, mainnet]
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 600
     steps:
       - name: checkout cardano-node-tests repo
         uses: actions/checkout@v2
