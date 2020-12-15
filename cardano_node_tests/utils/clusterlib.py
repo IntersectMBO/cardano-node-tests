@@ -968,7 +968,9 @@ class ClusterLib:
 
         return deposit
 
-    def _organize_tx_ins_outs(self, tx_list: Union[List[UTXOData], List[TxOut]]) -> Dict[str, list]:
+    def _organize_tx_ins_outs(
+        self, tx_list: Union[List[UTXOData], List[TxOut], Tuple[()]]
+    ) -> Dict[str, list]:
         """Organize transaction inputs or outputs by coin type."""
         db: Dict[str, list] = {}
         for rec in tx_list:
@@ -989,28 +991,30 @@ class ClusterLib:
         mint: OptionalTxOuts = (),
     ) -> Tuple[list, list]:
         """Return list of transaction's inputs and outputs."""
-        # pylint: disable=too-many-branches
-        withdrawals_copy = list(withdrawals) if withdrawals else []
+        # pylint: disable=too-many-branches,too-many-locals
+        txouts_passed = list(txouts) if txouts else []
+        txouts_passed_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(txouts_passed)
 
-        txouts_copy = list(txouts) if txouts else []
-        txouts_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(txouts_copy)
-        outcoins = [DEFAULT_COIN, *txouts_db.keys()]
+        txouts_mint_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(mint)
 
-        txins_copy = list(txins) if txins else self.get_utxo(src_address, coins=outcoins)
-        txins_db: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs(txins_copy)
+        outcoins_all = [DEFAULT_COIN, *txouts_mint_db.keys()]
+        _txins = list(txins) if txins else self.get_utxo(src_address, coins=outcoins_all)
+        txins_db: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs(_txins)
 
-        if not all(c in txins_db for c in outcoins):
+        outcoins_passed = [DEFAULT_COIN, *txouts_passed_db.keys()]
+        if not all(c in txins_db for c in outcoins_passed):
             LOGGER.error("Not all output coins are present in input UTxO.")
 
         txins_result: List[UTXOData] = []
         txouts_result: List[TxOut] = []
 
-        for coin in txins_db:
+        # iterate over coins both in txins and txouts
+        for coin in set(txins_db).union(txouts_passed_db).union(txouts_mint_db):
             max_address = None
-            coin_txins = txins_db[coin]
-            coin_txouts = txouts_db.get(coin) or []
+            coin_txins = txins_db.get(coin) or []
+            coin_txouts = txouts_passed_db.get(coin) or []
 
-            # the value "-1" means all available funds
+            # The value "-1" means all available funds.
             max_index = [idx for idx, val in enumerate(coin_txouts) if val.amount == -1]
             if len(max_index) > 1:
                 raise CLIError("Cannot send all remaining funds to more than one address.")
@@ -1019,18 +1023,26 @@ class ClusterLib:
 
             total_input_amount = functools.reduce(lambda x, y: x + y.amount, coin_txins, 0)
             total_output_amount = functools.reduce(lambda x, y: x + y.amount, coin_txouts, 0)
-            total_withdrawals_amount = functools.reduce(
-                lambda x, y: x + y.amount, withdrawals_copy, 0
-            )
 
-            tx_deposit = self.get_tx_deposit(tx_files=tx_files) if deposit is None else deposit
-            funds_needed = total_output_amount + fee + tx_deposit
-            change = total_input_amount + total_withdrawals_amount - funds_needed
-            if change < 0:
-                LOGGER.error(
-                    "Not enough funds to make a transaction - "
-                    f"available: {total_input_amount}; needed {funds_needed}"
+            if coin == DEFAULT_COIN:
+                tx_deposit = self.get_tx_deposit(tx_files=tx_files) if deposit is None else deposit
+                funds_needed = total_output_amount + fee + tx_deposit
+                total_withdrawals_amount = functools.reduce(
+                    lambda x, y: x + y.amount, withdrawals, 0
                 )
+                change = total_input_amount + total_withdrawals_amount - funds_needed
+                if change < 0:
+                    LOGGER.error(
+                        "Not enough funds to make a transaction - "
+                        f"available: {total_input_amount}; needed {funds_needed}"
+                    )
+            else:
+                coin_txouts_minted = txouts_mint_db.get(coin) or []
+                total_minted_amount = functools.reduce(
+                    lambda x, y: x + y.amount, coin_txouts_minted, 0
+                )
+                change = total_input_amount + total_minted_amount - total_output_amount
+
             if change > 0:
                 coin_txouts.append(
                     TxOut(address=(max_address or src_address), amount=change, coin=coin)
@@ -1039,9 +1051,8 @@ class ClusterLib:
             txins_result.extend(coin_txins)
             txouts_result.extend(coin_txouts)
 
-        for m in mint:
-            if m.amount > 0:
-                txouts_result.append(TxOut(address=m.address, amount=m.amount, coin=m.coin))
+        # filter out negative token amounts (tokens burning)
+        txouts_result = [r for r in txouts_result if r.amount > 0]
 
         if not txins_result:
             LOGGER.error("Cannot build transaction, empty `txins`.")
@@ -1093,7 +1104,9 @@ class ClusterLib:
             amounts_joined = "+".join(amounts)
             txouts_combined.append(f"{addr}+{amounts_joined}")
 
-        txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in txins]
+        # filter out duplicate txins
+        txins_combined = {f"{x.utxo_hash}#{x.utxo_ix}" for x in txins}
+
         withdrawals_combined = [f"{x.address}+{x.amount}" for x in withdrawals]
 
         bound_args = []
