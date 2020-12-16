@@ -527,12 +527,15 @@ def get_calculated_slot_no(env):
     if env == "testnet":
         byron_start_time = datetime.strptime("2019-07-24 20:20:16", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-07-28 20:20:16", "%Y-%m-%d %H:%M:%S")
+        allegra_start_time = datetime.strptime("2020-12-15 20:20:16", "%Y-%m-%d %H:%M:%S")
     elif env == "staging":
         byron_start_time = datetime.strptime("2017-09-26 18:23:33", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-08-01 18:23:33", "%Y-%m-%d %H:%M:%S")
+        allegra_start_time = datetime.strptime("2020-12-19 18:23:33", "%Y-%m-%d %H:%M:%S")
     elif env == "mainnet":
         byron_start_time = datetime.strptime("2017-09-23 21:44:51", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-07-29 21:44:51", "%Y-%m-%d %H:%M:%S")
+        allegra_start_time = datetime.strptime("2020-12-16 21:44:51", "%Y-%m-%d %H:%M:%S")
     elif env == "shelley_qa":
         byron_start_time = datetime.strptime("2020-08-17 13:00:00", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-08-17 17:00:00", "%Y-%m-%d %H:%M:%S")
