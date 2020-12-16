@@ -42,6 +42,7 @@ CLUSTERS_COUNT = WORKERS_COUNT if WORKERS_COUNT <= 9 else 9
 CLUSTER_DIR_TEMPLATE = "cluster"
 CLUSTER_RUNNING_FILE = ".cluster_running"
 CLUSTER_STOPPED_FILE = ".cluster_stopped"
+CLUSTER_DEAD_FILE = ".cluster_dead"
 
 DEV_CLUSTER_RUNNING = bool(os.environ.get("DEV_CLUSTER_RUNNING"))
 
@@ -177,16 +178,11 @@ class ClusterManager:
 
         devops_cluster.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=clean)
 
-    def _restart(  # noqa: C901
-        self, start_cmd: str = "", stop_cmd: str = ""
-    ) -> clusterlib.ClusterLib:
+    def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> None:  # noqa: C901
         """Restart cluster."""
         # don't restart cluster if it was started outside of test framework
         if self.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
-            cluster_obj = self.cache.cluster_obj
-            if not cluster_obj:
-                cluster_obj = devops_cluster.get_cluster_obj()
-            return cluster_obj
+            return None
 
         # using `_locked_log` because restart is not called under global lock
         self._locked_log(
@@ -229,13 +225,10 @@ class ClusterManager:
             else:
                 break
         else:
-            msg = "Failed to start cluster"
-            if helpers.IS_XDIST:
-                # just leave this instance unusable
-                if excp is not None:
-                    raise RuntimeError(msg) from excp
-                raise RuntimeError(msg)
-            pytest.exit(msg=f"{msg}, exception: {excp}", returncode=1)
+            if not helpers.IS_XDIST:
+                pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
+            open(self.instance_dir / CLUSTER_DEAD_FILE, "a").close()
+            return None
 
         # setup faucet addresses
         tmp_path = Path(self.tmp_path_factory.mktemp("addrs_data"))
@@ -246,7 +239,7 @@ class ClusterManager:
         if not cluster_running_file.exists():
             open(cluster_running_file, "a").close()
 
-        return cluster_obj
+        return None
 
     def save_worker_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this pytest worker.
@@ -373,9 +366,9 @@ class ClusterManager:
             open(instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
 
         # remove file that indicates that tests with the mark are running
-        test_curr_mark = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
-        if test_curr_mark:
-            os.remove(test_curr_mark[0])
+        marked_running = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
+        if marked_running:
+            os.remove(marked_running[0])
 
     def _get_marked_tests_status(
         self, cache: Dict[int, MarkedTestsStatus], instance_num: int
@@ -515,7 +508,6 @@ class ClusterManager:
         selected_instance = -1
         restart_here = False
         restart_ready = False
-        mark_start_here = False
         first_iteration = True
         sleep_delay = 1
         marked_tests_cache: Dict[int, MarkedTestsStatus] = {}
@@ -567,6 +559,17 @@ class ClusterManager:
                     instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
                     instance_dir.mkdir(exist_ok=True)
 
+                    # if the selected instance failed to start, move on to other instance
+                    if (instance_dir / CLUSTER_DEAD_FILE).exists():
+                        selected_instance = -1
+                        # remove status files that are checked by other workers
+                        for sf in (
+                            *instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"),
+                            *instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_*"),
+                        ):
+                            os.remove(sf)
+                        continue
+
                     # singleton test is running, so no other test can be started
                     if (instance_dir / TEST_SINGLETON_FILE).exists():
                         self._log(f"c{instance_num}: singleton test in progress, cannot run")
@@ -576,54 +579,99 @@ class ClusterManager:
                     restart_in_progress = list(instance_dir.glob(f"{RESTART_IN_PROGRESS_GLOB}_*"))
                     # cluster restart planned, no new tests can start
                     if not restart_here and restart_in_progress:
-                        self._log(f"c{instance_num}: restart in progress, cannot run")
+                        # no log message here, it would be too many of them
+                        sleep_delay = 5
                         continue
 
                     started_tests = list(instance_dir.glob(f"{TEST_RUNNING_GLOB}_*"))
 
                     # "marked tests" = group of tests marked with a specific mark.
                     # While these tests are running, no unmarked test can start.
-                    # Check if it is indicated that marked tests will start next.
-                    marked_tests_starting = list(instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_*"))
-                    marked_tests_starting_my = list(
-                        instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_{mark}_*")
-                    )
-                    if not mark_start_here and marked_tests_starting_my:
-                        self._log(
-                            f"c{instance_num}: marked tests starting with my mark, cannot run"
-                        )
-                        selected_instance = instance_num
-                        sleep_delay = 2
-                        continue
-                    if not mark_start_here and marked_tests_starting:
-                        self._log(f"c{instance_num}: marked tests starting, cannot run")
-                        sleep_delay = 2
-                        continue
-                    if mark_start_here and marked_tests_starting:
-                        if started_tests:
-                            self._log(
-                                f"c{instance_num}: unmarked tests running, cannot start marked test"
-                            )
-                            sleep_delay = 2
-                            continue
-                        os.remove(marked_tests_starting[0])
-                        mark_start_here = False
+                    marked_starting = list(instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_*"))
+                    marked_running = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
 
-                    test_curr_mark = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
-                    first_marked_test = bool(mark and not test_curr_mark)
+                    if mark:
+                        marked_running_my = (
+                            instance_dir / f"{TEST_CURR_MARK_GLOB}_{mark}"
+                        ).exists()
+                        marked_starting_my = list(
+                            instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_{mark}_*")
+                        )
+
+                        marked_running_my_anywhere = list(
+                            self.lock_dir.glob(
+                                f"{CLUSTER_DIR_TEMPLATE}*/{TEST_CURR_MARK_GLOB}_{mark}"
+                            )
+                        )
+                        # check if tests with my mark are running on some other cluster instance
+                        if not marked_running_my and marked_running_my_anywhere:
+                            self._log(
+                                f"c{instance_num}: tests marked with my mark already running "
+                                "on other cluster instance, cannot run"
+                            )
+                            continue
+
+                        marked_starting_my_anywhere = list(
+                            self.lock_dir.glob(
+                                f"{CLUSTER_DIR_TEMPLATE}*/{TEST_MARK_STARTING_GLOB}_{mark}_*"
+                            )
+                        )
+                        # check if tests with my mark are starting on some other cluster instance
+                        if not marked_starting_my and marked_starting_my_anywhere:
+                            self._log(
+                                f"c{instance_num}: tests marked with my mark starting on other "
+                                "cluster instance, cannot run"
+                            )
+                            continue
+
+                        # check if this test has the same mark as currently running marked tests
+                        if marked_running_my or marked_starting_my:
+                            # lock to this cluster instance
+                            selected_instance = instance_num
+                        elif marked_running or marked_starting:
+                            self._log(
+                                f"c{instance_num}: tests marked with other mark starting "
+                                f"or running, I have different mark '{mark}'"
+                            )
+                            continue
+
+                        # check if needs to wait until marked tests can run
+                        if marked_starting_my:
+                            if started_tests:
+                                self._log(
+                                    f"c{instance_num}: unmarked tests running, cannot start "
+                                    "marked test"
+                                )
+                                sleep_delay = 2
+                                continue
+                            # no other tests are running, marked tests can run now
+                            for sf in marked_starting:
+                                os.remove(sf)
+
+                    # no unmarked test can run while marked tests are starting or running
+                    elif marked_running or marked_starting:
+                        self._log(
+                            f"c{instance_num}: marked tests starting or running, "
+                            f"I don't have mark"
+                        )
+                        sleep_delay = 5
+                        continue
+
+                    # is this the first marked test that wants to run?
+                    initial_marked_test = bool(mark and not marked_running)
 
                     # indicate that it is planned to start marked tests as soon as
                     # all currently running tests are finished
-                    if first_marked_test and started_tests:
+                    if initial_marked_test and started_tests:
                         self._log(
                             f"c{instance_num}: unmarked tests running, wants to start '{mark}'"
                         )
-                        mark_start_here = True
+                        # lock to this cluster instance
                         selected_instance = instance_num
                         open(
                             instance_dir / f"{TEST_MARK_STARTING_GLOB}_{mark}_{self.worker_id}", "a"
                         ).close()
-                        sleep_delay = 2
+                        sleep_delay = 3
                         continue
 
                     # get marked tests status
@@ -632,30 +680,16 @@ class ClusterManager:
                     )
 
                     # marked tests are already running
-                    if test_curr_mark:
-                        active_mark_file = test_curr_mark[0].name
+                    if marked_running:
+                        active_mark_file = marked_running[0].name
 
+                        # update marked tests status
                         self._update_marked_tests(
                             marked_tests_status=marked_tests_status,
                             active_mark_name=active_mark_file,
                             started_tests=started_tests,
                             instance_num=instance_num,
                         )
-
-                        if not mark:
-                            self._log(f"c{instance_num}: marked tests running, I don't have mark")
-                            sleep_delay = 5
-                            continue
-
-                        # check if this test has the same mark as currently running marked tests,
-                        # so it can run
-                        if f"{TEST_CURR_MARK_GLOB}_{mark}" not in active_mark_file:
-                            self._log(
-                                f"c{instance_num}: marked tests running, "
-                                f"I have different mark - {mark}"
-                            )
-                            sleep_delay = 5
-                            continue
 
                         self._log(
                             f"c{instance_num}: in marked tests branch, "
@@ -699,22 +733,21 @@ class ClusterManager:
                             continue
 
                     # indicate that the cluster will be restarted
-                    new_cmd_restart = bool(start_cmd and (first_marked_test or singleton))
+                    new_cmd_restart = bool(start_cmd and (initial_marked_test or singleton))
                     if not restart_here and (
                         new_cmd_restart or self._is_restart_needed(instance_num)
                     ):
+                        if started_tests:
+                            self._log(f"c{instance_num}: tests are running, cannot restart")
+                            continue
+
+                        # cluster restart will be performed by this worker
                         self._log(f"c{instance_num}: setting to restart cluster")
                         restart_here = True
                         selected_instance = instance_num
                         open(
                             instance_dir / f"{RESTART_IN_PROGRESS_GLOB}_{self.worker_id}", "a"
                         ).close()
-
-                    # cluster restart will be performed by this worker
-                    if restart_here and started_tests:
-                        self._log(f"c{instance_num}: tests are running, cannot restart")
-                        sleep_delay = 2
-                        continue
 
                     # we've found suitable cluster instance
                     self._cluster_instance = instance_num
@@ -746,7 +779,7 @@ class ClusterManager:
                         open(self.instance_dir / TEST_SINGLETON_FILE, "a").close()
 
                     # this test is a first marked test
-                    if first_marked_test:
+                    if initial_marked_test:
                         self._log(f"c{instance_num}: starting '{mark}' tests")
                         open(self.instance_dir / f"{TEST_CURR_MARK_GLOB}_{mark}", "a").close()
 
