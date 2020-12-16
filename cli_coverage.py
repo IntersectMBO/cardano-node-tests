@@ -15,6 +15,22 @@ from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
+SKIPPED = (
+    "Byron",
+    "byron",
+    "convert-byron-key",
+    "convert-byron-genesis-vkey",
+    "convert-itn-key",
+    "convert-itn-extended-key",
+    "convert-itn-bip32-key",
+    "genesis",
+    "Miscellaneous",
+    "--byron-era",
+    "--byron-mode",
+    "--byron-key",
+    "--mainnet",
+)
+
 
 def get_args() -> argparse.Namespace:
     """Get script command line arguments."""
@@ -50,6 +66,11 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Print badge icon URL",
     )
+    parser.add_argument(
+        "--ignore-skips",
+        action="store_true",
+        help="Include all commands and arguments, ignore list of items to skip",
+    )
     return parser.parse_args()
 
 
@@ -66,7 +87,7 @@ def merge_coverage(dict_a: dict, dict_b: dict) -> dict:
             dict_a[key] = sorted(new_list)
         elif key in dict_a and isinstance(value, addable) and isinstance(dict_a[key], addable):
             dict_a[key] += value
-        # there shouldn't be any argument that is not in the available commands dict
+        # skipped arguments and commands are not in the available commands dict
         elif key not in dict_a:
             continue
         elif not isinstance(value, dict):
@@ -105,16 +126,18 @@ def parse_cmd_output(output: str) -> List[str]:
     return cli_args
 
 
-def get_available_commands(cli_args: UnpackableSequence) -> dict:
+def get_available_commands(cli_args: UnpackableSequence, ignore_skips: bool = False) -> dict:
     """Get all available cardano-cli sub-commands and options."""
     cli_out = cli(cli_args)
     new_cli_args = parse_cmd_output(cli_out)
     command_dict: dict = {"_count": 0}
     for arg in new_cli_args:
+        if not ignore_skips and arg in SKIPPED:
+            continue
         if arg.startswith("-"):
             command_dict[arg] = {"_count": 0}
             continue
-        command_dict[arg] = get_available_commands([*cli_args, arg])
+        command_dict[arg] = get_available_commands([*cli_args, arg], ignore_skips=ignore_skips)
 
     return command_dict
 
@@ -194,7 +217,7 @@ def main() -> int:
         return 1
 
     available_commands = {
-        "cardano-cli": {"_count": 0, "shelley": get_available_commands(["cardano-cli", "shelley"])}
+        "cardano-cli": get_available_commands(["cardano-cli"], ignore_skips=args.ignore_skips)
     }
     try:
         coverage = get_coverage(args.input_files, available_commands)
