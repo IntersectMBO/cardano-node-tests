@@ -23,7 +23,8 @@ ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
 ERRORS_IGNORED = [
     "failedScripts",
     "EKGServerStartupError",
-    "WithIPList SubscriptionTrace",
+    "Failed to start all required subscriptions",
+    "Connection Attempt Exception",
 ]
 ERRORS_RULES_FILE_NAME = ".errors_rules"
 
