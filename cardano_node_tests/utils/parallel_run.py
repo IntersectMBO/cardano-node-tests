@@ -1,4 +1,4 @@
-"""Functionality for parallel execution of tests on DevOps cluster instances."""
+"""Functionality for parallel execution of tests on multiple cluster instances."""
 import contextlib
 import dataclasses
 import datetime
@@ -65,6 +65,8 @@ def _kill_supervisor(instance_num: int) -> None:
 
 @dataclasses.dataclass
 class ClusterManagerCache:
+    """Cache for a single cluster instance."""
+
     cluster_obj: Optional[clusterlib.ClusterLib] = None
     test_data: dict = dataclasses.field(default_factory=dict)
     addrs_data: dict = dataclasses.field(default_factory=dict)
@@ -170,77 +172,6 @@ class ClusterManager:
         startup_files_dir.mkdir(exist_ok=True, parents=True)
         return startup_files_dir
 
-    def _restart_save_cluster_artifacts(self, clean: bool = False) -> None:
-        """Save cluster artifacts (logs, certs, etc.) to pytest temp dir before cluster restart."""
-        cluster_obj = self.cache.cluster_obj
-        if not cluster_obj:
-            return
-
-        devops_cluster.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=clean)
-
-    def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> None:  # noqa: C901
-        """Restart cluster."""
-        # don't restart cluster if it was started outside of test framework
-        if self.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
-            return None
-
-        # using `_locked_log` because restart is not called under global lock
-        self._locked_log(
-            f"c{self.cluster_instance}: called `_restart`, start_cmd='{start_cmd}', "
-            f"stop_cmd='{stop_cmd}'"
-        )
-
-        startup_files = cluster_instances.prepare_files(
-            destdir=self._create_startup_files_dir(self.cluster_instance),
-            instance_num=self.cluster_instance,
-            start_script=start_cmd,
-            stop_script=stop_cmd,
-        )
-
-        self._locked_log(
-            f"c{self.cluster_instance}: in `_restart`, new files "
-            f"start_cmd='{startup_files.start_script}', "
-            f"stop_cmd='{startup_files.stop_script}'"
-        )
-
-        excp: Optional[Exception]
-        for i in range(2):
-            excp = None
-            if i > 0:
-                self._locked_log(f"c{self.cluster_instance}: failed to start cluster, retrying")
-                time.sleep(0.2)
-
-            devops_cluster.stop_cluster(cmd=str(startup_files.stop_script))
-            self._restart_save_cluster_artifacts(clean=True)
-            try:
-                _kill_supervisor(self.cluster_instance)
-            except Exception:
-                pass
-
-            try:
-                cluster_obj = devops_cluster.start_cluster(cmd=str(startup_files.start_script))
-            except Exception as err:
-                LOGGER.error(f"Failed to start cluster: {err}")
-                excp = err
-            else:
-                break
-        else:
-            if not helpers.IS_XDIST:
-                pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
-            open(self.instance_dir / CLUSTER_DEAD_FILE, "a").close()
-            return None
-
-        # setup faucet addresses
-        tmp_path = Path(self.tmp_path_factory.mktemp("addrs_data"))
-        devops_cluster.setup_test_addrs(cluster_obj, tmp_path)
-
-        # create file that indicates that the cluster is running
-        cluster_running_file = self.instance_dir / CLUSTER_RUNNING_FILE
-        if not cluster_running_file.exists():
-            open(cluster_running_file, "a").close()
-
-        return None
-
     def save_worker_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this pytest worker.
 
@@ -337,13 +268,111 @@ class ClusterManager:
             if errors:
                 logfiles.report_artifacts_errors(errors)
 
-    #
-    # methods below are unsafe to use outside of `get`
-    #
+    def get(
+        self,
+        singleton: bool = False,
+        mark: str = "",
+        lock_resources: UnpackableSequence = (),
+        use_resources: UnpackableSequence = (),
+        cleanup: bool = False,
+        start_cmd: str = "",
+    ) -> clusterlib.ClusterLib:
+        """Wrap a call to `_ClusterGetter.get`."""
+        return _ClusterGetter(self).get(
+            singleton=singleton,
+            mark=mark,
+            lock_resources=lock_resources,
+            use_resources=use_resources,
+            cleanup=cleanup,
+            start_cmd=start_cmd,
+        )
+
+
+class _ClusterGetter:
+    """Internal class that encapsulate functionality for getting a cluster instance."""
+
+    def __init__(self, cluster_manager: ClusterManager) -> None:
+        self.cm = cluster_manager  # pylint: disable=invalid-name
+
+    def _restart_save_cluster_artifacts(self, clean: bool = False) -> None:
+        """Save cluster artifacts (logs, certs, etc.) to pytest temp dir before cluster restart."""
+        cluster_obj = self.cm.cache.cluster_obj
+        if not cluster_obj:
+            return
+
+        devops_cluster.save_cluster_artifacts(artifacts_dir=self.cm.pytest_tmp_dir, clean=clean)
+
+    def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> None:  # noqa: C901
+        """Restart cluster.
+
+        Not called under global lock!
+        """
+        # don't restart cluster if it was started outside of test framework
+        if self.cm.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
+            return None
+
+        # using `_locked_log` because restart is not called under global lock
+        self.cm._locked_log(
+            f"c{self.cm.cluster_instance}: called `_restart`, start_cmd='{start_cmd}', "
+            f"stop_cmd='{stop_cmd}'"
+        )
+
+        startup_files = cluster_instances.prepare_files(
+            destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance),
+            instance_num=self.cm.cluster_instance,
+            start_script=start_cmd,
+            stop_script=stop_cmd,
+        )
+
+        self.cm._locked_log(
+            f"c{self.cm.cluster_instance}: in `_restart`, new files "
+            f"start_cmd='{startup_files.start_script}', "
+            f"stop_cmd='{startup_files.stop_script}'"
+        )
+
+        excp: Optional[Exception]
+        for i in range(2):
+            excp = None
+            if i > 0:
+                self.cm._locked_log(
+                    f"c{self.cm.cluster_instance}: failed to start cluster, retrying"
+                )
+                time.sleep(0.2)
+
+            devops_cluster.stop_cluster(cmd=str(startup_files.stop_script))
+            self._restart_save_cluster_artifacts(clean=True)
+            try:
+                _kill_supervisor(self.cm.cluster_instance)
+            except Exception:
+                pass
+
+            try:
+                cluster_obj = devops_cluster.start_cluster(cmd=str(startup_files.start_script))
+            except Exception as err:
+                LOGGER.error(f"Failed to start cluster: {err}")
+                excp = err
+            else:
+                break
+        else:
+            if not helpers.IS_XDIST:
+                pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
+            open(self.cm.instance_dir / CLUSTER_DEAD_FILE, "a").close()
+            return None
+
+        # setup faucet addresses
+        tmp_path = Path(self.cm.tmp_path_factory.mktemp("addrs_data"))
+        devops_cluster.setup_test_addrs(cluster_obj, tmp_path)
+
+        # create file that indicates that the cluster is running
+        cluster_running_file = self.cm.instance_dir / CLUSTER_RUNNING_FILE
+        if not cluster_running_file.exists():
+            open(cluster_running_file, "a").close()
+
+        return None
 
     def _is_restart_needed(self, instance_num: int) -> bool:
         """Check if it is necessary to restart cluster."""
-        instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
         if not (instance_dir / CLUSTER_RUNNING_FILE).exists():
             return True
         if list(instance_dir.glob(f"{RESTART_NEEDED_GLOB}_*")):
@@ -352,18 +381,18 @@ class ClusterManager:
 
     def _on_marked_test_stop(self, instance_num: int) -> None:
         """Perform actions after marked tests are finished."""
-        self._log(f"c{instance_num}: in `_on_marked_test_stop`")
-        instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        self.cm._log(f"c{instance_num}: in `_on_marked_test_stop`")
+        instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
 
         # set cluster to be restarted if needed
         restart_after_mark_files = list(instance_dir.glob(f"{RESTART_AFTER_MARK_GLOB}_*"))
         if restart_after_mark_files:
             for f in restart_after_mark_files:
                 os.remove(f)
-            self._log(
+            self.cm._log(
                 f"c{instance_num}: in `_on_marked_test_stop`, " "creating 'restart needed' file"
             )
-            open(instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
+            open(instance_dir / f"{RESTART_NEEDED_GLOB}_{self.cm.worker_id}", "a").close()
 
         # remove file that indicates that tests with the mark are running
         marked_running = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
@@ -393,7 +422,7 @@ class ClusterManager:
 
         # check if there is a stale mark status file
         if marked_tests_status.no_marked_tests_iter >= 10:
-            self._log(
+            self.cm._log(
                 f"c{instance_num}: no marked tests running for a while, "
                 "cleaning the mark status file"
             )
@@ -408,14 +437,14 @@ class ClusterManager:
         for res in resources:
             res_locked = list(instance_dir.glob(f"{RESOURCE_LOCKED_GLOB}_{res}_*"))
             if res_locked:
-                self._log(f"c{instance_num}: resource '{res}' locked, cannot start")
+                self.cm._log(f"c{instance_num}: resource '{res}' locked, cannot start")
                 break
             res_used = list(instance_dir.glob(f"{RESOURCE_IN_USE_GLOB}_{res}_*"))
             if res_used:
-                self._log(f"c{instance_num}: resource '{res}' in use, " "cannot lock and start")
+                self.cm._log(f"c{instance_num}: resource '{res}' in use, " "cannot lock and start")
                 break
         else:
-            self._log(
+            self.cm._log(
                 f"c{instance_num}: none of the resources in '{resources}' "
                 "locked or in use, can start and lock"
             )
@@ -430,47 +459,47 @@ class ClusterManager:
         for res in resources:
             res_locked = list(instance_dir.glob(f"{RESOURCE_LOCKED_GLOB}_{res}_*"))
             if res_locked:
-                self._log(f"c{instance_num}: resource '{res}' locked, cannot start")
+                self.cm._log(f"c{instance_num}: resource '{res}' locked, cannot start")
                 break
 
         if not res_locked:
-            self._log(
+            self.cm._log(
                 f"c{instance_num}: none of the resources in '{resources}' locked, " "can start"
             )
         return bool(res_locked)
 
     def _save_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this `cluster_obj` instance."""
-        self._log("called `_save_cli_coverage`")
-        cluster_obj = self.cache.cluster_obj
+        self.cm._log("called `_save_cli_coverage`")
+        cluster_obj = self.cm.cache.cluster_obj
         if not cluster_obj:
             return
 
         clusterlib_utils.save_cli_coverage(
-            cluster_obj=cluster_obj, pytest_config=self.pytest_config
+            cluster_obj=cluster_obj, pytest_config=self.cm.pytest_config
         )
 
     def _reload_cluster_obj(self, state_dir: Path) -> None:
         """Realod cluster data if necessary."""
         addrs_data_checksum = helpers.checksum(state_dir / devops_cluster.ADDRS_DATA)
-        if addrs_data_checksum == self.cache.last_checksum:
+        if addrs_data_checksum == self.cm.cache.last_checksum:
             return
 
         # save CLI coverage collected by the old `cluster_obj` instance
         self._save_cli_coverage()
         # replace the old `cluster_obj` instance and reload data
-        self.cache.cluster_obj = devops_cluster.get_cluster_obj()
-        self.cache.test_data = {}
-        self.cache.addrs_data = devops_cluster.load_addrs_data()
-        self.cache.last_checksum = addrs_data_checksum
+        self.cm.cache.cluster_obj = devops_cluster.get_cluster_obj()
+        self.cm.cache.test_data = {}
+        self.cm.cache.addrs_data = devops_cluster.load_addrs_data()
+        self.cm.cache.last_checksum = addrs_data_checksum
 
     def _reuse_dev_cluster(self) -> clusterlib.ClusterLib:
         """Reuse cluster that was already started outside of test framework."""
-        self._cluster_instance = 0
+        self.cm._cluster_instance = 0
         cluster_env = devops_cluster.get_cluster_env()
         state_dir = Path(cluster_env["state_dir"])
 
-        cluster_obj = self.cache.cluster_obj
+        cluster_obj = self.cm.cache.cluster_obj
         if not cluster_obj:
             cluster_obj = devops_cluster.get_cluster_obj()
 
@@ -502,7 +531,7 @@ class ClusterManager:
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
 
         # don't start new cluster if it was already started outside of test framework
-        if self.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
+        if self.cm.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
             return self._reuse_dev_cluster()
 
         selected_instance = -1
@@ -529,10 +558,10 @@ class ClusterManager:
                 helpers.xdist_sleep(random.random() * sleep_delay)
 
             # nothing time consuming can go under this lock as it will block all other workers
-            with helpers.FileLockIfXdist(self.cluster_lock):
+            with helpers.FileLockIfXdist(self.cm.cluster_lock):
                 test_on_worker = list(
-                    self.lock_dir.glob(
-                        f"{CLUSTER_DIR_TEMPLATE}*/{TEST_RUNNING_GLOB}_{self.worker_id}"
+                    self.cm.lock_dir.glob(
+                        f"{CLUSTER_DIR_TEMPLATE}*/{TEST_RUNNING_GLOB}_{self.cm.worker_id}"
                     )
                 )
 
@@ -540,23 +569,23 @@ class ClusterManager:
                 if (
                     first_iteration
                     and test_on_worker
-                    and self._cluster_instance != -1
-                    and self.cache.cluster_obj
+                    and self.cm._cluster_instance != -1
+                    and self.cm.cache.cluster_obj
                 ):
-                    self._log(f"{test_on_worker[0]} already exists")
-                    return self.cache.cluster_obj
+                    self.cm._log(f"{test_on_worker[0]} already exists")
+                    return self.cm.cache.cluster_obj
 
                 first_iteration = False  # needs to be set here, before the first `continue`
-                self._cluster_instance = -1
+                self.cm._cluster_instance = -1
 
                 # try all existing cluster instances
-                for instance_num in range(self.num_of_instances):
+                for instance_num in range(self.cm.num_of_instances):
                     # if instance to run the test on was already decided, skip all other instances
                     # pylint: disable=consider-using-in
                     if selected_instance != -1 and instance_num != selected_instance:
                         continue
 
-                    instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+                    instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
                     instance_dir.mkdir(exist_ok=True)
 
                     # if the selected instance failed to start, move on to other instance
@@ -572,7 +601,7 @@ class ClusterManager:
 
                     # singleton test is running, so no other test can be started
                     if (instance_dir / TEST_SINGLETON_FILE).exists():
-                        self._log(f"c{instance_num}: singleton test in progress, cannot run")
+                        self.cm._log(f"c{instance_num}: singleton test in progress, cannot run")
                         sleep_delay = 5
                         continue
 
@@ -599,28 +628,28 @@ class ClusterManager:
                         )
 
                         marked_running_my_anywhere = list(
-                            self.lock_dir.glob(
+                            self.cm.lock_dir.glob(
                                 f"{CLUSTER_DIR_TEMPLATE}*/{TEST_CURR_MARK_GLOB}_{mark}"
                             )
                         )
                         # check if tests with my mark are running on some other cluster instance
                         if not marked_running_my and marked_running_my_anywhere:
-                            self._log(
-                                f"c{instance_num}: tests marked with my mark already running "
-                                "on other cluster instance, cannot run"
+                            self.cm._log(
+                                f"c{instance_num}: tests marked with my mark '{mark}' "
+                                "already running on other cluster instance, cannot run"
                             )
                             continue
 
                         marked_starting_my_anywhere = list(
-                            self.lock_dir.glob(
+                            self.cm.lock_dir.glob(
                                 f"{CLUSTER_DIR_TEMPLATE}*/{TEST_MARK_STARTING_GLOB}_{mark}_*"
                             )
                         )
                         # check if tests with my mark are starting on some other cluster instance
                         if not marked_starting_my and marked_starting_my_anywhere:
-                            self._log(
-                                f"c{instance_num}: tests marked with my mark starting on other "
-                                "cluster instance, cannot run"
+                            self.cm._log(
+                                f"c{instance_num}: tests marked with my mark '{mark}' starting "
+                                "on other cluster instance, cannot run"
                             )
                             continue
 
@@ -629,28 +658,23 @@ class ClusterManager:
                             # lock to this cluster instance
                             selected_instance = instance_num
                         elif marked_running or marked_starting:
-                            self._log(
+                            self.cm._log(
                                 f"c{instance_num}: tests marked with other mark starting "
                                 f"or running, I have different mark '{mark}'"
                             )
                             continue
 
                         # check if needs to wait until marked tests can run
-                        if marked_starting_my:
-                            if started_tests:
-                                self._log(
-                                    f"c{instance_num}: unmarked tests running, cannot start "
-                                    "marked test"
-                                )
-                                sleep_delay = 2
-                                continue
-                            # no other tests are running, marked tests can run now
-                            for sf in marked_starting:
-                                os.remove(sf)
+                        if marked_starting_my and started_tests:
+                            self.cm._log(
+                                f"c{instance_num}: unmarked tests running, wants to start '{mark}'"
+                            )
+                            sleep_delay = 2
+                            continue
 
                     # no unmarked test can run while marked tests are starting or running
                     elif marked_running or marked_starting:
-                        self._log(
+                        self.cm._log(
                             f"c{instance_num}: marked tests starting or running, "
                             f"I don't have mark"
                         )
@@ -661,18 +685,24 @@ class ClusterManager:
                     initial_marked_test = bool(mark and not marked_running)
 
                     # indicate that it is planned to start marked tests as soon as
-                    # all currently running tests are finished
-                    if initial_marked_test and started_tests:
-                        self._log(
-                            f"c{instance_num}: unmarked tests running, wants to start '{mark}'"
-                        )
+                    # all currently running tests are finished or the cluster is restarted
+                    if initial_marked_test:
                         # lock to this cluster instance
                         selected_instance = instance_num
-                        open(
-                            instance_dir / f"{TEST_MARK_STARTING_GLOB}_{mark}_{self.worker_id}", "a"
-                        ).close()
-                        sleep_delay = 3
-                        continue
+                        mark_starting_file = (
+                            instance_dir / f"{TEST_MARK_STARTING_GLOB}_{mark}_{self.cm.worker_id}"
+                        )
+                        if not mark_starting_file.exists():
+                            open(
+                                mark_starting_file,
+                                "a",
+                            ).close()
+                        if started_tests:
+                            self.cm._log(
+                                f"c{instance_num}: unmarked tests running, wants to start '{mark}'"
+                            )
+                            sleep_delay = 3
+                            continue
 
                     # get marked tests status
                     marked_tests_status = self._get_marked_tests_status(
@@ -691,7 +721,7 @@ class ClusterManager:
                             instance_num=instance_num,
                         )
 
-                        self._log(
+                        self.cm._log(
                             f"c{instance_num}: in marked tests branch, "
                             f"I have required mark '{mark}'"
                         )
@@ -701,7 +731,7 @@ class ClusterManager:
 
                     # this test is a singleton - no other test can run while this one is running
                     if singleton and started_tests:
-                        self._log(f"c{instance_num}: tests are running, cannot start singleton")
+                        self.cm._log(f"c{instance_num}: tests are running, cannot start singleton")
                         sleep_delay = 5
                         continue
 
@@ -738,19 +768,25 @@ class ClusterManager:
                         new_cmd_restart or self._is_restart_needed(instance_num)
                     ):
                         if started_tests:
-                            self._log(f"c{instance_num}: tests are running, cannot restart")
+                            self.cm._log(f"c{instance_num}: tests are running, cannot restart")
                             continue
 
-                        # cluster restart will be performed by this worker
-                        self._log(f"c{instance_num}: setting to restart cluster")
+                        # Cluster restart will be performed by this worker.
+                        # By setting `restart_here`, we make sure this worker continue on
+                        # this cluster instance after restart. It is important because
+                        # the `start_cmd` used for starting the cluster might be speciffic
+                        # to the test.
                         restart_here = True
+                        self.cm._log(f"c{instance_num}: setting to restart cluster")
                         selected_instance = instance_num
-                        open(
-                            instance_dir / f"{RESTART_IN_PROGRESS_GLOB}_{self.worker_id}", "a"
-                        ).close()
+                        restart_in_progress_file = (
+                            instance_dir / f"{RESTART_IN_PROGRESS_GLOB}_{self.cm.worker_id}"
+                        )
+                        if not restart_in_progress_file.exists():
+                            open(restart_in_progress_file, "a").close()
 
                     # we've found suitable cluster instance
-                    self._cluster_instance = instance_num
+                    self.cm._cluster_instance = instance_num
                     cluster_instances.set_cardano_node_socket_path(instance_num)
 
                     if restart_here:
@@ -765,7 +801,7 @@ class ClusterManager:
                             for f in instance_dir.glob(f"{RESTART_NEEDED_GLOB}_*"):
                                 os.remove(f)
                         else:
-                            self._log(f"c{instance_num}: calling restart")
+                            self.cm._log(f"c{instance_num}: calling restart")
                             # the actual `_restart` function will be called outside
                             # of global lock
                             restart_ready = True
@@ -775,18 +811,22 @@ class ClusterManager:
 
                     # this test is a singleton
                     if singleton:
-                        self._log(f"c{instance_num}: starting singleton")
-                        open(self.instance_dir / TEST_SINGLETON_FILE, "a").close()
+                        self.cm._log(f"c{instance_num}: starting singleton")
+                        open(self.cm.instance_dir / TEST_SINGLETON_FILE, "a").close()
 
                     # this test is a first marked test
                     if initial_marked_test:
-                        self._log(f"c{instance_num}: starting '{mark}' tests")
-                        open(self.instance_dir / f"{TEST_CURR_MARK_GLOB}_{mark}", "a").close()
+                        self.cm._log(f"c{instance_num}: starting '{mark}' tests")
+                        open(self.cm.instance_dir / f"{TEST_CURR_MARK_GLOB}_{mark}", "a").close()
+                        for sf in marked_starting:
+                            os.remove(sf)
 
                     # create status file for each in-use resource
                     _ = [
                         open(
-                            self.instance_dir / f"{RESOURCE_IN_USE_GLOB}_{r}_{self.worker_id}", "a"
+                            self.cm.instance_dir
+                            / f"{RESOURCE_IN_USE_GLOB}_{r}_{self.cm.worker_id}",
+                            "a",
                         ).close()
                         for r in use_resources
                     ]
@@ -794,7 +834,9 @@ class ClusterManager:
                     # create status file for each locked resource
                     _ = [
                         open(
-                            self.instance_dir / f"{RESOURCE_LOCKED_GLOB}_{r}_{self.worker_id}", "a"
+                            self.cm.instance_dir
+                            / f"{RESOURCE_LOCKED_GLOB}_{r}_{self.cm.worker_id}",
+                            "a",
                         ).close()
                         for r in lock_resources
                     ]
@@ -803,16 +845,18 @@ class ClusterManager:
                     if cleanup:
                         # cleanup after group of test that are marked with a marker
                         if mark:
-                            self._log(f"c{instance_num}: cleanup and mark")
+                            self.cm._log(f"c{instance_num}: cleanup and mark")
                             open(
-                                self.instance_dir / f"{RESTART_AFTER_MARK_GLOB}_{self.worker_id}",
+                                self.cm.instance_dir
+                                / f"{RESTART_AFTER_MARK_GLOB}_{self.cm.worker_id}",
                                 "a",
                             ).close()
                         # cleanup after single test (e.g. singleton)
                         else:
-                            self._log(f"c{instance_num}: cleanup and not mark")
+                            self.cm._log(f"c{instance_num}: cleanup and not mark")
                             open(
-                                self.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a"
+                                self.cm.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.cm.worker_id}",
+                                "a",
                             ).close()
 
                     break
@@ -820,8 +864,10 @@ class ClusterManager:
                     # if the test cannot run on any instance, return to top-level loop
                     continue
 
-                test_running_file = self.instance_dir / f"{TEST_RUNNING_GLOB}_{self.worker_id}"
-                self._log(f"c{self.cluster_instance}: creating {test_running_file}")
+                test_running_file = (
+                    self.cm.instance_dir / f"{TEST_RUNNING_GLOB}_{self.cm.worker_id}"
+                )
+                self.cm._log(f"c{self.cm.cluster_instance}: creating {test_running_file}")
                 open(test_running_file, "a").close()
 
                 cluster_env = devops_cluster.get_cluster_env()
@@ -830,7 +876,7 @@ class ClusterManager:
                 # check if it is necessary to reload data
                 self._reload_cluster_obj(state_dir=state_dir)
 
-                cluster_obj = self.cache.cluster_obj
+                cluster_obj = self.cm.cache.cluster_obj
                 if not cluster_obj:
                     cluster_obj = devops_cluster.get_cluster_obj()
 
