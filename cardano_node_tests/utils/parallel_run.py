@@ -635,8 +635,8 @@ class _ClusterGetter:
                         # check if tests with my mark are running on some other cluster instance
                         if not marked_running_my and marked_running_my_anywhere:
                             self.cm._log(
-                                f"c{instance_num}: tests marked with my mark already running "
-                                "on other cluster instance, cannot run"
+                                f"c{instance_num}: tests marked with my mark '{mark}' "
+                                "already running on other cluster instance, cannot run"
                             )
                             continue
 
@@ -648,8 +648,8 @@ class _ClusterGetter:
                         # check if tests with my mark are starting on some other cluster instance
                         if not marked_starting_my and marked_starting_my_anywhere:
                             self.cm._log(
-                                f"c{instance_num}: tests marked with my mark starting on other "
-                                "cluster instance, cannot run"
+                                f"c{instance_num}: tests marked with my mark '{mark}' starting "
+                                "on other cluster instance, cannot run"
                             )
                             continue
 
@@ -665,17 +665,12 @@ class _ClusterGetter:
                             continue
 
                         # check if needs to wait until marked tests can run
-                        if marked_starting_my:
-                            if started_tests:
-                                self.cm._log(
-                                    f"c{instance_num}: unmarked tests running, cannot start "
-                                    "marked test"
-                                )
-                                sleep_delay = 2
-                                continue
-                            # no other tests are running, marked tests can run now
-                            for sf in marked_starting:
-                                os.remove(sf)
+                        if marked_starting_my and started_tests:
+                            self.cm._log(
+                                f"c{instance_num}: unmarked tests running, wants to start '{mark}'"
+                            )
+                            sleep_delay = 2
+                            continue
 
                     # no unmarked test can run while marked tests are starting or running
                     elif marked_running or marked_starting:
@@ -690,19 +685,24 @@ class _ClusterGetter:
                     initial_marked_test = bool(mark and not marked_running)
 
                     # indicate that it is planned to start marked tests as soon as
-                    # all currently running tests are finished
-                    if initial_marked_test and started_tests:
-                        self.cm._log(
-                            f"c{instance_num}: unmarked tests running, wants to start '{mark}'"
-                        )
+                    # all currently running tests are finished or the cluster is restarted
+                    if initial_marked_test:
                         # lock to this cluster instance
                         selected_instance = instance_num
-                        open(
-                            instance_dir / f"{TEST_MARK_STARTING_GLOB}_{mark}_{self.cm.worker_id}",
-                            "a",
-                        ).close()
-                        sleep_delay = 3
-                        continue
+                        mark_starting_file = (
+                            instance_dir / f"{TEST_MARK_STARTING_GLOB}_{mark}_{self.cm.worker_id}"
+                        )
+                        if not mark_starting_file.exists():
+                            open(
+                                mark_starting_file,
+                                "a",
+                            ).close()
+                        if started_tests:
+                            self.cm._log(
+                                f"c{instance_num}: unmarked tests running, wants to start '{mark}'"
+                            )
+                            sleep_delay = 3
+                            continue
 
                     # get marked tests status
                     marked_tests_status = self._get_marked_tests_status(
@@ -779,9 +779,11 @@ class _ClusterGetter:
                         restart_here = True
                         self.cm._log(f"c{instance_num}: setting to restart cluster")
                         selected_instance = instance_num
-                        open(
-                            instance_dir / f"{RESTART_IN_PROGRESS_GLOB}_{self.cm.worker_id}", "a"
-                        ).close()
+                        restart_in_progress_file = (
+                            instance_dir / f"{RESTART_IN_PROGRESS_GLOB}_{self.cm.worker_id}"
+                        )
+                        if not restart_in_progress_file.exists():
+                            open(restart_in_progress_file, "a").close()
 
                     # we've found suitable cluster instance
                     self.cm._cluster_instance = instance_num
@@ -816,6 +818,8 @@ class _ClusterGetter:
                     if initial_marked_test:
                         self.cm._log(f"c{instance_num}: starting '{mark}' tests")
                         open(self.cm.instance_dir / f"{TEST_CURR_MARK_GLOB}_{mark}", "a").close()
+                        for sf in marked_starting:
+                            os.remove(sf)
 
                     # create status file for each in-use resource
                     _ = [
