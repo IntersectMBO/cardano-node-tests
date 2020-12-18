@@ -811,8 +811,8 @@ class TestNegative:
     def _get_txins_txouts(
         self, txins: List[clusterlib.UTXOData], txouts: List[clusterlib.TxOut]
     ) -> Tuple[List[str], List[str]]:
-        txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
-        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts]
+        txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in txins]
+        txouts_combined = [f"{x.address}+{x.amount}" for x in txouts]
         return txins_combined, txouts_combined
 
     @allure.link(helpers.get_vcs_link())
