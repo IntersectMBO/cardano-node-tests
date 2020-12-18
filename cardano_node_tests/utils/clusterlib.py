@@ -73,6 +73,8 @@ class TxOut(NamedTuple):
 
 # list of `TxOut`s, empty list, or empty tuple
 OptionalTxOuts = Union[List[TxOut], Tuple[()]]
+# list of `UTXOData`s, empty list, or empty tuple
+OptionalUTXOData = Union[List[UTXOData], Tuple[()]]
 
 
 class TxFiles(NamedTuple):
@@ -983,8 +985,8 @@ class ClusterLib:
         self,
         src_address: str,
         tx_files: TxFiles,
-        txins: Optional[List[UTXOData]] = None,
-        txouts: Optional[List[TxOut]] = None,
+        txins: OptionalUTXOData = (),
+        txouts: OptionalTxOuts = (),
         fee: int = 0,
         deposit: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
@@ -992,14 +994,13 @@ class ClusterLib:
     ) -> Tuple[list, list]:
         """Return list of transaction's inputs and outputs."""
         # pylint: disable=too-many-branches,too-many-locals
-        txouts_passed = list(txouts) if txouts else []
-        txouts_passed_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(txouts_passed)
+        txouts_passed_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(txouts)
 
         txouts_mint_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(mint)
 
         outcoins_all = [DEFAULT_COIN, *txouts_mint_db.keys()]
-        _txins = list(txins) if txins else self.get_utxo(src_address, coins=outcoins_all)
-        txins_db: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs(_txins)
+        txins = txins or self.get_utxo(src_address, coins=outcoins_all)
+        txins_db: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs(txins)
 
         outcoins_passed = [DEFAULT_COIN, *txouts_passed_db.keys()]
         if not all(c in txins_db for c in outcoins_passed):
@@ -1158,8 +1159,8 @@ class ClusterLib:
         self,
         src_address: str,
         tx_name: str,
-        txins: Optional[List[UTXOData]] = None,
-        txouts: Optional[List[TxOut]] = None,
+        txins: OptionalUTXOData = (),
+        txouts: OptionalTxOuts = (),
         tx_files: Optional[TxFiles] = None,
         fee: int = 0,
         ttl: Optional[int] = None,
@@ -1243,8 +1244,8 @@ class ClusterLib:
         src_address: str,
         tx_name: str,
         dst_addresses: Optional[List[str]] = None,
-        txins: Optional[List[UTXOData]] = None,
-        txouts: Optional[List[TxOut]] = None,
+        txins: OptionalUTXOData = (),
+        txouts: OptionalTxOuts = (),
         tx_files: Optional[TxFiles] = None,
         ttl: Optional[int] = None,
         withdrawals: OptionalTxOuts = (),
@@ -1393,8 +1394,8 @@ class ClusterLib:
         self,
         src_address: str,
         tx_name: str,
-        txins: Optional[List[UTXOData]] = None,
-        txouts: Optional[List[TxOut]] = None,
+        txins: OptionalUTXOData = (),
+        txouts: OptionalTxOuts = (),
         tx_files: Optional[TxFiles] = None,
         fee: Optional[int] = None,
         ttl: Optional[int] = None,
