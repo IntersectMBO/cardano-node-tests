@@ -170,6 +170,7 @@ class TestKES:
             ]
             with logfiles.expect_errors(expected_errors):
                 # restart the node with the new operational certificate
+                logfiles.add_ignore_rule("*.stdout", "MuxBearerClosed")
                 shutil.copy(invalid_opcert_file, opcert_file)
                 devops_cluster.restart_node(node_name)
 
@@ -247,6 +248,7 @@ class TestKES:
             )
 
             # restart the node with the new operational certificate
+            logfiles.add_ignore_rule("*.stdout", "MuxBearerClosed")
             shutil.copy(new_opcert_file, opcert_file)
             devops_cluster.restart_node(node_name)
 
