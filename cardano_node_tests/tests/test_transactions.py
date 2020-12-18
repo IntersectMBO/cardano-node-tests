@@ -21,11 +21,13 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from _pytest.tmpdir import TempdirFactory
+from packaging import version
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
+from cardano_node_tests.utils.devops_cluster import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
@@ -48,6 +50,56 @@ def temp_dir(create_temp_dir: Path):
 
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
+def _get_raw_tx_values(
+    cluster_obj: clusterlib.ClusterLib,
+    tx_name: str,
+    src_record: clusterlib.AddressRecord,
+    dst_record: clusterlib.AddressRecord,
+    temp_dir: Path,
+) -> clusterlib.TxRawOutput:
+    """Get values for building raw TX using `clusterlib.build_raw_tx_bare`."""
+    src_address = src_record.address
+    dst_address = dst_record.address
+
+    tx_files = clusterlib.TxFiles(signing_key_files=[src_record.skey_file])
+    ttl = cluster_obj.calculate_tx_ttl()
+
+    fee = cluster_obj.calculate_tx_fee(
+        src_address=src_address,
+        tx_name=tx_name,
+        dst_addresses=[dst_address],
+        tx_files=tx_files,
+        ttl=ttl,
+    )
+
+    src_addr_highest_utxo = cluster_obj.get_utxo_with_highest_amount(src_address)
+
+    # use only the UTXO with highest amount
+    txins = [src_addr_highest_utxo]
+    txouts = [
+        clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee),
+    ]
+    out_file = temp_dir / f"{clusterlib_utils.get_timestamped_rand_str()}_tx.body"
+
+    return clusterlib.TxRawOutput(
+        txins=txins,
+        txouts=txouts,
+        tx_files=tx_files,
+        out_file=out_file,
+        fee=fee,
+        ttl=ttl,
+        withdrawals=(),
+    )
+
+
+def _get_txins_txouts(
+    txins: List[clusterlib.UTXOData], txouts: List[clusterlib.TxOut]
+) -> Tuple[List[str], List[str]]:
+    txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in txins]
+    txouts_combined = [f"{x.address}+{x.amount}" for x in txouts]
+    return txins_combined, txouts_combined
 
 
 class TestBasic:
@@ -275,6 +327,47 @@ class TestBasic:
         assert (
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_missing_tx_out(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        temp_dir: Path,
+    ):
+        """Try to build a transaction with a missing `--tx-out` parameter.
+
+        Expect failure on node version < 1.24.2 commit 3d201869.
+        """
+        temp_template = helpers.get_func_name()
+
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=payment_addrs[0],
+            dst_record=payment_addrs[1],
+            temp_dir=temp_dir,
+        )
+        txins, __ = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+
+        cli_args = [
+            "transaction",
+            "build-raw",
+            "--ttl",
+            str(tx_raw_output.ttl),
+            "--fee",
+            str(tx_raw_output.fee),
+            "--out-file",
+            str(tx_raw_output.out_file),
+            *cluster._prepend_flag("--tx-in", txins),
+        ]
+
+        if VERSIONS.node < version.parse("1.24.2"):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.cli(cli_args)
+            assert "Missing: (--tx-out TX-OUT)" in str(excinfo.value)
+        else:
+            cluster.cli(cli_args)
 
 
 class TestMultiInOut:
@@ -767,54 +860,6 @@ class TestNegative:
             )
         assert "invalid address" in str(excinfo.value)
 
-    def _get_raw_tx_values(
-        self,
-        cluster_obj: clusterlib.ClusterLib,
-        tx_name: str,
-        pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
-    ) -> clusterlib.TxRawOutput:
-        """Get values for building raw TX using `clusterlib.build_raw_tx_bare`."""
-        src_address = pool_users[0].payment.address
-        dst_address = pool_users[1].payment.address
-
-        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        ttl = cluster_obj.calculate_tx_ttl()
-
-        fee = cluster_obj.calculate_tx_fee(
-            src_address=src_address,
-            tx_name=tx_name,
-            dst_addresses=[dst_address],
-            tx_files=tx_files,
-            ttl=ttl,
-        )
-
-        src_addr_highest_utxo = cluster_obj.get_utxo_with_highest_amount(src_address)
-
-        # use only the UTXO with highest amount
-        txins = [src_addr_highest_utxo]
-        txouts = [
-            clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee),
-        ]
-        out_file = temp_dir / f"{clusterlib_utils.get_timestamped_rand_str()}_tx.body"
-
-        return clusterlib.TxRawOutput(
-            txins=txins,
-            txouts=txouts,
-            tx_files=tx_files,
-            out_file=out_file,
-            fee=fee,
-            ttl=ttl,
-            withdrawals=(),
-        )
-
-    def _get_txins_txouts(
-        self, txins: List[clusterlib.UTXOData], txouts: List[clusterlib.TxOut]
-    ) -> Tuple[List[str], List[str]]:
-        txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in txins]
-        txouts_combined = [f"{x.address}+{x.amount}" for x in txouts]
-        return txins_combined, txouts_combined
-
     @allure.link(helpers.get_vcs_link())
     def test_past_ttl(
         self,
@@ -1090,10 +1135,14 @@ class TestNegative:
         """
         temp_template = helpers.get_func_name()
 
-        tx_raw_output = self._get_raw_tx_values(
-            cluster_obj=cluster, tx_name=temp_template, pool_users=pool_users, temp_dir=temp_dir
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=pool_users[0].payment,
+            dst_record=pool_users[1].payment,
+            temp_dir=temp_dir,
         )
-        txins, txouts = self._get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
@@ -1123,10 +1172,14 @@ class TestNegative:
         """
         temp_template = helpers.get_func_name()
 
-        tx_raw_output = self._get_raw_tx_values(
-            cluster_obj=cluster, tx_name=temp_template, pool_users=pool_users, temp_dir=temp_dir
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=pool_users[0].payment,
+            dst_record=pool_users[1].payment,
+            temp_dir=temp_dir,
         )
-        txins, txouts = self._get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
@@ -1156,10 +1209,14 @@ class TestNegative:
         """
         temp_template = helpers.get_func_name()
 
-        tx_raw_output = self._get_raw_tx_values(
-            cluster_obj=cluster, tx_name=temp_template, pool_users=pool_users, temp_dir=temp_dir
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=pool_users[0].payment,
+            dst_record=pool_users[1].payment,
+            temp_dir=temp_dir,
         )
-        __, txouts = self._get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        __, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
@@ -1176,40 +1233,6 @@ class TestNegative:
                 ]
             )
         assert "Missing: (--tx-in TX-IN)" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    def test_missing_tx_out(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
-    ):
-        """Try to build a transaction with a missing `--tx-out` parameter.
-
-        Expect failure.
-        """
-        temp_template = helpers.get_func_name()
-
-        tx_raw_output = self._get_raw_tx_values(
-            cluster_obj=cluster, tx_name=temp_template, pool_users=pool_users, temp_dir=temp_dir
-        )
-        txins, __ = self._get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "transaction",
-                    "build-raw",
-                    "--ttl",
-                    str(tx_raw_output.ttl),
-                    "--fee",
-                    str(tx_raw_output.fee),
-                    "--out-file",
-                    str(tx_raw_output.out_file),
-                    *cluster._prepend_flag("--tx-in", txins),
-                ]
-            )
-        assert "Missing: (--tx-out TX-OUT)" in str(excinfo.value)
 
 
 class TestMetadata:
