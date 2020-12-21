@@ -998,7 +998,7 @@ class ClusterLib:
 
         txouts_mint_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(mint)
 
-        outcoins_all = [DEFAULT_COIN, *txouts_mint_db.keys()]
+        outcoins_all = {DEFAULT_COIN, *txouts_mint_db.keys(), *txouts_passed_db.keys()}
         txins = txins or self.get_utxo(src_address, coins=outcoins_all)
         txins_db: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs(txins)
 
