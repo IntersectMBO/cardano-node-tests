@@ -51,7 +51,7 @@ def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
         genesis_spec["epochLength"] = 1200
 
-        with open(startup_files.genesis_spec, "wt") as fp_out:
+        with open(startup_files.genesis_spec, "w") as fp_out:
             json.dump(genesis_spec, fp_out)
 
         return startup_files.start_script
@@ -78,7 +78,7 @@ def slot_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
         genesis_spec["slotLength"] = 0.3
 
-        with open(startup_files.genesis_spec, "wt") as fp_out:
+        with open(startup_files.genesis_spec, "w") as fp_out:
             json.dump(genesis_spec, fp_out)
 
         return startup_files.start_script
