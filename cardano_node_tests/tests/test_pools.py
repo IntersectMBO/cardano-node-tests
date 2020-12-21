@@ -61,7 +61,7 @@ def pool_cost_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
         genesis_spec["protocolParams"]["minPoolCost"] = 500
 
-        with open(startup_files.genesis_spec, "wt") as fp_out:
+        with open(startup_files.genesis_spec, "w") as fp_out:
             json.dump(genesis_spec, fp_out)
 
         return startup_files.start_script
