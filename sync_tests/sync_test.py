@@ -546,13 +546,12 @@ def get_calculated_slot_no(env):
                                last_byron_slot_no)
     if allegra_start_time != current_time:
         last_allegra_slot_no = int(date_diff_in_seconds(current_time, allegra_start_time) +
-                                   last_byron_slot_no +
                                    last_shelley_slot_no)
     else:
         last_allegra_slot_no = 0
 
-    latest_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20) + \
-                     int(date_diff_in_seconds(current_time, shelley_start_time))
+    latest_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20 +
+                         date_diff_in_seconds(current_time, shelley_start_time))
 
     print("----------------------------------------------------------------")
     print(f"byron_start_time        : {byron_start_time}")
