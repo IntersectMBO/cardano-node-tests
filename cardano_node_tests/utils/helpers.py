@@ -257,7 +257,7 @@ def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str
 
     replaced_content = content.replace(orig_str, new_str)
 
-    with open(outfile, "wt") as out_fp:
+    with open(outfile, "w") as out_fp:
         out_fp.write(replaced_content)
 
 
