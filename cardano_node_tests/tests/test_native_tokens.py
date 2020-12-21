@@ -9,6 +9,7 @@ import json
 import logging
 from pathlib import Path
 from typing import List
+from typing import NamedTuple
 
 import allure
 import pytest
@@ -22,6 +23,15 @@ from cardano_node_tests.utils import parallel_run
 from cardano_node_tests.utils.devops_cluster import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+
+
+class NewToken(NamedTuple):
+    token: str
+    asset_name: str
+    amount: int
+    issuers_addrs: List[clusterlib.AddressRecord]
+    token_mint_addr: clusterlib.AddressRecord
+    script: Path
 
 
 @pytest.fixture(scope="module")
@@ -346,3 +356,147 @@ class TestMinting:
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not burned"
 
+
+@pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
+    reason="runs on version >= 1.24.0 and with Mary+ TX",
+)
+class TestTransfer:
+    """Tests for transfering tokens."""
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        data_key = id(TestMinting)
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"token_transfer_ci{cluster_manager.cluster_instance}_{i}" for i in range(10)],
+            cluster_obj=cluster,
+        )
+        cluster_manager.cache.test_data[data_key] = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=20_000_000,
+        )
+
+        return addrs
+
+    @pytest.fixture
+    def new_token(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ) -> NewToken:
+        """Test minting and burning of tokens, sign using skeys."""
+        data_key = id(TestMinting) + 1
+        cached_value = cluster_manager.cache.test_data.get(data_key)
+        if cached_value:
+            return cached_value  # type: ignore
+
+        temp_template = "test_tx_new_token"
+        asset_name = f"counttscoin{clusterlib.get_rand_str(4)}"
+        amount = 20_000_000
+
+        token_mint_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        # create simple script
+        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        script_content = {"keyHash": keyhash, "type": "sig"}
+        script = Path(f"{temp_template}.script")
+        with open(f"{temp_template}.script", "w") as out_json:
+            json.dump(script_content, out_json)
+
+        policyid = cluster.get_policyid(script)
+        token = f"{policyid}.{asset_name}"
+
+        assert not cluster.get_utxo(
+            token_mint_addr.address, coins=[token]
+        ), "The token already exists"
+
+        # token minting
+        _mint_or_burn_sign(
+            cluster_obj=cluster,
+            issuer_addr=issuer_addr,
+            token_mint_addr=token_mint_addr,
+            amount=amount,
+            script=script,
+            asset_name=asset_name,
+            temp_template=f"{temp_template}_mint",
+        )
+
+        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
+
+        new_token = NewToken(
+            token=token,
+            asset_name=asset_name,
+            amount=amount,
+            issuers_addrs=[issuer_addr],
+            token_mint_addr=token_mint_addr,
+            script=script,
+        )
+        cluster_manager.cache.test_data[data_key] = new_token
+
+        return new_token
+
+    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
+    @allure.link(helpers.get_vcs_link())
+    def test_transfer_tokens(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        new_token: NewToken,
+        amount: int,
+    ):
+        """Send tokens to payment address.
+
+        * send tokens from 1 source address to 1 destination address
+        * check expected token balances for both source and destination addresses
+        * check fees in Lovelace
+        """
+        temp_template = f"{helpers.get_func_name()}_{amount}"
+
+        src_address = new_token.token_mint_addr.address
+        dst_address = payment_addrs[2].address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        src_init_balance_token = cluster.get_address_balance(src_address, coin=new_token.token)
+        dst_init_balance = cluster.get_address_balance(dst_address, coin=new_token.token)
+
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
+
+        tx_raw_output = cluster.send_funds(
+            src_address=src_address,
+            destinations=destinations,
+            tx_name=temp_template,
+            tx_files=tx_files,
+        )
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert (
+            cluster.get_address_balance(src_address, coin=new_token.token)
+            == src_init_balance_token - len(destinations) * amount
+        ), f"Incorrect token balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(src_address) == src_init_balance - tx_raw_output.fee
+        ), f"Incorrect Lovelace balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address, coin=new_token.token)
+            == dst_init_balance + amount
+        ), f"Incorrect token balance for destination address `{dst_address}`"
