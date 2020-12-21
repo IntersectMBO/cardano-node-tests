@@ -1409,6 +1409,7 @@ class ClusterLib:
         deposit: Optional[int] = None,
         invalid_hereafter: Optional[int] = None,
         invalid_before: Optional[int] = None,
+        script_file: Optional[FileType] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Build, Sign and Send transaction to chain."""
@@ -1416,6 +1417,10 @@ class ClusterLib:
         tx_files = tx_files or TxFiles()
 
         if fee is None:
+            witness_count_add = 0
+            if script_file:
+                # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+                witness_count_add += 5
             fee = self.calculate_tx_fee(
                 src_address=src_address,
                 tx_name=tx_name,
@@ -1423,6 +1428,7 @@ class ClusterLib:
                 txouts=txouts,
                 tx_files=tx_files,
                 ttl=ttl,
+                witness_count_add=witness_count_add,
                 destination_dir=destination_dir,
             )
 
@@ -1444,6 +1450,7 @@ class ClusterLib:
             tx_body_file=tx_raw_output.out_file,
             tx_name=tx_name,
             signing_key_files=tx_files.signing_key_files,
+            script_file=script_file,
             destination_dir=destination_dir,
         )
         self.submit_tx(tx_signed_file)
