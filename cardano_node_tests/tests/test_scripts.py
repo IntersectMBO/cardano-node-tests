@@ -178,10 +178,12 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # check script address length
-        assert len(script_addr) == len(payment_addrs[0].address)
+        assert len(script_address) == len(payment_addrs[0].address)
 
     @allure.link(helpers.get_vcs_link())
     def test_multisig_all(
@@ -201,14 +203,16 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -218,7 +222,7 @@ class TestBasic:
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
-            src_address=script_addr,
+            src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
             multisig_script=multisig_script,
@@ -251,14 +255,16 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=5_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -269,7 +275,7 @@ class TestBasic:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from_single_{i}",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
                 multisig_script=multisig_script,
@@ -283,7 +289,7 @@ class TestBasic:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from_multi_{i}",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
                 multisig_script=multisig_script,
@@ -313,14 +319,16 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -332,7 +340,7 @@ class TestBasic:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from_{i}",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
                 multisig_script=multisig_script,
@@ -357,14 +365,16 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # record initial balances
         src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(script_addr)
+        dst_init_balance = cluster.get_address_balance(script_address)
 
         # send funds to script address
-        destinations = [clusterlib.TxOut(address=script_addr, amount=amount)]
+        destinations = [clusterlib.TxOut(address=script_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         tx_raw_output = cluster.send_funds(
@@ -382,8 +392,8 @@ class TestBasic:
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
-            cluster.get_address_balance(script_addr) == dst_init_balance + amount
-        ), f"Incorrect balance for destination address `{script_addr}`"
+            cluster.get_address_balance(script_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{script_address}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_multisig_empty_all(
@@ -402,14 +412,16 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -419,7 +431,7 @@ class TestBasic:
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
-            src_address=script_addr,
+            src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
             multisig_script=multisig_script,
@@ -446,14 +458,16 @@ class TestBasic:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -463,7 +477,7 @@ class TestBasic:
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
-            src_address=script_addr,
+            src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
             multisig_script=multisig_script,
@@ -523,14 +537,16 @@ class TestNegative:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=temp_template,
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=300_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -541,7 +557,7 @@ class TestNegative:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=temp_template,
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
                 multisig_script=multisig_script,
@@ -571,14 +587,16 @@ class TestNegative:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=temp_template,
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=300_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -589,7 +607,7 @@ class TestNegative:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=temp_template,
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
                 multisig_script=multisig_script,
@@ -623,14 +641,16 @@ class TestNegative:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=temp_template,
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=300_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -642,7 +662,7 @@ class TestNegative:
                 multisig_tx(
                     cluster_obj=cluster,
                     temp_template=temp_template,
-                    src_address=script_addr,
+                    src_address=script_address,
                     dst_address=payment_addrs[0].address,
                     amount=1000,
                     multisig_script=multisig_script,
@@ -760,14 +780,16 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -777,7 +799,7 @@ class TestTimeLocking:
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
-            src_address=script_addr,
+            src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
             multisig_script=multisig_script,
@@ -809,14 +831,16 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=2_000_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -826,7 +850,7 @@ class TestTimeLocking:
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
-            src_address=script_addr,
+            src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
             multisig_script=multisig_script,
@@ -861,14 +885,16 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=500_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -879,7 +905,7 @@ class TestTimeLocking:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
                 multisig_script=multisig_script,
@@ -895,7 +921,7 @@ class TestTimeLocking:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
                 multisig_script=multisig_script,
@@ -931,14 +957,16 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=500_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -949,7 +977,7 @@ class TestTimeLocking:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
                 multisig_script=multisig_script,
@@ -985,14 +1013,16 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=500_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -1003,7 +1033,7 @@ class TestTimeLocking:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
                 multisig_script=multisig_script,
@@ -1019,7 +1049,7 @@ class TestTimeLocking:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
                 multisig_script=multisig_script,
@@ -1055,14 +1085,16 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_addr = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
 
         # send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
-            dst_address=script_addr,
+            dst_address=script_address,
             amount=500_000,
             multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
@@ -1074,7 +1106,7 @@ class TestTimeLocking:
             multisig_tx(
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_from",
-                src_address=script_addr,
+                src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
                 multisig_script=multisig_script,
