@@ -1293,11 +1293,16 @@ class ClusterLib:
         tx_body_file: FileType,
         signing_key_files: OptionalFiles,
         tx_name: str,
+        script_file: Optional[FileType] = None,
         destination_dir: FileType = ".",
     ) -> Path:
         """Sign transaction."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.signed"
+
+        cli_args = []
+        if script_file:
+            cli_args = ["--script-file", str(script_file)]
 
         self.cli(
             [
@@ -1310,6 +1315,7 @@ class ClusterLib:
                 "--testnet-magic",
                 str(self.network_magic),
                 *self._prepend_flag("--signing-key-file", signing_key_files),
+                *cli_args,
             ]
         )
 
