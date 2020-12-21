@@ -1478,7 +1478,7 @@ class ClusterLib:
         if script_type_arg == MultiSigTypeArgs.AT_LEAST:
             script["required"] = required
 
-        with open(out_file, "wt") as fp_out:
+        with open(out_file, "w") as fp_out:
             json.dump(script, fp_out, indent=4)
 
         return out_file
