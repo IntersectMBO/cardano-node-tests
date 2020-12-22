@@ -13,6 +13,7 @@ from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Set
 from typing import Tuple
 from typing import Union
 
@@ -981,6 +982,31 @@ class ClusterLib:
             db[rec.coin].append(rec)
         return db
 
+    def _organize_txins_by_hash(self, tx_list: List[UTXOData]) -> Dict[str, List[UTXOData]]:
+        """Organize transaction inputs by hash."""
+        db: Dict[str, List[UTXOData]] = {}
+        for rec in tx_list:
+            rec_hash = f"{rec.utxo_hash}#{rec.utxo_ix}"
+            if rec_hash not in db:
+                db[rec_hash] = []
+            db[rec_hash].append(rec)
+        return db
+
+    def _get_txins(self, src_address: str, outcoins: Set[str]) -> List[UTXOData]:
+        """Get all UTXOs that contains some of the required coins (`outcoins`)."""
+        txins_all = self.get_utxo(src_address)
+        txins_by_hash = self._organize_txins_by_hash(txins_all)
+
+        txins = []
+        seen_hashes = set()
+        for rec in txins_all:
+            rec_hash = f"{rec.utxo_hash}#{rec.utxo_ix}"
+            if rec.coin in outcoins and rec_hash not in seen_hashes:
+                seen_hashes.add(rec_hash)
+                txins.extend(txins_by_hash[rec_hash])
+
+        return txins
+
     def get_tx_ins_outs(  # noqa: C901
         self,
         src_address: str,
@@ -995,14 +1021,13 @@ class ClusterLib:
         """Return list of transaction's inputs and outputs."""
         # pylint: disable=too-many-branches,too-many-locals
         txouts_passed_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(txouts)
-
         txouts_mint_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(mint)
-
         outcoins_all = {DEFAULT_COIN, *txouts_mint_db.keys(), *txouts_passed_db.keys()}
-        txins = txins or self.get_utxo(src_address, coins=outcoins_all)
+        outcoins_passed = [DEFAULT_COIN, *txouts_passed_db.keys()]
+
+        txins = txins or self._get_txins(src_address=src_address, outcoins=outcoins_all)
         txins_db: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs(txins)
 
-        outcoins_passed = [DEFAULT_COIN, *txouts_passed_db.keys()]
         if not all(c in txins_db for c in outcoins_passed):
             LOGGER.error("Not all output coins are present in input UTxO.")
 
