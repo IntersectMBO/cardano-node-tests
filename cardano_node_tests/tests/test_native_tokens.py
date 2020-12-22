@@ -371,7 +371,7 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        data_key = id(TestMinting)
+        data_key = id(TestTransfer)
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
@@ -400,7 +400,7 @@ class TestTransfer:
         payment_addrs: List[clusterlib.AddressRecord],
     ) -> NewToken:
         """Test minting and burning of tokens, sign using skeys."""
-        data_key = id(TestMinting) + 1
+        data_key = id(TestTransfer) + 1
         cached_value = cluster_manager.cache.test_data.get(data_key)
         if cached_value:
             return cached_value  # type: ignore
