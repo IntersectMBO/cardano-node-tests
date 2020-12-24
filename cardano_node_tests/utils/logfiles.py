@@ -6,7 +6,7 @@ import os
 import re
 import time
 from pathlib import Path
-from typing import Generator
+from typing import Iterator
 from typing import List
 from typing import NamedTuple
 from typing import Tuple
@@ -74,7 +74,7 @@ def add_ignore_rule(files_glob: str, regex: str) -> None:
 
 
 @contextlib.contextmanager
-def expect_errors(regex_pairs: List[Tuple[str, str]]) -> Generator:
+def expect_errors(regex_pairs: List[Tuple[str, str]]) -> Iterator[None]:
     """Make sure expected errors are present in logs.
 
     Args:
