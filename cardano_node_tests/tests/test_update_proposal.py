@@ -47,18 +47,17 @@ class TestBasic:
         cluster_update_proposal: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""
-        data_key = id(TestBasic)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
-
         cluster = cluster_update_proposal
 
-        addr = clusterlib_utils.create_payment_addr_records(
-            f"addr_test_basic_update_proposal_ci{cluster_manager.cluster_instance}_0",
-            cluster_obj=cluster,
-        )[0]
-        cluster_manager.cache.test_data[data_key] = addr
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addr = clusterlib_utils.create_payment_addr_records(
+                f"addr_test_basic_update_proposal_ci{cluster_manager.cluster_instance}_0",
+                cluster_obj=cluster,
+            )[0]
+            fixture_cache.value = addr
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
