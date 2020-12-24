@@ -72,10 +72,10 @@ def _stop_all_cluster_instances(
     devops_cluster.save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
-@pytest.yield_fixture(scope="session")
+@pytest.fixture(scope="session")
 def cluster_cleanup(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
-) -> Generator:
+) -> Generator[None, None, None]:
     pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
 
     if not worker_id or worker_id == "master":
@@ -128,7 +128,7 @@ def session_autouse(change_dir: Any, cluster_cleanup: Any) -> None:
     pass
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def cluster_manager(
     tmp_path_factory: TempdirFactory,
     worker_id: str,
