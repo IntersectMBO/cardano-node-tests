@@ -2,13 +2,16 @@
 import contextlib
 import dataclasses
 import datetime
+import hashlib
+import inspect
 import logging
 import os
 import random
 import time
 from pathlib import Path
+from typing import Any
 from typing import Dict
-from typing import Generator
+from typing import Iterator
 from typing import Optional
 
 import pytest
@@ -63,6 +66,17 @@ def _kill_supervisor(instance_num: int) -> None:
         return
 
 
+def _get_fixture_hash() -> int:
+    """Get hash of fixture, using hash of `filename#lineno`."""
+    # get past `cache_fixture` and `contextmanager` to the fixture
+    calling_frame = inspect.currentframe().f_back.f_back.f_back  # type: ignore
+    lineno = calling_frame.f_lineno  # type: ignore
+    fpath = calling_frame.f_globals["__file__"]  # type: ignore
+    hash_str = f"{fpath}#L{lineno}"
+    hash_num = int(hashlib.sha1(hash_str.encode("utf-8")).hexdigest(), 16)
+    return hash_num
+
+
 @dataclasses.dataclass
 class ClusterManagerCache:
     """Cache for a single cluster instance."""
@@ -71,6 +85,13 @@ class ClusterManagerCache:
     test_data: dict = dataclasses.field(default_factory=dict)
     addrs_data: dict = dataclasses.field(default_factory=dict)
     last_checksum: str = ""
+
+
+@dataclasses.dataclass
+class FixtureCache:
+    """Cache for a fixture."""
+
+    value: Any
 
 
 @dataclasses.dataclass
@@ -221,13 +242,25 @@ class ClusterManager:
             open(self.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
 
     @contextlib.contextmanager
-    def restart_on_failure(self) -> Generator:
+    def restart_on_failure(self) -> Iterator:
         """Indicate that the cluster needs restart if command failed - context manager."""
         try:
             yield
         except Exception:
             self.set_needs_restart()
             raise
+
+    @contextlib.contextmanager
+    def cache_fixture(self) -> Iterator[FixtureCache]:
+        """Cache fixture value - context manager."""
+        curline_hash = _get_fixture_hash()
+        cached_value = self.cache.test_data.get(curline_hash)
+        container = FixtureCache(value=cached_value)
+
+        yield container
+
+        if container.value != cached_value:
+            self.cache.test_data[curline_hash] = container.value
 
     def on_test_stop(self) -> None:
         """Perform actions after the test finished."""
