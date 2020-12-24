@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
-from typing import Generator
+from typing import Iterator
 from typing import Optional
 
 import hypothesis
@@ -82,7 +82,7 @@ CARDANO_VERSION = get_cardano_version()
 
 
 @contextlib.contextmanager
-def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
+def change_cwd(dir_path: FileType) -> Iterator[FileType]:
     """Change and restore CWD - context manager."""
     orig_cwd = os.getcwd()
     os.chdir(dir_path)
@@ -95,7 +95,7 @@ def change_cwd(dir_path: FileType) -> Generator[FileType, None, None]:
 
 
 @contextlib.contextmanager
-def ignore_interrupt() -> Generator:
+def ignore_interrupt() -> Iterator[None]:
     """Ignore the KeyboardInterrupt signal."""
     orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
