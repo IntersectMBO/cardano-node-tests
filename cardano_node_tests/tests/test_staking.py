@@ -47,17 +47,16 @@ def pool_users(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.PoolUser]:
     """Create pool users."""
-    data_key = id(pool_users)
-    cached_value = cluster_manager.cache.test_data.get(data_key)
-    if cached_value:
-        return cached_value  # type: ignore
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
 
-    created_users = clusterlib_utils.create_pool_users(
-        cluster_obj=cluster,
-        name_template=f"test_staking_pool_users_ci{cluster_manager.cluster_instance}",
-        no_of_addr=2,
-    )
-    cluster_manager.cache.test_data[data_key] = created_users
+        created_users = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster,
+            name_template=f"test_staking_pool_users_ci{cluster_manager.cluster_instance}",
+            no_of_addr=2,
+        )
+        fixture_cache.value = created_users
 
     # fund source addresses
     clusterlib_utils.fund_from_faucet(

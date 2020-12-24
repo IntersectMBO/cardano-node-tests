@@ -176,16 +176,15 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new issuers addresses."""
-        data_key = id(TestMinting)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"token_minting_ci{cluster_manager.cluster_instance}_{i}" for i in range(3)],
-            cluster_obj=cluster,
-        )
-        cluster_manager.cache.test_data[data_key] = addrs
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[f"token_minting_ci{cluster_manager.cluster_instance}_{i}" for i in range(3)],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -424,16 +423,15 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        data_key = id(TestTransfer)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"token_transfer_ci{cluster_manager.cluster_instance}_{i}" for i in range(10)],
-            cluster_obj=cluster,
-        )
-        cluster_manager.cache.test_data[data_key] = addrs
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[f"token_transfer_ci{cluster_manager.cluster_instance}_{i}" for i in range(10)],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -452,13 +450,12 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ) -> NewToken:
-        data_key = id(TestTransfer) + 1
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        new_token = self._new_token(cluster_obj=cluster, payment_addrs=payment_addrs)
-        cluster_manager.cache.test_data[data_key] = new_token
+            new_token = self._new_token(cluster_obj=cluster, payment_addrs=payment_addrs)
+            fixture_cache.value = new_token
 
         return new_token
 

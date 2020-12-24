@@ -46,17 +46,16 @@ class TestFee:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        data_key = id(TestFee)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        addrs = clusterlib_utils.create_payment_addr_records(
-            f"addr_test_fee_ci{cluster_manager.cluster_instance}_0",
-            f"addr_test_fee_ci{cluster_manager.cluster_instance}_1",
-            cluster_obj=cluster,
-        )
-        cluster_manager.cache.test_data[data_key] = addrs
+            addrs = clusterlib_utils.create_payment_addr_records(
+                f"addr_test_fee_ci{cluster_manager.cluster_instance}_0",
+                f"addr_test_fee_ci{cluster_manager.cluster_instance}_1",
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -201,17 +200,16 @@ class TestExpectedFees:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        data_key = id(TestExpectedFees)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        created_users = clusterlib_utils.create_pool_users(
-            cluster_obj=cluster,
-            name_template=f"test_expected_fees_ci{cluster_manager.cluster_instance}",
-            no_of_addr=201,
-        )
-        cluster_manager.cache.test_data[data_key] = created_users
+            created_users = clusterlib_utils.create_pool_users(
+                cluster_obj=cluster,
+                name_template=f"test_expected_fees_ci{cluster_manager.cluster_instance}",
+                no_of_addr=201,
+            )
+            fixture_cache.value = created_users
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
