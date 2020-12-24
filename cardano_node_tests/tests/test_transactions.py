@@ -112,17 +112,16 @@ class TestBasic:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        data_key = id(TestBasic)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        addrs = clusterlib_utils.create_payment_addr_records(
-            f"addr_basic_ci{cluster_manager.cluster_instance}_0",
-            f"addr_basic_ci{cluster_manager.cluster_instance}_1",
-            cluster_obj=cluster,
-        )
-        cluster_manager.cache.test_data[data_key] = addrs
+            addrs = clusterlib_utils.create_payment_addr_records(
+                f"addr_basic_ci{cluster_manager.cluster_instance}_0",
+                f"addr_basic_ci{cluster_manager.cluster_instance}_1",
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -380,16 +379,18 @@ class TestMultiInOut:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 11 new payment addresses."""
-        data_key = id(TestMultiInOut)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"multi_in_out_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(201)],
-            cluster_obj=cluster,
-        )
-        cluster_manager.cache.test_data[data_key] = addrs
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[
+                    f"multi_in_out_addr_ci{cluster_manager.cluster_instance}_{i}"
+                    for i in range(201)
+                ],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -643,17 +644,16 @@ class TestNotBalanced:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        data_key = id(TestNotBalanced)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        addrs = clusterlib_utils.create_payment_addr_records(
-            f"addr_not_balanced_ci{cluster_manager.cluster_instance}_0",
-            f"addr_not_balanced_ci{cluster_manager.cluster_instance}_1",
-            cluster_obj=cluster,
-        )
-        cluster_manager.cache.test_data[data_key] = addrs
+            addrs = clusterlib_utils.create_payment_addr_records(
+                f"addr_not_balanced_ci{cluster_manager.cluster_instance}_0",
+                f"addr_not_balanced_ci{cluster_manager.cluster_instance}_1",
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -801,17 +801,16 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
-        data_key = id(TestNegative)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        created_users = clusterlib_utils.create_pool_users(
-            cluster_obj=cluster,
-            name_template=f"test_negative_ci{cluster_manager.cluster_instance}",
-            no_of_addr=2,
-        )
-        cluster_manager.cache.test_data[data_key] = created_users
+            created_users = clusterlib_utils.create_pool_users(
+                cluster_obj=cluster,
+                name_template=f"test_negative_ci{cluster_manager.cluster_instance}",
+                no_of_addr=2,
+            )
+            fixture_cache.value = created_users
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -1251,15 +1250,14 @@ class TestMetadata:
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""
-        data_key = id(TestMetadata)
-        cached_value = cluster_manager.cache.test_data.get(data_key)
-        if cached_value:
-            return cached_value  # type: ignore
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
 
-        addr = clusterlib_utils.create_payment_addr_records(
-            f"addr_test_metadata_ci{cluster_manager.cluster_instance}_0", cluster_obj=cluster
-        )[0]
-        cluster_manager.cache.test_data[data_key] = addr
+            addr = clusterlib_utils.create_payment_addr_records(
+                f"addr_test_metadata_ci{cluster_manager.cluster_instance}_0", cluster_obj=cluster
+            )[0]
+            fixture_cache.value = addr
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
