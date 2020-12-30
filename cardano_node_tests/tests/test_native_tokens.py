@@ -5,6 +5,7 @@
 * locking
 * transactions
 """
+import itertools
 import json
 import logging
 from pathlib import Path
@@ -51,38 +52,37 @@ def temp_dir(create_temp_dir: Path):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-def _min_or_burn_witness(
+def _mint_or_burn_witness(
     cluster_obj: clusterlib.ClusterLib,
-    issuers_addrs: List[clusterlib.AddressRecord],
-    token_mint_addr: str,
-    amount: int,
-    script: Path,
-    asset_name: str,
+    new_tokens: List[NewToken],
     temp_template: str,
 ) -> None:
     """Mint of burn tokens, based on the `amount value`. Sign using witnesses.
 
     Positive `amount` value means minting, negative means burning.
     """
-    policyid = cluster_obj.get_policyid(script)
-    token = f"{policyid}.{asset_name}"
-
+    _issuers_addrs = [n.issuers_addrs for n in new_tokens]
+    issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
     issuers_skey_files = [p.skey_file for p in issuers_addrs]
+    src_address = new_tokens[0].token_mint_addr.address
 
     # create TX body
     ttl = cluster_obj.calculate_tx_ttl()
     fee = cluster_obj.calculate_tx_fee(
-        src_address=token_mint_addr,
+        src_address=src_address,
         tx_name=temp_template,
         ttl=ttl,
         witness_count_add=len(issuers_skey_files),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=token_mint_addr,
+        src_address=src_address,
         tx_name=temp_template,
         fee=fee,
         ttl=ttl,
-        mint=[clusterlib.TxOut(address=token_mint_addr, amount=amount, coin=token)],
+        mint=[
+            clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
+            for n in new_tokens
+        ],
     )
 
     # create witness file for each required key
@@ -94,12 +94,15 @@ def _min_or_burn_witness(
         )
         for idx, skey in enumerate(issuers_skey_files)
     ]
-    witness_files.append(
-        cluster_obj.witness_tx(
-            tx_body_file=tx_raw_output.out_file,
-            tx_name=f"{temp_template}_script",
-            script_file=script,
-        )
+    witness_files.extend(
+        [
+            cluster_obj.witness_tx(
+                tx_body_file=tx_raw_output.out_file,
+                tx_name=f"{temp_template}_script{idx}",
+                script_file=token.script,
+            )
+            for idx, token in enumerate(new_tokens)
+        ]
     )
 
     # sign TX using witness files
@@ -116,45 +119,47 @@ def _min_or_burn_witness(
 
 def _mint_or_burn_sign(
     cluster_obj: clusterlib.ClusterLib,
-    issuer_addr: clusterlib.AddressRecord,
-    token_mint_addr: clusterlib.AddressRecord,
-    amount: int,
-    script: Path,
-    asset_name: str,
+    new_tokens: List[NewToken],
     temp_template: str,
 ) -> None:
     """Mint of burn tokens, based on the `amount value`. Sign using skeys.
 
     Positive `amount` value means minting, negative means burning.
     """
-    policyid = cluster_obj.get_policyid(script)
-    token = f"{policyid}.{asset_name}"
+    _issuers_addrs = [n.issuers_addrs for n in new_tokens]
+    issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
+    issuers_skey_files = [p.skey_file for p in issuers_addrs]
+    token_mint_addr_skey_files = [t.token_mint_addr.skey_file for t in new_tokens]
+    src_address = new_tokens[0].token_mint_addr.address
 
     tx_files = clusterlib.TxFiles(
-        signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file]
+        signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files]
     )
 
     # build and sign a transaction
     ttl = cluster_obj.calculate_tx_ttl()
     fee = cluster_obj.calculate_tx_fee(
-        src_address=token_mint_addr.address,
+        src_address=src_address,
         tx_name=temp_template,
         tx_files=tx_files,
         ttl=ttl,
     )
     tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=token_mint_addr.address,
+        src_address=src_address,
         tx_name=temp_template,
         tx_files=tx_files,
         fee=fee,
         ttl=ttl,
-        mint=[clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token)],
+        mint=[
+            clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
+            for n in new_tokens
+        ],
     )
     out_file_signed = cluster_obj.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=temp_template,
-        script_file=script,
+        script_files=[n.script for n in new_tokens],
     )
 
     # submit signed transaction
@@ -203,9 +208,10 @@ class TestMinting:
         """Test minting and burning of tokens, sign using witnesses."""
         temp_template = helpers.get_func_name()
         asset_name = "couttscoin"
+        amount = 5
 
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
-        token_mint_addr = issuers_addrs[0].address
+        token_mint_addr = issuers_addrs[0]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -217,34 +223,38 @@ class TestMinting:
         policyid = cluster.get_policyid(multisig_script)
         token = f"{policyid}.{asset_name}"
 
-        assert not cluster.get_utxo(token_mint_addr, coins=[token]), "The token already exists"
+        assert not cluster.get_utxo(
+            token_mint_addr.address, coins=[token]
+        ), "The token already exists"
 
-        # token minting
-        _min_or_burn_witness(
-            cluster_obj=cluster,
+        token_mint = NewToken(
+            token=token,
+            asset_name=asset_name,
+            amount=amount,
             issuers_addrs=issuers_addrs,
             token_mint_addr=token_mint_addr,
-            amount=5,
             script=multisig_script,
-            asset_name=asset_name,
+        )
+
+        # token minting
+        _mint_or_burn_witness(
+            cluster_obj=cluster,
+            new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr, coins=[token])
-        assert token_utxo and token_utxo[0].amount == 5, "The token was not minted"
+        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
-        _min_or_burn_witness(
+        token_burn = token_mint._replace(amount=-amount)
+        _mint_or_burn_witness(
             cluster_obj=cluster,
-            issuers_addrs=issuers_addrs,
-            token_mint_addr=token_mint_addr,
-            amount=-5,
-            script=multisig_script,
-            asset_name=asset_name,
+            new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr, coins=[token])
+        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
     @allure.link(helpers.get_vcs_link())
@@ -254,6 +264,7 @@ class TestMinting:
         """Test minting and burning of tokens, sign using skeys."""
         temp_template = helpers.get_func_name()
         asset_name = f"counttscoin{clusterlib.get_rand_str(4)}"
+        amount = 5
 
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
@@ -272,28 +283,30 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
+        token_mint = NewToken(
+            token=token,
+            asset_name=asset_name,
+            amount=amount,
+            issuers_addrs=[issuer_addr],
+            token_mint_addr=token_mint_addr,
+            script=script,
+        )
+
         # token minting
         _mint_or_burn_sign(
             cluster_obj=cluster,
-            issuer_addr=issuer_addr,
-            token_mint_addr=token_mint_addr,
-            amount=5,
-            script=script,
-            asset_name=asset_name,
+            new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
         )
 
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
-        assert token_utxo and token_utxo[0].amount == 5, "The token was not minted"
+        assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
+        token_burn = token_mint._replace(amount=-amount)
         _mint_or_burn_sign(
             cluster_obj=cluster,
-            issuer_addr=issuer_addr,
-            token_mint_addr=token_mint_addr,
-            amount=-5,
-            script=script,
-            asset_name=asset_name,
+            new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
         )
 
@@ -310,7 +323,7 @@ class TestMinting:
         amount = 50
 
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
-        token_mint_addr = issuers_addrs[0].address
+        token_mint_addr = issuers_addrs[0]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -322,35 +335,39 @@ class TestMinting:
         policyid = cluster.get_policyid(multisig_script)
         token = f"{policyid}.{asset_name}"
 
-        assert not cluster.get_utxo(token_mint_addr, coins=[token]), "The token already exists"
+        assert not cluster.get_utxo(
+            token_mint_addr.address, coins=[token]
+        ), "The token already exists"
 
-        # token minting
-        _min_or_burn_witness(
-            cluster_obj=cluster,
+        token_mint = NewToken(
+            token=token,
+            asset_name=asset_name,
+            amount=amount,
             issuers_addrs=issuers_addrs,
             token_mint_addr=token_mint_addr,
-            amount=amount,
             script=multisig_script,
-            asset_name=asset_name,
+        )
+
+        # token minting
+        _mint_or_burn_witness(
+            cluster_obj=cluster,
+            new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr, coins=[token])
+        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
         burn_amount = amount // 2
-        _min_or_burn_witness(
+        token_burn = token_mint._replace(amount=-burn_amount)
+        _mint_or_burn_witness(
             cluster_obj=cluster,
-            issuers_addrs=issuers_addrs,
-            token_mint_addr=token_mint_addr,
-            amount=-burn_amount,
-            script=multisig_script,
-            asset_name=asset_name,
+            new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr, coins=[token])
+        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert (
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not burned"
@@ -391,21 +408,7 @@ class TestTransfer:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        # token minting
-        _mint_or_burn_sign(
-            cluster_obj=cluster_obj,
-            issuer_addr=issuer_addr,
-            token_mint_addr=token_mint_addr,
-            amount=amount,
-            script=script,
-            asset_name=asset_name,
-            temp_template=f"{temp_template}_mint",
-        )
-
-        token_utxo = cluster_obj.get_utxo(token_mint_addr.address, coins=[token])
-        assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
-
-        new_token = NewToken(
+        token_mint = NewToken(
             token=token,
             asset_name=asset_name,
             amount=amount,
@@ -414,7 +417,17 @@ class TestTransfer:
             script=script,
         )
 
-        return new_token
+        # token minting
+        _mint_or_burn_sign(
+            cluster_obj=cluster_obj,
+            new_tokens=[token_mint],
+            temp_template=f"{temp_template}_mint",
+        )
+
+        token_utxo = cluster_obj.get_utxo(token_mint_addr.address, coins=[token])
+        assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
+
+        return token_mint
 
     @pytest.fixture
     def payment_addrs(
