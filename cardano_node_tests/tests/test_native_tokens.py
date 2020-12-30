@@ -26,7 +26,7 @@ from cardano_node_tests.utils.devops_cluster import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-class NewToken(NamedTuple):
+class TokenRecord(NamedTuple):
     token: str
     asset_name: str
     amount: int
@@ -54,7 +54,7 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 def _mint_or_burn_witness(
     cluster_obj: clusterlib.ClusterLib,
-    new_tokens: List[NewToken],
+    new_tokens: List[TokenRecord],
     temp_template: str,
 ) -> None:
     """Mint of burn tokens, based on the `amount value`. Sign using witnesses.
@@ -119,7 +119,7 @@ def _mint_or_burn_witness(
 
 def _mint_or_burn_sign(
     cluster_obj: clusterlib.ClusterLib,
-    new_tokens: List[NewToken],
+    new_tokens: List[TokenRecord],
     temp_template: str,
 ) -> None:
     """Mint of burn tokens, based on the `amount value`. Sign using skeys.
@@ -227,7 +227,7 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        token_mint = NewToken(
+        token_mint = TokenRecord(
             token=token,
             asset_name=asset_name,
             amount=amount,
@@ -283,7 +283,7 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        token_mint = NewToken(
+        token_mint = TokenRecord(
             token=token,
             asset_name=asset_name,
             amount=amount,
@@ -343,7 +343,7 @@ class TestMinting:
             ), "The token already exists"
 
             tokens_to_mint.append(
-                NewToken(
+                TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -407,7 +407,7 @@ class TestMinting:
             ), "The token already exists"
 
             tokens_to_mint.append(
-                NewToken(
+                TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -466,7 +466,7 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        token_mint = NewToken(
+        token_mint = TokenRecord(
             token=token,
             asset_name=asset_name,
             amount=amount,
@@ -511,7 +511,7 @@ class TestTransfer:
         self,
         cluster_obj: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-    ) -> NewToken:
+    ) -> TokenRecord:
         """Mint new token, sign using skeys."""
         rand = clusterlib.get_rand_str(4)
         temp_template = f"test_tx_new_token_{rand}"
@@ -535,7 +535,7 @@ class TestTransfer:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        token_mint = NewToken(
+        token_mint = TokenRecord(
             token=token,
             asset_name=asset_name,
             amount=amount,
@@ -589,7 +589,7 @@ class TestTransfer:
         cluster_manager: parallel_run.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-    ) -> NewToken:
+    ) -> TokenRecord:
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
@@ -605,7 +605,7 @@ class TestTransfer:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        new_token: NewToken,
+        new_token: TokenRecord,
         amount: int,
     ):
         """Send tokens to payment address.
@@ -653,7 +653,7 @@ class TestTransfer:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        new_token: NewToken,
+        new_token: TokenRecord,
     ):
         """Send multiple different tokens to payment address.
 
