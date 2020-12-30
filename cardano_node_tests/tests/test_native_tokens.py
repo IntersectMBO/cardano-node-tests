@@ -207,7 +207,7 @@ class TestMinting:
     ):
         """Test minting and burning of tokens, sign using witnesses."""
         temp_template = helpers.get_func_name()
-        asset_name = "couttscoin"
+        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 5
 
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
@@ -263,7 +263,7 @@ class TestMinting:
     ):
         """Test minting and burning of tokens, sign using skeys."""
         temp_template = helpers.get_func_name()
-        asset_name = f"counttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -446,7 +446,7 @@ class TestMinting:
     ):
         """Test minting and partial burning of tokens."""
         temp_template = helpers.get_func_name()
-        asset_name = f"counttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 50
 
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
@@ -515,7 +515,7 @@ class TestTransfer:
         """Mint new token, sign using skeys."""
         rand = clusterlib.get_rand_str(4)
         temp_template = f"test_tx_new_token_{rand}"
-        asset_name = f"counttscoin{rand}"
+        asset_name = f"couttscoin{rand}"
         amount = 20_000_000
 
         token_mint_addr = payment_addrs[0]
