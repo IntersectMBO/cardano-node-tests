@@ -1144,9 +1144,8 @@ class ClusterLib:
         else:
             bound_args.extend(["--invalid-hereafter", str(invalid_hereafter)])
 
-        mint_args = []
-        for m in mint:
-            mint_args.extend(["--mint", f"{m.amount} {m.coin}"])
+        mint_records = [f"{m.amount} {m.coin}" for m in mint]
+        mint_args = ["--mint", "+".join(mint_records)] if mint_records else []
 
         self.cli(
             [
