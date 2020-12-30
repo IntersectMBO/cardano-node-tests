@@ -377,6 +377,70 @@ class TestMinting:
             assert not token_utxo, "The token was not burnt"
 
     @allure.link(helpers.get_vcs_link())
+    def testmulti_minting_and_burning_sign(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test minting and burning multiple tokens, sign using skeys."""
+        temp_template = helpers.get_func_name()
+        rand = clusterlib.get_rand_str(4)
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        issuer_addr = issuers_addrs[1]
+
+        # create simple script
+        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        script_content = {"keyHash": keyhash, "type": "sig"}
+        script = Path(f"{temp_template}.script")
+        with open(f"{temp_template}.script", "w") as out_json:
+            json.dump(script_content, out_json)
+
+        policyid = cluster.get_policyid(script)
+
+        tokens_to_mint = []
+        for tnum in range(5):
+            asset_name = f"couttscoin{rand}{tnum}"
+            token = f"{policyid}.{asset_name}"
+
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[token]
+            ), "The token already exists"
+
+            tokens_to_mint.append(
+                NewToken(
+                    token=token,
+                    asset_name=asset_name,
+                    amount=amount,
+                    issuers_addrs=[issuer_addr],
+                    token_mint_addr=token_mint_addr,
+                    script=script,
+                )
+            )
+
+        # token minting
+        _mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=tokens_to_mint,
+            temp_template=f"{temp_template}_mint",
+        )
+
+        for t in tokens_to_mint:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
+
+        # token burning
+        tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
+        _mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=tokens_to_burn,
+            temp_template=f"{temp_template}_burn",
+        )
+
+        for t in tokens_to_burn:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert not token_utxo, "The token was not burnt"
+
+    @allure.link(helpers.get_vcs_link())
     def test_minting_and_partial_burning(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
