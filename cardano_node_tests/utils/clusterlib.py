@@ -1318,16 +1318,12 @@ class ClusterLib:
         tx_body_file: FileType,
         signing_key_files: OptionalFiles,
         tx_name: str,
-        script_file: Optional[FileType] = None,
+        script_files: OptionalFiles = (),
         destination_dir: FileType = ".",
     ) -> Path:
         """Sign transaction."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.signed"
-
-        cli_args = []
-        if script_file:
-            cli_args = ["--script-file", str(script_file)]
 
         self.cli(
             [
@@ -1340,7 +1336,7 @@ class ClusterLib:
                 "--testnet-magic",
                 str(self.network_magic),
                 *self._prepend_flag("--signing-key-file", signing_key_files),
-                *cli_args,
+                *self._prepend_flag("--script-file", script_files),
             ]
         )
 
@@ -1434,7 +1430,7 @@ class ClusterLib:
         deposit: Optional[int] = None,
         invalid_hereafter: Optional[int] = None,
         invalid_before: Optional[int] = None,
-        script_file: Optional[FileType] = None,
+        script_files: OptionalFiles = (),
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Build, Sign and Send transaction to chain."""
@@ -1443,9 +1439,9 @@ class ClusterLib:
 
         if fee is None:
             witness_count_add = 0
-            if script_file:
+            if script_files:
                 # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-                witness_count_add += 5
+                witness_count_add += 5 * len(script_files)
             fee = self.calculate_tx_fee(
                 src_address=src_address,
                 tx_name=tx_name,
@@ -1475,7 +1471,7 @@ class ClusterLib:
             tx_body_file=tx_raw_output.out_file,
             tx_name=tx_name,
             signing_key_files=tx_files.signing_key_files,
-            script_file=script_file,
+            script_files=script_files,
             destination_dir=destination_dir,
         )
         self.submit_tx(tx_signed_file)

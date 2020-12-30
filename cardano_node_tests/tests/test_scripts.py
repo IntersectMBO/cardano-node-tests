@@ -442,7 +442,7 @@ class TestBasic:
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
-            script_file=multisig_script,
+            script_files=[multisig_script],
         )
         cluster.wait_for_new_block(new_blocks=2)
 
