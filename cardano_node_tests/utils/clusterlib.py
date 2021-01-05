@@ -971,7 +971,7 @@ class ClusterLib:
 
         return deposit
 
-    def _organize_tx_ins_outs(
+    def _organize_tx_ins_outs_by_coin(
         self, tx_list: Union[List[UTXOData], List[TxOut], Tuple[()]]
     ) -> Dict[str, list]:
         """Organize transaction inputs or outputs by coin type."""
@@ -982,56 +982,106 @@ class ClusterLib:
             db[rec.coin].append(rec)
         return db
 
-    def _organize_txins_by_hash(self, tx_list: List[UTXOData]) -> Dict[str, List[UTXOData]]:
-        """Organize transaction inputs by hash."""
+    def _organize_utxos_by_id(self, tx_list: List[UTXOData]) -> Dict[str, List[UTXOData]]:
+        """Organize UTxOs by ID (hash#ix)."""
         db: Dict[str, List[UTXOData]] = {}
         for rec in tx_list:
-            rec_hash = f"{rec.utxo_hash}#{rec.utxo_ix}"
-            if rec_hash not in db:
-                db[rec_hash] = []
-            db[rec_hash].append(rec)
+            utxo_id = f"{rec.utxo_hash}#{rec.utxo_ix}"
+            if utxo_id not in db:
+                db[utxo_id] = []
+            db[utxo_id].append(rec)
         return db
 
-    def _get_txins(self, src_address: str, outcoins: Set[str]) -> List[UTXOData]:
-        """Get all UTXOs that contains some of the required coins (`outcoins`)."""
+    def _get_utxos_with_coins(self, src_address: str, coins: Set[str]) -> List[UTXOData]:
+        """Get all UTxOs that contain any of the required coins (`coins`)."""
         txins_all = self.get_utxo(src_address)
-        txins_by_hash = self._organize_txins_by_hash(txins_all)
+        txins_by_id = self._organize_utxos_by_id(txins_all)
 
         txins = []
-        seen_hashes = set()
+        seen_ids = set()
         for rec in txins_all:
-            rec_hash = f"{rec.utxo_hash}#{rec.utxo_ix}"
-            if rec.coin in outcoins and rec_hash not in seen_hashes:
-                seen_hashes.add(rec_hash)
-                txins.extend(txins_by_hash[rec_hash])
+            utxo_id = f"{rec.utxo_hash}#{rec.utxo_ix}"
+            if rec.coin in coins and utxo_id not in seen_ids:
+                seen_ids.add(utxo_id)
+                txins.extend(txins_by_id[utxo_id])
 
         return txins
 
-    def get_tx_ins_outs(  # noqa: C901
+    def _collect_utxos_amount(self, utxos: List[UTXOData], amount: int) -> List[UTXOData]:
+        """Collect UTxOs so their total combined amount >= `amount`."""
+        collected_utxos: List[UTXOData] = []
+        collected_amount = 0
+        for utxo in utxos:
+            if collected_amount >= amount:
+                break
+            collected_utxos.append(utxo)
+            collected_amount += utxo.amount
+
+        return collected_utxos
+
+    def _select_utxos(
+        self,
+        tx_files: TxFiles,
+        txins_db: Dict[str, List[UTXOData]],
+        txouts_passed_db: Dict[str, List[TxOut]],
+        txouts_mint_db: Dict[str, List[TxOut]],
+        fee: int,
+        deposit: Optional[int],
+        withdrawals: OptionalTxOuts,
+    ) -> Set[str]:
+        """Select UTxOs that can satisfy all outputs, deposits and fee.
+
+        Return IDs of selected UTxOs.
+        """
+        utxo_ids: Set[str] = set()
+
+        # iterate over coins both in txins and txouts
+        for coin in set(txins_db).union(txouts_passed_db).union(txouts_mint_db):
+            coin_txins = txins_db.get(coin) or []
+            coin_txouts = txouts_passed_db.get(coin) or []
+
+            # the value "-1" means all available funds
+            max_index = [idx for idx, val in enumerate(coin_txouts) if val.amount == -1]
+            if max_index:
+                utxo_ids.update(f"{rec.utxo_hash}#{rec.utxo_ix}" for rec in coin_txins)
+                continue
+
+            total_output_amount = functools.reduce(lambda x, y: x + y.amount, coin_txouts, 0)
+
+            if coin == DEFAULT_COIN:
+                tx_deposit = self.get_tx_deposit(tx_files=tx_files) if deposit is None else deposit
+                tx_fee = fee if fee > 0 else 0
+                funds_needed = total_output_amount + tx_fee + tx_deposit
+                total_withdrawals_amount = functools.reduce(
+                    lambda x, y: x + y.amount, withdrawals, 0
+                )
+                input_funds_needed = funds_needed - total_withdrawals_amount
+            else:
+                coin_txouts_minted = txouts_mint_db.get(coin) or []
+                total_minted_amount = functools.reduce(
+                    lambda x, y: x + y.amount, coin_txouts_minted, 0
+                )
+                input_funds_needed = total_output_amount - total_minted_amount
+
+            filtered_coin_utxos = self._collect_utxos_amount(
+                utxos=coin_txins, amount=input_funds_needed
+            )
+            utxo_ids.update(f"{rec.utxo_hash}#{rec.utxo_ix}" for rec in filtered_coin_utxos)
+
+        return utxo_ids
+
+    def _ballance_txouts(
         self,
         src_address: str,
         tx_files: TxFiles,
-        txins: OptionalUTXOData = (),
-        txouts: OptionalTxOuts = (),
-        fee: int = 0,
-        deposit: Optional[int] = None,
-        withdrawals: OptionalTxOuts = (),
-        mint: OptionalTxOuts = (),
-    ) -> Tuple[list, list]:
-        """Return list of transaction's inputs and outputs."""
-        # pylint: disable=too-many-branches,too-many-locals
-        txouts_passed_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(txouts)
-        txouts_mint_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs(mint)
-        outcoins_all = {DEFAULT_COIN, *txouts_mint_db.keys(), *txouts_passed_db.keys()}
-        outcoins_passed = [DEFAULT_COIN, *txouts_passed_db.keys()]
-
-        txins = txins or self._get_txins(src_address=src_address, outcoins=outcoins_all)
-        txins_db: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs(txins)
-
-        if not all(c in txins_db for c in outcoins_passed):
-            LOGGER.error("Not all output coins are present in input UTxO.")
-
-        txins_result: List[UTXOData] = []
+        txins_db: Dict[str, List[UTXOData]],
+        txouts_passed_db: Dict[str, List[TxOut]],
+        txouts_mint_db: Dict[str, List[TxOut]],
+        fee: int,
+        deposit: Optional[int],
+        withdrawals: OptionalTxOuts,
+    ) -> List[TxOut]:
+        """Ballance the transaction by adding change output for each coin."""
         txouts_result: List[TxOut] = []
 
         # iterate over coins both in txins and txouts
@@ -1040,7 +1090,7 @@ class ClusterLib:
             coin_txins = txins_db.get(coin) or []
             coin_txouts = txouts_passed_db.get(coin) or []
 
-            # The value "-1" means all available funds.
+            # the value "-1" means all available funds
             max_index = [idx for idx, val in enumerate(coin_txouts) if val.amount == -1]
             if len(max_index) > 1:
                 raise CLIError("Cannot send all remaining funds to more than one address.")
@@ -1052,14 +1102,15 @@ class ClusterLib:
 
             if coin == DEFAULT_COIN:
                 tx_deposit = self.get_tx_deposit(tx_files=tx_files) if deposit is None else deposit
-                funds_needed = total_output_amount + fee + tx_deposit
+                tx_fee = fee if fee > 0 else 0
+                funds_needed = total_output_amount + tx_fee + tx_deposit
                 total_withdrawals_amount = functools.reduce(
                     lambda x, y: x + y.amount, withdrawals, 0
                 )
                 change = total_input_amount + total_withdrawals_amount - funds_needed
                 if change < 0:
                     LOGGER.error(
-                        "Not enough funds to make a transaction - "
+                        "Not enough funds to make the transaction - "
                         f"available: {total_input_amount}; needed {funds_needed}"
                     )
             else:
@@ -1074,18 +1125,84 @@ class ClusterLib:
                     TxOut(address=(max_address or src_address), amount=change, coin=coin)
                 )
 
-            txins_result.extend(coin_txins)
             txouts_result.extend(coin_txouts)
 
-        # filter out negative token amounts (tokens burning)
-        txouts_result = [r for r in txouts_result if r.amount > 0]
+        return txouts_result
 
-        if not txins_result:
+    def get_tx_ins_outs(
+        self,
+        src_address: str,
+        tx_files: TxFiles,
+        txins: OptionalUTXOData = (),
+        txouts: OptionalTxOuts = (),
+        fee: int = 0,
+        deposit: Optional[int] = None,
+        withdrawals: OptionalTxOuts = (),
+        mint: OptionalTxOuts = (),
+    ) -> Tuple[list, list]:
+        """Return list of transaction's inputs and outputs."""
+        txouts_passed_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs_by_coin(txouts)
+        txouts_mint_db: Dict[str, List[TxOut]] = self._organize_tx_ins_outs_by_coin(mint)
+        outcoins_all = {DEFAULT_COIN, *txouts_mint_db.keys(), *txouts_passed_db.keys()}
+        outcoins_passed = [DEFAULT_COIN, *txouts_passed_db.keys()]
+
+        txins_all = list(txins) or self._get_utxos_with_coins(
+            src_address=src_address, coins=outcoins_all
+        )
+        txins_db_all: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs_by_coin(txins_all)
+
+        if not all(c in txins_db_all for c in outcoins_passed):
+            LOGGER.error("Not all output coins are present in input UTxO.")
+
+        if txins:
+            # don't touch txins that were passed to the function
+            txins_filtered = txins_all
+            txins_db_filtered = txins_db_all
+        else:
+            # select only UTxOs that are needed to satisfy all outputs, deposits and fee
+            selected_utxo_ids = self._select_utxos(
+                tx_files=tx_files,
+                txins_db=txins_db_all,
+                txouts_passed_db=txouts_passed_db,
+                txouts_mint_db=txouts_mint_db,
+                fee=fee,
+                deposit=deposit,
+                withdrawals=withdrawals,
+            )
+            txins_by_id: Dict[str, List[UTXOData]] = self._organize_utxos_by_id(txins_all)
+            _txins_filtered = [
+                utxo for uid, utxo in txins_by_id.items() if uid in selected_utxo_ids
+            ]
+
+            if _txins_filtered:
+                txins_filtered = list(itertools.chain.from_iterable(_txins_filtered))
+            else:
+                # there's always a txin needed, if only for the fee
+                txins_filtered = [txins_all[0]]
+
+            txins_db_filtered = self._organize_tx_ins_outs_by_coin(txins_filtered)
+
+        # ballance the transaction
+        txouts_ballanced = self._ballance_txouts(
+            src_address=src_address,
+            tx_files=tx_files,
+            txins_db=txins_db_filtered,
+            txouts_passed_db=txouts_passed_db,
+            txouts_mint_db=txouts_mint_db,
+            fee=fee,
+            deposit=deposit,
+            withdrawals=withdrawals,
+        )
+
+        # filter out negative token amounts (tokens burning)
+        txouts_ballanced = [r for r in txouts_ballanced if r.amount > 0]
+
+        if not txins_filtered:
             LOGGER.error("Cannot build transaction, empty `txins`.")
-        if not txouts_result:
+        if not txouts_ballanced:
             LOGGER.error("Cannot build transaction, empty `txouts`.")
 
-        return txins_result, txouts_result
+        return txins_filtered, txouts_ballanced
 
     def get_withdrawals(self, withdrawals: List[TxOut]) -> List[TxOut]:
         """Return list of withdrawals."""
