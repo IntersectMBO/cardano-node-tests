@@ -1122,12 +1122,12 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    def test_nonexistent_utxo(
+    def test_nonexistent_utxo_ix(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to use nonexistent UTxO as an input.
+        """Try to use nonexistent UTxO TxIx as an input.
 
         Expect failure.
         """
@@ -1136,6 +1136,35 @@ class TestNegative:
         src_addr = pool_users[0].payment
         utxo = cluster.get_utxo(src_addr.address)[0]
         utxo_copy = utxo._replace(utxo_ix="5")
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000)]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                txins=[utxo_copy],
+                txouts=destinations,
+                tx_files=tx_files,
+            )
+        assert "BadInputsUTxO" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_nonexistent_utxo_hash(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Try to use nonexistent UTxO hash as an input.
+
+        Expect failure.
+        """
+        temp_template = helpers.get_func_name()
+
+        src_addr = pool_users[0].payment
+        utxo = cluster.get_utxo(src_addr.address)[0]
+        new_hash = f"{utxo.utxo_hash[:-4]}fd42"
+        utxo_copy = utxo._replace(utxo_hash=new_hash)
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
         destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000)]
 
