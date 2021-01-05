@@ -33,7 +33,10 @@ disable=
     ungrouped-imports,
     wrong-import-order,
     # handled by black
-    format
+    format,
+    # TODO: temporary workaround for python 3.9
+    unsubscriptable-object,
+    inherit-non-class
 
 
 [FORMAT]
