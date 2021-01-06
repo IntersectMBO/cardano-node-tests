@@ -1116,7 +1116,7 @@ class TestRewards:
         * delegate stake address
         * wait for first reward
         * transfer all funds from payment address back to faucet, so no funds are staked
-        * keep withdrawing new rewards so reward ballance is 0
+        * keep withdrawing new rewards so reward balance is 0
         * check that reward amount is decreasing epoch after epoch
         """
         pool_name = "node-pool1"
@@ -1169,7 +1169,7 @@ class TestRewards:
 
         rewards_rec = []
 
-        # keep withdrawing new rewards so reward ballance is 0
+        # keep withdrawing new rewards so reward balance is 0
         def _withdraw():
             rewards = cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
             if rewards:
