@@ -39,7 +39,7 @@ HYPOTHESIS_SETTINGS = hypothesis.settings(
 
 # Use dummy locking if not executing with multiple workers.
 # When running with multiple workers, operations with shared resources (like faucet addresses)
-# need to be locked to single worker (otherwise e.g. ballances would not check).
+# need to be locked to single worker (otherwise e.g. balances would not check).
 if os.environ.get("PYTEST_XDIST_TESTRUNUID"):
     IS_XDIST = True
     FileLockIfXdist: Any = FileLock
