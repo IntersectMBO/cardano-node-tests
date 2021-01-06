@@ -1,7 +1,7 @@
 """Tests for general transactions.
 
 * transfering funds (from 1 address to many, many to 1, many to many)
-* not ballanced transactions
+* not balanced transactions
 * other negative tests like duplicated transaction, sending funds to wrong addresses,
   wrong fee, wrong ttl
 * transactions with metadata
@@ -635,7 +635,7 @@ class TestMultiInOut:
 
 
 class TestNotBalanced:
-    """Tests for not ballanced transactions."""
+    """Tests for not balanced transactions."""
 
     @pytest.fixture
     def payment_addrs(

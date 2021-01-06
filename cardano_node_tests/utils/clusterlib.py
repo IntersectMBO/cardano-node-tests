@@ -1070,7 +1070,7 @@ class ClusterLib:
 
         return utxo_ids
 
-    def _ballance_txouts(
+    def _balance_txouts(
         self,
         src_address: str,
         tx_files: TxFiles,
@@ -1182,8 +1182,8 @@ class ClusterLib:
 
             txins_db_filtered = self._organize_tx_ins_outs_by_coin(txins_filtered)
 
-        # ballance the transaction
-        txouts_ballanced = self._ballance_txouts(
+        # balance the transaction
+        txouts_balanced = self._balance_txouts(
             src_address=src_address,
             tx_files=tx_files,
             txins_db=txins_db_filtered,
@@ -1195,14 +1195,14 @@ class ClusterLib:
         )
 
         # filter out negative token amounts (tokens burning)
-        txouts_ballanced = [r for r in txouts_ballanced if r.amount > 0]
+        txouts_balanced = [r for r in txouts_balanced if r.amount > 0]
 
         if not txins_filtered:
             LOGGER.error("Cannot build transaction, empty `txins`.")
-        if not txouts_ballanced:
+        if not txouts_balanced:
             LOGGER.error("Cannot build transaction, empty `txouts`.")
 
-        return txins_filtered, txouts_ballanced
+        return txins_filtered, txouts_balanced
 
     def get_withdrawals(self, withdrawals: List[TxOut]) -> List[TxOut]:
         """Return list of withdrawals."""
