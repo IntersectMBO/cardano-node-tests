@@ -1229,23 +1229,28 @@ class ClusterLib:
         invalid_hereafter: Optional[int] = None,
         invalid_before: Optional[int] = None,
         mint: OptionalTxOuts = (),
+        join_txouts: bool = True,
     ) -> TxRawOutput:
         """Build raw transaction."""
         # pylint: disable=too-many-arguments
         out_file = Path(out_file)
 
-        # aggregate TX outputs by address
-        txouts_by_addr: Dict[str, List[str]] = {}
-        for rec in txouts:
-            if rec.address not in txouts_by_addr:
-                txouts_by_addr[rec.address] = []
-            coin = f" {rec.coin}" if rec.coin and rec.coin != DEFAULT_COIN else ""
-            txouts_by_addr[rec.address].append(f"{rec.amount}{coin}")
+        if join_txouts:
+            # aggregate TX outputs by address
+            txouts_by_addr: Dict[str, List[str]] = {}
+            for rec in txouts:
+                if rec.address not in txouts_by_addr:
+                    txouts_by_addr[rec.address] = []
+                coin = f" {rec.coin}" if rec.coin and rec.coin != DEFAULT_COIN else ""
+                txouts_by_addr[rec.address].append(f"{rec.amount}{coin}")
 
-        txouts_combined: List[str] = []
-        for addr, amounts in txouts_by_addr.items():
-            amounts_joined = "+".join(amounts)
-            txouts_combined.append(f"{addr}+{amounts_joined}")
+            # join txouts with the same address
+            txout_args: List[str] = []
+            for addr, amounts in txouts_by_addr.items():
+                amounts_joined = "+".join(amounts)
+                txout_args.append(f"{addr}+{amounts_joined}")
+        else:
+            txout_args = [f"{rec.address}+{rec.amount}" for rec in txouts]
 
         # filter out duplicate txins
         txins_combined = {f"{x.utxo_hash}#{x.utxo_ix}" for x in txins}
@@ -1273,7 +1278,7 @@ class ClusterLib:
                 "--out-file",
                 str(out_file),
                 *self._prepend_flag("--tx-in", txins_combined),
-                *self._prepend_flag("--tx-out", txouts_combined),
+                *self._prepend_flag("--tx-out", txout_args),
                 *self._prepend_flag("--certificate-file", tx_files.certificate_files),
                 *self._prepend_flag("--update-proposal-file", tx_files.proposal_files),
                 *self._prepend_flag("--metadata-json-file", tx_files.metadata_json_files),
@@ -1310,6 +1315,7 @@ class ClusterLib:
         invalid_hereafter: Optional[int] = None,
         invalid_before: Optional[int] = None,
         mint: OptionalTxOuts = (),
+        join_txouts: bool = True,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Figure out all the missing data and build raw transaction."""
@@ -1342,6 +1348,7 @@ class ClusterLib:
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
             mint=mint,
+            join_txouts=join_txouts,
         )
 
         self._check_outfiles(out_file)
@@ -1392,6 +1399,7 @@ class ClusterLib:
         withdrawals: OptionalTxOuts = (),
         mint: OptionalTxOuts = (),
         witness_count_add: int = 0,
+        join_txouts: bool = True,
         destination_dir: FileType = ".",
     ) -> int:
         """Build "dummy" transaction and calculate it's fee."""
@@ -1417,6 +1425,7 @@ class ClusterLib:
             withdrawals=withdrawals,
             deposit=0,
             mint=mint,
+            join_txouts=join_txouts,
             destination_dir=destination_dir,
         )
 
@@ -1547,6 +1556,7 @@ class ClusterLib:
         invalid_hereafter: Optional[int] = None,
         invalid_before: Optional[int] = None,
         script_files: OptionalFiles = (),
+        join_txouts: bool = True,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
         """Build, Sign and Send transaction to chain."""
@@ -1566,6 +1576,7 @@ class ClusterLib:
                 tx_files=tx_files,
                 ttl=ttl,
                 witness_count_add=witness_count_add,
+                join_txouts=join_txouts,
                 destination_dir=destination_dir,
             )
 
@@ -1581,6 +1592,7 @@ class ClusterLib:
             deposit=deposit,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
+            join_txouts=join_txouts,
             destination_dir=destination_dir,
         )
         tx_signed_file = self.sign_tx(
