@@ -76,7 +76,7 @@ def _get_raw_tx_values(
 
     src_addr_highest_utxo = cluster_obj.get_utxo_with_highest_amount(src_address)
 
-    # use only the UTXO with highest amount
+    # use only the UTxO with highest amount
     txins = [src_addr_highest_utxo]
     txouts = [
         clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee),
@@ -222,7 +222,7 @@ class TestBasic:
         * send funds from 1 source address to 1 destination address
         * get txid from transaction body
         * check that txid has expected lenght
-        * check that the txid is listed in UTXO hashes for both source and destination addresses
+        * check that the txid is listed in UTxO hashes for both source and destination addresses
         """
         temp_template = helpers.get_func_name()
 
@@ -693,7 +693,7 @@ class TestNotBalanced:
 
         src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
 
-        # use only the UTXO with highest amount
+        # use only the UTxO with highest amount
         txins = [src_addr_highest_utxo]
         # try to transfer +1 Lovelace more than available and use a negative change (-1)
         txouts = [
@@ -753,7 +753,7 @@ class TestNotBalanced:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.calculate_tx_ttl()
 
-        # use only the UTXO with highest amount
+        # use only the UTxO with highest amount
         txins = [src_addr_highest_utxo]
         txouts = [
             clusterlib.TxOut(address=dst_address, amount=transferred_amount),
@@ -1033,7 +1033,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to send funds from payment address to UTXO address.
+        """Try to send funds from payment address to UTxO address.
 
         Expect failure.
         """
