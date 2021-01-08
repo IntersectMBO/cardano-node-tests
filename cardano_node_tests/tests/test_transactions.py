@@ -5,12 +5,15 @@
 * other negative tests like duplicated transaction, sending funds to wrong addresses,
   wrong fee, wrong ttl
 * transactions with metadata
+* transactions with many UTxOs
 """
 import functools
 import itertools
 import json
 import logging
+import random
 import string
+import time
 from pathlib import Path
 from typing import List
 from typing import Tuple
@@ -76,7 +79,7 @@ def _get_raw_tx_values(
 
     src_addr_highest_utxo = cluster_obj.get_utxo_with_highest_amount(src_address)
 
-    # use only the UTXO with highest amount
+    # use only the UTxO with highest amount
     txins = [src_addr_highest_utxo]
     txouts = [
         clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee),
@@ -222,7 +225,7 @@ class TestBasic:
         * send funds from 1 source address to 1 destination address
         * get txid from transaction body
         * check that txid has expected lenght
-        * check that the txid is listed in UTXO hashes for both source and destination addresses
+        * check that the txid is listed in UTxO hashes for both source and destination addresses
         """
         temp_template = helpers.get_func_name()
 
@@ -378,7 +381,7 @@ class TestMultiInOut:
         cluster_manager: parallel_run.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
-        """Create 11 new payment addresses."""
+        """Create 201 new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
@@ -444,7 +447,7 @@ class TestMultiInOut:
 
         # record initial balances
         src_init_balance = cluster_obj.get_address_balance(src_address)
-        from_init_balance = functools.reduce(
+        from_init_total_balance = functools.reduce(
             lambda x, y: x + y,
             (cluster_obj.get_address_balance(r.address) for r in from_addr_recs),
             0,
@@ -478,12 +481,12 @@ class TestMultiInOut:
 
         assert (
             from_final_balance == 0
-        ), f"The output addresses should have no balance, the have {from_final_balance}"
+        ), f"The output addresses should have no balance, they have {from_final_balance}"
 
         assert (
             src_final_balance
             == src_init_balance
-            + from_init_balance
+            + from_init_total_balance
             - tx_raw_output.fee
             - amount * len(dst_addresses)
         ), f"Incorrect balance for source address `{src_address}`"
@@ -634,6 +637,205 @@ class TestMultiInOut:
         )
 
 
+class TestManyUTXOs:
+    """Test transaction with many UTxOs and small amounts of Lovelace."""
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[f"tiny_tx_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(3)],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=100_000_000_000,
+        )
+
+        return addrs
+
+    def _from_to_transactions(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        out_addrs: List[clusterlib.AddressRecord],
+        tx_name: str,
+        amount: int,
+    ):
+        """Send `amount` of Lovelace to each address in `out_addrs`."""
+        src_address = payment_addr.address
+        dst_addresses = [rec.address for rec in out_addrs]
+
+        # create TX data
+        txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+        # send TX
+        cluster_obj.send_tx(
+            src_address=src_address,  # change is returned to `src_address`
+            tx_name=tx_name,
+            txouts=txouts,
+            tx_files=tx_files,
+            join_txouts=False,
+        )
+        cluster_obj.wait_for_new_block(new_blocks=2)
+
+    @pytest.fixture
+    def many_utxos(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ) -> Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
+        """Generate many UTxOs (100000+) with small amounts of Lovelace (1-1000000)."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            temp_template = helpers.get_func_name()
+
+            LOGGER.info("Generating lot of UTxO addresses, will take a while.")
+            start = time.time()
+            payment_addr = payment_addrs[0]
+            out_addrs1 = [payment_addrs[1] for __ in range(200)]
+            out_addrs2 = [payment_addrs[2] for __ in range(200)]
+            out_addrs = [*out_addrs1, *out_addrs2]
+
+            for i in range(25):
+                for amount in range(1, 21):
+                    self._from_to_transactions(
+                        cluster_obj=cluster,
+                        payment_addr=payment_addr,
+                        tx_name=f"{temp_template}_{amount}_{i}",
+                        out_addrs=out_addrs,
+                        amount=amount,
+                    )
+
+            self._from_to_transactions(
+                cluster_obj=cluster,
+                payment_addr=payment_addr,
+                tx_name=f"{temp_template}_big",
+                out_addrs=out_addrs,
+                amount=1000_000,
+            )
+            end = time.time()
+
+            retval = payment_addrs[1], payment_addrs[2]
+            fixture_cache.value = retval
+
+        num_of_utxo = len(cluster.get_utxo(payment_addrs[1].address)) + len(
+            cluster.get_utxo(payment_addrs[2].address)
+        )
+        LOGGER.info(f"Generated {num_of_utxo} of UTxO addresses in {end - start} seconds.")
+
+        return retval
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 10_000, 100_000, 1000_000))
+    def test_mini_transactions(
+        self,
+        cluster: clusterlib.ClusterLib,
+        many_utxos: Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord],
+        amount: int,
+    ):
+        """Test transaction with many UTxOs (300+) with tiny amounts of Lovelace (1-1000000).
+
+        * use source address with many UTxOs (100000+)
+        * use destination address with many UTxOs (100000+)
+        * sent transaction with many UTxOs (300+) with tiny amounts of Lovelace from source address
+          to destination address
+        * check expected balances for both source and destination addresses
+        """
+        temp_template = f"{helpers.get_func_name()}_{amount}"
+        big_funds_idx = -190
+
+        src_address = many_utxos[0].address
+        dst_address = many_utxos[1].address
+
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[many_utxos[0].skey_file])
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        # sort UTxOs by amount
+        utxos_sorted = sorted(cluster.get_utxo(src_address), key=lambda x: x.amount)
+
+        # select 350 UTxOs, so we are in a limit of command line arguments lenght and size of the TX
+        txins = random.sample(utxos_sorted[:big_funds_idx], k=350)
+        # add several UTxOs with "big funds" so we can pay fees
+        txins.extend(utxos_sorted[-30:])
+
+        ttl = cluster.calculate_tx_ttl()
+        fee = cluster.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            txins=txins,
+            txouts=destinations,
+            tx_files=tx_files,
+            ttl=ttl,
+        )
+
+        # optimize list of txins so the total amount of funds in selected UTxOs is close
+        # to the amount of needed funds
+        needed_funds = amount + fee + 100_000  # add a buffer
+        total_funds = functools.reduce(lambda x, y: x + y.amount, txins, 0)
+        funds_optimized = total_funds
+        txins_optimized = txins[:]
+        while funds_optimized > needed_funds:
+            popped_txin = txins_optimized.pop()
+            funds_optimized -= popped_txin.amount
+            if funds_optimized < needed_funds:
+                txins_optimized.append(popped_txin)
+                break
+
+        # build, sign and submit the transaction
+        txins_filtered, txouts_balanced = cluster.get_tx_ins_outs(
+            src_address=src_address,
+            tx_files=tx_files,
+            txins=txins_optimized,
+            txouts=destinations,
+            fee=fee,
+        )
+        tx_raw_output = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_tx.body",
+            txins=txins_filtered,
+            txouts=txouts_balanced,
+            tx_files=tx_files,
+            fee=fee,
+            ttl=ttl,
+        )
+        tx_signed_file = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            tx_name=temp_template,
+            signing_key_files=tx_files.signing_key_files,
+        )
+        cluster.submit_tx(tx_signed_file)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
+
 class TestNotBalanced:
     """Tests for not balanced transactions."""
 
@@ -693,7 +895,7 @@ class TestNotBalanced:
 
         src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
 
-        # use only the UTXO with highest amount
+        # use only the UTxO with highest amount
         txins = [src_addr_highest_utxo]
         # try to transfer +1 Lovelace more than available and use a negative change (-1)
         txouts = [
@@ -753,7 +955,7 @@ class TestNotBalanced:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.calculate_tx_ttl()
 
-        # use only the UTXO with highest amount
+        # use only the UTxO with highest amount
         txins = [src_addr_highest_utxo]
         txouts = [
             clusterlib.TxOut(address=dst_address, amount=transferred_amount),
@@ -1033,7 +1235,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
-        """Try to send funds from payment address to UTXO address.
+        """Try to send funds from payment address to UTxO address.
 
         Expect failure.
         """
