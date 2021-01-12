@@ -36,6 +36,12 @@ def pytest_addoption(parser: Any) -> None:
         default="",
         help="Path to directory for storing artifacts",
     )
+    parser.addoption(
+        "--skipall",
+        action="store_true",
+        default=False,
+        help="Skip all tests",
+    )
 
 
 def pytest_configure(config: Any) -> None:
@@ -44,6 +50,31 @@ def pytest_configure(config: Any) -> None:
     config._metadata["ghc"] = helpers.CARDANO_VERSION["ghc"]
     config._metadata["cardano-node-tests rev"] = helpers.CURRENT_COMMIT
     config._metadata["cardano-node-tests url"] = helpers.GITHUB_TREE_URL
+
+
+def _skip_all_tests(config: Any, items: list) -> None:
+    """Skip all tests if specified on command line.
+
+    Can be used for collecting all tests and having "skipped" result before running them for real.
+    This is useful when a test run is interrupted (for any reason) and needs to be restarted with
+    just tests that were not run yet.
+    """
+    # prevent on slave nodes (xdist)
+    if hasattr(config, "slaveinput"):
+        return
+
+    if not config.getvalue("skipall"):
+        return
+
+    marker = pytest.mark.skip(reason="collected, not run")
+
+    for item in items:
+        item.add_marker(marker)
+
+
+@pytest.mark.tryfirst
+def pytest_collection_modifyitems(config: Any, items: list) -> None:
+    _skip_all_tests(config=config, items=items)
 
 
 @pytest.fixture(scope="session")
