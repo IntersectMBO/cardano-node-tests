@@ -28,10 +28,10 @@ cardano\_node\_tests.tests.test\_kes module
    :undoc-members:
    :show-inheritance:
 
-cardano\_node\_tests.tests.test\_multisig module
-------------------------------------------------
+cardano\_node\_tests.tests.test\_native\_tokens module
+------------------------------------------------------
 
-.. automodule:: cardano_node_tests.tests.test_multisig
+.. automodule:: cardano_node_tests.tests.test_native_tokens
    :members:
    :undoc-members:
    :show-inheritance:
@@ -40,6 +40,22 @@ cardano\_node\_tests.tests.test\_pools module
 ---------------------------------------------
 
 .. automodule:: cardano_node_tests.tests.test_pools
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.tests.test\_protocol module
+------------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_protocol
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.tests.test\_scripts module
+-----------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_scripts
    :members:
    :undoc-members:
    :show-inheritance:

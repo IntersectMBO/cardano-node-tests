@@ -4,6 +4,14 @@ cardano\_node\_tests.utils package
 Submodules
 ----------
 
+cardano\_node\_tests.utils.cluster\_instances module
+----------------------------------------------------
+
+.. automodule:: cardano_node_tests.utils.cluster_instances
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 cardano\_node\_tests.utils.clusterlib module
 --------------------------------------------
 
@@ -32,6 +40,14 @@ cardano\_node\_tests.utils.helpers module
 -----------------------------------------
 
 .. automodule:: cardano_node_tests.utils.helpers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.utils.logfiles module
+------------------------------------------
+
+.. automodule:: cardano_node_tests.utils.logfiles
    :members:
    :undoc-members:
    :show-inheritance:
