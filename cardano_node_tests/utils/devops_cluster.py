@@ -26,6 +26,8 @@ ADDRS_DATA = "addrs_data.pickle"
 
 
 class Versions:
+    """Cluster era and transaction era determined from env variables, and node version."""
+
     BYRON = 1
     SHELLEY = 2
     ALLEGRA = 3
@@ -33,7 +35,9 @@ class Versions:
 
     def __init__(self) -> None:
         cluster_era = cluster_instances.CLUSTER_ERA
+        # if not specified otherwise, transaction era is the same as cluster era
         transaction_era = cluster_instances.TX_ERA or cluster_era
+
         self.cluster_era = getattr(self, cluster_era.upper(), 1)
         self.transaction_era = getattr(self, transaction_era.upper(), 1)
         self.node = version.parse(helpers.CARDANO_VERSION["cardano-node"])
