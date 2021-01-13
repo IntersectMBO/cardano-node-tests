@@ -41,7 +41,6 @@ cardano-cli byron genesis genesis \
   --n-poor-addresses 0 \
   --n-delegate-addresses "$NUM_BFT_NODES" \
   --total-balance "$INIT_SUPPLY" \
-  --byron-formats \
   --delegate-share 1 \
   --avvm-entry-count 0 \
   --avvm-entry-balance 0 \
@@ -81,10 +80,8 @@ do
 
   INDEX="$(printf "%03d" $((i - 1)))"
 
-  cardano-cli keygen \
-    --byron-formats \
-    --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key" \
-    --no-password
+  cardano-cli byron key keygen \
+    --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key"
 
   cardano-cli signing-key-address \
     --byron-formats \
