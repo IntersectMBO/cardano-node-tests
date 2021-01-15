@@ -334,7 +334,7 @@ class ClusterLib:
         self.query_cli(["protocol-parameters", *self.era_arg, "--out-file", str(self.pparams_file)])
 
     def get_utxo(self, address: str, coins: UnpackableSequence = ()) -> List[UTXOData]:
-        """Return UTXO info for payment address."""
+        """Return UTxO info for payment address."""
         utxo_dict = json.loads(
             self.query_cli(
                 ["utxo", "--address", address, *self.era_arg, "--out-file", "/dev/stdout"]
@@ -395,7 +395,7 @@ class ClusterLib:
     def gen_genesis_addr(
         self, addr_name: str, vkey_file: FileType, destination_dir: FileType = "."
     ) -> str:
-        """Generate genesis address."""
+        """Generate the address for an initial UTxO based on the verification key."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_genesis.addr"
 
@@ -422,7 +422,7 @@ class ClusterLib:
         stake_vkey_file: Optional[FileType] = None,
         destination_dir: FileType = ".",
     ) -> str:
-        """Generate payment address."""
+        """Generate a payment address, with optional delegation to a stake address."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}.addr"
 
@@ -448,7 +448,7 @@ class ClusterLib:
     def gen_stake_addr(
         self, addr_name: str, stake_vkey_file: FileType, destination_dir: FileType = "."
     ) -> str:
-        """Generate stake address."""
+        """Generate a stake address."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake.addr"
 
@@ -471,7 +471,7 @@ class ClusterLib:
     def gen_script_addr(
         self, addr_name: str, script_file: FileType, destination_dir: FileType = "."
     ) -> str:
-        """Generate multi-signature address."""
+        """Generate a script address."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_script.addr"
 
@@ -492,7 +492,7 @@ class ClusterLib:
         return read_address_from_file(out_file)
 
     def gen_payment_key_pair(self, key_name: str, destination_dir: FileType = ".") -> KeyPair:
-        """Generate payment key pair."""
+        """Generate an address key pair."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{key_name}.vkey"
         skey = destination_dir / f"{key_name}.skey"
@@ -511,7 +511,7 @@ class ClusterLib:
         return KeyPair(vkey, skey)
 
     def gen_stake_key_pair(self, key_name: str, destination_dir: FileType = ".") -> KeyPair:
-        """Generate stake key pair."""
+        """Generate a stake address key pair."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{key_name}_stake.vkey"
         skey = destination_dir / f"{key_name}_stake.skey"
@@ -557,7 +557,7 @@ class ClusterLib:
         )
 
     def gen_kes_key_pair(self, node_name: str, destination_dir: FileType = ".") -> KeyPair:
-        """Generate KES key pair."""
+        """Generate a key pair for a node KES operational key."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{node_name}_kes.vkey"
         skey = destination_dir / f"{node_name}_kes.skey"
@@ -576,7 +576,7 @@ class ClusterLib:
         return KeyPair(vkey, skey)
 
     def gen_vrf_key_pair(self, node_name: str, destination_dir: FileType = ".") -> KeyPair:
-        """Generate VRF key pair."""
+        """Generate a key pair for a node VRF operational key."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{node_name}_vrf.vkey"
         skey = destination_dir / f"{node_name}_vrf.skey"
@@ -597,7 +597,7 @@ class ClusterLib:
     def gen_cold_key_pair_and_counter(
         self, node_name: str, destination_dir: FileType = "."
     ) -> ColdKeyPair:
-        """Generate cold key pair and counter."""
+        """Generate a key pair for operator's offline key and a new certificate issue counter."""
         destination_dir = Path(destination_dir).expanduser()
         vkey = destination_dir / f"{node_name}_cold.vkey"
         skey = destination_dir / f"{node_name}_cold.skey"
@@ -627,7 +627,7 @@ class ClusterLib:
         kes_period: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> Path:
-        """Generate node operational certificate.
+        """Generate a node operational certificate.
 
         This certificate is used when starting the node and not submitted through a transaction.
         """
@@ -657,7 +657,7 @@ class ClusterLib:
     def gen_stake_addr_registration_cert(
         self, addr_name: str, stake_vkey_file: FileType, destination_dir: FileType = "."
     ) -> Path:
-        """Generate stake address registration certificate."""
+        """Generate a stake address registration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake_reg.cert"
         self.cli(
@@ -677,7 +677,7 @@ class ClusterLib:
     def gen_stake_addr_deregistration_cert(
         self, addr_name: str, stake_vkey_file: FileType, destination_dir: FileType = "."
     ) -> Path:
-        """Generate stake address deregistration certificate."""
+        """Generate a stake address deregistration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake_dereg.cert"
         self.cli(
@@ -702,7 +702,7 @@ class ClusterLib:
         stake_pool_id: Optional[str] = None,
         destination_dir: FileType = ".",
     ) -> Path:
-        """Generate stake address delegation certificate."""
+        """Generate a stake address delegation certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{addr_name}_stake_deleg.cert"
 
@@ -735,7 +735,7 @@ class ClusterLib:
         return out_file
 
     def gen_pool_metadata_hash(self, pool_metadata_file: FileType) -> str:
-        """Generate hash of pool metadata."""
+        """Generate the hash of pool metadata."""
         return (
             self.cli(
                 ["stake-pool", "metadata-hash", "--pool-metadata-file", str(pool_metadata_file)]
@@ -753,7 +753,7 @@ class ClusterLib:
         reward_account_vkey_file: Optional[FileType] = None,
         destination_dir: FileType = ".",
     ) -> Path:
-        """Generate pool registration certificate."""
+        """Generate a stake pool registration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{pool_data.pool_name}_pool_reg.cert"
 
@@ -810,7 +810,7 @@ class ClusterLib:
     def gen_pool_deregistration_cert(
         self, pool_name: str, cold_vkey_file: FileType, epoch: int, destination_dir: FileType = "."
     ) -> Path:
-        """Generate pool deregistration certificate."""
+        """Generate a stake pool deregistration certificate."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{pool_name}_pool_dereg.cert"
         self.cli(
@@ -833,7 +833,7 @@ class ClusterLib:
         self,
         payment_vkey_file: FileType,
     ) -> str:
-        """Return payment vkey hash."""
+        """Return the hash of an address key."""
         return (
             self.cli(
                 ["address", "key-hash", "--payment-verification-key-file", str(payment_vkey_file)]
@@ -843,15 +843,15 @@ class ClusterLib:
         )
 
     def get_ledger_state(self) -> dict:
-        """Return ledger state info."""
+        """Return the current ledger state info."""
         return json.loads(self.query_cli(["ledger-state", *self.era_arg]))  # type: ignore
 
     def get_protocol_state(self) -> dict:
-        """Return protocol state info."""
+        """Return the current protocol state info."""
         return json.loads(self.query_cli(["protocol-state", *self.era_arg]))  # type: ignore
 
     def get_protocol_params(self) -> dict:
-        """Return protocol parameters info."""
+        """Return the current protocol parameters."""
         self.refresh_pparams_file()
         with open(self.pparams_file) as in_json:
             return json.load(in_json)  # type: ignore
@@ -864,7 +864,7 @@ class ClusterLib:
         return registered_pools_details  # type: ignore
 
     def get_stake_pool_id(self, pool_cold_vkey_file: FileType) -> str:
-        """Return ID of stake pool."""
+        """Return pool id from the offline key."""
         pool_id = (
             self.cli(["stake-pool", "id", "--cold-verification-key-file", str(pool_cold_vkey_file)])
             .stdout.strip()
@@ -873,7 +873,7 @@ class ClusterLib:
         return pool_id
 
     def get_stake_addr_info(self, stake_addr: str) -> StakeAddrInfo:
-        """Return info about stake pool address."""
+        """Return the current delegations and reward accounts filtered by stake address."""
         output_json = json.loads(
             self.query_cli(["stake-address-info", *self.era_arg, "--address", stake_addr])
         )
@@ -899,7 +899,7 @@ class ClusterLib:
         return int(self.get_protocol_params()["poolDeposit"])
 
     def get_stake_distribution(self) -> dict:
-        """Return info about stake distribution per stake pool."""
+        """Return current aggregated stake distribution per stake pool."""
         # stake pool values are displayed starting with line 2 from the command output
         result = self.query_cli(["stake-distribution", *self.era_arg]).splitlines()[2:]
         stake_distribution = {}
@@ -921,13 +921,13 @@ class ClusterLib:
         return int(self.get_last_block_slot_no() // self.epoch_length)
 
     def get_address_balance(self, address: str, coin: str = DEFAULT_COIN) -> int:
-        """Return total balance of an address (sum of all UTXO balances)."""
+        """Return total balance of an address (sum of all UTxO balances)."""
         utxo = self.get_utxo(address, coins=[coin])
         address_balance = functools.reduce(lambda x, y: x + y.amount, utxo, 0)
         return int(address_balance)
 
     def get_utxo_with_highest_amount(self, address: str, coin: str = DEFAULT_COIN) -> UTXOData:
-        """Return data for UTXO with highest amount."""
+        """Return data for UTxO with highest amount."""
         utxo = self.get_utxo(address, coins=[coin])
         highest_amount_rec = max(utxo, key=lambda x: x.amount)
         return highest_amount_rec
@@ -941,7 +941,7 @@ class ClusterLib:
         return int(self.get_last_block_slot_no() // self.slots_per_kes_period)
 
     def get_txid(self, tx_body_file: FileType) -> str:
-        """Get txid trom transaction body."""
+        """Get the transaction identifier trom transaction body."""
         return (
             self.cli(["transaction", "txid", "--tx-body-file", str(tx_body_file)])
             .stdout.rstrip()
@@ -1231,7 +1231,7 @@ class ClusterLib:
         mint: OptionalTxOuts = (),
         join_txouts: bool = True,
     ) -> TxRawOutput:
-        """Build raw transaction."""
+        """Build a raw transaction."""
         # pylint: disable=too-many-arguments
         out_file = Path(out_file)
 
@@ -1318,7 +1318,7 @@ class ClusterLib:
         join_txouts: bool = True,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
-        """Figure out all the missing data and build raw transaction."""
+        """Figure out all the missing data and build a raw transaction."""
         # pylint: disable=too-many-arguments
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.body"
@@ -1362,7 +1362,7 @@ class ClusterLib:
         witness_count: int = 1,
         byron_witness_count: int = 0,
     ) -> int:
-        """Estimate fee of a transaction."""
+        """Estimate the minimum fee for a transaction."""
         self.refresh_pparams_file()
         stdout = self.cli(
             [
@@ -1402,7 +1402,7 @@ class ClusterLib:
         join_txouts: bool = True,
         destination_dir: FileType = ".",
     ) -> int:
-        """Build "dummy" transaction and calculate it's fee."""
+        """Build "dummy" transaction and calculate (estimate) it's fee."""
         # pylint: disable=too-many-arguments
         tx_files = tx_files or TxFiles()
         tx_name = f"{tx_name}_estimate"
@@ -1446,7 +1446,7 @@ class ClusterLib:
         script_files: OptionalFiles = (),
         destination_dir: FileType = ".",
     ) -> Path:
-        """Sign transaction."""
+        """Sign a transaction."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.signed"
 
@@ -1476,7 +1476,7 @@ class ClusterLib:
         script_file: Optional[FileType] = None,
         destination_dir: FileType = ".",
     ) -> Path:
-        """Witness transaction."""
+        """Create a transaction witness."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.witness"
 
@@ -1509,7 +1509,7 @@ class ClusterLib:
         tx_name: str,
         destination_dir: FileType = ".",
     ) -> Path:
-        """Assemble transaction from TX body and a set of witnesses."""
+        """Assemble a tx body and witness(es) to form a transaction."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_tx.witnessed"
 
@@ -1529,7 +1529,7 @@ class ClusterLib:
         return out_file
 
     def submit_tx(self, tx_file: FileType) -> None:
-        """Submit transaction."""
+        """Submit a transaction."""
         self.cli(
             [
                 "transaction",
@@ -1559,7 +1559,7 @@ class ClusterLib:
         join_txouts: bool = True,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
-        """Build, Sign and Send transaction to chain."""
+        """Build, Sign and Send a transaction."""
         # pylint: disable=too-many-arguments
         tx_files = tx_files or TxFiles()
 
@@ -1616,7 +1616,7 @@ class ClusterLib:
         slot_type_arg: str = "",
         destination_dir: FileType = ".",
     ) -> Path:
-        """Build multi-signature script."""
+        """Build a multi-signature script."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{script_name}_multisig.script"
 
@@ -1657,7 +1657,7 @@ class ClusterLib:
         tx_name: str,
         destination_dir: FileType = ".",
     ) -> Path:
-        """Create update proposal."""
+        """Create an update proposal."""
         destination_dir = Path(destination_dir).expanduser()
         out_file = destination_dir / f"{tx_name}_update.proposal"
 
@@ -1686,7 +1686,7 @@ class ClusterLib:
         epoch: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> TxRawOutput:
-        """Submit update proposal."""
+        """Submit an update proposal."""
         # TODO: assumption is update proposals submitted near beginning of epoch
         epoch = epoch if epoch is not None else self.get_last_block_epoch()
 
@@ -1800,7 +1800,7 @@ class ClusterLib:
         deposit: Optional[int] = None,
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawOutput]:
-        """Register stake pool."""
+        """Register a stake pool."""
         tx_name = f"{tx_name}_reg_pool"
         pool_reg_cert_file = self.gen_pool_registration_cert(
             pool_data=pool_data,
@@ -1841,7 +1841,7 @@ class ClusterLib:
         tx_name: str,
         destination_dir: FileType = ".",
     ) -> Tuple[Path, TxRawOutput]:
-        """Deregister stake pool."""
+        """Deregister a stake pool."""
         tx_name = f"{tx_name}_dereg_pool"
         LOGGER.debug(
             f"Deregistering stake pool starting with epoch: {epoch}; "
@@ -1881,7 +1881,7 @@ class ClusterLib:
         tx_name: str,
         destination_dir: FileType = ".",
     ) -> PoolCreationOutput:
-        """Create and register stake pool."""
+        """Create and register a stake pool."""
         # create the KES key pair
         node_kes = self.gen_kes_key_pair(
             node_name=pool_data.pool_name,
