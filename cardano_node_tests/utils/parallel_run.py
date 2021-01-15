@@ -528,9 +528,14 @@ class _ClusterGetter:
 
     def _reuse_dev_cluster(self) -> clusterlib.ClusterLib:
         """Reuse cluster that was already started outside of test framework."""
-        self.cm._cluster_instance = 0
+        instance_num = 0
+        self.cm._cluster_instance = instance_num
         cluster_env = devops_cluster.get_cluster_env()
         state_dir = Path(cluster_env["state_dir"])
+
+        # make sure instance dir exists
+        instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        instance_dir.mkdir(exist_ok=True, parents=True)
 
         cluster_obj = self.cm.cache.cluster_obj
         if not cluster_obj:
