@@ -72,6 +72,7 @@ def _mint_or_burn_witness(
         src_address=src_address,
         tx_name=temp_template,
         ttl=ttl,
+        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add=len(issuers_skey_files),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
@@ -143,6 +144,8 @@ def _mint_or_burn_sign(
         tx_name=temp_template,
         tx_files=tx_files,
         ttl=ttl,
+        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+        witness_count_add=len(issuers_skey_files),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
