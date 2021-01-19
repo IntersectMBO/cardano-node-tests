@@ -125,6 +125,13 @@ class PoolCreationOutput(NamedTuple):
     kes_key_pair: Optional[KeyPair] = None
 
 
+class GenesisKeys(NamedTuple):
+    genesis_utxo_vkey: Path
+    genesis_utxo_skey: Path
+    genesis_vkeys: List[Path]
+    delegate_skeys: List[Path]
+
+
 class Protocols:
     CARDANO = "cardano"
     SHELLEY = "shelley"
@@ -177,16 +184,11 @@ class ClusterLib:
         tx_era: str = "",
     ):
         self.cli_coverage: dict = {}
-
-        _rand_str = get_rand_str(4)
+        self._rand_str = get_rand_str(4)
 
         self.state_dir = Path(state_dir).expanduser().resolve()
         self.genesis_json = self.state_dir / "shelley" / "genesis.json"
-        self.genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
-        self.genesis_utxo_skey = self.state_dir / "shelley" / "genesis-utxo.skey"
-        self.genesis_vkeys = list(self.state_dir.glob("shelley/genesis-keys/genesis?.vkey"))
-        self.delegate_skeys = list(self.state_dir.glob("shelley/delegate-keys/delegate?.skey"))
-        self.pparams_file = self.state_dir / f"pparams-{_rand_str}.json"
+        self.pparams_file = self.state_dir / f"pparams-{self._rand_str}.json"
         self._check_state_dir()
 
         with open(self.genesis_json) as in_json:
@@ -200,11 +202,6 @@ class ClusterLib:
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
 
         self.ttl_length = 1000
-        self.genesis_utxo_addr = self.gen_genesis_addr(
-            addr_name=f"genesis-{_rand_str}",
-            vkey_file=self.genesis_utxo_vkey,
-            destination_dir=self.state_dir,
-        )
 
         self.era = era
         self.era_arg = [f"--{self.era}-era"] if self.era else []
@@ -214,22 +211,15 @@ class ClusterLib:
         self.protocol = protocol
         self._check_protocol()
 
+        self._genesis_keys: Optional[GenesisKeys] = None
+        self._genesis_utxo_addr: str = ""
+
     def _check_state_dir(self) -> None:
         """Check that all files expected by `__init__` are present."""
         if not self.state_dir.exists():
             raise CLIError(f"The state dir `{self.state_dir}` doesn't exist.")
-        if not self.genesis_vkeys:
-            raise CLIError("The genesis verification keys don't exist.")
-        if not self.delegate_skeys:
-            raise CLIError("The delegation signing keys don't exist.")
-
-        for file_name in (
-            self.genesis_json,
-            self.genesis_utxo_vkey,
-            self.genesis_utxo_skey,
-        ):
-            if not file_name.exists():
-                raise CLIError(f"The file `{file_name}` doesn't exist.")
+        if not self.genesis_json.exists():
+            raise CLIError(f"The genesis JSON file `{self.genesis_json}` doesn't exist.")
 
     def _check_protocol(self) -> None:
         """Check that the cluster is running with the expected protocol."""
@@ -241,6 +231,54 @@ class ClusterLib:
             raise CLIError(
                 f"The cluster is running with protocol different from '{self.protocol}'."
             ) from exc
+
+    @property
+    def genesis_keys(self) -> GenesisKeys:
+        """Return tuple with genesis-related keys."""
+        if self._genesis_keys:
+            return self._genesis_keys
+
+        genesis_utxo_vkey = self.state_dir / "shelley" / "genesis-utxo.vkey"
+        genesis_utxo_skey = self.state_dir / "shelley" / "genesis-utxo.skey"
+        genesis_vkeys = list(self.state_dir.glob("shelley/genesis-keys/genesis?.vkey"))
+        delegate_skeys = list(self.state_dir.glob("shelley/delegate-keys/delegate?.skey"))
+
+        if not genesis_vkeys:
+            raise CLIError("The genesis verification keys don't exist.")
+        if not delegate_skeys:
+            raise CLIError("The delegation signing keys don't exist.")
+
+        for file_name in (
+            genesis_utxo_vkey,
+            genesis_utxo_skey,
+        ):
+            if not file_name.exists():
+                raise CLIError(f"The file `{file_name}` doesn't exist.")
+
+        genesis_keys = GenesisKeys(
+            genesis_utxo_vkey=genesis_utxo_skey,
+            genesis_utxo_skey=genesis_utxo_skey,
+            genesis_vkeys=genesis_vkeys,
+            delegate_skeys=delegate_skeys,
+        )
+
+        self._genesis_keys = genesis_keys
+
+        return genesis_keys
+
+    @property
+    def genesis_utxo_addr(self) -> str:
+        """Produce a genesis UTxO address."""
+        if self._genesis_utxo_addr:
+            return self._genesis_utxo_addr
+
+        self._genesis_utxo_addr = self.gen_genesis_addr(
+            addr_name=f"genesis-{self._rand_str}",
+            vkey_file=self.genesis_keys.genesis_utxo_vkey,
+            destination_dir=self.state_dir,
+        )
+
+        return self._genesis_utxo_addr
 
     def _check_outfiles(self, *out_files: FileType) -> None:
         """Check that the expected output files were created."""
@@ -1670,7 +1708,9 @@ class ClusterLib:
                 str(out_file),
                 "--epoch",
                 str(epoch),
-                *self._prepend_flag("--genesis-verification-key-file", self.genesis_vkeys),
+                *self._prepend_flag(
+                    "--genesis-verification-key-file", self.genesis_keys.genesis_vkeys
+                ),
             ]
         )
 
@@ -1702,7 +1742,7 @@ class ClusterLib:
             tx_name=f"{tx_name}_submit_proposal",
             tx_files=TxFiles(
                 proposal_files=[out_file],
-                signing_key_files=[*self.delegate_skeys, Path(src_skey_file)],
+                signing_key_files=[*self.genesis_keys.delegate_skeys, Path(src_skey_file)],
             ),
             destination_dir=destination_dir,
         )
