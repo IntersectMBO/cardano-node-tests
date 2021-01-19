@@ -208,7 +208,7 @@ class TestMinting:
     def test_minting_and_burning_witnesses(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting and burning of tokens, sign using witnesses."""
+        """Test minting and burning of tokens, sign the transaction using witnesses."""
         temp_template = helpers.get_func_name()
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 5
@@ -264,7 +264,7 @@ class TestMinting:
     def test_minting_and_burning_sign(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting and burning of tokens, sign using skeys."""
+        """Test minting and burning of tokens, sign the transaction using skeys."""
         temp_template = helpers.get_func_name()
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 5
@@ -320,7 +320,7 @@ class TestMinting:
     def test_multi_minting_and_burning_witnesses(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting and burning multiple tokens, sign using witnesses."""
+        """Test minting and burning multiple different tokens, sign the TX using witnesses."""
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(4)
         amount = 5
@@ -383,7 +383,7 @@ class TestMinting:
     def testmulti_minting_and_burning_sign(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting and burning multiple tokens, sign using skeys."""
+        """Test minting and burning multiple different tokens, sign the TX using skeys."""
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(4)
         amount = 5
@@ -611,7 +611,7 @@ class TestTransfer:
         new_token: TokenRecord,
         amount: int,
     ):
-        """Send tokens to payment address.
+        """Test sending tokens to payment address.
 
         * send tokens from 1 source address to 1 destination address
         * check expected token balances for both source and destination addresses
@@ -658,7 +658,7 @@ class TestTransfer:
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: TokenRecord,
     ):
-        """Send multiple different tokens to payment address.
+        """Test sending multiple different tokens to payment address.
 
         * send multiple different tokens from 1 source address to 1 destination address
         * check expected token balances for both source and destination addresses for each token
