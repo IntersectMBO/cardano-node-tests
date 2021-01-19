@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 from typing import List
 from typing import NamedTuple
+from typing import Optional
 
 import allure
 import pytest
@@ -52,10 +53,39 @@ def temp_dir(create_temp_dir: Path):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
+@pytest.fixture
+def issuers_addrs(
+    cluster_manager: parallel_run.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> List[clusterlib.AddressRecord]:
+    """Create new issuers addresses."""
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"token_minting_ci{cluster_manager.cluster_instance}_{i}" for i in range(3)],
+            cluster_obj=cluster,
+        )
+        fixture_cache.value = addrs
+
+    # fund source addresses
+    clusterlib_utils.fund_from_faucet(
+        addrs[0],
+        cluster_obj=cluster,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        amount=20_000_000,
+    )
+
+    return addrs
+
+
 def _mint_or_burn_witness(
     cluster_obj: clusterlib.ClusterLib,
     new_tokens: List[TokenRecord],
     temp_template: str,
+    invalid_hereafter: Optional[int] = None,
+    invalid_before: Optional[int] = None,
 ) -> None:
     """Mint of burn tokens, based on the `amount value`. Sign using witnesses.
 
@@ -80,6 +110,8 @@ def _mint_or_burn_witness(
         tx_name=temp_template,
         fee=fee,
         ttl=ttl,
+        invalid_hereafter=invalid_hereafter,
+        invalid_before=invalid_before,
         mint=[
             clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
             for n in new_tokens
@@ -175,34 +207,7 @@ def _mint_or_burn_sign(
     reason="runs on version >= 1.24.0 and with Mary+ TX",
 )
 class TestMinting:
-    """Tests for minting nad burning tokens."""
-
-    @pytest.fixture
-    def issuers_addrs(
-        self,
-        cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
-        """Create new issuers addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"token_minting_ci{cluster_manager.cluster_instance}_{i}" for i in range(3)],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
-            cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=20_000_000,
-        )
-
-        return addrs
+    """Tests for minting and burning tokens."""
 
     @allure.link(helpers.get_vcs_link())
     def test_minting_and_burning_witnesses(
@@ -501,6 +506,421 @@ class TestMinting:
         assert (
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not burned"
+
+
+@pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
+    reason="runs on version >= 1.24.0 and with Mary+ TX",
+)
+class TestPolicies:
+    """Tests for minting and burning tokens using minting policies."""
+
+    @allure.link(helpers.get_vcs_link())
+    def test_valid_policy_after(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test minting and burning tokens after given slot."""
+        temp_template = helpers.get_func_name()
+        rand = clusterlib.get_rand_str(4)
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files[1:],
+            slot=100,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+        policyid = cluster.get_policyid(multisig_script)
+
+        tokens_to_mint = []
+        for tnum in range(5):
+            asset_name = f"couttscoin{rand}{tnum}"
+            token = f"{policyid}.{asset_name}"
+
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[token]
+            ), "The token already exists"
+
+            tokens_to_mint.append(
+                TokenRecord(
+                    token=token,
+                    asset_name=asset_name,
+                    amount=amount,
+                    issuers_addrs=issuers_addrs,
+                    token_mint_addr=token_mint_addr,
+                    script=multisig_script,
+                )
+            )
+
+        # token minting
+        _mint_or_burn_witness(
+            cluster_obj=cluster,
+            new_tokens=tokens_to_mint,
+            temp_template=f"{temp_template}_mint",
+            invalid_before=100,
+            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
+        )
+
+        for t in tokens_to_mint:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
+
+        # token burning
+        tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
+        _mint_or_burn_witness(
+            cluster_obj=cluster,
+            new_tokens=tokens_to_burn,
+            temp_template=f"{temp_template}_burn",
+            invalid_before=100,
+            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
+        )
+
+        for t in tokens_to_burn:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert not token_utxo, "The token was not burnt"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_valid_policy_before(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test minting and burning tokens before given slot."""
+        temp_template = helpers.get_func_name()
+        rand = clusterlib.get_rand_str(4)
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+
+        before_slot = cluster.get_tip()["slotNo"] + 10_000
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files[1:],
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+        )
+        policyid = cluster.get_policyid(multisig_script)
+
+        tokens_to_mint = []
+        for tnum in range(5):
+            asset_name = f"couttscoin{rand}{tnum}"
+            token = f"{policyid}.{asset_name}"
+
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[token]
+            ), "The token already exists"
+
+            tokens_to_mint.append(
+                TokenRecord(
+                    token=token,
+                    asset_name=asset_name,
+                    amount=amount,
+                    issuers_addrs=issuers_addrs,
+                    token_mint_addr=token_mint_addr,
+                    script=multisig_script,
+                )
+            )
+
+        # token minting
+        _mint_or_burn_witness(
+            cluster_obj=cluster,
+            new_tokens=tokens_to_mint,
+            temp_template=f"{temp_template}_mint",
+            invalid_before=100,
+            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
+        )
+
+        for t in tokens_to_mint:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
+
+        # token burning
+        tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
+        _mint_or_burn_witness(
+            cluster_obj=cluster,
+            new_tokens=tokens_to_burn,
+            temp_template=f"{temp_template}_burn",
+            invalid_before=100,
+            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
+        )
+
+        for t in tokens_to_burn:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert not token_utxo, "The token was not burnt"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_policy_before_past(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test that it's NOT possible to mint tokens when the "before" slot is in the past."""
+        temp_template = helpers.get_func_name()
+        rand = clusterlib.get_rand_str(4)
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+
+        before_slot = cluster.get_tip()["slotNo"] - 1
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files[1:],
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+        )
+        policyid = cluster.get_policyid(multisig_script)
+
+        tokens_to_mint = []
+        for tnum in range(5):
+            asset_name = f"couttscoin{rand}{tnum}"
+            token = f"{policyid}.{asset_name}"
+
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[token]
+            ), "The token already exists"
+
+            tokens_to_mint.append(
+                TokenRecord(
+                    token=token,
+                    asset_name=asset_name,
+                    amount=amount,
+                    issuers_addrs=issuers_addrs,
+                    token_mint_addr=token_mint_addr,
+                    script=multisig_script,
+                )
+            )
+
+        # token minting - valid range, slot is already in the past
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _mint_or_burn_witness(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_mint,
+                temp_template=f"{temp_template}_mint",
+                invalid_before=1,
+                invalid_hereafter=before_slot,
+            )
+        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+
+        # token minting - invalid range, slot is already in the past
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _mint_or_burn_witness(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_mint,
+                temp_template=f"{temp_template}_mint",
+                invalid_before=1,
+                invalid_hereafter=before_slot + 1,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+        for t in tokens_to_mint:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert not token_utxo, "The token was minted unexpectedly"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_policy_before_future(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test that it's NOT possible to mint tokens.
+
+        The "before" slot is in the future and the given range is invalid.
+        """
+        temp_template = helpers.get_func_name()
+        rand = clusterlib.get_rand_str(4)
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+
+        before_slot = cluster.get_tip()["slotNo"] + 10_000
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files[1:],
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+        )
+        policyid = cluster.get_policyid(multisig_script)
+
+        tokens_to_mint = []
+        for tnum in range(5):
+            asset_name = f"couttscoin{rand}{tnum}"
+            token = f"{policyid}.{asset_name}"
+
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[token]
+            ), "The token already exists"
+
+            tokens_to_mint.append(
+                TokenRecord(
+                    token=token,
+                    asset_name=asset_name,
+                    amount=amount,
+                    issuers_addrs=issuers_addrs,
+                    token_mint_addr=token_mint_addr,
+                    script=multisig_script,
+                )
+            )
+
+        # token minting - invalid range, slot is in the future
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _mint_or_burn_witness(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_mint,
+                temp_template=f"{temp_template}_mint",
+                invalid_before=1,
+                invalid_hereafter=before_slot + 1,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+        for t in tokens_to_mint:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert not token_utxo, "The token was minted unexpectedly"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_policy_after_future(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test that it's NOT possible to mint tokens.
+
+        The "after" slot is in the future and the given range is invalid.
+        """
+        temp_template = helpers.get_func_name()
+        rand = clusterlib.get_rand_str(4)
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+
+        after_slot = cluster.get_tip()["slotNo"] + 10_000
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files[1:],
+            slot=after_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+        policyid = cluster.get_policyid(multisig_script)
+
+        tokens_to_mint = []
+        for tnum in range(5):
+            asset_name = f"couttscoin{rand}{tnum}"
+            token = f"{policyid}.{asset_name}"
+
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[token]
+            ), "The token already exists"
+
+            tokens_to_mint.append(
+                TokenRecord(
+                    token=token,
+                    asset_name=asset_name,
+                    amount=amount,
+                    issuers_addrs=issuers_addrs,
+                    token_mint_addr=token_mint_addr,
+                    script=multisig_script,
+                )
+            )
+
+        # token minting - valid range, slot is in the future
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _mint_or_burn_witness(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_mint,
+                temp_template=f"{temp_template}_mint",
+                invalid_before=after_slot,
+                invalid_hereafter=after_slot + 100,
+            )
+        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+
+        # token minting - invalid range, slot is in the future
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _mint_or_burn_witness(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_mint,
+                temp_template=f"{temp_template}_mint",
+                invalid_before=1,
+                invalid_hereafter=after_slot,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+        for t in tokens_to_mint:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert not token_utxo, "The token was minted unexpectedly"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_policy_after_past(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test that it's NOT possible to mint tokens.
+
+        The "after" slot is in the past.
+        """
+        temp_template = helpers.get_func_name()
+        rand = clusterlib.get_rand_str(4)
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+
+        after_slot = cluster.get_tip()["slotNo"] - 1
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files[1:],
+            slot=after_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+        policyid = cluster.get_policyid(multisig_script)
+
+        tokens_to_mint = []
+        for tnum in range(5):
+            asset_name = f"couttscoin{rand}{tnum}"
+            token = f"{policyid}.{asset_name}"
+
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[token]
+            ), "The token already exists"
+
+            tokens_to_mint.append(
+                TokenRecord(
+                    token=token,
+                    asset_name=asset_name,
+                    amount=amount,
+                    issuers_addrs=issuers_addrs,
+                    token_mint_addr=token_mint_addr,
+                    script=multisig_script,
+                )
+            )
+
+        # token minting - valid slot, invalid range - `invalid_hereafter` is in the past
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _mint_or_burn_witness(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_mint,
+                temp_template=f"{temp_template}_mint",
+                invalid_before=1,
+                invalid_hereafter=after_slot,
+            )
+        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+        for t in tokens_to_mint:
+            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert not token_utxo, "The token was minted unexpectedly"
 
 
 @pytest.mark.skipif(
