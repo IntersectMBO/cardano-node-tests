@@ -110,9 +110,9 @@ def cluster_cleanup(
     pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
 
     if not worker_id or worker_id == "master":
-        # cluster was started outside of test framework, do nothing
+        # if cluster was started outside of test framework, do nothing
         if parallel_run.DEV_CLUSTER_RUNNING:
-            # TODO: check if socket is open and print error of not
+            # TODO: check that socket is open and print error if not
             yield
             return
 
@@ -154,7 +154,7 @@ def cluster_cleanup(
 
 @pytest.fixture(scope="session", autouse=True)
 def session_autouse(change_dir: Any, cluster_cleanup: Any) -> None:
-    """Autouse required session fixtures."""
+    """Autouse session fixtures that are required for session setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
     pass
 
@@ -165,6 +165,7 @@ def cluster_manager(
     worker_id: str,
     request: FixtureRequest,
 ) -> Generator[parallel_run.ClusterManager, None, None]:
+    """Return instance of `parallel_run.ClusterManager`."""
     cluster_manager_obj = parallel_run.ClusterManager(
         tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
     )
@@ -176,4 +177,5 @@ def cluster_manager(
 def cluster(
     cluster_manager: parallel_run.ClusterManager,
 ) -> clusterlib.ClusterLib:
+    """Return instance of `clusterlib.ClusterLib`."""
     return cluster_manager.get()
