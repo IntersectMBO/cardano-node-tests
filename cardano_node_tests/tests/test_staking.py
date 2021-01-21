@@ -702,7 +702,7 @@ class TestRewards:
         pool_reward_addr_dec = helpers.decode_bech32(pool_reward.stake.address)[2:]
         pool_stake_addr_dec = helpers.decode_bech32(pool_owner.stake.address)[2:]
 
-        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 8
+        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 10
         if sleep_time > 0:
             time.sleep(sleep_time)
 
@@ -732,6 +732,11 @@ class TestRewards:
             pool_name=pool_name,
             check_delegation=False,
         )
+
+        # make sure we managed to finish registration in the expected epoch
+        assert (
+            cluster.get_last_block_epoch() == init_epoch
+        ), "Registration took longer than expected and would affect other checks"
 
         user_stake_addr_dec = helpers.decode_bech32(pool_user.stake.address)[2:]
         user_payment_balance = cluster.get_address_balance(pool_user.payment.address)
