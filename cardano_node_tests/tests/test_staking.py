@@ -702,9 +702,11 @@ class TestRewards:
         pool_reward_addr_dec = helpers.decode_bech32(pool_reward.stake.address)[2:]
         pool_stake_addr_dec = helpers.decode_bech32(pool_owner.stake.address)[2:]
 
-        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 10
-        if sleep_time > 0:
-            time.sleep(sleep_time)
+        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        if sleep_time < 0:
+            cluster.wait_for_new_epoch()
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        time.sleep(sleep_time)
 
         init_epoch = cluster.get_last_block_epoch()
         user_rewards = [(init_epoch, 0, 0)]
@@ -969,9 +971,9 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 10
-            if sleep_time > 0:
-                time.sleep(sleep_time)
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+            assert sleep_time >= 0, "Not enough time left in epoch"
+            time.sleep(sleep_time)
 
             this_epoch = cluster.get_last_block_epoch()
 
