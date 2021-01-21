@@ -10,17 +10,15 @@ ALLURE_DIR ?= .reports/
 .dirs:
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(ALLURE_DIR)
 
-.clean_allure:
-	rm -f $(ALLURE_DIR)/{*-attachment.txt,*-result.json,*-container.json}
-
 .docs_build_dir:
 	mkdir -p docs/build
 
 # run all tests, generate allure report
 TEST_THREADS ?= 15
-tests: .dirs .clean_allure
+tests: .dirs
 # First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.
 ifndef PYTEST_ARGS
+	rm -f $(ALLURE_DIR)/{*-attachment.txt,*-result.json,*-container.json}
 	pytest -s cardano_node_tests --skipall --alluredir=$(ALLURE_DIR) >/dev/null
 endif
 # run tests for real and produce Allure results
