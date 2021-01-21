@@ -929,6 +929,8 @@ class TestRewards:
             sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
         time.sleep(sleep_time)
 
+        init_epoch = cluster.get_last_block_epoch()
+
         # update the pool parameters by resubmitting the pool registration certificate
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
@@ -942,7 +944,6 @@ class TestRewards:
 
         cluster_manager.set_needs_restart()  # changing pool configuration, restart needed
 
-        init_epoch = cluster.get_last_block_epoch()
         owner_rewards = [
             (
                 init_epoch,
@@ -958,6 +959,11 @@ class TestRewards:
         ledger_state: dict = cluster.get_ledger_state()
         es_snapshots = {init_epoch: ledger_state["nesEs"]["esSnapshots"]}
         rs_records = {init_epoch: ledger_state["nesRu"]["rs"]}
+
+        # make sure we managed to finish pool update in the expected epoch
+        assert (
+            cluster.get_last_block_epoch() == init_epoch
+        ), "Pool update took longer than expected and would affect other checks"
 
         LOGGER.info("Checking rewards for 9 epochs.")
         for __ in range(9):
