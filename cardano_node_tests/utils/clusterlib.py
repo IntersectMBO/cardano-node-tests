@@ -428,7 +428,8 @@ class ClusterLib:
 
     def get_tip(self) -> dict:
         """Return current tip - last block successfully applied to the ledger."""
-        return json.loads(self.query_cli(["tip"]))  # type: ignore
+        tip: dict = json.loads(self.query_cli(["tip"]))
+        return tip
 
     def gen_genesis_addr(
         self, addr_name: str, vkey_file: FileType, destination_dir: FileType = "."
@@ -882,24 +883,27 @@ class ClusterLib:
 
     def get_ledger_state(self) -> dict:
         """Return the current ledger state info."""
-        return json.loads(self.query_cli(["ledger-state", *self.era_arg]))  # type: ignore
+        ledger_state: dict = json.loads(self.query_cli(["ledger-state", *self.era_arg]))
+        return ledger_state
 
     def get_protocol_state(self) -> dict:
         """Return the current protocol state info."""
-        return json.loads(self.query_cli(["protocol-state", *self.era_arg]))  # type: ignore
+        protocol_state: dict = json.loads(self.query_cli(["protocol-state", *self.era_arg]))
+        return protocol_state
 
     def get_protocol_params(self) -> dict:
         """Return the current protocol parameters."""
         self.refresh_pparams_file()
         with open(self.pparams_file) as in_json:
-            return json.load(in_json)  # type: ignore
+            pparams: dict = json.load(in_json)
+        return pparams
 
     def get_registered_stake_pools_ledger_state(self) -> dict:
         """Return ledger state info for registered stake pools."""
-        registered_pools_details = self.get_ledger_state()["nesEs"]["esLState"]["_delegationState"][
-            "_pstate"
-        ]["_pParams"]
-        return registered_pools_details  # type: ignore
+        registered_pools_details: dict = self.get_ledger_state()["nesEs"]["esLState"][
+            "_delegationState"
+        ]["_pstate"]["_pParams"]
+        return registered_pools_details
 
     def get_stake_pool_id(self, pool_cold_vkey_file: FileType) -> str:
         """Return pool id from the offline key."""
