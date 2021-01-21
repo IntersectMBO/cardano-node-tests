@@ -1617,6 +1617,8 @@ class ClusterLib:
                 join_txouts=join_txouts,
                 destination_dir=destination_dir,
             )
+            # add 5% to the estimated fee, as the estimation is not precise enough
+            fee = int(fee + fee * 0.05)
 
         tx_raw_output = self.build_raw_tx(
             src_address=src_address,
