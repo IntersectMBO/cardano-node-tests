@@ -964,7 +964,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 5
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 10
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
@@ -1054,6 +1054,11 @@ class TestRewards:
                     tx_files=tx_files_deregister,
                 )
                 cluster.wait_for_new_block(new_blocks=2)
+
+                # make sure we managed to finish deregistration in the expected epoch
+                assert (
+                    cluster.get_last_block_epoch() == this_epoch
+                ), "Deregistration took longer than expected and would affect other checks"
 
             if this_epoch == init_epoch + 3:
                 assert reward_addr_dec in _pstake_mark
