@@ -759,8 +759,8 @@ class TestRewards:
 
             # sleep till the end of epoch
             sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 5
-            if sleep_time > 0:
-                time.sleep(sleep_time)
+            assert sleep_time >= 0, "Not enough time left in epoch"
+            time.sleep(sleep_time)
 
             this_epoch = cluster.get_last_block_epoch()
 
@@ -923,6 +923,12 @@ class TestRewards:
         )
         pool_data_updated = loaded_data._replace(pool_pledge=0)
 
+        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        if sleep_time < 0:
+            cluster.wait_for_new_epoch()
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        time.sleep(sleep_time)
+
         # update the pool parameters by resubmitting the pool registration certificate
         cluster.register_stake_pool(
             pool_data=pool_data_updated,
@@ -935,10 +941,6 @@ class TestRewards:
         )
 
         cluster_manager.set_needs_restart()  # changing pool configuration, restart needed
-
-        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 5
-        if sleep_time > 0:
-            time.sleep(sleep_time)
 
         init_epoch = cluster.get_last_block_epoch()
         owner_rewards = [
