@@ -821,7 +821,7 @@ class TestRewards:
             _pstake_set = _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
             _pstake_go = _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
 
-            if this_epoch == init_epoch + 2:
+            if this_epoch == init_epoch + 1:
                 assert pool_stake_addr_dec in _pstake_mark
                 assert pool_stake_addr_dec in _pstake_set
 
@@ -829,22 +829,22 @@ class TestRewards:
                 assert user_stake_addr_dec not in _pstake_set
                 assert user_stake_addr_dec not in _pstake_go
 
-            if this_epoch == init_epoch + 3:
+            if this_epoch == init_epoch + 2:
                 assert user_stake_addr_dec in _pstake_mark
                 assert user_stake_addr_dec in _pstake_set
                 assert user_stake_addr_dec not in _pstake_go
 
-            if this_epoch >= init_epoch + 3:
+            if this_epoch >= init_epoch + 2:
                 assert pool_stake_addr_dec in _pstake_mark
                 assert pool_stake_addr_dec in _pstake_set
                 assert pool_stake_addr_dec in _pstake_go
 
-            if this_epoch >= init_epoch + 4:
+            if this_epoch >= init_epoch + 3:
                 assert user_stake_addr_dec in _pstake_mark
                 assert user_stake_addr_dec in _pstake_set
                 assert user_stake_addr_dec in _pstake_go
 
-            if this_epoch >= init_epoch + 5:
+            if this_epoch >= init_epoch + 4:
                 # wait 5 epochs for first rewards
                 assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
                 assert (
@@ -1080,7 +1080,7 @@ class TestRewards:
                 assert reward_addr_dec not in _pstake_set
                 assert reward_addr_dec not in _pstake_go
 
-                assert stake_addr_dec in _pstake_mark
+                assert stake_addr_dec not in _pstake_mark
                 assert stake_addr_dec in _pstake_set
                 assert stake_addr_dec in _pstake_go
 
@@ -1090,10 +1090,7 @@ class TestRewards:
                 assert reward_addr_dec not in _pstake_go
 
                 assert stake_addr_dec not in _pstake_mark
-                assert stake_addr_dec in _pstake_set
-                assert stake_addr_dec in _pstake_go
-
-            if this_epoch == init_epoch + 5:
+                assert stake_addr_dec not in _pstake_set
                 assert stake_addr_dec in _pstake_go
 
             if this_epoch >= init_epoch + 5:
@@ -1103,6 +1100,7 @@ class TestRewards:
 
                 assert stake_addr_dec not in _pstake_mark
                 assert stake_addr_dec not in _pstake_set
+                assert stake_addr_dec not in _pstake_go
 
                 # make sure ledger state and actual stake correspond
                 assert (
@@ -1117,9 +1115,6 @@ class TestRewards:
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeGo"]["_stake"])
                     == owner_rewards[-3][1]
                 )
-
-            if this_epoch >= init_epoch + 6:
-                assert stake_addr_dec not in _pstake_go
 
     @allure.link(helpers.get_vcs_link())
     def test_decreasing_reward_transfered_funds(
