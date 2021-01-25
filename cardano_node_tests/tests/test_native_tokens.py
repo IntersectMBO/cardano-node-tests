@@ -87,7 +87,7 @@ def _mint_or_burn_witness(
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
 ) -> None:
-    """Mint of burn tokens, based on the `amount value`. Sign using witnesses.
+    """Mint or burn tokens, depending on the `amount value`. Sign using witnesses.
 
     Positive `amount` value means minting, negative means burning.
     """
@@ -155,7 +155,7 @@ def _mint_or_burn_sign(
     new_tokens: List[TokenRecord],
     temp_template: str,
 ) -> None:
-    """Mint of burn tokens, based on the `amount value`. Sign using skeys.
+    """Mint or burn tokens, depending on the `amount value`. Sign using skeys.
 
     Positive `amount` value means minting, negative means burning.
     """
@@ -385,7 +385,7 @@ class TestMinting:
             assert not token_utxo, "The token was not burnt"
 
     @allure.link(helpers.get_vcs_link())
-    def testmulti_minting_and_burning_sign(
+    def test_multi_minting_and_burning_sign(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting and burning multiple different tokens, sign the TX using skeys."""
