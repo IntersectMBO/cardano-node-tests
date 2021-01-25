@@ -12,8 +12,11 @@ from pathlib import Path
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Tuple
 
 import allure
+import hypothesis
+import hypothesis.strategies as st
 import pytest
 from _pytest.tmpdir import TempdirFactory
 from packaging import version
@@ -1132,3 +1135,155 @@ class TestTransfer:
                 cluster.get_address_balance(dst_address, coin=token.token)
                 == dst_init_balance_tokens[idx] + amount
             ), f"Incorrect token #{idx} balance for destination address `{dst_address}`"
+
+
+@pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
+    reason="runs on version >= 1.24.0 and with Mary+ TX",
+)
+class TestNegative:
+    """Negative tests for minting tokens."""
+
+    TEMP_TEMPLATE = "test_native_tokens_negative"
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[f"{self.TEMP_TEMPLATE}{cluster_manager.cluster_instance}_{i}" for i in range(3)],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=20_000_000,
+        )
+
+        return addrs
+
+    @pytest.fixture
+    def script_policyid(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ) -> Tuple[Path, str]:
+        """Return script and it's PolicyId."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+        issuer_addr = payment_addrs[1]
+
+        # create simple script
+        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        script_content = {"keyHash": keyhash, "type": "sig"}
+        script = Path(f"{self.TEMP_TEMPLATE}.script")
+        with open(f"{self.TEMP_TEMPLATE}.script", "w") as out_json:
+            json.dump(script_content, out_json)
+
+        policyid = cluster.get_policyid(script)
+
+        return script, policyid
+
+    def _mint_tx(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        new_tokens: List[TokenRecord],
+        temp_template: str,
+    ) -> Path:
+        """Return signed TX for minting new token. Sign using skeys."""
+        _issuers_addrs = [n.issuers_addrs for n in new_tokens]
+        issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
+        issuers_skey_files = [p.skey_file for p in issuers_addrs]
+        token_mint_addr_skey_files = [t.token_mint_addr.skey_file for t in new_tokens]
+        src_address = new_tokens[0].token_mint_addr.address
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files]
+        )
+
+        # build and sign a transaction
+        ttl = cluster_obj.calculate_tx_ttl()
+        tx_raw_output = cluster_obj.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            fee=100_000,
+            ttl=ttl,
+            mint=[
+                clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
+                for n in new_tokens
+            ],
+        )
+        out_file_signed = cluster_obj.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+            script_files=[n.script for n in new_tokens],
+        )
+
+        return out_file_signed
+
+    @hypothesis.given(
+        asset_name=st.text(
+            alphabet=st.characters(
+                blacklist_categories=["C"], blacklist_characters=[" ", "+", "\xa0"]
+            ),
+            min_size=33,
+            max_size=1000,
+        )
+    )
+    @helpers.HYPOTHESIS_SETTINGS
+    def test_long_name(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        script_policyid: Tuple[Path, str],
+        asset_name: str,
+    ):
+        """Try to create token with asset name that is longer than allowed.
+
+        The name can also contain characters that are not allowed. Expect failure.
+        """
+        temp_template = "test_long_name"
+
+        script, policyid = script_policyid
+        token = f"{policyid}.{asset_name}"
+        token_mint_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+        amount = 20_000_000
+
+        token_mint = TokenRecord(
+            token=token,
+            asset_name=asset_name,
+            amount=amount,
+            issuers_addrs=[issuer_addr],
+            token_mint_addr=token_mint_addr,
+            script=script,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._mint_tx(
+                cluster_obj=cluster,
+                new_tokens=[token_mint],
+                temp_template=f"{temp_template}_mint",
+            )
+        exc_val = str(excinfo.value)
+        assert (
+            "name exceeds 32 bytes" in exc_val
+            or "expecting letter or digit, white space" in exc_val
+            or "expecting alphanumeric asset name" in exc_val
+        )
