@@ -10,8 +10,8 @@ from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 from xdist import workermanage
 
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
-from cardano_node_tests.utils import devops_cluster
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
 
@@ -100,7 +100,7 @@ def _stop_all_cluster_instances(
     # save environment info for Allure
     helpers.save_env_for_allure(pytest_config)
     # save artifacts
-    devops_cluster.save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
+    cluster_nodes.save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
 @pytest.fixture(scope="session")

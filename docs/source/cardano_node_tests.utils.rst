@@ -28,10 +28,10 @@ cardano\_node\_tests.utils.clusterlib\_utils module
    :undoc-members:
    :show-inheritance:
 
-cardano\_node\_tests.utils.devops\_cluster module
+cardano\_node\_tests.utils.cluster\_nodes module
 -------------------------------------------------
 
-.. automodule:: cardano_node_tests.utils.devops_cluster
+.. automodule:: cardano_node_tests.utils.cluster_nodes
    :members:
    :undoc-members:
    :show-inheritance:

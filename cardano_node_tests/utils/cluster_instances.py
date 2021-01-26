@@ -1,4 +1,4 @@
-"""Functionality for setting up new DevOps cluster instance."""
+"""Functionality for setting up new cluster instance."""
 import logging
 import os
 import re
