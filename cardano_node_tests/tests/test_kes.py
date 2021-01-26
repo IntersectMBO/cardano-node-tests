@@ -10,10 +10,10 @@ import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
-from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import parallel_run
@@ -79,7 +79,7 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 @pytest.mark.skipif(
-    cluster_instances.CLUSTER_ERA != "shelley", reason="meant to run on shelley-only cluster"
+    configuration.CLUSTER_ERA != "shelley", reason="meant to run on shelley-only cluster"
 )
 class TestKES:
     """Basic tests for KES period."""
