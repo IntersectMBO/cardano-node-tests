@@ -11,9 +11,9 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import cluster_instances
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import devops_cluster
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import parallel_run
@@ -54,7 +54,7 @@ def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         if destdir_ls:
             return destdir_ls[0]
 
-        startup_files = devops_cluster.copy_startup_files(destdir=destdir)
+        startup_files = cluster_nodes.CLUSTER_TYPE.copy_startup_files(destdir=destdir)
         with open(startup_files.genesis_spec) as fp_in:
             genesis_spec = json.load(fp_in)
 
@@ -172,7 +172,7 @@ class TestKES:
                 # restart the node with the new operational certificate
                 logfiles.add_ignore_rule("*.stdout", "MuxBearerClosed")
                 shutil.copy(invalid_opcert_file, opcert_file)
-                devops_cluster.restart_node(node_name)
+                cluster_nodes.restart_node(node_name)
 
                 LOGGER.info("Checking blocks production for 5 epochs.")
                 this_epoch = -1
@@ -198,7 +198,7 @@ class TestKES:
             )
             # copy the new certificate and restart the node
             shutil.move(str(valid_opcert_file), str(opcert_file))
-            devops_cluster.restart_node(node_name)
+            cluster_nodes.restart_node(node_name)
 
             LOGGER.info("Checking blocks production for another 3 epochs.")
             for __ in range(5):
@@ -250,7 +250,7 @@ class TestKES:
             # restart the node with the new operational certificate
             logfiles.add_ignore_rule("*.stdout", "MuxBearerClosed")
             shutil.copy(new_opcert_file, opcert_file)
-            devops_cluster.restart_node(node_name)
+            cluster_nodes.restart_node(node_name)
 
             LOGGER.info("Checking blocks production for 5 epochs.")
             this_epoch = -1

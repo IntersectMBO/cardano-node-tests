@@ -25,7 +25,7 @@ from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
-from cardano_node_tests.utils.devops_cluster import VERSIONS
+from cardano_node_tests.utils.cluster_nodes import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
