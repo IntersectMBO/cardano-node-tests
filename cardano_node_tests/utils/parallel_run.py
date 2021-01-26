@@ -19,9 +19,9 @@ from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import cluster_instances
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import devops_cluster
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.types import UnpackableSequence
@@ -230,8 +230,8 @@ class ClusterManager:
             self._log(
                 f"stopping cluster instance {instance_num} with `{startup_files.stop_script}`"
             )
-            devops_cluster.stop_cluster(cmd=str(startup_files.stop_script))
-            devops_cluster.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=True)
+            cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
+            cluster_nodes.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=True)
             open(instance_dir / CLUSTER_STOPPED_FILE, "a").close()
             self._log(f"stopped cluster instance {instance_num}")
 
@@ -333,7 +333,7 @@ class _ClusterGetter:
         if not cluster_obj:
             return
 
-        devops_cluster.save_cluster_artifacts(artifacts_dir=self.cm.pytest_tmp_dir, clean=clean)
+        cluster_nodes.save_cluster_artifacts(artifacts_dir=self.cm.pytest_tmp_dir, clean=clean)
 
     def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> None:  # noqa: C901
         """Restart cluster.
@@ -372,7 +372,7 @@ class _ClusterGetter:
                 )
                 time.sleep(0.2)
 
-            devops_cluster.stop_cluster(cmd=str(startup_files.stop_script))
+            cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
             self._restart_save_cluster_artifacts(clean=True)
             try:
                 _kill_supervisor(self.cm.cluster_instance)
@@ -380,7 +380,7 @@ class _ClusterGetter:
                 pass
 
             try:
-                cluster_obj = devops_cluster.start_cluster(cmd=str(startup_files.start_script))
+                cluster_obj = cluster_nodes.start_cluster(cmd=str(startup_files.start_script))
             except Exception as err:
                 LOGGER.error(f"Failed to start cluster: {err}")
                 excp = err
@@ -394,7 +394,7 @@ class _ClusterGetter:
 
         # setup faucet addresses
         tmp_path = Path(self.cm.tmp_path_factory.mktemp("addrs_data"))
-        devops_cluster.setup_test_addrs(cluster_obj, tmp_path)
+        cluster_nodes.setup_test_addrs(cluster_obj, tmp_path)
 
         # create file that indicates that the cluster is running
         cluster_running_file = self.cm.instance_dir / CLUSTER_RUNNING_FILE
@@ -514,23 +514,23 @@ class _ClusterGetter:
 
     def _reload_cluster_obj(self, state_dir: Path) -> None:
         """Realod cluster data if necessary."""
-        addrs_data_checksum = helpers.checksum(state_dir / devops_cluster.ADDRS_DATA)
+        addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
         if addrs_data_checksum == self.cm.cache.last_checksum:
             return
 
         # save CLI coverage collected by the old `cluster_obj` instance
         self._save_cli_coverage()
         # replace the old `cluster_obj` instance and reload data
-        self.cm.cache.cluster_obj = devops_cluster.get_cluster_obj()
+        self.cm.cache.cluster_obj = cluster_nodes.CLUSTER_TYPE.get_cluster_obj()
         self.cm.cache.test_data = {}
-        self.cm.cache.addrs_data = devops_cluster.load_addrs_data()
+        self.cm.cache.addrs_data = cluster_nodes.load_addrs_data()
         self.cm.cache.last_checksum = addrs_data_checksum
 
     def _reuse_dev_cluster(self) -> clusterlib.ClusterLib:
         """Reuse cluster that was already started outside of test framework."""
         instance_num = 0
         self.cm._cluster_instance = instance_num
-        cluster_env = devops_cluster.get_cluster_env()
+        cluster_env = cluster_nodes.get_cluster_env()
         state_dir = Path(cluster_env["state_dir"])
 
         # make sure instance dir exists
@@ -539,13 +539,13 @@ class _ClusterGetter:
 
         cluster_obj = self.cm.cache.cluster_obj
         if not cluster_obj:
-            cluster_obj = devops_cluster.get_cluster_obj()
+            cluster_obj = cluster_nodes.CLUSTER_TYPE.get_cluster_obj()
 
         # setup faucet addresses
-        if not (state_dir / devops_cluster.ADDRS_DATA).exists():
+        if not (state_dir / cluster_nodes.ADDRS_DATA).exists():
             tmp_path = state_dir / "addrs_data"
             tmp_path.mkdir(exist_ok=True, parents=True)
-            devops_cluster.setup_test_addrs(cluster_obj, tmp_path)
+            cluster_nodes.setup_test_addrs(cluster_obj, tmp_path)
 
         # check if it is necessary to reload data
         self._reload_cluster_obj(state_dir=state_dir)
@@ -908,7 +908,7 @@ class _ClusterGetter:
                 self.cm._log(f"c{self.cm.cluster_instance}: creating {test_running_file}")
                 open(test_running_file, "a").close()
 
-                cluster_env = devops_cluster.get_cluster_env()
+                cluster_env = cluster_nodes.get_cluster_env()
                 state_dir = Path(cluster_env["state_dir"])
 
                 # check if it is necessary to reload data
@@ -916,7 +916,7 @@ class _ClusterGetter:
 
                 cluster_obj = self.cm.cache.cluster_obj
                 if not cluster_obj:
-                    cluster_obj = devops_cluster.get_cluster_obj()
+                    cluster_obj = cluster_nodes.CLUSTER_TYPE.get_cluster_obj()
 
                 # `cluster_obj` is ready, we can start the test
                 break

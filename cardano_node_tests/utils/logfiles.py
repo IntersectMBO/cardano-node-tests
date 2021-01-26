@@ -13,7 +13,7 @@ from typing import Tuple
 
 import pytest
 
-from cardano_node_tests.utils import devops_cluster
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> Li
 def add_ignore_rule(files_glob: str, regex: str) -> None:
     """Add ignore rule for expected errors."""
     with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/ignore_rules.lock"):
-        cluster_env = devops_cluster.get_cluster_env()
+        cluster_env = cluster_nodes.get_cluster_env()
         state_dir = cluster_env["state_dir"]
         rules_file = state_dir / ERRORS_RULES_FILE_NAME
         with open(rules_file, "a") as infile:
@@ -81,7 +81,7 @@ def expect_errors(regex_pairs: List[Tuple[str, str]]) -> Iterator[None]:
         regex_pairs: [(glob, regex)] - list of regexes that need to be present in files
             described by the glob
     """
-    cluster_env = devops_cluster.get_cluster_env()
+    cluster_env = cluster_nodes.get_cluster_env()
     state_dir = cluster_env["state_dir"]
 
     glob_list = []
@@ -160,7 +160,7 @@ def get_ignore_regex(ignore_rules: List[Tuple[str, str]], regexes: List[str], lo
 
 def search_cluster_artifacts() -> List[Tuple[Path, str]]:
     """Search cluster artifacts for errors."""
-    cluster_env = devops_cluster.get_cluster_env()
+    cluster_env = cluster_nodes.get_cluster_env()
     state_dir = cluster_env["state_dir"]
     rules_file = state_dir / ERRORS_RULES_FILE_NAME
 
