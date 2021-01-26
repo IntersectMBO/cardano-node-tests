@@ -1,4 +1,4 @@
-"""Functionality for setup and interaction with cluster nodes."""
+"""Functionality for cluster setup and interaction with cluster nodes."""
 import logging
 import os
 import pickle
@@ -17,6 +17,7 @@ from packaging import version
 from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 
@@ -34,9 +35,9 @@ class Versions:
     MARY = 4
 
     def __init__(self) -> None:
-        cluster_era = cluster_instances.CLUSTER_ERA
+        cluster_era = configuration.CLUSTER_ERA
         # if not specified otherwise, transaction era is the same as cluster era
-        transaction_era = cluster_instances.TX_ERA or cluster_era
+        transaction_era = configuration.TX_ERA or cluster_era
 
         self.cluster_era = getattr(self, cluster_era.upper(), 1)
         self.transaction_era = getattr(self, transaction_era.upper(), 1)
@@ -167,7 +168,7 @@ class LocalCluster(ClusterType):
 
     def copy_startup_files(self, destdir: Path) -> StartupFiles:
         """Make copy of cluster startup files located in this repository."""
-        scripts_dir = cluster_instances.SCRIPTS_DIR
+        scripts_dir = configuration.SCRIPTS_DIR
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
@@ -223,7 +224,7 @@ class LocalCluster(ClusterType):
 
 
 def get_cluster_type() -> ClusterType:
-    if cluster_instances.CLUSTER_ERA == "shelley":
+    if configuration.CLUSTER_ERA == "shelley":
         return DevopsCluster()
     return LocalCluster()
 
@@ -246,8 +247,8 @@ def get_cluster_env() -> dict:
         "repo_dir": repo_dir,
         "work_dir": work_dir,
         "instance_num": instance_num,
-        "cluster_era": cluster_instances.CLUSTER_ERA,
-        "tx_era": cluster_instances.TX_ERA,
+        "cluster_era": configuration.CLUSTER_ERA,
+        "tx_era": configuration.TX_ERA,
     }
     return cluster_env
 

@@ -6,20 +6,11 @@ from pathlib import Path
 from typing import List
 from typing import NamedTuple
 
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
-
-CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or "shelley"
-if CLUSTER_ERA not in ("shelley", "allegra", "mary"):
-    raise RuntimeError(f"Invalid CLUSTER_ERA`: `{CLUSTER_ERA}")
-
-TX_ERA = os.environ.get("TX_ERA") or ""
-if TX_ERA not in ("", "shelley", "allegra", "mary"):
-    raise RuntimeError(f"Invalid TX_ERA`: `{TX_ERA}")
-
-SCRIPTS_DIR = Path(__file__).parent.parent / "cluster_scripts" / CLUSTER_ERA
 
 
 class InstanceFiles(NamedTuple):
@@ -54,7 +45,7 @@ def get_instance_ports(instance_num: int) -> InstancePorts:
     base = 30000 + offset
     metrics_base = 30300 + offset
 
-    if CLUSTER_ERA == "shelley":
+    if configuration.CLUSTER_ERA == "shelley":
         ekg = 12588 + instance_num
         prometheus = 12898 + instance_num
 
@@ -237,22 +228,22 @@ def prepare_files(
 
     if start_script:
         start_script = Path(start_script)
-    elif CLUSTER_ERA == "shelley":
+    elif configuration.CLUSTER_ERA == "shelley":
         start_script = Path(helpers.get_cmd_path("start-cluster"))
     else:
-        start_script = SCRIPTS_DIR / "start-cluster-hfc"
+        start_script = configuration.SCRIPTS_DIR / "start-cluster-hfc"
 
     if stop_script:
         stop_script = Path(stop_script)
-    elif CLUSTER_ERA == "shelley":
+    elif configuration.CLUSTER_ERA == "shelley":
         stop_script = Path(helpers.get_cmd_path("stop-cluster"))
     else:
-        stop_script = SCRIPTS_DIR / "stop-cluster-hfc"
+        stop_script = configuration.SCRIPTS_DIR / "stop-cluster-hfc"
 
     start_script = start_script.expanduser().resolve()
     stop_script = stop_script.expanduser().resolve()
 
-    if CLUSTER_ERA == "shelley":
+    if configuration.CLUSTER_ERA == "shelley":
         new_start_script = _reconfigure_nix_file(
             infile=start_script, destdir=destdir, instance_num=instance_num
         )
