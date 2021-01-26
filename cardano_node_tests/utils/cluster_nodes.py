@@ -1,4 +1,4 @@
-"""Functionality for interacting with the DevOps cluster."""
+"""Functionality for setup and interaction with cluster nodes."""
 import logging
 import os
 import pickle
@@ -50,6 +50,7 @@ class Versions:
         )
 
 
+# versions don't change during test run, so it can be used as constant
 VERSIONS = Versions()
 
 
@@ -57,6 +58,178 @@ class StartupFiles(NamedTuple):
     start_script: Path
     genesis_spec: Path
     config_glob: str
+
+
+class ClusterType:
+    """Generic cluster type."""
+
+    DEVOPS = "devops"
+    LOCAL = "local"
+
+    def __init__(self) -> None:
+        self.version = VERSIONS
+        self.type = "unknown"
+
+    def copy_startup_files(self, destdir: Path) -> StartupFiles:
+        """Make copy of cluster startup files."""
+        raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
+
+    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+        """Return instance of `ClusterLib` (cluster_obj)."""
+        raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
+
+    def fund_setup(
+        self, cluster_obj: clusterlib.ClusterLib, addrs_data: dict, destination_dir: FileType = "."
+    ) -> None:
+        """Fund addresses created during cluster setup."""
+        raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
+
+
+class DevopsCluster(ClusterType):
+    """DevOps cluster type (shelley-only mode)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.type = ClusterType.DEVOPS
+
+    def _get_node_config_paths(self, start_script: Path) -> List[Path]:
+        """Return path of node config files in nix."""
+        with open(start_script) as infile:
+            content = infile.read()
+
+        node_config = re.findall(r"cp /nix/store/(.+\.json) ", content)
+        nix_store = Path("/nix/store")
+        node_config_paths = [nix_store / c for c in node_config]
+
+        return node_config_paths
+
+    def copy_startup_files(self, destdir: Path) -> StartupFiles:
+        """Make copy of cluster startup files located on nix."""
+        start_script_orig = helpers.get_cmd_path("start-cluster")
+        shutil.copy(start_script_orig, destdir)
+        start_script = destdir / "start-cluster"
+        start_script.chmod(0o755)
+
+        node_config_paths = self._get_node_config_paths(start_script)
+        for fpath in node_config_paths:
+            conf_name_orig = str(fpath)
+            if conf_name_orig.endswith("node.json"):
+                conf_name = "node.json"
+            elif conf_name_orig.endswith("genesis.spec.json"):
+                conf_name = "genesis.spec.json"
+            else:
+                continue
+
+            dest_file = destdir / conf_name
+            shutil.copy(fpath, dest_file)
+            dest_file.chmod(0o644)
+
+            helpers.replace_str_in_file(
+                infile=start_script,
+                outfile=start_script,
+                orig_str=str(fpath),
+                new_str=str(dest_file),
+            )
+
+        config_glob = "node.json"
+        genesis_spec_json = destdir / "genesis.spec.json"
+        assert genesis_spec_json.exists()
+
+        return StartupFiles(
+            start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
+        )
+
+    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+        """Return instance of `ClusterLib` (cluster_obj)."""
+        cluster_env = get_cluster_env()
+        cluster_obj = clusterlib.ClusterLib(cluster_env["state_dir"])
+        return cluster_obj
+
+    def fund_setup(
+        self, cluster_obj: clusterlib.ClusterLib, addrs_data: dict, destination_dir: FileType = "."
+    ) -> None:
+        """Fund addresses created during cluster setup."""
+        # fund from shelley genesis
+        clusterlib_utils.fund_from_genesis(
+            *[d["payment"].address for d in addrs_data.values()],
+            cluster_obj=cluster_obj,
+            amount=6_000_000_000_000,
+            destination_dir=destination_dir,
+        )
+
+
+class LocalCluster(ClusterType):
+    """Local cluster type (full cardano mode)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.type = ClusterType.LOCAL
+
+    def copy_startup_files(self, destdir: Path) -> StartupFiles:
+        """Make copy of cluster startup files located in this repository."""
+        scripts_dir = cluster_instances.SCRIPTS_DIR
+        shutil.copytree(
+            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
+
+        start_script = destdir / "start-cluster-hfc"
+        config_glob = "config-*.json"
+        genesis_spec_json = destdir / "genesis.spec.json"
+        assert start_script.exists() and genesis_spec_json.exists()
+
+        return StartupFiles(
+            start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
+        )
+
+    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+        """Return instance of `ClusterLib` (cluster_obj)."""
+        cluster_env = get_cluster_env()
+        cluster_obj = clusterlib.ClusterLib(
+            cluster_env["state_dir"],
+            protocol=clusterlib.Protocols.CARDANO,
+            era=cluster_env["cluster_era"],
+            tx_era=cluster_env["tx_era"],
+        )
+        return cluster_obj
+
+    def fund_setup(
+        self, cluster_obj: clusterlib.ClusterLib, addrs_data: dict, destination_dir: FileType = "."
+    ) -> None:
+        """Fund addresses created during cluster setup."""
+        cluster_env = get_cluster_env()
+        to_fund = [d["payment"] for d in addrs_data.values()]
+        byron_dir = cluster_env["state_dir"] / "byron"
+        for b in range(3):
+            byron_addr = {
+                "payment": clusterlib.AddressRecord(
+                    address=clusterlib.read_address_from_file(
+                        byron_dir / f"address-00{b}-converted"
+                    ),
+                    vkey_file=byron_dir / f"payment-keys.00{b}-converted.vkey",
+                    skey_file=byron_dir / f"payment-keys.00{b}-converted.skey",
+                )
+            }
+            addrs_data[f"byron00{b}"] = byron_addr
+
+        # fund from converted byron address
+        clusterlib_utils.fund_from_faucet(
+            *to_fund,
+            cluster_obj=cluster_obj,
+            faucet_data=addrs_data["byron000"],
+            amount=6_000_000_000_000,
+            destination_dir=destination_dir,
+            force=True,
+        )
+
+
+def get_cluster_type() -> ClusterType:
+    if cluster_instances.CLUSTER_ERA == "shelley":
+        return DevopsCluster()
+    return LocalCluster()
+
+
+# cluster type doesn't change during test run, so it can be used as constant
+CLUSTER_TYPE = get_cluster_type()
 
 
 def get_cluster_env() -> dict:
@@ -79,28 +252,13 @@ def get_cluster_env() -> dict:
     return cluster_env
 
 
-def get_cluster_obj() -> clusterlib.ClusterLib:
-    """Return instance of `ClusterLib` (cluster_obj)."""
-    cluster_env = get_cluster_env()
-    if cluster_instances.CLUSTER_ERA == "shelley":
-        cluster_obj = clusterlib.ClusterLib(cluster_env["state_dir"])
-    else:
-        cluster_obj = clusterlib.ClusterLib(
-            cluster_env["state_dir"],
-            protocol=clusterlib.Protocols.CARDANO,
-            era=cluster_instances.CLUSTER_ERA,
-            tx_era=cluster_instances.TX_ERA,
-        )
-    return cluster_obj
-
-
 def start_cluster(cmd: str) -> clusterlib.ClusterLib:
     """Start cluster."""
     LOGGER.info(f"Starting cluster with `{cmd}`.")
     cluster_env = get_cluster_env()
     helpers.run_shell_command(cmd, workdir=cluster_env["work_dir"])
     LOGGER.info("Cluster started.")
-    return get_cluster_obj()
+    return CLUSTER_TYPE.get_cluster_obj()
 
 
 def stop_cluster(cmd: str) -> None:
@@ -127,8 +285,8 @@ def restart_node(node_name: str) -> None:
         LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
 
 
-def load_devops_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
-    """Load data for pools existing in the devops environment."""
+def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
+    """Load data for pools existing in the cluster environment."""
     data_dir = get_cluster_env()["state_dir"] / "nodes"
     pools = ("node-pool1", "node-pool2")
 
@@ -211,118 +369,16 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
         }
 
     LOGGER.debug("Funding created addresses.")
-    if cluster_instances.CLUSTER_ERA == "shelley":
-        # fund from shelley genesis
-        clusterlib_utils.fund_from_genesis(
-            *[d["payment"].address for d in addrs_data.values()],
-            cluster_obj=cluster_obj,
-            amount=6_000_000_000_000,
-            destination_dir=destination_dir,
-        )
-    else:
-        to_fund = [d["payment"] for d in addrs_data.values()]
-        byron_dir = cluster_env["state_dir"] / "byron"
-        for b in range(3):
-            byron_addr = {
-                "payment": clusterlib.AddressRecord(
-                    address=clusterlib.read_address_from_file(
-                        byron_dir / f"address-00{b}-converted"
-                    ),
-                    vkey_file=byron_dir / f"payment-keys.00{b}-converted.vkey",
-                    skey_file=byron_dir / f"payment-keys.00{b}-converted.skey",
-                )
-            }
-            addrs_data[f"byron00{b}"] = byron_addr
+    CLUSTER_TYPE.fund_setup(
+        cluster_obj=cluster_obj, addrs_data=addrs_data, destination_dir=destination_dir
+    )
 
-        # fund from converted byron address
-        clusterlib_utils.fund_from_faucet(
-            *to_fund,
-            cluster_obj=cluster_obj,
-            faucet_data=addrs_data["byron000"],
-            amount=6_000_000_000_000,
-            destination_dir=destination_dir,
-            force=True,
-        )
-
-    pools_data = load_devops_pools_data(cluster_obj)
+    pools_data = load_pools_data(cluster_obj)
 
     data_file = Path(cluster_env["state_dir"]) / ADDRS_DATA
     with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
     return data_file
-
-
-def get_node_config_paths(start_script: Path) -> List[Path]:
-    """Return path of node config files in nix."""
-    with open(start_script) as infile:
-        content = infile.read()
-
-    node_config = re.findall(r"cp /nix/store/(.+\.json) ", content)
-    nix_store = Path("/nix/store")
-    node_config_paths = [nix_store / c for c in node_config]
-
-    return node_config_paths
-
-
-def _copy_nix_startup_files(destdir: Path) -> StartupFiles:
-    """Make copy of cluster startup files located on nix."""
-    start_script_orig = helpers.get_cmd_path("start-cluster")
-    shutil.copy(start_script_orig, destdir)
-    start_script = destdir / "start-cluster"
-    start_script.chmod(0o755)
-
-    node_config_paths = get_node_config_paths(start_script)
-    for fpath in node_config_paths:
-        conf_name_orig = str(fpath)
-        if conf_name_orig.endswith("node.json"):
-            conf_name = "node.json"
-        elif conf_name_orig.endswith("genesis.spec.json"):
-            conf_name = "genesis.spec.json"
-        else:
-            continue
-
-        dest_file = destdir / conf_name
-        shutil.copy(fpath, dest_file)
-        dest_file.chmod(0o644)
-
-        helpers.replace_str_in_file(
-            infile=start_script,
-            outfile=start_script,
-            orig_str=str(fpath),
-            new_str=str(dest_file),
-        )
-
-    config_glob = "node.json"
-    genesis_spec_json = destdir / "genesis.spec.json"
-    assert genesis_spec_json.exists()
-
-    return StartupFiles(
-        start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
-    )
-
-
-def _copy_local_startup_files(destdir: Path) -> StartupFiles:
-    """Make copy of cluster startup files located in this repository."""
-    scripts_dir = cluster_instances.SCRIPTS_DIR
-    shutil.copytree(
-        scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
-    )
-
-    start_script = destdir / "start-cluster-hfc"
-    config_glob = "config-*.json"
-    genesis_spec_json = destdir / "genesis.spec.json"
-    assert start_script.exists() and genesis_spec_json.exists()
-
-    return StartupFiles(
-        start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
-    )
-
-
-def copy_startup_files(destdir: Path) -> StartupFiles:
-    """Make a copy of the "start-cluster" script and cluster config files."""
-    if cluster_instances.CLUSTER_ERA == "shelley":
-        return _copy_nix_startup_files(destdir=destdir)
-    return _copy_local_startup_files(destdir=destdir)
 
 
 def load_addrs_data() -> dict:
