@@ -263,7 +263,10 @@ cardano-cli governance create-update-proposal \
 
 # Tranfer funds, register pools and delegations, submit update proposal, all in one big transaction:
 
-jq .protocolParams < "$STATE_CLUSTER/shelley/genesis.json" > "$STATE_CLUSTER/pparams.json"
+cardano-cli query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --shelley-era \
+  --out-file "$STATE_CLUSTER/pparams.json"
 
 TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-001-converted)"
 UTXO="$(cardano-cli query utxo \
@@ -367,7 +370,10 @@ cardano-cli governance create-update-proposal \
   --protocol-major-version 4 \
   --protocol-minor-version 0
 
-jq .protocolParams < "$STATE_CLUSTER/shelley/genesis.json" > "$STATE_CLUSTER/pparams.json"
+cardano-cli query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --allegra-era \
+  --out-file "$STATE_CLUSTER/pparams.json"
 
 TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-001-converted)"
 UTXO="$(cardano-cli query utxo \
