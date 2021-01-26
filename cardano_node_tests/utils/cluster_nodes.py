@@ -70,6 +70,7 @@ class ClusterType:
     def __init__(self) -> None:
         self.version = VERSIONS
         self.type = "unknown"
+        self.instances = cluster_instances.InstanceType()
 
     def copy_startup_files(self, destdir: Path) -> StartupFiles:
         """Make copy of cluster startup files."""
@@ -92,6 +93,7 @@ class DevopsCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.DEVOPS
+        self.instances = cluster_instances.DevopsInstance()
 
     def _get_node_config_paths(self, start_script: Path) -> List[Path]:
         """Return path of node config files in nix."""
@@ -165,6 +167,7 @@ class LocalCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.LOCAL
+        self.instances = cluster_instances.LocalInstance()
 
     def copy_startup_files(self, destdir: Path) -> StartupFiles:
         """Make copy of cluster startup files located in this repository."""
@@ -276,7 +279,9 @@ def restart_node(node_name: str) -> None:
     """Restart single node of the running cluster."""
     LOGGER.info(f"Restarting cluster node `{node_name}`.")
     cluster_env = get_cluster_env()
-    supervisor_port = cluster_instances.get_instance_ports(cluster_env["instance_num"]).supervisor
+    supervisor_port = CLUSTER_TYPE.instances.get_instance_ports(
+        cluster_env["instance_num"]
+    ).supervisor
     try:
         helpers.run_command(
             f"supervisorctl -s http://localhost:{supervisor_port} restart {node_name}",

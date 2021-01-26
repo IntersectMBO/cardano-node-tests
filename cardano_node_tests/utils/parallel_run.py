@@ -55,10 +55,11 @@ if helpers.IS_XDIST and DEV_CLUSTER_RUNNING:
 
 def _kill_supervisor(instance_num: int) -> None:
     """Kill supervisor process."""
-    port = f":{cluster_instances.get_instance_ports(instance_num).supervisor}"
+    port_num = cluster_nodes.CLUSTER_TYPE.instances.get_instance_ports(instance_num).supervisor
+    port_str = f":{port_num}"
     netstat = helpers.run_command("netstat -plnt").decode().splitlines()
     for line in netstat:
-        if port not in line:
+        if port_str not in line:
             continue
         line = line.replace("  ", " ").strip()
         pid = line.split(" ")[-1].split("/")[0]
@@ -154,7 +155,7 @@ class ClusterManager:
     @property
     def ports(self) -> cluster_instances.InstancePorts:
         """Return port mappings for current cluster instance."""
-        return cluster_instances.get_instance_ports(self.cluster_instance)
+        return cluster_nodes.CLUSTER_TYPE.instances.get_instance_ports(self.cluster_instance)
 
     def _init_log(self) -> Path:
         """Return path to run log file."""
@@ -222,11 +223,11 @@ class ClusterManager:
                 self._log(f"cluster instance {instance_num} not running")
                 continue
 
-            startup_files = cluster_instances.prepare_files(
+            startup_files = cluster_nodes.CLUSTER_TYPE.instances.prepare_files(
                 destdir=self._create_startup_files_dir(instance_num),
                 instance_num=instance_num,
             )
-            cluster_instances.set_cardano_node_socket_path(instance_num)
+            cluster_nodes.CLUSTER_TYPE.instances.set_cardano_node_socket_path(instance_num)
             self._log(
                 f"stopping cluster instance {instance_num} with `{startup_files.stop_script}`"
             )
@@ -350,7 +351,7 @@ class _ClusterGetter:
             f"stop_cmd='{stop_cmd}'"
         )
 
-        startup_files = cluster_instances.prepare_files(
+        startup_files = cluster_nodes.CLUSTER_TYPE.instances.prepare_files(
             destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance),
             instance_num=self.cm.cluster_instance,
             start_script=start_cmd,
@@ -825,7 +826,7 @@ class _ClusterGetter:
 
                     # we've found suitable cluster instance
                     self.cm._cluster_instance = instance_num
-                    cluster_instances.set_cardano_node_socket_path(instance_num)
+                    cluster_nodes.CLUSTER_TYPE.instances.set_cardano_node_socket_path(instance_num)
 
                     if restart_here:
                         if restart_ready:
