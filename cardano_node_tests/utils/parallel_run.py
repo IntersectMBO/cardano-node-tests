@@ -535,8 +535,7 @@ class _ClusterGetter:
         """Reuse cluster that was already started outside of test framework."""
         instance_num = 0
         self.cm._cluster_instance = instance_num
-        cluster_env = cluster_nodes.get_cluster_env()
-        state_dir = Path(cluster_env["state_dir"])
+        state_dir = cluster_nodes.get_cluster_env().state_dir
 
         # make sure instance dir exists
         instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
@@ -913,10 +912,8 @@ class _ClusterGetter:
                 self.cm._log(f"c{self.cm.cluster_instance}: creating {test_running_file}")
                 open(test_running_file, "a").close()
 
-                cluster_env = cluster_nodes.get_cluster_env()
-                state_dir = Path(cluster_env["state_dir"])
-
                 # check if it is necessary to reload data
+                state_dir = cluster_nodes.get_cluster_env().state_dir
                 self._reload_cluster_obj(state_dir=state_dir)
 
                 cluster_obj = self.cm.cache.cluster_obj

@@ -55,6 +55,16 @@ class Versions:
 VERSIONS = Versions()
 
 
+class ClusterEnv(NamedTuple):
+    socket_path: Path
+    state_dir: Path
+    repo_dir: Path
+    work_dir: Path
+    instance_num: int
+    cluster_era: str
+    tx_era: str
+
+
 class StartupFiles(NamedTuple):
     start_script: Path
     genesis_spec: Path
@@ -144,8 +154,7 @@ class DevopsCluster(ClusterType):
 
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
-        cluster_env = get_cluster_env()
-        cluster_obj = clusterlib.ClusterLib(cluster_env["state_dir"])
+        cluster_obj = clusterlib.ClusterLib(get_cluster_env().state_dir)
         return cluster_obj
 
     def fund_setup(
@@ -189,10 +198,10 @@ class LocalCluster(ClusterType):
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
         cluster_obj = clusterlib.ClusterLib(
-            cluster_env["state_dir"],
+            cluster_env.state_dir,
             protocol=clusterlib.Protocols.CARDANO,
-            era=cluster_env["cluster_era"],
-            tx_era=cluster_env["tx_era"],
+            era=cluster_env.cluster_era,
+            tx_era=cluster_env.tx_era,
         )
         return cluster_obj
 
@@ -200,9 +209,8 @@ class LocalCluster(ClusterType):
         self, cluster_obj: clusterlib.ClusterLib, addrs_data: dict, destination_dir: FileType = "."
     ) -> None:
         """Fund addresses created during cluster setup."""
-        cluster_env = get_cluster_env()
         to_fund = [d["payment"] for d in addrs_data.values()]
-        byron_dir = cluster_env["state_dir"] / "byron"
+        byron_dir = get_cluster_env().state_dir / "byron"
         for b in range(3):
             byron_addr = {
                 "payment": clusterlib.AddressRecord(
@@ -251,7 +259,7 @@ def set_cardano_node_socket_path(instance_num: int) -> None:
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
 
 
-def get_cluster_env() -> dict:
+def get_cluster_env() -> ClusterEnv:
     """Get cardano cluster environment."""
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
     state_dir = socket_path.parent
@@ -259,23 +267,22 @@ def get_cluster_env() -> dict:
     repo_dir = Path(os.environ.get("CARDANO_NODE_REPO_PATH") or work_dir)
     instance_num = int(state_dir.name.replace("state-cluster", "") or 0)
 
-    cluster_env = {
-        "socket_path": socket_path,
-        "state_dir": state_dir,
-        "repo_dir": repo_dir,
-        "work_dir": work_dir,
-        "instance_num": instance_num,
-        "cluster_era": configuration.CLUSTER_ERA,
-        "tx_era": configuration.TX_ERA,
-    }
+    cluster_env = ClusterEnv(
+        socket_path=socket_path,
+        state_dir=state_dir,
+        repo_dir=repo_dir,
+        work_dir=work_dir,
+        instance_num=instance_num,
+        cluster_era=configuration.CLUSTER_ERA,
+        tx_era=configuration.TX_ERA,
+    )
     return cluster_env
 
 
 def start_cluster(cmd: str) -> clusterlib.ClusterLib:
     """Start cluster."""
     LOGGER.info(f"Starting cluster with `{cmd}`.")
-    cluster_env = get_cluster_env()
-    helpers.run_shell_command(cmd, workdir=cluster_env["work_dir"])
+    helpers.run_shell_command(cmd, workdir=get_cluster_env().work_dir)
     LOGGER.info("Cluster started.")
     return CLUSTER_TYPE.get_cluster_obj()
 
@@ -283,9 +290,8 @@ def start_cluster(cmd: str) -> clusterlib.ClusterLib:
 def stop_cluster(cmd: str) -> None:
     """Stop cluster."""
     LOGGER.info(f"Stopping cluster with `{cmd}`.")
-    cluster_env = get_cluster_env()
     try:
-        helpers.run_shell_command(cmd, workdir=cluster_env["work_dir"])
+        helpers.run_shell_command(cmd, workdir=get_cluster_env().work_dir)
     except Exception as exc:
         LOGGER.debug(f"Failed to stop cluster: {exc}")
 
@@ -295,12 +301,12 @@ def restart_node(node_name: str) -> None:
     LOGGER.info(f"Restarting cluster node `{node_name}`.")
     cluster_env = get_cluster_env()
     supervisor_port = CLUSTER_TYPE.scripts_instances.get_instance_ports(
-        cluster_env["instance_num"]
+        cluster_env.instance_num
     ).supervisor
     try:
         helpers.run_command(
             f"supervisorctl -s http://localhost:{supervisor_port} restart {node_name}",
-            workdir=cluster_env["work_dir"],
+            workdir=cluster_env.work_dir,
         )
     except Exception as exc:
         LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
@@ -308,7 +314,7 @@ def restart_node(node_name: str) -> None:
 
 def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Load data for pools existing in the cluster environment."""
-    data_dir = get_cluster_env()["state_dir"] / "nodes"
+    data_dir = get_cluster_env().state_dir / "nodes"
     pools = ("node-pool1", "node-pool2")
 
     pools_data = {}
@@ -362,7 +368,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     destination_dir = Path(destination_dir).expanduser()
     destination_dir.mkdir(parents=True, exist_ok=True)
     cluster_env = get_cluster_env()
-    instance_num = cluster_env["instance_num"]
+    instance_num = cluster_env.instance_num
     addrs = ("user1",)
 
     LOGGER.debug("Creating addresses and keys for tests.")
@@ -396,7 +402,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 
     pools_data = load_pools_data(cluster_obj)
 
-    data_file = Path(cluster_env["state_dir"]) / ADDRS_DATA
+    data_file = Path(cluster_env.state_dir) / ADDRS_DATA
     with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
     return data_file
@@ -404,22 +410,17 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 
 def load_addrs_data() -> dict:
     """Load data about addresses and their keys for usage in tests."""
-    cluster_env = get_cluster_env()
-    data_file = Path(cluster_env["state_dir"]) / ADDRS_DATA
+    data_file = Path(get_cluster_env().state_dir) / ADDRS_DATA
     with open(data_file, "rb") as in_data:
         return pickle.load(in_data)  # type: ignore
 
 
 def save_cluster_artifacts(artifacts_dir: Path, clean: bool = False) -> Optional[Path]:
     """Save cluster artifacts."""
-    cluster_env = get_cluster_env()
-    if not cluster_env.get("state_dir"):
-        return None
-
     dest_dir = artifacts_dir / f"cluster_artifacts_{clusterlib.get_rand_str(8)}"
     dest_dir.mkdir(parents=True)
 
-    state_dir = Path(cluster_env["state_dir"])
+    state_dir = Path(get_cluster_env().state_dir)
     files_list = list(state_dir.glob("*.std*"))
     files_list.extend(list(state_dir.glob("*.json")))
     dirs_to_copy = ("nodes", "shelley")
