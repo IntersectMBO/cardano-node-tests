@@ -66,8 +66,7 @@ def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> Li
 def add_ignore_rule(files_glob: str, regex: str) -> None:
     """Add ignore rule for expected errors."""
     with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/ignore_rules.lock"):
-        cluster_env = cluster_nodes.get_cluster_env()
-        state_dir = cluster_env["state_dir"]
+        state_dir = cluster_nodes.get_cluster_env().state_dir
         rules_file = state_dir / ERRORS_RULES_FILE_NAME
         with open(rules_file, "a") as infile:
             infile.write(f"{files_glob};;{regex}\n")
@@ -81,8 +80,7 @@ def expect_errors(regex_pairs: List[Tuple[str, str]]) -> Iterator[None]:
         regex_pairs: [(glob, regex)] - list of regexes that need to be present in files
             described by the glob
     """
-    cluster_env = cluster_nodes.get_cluster_env()
-    state_dir = cluster_env["state_dir"]
+    state_dir = cluster_nodes.get_cluster_env().state_dir
 
     glob_list = []
     for files_glob, regex in regex_pairs:
@@ -160,8 +158,7 @@ def get_ignore_regex(ignore_rules: List[Tuple[str, str]], regexes: List[str], lo
 
 def search_cluster_artifacts() -> List[Tuple[Path, str]]:
     """Search cluster artifacts for errors."""
-    cluster_env = cluster_nodes.get_cluster_env()
-    state_dir = cluster_env["state_dir"]
+    state_dir = cluster_nodes.get_cluster_env().state_dir
     rules_file = state_dir / ERRORS_RULES_FILE_NAME
 
     with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/ignore_rules.lock"):
