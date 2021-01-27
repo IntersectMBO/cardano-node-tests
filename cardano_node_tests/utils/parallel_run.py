@@ -18,12 +18,12 @@ import pytest
 from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 
-from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import scripts_instances
 from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
@@ -55,7 +55,9 @@ if helpers.IS_XDIST and DEV_CLUSTER_RUNNING:
 
 def _kill_supervisor(instance_num: int) -> None:
     """Kill supervisor process."""
-    port_num = cluster_nodes.CLUSTER_TYPE.instances.get_instance_ports(instance_num).supervisor
+    port_num = cluster_nodes.CLUSTER_TYPE.scripts_instances.get_instance_ports(
+        instance_num
+    ).supervisor
     port_str = f":{port_num}"
     netstat = helpers.run_command("netstat -plnt").decode().splitlines()
     for line in netstat:
@@ -153,9 +155,11 @@ class ClusterManager:
         return instance_dir
 
     @property
-    def ports(self) -> cluster_instances.InstancePorts:
+    def ports(self) -> scripts_instances.InstancePorts:
         """Return port mappings for current cluster instance."""
-        return cluster_nodes.CLUSTER_TYPE.instances.get_instance_ports(self.cluster_instance)
+        return cluster_nodes.CLUSTER_TYPE.scripts_instances.get_instance_ports(
+            self.cluster_instance
+        )
 
     def _init_log(self) -> Path:
         """Return path to run log file."""
@@ -223,11 +227,11 @@ class ClusterManager:
                 self._log(f"cluster instance {instance_num} not running")
                 continue
 
-            startup_files = cluster_nodes.CLUSTER_TYPE.instances.prepare_files(
+            startup_files = cluster_nodes.CLUSTER_TYPE.scripts_instances.prepare_files(
                 destdir=self._create_startup_files_dir(instance_num),
                 instance_num=instance_num,
             )
-            cluster_nodes.CLUSTER_TYPE.instances.set_cardano_node_socket_path(instance_num)
+            cluster_nodes.set_cardano_node_socket_path(instance_num)
             self._log(
                 f"stopping cluster instance {instance_num} with `{startup_files.stop_script}`"
             )
@@ -351,7 +355,7 @@ class _ClusterGetter:
             f"stop_cmd='{stop_cmd}'"
         )
 
-        startup_files = cluster_nodes.CLUSTER_TYPE.instances.prepare_files(
+        startup_files = cluster_nodes.CLUSTER_TYPE.scripts_instances.prepare_files(
             destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance),
             instance_num=self.cm.cluster_instance,
             start_script=start_cmd,
@@ -514,7 +518,7 @@ class _ClusterGetter:
         )
 
     def _reload_cluster_obj(self, state_dir: Path) -> None:
-        """Realod cluster data if necessary."""
+        """Reload cluster data if necessary."""
         addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
         if addrs_data_checksum == self.cm.cache.last_checksum:
             return
@@ -826,7 +830,7 @@ class _ClusterGetter:
 
                     # we've found suitable cluster instance
                     self.cm._cluster_instance = instance_num
-                    cluster_nodes.CLUSTER_TYPE.instances.set_cardano_node_socket_path(instance_num)
+                    cluster_nodes.set_cardano_node_socket_path(instance_num)
 
                     if restart_here:
                         if restart_ready:

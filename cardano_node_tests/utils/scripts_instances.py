@@ -1,5 +1,4 @@
-"""Functionality for setting up new cluster instance."""
-import os
+"""Functionality for setting up scripts for cluster instances."""
 import re
 from pathlib import Path
 from typing import List
@@ -36,8 +35,8 @@ class InstancePorts(NamedTuple):
     prometheus_pool2: int
 
 
-class InstanceType:
-    """Generic cluster instance type."""
+class ScriptsTypes:
+    """Generic cluster scripts."""
 
     DEVOPS = "devops"
     LOCAL = "local"
@@ -59,26 +58,13 @@ class InstanceType:
         """Prepare files for starting and stoping cluster instance."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
-    def _get_cardano_node_socket_path(self, instance_num: int) -> Path:
-        """Return path to socket file in the given cluster instance."""
-        socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).resolve()
-        state_cluster_dirname = f"state-cluster{instance_num}"
-        state_cluster = socket_path.parent.parent / state_cluster_dirname
-        new_socket_path = state_cluster / socket_path.name
-        return new_socket_path
 
-    def set_cardano_node_socket_path(self, instance_num: int) -> None:
-        """Set the `CARDANO_NODE_SOCKET_PATH` env variable for the given cluster instance."""
-        socket_path = self._get_cardano_node_socket_path(instance_num)
-        os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
-
-
-class DevopsInstance(InstanceType):
-    """Instances for DevOps cluster type (shelley-only mode)."""
+class DevopsScripts(ScriptsTypes):
+    """DevOps cluster scripts (shelley-only mode)."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.type = InstanceType.DEVOPS
+        self.type = ScriptsTypes.DEVOPS
 
     def get_instance_ports(self, instance_num: int) -> InstancePorts:
         """Return ports mapping for given cluster instance."""
@@ -222,12 +208,12 @@ class DevopsInstance(InstanceType):
         )
 
 
-class LocalInstance(InstanceType):
-    """Instances for local cluster type (full cardano mode)."""
+class LocalScripts(ScriptsTypes):
+    """Local cluster scripts (full cardano mode)."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.type = InstanceType.LOCAL
+        self.type = ScriptsTypes.LOCAL
 
     def get_instance_ports(self, instance_num: int) -> InstancePorts:
         """Return ports mapping for given cluster instance."""

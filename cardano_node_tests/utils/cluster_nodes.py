@@ -14,11 +14,11 @@ from typing import Optional
 from _pytest.config import Config
 from packaging import version
 
-from cardano_node_tests.utils import cluster_instances
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import scripts_instances
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ class ClusterType:
     def __init__(self) -> None:
         self.version = VERSIONS
         self.type = "unknown"
-        self.instances = cluster_instances.InstanceType()
+        self.scripts_instances = scripts_instances.ScriptsTypes()
 
     def copy_startup_files(self, destdir: Path) -> StartupFiles:
         """Make copy of cluster startup files."""
@@ -93,7 +93,7 @@ class DevopsCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.DEVOPS
-        self.instances = cluster_instances.DevopsInstance()
+        self.scripts_instances = scripts_instances.DevopsScripts()
 
     def _get_node_config_paths(self, start_script: Path) -> List[Path]:
         """Return path of node config files in nix."""
@@ -167,7 +167,7 @@ class LocalCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.LOCAL
-        self.instances = cluster_instances.LocalInstance()
+        self.scripts_instances = scripts_instances.LocalScripts()
 
     def copy_startup_files(self, destdir: Path) -> StartupFiles:
         """Make copy of cluster startup files located in this repository."""
@@ -236,6 +236,21 @@ def get_cluster_type() -> ClusterType:
 CLUSTER_TYPE = get_cluster_type()
 
 
+def _get_cardano_node_socket_path(instance_num: int) -> Path:
+    """Return path to socket file in the given cluster instance."""
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).resolve()
+    state_cluster_dirname = f"state-cluster{instance_num}"
+    state_cluster = socket_path.parent.parent / state_cluster_dirname
+    new_socket_path = state_cluster / socket_path.name
+    return new_socket_path
+
+
+def set_cardano_node_socket_path(instance_num: int) -> None:
+    """Set the `CARDANO_NODE_SOCKET_PATH` env variable for the given cluster instance."""
+    socket_path = _get_cardano_node_socket_path(instance_num)
+    os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
+
+
 def get_cluster_env() -> dict:
     """Get cardano cluster environment."""
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
@@ -279,7 +294,7 @@ def restart_node(node_name: str) -> None:
     """Restart single node of the running cluster."""
     LOGGER.info(f"Restarting cluster node `{node_name}`.")
     cluster_env = get_cluster_env()
-    supervisor_port = CLUSTER_TYPE.instances.get_instance_ports(
+    supervisor_port = CLUSTER_TYPE.scripts_instances.get_instance_ports(
         cluster_env["instance_num"]
     ).supervisor
     try:
