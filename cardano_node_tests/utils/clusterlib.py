@@ -935,11 +935,14 @@ class ClusterLib:
     def get_key_deposit(self) -> int:
         """Return key deposit amount."""
         pparams = self.get_protocol_params()
+        # TODO: change once the old "keyDeposit" is no longer needed, possibly change
+        # the function name as well
         return int(pparams.get("keyDeposit") or pparams.get("stakeAddressDeposit") or 0)
 
     def get_pool_deposit(self) -> int:
         """Return pool deposit amount."""
         pparams = self.get_protocol_params()
+        # TODO: change once the old "poolDeposit" is no longer needed
         return int(pparams.get("poolDeposit") or pparams.get("stakePoolDeposit") or 0)
 
     def get_stake_distribution(self) -> dict:
@@ -998,6 +1001,7 @@ class ClusterLib:
             return 0
 
         pparams = self.get_protocol_params()
+        # TODO: change once the old "keyDeposit" and "poolDeposit" are no longer needed
         key_deposit = pparams.get("keyDeposit") or pparams.get("stakeAddressDeposit") or 0
         pool_deposit = pparams.get("poolDeposit") or pparams.get("stakePoolDeposit") or 0
 
