@@ -934,11 +934,13 @@ class ClusterLib:
 
     def get_key_deposit(self) -> int:
         """Return key deposit amount."""
-        return int(self.get_protocol_params()["keyDeposit"])
+        pparams = self.get_protocol_params()
+        return int(pparams.get("keyDeposit") or pparams.get("stakeAddressDeposit") or 0)
 
     def get_pool_deposit(self) -> int:
         """Return pool deposit amount."""
-        return int(self.get_protocol_params()["poolDeposit"])
+        pparams = self.get_protocol_params()
+        return int(pparams.get("poolDeposit") or pparams.get("stakePoolDeposit") or 0)
 
     def get_stake_distribution(self) -> dict:
         """Return current aggregated stake distribution per stake pool."""
@@ -996,8 +998,8 @@ class ClusterLib:
             return 0
 
         pparams = self.get_protocol_params()
-        key_deposit = pparams["keyDeposit"]
-        pool_deposit = pparams["poolDeposit"]
+        key_deposit = pparams.get("keyDeposit") or pparams.get("stakeAddressDeposit") or 0
+        pool_deposit = pparams.get("poolDeposit") or pparams.get("stakePoolDeposit") or 0
 
         deposit = 0
         for cert in tx_files.certificate_files:
