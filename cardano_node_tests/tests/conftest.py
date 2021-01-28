@@ -14,6 +14,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import parallel_run
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,9 +46,9 @@ def pytest_addoption(parser: Any) -> None:
 
 
 def pytest_configure(config: Any) -> None:
-    config._metadata["cardano-node"] = helpers.CARDANO_VERSION["cardano-node"]
-    config._metadata["cardano-node rev"] = helpers.CARDANO_VERSION["git_rev"]
-    config._metadata["ghc"] = helpers.CARDANO_VERSION["ghc"]
+    config._metadata["cardano-node"] = str(VERSIONS.node)
+    config._metadata["cardano-node rev"] = VERSIONS.git_rev
+    config._metadata["ghc"] = VERSIONS.ghc
     config._metadata["cardano-node-tests rev"] = helpers.CURRENT_COMMIT
     config._metadata["cardano-node-tests url"] = helpers.GITHUB_TREE_URL
 
