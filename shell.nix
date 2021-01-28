@@ -27,6 +27,7 @@ let
       mypy
       hypothesis
       cbor2
+      requests
     ])) ];
   });
 
