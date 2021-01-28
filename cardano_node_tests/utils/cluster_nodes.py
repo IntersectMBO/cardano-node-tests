@@ -12,7 +12,6 @@ from typing import NamedTuple
 from typing import Optional
 
 from _pytest.config import Config
-from packaging import version
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
@@ -24,35 +23,6 @@ from cardano_node_tests.utils.types import FileType
 LOGGER = logging.getLogger(__name__)
 
 ADDRS_DATA = "addrs_data.pickle"
-
-
-class Versions:
-    """Cluster era and transaction era determined from env variables, and node version."""
-
-    BYRON = 1
-    SHELLEY = 2
-    ALLEGRA = 3
-    MARY = 4
-
-    def __init__(self) -> None:
-        cluster_era = configuration.CLUSTER_ERA
-        # if not specified otherwise, transaction era is the same as cluster era
-        transaction_era = configuration.TX_ERA or cluster_era
-
-        self.cluster_era = getattr(self, cluster_era.upper(), 1)
-        self.transaction_era = getattr(self, transaction_era.upper(), 1)
-        self.node = version.parse(helpers.CARDANO_VERSION["cardano-node"])
-
-    def __repr__(self) -> str:
-        return (
-            f"<Versions: cluster_era={self.cluster_era}, "
-            f"transaction_era={self.transaction_era}, "
-            f"node={helpers.CARDANO_VERSION['cardano-node']}>"
-        )
-
-
-# versions don't change during test run, so it can be used as constant
-VERSIONS = Versions()
 
 
 class ClusterEnv(NamedTuple):
@@ -78,7 +48,6 @@ class ClusterType:
     LOCAL = "local"
 
     def __init__(self) -> None:
-        self.version = VERSIONS
         self.type = "unknown"
         self.scripts_instances = scripts_instances.ScriptsTypes()
 

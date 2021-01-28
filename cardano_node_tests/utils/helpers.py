@@ -64,23 +64,6 @@ def run_shell_command(command: str, workdir: FileType = "") -> bytes:
     return stdout
 
 
-def get_cardano_version() -> dict:
-    """Return version info for cardano-node."""
-    out = run_shell_command("cardano-node --version").decode().strip()
-    env_info, git_info, *__ = out.splitlines()
-    node, platform, ghc, *__ = env_info.split(" - ")
-    version_db = {
-        "cardano-node": node.split(" ")[-1],
-        "platform": platform,
-        "ghc": ghc,
-        "git_rev": git_info.split(" ")[-1],
-    }
-    return version_db
-
-
-CARDANO_VERSION = get_cardano_version()
-
-
 @contextlib.contextmanager
 def change_cwd(dir_path: FileType) -> Iterator[FileType]:
     """Change and restore CWD - context manager."""
