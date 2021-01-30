@@ -77,10 +77,61 @@ def issuers_addrs(
         addrs[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=20_000_000,
+        amount=900_000_000,
     )
 
     return addrs
+
+
+@pytest.fixture
+def simple_script_policyid(
+    cluster_manager: parallel_run.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+    issuers_addrs: List[clusterlib.AddressRecord],
+) -> Tuple[Path, str]:
+    """Return script and it's PolicyId."""
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+    temp_template = "test_native_tokens_simple"
+    issuer_addr = issuers_addrs[1]
+
+    # create simple script
+    keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+    script_content = {"keyHash": keyhash, "type": "sig"}
+    script = Path(f"{temp_template}.script")
+    with open(f"{temp_template}.script", "w") as out_json:
+        json.dump(script_content, out_json)
+
+    policyid = cluster.get_policyid(script)
+
+    return script, policyid
+
+
+@pytest.fixture
+def multisig_script_policyid(
+    cluster_manager: parallel_run.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+    issuers_addrs: List[clusterlib.AddressRecord],
+) -> Tuple[Path, str]:
+    """Return multisig script and it's PolicyId."""
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+    temp_template = "test_native_tokens_multisig"
+    payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+
+    # create multisig script
+    multisig_script = cluster.build_multisig_script(
+        script_name=temp_template,
+        script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+        payment_vkey_files=payment_vkey_files[1:],
+    )
+    policyid = cluster.get_policyid(multisig_script)
+
+    return multisig_script, policyid
 
 
 def _mint_or_burn_witness(
@@ -324,34 +375,27 @@ class TestMinting:
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
+    @pytest.mark.parametrize("tokens_num", (5, 10, 50, 100, 1000))
     @allure.link(helpers.get_vcs_link())
     def test_multi_minting_and_burning_witnesses(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        multisig_script_policyid: Tuple[Path, str],
+        tokens_num: int,
     ):
         """Test minting and burning multiple different tokens, sign the TX using witnesses."""
         temp_template = helpers.get_func_name()
-        rand = clusterlib.get_rand_str(4)
+        rand = clusterlib.get_rand_str(8)
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
-        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
-
-        # create multisig script
-        multisig_script = cluster.build_multisig_script(
-            script_name=temp_template,
-            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
-            payment_vkey_files=payment_vkey_files[1:],
-        )
-        policyid = cluster.get_policyid(multisig_script)
+        script, policyid = multisig_script_policyid
 
         tokens_to_mint = []
-        for tnum in range(5):
+        for tnum in range(tokens_num):
             asset_name = f"couttscoin{rand}{tnum}"
             token = f"{policyid}.{asset_name}"
-
-            assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
-            ), "The token already exists"
 
             tokens_to_mint.append(
                 TokenRecord(
@@ -360,16 +404,27 @@ class TestMinting:
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
-                    script=multisig_script,
+                    script=script,
                 )
             )
 
         # token minting
-        _mint_or_burn_witness(
-            cluster_obj=cluster,
-            new_tokens=tokens_to_mint,
-            temp_template=f"{temp_template}_mint",
-        )
+        minting_args = {
+            "cluster_obj": cluster,
+            "new_tokens": tokens_to_mint,
+            "temp_template": f"{temp_template}_mint",
+        }
+
+        if tokens_num >= 100:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                _mint_or_burn_witness(**minting_args)  # type: ignore
+            if tokens_num >= 1000:
+                assert "(UtxoFailure (MaxTxSizeUTxO" in str(excinfo.value)
+            else:
+                assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
+            return
+
+        _mint_or_burn_witness(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
@@ -387,35 +442,28 @@ class TestMinting:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
+    @pytest.mark.parametrize("tokens_num", (5, 10, 50, 100, 1000))
     @allure.link(helpers.get_vcs_link())
     def test_multi_minting_and_burning_sign(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        simple_script_policyid: Tuple[Path, str],
+        tokens_num: int,
     ):
         """Test minting and burning multiple different tokens, sign the TX using skeys."""
         temp_template = helpers.get_func_name()
-        rand = clusterlib.get_rand_str(4)
+        rand = clusterlib.get_rand_str(8)
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
-
-        # create simple script
-        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
-        script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
-        with open(f"{temp_template}.script", "w") as out_json:
-            json.dump(script_content, out_json)
-
-        policyid = cluster.get_policyid(script)
+        script, policyid = simple_script_policyid
 
         tokens_to_mint = []
-        for tnum in range(5):
+        for tnum in range(tokens_num):
             asset_name = f"couttscoin{rand}{tnum}"
             token = f"{policyid}.{asset_name}"
-
-            assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
-            ), "The token already exists"
 
             tokens_to_mint.append(
                 TokenRecord(
@@ -429,11 +477,22 @@ class TestMinting:
             )
 
         # token minting
-        _mint_or_burn_sign(
-            cluster_obj=cluster,
-            new_tokens=tokens_to_mint,
-            temp_template=f"{temp_template}_mint",
-        )
+        minting_args = {
+            "cluster_obj": cluster,
+            "new_tokens": tokens_to_mint,
+            "temp_template": f"{temp_template}_mint",
+        }
+
+        if tokens_num >= 100:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                _mint_or_burn_sign(**minting_args)  # type: ignore
+            if tokens_num >= 1000:
+                assert "(UtxoFailure (MaxTxSizeUTxO" in str(excinfo.value)
+            else:
+                assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
+            return
+
+        _mint_or_burn_sign(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
@@ -1144,60 +1203,6 @@ class TestTransfer:
 class TestNegative:
     """Negative tests for minting tokens."""
 
-    TEMP_TEMPLATE = "test_native_tokens_negative"
-
-    @pytest.fixture
-    def payment_addrs(
-        self,
-        cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
-        """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"{self.TEMP_TEMPLATE}{cluster_manager.cluster_instance}_{i}" for i in range(3)],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
-            cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=20_000_000,
-        )
-
-        return addrs
-
-    @pytest.fixture
-    def script_policyid(
-        self,
-        cluster_manager: parallel_run.ClusterManager,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-    ) -> Tuple[Path, str]:
-        """Return script and it's PolicyId."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-        issuer_addr = payment_addrs[1]
-
-        # create simple script
-        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
-        script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{self.TEMP_TEMPLATE}.script")
-        with open(f"{self.TEMP_TEMPLATE}.script", "w") as out_json:
-            json.dump(script_content, out_json)
-
-        policyid = cluster.get_policyid(script)
-
-        return script, policyid
-
     def _mint_tx(
         self,
         cluster_obj: clusterlib.ClusterLib,
@@ -1250,8 +1255,8 @@ class TestNegative:
     def test_long_name(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        script_policyid: Tuple[Path, str],
+        issuers_addrs: List[clusterlib.AddressRecord],
+        simple_script_policyid: Tuple[Path, str],
         asset_name: str,
     ):
         """Try to create token with asset name that is longer than allowed.
@@ -1260,10 +1265,10 @@ class TestNegative:
         """
         temp_template = "test_long_name"
 
-        script, policyid = script_policyid
+        script, policyid = simple_script_policyid
         token = f"{policyid}.{asset_name}"
-        token_mint_addr = payment_addrs[0]
-        issuer_addr = payment_addrs[1]
+        token_mint_addr = issuers_addrs[0]
+        issuer_addr = issuers_addrs[1]
         amount = 20_000_000
 
         token_mint = TokenRecord(
