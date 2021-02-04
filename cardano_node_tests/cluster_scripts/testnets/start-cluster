@@ -1,0 +1,280 @@
+#!/bin/bash
+
+set -euo pipefail
+
+TESTNET_DIR="${1:?"Testnet dir needed"}"
+SCRIPT_DIR="$(readlink -m "${0%/*}")"
+SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+STATE_CLUSTER="${SOCKET_PATH%/*}"
+
+if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
+  echo "Cluster already running. Please run \`stop-cluster\` first!" >&2
+  exit 1
+fi
+
+rm -rf "$STATE_CLUSTER"
+mkdir -p "$STATE_CLUSTER"/{byron,shelley,webserver}
+cd "$STATE_CLUSTER/.."
+
+TESTNET_CONF_DIR="$TESTNET_DIR"
+if [ -e "$SCRIPT_DIR/testnet_conf" ]; then
+  TESTNET_CONF_DIR="$SCRIPT_DIR/testnet_conf"
+fi
+
+# copy faucet address and keys
+cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
+
+# copy and edit configuration
+cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
+cp "$SCRIPT_DIR"/topology-pool*.json "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
+cp "$TESTNET_CONF_DIR/genesis-byron.json" "$STATE_CLUSTER/genesis-byron.json"
+cp "$TESTNET_CONF_DIR/genesis-shelley.json" "$STATE_CLUSTER/genesis-shelley.json"
+ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
+ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.json"
+
+PRODUCER="$(jq '.Producers[0]' "$TESTNET_CONF_DIR"/topology-*.json)"
+jq --argjson relay "$PRODUCER" '.Producers[2] = $relay' "$SCRIPT_DIR/topology-relay1.json" \
+  > "$STATE_CLUSTER/topology-relay1.json"
+
+RELAY1_EKG="30300"
+RELAY1_PROMETHEUS="30301"
+POOL1_EKG="30306"
+POOL1_PROMETHEUS="30307"
+POOL2_EKG="30308"
+POOL2_PROMETHEUS="30309"
+jq --arg ekg "$RELAY1_EKG" --arg prometheus "$RELAY1_PROMETHEUS" \
+  '.hasEKG = ($ekg|tonumber) | .hasPrometheus[1] = ($prometheus|tonumber)' \
+  "$TESTNET_CONF_DIR"/config-*.json > "$STATE_CLUSTER/config-relay1.json"
+jq --arg ekg "$POOL1_EKG" --arg prometheus "$POOL1_PROMETHEUS" \
+  '.hasEKG = ($ekg|tonumber) | .hasPrometheus[1] = ($prometheus|tonumber)' \
+  "$TESTNET_CONF_DIR"/config-*.json > "$STATE_CLUSTER/config-pool1.json"
+jq --arg ekg "$POOL2_EKG" --arg prometheus "$POOL2_PROMETHEUS" \
+  '.hasEKG = ($ekg|tonumber) | .hasPrometheus[1] = ($prometheus|tonumber)' \
+  "$TESTNET_CONF_DIR"/config-*.json > "$STATE_CLUSTER/config-pool2.json"
+chmod u+w "$STATE_CLUSTER"/config-*.json
+
+NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+POOL_PLEDGE=1000000000
+POOL_PORT_OFFSET=3
+RAND_POOL="$((RANDOM % 100))"
+
+SLOT_LENGTH="$(jq '.slotLength' "$STATE_CLUSTER/shelley/genesis.json")"
+SLOTS_KES_PERIOD="$(jq '.slotsPerKESPeriod' "$STATE_CLUSTER/shelley/genesis.json")"
+SYSTEM_START="$(jq -r '.systemStart' "$STATE_CLUSTER/shelley/genesis.json")"
+SYSTEM_START_SEC="$(date -d "$SYSTEM_START" +%s)"
+NOW="$(date +%s)"
+KES_PERIOD="$(( ((NOW - SYSTEM_START_SEC) * SLOT_LENGTH) / SLOTS_KES_PERIOD))"
+
+for i in {1..2}; do
+  mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
+  echo "Generating Pool $i Secrets"
+  cardano-cli address key-gen \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey"
+  cardano-cli stake-address key-gen \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
+  # Payment addresses
+  cardano-cli address build \
+    --payment-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey" \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner.addr"
+  # Stake addresses
+  cardano-cli stake-address build \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
+  # Stake addresses registration certs
+  cardano-cli stake-address registration-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
+
+  # Stake reward keys
+  cardano-cli stake-address key-gen \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey"
+  # Stake reward addresses registration certs
+  cardano-cli stake-address registration-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
+  cardano-cli node key-gen \
+    --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+    --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
+    --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter"
+  cardano-cli node key-gen-KES \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.vkey" \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.skey"
+  cardano-cli node key-gen-VRF \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.skey"
+
+  # Stake address delegation certs
+  cardano-cli stake-address delegation-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
+
+  cardano-cli node issue-op-cert \
+    --kes-period "$KES_PERIOD" \
+    --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
+    --kes-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.vkey" \
+    --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/op.cert"
+
+  echo "Generating Pool $i Metadata"
+  jq -n \
+    --arg name "TestPool${RAND_POOL}_${i}" \
+    --arg description "Test Pool $RAND_POOL $i" \
+    --arg ticker "TP${RAND_POOL}${i}" \
+    --arg homepage "http://localhost:30000/pool$i.html" \
+    '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
+    > "$STATE_CLUSTER/webserver/pool$i.json"
+
+  METADATA_URL="http://localhost:30000/pool$i.json"
+  METADATA_HASH=$(cardano-cli stake-pool metadata-hash --pool-metadata-file \
+                  "$STATE_CLUSTER/webserver/pool$i.json")
+  POOL_PORT=$(("30000" + "$POOL_PORT_OFFSET" + i))
+  POOL_COST="$(jq '.protocolParams.minPoolCost' "$STATE_CLUSTER/shelley/genesis.json")"
+  echo "$POOL_PORT" > "$STATE_CLUSTER/nodes/node-pool$i/port"
+  echo "$POOL_PLEDGE" > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
+
+  cardano-cli stake-pool registration-certificate \
+    --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+    --vrf-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
+    --pool-pledge "$POOL_PLEDGE" \
+    --pool-margin 0.35 \
+    --pool-cost "$POOL_COST" \
+    --pool-reward-account-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+    --pool-owner-stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --metadata-url "$METADATA_URL" \
+    --metadata-hash "$METADATA_HASH" \
+    --pool-relay-port "$POOL_PORT" \
+    --pool-relay-ipv4 "127.0.0.1" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/register.cert"
+done
+
+# create scripts for cluster starting / stopping
+printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
+printf "#!/bin/sh\n\nsupervisorctl stop all" > "$STATE_CLUSTER/supervisorctl_stop"
+printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
+  > "$STATE_CLUSTER/supervisord_start"
+chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_start}
+
+# copy db
+for n in db-pool1 db-pool2 db-relay1; do
+  cp -r "$TESTNET_DIR/node1-db" "$STATE_CLUSTER/$n"
+done
+
+supervisord --config "$STATE_CLUSTER/supervisor.conf"
+
+while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
+  echo "Waiting 5 seconds for relay node to start"; sleep 5
+done
+
+echo "Waiting to make sure the chain is synced"
+while :; do
+  start_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+  sleep 30
+  end_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+  if [ "$start_slot" -ne "$end_slot" ] && [ "$((end_slot - start_slot))" -lt 100 ]; then
+    break
+  fi
+  sleep 5
+done
+
+echo "Transfering funds to pool owners, registering pools and delegations"
+
+# Tranfer funds, register pools and delegations, all in one big transaction:
+
+# figure out what is the current era
+ERA="$({ cardano-cli query protocol-parameters \
+          --shelley-era \
+          --testnet-magic 3 \
+          --out-file /dev/null 2>&1 || :; } |
+          sed -n 's/.*{ledgerEraName = "\([^"]*\)".*/\L\1/p;')"
+[ -n "$ERA" ] || ERA="shelley"
+
+cardano-cli query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --"$ERA"-era \
+  --out-file "$STATE_CLUSTER/pparams.json"
+
+TXIN_ADDR="$(<"$STATE_CLUSTER"/shelley/faucet.addr)"
+UTXO="$(cardano-cli query utxo \
+          --testnet-magic "$NETWORK_MAGIC" \
+          --"$ERA"-era \
+          --address "$TXIN_ADDR" |
+          sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
+TXIN="${UTXO%;*}"
+TXIN_AMOUNT="${UTXO#*;}"
+TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+
+cardano-cli transaction build-raw \
+  --ttl    "$TTL" \
+  --fee    0 \
+  --tx-in  "$TXIN" \
+  --tx-out "$TXIN_ADDR+0" \
+  --tx-out "$(<"$STATE_CLUSTER/nodes/node-pool1/owner.addr")+$POOL_PLEDGE" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool1/stake.reg.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool1/stake-reward.reg.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool1/register.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool1/owner-stake.deleg.cert" \
+  --tx-out "$(<"$STATE_CLUSTER/nodes/node-pool2/owner.addr")+$POOL_PLEDGE" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake.reg.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake-reward.reg.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool2/register.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool2/owner-stake.deleg.cert" \
+  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody"
+
+FEE="$(cardano-cli transaction calculate-min-fee \
+        --testnet-magic "$NETWORK_MAGIC" \
+        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+        --tx-in-count 1 \
+        --tx-out-count 3 \
+        --witness-count 9 \
+        --byron-witness-count 0 \
+        --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody" |
+        cut -d' ' -f1)"
+
+DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' \
+  "$STATE_CLUSTER/shelley/genesis.json")"
+TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - (DEPOSITS + POOL_PLEDGE) * 2))"
+
+cardano-cli transaction build-raw \
+  --ttl    "$TTL" \
+  --fee    "$FEE" \
+  --tx-in  "$TXIN" \
+  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  --tx-out "$(<"$STATE_CLUSTER/nodes/node-pool1/owner.addr")+$POOL_PLEDGE" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool1/stake.reg.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool1/stake-reward.reg.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool1/register.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool1/owner-stake.deleg.cert" \
+  --tx-out "$(<"$STATE_CLUSTER/nodes/node-pool2/owner.addr")+$POOL_PLEDGE" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake.reg.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool2/stake-reward.reg.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool2/register.cert" \
+  --certificate-file "$STATE_CLUSTER/nodes/node-pool2/owner-stake.deleg.cert" \
+  --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
+
+cardano-cli transaction sign \
+  --signing-key-file "$STATE_CLUSTER/nodes/node-pool1/owner-stake.skey" \
+  --signing-key-file "$STATE_CLUSTER/nodes/node-pool1/reward.skey" \
+  --signing-key-file "$STATE_CLUSTER/nodes/node-pool1/cold.skey" \
+  --signing-key-file "$STATE_CLUSTER/nodes/node-pool2/owner-stake.skey" \
+  --signing-key-file "$STATE_CLUSTER/nodes/node-pool2/reward.skey" \
+  --signing-key-file "$STATE_CLUSTER/nodes/node-pool2/cold.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/faucet.skey" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
+  --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
+
+cardano-cli transaction submit \
+  --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
+  --testnet-magic "$NETWORK_MAGIC"
+
+
+echo "Cluster started. Run \`stop-cluster\` to stop"

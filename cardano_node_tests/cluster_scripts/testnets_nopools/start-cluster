@@ -1,0 +1,74 @@
+#!/bin/bash
+
+set -euo pipefail
+
+TESTNET_DIR="${1:?"Testnet dir needed"}"
+SCRIPT_DIR="$(readlink -m "${0%/*}")"
+SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+STATE_CLUSTER="${SOCKET_PATH%/*}"
+
+if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
+  echo "Cluster already running. Please run \`stop-cluster\` first!" >&2
+  exit 1
+fi
+
+rm -rf "$STATE_CLUSTER"
+mkdir -p "$STATE_CLUSTER"/{byron,shelley,webserver}
+cd "$STATE_CLUSTER/.."
+
+TESTNET_CONF_DIR="$TESTNET_DIR"
+if [ -e "$SCRIPT_DIR/testnet_conf" ]; then
+  TESTNET_CONF_DIR="$SCRIPT_DIR/testnet_conf"
+fi
+
+# copy faucet address and keys
+cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
+
+# copy and edit configuration
+cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
+cp "$TESTNET_CONF_DIR/genesis-byron.json" "$STATE_CLUSTER/genesis-byron.json"
+cp "$TESTNET_CONF_DIR/genesis-shelley.json" "$STATE_CLUSTER/genesis-shelley.json"
+ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
+ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.json"
+
+PRODUCER="$(jq '.Producers[0]' "$TESTNET_CONF_DIR"/topology-*.json)"
+jq --argjson relay "$PRODUCER" '.Producers[0] = $relay' "$SCRIPT_DIR/topology-relay1.json" \
+  > "$STATE_CLUSTER/topology-relay1.json"
+
+RELAY1_EKG="30300"
+RELAY1_PROMETHEUS="30301"
+jq --arg ekg "$RELAY1_EKG" --arg prometheus "$RELAY1_PROMETHEUS" \
+  '.hasEKG = ($ekg|tonumber) | .hasPrometheus[1] = ($prometheus|tonumber)' \
+  "$TESTNET_CONF_DIR"/config-*.json > "$STATE_CLUSTER/config-relay1.json"
+chmod u+w "$STATE_CLUSTER"/config-*.json
+
+# create scripts for cluster starting / stopping
+printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
+printf "#!/bin/sh\n\nsupervisorctl stop all" > "$STATE_CLUSTER/supervisorctl_stop"
+printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
+  > "$STATE_CLUSTER/supervisord_start"
+chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_start}
+
+# copy db
+cp -r "$TESTNET_DIR/node1-db" "$STATE_CLUSTER/db-relay1"
+
+supervisord --config "$STATE_CLUSTER/supervisor.conf"
+
+while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
+  echo "Waiting 5 seconds for relay node to start"; sleep 5
+done
+
+echo "Waiting to make sure the chain is synced"
+NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+while :; do
+  start_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+  sleep 30
+  end_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+  if [ "$start_slot" -ne "$end_slot" ] && [ "$((end_slot - start_slot))" -lt 100 ]; then
+    break
+  fi
+  sleep 5
+done
+
+echo "Cluster started. Run \`stop-cluster\` to stop"
