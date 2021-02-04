@@ -385,7 +385,9 @@ class _ClusterGetter:
                 pass
 
             try:
-                cluster_obj = cluster_nodes.start_cluster(cmd=str(startup_files.start_script))
+                cluster_obj = cluster_nodes.start_cluster(
+                    cmd=str(startup_files.start_script), args=startup_files.start_script_args
+                )
             except Exception as err:
                 LOGGER.error(f"Failed to start cluster: {err}")
                 excp = err
