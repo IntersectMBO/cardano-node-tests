@@ -1,4 +1,5 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
+import itertools
 import logging
 import os
 import pickle
@@ -46,6 +47,9 @@ class ClusterType:
 
     DEVOPS = "devops"
     LOCAL = "local"
+    TESTNET = "testnet"
+    TESTNET_NOPOOLS = "testnet_nopools"
+    test_addr_records = ("user1",)
 
     def __init__(self) -> None:
         self.type = "unknown"
@@ -59,10 +63,10 @@ class ClusterType:
         """Return instance of `ClusterLib` (cluster_obj)."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
-    def fund_setup(
-        self, cluster_obj: clusterlib.ClusterLib, addrs_data: dict, destination_dir: FileType = "."
-    ) -> None:
-        """Fund addresses created during cluster setup."""
+    def get_addrs_data(
+        self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
+    ) -> Dict[str, Dict[str, Any]]:
+        """Create addresses and their keys for usage in tests."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
 
@@ -126,10 +130,27 @@ class DevopsCluster(ClusterType):
         cluster_obj = clusterlib.ClusterLib(get_cluster_env().state_dir)
         return cluster_obj
 
-    def fund_setup(
-        self, cluster_obj: clusterlib.ClusterLib, addrs_data: dict, destination_dir: FileType = "."
-    ) -> None:
-        """Fund addresses created during cluster setup."""
+    def get_addrs_data(
+        self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
+    ) -> Dict[str, Dict[str, Any]]:
+        """Create addresses and their keys for usage in tests."""
+        destination_dir = Path(destination_dir).expanduser()
+        destination_dir.mkdir(parents=True, exist_ok=True)
+        cluster_env = get_cluster_env()
+        instance_num = cluster_env.instance_num
+
+        addrs_data: Dict[str, Dict[str, Any]] = {}
+        for addr_name in self.test_addr_records:
+            addr_name_instance = f"{addr_name}_ci{instance_num}"
+            payment = cluster_obj.gen_payment_addr_and_keys(
+                name=addr_name_instance,
+                destination_dir=destination_dir,
+            )
+            addrs_data[addr_name] = {
+                "payment": payment,
+            }
+
+        LOGGER.debug("Funding created addresses.")
         # fund from shelley genesis
         clusterlib_utils.fund_from_genesis(
             *[d["payment"].address for d in addrs_data.values()],
@@ -137,6 +158,8 @@ class DevopsCluster(ClusterType):
             amount=6_000_000_000_000,
             destination_dir=destination_dir,
         )
+
+        return addrs_data
 
 
 class LocalCluster(ClusterType):
@@ -167,18 +190,35 @@ class LocalCluster(ClusterType):
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
         cluster_obj = clusterlib.ClusterLib(
-            cluster_env.state_dir,
+            state_dir=cluster_env.state_dir,
             protocol=clusterlib.Protocols.CARDANO,
             era=cluster_env.cluster_era,
             tx_era=cluster_env.tx_era,
         )
         return cluster_obj
 
-    def fund_setup(
-        self, cluster_obj: clusterlib.ClusterLib, addrs_data: dict, destination_dir: FileType = "."
-    ) -> None:
-        """Fund addresses created during cluster setup."""
-        to_fund = [d["payment"] for d in addrs_data.values()]
+    def get_addrs_data(
+        self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
+    ) -> Dict[str, Dict[str, Any]]:
+        """Create addresses and their keys for usage in tests."""
+        destination_dir = Path(destination_dir).expanduser()
+        destination_dir.mkdir(parents=True, exist_ok=True)
+        cluster_env = get_cluster_env()
+        instance_num = cluster_env.instance_num
+
+        addrs_data: Dict[str, Dict[str, Any]] = {}
+        for addr_name in self.test_addr_records:
+            addr_name_instance = f"{addr_name}_ci{instance_num}"
+            payment = cluster_obj.gen_payment_addr_and_keys(
+                name=addr_name_instance,
+                destination_dir=destination_dir,
+            )
+            addrs_data[addr_name] = {
+                "payment": payment,
+            }
+
+        LOGGER.debug("Funding created addresses.")
+        # update `addrs_data` with byron addresses
         byron_dir = get_cluster_env().state_dir / "byron"
         for b in range(3):
             byron_addr = {
@@ -193,6 +233,7 @@ class LocalCluster(ClusterType):
             addrs_data[f"byron00{b}"] = byron_addr
 
         # fund from converted byron address
+        to_fund = [d["payment"] for d in addrs_data.values()]
         clusterlib_utils.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
@@ -202,8 +243,93 @@ class LocalCluster(ClusterType):
             force=True,
         )
 
+        return addrs_data
+
+
+class TestnetCluster(ClusterType):
+    """Testnet cluster type (full cardano mode)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.type = ClusterType.TESTNET
+        self.scripts_instances: scripts_instances.TestnetScripts = (
+            scripts_instances.TestnetScripts()
+        )
+
+    def copy_startup_files(self, destdir: Path) -> StartupFiles:
+        """Make copy of cluster startup files located in this repository."""
+        scripts_dir = configuration.SCRIPTS_DIR
+        shutil.copytree(
+            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
+
+        start_script = destdir / "start-cluster"
+        assert start_script.exists()
+
+        bootstrap_conf_dir = self.scripts_instances.get_bootstrap_conf_dir(bootstrap_dir=destdir)
+        destdir_bootstrap = destdir / self.scripts_instances.BOOTSTRAP_CONF
+        destdir_bootstrap.mkdir()
+        _infiles = [list(bootstrap_conf_dir.glob(g)) for g in self.scripts_instances.TESTNET_GLOBS]
+        infiles = list(itertools.chain.from_iterable(_infiles))
+        for infile in infiles:
+            shutil.copy(infile, destdir_bootstrap)
+
+        config_glob = f"{self.scripts_instances.BOOTSTRAP_CONF}/config-*.json"
+        # TODO: it's not really a spec file in case of a testnet
+        genesis_json = destdir / self.scripts_instances.BOOTSTRAP_CONF / "genesis-shelley.json"
+
+        return StartupFiles(
+            start_script=start_script, genesis_spec=genesis_json, config_glob=config_glob
+        )
+
+    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+        """Return instance of `ClusterLib` (cluster_obj)."""
+        cluster_env = get_cluster_env()
+        cluster_obj = clusterlib.ClusterLib(
+            state_dir=cluster_env.state_dir,
+            protocol=clusterlib.Protocols.CARDANO,
+            era=cluster_env.cluster_era,
+            tx_era=cluster_env.tx_era,
+        )
+        return cluster_obj
+
+    def get_addrs_data(
+        self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
+    ) -> Dict[str, Dict[str, Any]]:
+        """Create addresses and their keys for usage in tests."""
+        shelley_dir = get_cluster_env().state_dir / "shelley"
+
+        addrs_data: Dict[str, Dict[str, Any]] = {}
+        for addr_name in self.test_addr_records:
+            faucet_addr = {
+                "payment": clusterlib.AddressRecord(
+                    address=clusterlib.read_address_from_file(shelley_dir / "faucet.addr"),
+                    vkey_file=shelley_dir / "faucet.vkey",
+                    skey_file=shelley_dir / "faucet.skey",
+                )
+            }
+            addrs_data[addr_name] = faucet_addr
+
+        return addrs_data
+
+
+class TestnetNopoolsCluster(TestnetCluster):
+    """Testnet cluster type (full cardano mode)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.type = ClusterType.TESTNET_NOPOOLS
+        self.scripts_instances: scripts_instances.TestnetNopoolsScripts = (
+            scripts_instances.TestnetNopoolsScripts()
+        )
+
 
 def get_cluster_type() -> ClusterType:
+    """Return instance of the cluster type indicated by configuration."""
+    if configuration.BOOTSTRAP_DIR and configuration.NOPOOLS:
+        return TestnetNopoolsCluster()
+    if configuration.BOOTSTRAP_DIR:
+        return TestnetCluster()
     if configuration.CLUSTER_ERA == "shelley":
         return DevopsCluster()
     return LocalCluster()
@@ -248,10 +374,12 @@ def get_cluster_env() -> ClusterEnv:
     return cluster_env
 
 
-def start_cluster(cmd: str) -> clusterlib.ClusterLib:
+def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     """Start cluster."""
-    LOGGER.info(f"Starting cluster with `{cmd}`.")
-    helpers.run_shell_command(cmd, workdir=get_cluster_env().work_dir)
+    args_str = " ".join(args)
+    args_str = f" {args_str}" if args_str else ""
+    LOGGER.info(f"Starting cluster with `{cmd}{args_str}`.")
+    helpers.run_shell_command(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
     LOGGER.info("Cluster started.")
     return CLUSTER_TYPE.get_cluster_obj()
 
@@ -289,6 +417,10 @@ def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     pools_data = {}
     for pool_name in pools:
         pool_data_dir = data_dir / pool_name
+        if not pool_data_dir.exists():
+            LOGGER.info(f"The data for pool '{pool_name}' doesn't exist.")
+            continue
+
         pools_data[pool_name] = {
             "payment": clusterlib.AddressRecord(
                 address=clusterlib.read_address_from_file(pool_data_dir / "owner.addr"),
@@ -333,47 +465,21 @@ def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
 
 
 def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".") -> Path:
-    """Create addresses and their keys for usage in tests."""
+    """Set addresses and their keys up for usage in tests."""
     destination_dir = Path(destination_dir).expanduser()
     destination_dir.mkdir(parents=True, exist_ok=True)
     cluster_env = get_cluster_env()
-    instance_num = cluster_env.instance_num
-    addrs = ("user1",)
 
     LOGGER.debug("Creating addresses and keys for tests.")
-    addrs_data: Dict[str, Dict[str, Any]] = {}
-    for addr_name in addrs:
-        addr_name_instance = f"{addr_name}_ci{instance_num}"
-        stake = cluster_obj.gen_stake_addr_and_keys(
-            name=addr_name_instance, destination_dir=destination_dir
-        )
-        payment = cluster_obj.gen_payment_addr_and_keys(
-            name=addr_name_instance,
-            stake_vkey_file=stake.vkey_file,
-            destination_dir=destination_dir,
-        )
-        stake_addr_registration_cert = cluster_obj.gen_stake_addr_registration_cert(
-            addr_name=addr_name_instance,
-            stake_vkey_file=stake.vkey_file,
-            destination_dir=destination_dir,
-        )
-
-        addrs_data[addr_name] = {
-            "payment": payment,
-            "stake": stake,
-            "stake_addr_registration_cert": stake_addr_registration_cert,
-        }
-
-    LOGGER.debug("Funding created addresses.")
-    CLUSTER_TYPE.fund_setup(
-        cluster_obj=cluster_obj, addrs_data=addrs_data, destination_dir=destination_dir
+    addrs_data = CLUSTER_TYPE.get_addrs_data(
+        cluster_obj=cluster_obj, destination_dir=destination_dir
     )
 
     pools_data = load_pools_data(cluster_obj)
-
     data_file = Path(cluster_env.state_dir) / ADDRS_DATA
     with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
+
     return data_file
 
 
@@ -386,8 +492,8 @@ def load_addrs_data() -> dict:
 
 def save_cluster_artifacts(artifacts_dir: Path, clean: bool = False) -> Optional[Path]:
     """Save cluster artifacts."""
-    dest_dir = artifacts_dir / f"cluster_artifacts_{clusterlib.get_rand_str(8)}"
-    dest_dir.mkdir(parents=True)
+    destdir = artifacts_dir / f"cluster_artifacts_{clusterlib.get_rand_str(8)}"
+    destdir.mkdir(parents=True)
 
     state_dir = Path(get_cluster_env().state_dir)
     files_list = list(state_dir.glob("*.std*"))
@@ -395,24 +501,24 @@ def save_cluster_artifacts(artifacts_dir: Path, clean: bool = False) -> Optional
     dirs_to_copy = ("nodes", "shelley")
 
     for fpath in files_list:
-        shutil.copy(fpath, dest_dir)
+        shutil.copy(fpath, destdir)
     for dname in dirs_to_copy:
         src_dir = state_dir / dname
         if not src_dir.exists():
             continue
-        shutil.copytree(src_dir, dest_dir / dname, symlinks=True, ignore_dangling_symlinks=True)
+        shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
 
-    if not os.listdir(dest_dir):
-        dest_dir.rmdir()
+    if not os.listdir(destdir):
+        destdir.rmdir()
         return None
 
-    LOGGER.info(f"Cluster artifacts saved to '{dest_dir}'.")
+    LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
 
     if clean:
         LOGGER.info(f"Cleaning cluster artifacts in '{state_dir}'.")
         shutil.rmtree(state_dir, ignore_errors=True)
 
-    return dest_dir
+    return destdir
 
 
 def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
@@ -421,13 +527,13 @@ def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optio
     if not pytest_tmp_dir.is_dir():
         return None
 
-    dest_dir = artifacts_dir / f"{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
-    if dest_dir.resolve().is_dir():
-        shutil.rmtree(dest_dir)
-    shutil.copytree(pytest_tmp_dir, dest_dir, symlinks=True, ignore_dangling_symlinks=True)
+    destdir = artifacts_dir / f"{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
+    if destdir.resolve().is_dir():
+        shutil.rmtree(destdir)
+    shutil.copytree(pytest_tmp_dir, destdir, symlinks=True, ignore_dangling_symlinks=True)
 
     LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
-    return dest_dir
+    return destdir
 
 
 def save_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
