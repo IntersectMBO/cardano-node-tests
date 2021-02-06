@@ -19,11 +19,11 @@ from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
-from cardano_node_tests.utils import scripts_instances
 from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ if helpers.IS_XDIST and DEV_CLUSTER_RUNNING:
 
 def _kill_supervisor(instance_num: int) -> None:
     """Kill supervisor process."""
-    port_num = cluster_nodes.CLUSTER_TYPE.scripts_instances.get_instance_ports(
+    port_num = cluster_nodes.CLUSTER_TYPE.cluster_scripts.get_instance_ports(
         instance_num
     ).supervisor
     port_str = f":{port_num}"
@@ -155,11 +155,9 @@ class ClusterManager:
         return instance_dir
 
     @property
-    def ports(self) -> scripts_instances.InstancePorts:
+    def ports(self) -> cluster_scripts.InstancePorts:
         """Return port mappings for current cluster instance."""
-        return cluster_nodes.CLUSTER_TYPE.scripts_instances.get_instance_ports(
-            self.cluster_instance
-        )
+        return cluster_nodes.CLUSTER_TYPE.cluster_scripts.get_instance_ports(self.cluster_instance)
 
     def _init_log(self) -> Path:
         """Return path to run log file."""
@@ -227,7 +225,7 @@ class ClusterManager:
                 self._log(f"cluster instance {instance_num} not running")
                 continue
 
-            startup_files = cluster_nodes.CLUSTER_TYPE.scripts_instances.prepare_files(
+            startup_files = cluster_nodes.CLUSTER_TYPE.cluster_scripts.prepare_scripts_files(
                 destdir=self._create_startup_files_dir(instance_num),
                 instance_num=instance_num,
             )
@@ -355,7 +353,7 @@ class _ClusterGetter:
             f"stop_cmd='{stop_cmd}'"
         )
 
-        startup_files = cluster_nodes.CLUSTER_TYPE.scripts_instances.prepare_files(
+        startup_files = cluster_nodes.CLUSTER_TYPE.cluster_scripts.prepare_scripts_files(
             destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance),
             instance_num=self.cm.cluster_instance,
             start_script=start_cmd,
