@@ -1,13 +1,16 @@
 import argparse
 import contextlib
+import datetime
 import hashlib
 import inspect
 import io
 import json
 import logging
 import os
+import random
 import shutil
 import signal
+import string
 import subprocess
 import tempfile
 import time
@@ -117,6 +120,26 @@ def get_basetemp() -> Path:
 
 
 TEST_TEMP_DIR = get_basetemp()
+
+
+# TODO: unify with the implementation in clusterlib
+def get_rand_str(length: int = 8) -> str:
+    """Return random string."""
+    if length < 1:
+        return ""
+    return "".join(random.choice(string.ascii_lowercase) for i in range(length))
+
+
+def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
+    """Return random string prefixed with timestamp.
+
+    >>> len(get_timestamped_rand_str()) == len("200801_002401314_cinf")
+    True
+    """
+    timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S%f")[:-3]
+    rand_str_component = get_rand_str(rand_str_length)
+    rand_str_component = rand_str_component and f"_{rand_str_component}"
+    return f"{timestamp}{rand_str_component}"
 
 
 def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
