@@ -79,7 +79,7 @@ class TestFee:
 
         Expect failure.
         """
-        temp_template = f"{helpers.get_func_name()}_{clusterlib_utils.get_timestamped_rand_str()}"
+        temp_template = f"{helpers.get_func_name()}_{helpers.get_timestamped_rand_str()}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
