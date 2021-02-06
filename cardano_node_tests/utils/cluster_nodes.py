@@ -1,9 +1,7 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
-import itertools
 import logging
 import os
 import pickle
-import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -14,11 +12,11 @@ from typing import Optional
 
 from _pytest.config import Config
 
+from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import scripts_instances
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
@@ -36,12 +34,6 @@ class ClusterEnv(NamedTuple):
     tx_era: str
 
 
-class StartupFiles(NamedTuple):
-    start_script: Path
-    genesis_spec: Path
-    config_glob: str
-
-
 class ClusterType:
     """Generic cluster type."""
 
@@ -53,11 +45,7 @@ class ClusterType:
 
     def __init__(self) -> None:
         self.type = "unknown"
-        self.scripts_instances = scripts_instances.ScriptsTypes()
-
-    def copy_startup_files(self, destdir: Path) -> StartupFiles:
-        """Make copy of cluster startup files."""
-        raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
+        self.cluster_scripts = cluster_scripts.ScriptsTypes()
 
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
@@ -76,54 +64,7 @@ class DevopsCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.DEVOPS
-        self.scripts_instances = scripts_instances.DevopsScripts()
-
-    def _get_node_config_paths(self, start_script: Path) -> List[Path]:
-        """Return path of node config files in nix."""
-        with open(start_script) as infile:
-            content = infile.read()
-
-        node_config = re.findall(r"cp /nix/store/(.+\.json) ", content)
-        nix_store = Path("/nix/store")
-        node_config_paths = [nix_store / c for c in node_config]
-
-        return node_config_paths
-
-    def copy_startup_files(self, destdir: Path) -> StartupFiles:
-        """Make copy of cluster startup files located on nix."""
-        start_script_orig = helpers.get_cmd_path("start-cluster")
-        shutil.copy(start_script_orig, destdir)
-        start_script = destdir / "start-cluster"
-        start_script.chmod(0o755)
-
-        node_config_paths = self._get_node_config_paths(start_script)
-        for fpath in node_config_paths:
-            conf_name_orig = str(fpath)
-            if conf_name_orig.endswith("node.json"):
-                conf_name = "node.json"
-            elif conf_name_orig.endswith("genesis.spec.json"):
-                conf_name = "genesis.spec.json"
-            else:
-                continue
-
-            dest_file = destdir / conf_name
-            shutil.copy(fpath, dest_file)
-            dest_file.chmod(0o644)
-
-            helpers.replace_str_in_file(
-                infile=start_script,
-                outfile=start_script,
-                orig_str=str(fpath),
-                new_str=str(dest_file),
-            )
-
-        config_glob = "node.json"
-        genesis_spec_json = destdir / "genesis.spec.json"
-        assert genesis_spec_json.exists()
-
-        return StartupFiles(
-            start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
-        )
+        self.cluster_scripts = cluster_scripts.DevopsScripts()
 
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
@@ -168,23 +109,7 @@ class LocalCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.LOCAL
-        self.scripts_instances = scripts_instances.LocalScripts()
-
-    def copy_startup_files(self, destdir: Path) -> StartupFiles:
-        """Make copy of cluster startup files located in this repository."""
-        scripts_dir = configuration.SCRIPTS_DIR
-        shutil.copytree(
-            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
-        )
-
-        start_script = destdir / "start-cluster-hfc"
-        config_glob = "config-*.json"
-        genesis_spec_json = destdir / "genesis.spec.json"
-        assert start_script.exists() and genesis_spec_json.exists()
-
-        return StartupFiles(
-            start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
-        )
+        self.cluster_scripts = cluster_scripts.LocalScripts()
 
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
@@ -252,35 +177,7 @@ class TestnetCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET
-        self.scripts_instances: scripts_instances.TestnetScripts = (
-            scripts_instances.TestnetScripts()
-        )
-
-    def copy_startup_files(self, destdir: Path) -> StartupFiles:
-        """Make copy of cluster startup files located in this repository."""
-        scripts_dir = configuration.SCRIPTS_DIR
-        shutil.copytree(
-            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
-        )
-
-        start_script = destdir / "start-cluster"
-        assert start_script.exists()
-
-        bootstrap_conf_dir = self.scripts_instances.get_bootstrap_conf_dir(bootstrap_dir=destdir)
-        destdir_bootstrap = destdir / self.scripts_instances.BOOTSTRAP_CONF
-        destdir_bootstrap.mkdir()
-        _infiles = [list(bootstrap_conf_dir.glob(g)) for g in self.scripts_instances.TESTNET_GLOBS]
-        infiles = list(itertools.chain.from_iterable(_infiles))
-        for infile in infiles:
-            shutil.copy(infile, destdir_bootstrap)
-
-        config_glob = f"{self.scripts_instances.BOOTSTRAP_CONF}/config-*.json"
-        # TODO: it's not really a spec file in case of a testnet
-        genesis_json = destdir / self.scripts_instances.BOOTSTRAP_CONF / "genesis-shelley.json"
-
-        return StartupFiles(
-            start_script=start_script, genesis_spec=genesis_json, config_glob=config_glob
-        )
+        self.cluster_scripts: cluster_scripts.TestnetScripts = cluster_scripts.TestnetScripts()
 
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
@@ -319,8 +216,8 @@ class TestnetNopoolsCluster(TestnetCluster):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET_NOPOOLS
-        self.scripts_instances: scripts_instances.TestnetNopoolsScripts = (
-            scripts_instances.TestnetNopoolsScripts()
+        self.cluster_scripts: cluster_scripts.TestnetNopoolsScripts = (
+            cluster_scripts.TestnetNopoolsScripts()
         )
 
 
@@ -397,7 +294,7 @@ def restart_node(node_name: str) -> None:
     """Restart single node of the running cluster."""
     LOGGER.info(f"Restarting cluster node `{node_name}`.")
     cluster_env = get_cluster_env()
-    supervisor_port = CLUSTER_TYPE.scripts_instances.get_instance_ports(
+    supervisor_port = CLUSTER_TYPE.cluster_scripts.get_instance_ports(
         cluster_env.instance_num
     ).supervisor
     try:

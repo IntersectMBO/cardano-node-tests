@@ -1,4 +1,8 @@
-"""Functionality for setting up scripts for cluster instances."""
+"""Functionality for cluster scripts.
+
+* copying scripts and their configuration, so it can be atered by tests
+* setup of scripts and their configuration for starting of multiple cluster instances
+"""
 import itertools
 import re
 import shutil
@@ -16,6 +20,12 @@ class InstanceFiles(NamedTuple):
     stop_script: Path
     start_script_args: List[str]
     dir: Path
+
+
+class StartupFiles(NamedTuple):
+    start_script: Path
+    genesis_spec: Path
+    config_glob: str
 
 
 class InstancePorts(NamedTuple):
@@ -57,14 +67,18 @@ class ScriptsTypes:
         """Return ports mapping for given cluster instance."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
-    def prepare_files(
+    def copy_scripts_files(self, destdir: Path) -> StartupFiles:
+        """Make copy of cluster scripts files."""
+        raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
+
+    def prepare_scripts_files(
         self,
         destdir: FileType,
         instance_num: int,
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare files for starting and stoping cluster instance."""
+        """Prepare scripts files for starting and stoping cluster instance."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
 
@@ -107,6 +121,53 @@ class DevopsScripts(ScriptsTypes):
             prometheus_pool2=prometheus,
         )
         return ports
+
+    def _get_node_config_paths(self, start_script: Path) -> List[Path]:
+        """Return path of node config files in nix."""
+        with open(start_script) as infile:
+            content = infile.read()
+
+        node_config = re.findall(r"cp /nix/store/(.+\.json) ", content)
+        nix_store = Path("/nix/store")
+        node_config_paths = [nix_store / c for c in node_config]
+
+        return node_config_paths
+
+    def copy_scripts_files(self, destdir: Path) -> StartupFiles:
+        """Make copy of cluster scripts files located on nix."""
+        start_script_orig = helpers.get_cmd_path("start-cluster")
+        shutil.copy(start_script_orig, destdir)
+        start_script = destdir / "start-cluster"
+        start_script.chmod(0o755)
+
+        node_config_paths = self._get_node_config_paths(start_script)
+        for fpath in node_config_paths:
+            conf_name_orig = str(fpath)
+            if conf_name_orig.endswith("node.json"):
+                conf_name = "node.json"
+            elif conf_name_orig.endswith("genesis.spec.json"):
+                conf_name = "genesis.spec.json"
+            else:
+                continue
+
+            dest_file = destdir / conf_name
+            shutil.copy(fpath, dest_file)
+            dest_file.chmod(0o644)
+
+            helpers.replace_str_in_file(
+                infile=start_script,
+                outfile=start_script,
+                orig_str=str(fpath),
+                new_str=str(dest_file),
+            )
+
+        config_glob = "node.json"
+        genesis_spec_json = destdir / "genesis.spec.json"
+        assert genesis_spec_json.exists()
+
+        return StartupFiles(
+            start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
+        )
 
     def _get_nix_paths(self, infile: Path, search_str: str) -> List[Path]:
         """Return path of nix files."""
@@ -193,14 +254,14 @@ class DevopsScripts(ScriptsTypes):
 
         return dest_file
 
-    def prepare_files(
+    def prepare_scripts_files(
         self,
         destdir: FileType,
         instance_num: int,
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare files for starting and stoping cluster instance."""
+        """Prepare scripts files for starting and stoping cluster instance."""
         destdir = Path(destdir).expanduser().resolve()
 
         _start_script = start_script or helpers.get_cmd_path("start-cluster")
@@ -262,6 +323,22 @@ class LocalScripts(ScriptsTypes):
         )
         return ports
 
+    def copy_scripts_files(self, destdir: Path) -> StartupFiles:
+        """Make copy of cluster scripts files located in this repository."""
+        scripts_dir = configuration.SCRIPTS_DIR
+        shutil.copytree(
+            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
+
+        start_script = destdir / "start-cluster-hfc"
+        config_glob = "config-*.json"
+        genesis_spec_json = destdir / "genesis.spec.json"
+        assert start_script.exists() and genesis_spec_json.exists()
+
+        return StartupFiles(
+            start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
+        )
+
     def _reconfigure_local(self, indir: Path, destdir: Path, instance_num: int) -> None:
         """Reconfigure scripts and config files located in this repository."""
         instance_ports = self.get_instance_ports(instance_num)
@@ -295,14 +372,14 @@ class LocalScripts(ScriptsTypes):
             if "." not in fname:
                 dest_file.chmod(0o755)
 
-    def prepare_files(
+    def prepare_scripts_files(
         self,
         destdir: FileType,
         instance_num: int,
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare files for starting and stoping cluster instance."""
+        """Prepare scripts files for starting and stoping cluster instance."""
         destdir = Path(destdir).expanduser().resolve()
 
         _start_script = start_script or configuration.SCRIPTS_DIR / "start-cluster-hfc"
@@ -366,6 +443,32 @@ class TestnetScripts(ScriptsTypes):
         )
         return ports
 
+    def copy_scripts_files(self, destdir: Path) -> StartupFiles:
+        """Make copy of cluster scripts files located in this repository."""
+        scripts_dir = configuration.SCRIPTS_DIR
+        shutil.copytree(
+            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
+
+        start_script = destdir / "start-cluster"
+        assert start_script.exists()
+
+        bootstrap_conf_dir = self.get_bootstrap_conf_dir(bootstrap_dir=destdir)
+        destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
+        destdir_bootstrap.mkdir()
+        _infiles = [list(bootstrap_conf_dir.glob(g)) for g in self.TESTNET_GLOBS]
+        infiles = list(itertools.chain.from_iterable(_infiles))
+        for infile in infiles:
+            shutil.copy(infile, destdir_bootstrap)
+
+        config_glob = f"{self.BOOTSTRAP_CONF}/config-*.json"
+        # TODO: it's not really a spec file in case of a testnet
+        genesis_json = destdir / self.BOOTSTRAP_CONF / "genesis-shelley.json"
+
+        return StartupFiles(
+            start_script=start_script, genesis_spec=genesis_json, config_glob=config_glob
+        )
+
     def _reconfigure_testnet(
         self, indir: Path, destdir: Path, instance_num: int, globs: List[str]
     ) -> None:
@@ -414,14 +517,14 @@ class TestnetScripts(ScriptsTypes):
             raise RuntimeError("The 'BOOTSTRAP_DIR' doesn't contain all the needed files.")
         return bootstrap_conf_dir
 
-    def prepare_files(
+    def prepare_scripts_files(
         self,
         destdir: FileType,
         instance_num: int,
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare files for starting and stoping cluster instance."""
+        """Prepare scripts files for starting and stoping cluster instance."""
         destdir = Path(destdir).expanduser().resolve()
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir(exist_ok=True)
