@@ -21,7 +21,7 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib
-from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import clusterlib_cli_coverage
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.types import UnpackableSequence
@@ -209,7 +209,7 @@ class ClusterManager:
             if not cluster_obj:
                 continue
 
-            clusterlib_utils.save_cli_coverage(
+            clusterlib_cli_coverage.save_cli_coverage(
                 cluster_obj=cluster_obj, pytest_config=self.pytest_config
             )
 
@@ -513,7 +513,7 @@ class _ClusterGetter:
         if not cluster_obj:
             return
 
-        clusterlib_utils.save_cli_coverage(
+        clusterlib_cli_coverage.save_cli_coverage(
             cluster_obj=cluster_obj, pytest_config=self.cm.pytest_config
         )
 

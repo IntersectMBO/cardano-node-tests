@@ -1,6 +1,4 @@
-import datetime
 import itertools
-import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -8,9 +6,6 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 from typing import Union
-
-from _pytest.config import Config
-from _pytest.fixtures import FixtureRequest
 
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
@@ -23,18 +18,6 @@ class UpdateProposal(NamedTuple):
     arg: str
     value: Any
     name: str = ""
-
-
-def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
-    """Return random string prefixed with timestamp.
-
-    >>> len(get_timestamped_rand_str()) == len("200801_002401314_cinf")
-    True
-    """
-    timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S%f")[:-3]
-    rand_str_component = clusterlib.get_rand_str(rand_str_length)
-    rand_str_component = rand_str_component and f"_{rand_str_component}"
-    return f"{timestamp}{rand_str_component}"
 
 
 def withdraw_reward(
@@ -122,7 +105,7 @@ def fund_from_genesis(
         return
 
     with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{cluster_obj.genesis_utxo_addr}.lock"):
-        tx_name = tx_name or get_timestamped_rand_str()
+        tx_name = tx_name or helpers.get_timestamped_rand_str()
         tx_name = f"{tx_name}_genesis_funding"
         fund_tx_files = clusterlib.TxFiles(
             signing_key_files=[
@@ -153,7 +136,7 @@ def return_funds_to_faucet(
 
     The amount of "-1" means all available funds.
     """
-    tx_name = tx_name or get_timestamped_rand_str()
+    tx_name = tx_name or helpers.get_timestamped_rand_str()
     tx_name = f"{tx_name}_return_funds"
     with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{faucet_addr}.lock"):
         try:
@@ -183,7 +166,6 @@ def fund_from_faucet(
     faucet_data: dict,
     amount: int = 3_000_000,
     tx_name: Optional[str] = None,
-    request: Optional[FixtureRequest] = None,
     destination_dir: FileType = ".",
     force: bool = False,
 ) -> None:
@@ -201,20 +183,9 @@ def fund_from_faucet(
     if not fund_dst:
         return
 
-    if request:
-        request.addfinalizer(
-            lambda: return_funds_to_faucet(
-                *dst_addr_records,
-                cluster_obj=cluster_obj,
-                faucet_addr=faucet_data["payment"].address,
-                tx_name=tx_name,
-                destination_dir=destination_dir,
-            )
-        )
-
     src_address = faucet_data["payment"].address
     with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{src_address}.lock"):
-        tx_name = tx_name or get_timestamped_rand_str()
+        tx_name = tx_name or helpers.get_timestamped_rand_str()
         tx_name = f"{tx_name}_funding"
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])
 
@@ -416,7 +387,7 @@ def update_params(
             cli_args=cli_args,
             src_address=src_addr_record.address,
             src_skey_file=src_addr_record.skey_file,
-            tx_name=get_timestamped_rand_str(),
+            tx_name=helpers.get_timestamped_rand_str(),
         )
 
         LOGGER.info(f"Update Proposal submitted ({cli_args})")
@@ -436,26 +407,13 @@ def update_params(
                 )
 
 
-def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> Optional[Path]:
-    """Save CLI coverage info."""
-    cli_coverage_dir = pytest_config.getoption("--cli-coverage-dir")
-    if not (cli_coverage_dir and cluster_obj.cli_coverage):
-        return None
-
-    json_file = Path(cli_coverage_dir) / f"cli_coverage_{get_timestamped_rand_str()}.json"
-    with open(json_file, "w") as out_json:
-        json.dump(cluster_obj.cli_coverage, out_json, indent=4)
-    LOGGER.info(f"Coverage files saved to '{cli_coverage_dir}'.")
-    return json_file
-
-
 def save_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     destination_dir: FileType = ".",
 ) -> Path:
     """Save ledger state."""
-    name_template = name_template or get_timestamped_rand_str(0)
+    name_template = name_template or helpers.get_timestamped_rand_str(0)
     json_file = Path(destination_dir) / f"{name_template}_ledger_state.json"
     cluster_obj.query_cli(["ledger-state", *cluster_obj.era_arg, "--out-file", str(json_file)])
     return json_file
