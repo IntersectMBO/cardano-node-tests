@@ -1,0 +1,173 @@
+#!/bin/bash
+
+set -euo pipefail
+
+SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+STATE_CLUSTER="${SOCKET_PATH%/*}"
+POOL_ARTIFACTS="${1:-${STATE_CLUSTER}/nodes}"
+
+cd "$POOL_ARTIFACTS"
+
+NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/genesis-shelley.json")"
+
+# figure out what is the current era
+ERA="$({ cardano-cli query protocol-parameters \
+          --shelley-era \
+          --testnet-magic 3 \
+          --out-file /dev/null 2>&1 || :; } |
+          sed -n 's/.*{ledgerEraName = "\([^"]*\)".*/\L\1/p;')"
+[ -n "$ERA" ] || ERA="shelley"
+
+cardano-cli query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --"$ERA"-era \
+  --out-file "$STATE_CLUSTER/pparams.json"
+
+TXOUT_ADDR="$(<"$STATE_CLUSTER/shelley/faucet.addr")"
+OWNER1_ADDR="$(<"$POOL_ARTIFACTS/node-pool1/owner.addr")"
+OWNER2_ADDR="$(<"$POOL_ARTIFACTS/node-pool2/owner.addr")"
+UTXO1="$(cardano-cli query utxo \
+          --testnet-magic "$NETWORK_MAGIC" \
+          --"$ERA"-era \
+          --address "$OWNER1_ADDR" |
+          sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
+UTXO2="$(cardano-cli query utxo \
+          --testnet-magic "$NETWORK_MAGIC" \
+          --"$ERA"-era \
+          --address "$OWNER2_ADDR" |
+          sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
+TXIN1="${UTXO1%;*}"
+[ "$TXIN1" != "#" ] || { echo "Invalid 'TXIN1' on line $LINENO" >&2; exit 1; }  # assert
+TXIN2="${UTXO2%;*}"
+[ "$TXIN2" != "#" ] || { echo "Invalid 'TXIN2' on line $LINENO" >&2; exit 1; }  # assert
+TXIN2="${UTXO2%;*}"
+TXIN1_AMOUNT="${UTXO1#*;}"
+TXIN2_AMOUNT="${UTXO2#*;}"
+TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+
+# find pool deregistration epoch
+cardano-cli stake-pool deregistration-certificate \
+  --cold-verification-key-file "$POOL_ARTIFACTS/node-pool1/cold.vkey" \
+  --epoch 0 \
+  --out-file "$POOL_ARTIFACTS/node-pool1/deregister-epoch0.cert"
+
+cardano-cli transaction build-raw \
+  --ttl    "$TTL" \
+  --fee    1000000 \
+  --tx-in  "$TXIN1" \
+  --tx-out "$TXOUT_ADDR+$((TXIN1_AMOUNT - 1000000))" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool1/deregister-epoch0.cert" \
+  --out-file "$POOL_ARTIFACTS/deregister-tx-epoch0.txbody"
+
+cardano-cli transaction sign \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool1/cold.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/faucet.skey" \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool1/owner-utxo.skey" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "$POOL_ARTIFACTS/deregister-tx-epoch0.txbody" \
+  --out-file         "$POOL_ARTIFACTS/deregister-tx-epoch0.tx"
+
+DEREG_EPOCH="$({ cardano-cli transaction submit \
+  --tx-file "$POOL_ARTIFACTS/deregister-tx-epoch0.tx" \
+  --testnet-magic "$NETWORK_MAGIC" 2>&1 || :; } |
+  sed -n 's/.*StakePoolRetirementWrongEpochPOOL \([0-9]*\).*/\1/p')"
+
+[ "$DEREG_EPOCH" -gt 0 ] || { echo "Invalid 'DEREG_EPOCH' on line $LINENO" >&2; exit 1; }  # assert
+
+# create deregistraton certificates
+for i in {1..2}; do
+  # create reward stake address
+  cardano-cli stake-address build \
+    --stake-verification-key-file "$POOL_ARTIFACTS/node-pool$i/reward.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$POOL_ARTIFACTS/node-pool$i/reward.addr"
+
+  # create pool deregistration cert
+  cardano-cli stake-pool deregistration-certificate \
+    --cold-verification-key-file "$POOL_ARTIFACTS/node-pool$i/cold.vkey" \
+    --epoch "$((DEREG_EPOCH + 1))" \
+    --out-file "$POOL_ARTIFACTS/node-pool$i/deregister.cert"
+
+  # create stake address deregistration cert
+  cardano-cli stake-address deregistration-certificate \
+    --stake-verification-key-file "$POOL_ARTIFACTS/node-pool$i/owner-stake.vkey" \
+    --out-file "$POOL_ARTIFACTS/node-pool$i/stake.dereg.cert"
+
+  # create reward address deregistration cert
+  cardano-cli stake-address deregistration-certificate \
+    --stake-verification-key-file "$POOL_ARTIFACTS/node-pool$i/reward.vkey" \
+    --out-file "$POOL_ARTIFACTS/node-pool$i/stake-reward.dereg.cert"
+done
+
+# deregister pool, transfer rewards, deregister stake address, deregister reward address
+# transfer funds to faucet
+REWARD1_AMOUNT="$(jq '.[0].rewardAccountBalance' <<< "$(cardano-cli query stake-address-info \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --"$ERA"-era \
+  --address "$(<"$POOL_ARTIFACTS"/node-pool1/reward.addr)")")"
+REWARD2_AMOUNT="$(jq '.[0].rewardAccountBalance' <<< "$(cardano-cli query stake-address-info \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --"$ERA"-era \
+  --address "$(<"$POOL_ARTIFACTS"/node-pool2/reward.addr)")")"
+
+cardano-cli transaction build-raw \
+  --ttl    "$TTL" \
+  --fee    0 \
+  --tx-in  "$TXIN1" \
+  --tx-in  "$TXIN2" \
+  --tx-out "$TXOUT_ADDR+0" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool1/stake.dereg.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool1/stake-reward.dereg.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool1/deregister.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool2/stake.dereg.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool2/stake-reward.dereg.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool2/deregister.cert" \
+  --out-file "$POOL_ARTIFACTS/deregister-tx-fee.txbody"
+
+FEE="$(cardano-cli transaction calculate-min-fee \
+        --testnet-magic "$NETWORK_MAGIC" \
+        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+        --tx-in-count 2 \
+        --tx-out-count 1 \
+        --witness-count 9 \
+        --byron-witness-count 0 \
+        --tx-body-file "$POOL_ARTIFACTS/deregister-tx-fee.txbody" |
+        cut -d' ' -f1)"
+
+DEPOSITS="$(jq '2 * .protocolParams.keyDeposit' "$STATE_CLUSTER/genesis-shelley.json")"
+TXOUT_AMOUNT="$((TXIN1_AMOUNT + TXIN2_AMOUNT + REWARD1_AMOUNT + REWARD2_AMOUNT + (2 * DEPOSITS) - FEE))"
+
+cardano-cli transaction build-raw \
+  --ttl    "$TTL" \
+  --fee    "$FEE" \
+  --tx-in  "$TXIN1" \
+  --tx-in  "$TXIN2" \
+  --tx-out "$TXOUT_ADDR+$TXOUT_AMOUNT" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool1/stake.dereg.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool1/stake-reward.dereg.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool1/deregister.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool2/stake.dereg.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool2/stake-reward.dereg.cert" \
+  --certificate-file "$POOL_ARTIFACTS/node-pool2/deregister.cert" \
+  --out-file         "$POOL_ARTIFACTS/deregister-tx.txbody"
+
+cardano-cli transaction sign \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool1/owner-stake.skey" \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool1/reward.skey" \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool1/cold.skey" \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool1/owner-utxo.skey" \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool2/owner-stake.skey" \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool2/reward.skey" \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool2/cold.skey" \
+  --signing-key-file "$POOL_ARTIFACTS/node-pool2/owner-utxo.skey" \
+  --signing-key-file "$STATE_CLUSTER/shelley/faucet.skey" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "$POOL_ARTIFACTS/deregister-tx.txbody" \
+  --out-file         "$POOL_ARTIFACTS/deregister-tx.tx"
+
+cardano-cli transaction submit \
+  --tx-file "$POOL_ARTIFACTS/deregister-tx.tx" \
+  --testnet-magic "$NETWORK_MAGIC"
+
+echo "Pools deregistered in epoch $DEREG_EPOCH" > "$POOL_ARTIFACTS/dereg_success"
+sleep 5
