@@ -17,7 +17,7 @@ $ make install
 Usage
 -----
 
-Running tests:
+Preparing env:
 
 ```sh
 # cd to cardano-node repo
@@ -33,8 +33,26 @@ $ nix-shell -A devops
 $ cd /path/to/cardano-node-tests
 # activate virtual env
 $ . .env/bin/activate
+```
+
+Running tests:
+
+```sh
 # run tests
 $ make tests
+```
+
+Running tests on one of the testnets:
+
+```sh
+# run tests
+$ BOOTSTRAP_DIR=/path/to/bootstrap/dir make testnets
+```
+
+Running individual tests:
+
+```sh
+$ pytest -k "test_name1 or test_name2" cardano_node_tests
 ```
 
 Running linter:
@@ -46,14 +64,17 @@ $ . .env/bin/activate
 $ make lint
 ```
 
-Variables for `make tests`
-----------------------------
+Variables for `make tests` and `make testnets`
+----------------------------------------------
 
 * `SCHEDULING_LOG` - specifies path to file where log messages for tests and cluster instance scheduler are stored
 * `PYTEST_ARGS` - specifies additional arguments for pytest
 * `TEST_THREADS` - specifies number of pytest workers
+* `CLUSTERS_COUNT` - number of cluster instances that will be started
 * `CLUSTER_ERA` - cluster era for cardano node - used for selecting correct cluster start script
 * `TX_ERA` - era for transactions - can be used for creating Shelley-era transactions on Allegra era
+* `NOPOOLS` - when running tests on testnet, a cluster with no staking pools will be created
+* `BOOTSTRAP_DIR` - path to a bootstrap dir for given testnet (genesis files, config files, faucet data)
 
 E.g.
 ```sh
