@@ -51,7 +51,7 @@ class ClusterType:
         """Return instance of `ClusterLib` (cluster_obj)."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
-    def get_addrs_data(
+    def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
     ) -> Dict[str, Dict[str, Any]]:
         """Create addresses and their keys for usage in tests."""
@@ -71,7 +71,7 @@ class DevopsCluster(ClusterType):
         cluster_obj = clusterlib.ClusterLib(get_cluster_env().state_dir)
         return cluster_obj
 
-    def get_addrs_data(
+    def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
     ) -> Dict[str, Dict[str, Any]]:
         """Create addresses and their keys for usage in tests."""
@@ -122,7 +122,7 @@ class LocalCluster(ClusterType):
         )
         return cluster_obj
 
-    def get_addrs_data(
+    def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
     ) -> Dict[str, Dict[str, Any]]:
         """Create addresses and their keys for usage in tests."""
@@ -190,7 +190,7 @@ class TestnetCluster(ClusterType):
         )
         return cluster_obj
 
-    def get_addrs_data(
+    def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
     ) -> Dict[str, Dict[str, Any]]:
         """Create addresses and their keys for usage in tests."""
@@ -368,7 +368,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     cluster_env = get_cluster_env()
 
     LOGGER.debug("Creating addresses and keys for tests.")
-    addrs_data = CLUSTER_TYPE.get_addrs_data(
+    addrs_data = CLUSTER_TYPE.create_addrs_data(
         cluster_obj=cluster_obj, destination_dir=destination_dir
     )
 
