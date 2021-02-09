@@ -105,6 +105,7 @@ def _get_txins_txouts(
     return txins_combined, txouts_combined
 
 
+@pytest.mark.testnets
 class TestBasic:
     """Test basic transactions - transfering funds, transaction IDs."""
 
@@ -372,6 +373,7 @@ class TestBasic:
             cluster.cli(cli_args)
 
 
+@pytest.mark.testnets
 class TestMultiInOut:
     """Test transactions with multiple txins and/or txouts."""
 
@@ -836,6 +838,7 @@ class TestManyUTXOs:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
 
+@pytest.mark.testnets
 class TestNotBalanced:
     """Tests for not balanced transactions."""
 
@@ -993,6 +996,7 @@ class TestNotBalanced:
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
 
+@pytest.mark.testnets
 class TestNegative:
     """Transaction tests that are expected to fail."""
 
@@ -1519,6 +1523,7 @@ class TestNegative:
         assert "Missing: (--tx-in TX-IN)" in str(excinfo.value)
 
 
+@pytest.mark.testnets
 class TestMetadata:
     """Tests for transactions with metadata."""
 

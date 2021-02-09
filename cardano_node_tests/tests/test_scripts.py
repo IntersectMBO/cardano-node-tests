@@ -127,6 +127,7 @@ def multisig_tx(
     ), f"Incorrect balance for script address `{dst_address}`"
 
 
+@pytest.mark.testnets
 class TestBasic:
     """Basic tests for multisig transactions."""
 
@@ -547,6 +548,7 @@ class TestBasic:
         )
 
 
+@pytest.mark.testnets
 class TestNegative:
     """Transaction tests that are expected to fail."""
 
@@ -732,6 +734,7 @@ class TestNegative:
             assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
 
+@pytest.mark.testnets
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALLEGRA or VERSIONS.node < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Allegra+ TX",
@@ -1129,6 +1132,7 @@ class TestTimeLocking:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
 
+@pytest.mark.testnets
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALLEGRA or VERSIONS.node < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Allegra+ TX",
