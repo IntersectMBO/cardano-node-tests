@@ -14,6 +14,7 @@ from typing import Tuple
 import pytest
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -26,6 +27,8 @@ ERRORS_IGNORED = [
     "Failed to start all required subscriptions",
     "Connection Attempt Exception",
 ]
+if configuration.TESTNET_SCRIPTS_DIR:
+    ERRORS_IGNORED.append("ExceededTimeLimit")
 ERRORS_RULES_FILE_NAME = ".errors_rules"
 
 
