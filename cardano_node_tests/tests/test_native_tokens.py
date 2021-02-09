@@ -157,7 +157,7 @@ def _mint_or_burn_witness(
         tx_name=temp_template,
         ttl=ttl,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files),
+        witness_count_add=len(issuers_skey_files) * 2,
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
@@ -231,7 +231,7 @@ def _mint_or_burn_sign(
         tx_files=tx_files,
         ttl=ttl,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files),
+        witness_count_add=len(issuers_skey_files) * 2,
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
@@ -256,6 +256,7 @@ def _mint_or_burn_sign(
     cluster_obj.wait_for_new_block(new_blocks=2)
 
 
+@pytest.mark.testnets
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Mary+ TX",
@@ -415,7 +416,14 @@ class TestMinting:
             "temp_template": f"{temp_template}_mint",
         }
 
-        if tokens_num >= 100:
+        # TODO: remove once testnets are upgraded to node > 1.25.1
+        too_high = (
+            1000
+            if VERSIONS.node < version.parse("1.25.1")
+            or VERSIONS.git_rev == "9a7331cce5e8bc0ea9c6bfa1c28773f4c5a7000f"  # 1.25.1
+            else 100
+        )
+        if tokens_num >= too_high:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 _mint_or_burn_witness(**minting_args)  # type: ignore
             if tokens_num >= 1000:
@@ -483,7 +491,14 @@ class TestMinting:
             "temp_template": f"{temp_template}_mint",
         }
 
-        if tokens_num >= 100:
+        # TODO: remove once testnets are upgraded to node > 1.25.1
+        too_high = (
+            1000
+            if VERSIONS.node < version.parse("1.25.1")
+            or VERSIONS.git_rev == "9a7331cce5e8bc0ea9c6bfa1c28773f4c5a7000f"  # 1.25.1
+            else 100
+        )
+        if tokens_num >= too_high:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 _mint_or_burn_sign(**minting_args)  # type: ignore
             if tokens_num >= 1000:
@@ -570,6 +585,7 @@ class TestMinting:
         ), "The token was not burned"
 
 
+@pytest.mark.testnets
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Mary+ TX",
@@ -985,6 +1001,7 @@ class TestPolicies:
             assert not token_utxo, "The token was minted unexpectedly"
 
 
+@pytest.mark.testnets
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Mary+ TX",
@@ -1196,6 +1213,7 @@ class TestTransfer:
             ), f"Incorrect token #{idx} balance for destination address `{dst_address}`"
 
 
+@pytest.mark.testnets
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
     reason="runs on version >= 1.24.0 and with Mary+ TX",

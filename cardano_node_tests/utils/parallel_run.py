@@ -22,6 +22,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_cli_coverage
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.types import UnpackableSequence
@@ -40,8 +41,8 @@ TEST_RUNNING_GLOB = ".test_running"
 TEST_CURR_MARK_GLOB = ".curr_test_mark"
 TEST_MARK_STARTING_GLOB = ".starting_marked_tests"
 
-WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", 1))
-CLUSTERS_COUNT = WORKERS_COUNT if WORKERS_COUNT <= 9 else 9
+WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 1)
+CLUSTERS_COUNT = int(configuration.CLUSTERS_COUNT or (WORKERS_COUNT if WORKERS_COUNT <= 9 else 9))
 CLUSTER_DIR_TEMPLATE = "cluster"
 CLUSTER_RUNNING_FILE = ".cluster_running"
 CLUSTER_STOPPED_FILE = ".cluster_stopped"

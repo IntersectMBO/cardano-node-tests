@@ -25,6 +25,7 @@ def temp_dir(create_temp_dir: Path):
         yield create_temp_dir
 
 
+@pytest.mark.testnets
 class TestProtocol:
     """Basic tests for protocol."""
 

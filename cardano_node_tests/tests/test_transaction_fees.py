@@ -36,6 +36,7 @@ def temp_dir(create_temp_dir: Path):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
+@pytest.mark.testnets
 class TestFee:
     """General fees tests."""
 
@@ -409,7 +410,6 @@ class TestExpectedFees:
             epoch=cluster.get_last_block_epoch() + 1,
         )
 
-        # submit the pool deregistration certificate through a tx
         tx_files = clusterlib.TxFiles(
             certificate_files=[pool_dereg_cert_file],
             signing_key_files=[

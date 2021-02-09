@@ -119,9 +119,11 @@ cardano-cli transaction build-raw \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/stake.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/stake-reward.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/deregister.cert" \
+  --withdrawal "$(<"$POOL_ARTIFACTS"/node-pool1/reward.addr)+$REWARD1_AMOUNT" \
   --certificate-file "$POOL_ARTIFACTS/node-pool2/stake.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool2/stake-reward.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool2/deregister.cert" \
+  --withdrawal "$(<"$POOL_ARTIFACTS"/node-pool2/reward.addr)+$REWARD2_AMOUNT" \
   --out-file "$POOL_ARTIFACTS/deregister-tx-fee.txbody"
 
 FEE="$(cardano-cli transaction calculate-min-fee \
@@ -146,9 +148,11 @@ cardano-cli transaction build-raw \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/stake.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/stake-reward.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/deregister.cert" \
+  --withdrawal "$(<"$POOL_ARTIFACTS"/node-pool1/reward.addr)+$REWARD1_AMOUNT" \
   --certificate-file "$POOL_ARTIFACTS/node-pool2/stake.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool2/stake-reward.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool2/deregister.cert" \
+  --withdrawal "$(<"$POOL_ARTIFACTS"/node-pool2/reward.addr)+$REWARD2_AMOUNT" \
   --out-file         "$POOL_ARTIFACTS/deregister-tx.txbody"
 
 cardano-cli transaction sign \

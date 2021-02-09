@@ -11,6 +11,8 @@ TX_ERA = os.environ.get("TX_ERA") or ""
 if TX_ERA not in ("", "shelley", "allegra", "mary"):
     raise RuntimeError(f"Invalid TX_ERA: {TX_ERA}")
 
+CLUSTERS_COUNT = os.environ.get("CLUSTERS_COUNT") or 0
+
 BOOTSTRAP_DIR = os.environ.get("BOOTSTRAP_DIR") or ""
 
 NOPOOLS = bool(os.environ.get("NOPOOLS"))
