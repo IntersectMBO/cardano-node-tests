@@ -1,8 +1,11 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
+import json
 import logging
 import os
 import pickle
 import shutil
+from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -32,6 +35,10 @@ class ClusterEnv(NamedTuple):
     instance_num: int
     cluster_era: str
     tx_era: str
+
+
+class Testnets:
+    shelley_qa = "shelley_qa"
 
 
 class ClusterType:
@@ -174,19 +181,83 @@ class LocalCluster(ClusterType):
 class TestnetCluster(ClusterType):
     """Testnet cluster type (full cardano mode)."""
 
+    TESTNETS = {1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"}}
+
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET
         self.cluster_scripts: cluster_scripts.TestnetScripts = cluster_scripts.TestnetScripts()
 
+        # cached values
+        self._testnet_type = ""
+        self._slots_offset = -1
+
+    @property
+    def testnet_type(self) -> str:
+        """Return testnet type (shelley_qa, etc.)."""
+        if self._testnet_type:
+            return self._testnet_type
+
+        cluster_env = get_cluster_env()
+        genesis_byron_json = cluster_env.state_dir / "genesis-byron.json"
+        with open(genesis_byron_json) as in_json:
+            genesis_byron = json.load(in_json)
+
+        start_timestamp: int = genesis_byron["startTime"]
+        testnet_type: str = self.TESTNETS.get(start_timestamp, {}).get("type", "unknown")
+
+        self._testnet_type = testnet_type
+        return testnet_type
+
+    def _datetime2timestamp(self, datetime_str: str) -> int:
+        """Convert UTC datetime string to timestamp."""
+        converted_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
+        timestamp = converted_time.replace(tzinfo=timezone.utc).timestamp()
+        return int(timestamp)
+
+    def _get_slots_offset(self, state_dir: Path) -> int:
+        """Get offset of blocks from Byron era vs current configuration."""
+        if self._slots_offset != -1:
+            return self._slots_offset
+
+        genesis_byron_json = state_dir / "genesis-byron.json"
+        with open(genesis_byron_json) as in_json:
+            genesis_byron = json.load(in_json)
+        genesis_shelley_json = state_dir / "genesis-shelley.json"
+        with open(genesis_shelley_json) as in_json:
+            genesis_shelley = json.load(in_json)
+
+        start_timestamp: int = genesis_byron["startTime"]
+
+        shelley_start: str = self.TESTNETS.get(start_timestamp, {}).get("shelley_start", "")
+        if not shelley_start:
+            self._slots_offset = 0
+            return 0
+
+        testnet_timestamp = self._datetime2timestamp(shelley_start)
+
+        offset_sec = testnet_timestamp - start_timestamp
+        slot_duration_byron_msec: int = genesis_byron["blockVersionData"]["slotDuration"]
+        slot_duration_byron: int = int(slot_duration_byron_msec) // 1000
+        slot_duration_shelley: int = genesis_shelley["slotLength"]
+
+        slots_in_byron = offset_sec // slot_duration_byron
+        slots_in_shelley = offset_sec // slot_duration_shelley
+        offset = slots_in_shelley - slots_in_byron
+
+        self._slots_offset = offset
+        return offset
+
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
+        slots_offset = self._get_slots_offset(cluster_env.state_dir)
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
             protocol=clusterlib.Protocols.CARDANO,
             era=cluster_env.cluster_era,
             tx_era=cluster_env.tx_era,
+            slots_offset=slots_offset,
         )
         return cluster_obj
 
@@ -227,7 +298,7 @@ def get_cluster_type() -> ClusterType:
         return TestnetNopoolsCluster()
     if configuration.BOOTSTRAP_DIR:
         return TestnetCluster()
-    if configuration.CLUSTER_ERA == "shelley":
+    if configuration.CLUSTER_ERA == clusterlib.Eras.SHELLEY:
         return DevopsCluster()
     return LocalCluster()
 
