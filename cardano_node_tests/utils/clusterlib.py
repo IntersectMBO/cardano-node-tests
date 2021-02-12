@@ -182,6 +182,7 @@ class ClusterLib:
         protocol: str = Protocols.SHELLEY,
         era: str = "",
         tx_era: str = "",
+        slots_offset: int = 0,
     ):
         self.cli_coverage: dict = {}
         self._rand_str = get_rand_str(4)
@@ -200,6 +201,7 @@ class ClusterLib:
         self.epoch_length_sec = self.epoch_length * self.slot_length
         self.slots_per_kes_period = self.genesis["slotsPerKESPeriod"]
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
+        self.slots_offset = slots_offset
 
         self.ttl_length = 1000
 
@@ -965,7 +967,7 @@ class ClusterLib:
 
     def get_last_block_epoch(self) -> int:
         """Return epoch of last block that was successfully applied to the ledger."""
-        return int(self.get_last_block_slot_no() // self.epoch_length)
+        return int((self.get_last_block_slot_no() + self.slots_offset) // self.epoch_length)
 
     def get_address_balance(self, address: str, coin: str = DEFAULT_COIN) -> int:
         """Return total balance of an address (sum of all UTxO balances)."""
@@ -1820,9 +1822,9 @@ class ClusterLib:
         )
 
         # how many seconds to wait until start of the expected epoch
-        sleep_slots = (
-            last_block_epoch + new_epochs
-        ) * self.epoch_length - self.get_last_block_slot_no()
+        sleep_slots = (last_block_epoch + new_epochs) * self.epoch_length - (
+            self.get_last_block_slot_no() + self.slots_offset
+        )
         sleep_time = int(sleep_slots * self.slot_length) + (padding_seconds or 1)
 
         if sleep_time > 15:
