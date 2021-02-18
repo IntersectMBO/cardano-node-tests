@@ -571,7 +571,7 @@ class TestMinting:
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
-        burn_amount = amount // 2
+        burn_amount = amount - 10
         token_burn = token_mint._replace(amount=-burn_amount)
         _mint_or_burn_witness(
             cluster_obj=cluster,
@@ -583,6 +583,14 @@ class TestMinting:
         assert (
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not burned"
+
+        # burn the rest of tokens
+        final_burn = token_mint._replace(amount=-10)
+        _mint_or_burn_witness(
+            cluster_obj=cluster,
+            new_tokens=[final_burn],
+            temp_template=f"{temp_template}_burn",
+        )
 
 
 @pytest.mark.testnets
