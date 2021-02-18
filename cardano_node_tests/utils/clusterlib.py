@@ -1201,7 +1201,9 @@ class ClusterLib:
         )
         txins_db_all: Dict[str, List[UTXOData]] = self._organize_tx_ins_outs_by_coin(txins_all)
 
-        if not all(c in txins_db_all for c in outcoins_passed):
+        if not txins_all:
+            LOGGER.error("No input UTxO.")
+        elif not all(c in txins_db_all for c in outcoins_passed):
             LOGGER.error("Not all output coins are present in input UTxO.")
 
         if txins:
@@ -1228,7 +1230,7 @@ class ClusterLib:
                 txins_filtered = list(itertools.chain.from_iterable(_txins_filtered))
             else:
                 # there's always a txin needed, if only for the fee
-                txins_filtered = [txins_all[0]]
+                txins_filtered = [txins_all[0]] if txins_all else []
 
             txins_db_filtered = self._organize_tx_ins_outs_by_coin(txins_filtered)
 
