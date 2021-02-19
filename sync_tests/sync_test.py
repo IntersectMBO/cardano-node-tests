@@ -542,7 +542,7 @@ def date_diff_in_seconds(dt2, dt1):
 
 def get_calculated_slot_no(env):
     current_time = datetime.utcnow()
-    shelley_start_time, byron_start_time, allegra_start_time, mary_start_time, alonzo_start_time = current_time
+    shelley_start_time = byron_start_time = allegra_start_time = mary_start_time = current_time
 
     if env == "testnet":
         byron_start_time = datetime.strptime("2019-07-24 20:20:16", "%Y-%m-%d %H:%M:%S")
