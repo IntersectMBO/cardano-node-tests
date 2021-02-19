@@ -430,7 +430,7 @@ def get_size(start_path='.'):
 def wait_for_node_to_sync(env, tag_no):
     sync_details_dict = OrderedDict()
     count = 0
-    last_byron_slot_no, last_shelley_slot_no, latest_slot_no = get_calculated_slot_no(env)
+    last_byron_slot_no, last_shelley_slot_no, last_allegra_slot_no, latest_slot_no = get_calculated_slot_no(env)
 
     actual_slot_no = get_current_tip(tag_no)[2]
     start_sync = time.perf_counter()
@@ -475,7 +475,27 @@ def wait_for_node_to_sync(env, tag_no):
     end_shelley_sync = time.perf_counter()
     shelley_sync_time_seconds = int(end_shelley_sync - end_byron_sync)
 
-    if last_shelley_slot_no != latest_slot_no:
+    while actual_slot_no <= last_allegra_slot_no:
+        value_dict = {
+            "actual_slot_not": actual_slot_no,
+            "actual_sync_percent": percentage(actual_slot_no, latest_slot_no),
+            "actual_date_time": get_current_date_time(),
+        }
+        sync_details_dict[count] = value_dict
+
+        print(
+            f"  - actual_slot_no (Allegra era): "
+            f"{actual_slot_no} - {percentage(actual_slot_no, latest_slot_no)} % --> "
+            f"{get_current_date_time()}"
+        )
+        time.sleep(15)
+        count += 1
+        actual_slot_no = get_current_tip(tag_no)[2]
+
+    end_allegra_sync = time.perf_counter()
+    allegra_sync_time_seconds = int(end_allegra_sync - end_shelley_sync)
+
+    if last_allegra_slot_no != latest_slot_no:
         while actual_slot_no < latest_slot_no:
             value_dict = {
                 "actual_slot_not": actual_slot_no,
@@ -485,7 +505,7 @@ def wait_for_node_to_sync(env, tag_no):
             sync_details_dict[count] = value_dict
 
             print(
-                f"  - actual_slot_no (Allegra era): "
+                f"  - actual_slot_no (Mary era): "
                 f"{actual_slot_no} - {percentage(actual_slot_no, latest_slot_no)} % --> "
                 f"{get_current_date_time()}"
             )
@@ -493,10 +513,10 @@ def wait_for_node_to_sync(env, tag_no):
             count += 1
             actual_slot_no = get_current_tip(tag_no)[2]
 
-        end_allegra_sync = time.perf_counter()
-        allegra_sync_time_seconds = int(end_allegra_sync - end_shelley_sync)
+        end_mary_sync = time.perf_counter()
+        mary_sync_time_seconds = int(end_mary_sync - end_allegra_sync)
     else:
-        allegra_sync_time_seconds = 0
+        mary_sync_time_seconds = 0
 
     # include also the last value into the db/dict (100%)
     value_dict = {
@@ -512,7 +532,7 @@ def wait_for_node_to_sync(env, tag_no):
     os.chdir(Path(CARDANO_NODE_TESTS_PATH))
     print(f"Sync done!; newest_chunk: {newest_chunk}")
     return newest_chunk, byron_sync_time_seconds, shelley_sync_time_seconds, \
-           allegra_sync_time_seconds, sync_details_dict
+           allegra_sync_time_seconds, mary_sync_time_seconds, sync_details_dict
 
 
 def date_diff_in_seconds(dt2, dt1):
@@ -522,16 +542,18 @@ def date_diff_in_seconds(dt2, dt1):
 
 def get_calculated_slot_no(env):
     current_time = datetime.utcnow()
-    allegra_start_time = current_time
+    shelley_start_time, byron_start_time, allegra_start_time, mary_start_time, alonzo_start_time = current_time
 
     if env == "testnet":
         byron_start_time = datetime.strptime("2019-07-24 20:20:16", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-07-28 20:20:16", "%Y-%m-%d %H:%M:%S")
         allegra_start_time = datetime.strptime("2020-12-15 20:20:16", "%Y-%m-%d %H:%M:%S")
+        mary_start_time = datetime.strptime("2021-02-03 20:20:16", "%Y-%m-%d %H:%M:%S")
     elif env == "staging":
         byron_start_time = datetime.strptime("2017-09-26 18:23:33", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-08-01 18:23:33", "%Y-%m-%d %H:%M:%S")
         allegra_start_time = datetime.strptime("2020-12-19 18:23:33", "%Y-%m-%d %H:%M:%S")
+        mary_start_time = datetime.strptime("2021-01-28 18:23:33", "%Y-%m-%d %H:%M:%S")
     elif env == "mainnet":
         byron_start_time = datetime.strptime("2017-09-23 21:44:51", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-07-29 21:44:51", "%Y-%m-%d %H:%M:%S")
@@ -540,15 +562,19 @@ def get_calculated_slot_no(env):
         byron_start_time = datetime.strptime("2020-08-17 13:00:00", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-08-17 17:00:00", "%Y-%m-%d %H:%M:%S")
         allegra_start_time = datetime.strptime("2020-12-07 19:00:00", "%Y-%m-%d %H:%M:%S")
+        mary_start_time = datetime.strptime("2021-01-30 01:00:00", "%Y-%m-%d %H:%M:%S")
 
     last_byron_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20)
     last_shelley_slot_no = int(date_diff_in_seconds(allegra_start_time, shelley_start_time) +
                                last_byron_slot_no)
-    if allegra_start_time != current_time:
-        last_allegra_slot_no = int(date_diff_in_seconds(current_time, allegra_start_time) +
-                                   last_shelley_slot_no)
+    last_allegra_slot_no = int(date_diff_in_seconds(mary_start_time, shelley_start_time) +
+                               last_byron_slot_no)
+
+    if mary_start_time != current_time:
+        last_mary_slot_no = int(date_diff_in_seconds(current_time, mary_start_time) +
+                                last_allegra_slot_no)
     else:
-        last_allegra_slot_no = 0
+        last_mary_slot_no = 0
 
     latest_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20 +
                          date_diff_in_seconds(current_time, shelley_start_time))
@@ -557,14 +583,16 @@ def get_calculated_slot_no(env):
     print(f"byron_start_time        : {byron_start_time}")
     print(f"shelley_start_time      : {shelley_start_time}")
     print(f"allegra_start_time      : {allegra_start_time}")
+    print(f"mary_start_time         : {mary_start_time}")
     print(f"current_utc_time        : {current_time}")
     print(f"last_byron_slot_no      : {last_byron_slot_no}")
     print(f"last_shelley_slot_no    : {last_shelley_slot_no}")
     print(f"last_allegra_slot_no    : {last_allegra_slot_no}")
+    print(f"last_mary_slot_no       : {last_mary_slot_no}")
     print(f"latest_slot_no          : {latest_slot_no}")
     print("----------------------------------------------------------------")
 
-    return last_byron_slot_no, last_shelley_slot_no, latest_slot_no
+    return last_byron_slot_no, last_shelley_slot_no, last_allegra_slot_no, latest_slot_no
 
 
 def main():
@@ -624,6 +652,7 @@ def main():
         byron_sync_time_seconds1,
         shelley_sync_time_seconds1,
         allegra_sync_time_seconds1,
+        mary_sync_time_seconds1,
         sync_details_dict1
     ) = wait_for_node_to_sync(env, tag_no1)
 
@@ -643,16 +672,20 @@ def main():
     print(
         f"allegra_sync_time_seconds1: {time.strftime('%H:%M:%S', time.gmtime(allegra_sync_time_seconds1))}"
     )
+    print(f"mary_sync_time_seconds1: {mary_sync_time_seconds1}")
+    print(
+        f"mary_sync_time_seconds1: {time.strftime('%H:%M:%S', time.gmtime(mary_sync_time_seconds1))}"
+    )
 
     latest_block_no1 = get_current_tip(tag_no1)[0]
     latest_slot_no1 = get_current_tip(tag_no1)[2]
     sync_speed_bps1 = int(
         latest_block_no1 / (
-                byron_sync_time_seconds1 + shelley_sync_time_seconds1 + allegra_sync_time_seconds1)
+                byron_sync_time_seconds1 + shelley_sync_time_seconds1 + allegra_sync_time_seconds1 + mary_sync_time_seconds1)
     )
     sync_speed_sps1 = int(
         latest_slot_no1 / (
-                byron_sync_time_seconds1 + shelley_sync_time_seconds1 + allegra_sync_time_seconds1)
+                byron_sync_time_seconds1 + shelley_sync_time_seconds1 + allegra_sync_time_seconds1 + mary_sync_time_seconds1)
     )
     print(f"sync_speed_bps1   : {sync_speed_bps1}")
     print(f"sync_speed_sps1   : {sync_speed_sps1}")
@@ -703,6 +736,7 @@ def main():
             byron_sync_time_seconds2,
             shelley_sync_time_seconds2,
             allegra_sync_time_seconds2,
+            mary_sync_time_seconds2,
             sync_details_dict2
         ) = wait_for_node_to_sync(env, tag_no2)
 
@@ -722,16 +756,19 @@ def main():
         print(f"allegra_sync_time_seconds2: {allegra_sync_time_seconds2}")
         print(f"allegra_sync_time_seconds2: "
               f"{time.strftime('%H:%M:%S', time.gmtime(allegra_sync_time_seconds2))}")
+        print(f"mary_sync_time_seconds2: {mary_sync_time_seconds2}")
+        print(f"mary_sync_time_seconds2: "
+              f"{time.strftime('%H:%M:%S', time.gmtime(mary_sync_time_seconds2))}")
 
         latest_block_no2 = get_current_tip(tag_no2)[0]
         latest_slot_no2 = get_current_tip(tag_no2)[2]
         sync_speed_bps2 = int(
             (latest_block_no2 - latest_block_no1)
-            / (byron_sync_time_seconds2 + shelley_sync_time_seconds2 + allegra_sync_time_seconds2)
+            / (byron_sync_time_seconds2 + shelley_sync_time_seconds2 + allegra_sync_time_seconds2 + mary_sync_time_seconds2)
         )
         sync_speed_sps2 = int(
             (latest_slot_no2 - latest_slot_no1)
-            / (byron_sync_time_seconds2 + shelley_sync_time_seconds2 + allegra_sync_time_seconds2)
+            / (byron_sync_time_seconds2 + shelley_sync_time_seconds2 + allegra_sync_time_seconds2 + mary_sync_time_seconds2)
         )
         print(f"sync_speed_bps2   : {sync_speed_bps2}")
         print(f"sync_speed_sps2   : {sync_speed_sps2}")
@@ -761,6 +798,7 @@ def main():
         byron_sync_time_seconds1,
         shelley_sync_time_seconds1,
         allegra_sync_time_seconds1,
+        mary_sync_time_seconds1,
         sync_time_after_restart_seconds,
         total_chunks1,
         total_chunks2,
