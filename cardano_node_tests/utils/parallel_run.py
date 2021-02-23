@@ -234,7 +234,12 @@ class ClusterManager:
             self._log(
                 f"stopping cluster instance {instance_num} with `{startup_files.stop_script}`"
             )
-            cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
+
+            try:
+                cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
+            except Exception as exc:
+                LOGGER.error(f"While stopping cluster: {exc}")
+
             cluster_nodes.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=True)
             open(instance_dir / CLUSTER_STOPPED_FILE, "a").close()
             self._log(f"stopped cluster instance {instance_num}")
@@ -376,7 +381,11 @@ class _ClusterGetter:
                 )
                 time.sleep(0.2)
 
-            cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
+            try:
+                cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
+            except Exception:
+                pass
+
             self._restart_save_cluster_artifacts(clean=True)
             try:
                 _kill_supervisor(self.cm.cluster_instance)
@@ -640,6 +649,12 @@ class _ClusterGetter:
                             *instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_*"),
                         ):
                             os.remove(sf)
+
+                        dead_clusters = list(
+                            self.cm.lock_dir.glob(f"{CLUSTER_DIR_TEMPLATE}*/{CLUSTER_DEAD_FILE}")
+                        )
+                        if len(dead_clusters) == self.cm.num_of_instances:
+                            raise RuntimeError("All clusters are dead, cannot run")
                         continue
 
                     # singleton test is running, so no other test can be started

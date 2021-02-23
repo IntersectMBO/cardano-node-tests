@@ -28,6 +28,7 @@ def get_args() -> argparse.Namespace:
         description="Cleanup a testnet with the help of testing artifacts."
     )
     parser.add_argument(
+        "-a",
         "--artifacts-base-dir",
         required=True,
         type=helpers.check_dir_arg,
@@ -205,7 +206,7 @@ def cleanup(
                 try:
                     payment = create_addr_record(fpath)
                 except ValueError as exc:
-                    LOGGER.warning(f"Skipping '{fpath}': '{exc}'")
+                    LOGGER.warning(f"Skipping '{fpath}':\n'{exc}'")
                     return
                 return_funds_to_faucet(
                     cluster_obj=cluster_obj,

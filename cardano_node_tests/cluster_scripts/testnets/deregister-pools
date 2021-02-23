@@ -4,7 +4,14 @@ set -euo pipefail
 
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
-POOL_ARTIFACTS="${1:-${STATE_CLUSTER}/nodes}"
+
+if [ -n "${1:-""}" ]; then
+  POOL_ARTIFACTS="$1"
+elif [ -d "./nodes" ]; then
+  POOL_ARTIFACTS="$PWD/nodes"
+else
+  POOL_ARTIFACTS="$STATE_CLUSTER/nodes"
+fi
 
 cd "$POOL_ARTIFACTS"
 
