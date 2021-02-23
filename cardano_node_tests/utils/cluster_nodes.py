@@ -355,10 +355,7 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
 def stop_cluster(cmd: str) -> None:
     """Stop cluster."""
     LOGGER.info(f"Stopping cluster with `{cmd}`.")
-    try:
-        helpers.run_shell_command(cmd, workdir=get_cluster_env().work_dir)
-    except Exception as exc:
-        LOGGER.debug(f"Failed to stop cluster: {exc}")
+    helpers.run_shell_command(cmd, workdir=get_cluster_env().work_dir)
 
 
 def restart_node(node_name: str) -> None:
