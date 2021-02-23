@@ -6,10 +6,10 @@ import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +28,9 @@ def temp_dir(create_temp_dir: Path):
 
 
 @pytest.fixture
-def cluster_update_proposal(cluster_manager: parallel_run.ClusterManager) -> clusterlib.ClusterLib:
+def cluster_update_proposal(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
     return cluster_manager.get(singleton=True, cleanup=True)
 
 
@@ -43,7 +45,7 @@ class TestBasic:
     @pytest.fixture
     def payment_addr(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_update_proposal: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""

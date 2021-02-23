@@ -26,10 +26,10 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from packaging import version
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -112,7 +112,7 @@ class TestBasic:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
@@ -380,7 +380,7 @@ class TestMultiInOut:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 201 new payment addresses."""
@@ -645,7 +645,7 @@ class TestManyUTXOs:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
@@ -698,7 +698,7 @@ class TestManyUTXOs:
     @pytest.fixture
     def many_utxos(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ) -> Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
@@ -845,7 +845,7 @@ class TestNotBalanced:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
@@ -1003,7 +1003,7 @@ class TestNegative:
     @pytest.fixture
     def pool_users(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
@@ -1536,7 +1536,7 @@ class TestMetadata:
     @pytest.fixture
     def payment_addr(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""

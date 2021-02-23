@@ -30,7 +30,7 @@ from cardano_node_tests.utils.types import UnpackableSequence
 LOGGER = logging.getLogger(__name__)
 
 CLUSTER_LOCK = ".cluster.lock"
-RUN_LOG_FILE = ".parallel.log"
+RUN_LOG_FILE = ".cluster_manager.log"
 TEST_SINGLETON_FILE = ".test_singleton"
 RESOURCE_LOCKED_GLOB = ".resource_locked"
 RESOURCE_IN_USE_GLOB = ".resource_in_use"

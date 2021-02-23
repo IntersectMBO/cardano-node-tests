@@ -10,13 +10,13 @@ import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
-from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def temp_dir(create_temp_dir: Path):
 
 
 @pytest.fixture
-def cluster_lock_pool2(cluster_manager: parallel_run.ClusterManager) -> clusterlib.ClusterLib:
+def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(lock_resources=["node-pool2"])
 
 
@@ -71,7 +71,7 @@ def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
 @pytest.fixture
 def cluster_kes(
-    cluster_manager: parallel_run.ClusterManager, short_kes_start_cluster: Path
+    cluster_manager: cluster_management.ClusterManager, short_kes_start_cluster: Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(singleton=True, cleanup=True, start_cmd=str(short_kes_start_cluster))
 
@@ -121,7 +121,7 @@ class TestKES:
     def test_opcert_past_kes_period(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
     ):
         """Start a stake pool with an operational certificate created with expired `--kes-period`.
 
@@ -218,7 +218,7 @@ class TestKES:
     def test_update_valid_opcert(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
     ):
         """Update a valid operational certificate with another valid operational certificate.
 
@@ -282,7 +282,7 @@ class TestKES:
     def test_no_kes_period_arg(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         temp_dir: Path,
     ):
         """Try to generate new operational certificate without specifying the `--kes-period`.

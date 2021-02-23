@@ -52,10 +52,10 @@ cardano\_node\_tests.utils.logfiles module
    :undoc-members:
    :show-inheritance:
 
-cardano\_node\_tests.utils.parallel\_run module
+cardano\_node\_tests.utils.cluster\_management module
 -----------------------------------------------
 
-.. automodule:: cardano_node_tests.utils.parallel_run
+.. automodule:: cardano_node_tests.utils.cluster_management
    :members:
    :undoc-members:
    :show-inheritance:
