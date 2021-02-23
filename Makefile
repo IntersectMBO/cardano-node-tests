@@ -25,9 +25,9 @@ endif
 	pytest cardano_node_tests $(PYTEST_ARGS) -n $(TEST_THREADS) --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
 
 # run all enabled tests on testnet, generate allure report
+# testnets: export NOPOOLS=1
 testnets: export CLUSTERS_COUNT=1
-testnets: export NOPOOLS=1
-testnets: TEST_THREADS ?= 5
+testnets: TEST_THREADS ?= 15
 testnets: .dirs
 # First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.
 ifndef PYTEST_ARGS
