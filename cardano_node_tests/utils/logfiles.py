@@ -28,7 +28,7 @@ ERRORS_IGNORED = [
     "Connection Attempt Exception",
 ]
 if configuration.TESTNET_SCRIPTS_DIR:
-    ERRORS_IGNORED.append("ExceededTimeLimit")
+    ERRORS_IGNORED.extend(["ExceededTimeLimit", "closed when reading data, waiting on next header"])
 ERRORS_RULES_FILE_NAME = ".errors_rules"
 
 

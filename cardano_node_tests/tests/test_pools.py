@@ -338,6 +338,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     return pool_creation_out
 
 
+@pytest.mark.testnets
 class TestStakePool:
     """General tests for stake pools."""
 
@@ -368,7 +369,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1000,
-            pool_cost=15,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
             pool_metadata_url="https://bit.ly/3bDUg9z",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
@@ -390,11 +391,20 @@ class TestStakePool:
         )
 
         # register pool and delegate stake address
-        _create_register_pool_delegate_stake_tx(
+        pool_creation_out = _create_register_pool_delegate_stake_tx(
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
             pool_data=pool_data,
+        )
+
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -425,7 +435,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1000,
-            pool_cost=15,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
@@ -447,11 +457,20 @@ class TestStakePool:
         )
 
         # register pool and delegate stake address
-        _create_register_pool_tx_delegate_stake_tx(
+        pool_creation_out = _create_register_pool_tx_delegate_stake_tx(
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
             pool_data=pool_data,
+        )
+
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
         )
 
     @pytest.mark.parametrize("no_of_addr", [1, 3])
@@ -472,7 +491,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
             pool_pledge=12345,
-            pool_cost=123456789,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.123,
         )
 
@@ -492,11 +511,20 @@ class TestStakePool:
         )
 
         # register pool
-        _create_register_pool(
+        pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
             pool_owners=pool_owners,
             pool_data=pool_data,
+        )
+
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
         )
 
     @pytest.mark.parametrize("no_of_addr", [1, 3])
@@ -531,7 +559,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
-            pool_cost=123,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
@@ -637,7 +665,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
-            pool_cost=123,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
@@ -732,6 +760,15 @@ class TestStakePool:
             stake_pool_id=pool_creation_out.stake_pool_id,
         )
 
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
     @allure.link(helpers.get_vcs_link())
     def test_cancel_stake_pool_deregistration(
         self,
@@ -765,7 +802,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
-            pool_cost=123,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
@@ -852,6 +889,15 @@ class TestStakePool:
             stake_pool_id=pool_creation_out.stake_pool_id,
         )
 
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     @allure.link(helpers.get_vcs_link())
     def test_update_stake_pool_metadata(
@@ -895,7 +941,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=4567,
-            pool_cost=3,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.01,
             pool_metadata_url="https://init_location.com",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
@@ -947,6 +993,15 @@ class TestStakePool:
             pool_data=pool_data_updated,
         )
 
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     @allure.link(helpers.get_vcs_link())
     def test_update_stake_pool_parameters(
@@ -976,16 +1031,20 @@ class TestStakePool:
             temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
+        min_pool_cost = cluster.get_protocol_params().get("minPoolCost", 500)
+
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=4567,
-            pool_cost=3,
+            pool_cost=min_pool_cost,
             pool_margin=0.01,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
             pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
         )
 
-        pool_data_updated = pool_data._replace(pool_pledge=1, pool_cost=1_000_000, pool_margin=0.9)
+        pool_data_updated = pool_data._replace(
+            pool_pledge=1, pool_cost=min_pool_cost + 1_000_000, pool_margin=0.9
+        )
 
         # create pool owners
         pool_owners = clusterlib_utils.create_pool_users(
@@ -1028,6 +1087,15 @@ class TestStakePool:
             pool_data=pool_data_updated,
         )
 
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
     @allure.link(helpers.get_vcs_link())
     def test_sign_in_multiple_stages(
         self,
@@ -1048,7 +1116,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
             pool_pledge=5,
-            pool_cost=3,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.01,
         )
 
@@ -1146,6 +1214,15 @@ class TestStakePool:
             pool_data=pool_data,
         )
 
+        # deregister stake pool
+        cluster.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=node_cold,
+            epoch=cluster.get_last_block_epoch() + 1,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
     @allure.link(helpers.get_vcs_link())
     def test_pool_registration_deregistration(
         self,
@@ -1166,7 +1243,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
             pool_pledge=5,
-            pool_cost=3,
+            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.01,
         )
 
@@ -1360,6 +1437,7 @@ class TestPoolCost:
         )
 
 
+@pytest.mark.testnets
 class TestNegative:
     """Stake pool tests that are expected to fail."""
 
@@ -1396,7 +1474,7 @@ class TestNegative:
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{clusterlib.get_rand_str(4)}",
             pool_pledge=5,
-            pool_cost=3,
+            pool_cost=500_000_000,
             pool_margin=0.01,
         )
         return pool_data
@@ -1849,7 +1927,7 @@ class TestNegative:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1000,
-            pool_cost=15,
+            pool_cost=500_000_000,
             pool_margin=0.2,
             pool_metadata_url=(f"https://gist.githubusercontent.com/{metadata_url}.json"),
             pool_metadata_hash=pool_metadata_hash,
