@@ -640,6 +640,12 @@ class _ClusterGetter:
                             *instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_*"),
                         ):
                             os.remove(sf)
+
+                        dead_clusters = list(
+                            self.cm.lock_dir.glob(f"{CLUSTER_DIR_TEMPLATE}*/{CLUSTER_DEAD_FILE}")
+                        )
+                        if len(dead_clusters) == self.cm.num_of_instances:
+                            raise RuntimeError("All clusters are dead, cannot run")
                         continue
 
                     # singleton test is running, so no other test can be started
