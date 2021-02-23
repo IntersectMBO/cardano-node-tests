@@ -21,10 +21,10 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from packaging import version
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 @pytest.fixture
 def issuers_addrs(
-    cluster_manager: parallel_run.ClusterManager,
+    cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.AddressRecord]:
     """Create new issuers addresses."""
@@ -85,7 +85,7 @@ def issuers_addrs(
 
 @pytest.fixture
 def simple_script_policyid(
-    cluster_manager: parallel_run.ClusterManager,
+    cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
     issuers_addrs: List[clusterlib.AddressRecord],
 ) -> Tuple[Path, str]:
@@ -111,7 +111,7 @@ def simple_script_policyid(
 
 @pytest.fixture
 def multisig_script_policyid(
-    cluster_manager: parallel_run.ClusterManager,
+    cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
     issuers_addrs: List[clusterlib.AddressRecord],
 ) -> Tuple[Path, str]:
@@ -1069,7 +1069,7 @@ class TestTransfer:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
@@ -1096,7 +1096,7 @@ class TestTransfer:
     @pytest.fixture
     def new_token(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ) -> TokenRecord:

@@ -1,4 +1,4 @@
-"""Functionality for cluster scripts.
+"""Functionality for cluster scripts (starting and stopping clusters).
 
 * copying scripts and their configuration, so it can be atered by tests
 * setup of scripts and their configuration for starting of multiple cluster instances

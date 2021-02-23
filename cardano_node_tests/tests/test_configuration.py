@@ -8,11 +8,11 @@ import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ def slot_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
 @pytest.fixture
 def cluster_epoch_length(
-    cluster_manager: parallel_run.ClusterManager, epoch_length_start_cluster: Path
+    cluster_manager: cluster_management.ClusterManager, epoch_length_start_cluster: Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
         singleton=True, cleanup=True, start_cmd=str(epoch_length_start_cluster)
@@ -99,7 +99,7 @@ def cluster_epoch_length(
 
 @pytest.fixture
 def cluster_slot_length(
-    cluster_manager: parallel_run.ClusterManager, slot_length_start_cluster: Path
+    cluster_manager: cluster_management.ClusterManager, slot_length_start_cluster: Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
         singleton=True, cleanup=True, start_cmd=str(slot_length_start_cluster)

@@ -10,10 +10,10 @@ from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 from xdist import workermanage
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ def _stop_all_cluster_instances(
     tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config, pytest_tmp_dir: Path
 ) -> None:
     """Stop all cluster instances after all tests are finished."""
-    cluster_manager_obj = parallel_run.ClusterManager(
+    cluster_manager_obj = cluster_management.ClusterManager(
         tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=pytest_config
     )
     cluster_manager_obj._log("running `_stop_all_cluster_instances`")
@@ -112,14 +112,14 @@ def cluster_cleanup(
 
     if not worker_id or worker_id == "master":
         # if cluster was started outside of test framework, do nothing
-        if parallel_run.DEV_CLUSTER_RUNNING:
+        if cluster_management.DEV_CLUSTER_RUNNING:
             # TODO: check that socket is open and print error if not
             yield
             return
 
         yield
 
-        cluster_manager_obj = parallel_run.ClusterManager(
+        cluster_manager_obj = cluster_management.ClusterManager(
             tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
@@ -137,8 +137,8 @@ def cluster_cleanup(
 
     yield
 
-    with helpers.FileLockIfXdist(f"{lock_dir}/{parallel_run.CLUSTER_LOCK}"):
-        cluster_manager_obj = parallel_run.ClusterManager(
+    with helpers.FileLockIfXdist(f"{lock_dir}/{cluster_management.CLUSTER_LOCK}"):
+        cluster_manager_obj = cluster_management.ClusterManager(
             tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
@@ -165,9 +165,9 @@ def cluster_manager(
     tmp_path_factory: TempdirFactory,
     worker_id: str,
     request: FixtureRequest,
-) -> Generator[parallel_run.ClusterManager, None, None]:
-    """Return instance of `parallel_run.ClusterManager`."""
-    cluster_manager_obj = parallel_run.ClusterManager(
+) -> Generator[cluster_management.ClusterManager, None, None]:
+    """Return instance of `cluster_management.ClusterManager`."""
+    cluster_manager_obj = cluster_management.ClusterManager(
         tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
     )
     yield cluster_manager_obj
@@ -176,7 +176,7 @@ def cluster_manager(
 
 @pytest.fixture
 def cluster(
-    cluster_manager: parallel_run.ClusterManager,
+    cluster_manager: cluster_management.ClusterManager,
 ) -> clusterlib.ClusterLib:
     """Return instance of `clusterlib.ClusterLib`."""
     return cluster_manager.get()

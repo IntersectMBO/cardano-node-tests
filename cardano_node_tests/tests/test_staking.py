@@ -10,11 +10,11 @@ import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -34,18 +34,18 @@ def temp_dir(create_temp_dir: Path):
 
 
 @pytest.fixture
-def cluster_use_pool1(cluster_manager: parallel_run.ClusterManager) -> clusterlib.ClusterLib:
+def cluster_use_pool1(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(use_resources=["node-pool1"])
 
 
 @pytest.fixture
-def cluster_lock_pool2(cluster_manager: parallel_run.ClusterManager) -> clusterlib.ClusterLib:
+def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(lock_resources=["node-pool2"])
 
 
 @pytest.fixture
 def pool_users(
-    cluster_manager: parallel_run.ClusterManager,
+    cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.PoolUser]:
     """Create pool users."""
@@ -186,7 +186,7 @@ class TestDelegateAddr:
     @allure.link(helpers.get_vcs_link())
     def test_delegate_using_pool_id(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Submit registration certificate and delegate to pool using pool id.
@@ -210,7 +210,7 @@ class TestDelegateAddr:
     @allure.link(helpers.get_vcs_link())
     def test_delegate_using_vkey(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Submit registration certificate and delegate to pool using cold vkey.
@@ -234,7 +234,7 @@ class TestDelegateAddr:
     @allure.link(helpers.get_vcs_link())
     def test_deregister(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Deregister stake address.
@@ -372,7 +372,7 @@ class TestDelegateAddr:
     @allure.link(helpers.get_vcs_link())
     def test_addr_delegation_deregistration(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
@@ -487,7 +487,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     def test_delegation_cert_with_wrong_key(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
@@ -546,7 +546,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     def test_delegate_addr_with_wrong_key(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
@@ -603,7 +603,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     def test_delegate_unregistered_addr(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
@@ -685,7 +685,7 @@ class TestRewards:
     )
     def test_reward_simple(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Check that the stake address and pool owner are receiving rewards.
@@ -802,7 +802,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_reward_amount(  # noqa: C901
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Check that the stake address and pool owner are receiving rewards.
@@ -999,7 +999,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_reward_addr_delegation(  # noqa: C901
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the rewards address can be delegated and receive rewards.
@@ -1243,7 +1243,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_decreasing_reward_transfered_funds(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
         """Check that rewards are gradually decreasing when funds are being transfered.
@@ -1341,7 +1341,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge1(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
@@ -1470,7 +1470,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge2(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
@@ -1613,7 +1613,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_deregistered_stake_addr(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the pool is not receiving rewards when owner's stake address is deregistered.
@@ -1775,7 +1775,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_deregistered_reward_addr(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that the reward address is not receiving rewards when deregistered.
@@ -1927,7 +1927,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_deregister_reward_addr_retire_pool(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Test deregistering reward address and retiring stake pool.
@@ -2142,7 +2142,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     def test_2_pools_same_reward_addr(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
     ):
         """Check that one reward address used for two pools receives rewards for both of them.
