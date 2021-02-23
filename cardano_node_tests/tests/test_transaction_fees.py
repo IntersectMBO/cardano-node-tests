@@ -11,10 +11,10 @@ import hypothesis.strategies as st
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class TestFee:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
@@ -197,7 +197,7 @@ class TestExpectedFees:
     @pytest.fixture
     def pool_users(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""

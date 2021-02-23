@@ -17,10 +17,10 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from packaging import version
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -134,7 +134,7 @@ class TestBasic:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
@@ -555,7 +555,7 @@ class TestNegative:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
@@ -747,7 +747,7 @@ class TestTimeLocking:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
@@ -1146,7 +1146,7 @@ class TestAuxiliaryScripts:
     @pytest.fixture
     def payment_addrs(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
