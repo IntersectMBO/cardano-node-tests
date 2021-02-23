@@ -6,7 +6,7 @@ SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 SCRIPT_DIR="$(readlink -m "${0%/*}")"
 
-"$SCRIPT_DIR/deregister-pools"
+"$SCRIPT_DIR/deregister-pools" || :
 supervisorctl stop all
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]

@@ -28,6 +28,7 @@ cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/topology-pool*.json "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/deregister-pools" "$STATE_CLUSTER"
 cp "$TESTNET_CONF_DIR/genesis-byron.json" "$STATE_CLUSTER/genesis-byron.json"
 cp "$TESTNET_CONF_DIR/genesis-shelley.json" "$STATE_CLUSTER/genesis-shelley.json"
 ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
@@ -55,7 +56,7 @@ jq --arg ekg "$POOL2_EKG" --arg prometheus "$POOL2_PROMETHEUS" \
 chmod u+w "$STATE_CLUSTER"/config-*.json
 
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
-POOL_PLEDGE=1000000000
+POOL_PLEDGE=400000000000
 POOL_PORT_OFFSET=3
 RAND_POOL="$((RANDOM % 100))"
 
@@ -170,11 +171,14 @@ done
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
+echo "waiting for node to start" >> "$STATE_CLUSTER/start-cluster.log"
 while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
   echo "Waiting 5 seconds for relay node to start"; sleep 5
 done
+echo "node started" >> "$STATE_CLUSTER/start-cluster.log"
 
 echo "Waiting to make sure the chain is synced"
+echo "waiting for chain to sync" >> "$STATE_CLUSTER/start-cluster.log"
 while :; do
   start_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
   sleep 30
@@ -184,6 +188,7 @@ while :; do
   fi
   sleep 5
 done
+echo "chain synced" >> "$STATE_CLUSTER/start-cluster.log"
 
 echo "Transfering funds to pool owners, registering pools and delegations"
 
@@ -207,8 +212,10 @@ UTXO="$(cardano-cli query utxo \
           --testnet-magic "$NETWORK_MAGIC" \
           --"$ERA"-era \
           --address "$TXIN_ADDR" |
-          sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
+          grep "1000000000000 lovelace" |
+          { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
 TXIN="${UTXO%;*}"
+[ "$TXIN" != "#" ] || { echo "Invalid 'TXIN' on line $LINENO" >&2; exit 1; }  # assert
 TXIN_AMOUNT="${UTXO#*;}"
 TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
 
@@ -277,4 +284,5 @@ cardano-cli transaction submit \
   --testnet-magic "$NETWORK_MAGIC"
 
 
+echo "cluster started" >> "$STATE_CLUSTER/start-cluster.log"
 echo "Cluster started. Run \`stop-cluster\` to stop"
