@@ -18,11 +18,11 @@ import hypothesis.strategies as st
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import parallel_run
 
 LOGGER = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def pool_cost_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
 @pytest.fixture
 def cluster_mincost(
-    cluster_manager: parallel_run.ClusterManager, pool_cost_start_cluster: Path
+    cluster_manager: cluster_management.ClusterManager, pool_cost_start_cluster: Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
         mark="minPoolCost", cleanup=True, start_cmd=str(pool_cost_start_cluster)
@@ -345,7 +345,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
@@ -410,7 +410,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_not_avail(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
@@ -477,7 +477,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_create_stake_pool(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         no_of_addr: int,
     ):
@@ -531,7 +531,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_deregister_stake_pool(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         no_of_addr: int,
@@ -635,7 +635,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_reregister_stake_pool(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
@@ -772,7 +772,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_cancel_stake_pool_deregistration(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
     ):
@@ -902,7 +902,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_update_stake_pool_metadata(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         no_of_addr: int,
@@ -1006,7 +1006,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_update_stake_pool_parameters(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         no_of_addr: int,
@@ -1099,7 +1099,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_sign_in_multiple_stages(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ):
         """Create and register a stake pool with TX signed in multiple stages.
@@ -1226,7 +1226,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     def test_pool_registration_deregistration(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ):
         """Send both pool registration and deregistration certificates in single TX.
@@ -1323,7 +1323,7 @@ class TestPoolCost:
     @pytest.fixture
     def pool_owners(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_mincost: clusterlib.ClusterLib,
     ):
         """Create class scoped pool owners."""
@@ -1396,7 +1396,7 @@ class TestPoolCost:
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_cost(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
         pool_cost: int,
@@ -1444,7 +1444,7 @@ class TestNegative:
     @pytest.fixture
     def pool_users(
         self,
-        cluster_manager: parallel_run.ClusterManager,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool users."""
