@@ -10,6 +10,7 @@ import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
 
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -177,6 +178,7 @@ def _delegate_stake_addr(
     return pool_user
 
 
+@pytest.mark.testnets
 @pytest.mark.run(order=3)
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
@@ -269,7 +271,6 @@ class TestDelegateAddr:
             silent=True,
         )
         if not stake_reward:
-            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # files for deregistering stake address
@@ -460,6 +461,7 @@ class TestDelegateAddr:
         assert not stake_addr_info.delegation, f"Stake address was delegated: {stake_addr_info}"
 
 
+@pytest.mark.testnets
 class TestNegative:
     """Tests that are expected to fail."""
 
@@ -676,6 +678,128 @@ class TestRewards:
     """Tests for checking expected rewards."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.skipif(
+        cluster_nodes.CLUSTER_TYPE.type != cluster_nodes.ClusterType.TESTNET,
+        reason="supposed to run on testnet with pools",
+    )
+    def test_reward_simple(
+        self,
+        cluster_manager: parallel_run.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
+    ):
+        """Check that the stake address and pool owner are receiving rewards.
+
+        * delegate to pool
+        * collect data for pool owner and pool users for 7 epochs
+        * withdraw rewards to payment address
+        """
+        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
+        pool_name = "node-pool1"
+        cluster = cluster_use_pool1
+
+        temp_template = helpers.get_func_name()
+        pool_rec = cluster_manager.cache.addrs_data[pool_name]
+        pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
+
+        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        if sleep_time < 0:
+            cluster.wait_for_new_epoch()
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        time.sleep(sleep_time)
+
+        init_epoch = cluster.get_last_block_epoch()
+        user_rewards = [(init_epoch, 0, 0)]
+        owner_rewards = [
+            (
+                init_epoch,
+                cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance,
+                0,
+            )
+        ]
+
+        # submit registration certificate and delegate to pool
+        pool_user = _delegate_stake_addr(
+            cluster_obj=cluster,
+            addrs_data=cluster_manager.cache.addrs_data,
+            temp_template=temp_template,
+            pool_name=pool_name,
+            check_delegation=False,
+        )
+
+        # make sure we managed to finish registration in the expected epoch
+        assert (
+            cluster.get_last_block_epoch() == init_epoch
+        ), "Registration took longer than expected and would affect other checks"
+
+        LOGGER.info("Checking rewards for 7 epochs.")
+        for __ in range(7):
+            # reward balances in previous epoch
+            prev_user_epoch, prev_user_reward, __ = user_rewards[-1]
+            (
+                prev_owner_epoch,
+                prev_owner_reward,
+                __,  # prev_abs_owner_reward
+            ) = owner_rewards[-1]
+
+            # wait for new epoch
+            if cluster.get_last_block_epoch() == prev_owner_epoch:
+                cluster.wait_for_new_epoch()
+
+            # sleep till the end of epoch
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 5
+            assert sleep_time >= 0, "Not enough time left in epoch"
+            time.sleep(sleep_time)
+
+            this_epoch = cluster.get_last_block_epoch()
+
+            # current reward balances
+            user_reward = cluster.get_stake_addr_info(
+                pool_user.stake.address
+            ).reward_account_balance
+            owner_reward = cluster.get_stake_addr_info(
+                pool_reward.stake.address
+            ).reward_account_balance
+
+            # absolute reward amounts received this epoch
+            abs_user_reward = (
+                user_reward - prev_user_reward if this_epoch == prev_user_epoch + 1 else 0
+            )
+            abs_owner_reward = (
+                owner_reward - prev_owner_reward if this_epoch == prev_owner_epoch + 1 else 0
+            )
+
+            # store collected rewards info
+            user_rewards.append(
+                (
+                    this_epoch,
+                    user_reward,
+                    abs_user_reward,
+                )
+            )
+            owner_rewards.append(
+                (
+                    this_epoch,
+                    owner_reward,
+                    abs_owner_reward,
+                )
+            )
+
+            if this_epoch >= init_epoch + 4:
+                # wait 4 epochs for first rewards
+                assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
+                assert (
+                    user_reward > prev_user_reward
+                ), "New reward was not received by stake address"
+
+        # withdraw rewards to payment address
+        if this_epoch == cluster.get_last_block_epoch():
+            cluster.wait_for_new_epoch()
+        clusterlib_utils.withdraw_reward(
+            cluster_obj=cluster, pool_user=pool_user, name_template=temp_template
+        )
+
+    @allure.link(helpers.get_vcs_link())
     def test_reward_amount(  # noqa: C901
         self,
         cluster_manager: parallel_run.ClusterManager,
@@ -684,7 +808,7 @@ class TestRewards:
         """Check that the stake address and pool owner are receiving rewards.
 
         * delegate to pool
-        * collect data for pool owner and pool users for 10 epochs
+        * collect data for pool owner and pool users for 9 epochs
 
            - each epoch check ledger state (expected data in `_pstake*`, delegation, stake amount)
            - each epoch check received reward with reward in ledger state
@@ -845,7 +969,7 @@ class TestRewards:
                 assert user_stake_addr_dec in _pstake_go
 
             if this_epoch >= init_epoch + 4:
-                # wait 5 epochs for first rewards
+                # wait 4 epochs for first rewards
                 assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
                 assert (
                     user_reward > prev_user_reward
@@ -1169,7 +1293,6 @@ class TestRewards:
             silent=True,
         )
         if not stake_reward:
-            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # transfer all funds from payment address back to faucet, so no funds are staked
@@ -1260,7 +1383,6 @@ class TestRewards:
             silent=True,
         )
         if not stake_reward:
-            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         node_cold = pool_rec["cold_key_pair"]
@@ -1389,7 +1511,6 @@ class TestRewards:
             silent=True,
         )
         if not stake_reward:
-            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         node_cold = pool_rec["cold_key_pair"]
@@ -1535,7 +1656,6 @@ class TestRewards:
             silent=True,
         )
         if not stake_reward:
-            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # deregister stake address - owner's stake is lower than pledge
@@ -1697,7 +1817,6 @@ class TestRewards:
             silent=True,
         )
         if not stake_reward:
-            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw pool rewards to payment address
@@ -1845,7 +1964,6 @@ class TestRewards:
             silent=True,
         )
         if not stake_reward:
-            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw pool rewards to payment address
@@ -2064,7 +2182,6 @@ class TestRewards:
             silent=True,
         )
         if not stake_reward:
-            cluster_manager.set_needs_restart()
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # fund source address so the pledge is still met after TX fees are deducted
