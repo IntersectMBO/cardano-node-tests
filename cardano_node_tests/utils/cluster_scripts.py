@@ -78,7 +78,7 @@ class ScriptsTypes:
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare scripts files for starting and stoping cluster instance."""
+        """Prepare scripts files for starting and stopping cluster instance."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
 
@@ -261,7 +261,7 @@ class DevopsScripts(ScriptsTypes):
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare scripts files for starting and stoping cluster instance."""
+        """Prepare scripts files for starting and stopping cluster instance."""
         destdir = Path(destdir).expanduser().resolve()
 
         _start_script = start_script or helpers.get_cmd_path("start-cluster")
@@ -379,7 +379,7 @@ class LocalScripts(ScriptsTypes):
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare scripts files for starting and stoping cluster instance."""
+        """Prepare scripts files for starting and stopping cluster instance."""
         destdir = Path(destdir).expanduser().resolve()
 
         _start_script = start_script or configuration.SCRIPTS_DIR / "start-cluster-hfc"
@@ -524,7 +524,7 @@ class TestnetScripts(ScriptsTypes):
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare scripts files for starting and stoping cluster instance."""
+        """Prepare scripts files for starting and stopping cluster instance."""
         destdir = Path(destdir).expanduser().resolve()
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir(exist_ok=True)

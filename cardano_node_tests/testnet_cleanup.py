@@ -24,9 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 def get_args() -> argparse.Namespace:
     """Get command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Cleanup a testnet with the help of testing artifacts."
-    )
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument(
         "-a",
         "--artifacts-base-dir",
@@ -180,7 +178,7 @@ def cleanup(
 
             f_name = fpath.name
             if f_name == "faucet.addr":
-                return
+                continue
             if f_name.endswith("_stake.addr"):
                 payment_addr = fpath.parent / f_name.replace("_stake.addr", ".addr")
                 try:
@@ -188,7 +186,7 @@ def cleanup(
                     stake = create_addr_record(fpath)
                 except ValueError as exc:
                     LOGGER.warning(f"Skipping '{fpath}':\n'{exc}'")
-                    return
+                    continue
 
                 pool_user = clusterlib.PoolUser(payment=payment, stake=stake)
 
@@ -207,7 +205,7 @@ def cleanup(
                     payment = create_addr_record(fpath)
                 except ValueError as exc:
                     LOGGER.warning(f"Skipping '{fpath}':\n'{exc}'")
-                    return
+                    continue
                 return_funds_to_faucet(
                     cluster_obj=cluster_obj,
                     src_addr=payment,
