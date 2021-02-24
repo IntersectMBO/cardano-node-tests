@@ -294,7 +294,10 @@ class TestDelegateAddr:
 
         # withdraw rewards to payment address
         clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster, pool_user=pool_user, name_template=temp_template
+            cluster_obj=cluster,
+            stake_addr_record=pool_user.stake,
+            dst_addr_record=pool_user.payment,
+            name_template=temp_template,
         )
 
         # deregister stake address
@@ -796,7 +799,10 @@ class TestRewards:
         if this_epoch == cluster.get_last_block_epoch():
             cluster.wait_for_new_epoch()
         clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster, pool_user=pool_user, name_template=temp_template
+            cluster_obj=cluster,
+            stake_addr_record=pool_user.stake,
+            dst_addr_record=pool_user.payment,
+            name_template=temp_template,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -993,7 +999,10 @@ class TestRewards:
         if this_epoch == cluster.get_last_block_epoch():
             cluster.wait_for_new_epoch()
         clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster, pool_user=pool_user, name_template=temp_template
+            cluster_obj=cluster,
+            stake_addr_record=pool_user.stake,
+            dst_addr_record=pool_user.payment,
+            name_template=temp_template,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1323,9 +1332,9 @@ class TestRewards:
                 # withdraw rewards to destination address
                 clusterlib_utils.withdraw_reward(
                     cluster_obj=cluster,
-                    pool_user=pool_user,
-                    name_template=f"{temp_template}_ep{epoch}",
+                    stake_addr_record=pool_user.stake,
                     dst_addr_record=dst_addr_record,
+                    name_template=f"{temp_template}_ep{epoch}",
                 )
 
         LOGGER.info("Withdrawing new rewards for 4 epochs.")
@@ -1821,7 +1830,10 @@ class TestRewards:
 
         # withdraw pool rewards to payment address
         clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster, pool_user=pool_reward, name_template=temp_template
+            cluster_obj=cluster,
+            stake_addr_record=pool_reward.stake,
+            dst_addr_record=pool_reward.payment,
+            name_template=temp_template,
         )
 
         # deregister the pool reward address
@@ -1968,7 +1980,10 @@ class TestRewards:
 
         # withdraw pool rewards to payment address
         clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster, pool_user=pool_reward, name_template=temp_template
+            cluster_obj=cluster,
+            stake_addr_record=pool_reward.stake,
+            dst_addr_record=pool_reward.payment,
+            name_template=temp_template,
         )
 
         # deregister the pool reward address
