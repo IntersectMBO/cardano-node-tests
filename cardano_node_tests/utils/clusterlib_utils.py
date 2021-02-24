@@ -22,17 +22,16 @@ class UpdateProposal(NamedTuple):
 
 def withdraw_reward(
     cluster_obj: clusterlib.ClusterLib,
-    pool_user: clusterlib.PoolUser,
+    stake_addr_record: clusterlib.AddressRecord,
+    dst_addr_record: clusterlib.AddressRecord,
     name_template: str,
-    dst_addr_record: Optional[clusterlib.AddressRecord] = None,
 ) -> None:
     """Withdraw rewards to payment address."""
-    dst_addr_record = dst_addr_record or pool_user.payment
     dst_address = dst_addr_record.address
     src_init_balance = cluster_obj.get_address_balance(dst_address)
 
     tx_files_withdrawal = clusterlib.TxFiles(
-        signing_key_files=[dst_addr_record.skey_file, pool_user.stake.skey_file],
+        signing_key_files=[dst_addr_record.skey_file, stake_addr_record.skey_file],
     )
 
     this_epoch = cluster_obj.get_last_block_epoch()
@@ -41,7 +40,7 @@ def withdraw_reward(
         src_address=dst_address,
         tx_name=f"{name_template}_reward_withdrawal",
         tx_files=tx_files_withdrawal,
-        withdrawals=[clusterlib.TxOut(address=pool_user.stake.address, amount=-1)],
+        withdrawals=[clusterlib.TxOut(address=stake_addr_record.address, amount=-1)],
     )
     cluster_obj.wait_for_new_block(new_blocks=2)
 
@@ -50,7 +49,7 @@ def withdraw_reward(
     else:
         # check that reward is 0
         assert (
-            cluster_obj.get_stake_addr_info(pool_user.stake.address).reward_account_balance == 0
+            cluster_obj.get_stake_addr_info(stake_addr_record.address).reward_account_balance == 0
         ), "Not all rewards were transfered"
 
     # check that rewards were transfered
@@ -77,7 +76,12 @@ def deregister_stake_addr(
     )
 
     # withdraw rewards to payment address
-    withdraw_reward(cluster_obj=cluster_obj, pool_user=pool_user, name_template=name_template)
+    withdraw_reward(
+        cluster_obj=cluster_obj,
+        stake_addr_record=pool_user.stake,
+        dst_addr_record=pool_user.payment,
+        name_template=name_template,
+    )
 
     tx_raw_output = cluster_obj.send_tx(
         src_address=pool_user.payment.address,
