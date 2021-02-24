@@ -34,7 +34,7 @@ SKIPPED = (
 
 def get_args() -> argparse.Namespace:
     """Get script command line arguments."""
-    parser = argparse.ArgumentParser(description="cli-coverage")
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument(
         "-i",
         "--input-files",
@@ -210,6 +210,10 @@ def get_badge_icon(report: dict) -> str:
 
 
 def main() -> int:
+    logging.basicConfig(
+        format="%(name)s:%(levelname)s:%(message)s",
+        level=logging.INFO,
+    )
     args = get_args()
 
     if not (args.output_file or args.print_coverage or args.badge_icon_url):
@@ -237,8 +241,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        format="%(name)s:%(levelname)s:%(message)s",
-        level=logging.INFO,
-    )
     sys.exit(main())
