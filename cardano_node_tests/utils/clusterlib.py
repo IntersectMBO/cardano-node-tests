@@ -179,7 +179,7 @@ class ClusterLib:
     def __init__(
         self,
         state_dir: FileType,
-        protocol: str = Protocols.SHELLEY,
+        protocol: str = Protocols.CARDANO,
         era: str = "",
         tx_era: str = "",
         slots_offset: int = 0,
