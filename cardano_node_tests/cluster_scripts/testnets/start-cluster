@@ -12,6 +12,11 @@ if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   exit 1
 fi
 
+if [ -e "$SCRIPT_DIR/shell_env" ]; then
+  # shellcheck disable=SC1090
+  source "$SCRIPT_DIR/shell_env"
+fi
+
 rm -rf "$STATE_CLUSTER"
 mkdir -p "$STATE_CLUSTER"/{byron,shelley,webserver}
 cd "$STATE_CLUSTER/.."
@@ -38,6 +43,15 @@ PRODUCER="$(jq '.Producers[0]' "$TESTNET_CONF_DIR"/topology-*.json)"
 jq --argjson relay "$PRODUCER" '.Producers[2] = $relay' "$SCRIPT_DIR/topology-relay1.json" \
   > "$STATE_CLUSTER/topology-relay1.json"
 
+# If public IP for relay is not set using `RELAY1_HOST`, try to use the external IP.
+# Setting it to 'localhost' is not useful as relay will not be reachable and pools
+# will not produce any blocks.
+if [ -z "$RELAY1_HOST" ]; then
+  RELAY1_HOST="$(curl -s "http://whatismyip.akamai.com/" || echo "")"
+  [ -n "$RELAY1_HOST" ] || { echo "Empty 'RELAY1_HOST' on line $LINENO" >&2; exit 1; }  # assert
+fi
+
+RELAY1_PORT="${RELAY1_PORT:-"30001"}"
 RELAY1_EKG="30300"
 RELAY1_PROMETHEUS="30301"
 POOL1_EKG="30306"
@@ -129,11 +143,11 @@ for i in {1..2}; do
     --arg name "TestPool${RAND_POOL}_${i}" \
     --arg description "Test Pool $RAND_POOL $i" \
     --arg ticker "TP${RAND_POOL}${i}" \
-    --arg homepage "http://localhost:30000/pool$i.html" \
+    --arg homepage "http://${RELAY1_HOST}:30000/pool$i.html" \
     '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
     > "$STATE_CLUSTER/webserver/pool$i.json"
 
-  METADATA_URL="http://localhost:30000/pool$i.json"
+  METADATA_URL="http://${RELAY1_HOST}:30000/pool$i.json"
   METADATA_HASH=$(cardano-cli stake-pool metadata-hash --pool-metadata-file \
                   "$STATE_CLUSTER/webserver/pool$i.json")
   POOL_PORT=$(("30000" + "$POOL_PORT_OFFSET" + i))
@@ -151,8 +165,8 @@ for i in {1..2}; do
     --pool-owner-stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --metadata-url "$METADATA_URL" \
     --metadata-hash "$METADATA_HASH" \
-    --pool-relay-port "$POOL_PORT" \
-    --pool-relay-ipv4 "127.0.0.1" \
+    --pool-relay-port "$RELAY1_PORT" \
+    --pool-relay-ipv4 "$RELAY1_HOST" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/register.cert"
 done
