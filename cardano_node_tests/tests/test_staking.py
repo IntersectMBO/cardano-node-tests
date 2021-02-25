@@ -694,7 +694,7 @@ class TestRewards:
         """Check that the stake address and pool owner are receiving rewards.
 
         * delegate to pool
-        * collect data for pool owner and pool users for 7 epochs
+        * collect data for pool owner and pool users for 6 epochs
         * withdraw rewards to payment address
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
@@ -705,10 +705,10 @@ class TestRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
 
-        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 80
         if sleep_time < 0:
             cluster.wait_for_new_epoch()
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 80
         time.sleep(sleep_time)
 
         init_epoch = cluster.get_last_block_epoch()
@@ -735,8 +735,8 @@ class TestRewards:
             cluster.get_last_block_epoch() == init_epoch
         ), "Registration took longer than expected and would affect other checks"
 
-        LOGGER.info("Checking rewards for 7 epochs.")
-        for __ in range(7):
+        LOGGER.info("Checking rewards for 6 epochs.")
+        for __ in range(6):
             # reward balances in previous epoch
             prev_user_epoch, prev_user_reward, __ = user_rewards[-1]
             (
@@ -750,7 +750,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 5
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 30
             assert sleep_time >= 0, "Not enough time left in epoch"
             time.sleep(sleep_time)
 
