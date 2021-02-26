@@ -46,12 +46,14 @@ jq --argjson relay "$PRODUCER" '.Producers[2] = $relay' "$SCRIPT_DIR/topology-re
 # If public IP for relay is not set using `RELAY1_HOST`, try to use the external IP.
 # Setting it to 'localhost' is not useful as relay will not be reachable and pools
 # will not produce any blocks.
-if [ -z "$RELAY1_HOST" ]; then
+if [ -z "${RELAY1_HOST:-""}" ]; then
   RELAY1_HOST="$(curl -s "http://whatismyip.akamai.com/" || echo "")"
   [ -n "$RELAY1_HOST" ] || { echo "Empty 'RELAY1_HOST' on line $LINENO" >&2; exit 1; }  # assert
 fi
-
 RELAY1_PORT="${RELAY1_PORT:-"30001"}"
+echo "$RELAY1_HOST" > "$STATE_CLUSTER/nodes/relay_host"
+echo "$RELAY1_PORT" > "$STATE_CLUSTER/nodes/relay_port"
+
 RELAY1_EKG="30300"
 RELAY1_PROMETHEUS="30301"
 POOL1_EKG="30306"
