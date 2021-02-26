@@ -1981,3 +1981,6 @@ class ClusterLib:
             tx_raw_output=tx_raw_output,
             kes_key_pair=node_kes,
         )
+
+    def __repr__(self) -> str:
+        return f"<ClusterLib: protocol={self.protocol}, era={self.era}, tx_era={self.tx_era}>"
