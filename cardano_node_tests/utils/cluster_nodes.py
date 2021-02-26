@@ -75,7 +75,13 @@ class DevopsCluster(ClusterType):
 
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
-        cluster_obj = clusterlib.ClusterLib(get_cluster_env().state_dir)
+        cluster_env = get_cluster_env()
+        cluster_obj = clusterlib.ClusterLib(
+            state_dir=cluster_env.state_dir,
+            protocol=clusterlib.Protocols.SHELLEY,
+            era=cluster_env.cluster_era,
+            tx_era=cluster_env.tx_era,
+        )
         return cluster_obj
 
     def create_addrs_data(
