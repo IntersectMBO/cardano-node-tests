@@ -179,7 +179,7 @@ class ClusterLib:
     def __init__(
         self,
         state_dir: FileType,
-        protocol: str = Protocols.SHELLEY,
+        protocol: str = Protocols.CARDANO,
         era: str = "",
         tx_era: str = "",
         slots_offset: int = 0,
@@ -1981,3 +1981,6 @@ class ClusterLib:
             tx_raw_output=tx_raw_output,
             kes_key_pair=node_kes,
         )
+
+    def __repr__(self) -> str:
+        return f"<ClusterLib: protocol={self.protocol}, era={self.era}, tx_era={self.tx_era}>"
