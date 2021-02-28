@@ -45,7 +45,7 @@ def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         if destdir_ls:
             return destdir_ls[0]
 
-        startup_files = cluster_nodes.CLUSTER_TYPE.cluster_scripts.copy_scripts_files(
+        startup_files = cluster_nodes.get_cluster_type().cluster_scripts.copy_scripts_files(
             destdir=destdir
         )
         with open(startup_files.genesis_spec) as fp_in:
@@ -74,7 +74,7 @@ def slot_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         if destdir_ls:
             return destdir_ls[0]
 
-        startup_files = cluster_nodes.CLUSTER_TYPE.cluster_scripts.copy_scripts_files(
+        startup_files = cluster_nodes.get_cluster_type().cluster_scripts.copy_scripts_files(
             destdir=destdir
         )
         with open(startup_files.genesis_spec) as fp_in:

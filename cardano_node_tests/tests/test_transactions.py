@@ -924,7 +924,7 @@ class TestNotBalanced:
         )
 
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_wrong_balance(
         self,
@@ -1250,7 +1250,7 @@ class TestNegative:
         )
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_non_existent_address(
         self,
@@ -1266,7 +1266,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_invalid_length_address(
         self,
@@ -1284,7 +1284,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_invalid_chars_address(
         self,
@@ -1300,7 +1300,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_non_existent_address(
         self,
@@ -1316,7 +1316,7 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_invalid_length_address(
         self,
@@ -1334,7 +1334,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_invalid_chars_address(
         self,
@@ -1389,7 +1389,7 @@ class TestNegative:
         assert "BadInputsUTxO" in err
 
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_invalid_lenght_utxo_hash(
         self,

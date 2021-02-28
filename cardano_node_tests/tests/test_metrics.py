@@ -119,9 +119,11 @@ class TestPrometheus:
     ):
         """Test that list of available metrics == list of expected metrics."""
         # pylint: disable=unused-argument
-        prometheus_port = cluster_nodes.CLUSTER_TYPE.cluster_scripts.get_instance_ports(
-            cluster_nodes.get_cluster_env().instance_num
-        ).prometheus_bft1
+        prometheus_port = (
+            cluster_nodes.get_cluster_type()
+            .cluster_scripts.get_instance_ports(cluster_nodes.get_cluster_env().instance_num)
+            .prometheus_bft1
+        )
 
         response = get_prometheus_metrics(prometheus_port)
 

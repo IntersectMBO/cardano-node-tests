@@ -683,7 +683,7 @@ class TestRewards:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.skipif(
-        cluster_nodes.CLUSTER_TYPE.type != cluster_nodes.ClusterType.TESTNET,
+        cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET,
         reason="supposed to run on testnet with pools",
     )
     def test_reward_simple(
