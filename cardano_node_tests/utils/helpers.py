@@ -59,7 +59,11 @@ def hypothesis_settings() -> Any:
     import hypothesis
 
     return hypothesis.settings(
-        deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,)
+        deadline=None,
+        suppress_health_check=(
+            hypothesis.HealthCheck.too_slow,
+            hypothesis.HealthCheck.function_scoped_fixture,
+        ),
     )
 
 
