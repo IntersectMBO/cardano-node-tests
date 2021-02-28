@@ -1,6 +1,7 @@
 import argparse
 import contextlib
 import datetime
+import functools
 import hashlib
 import inspect
 import io
@@ -21,7 +22,6 @@ from typing import Dict
 from typing import Iterator
 from typing import Optional
 
-import hypothesis
 from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 from filelock import FileLock
@@ -35,10 +35,8 @@ logging.getLogger("filelock").setLevel(logging.WARNING)
 LOGGER = logging.getLogger(__name__)
 
 LAUNCH_PATH = Path(os.getcwd())
+GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 
-HYPOTHESIS_SETTINGS = hypothesis.settings(
-    deadline=None, suppress_health_check=(hypothesis.HealthCheck.too_slow,)
-)
 
 # Use dummy locking if not executing with multiple workers.
 # When running with multiple workers, operations with shared resources (like faucet addresses)
@@ -54,6 +52,19 @@ else:
     def xdist_sleep(secs: float) -> None:
         # pylint: disable=all
         pass
+
+
+@functools.lru_cache
+def hypothesis_settings() -> Any:
+    import hypothesis
+
+    return hypothesis.settings(
+        deadline=None,
+        suppress_health_check=(
+            hypothesis.HealthCheck.too_slow,
+            hypothesis.HealthCheck.function_scoped_fixture,
+        ),
+    )
 
 
 def run_shell_command(command: str, workdir: FileType = "") -> bytes:
@@ -104,22 +115,20 @@ def run_command(command: str, workdir: FileType = "") -> bytes:
     return stdout
 
 
-CURRENT_COMMIT = (
-    os.environ.get("GIT_REVISION") or run_shell_command("git rev-parse HEAD").decode().strip()
-)
-GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
-GITHUB_TREE_URL = f"{GITHUB_URL}/tree/{CURRENT_COMMIT}"
-GITHUB_BLOB_URL = f"{GITHUB_URL}/blob/{CURRENT_COMMIT}"
+@functools.lru_cache
+def get_current_commit() -> str:
+    # TODO: make sure we are in correct repo
+    return (
+        os.environ.get("GIT_REVISION") or run_shell_command("git rev-parse HEAD").decode().strip()
+    )
 
 
+@functools.lru_cache
 def get_basetemp() -> Path:
     """Return base temporary directory for tests artifacts."""
     tempdir = Path(tempfile.gettempdir()) / "cardano-node-tests"
     tempdir.mkdir(mode=0o700, exist_ok=True)
     return tempdir
-
-
-TEST_TEMP_DIR = get_basetemp()
 
 
 # TODO: unify with the implementation in clusterlib
@@ -157,7 +166,7 @@ def get_vcs_link() -> str:
     lineno = calling_frame.f_lineno + 1  # type: ignore
     fpath = calling_frame.f_globals["__file__"]  # type: ignore
     fpart = fpath[fpath.find("cardano_node_tests") :]
-    url = f"{GITHUB_BLOB_URL}/{fpart}#L{lineno}"
+    url = f"{GITHUB_URL}/blob/{get_current_commit()}/{fpart}#L{lineno}"
     return url
 
 
