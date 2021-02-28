@@ -1277,7 +1277,7 @@ class TestNegative:
             max_size=1000,
         )
     )
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     def test_long_name(
         self,
         cluster: clusterlib.ClusterLib,

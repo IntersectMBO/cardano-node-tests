@@ -55,7 +55,7 @@ def pool_cost_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         if destdir_ls:
             return destdir_ls[0]
 
-        startup_files = cluster_nodes.CLUSTER_TYPE.cluster_scripts.copy_scripts_files(
+        startup_files = cluster_nodes.get_cluster_type().cluster_scripts.copy_scripts_files(
             destdir=destdir
         )
         with open(startup_files.genesis_spec) as fp_in:
@@ -1356,7 +1356,7 @@ class TestPoolCost:
         return pool_owners
 
     @hypothesis.given(pool_cost=st.integers(max_value=499))  # minPoolCost is now 500
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_low_cost(
         self,
@@ -1779,7 +1779,7 @@ class TestNegative:
         assert 'key "homepage" not found' in str(excinfo.value)
 
     @hypothesis.given(pool_name=st.text(min_size=51))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_name(
         self,
@@ -1812,7 +1812,7 @@ class TestNegative:
         )
 
     @hypothesis.given(pool_description=st.text(min_size=256))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_description(
         self,
@@ -1845,7 +1845,7 @@ class TestNegative:
         )
 
     @hypothesis.given(pool_ticker=st.text())
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_ticker(
         self,
@@ -1876,7 +1876,7 @@ class TestNegative:
         assert '"ticker" must have at least 3 and at most 5 characters' in str(excinfo.value)
 
     @hypothesis.given(pool_homepage=st.text(min_size=425))
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_homepage(
         self,
@@ -1907,7 +1907,7 @@ class TestNegative:
     @hypothesis.given(
         metadata_url=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=25)
     )
-    @helpers.HYPOTHESIS_SETTINGS
+    @helpers.hypothesis_settings()
     @allure.link(helpers.get_vcs_link())
     def test_stake_pool_long_metadata_url(
         self,
