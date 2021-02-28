@@ -56,9 +56,9 @@ if helpers.IS_XDIST and DEV_CLUSTER_RUNNING:
 
 def _kill_supervisor(instance_num: int) -> None:
     """Kill supervisor process."""
-    port_num = cluster_nodes.CLUSTER_TYPE.cluster_scripts.get_instance_ports(
-        instance_num
-    ).supervisor
+    port_num = (
+        cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
+    )
     port_str = f":{port_num}"
     netstat = helpers.run_command("netstat -plnt").decode().splitlines()
     for line in netstat:
@@ -158,7 +158,9 @@ class ClusterManager:
     @property
     def ports(self) -> cluster_scripts.InstancePorts:
         """Return port mappings for current cluster instance."""
-        return cluster_nodes.CLUSTER_TYPE.cluster_scripts.get_instance_ports(self.cluster_instance)
+        return cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
+            self.cluster_instance
+        )
 
     def _init_log(self) -> Path:
         """Return path to run log file."""
@@ -226,7 +228,7 @@ class ClusterManager:
                 self._log(f"cluster instance {instance_num} not running")
                 continue
 
-            startup_files = cluster_nodes.CLUSTER_TYPE.cluster_scripts.prepare_scripts_files(
+            startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
                 destdir=self._create_startup_files_dir(instance_num),
                 instance_num=instance_num,
             )
@@ -359,7 +361,7 @@ class _ClusterGetter:
             f"stop_cmd='{stop_cmd}'"
         )
 
-        startup_files = cluster_nodes.CLUSTER_TYPE.cluster_scripts.prepare_scripts_files(
+        startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
             destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance),
             instance_num=self.cm.cluster_instance,
             start_script=start_cmd,
@@ -536,7 +538,7 @@ class _ClusterGetter:
         # save CLI coverage collected by the old `cluster_obj` instance
         self._save_cli_coverage()
         # replace the old `cluster_obj` instance and reload data
-        self.cm.cache.cluster_obj = cluster_nodes.CLUSTER_TYPE.get_cluster_obj()
+        self.cm.cache.cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
         self.cm.cache.test_data = {}
         self.cm.cache.addrs_data = cluster_nodes.load_addrs_data()
         self.cm.cache.last_checksum = addrs_data_checksum
@@ -553,7 +555,7 @@ class _ClusterGetter:
 
         cluster_obj = self.cm.cache.cluster_obj
         if not cluster_obj:
-            cluster_obj = cluster_nodes.CLUSTER_TYPE.get_cluster_obj()
+            cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
 
         # setup faucet addresses
         if not (state_dir / cluster_nodes.ADDRS_DATA).exists():
@@ -934,7 +936,7 @@ class _ClusterGetter:
 
                 cluster_obj = self.cm.cache.cluster_obj
                 if not cluster_obj:
-                    cluster_obj = cluster_nodes.CLUSTER_TYPE.get_cluster_obj()
+                    cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
 
                 # `cluster_obj` is ready, we can start the test
                 break

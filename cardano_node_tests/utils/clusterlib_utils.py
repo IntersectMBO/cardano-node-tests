@@ -108,7 +108,7 @@ def fund_from_genesis(
     if not fund_dst:
         return
 
-    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{cluster_obj.genesis_utxo_addr}.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/{cluster_obj.genesis_utxo_addr}.lock"):
         tx_name = tx_name or helpers.get_timestamped_rand_str()
         tx_name = f"{tx_name}_genesis_funding"
         fund_tx_files = clusterlib.TxFiles(
@@ -142,7 +142,7 @@ def return_funds_to_faucet(
     """
     tx_name = tx_name or helpers.get_timestamped_rand_str()
     tx_name = f"{tx_name}_return_funds"
-    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{faucet_addr}.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/{faucet_addr}.lock"):
         try:
             logging.disable(logging.ERROR)
             for src in src_addrs:
@@ -188,7 +188,7 @@ def fund_from_faucet(
         return
 
     src_address = faucet_data["payment"].address
-    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/{src_address}.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/{src_address}.lock"):
         tx_name = tx_name or helpers.get_timestamped_rand_str()
         tx_name = f"{tx_name}_funding"
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])
@@ -383,7 +383,7 @@ def update_params(
     _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
     cli_args = list(itertools.chain.from_iterable(_cli_args))
 
-    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/update_params.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/update_params.lock"):
         LOGGER.info("Waiting for new epoch to submit proposal.")
         cluster_obj.wait_for_new_epoch()
 

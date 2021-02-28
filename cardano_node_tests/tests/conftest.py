@@ -49,8 +49,10 @@ def pytest_configure(config: Any) -> None:
     config._metadata["cardano-node"] = str(VERSIONS.node)
     config._metadata["cardano-node rev"] = VERSIONS.git_rev
     config._metadata["ghc"] = VERSIONS.ghc
-    config._metadata["cardano-node-tests rev"] = helpers.CURRENT_COMMIT
-    config._metadata["cardano-node-tests url"] = helpers.GITHUB_TREE_URL
+    config._metadata["cardano-node-tests rev"] = helpers.get_current_commit()
+    config._metadata[
+        "cardano-node-tests url"
+    ] = f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
 
 
 def _skip_all_tests(config: Any, items: list) -> None:

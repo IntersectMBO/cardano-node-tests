@@ -226,7 +226,7 @@ def main() -> None:
     )
     args = get_args()
 
-    cluster_obj = cluster_nodes.CLUSTER_TYPE.get_cluster_obj()
+    cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
     cleanup(cluster_obj=cluster_obj, location=args.artifacts_base_dir)
 
 

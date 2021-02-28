@@ -1,4 +1,5 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
+import functools
 import json
 import logging
 import os
@@ -298,6 +299,7 @@ class TestnetNopoolsCluster(TestnetCluster):
         )
 
 
+@functools.lru_cache
 def get_cluster_type() -> ClusterType:
     """Return instance of the cluster type indicated by configuration."""
     if configuration.BOOTSTRAP_DIR and configuration.NOPOOLS:
@@ -307,10 +309,6 @@ def get_cluster_type() -> ClusterType:
     if configuration.CLUSTER_ERA == clusterlib.Eras.SHELLEY:
         return DevopsCluster()
     return LocalCluster()
-
-
-# cluster type doesn't change during test run, so it can be used as constant
-CLUSTER_TYPE = get_cluster_type()
 
 
 def _get_cardano_node_socket_path(instance_num: int) -> Path:
@@ -355,7 +353,7 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     LOGGER.info(f"Starting cluster with `{cmd}{args_str}`.")
     helpers.run_shell_command(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
     LOGGER.info("Cluster started.")
-    return CLUSTER_TYPE.get_cluster_obj()
+    return get_cluster_type().get_cluster_obj()
 
 
 def stop_cluster(cmd: str) -> None:
@@ -368,9 +366,9 @@ def restart_node(node_name: str) -> None:
     """Restart single node of the running cluster."""
     LOGGER.info(f"Restarting cluster node `{node_name}`.")
     cluster_env = get_cluster_env()
-    supervisor_port = CLUSTER_TYPE.cluster_scripts.get_instance_ports(
-        cluster_env.instance_num
-    ).supervisor
+    supervisor_port = (
+        get_cluster_type().cluster_scripts.get_instance_ports(cluster_env.instance_num).supervisor
+    )
     try:
         helpers.run_command(
             f"supervisorctl -s http://localhost:{supervisor_port} restart {node_name}",
@@ -442,7 +440,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     cluster_env = get_cluster_env()
 
     LOGGER.debug("Creating addresses and keys for tests.")
-    addrs_data = CLUSTER_TYPE.create_addrs_data(
+    addrs_data = get_cluster_type().create_addrs_data(
         cluster_obj=cluster_obj, destination_dir=destination_dir
     )
 

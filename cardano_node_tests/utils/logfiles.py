@@ -68,7 +68,7 @@ def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> Li
 
 def add_ignore_rule(files_glob: str, regex: str) -> None:
     """Add ignore rule for expected errors."""
-    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/ignore_rules.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/ignore_rules.lock"):
         state_dir = cluster_nodes.get_cluster_env().state_dir
         rules_file = state_dir / ERRORS_RULES_FILE_NAME
         with open(rules_file, "a") as infile:
@@ -164,7 +164,7 @@ def search_cluster_artifacts() -> List[Tuple[Path, str]]:
     state_dir = cluster_nodes.get_cluster_env().state_dir
     rules_file = state_dir / ERRORS_RULES_FILE_NAME
 
-    with helpers.FileLockIfXdist(f"{helpers.TEST_TEMP_DIR}/ignore_rules.lock"):
+    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/ignore_rules.lock"):
         ignore_rules = get_ignore_rules(rules_file)
 
     errors = []

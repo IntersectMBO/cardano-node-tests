@@ -59,7 +59,7 @@ def prepare_scripts_files(
         if not (start_script and stop_script):
             raise RuntimeError(f"Start/stop scripts not found in '{scriptsdir}'")
 
-    startup_files = cluster_nodes.CLUSTER_TYPE.cluster_scripts.prepare_scripts_files(
+    startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
         destdir=destdir,
         instance_num=instance_num,
         start_script=start_script,
