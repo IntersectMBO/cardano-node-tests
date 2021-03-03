@@ -293,11 +293,10 @@ class TestDelegateAddr:
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
         # withdraw rewards to payment address
-        clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster,
+        cluster.withdraw_reward(
             stake_addr_record=pool_user.stake,
             dst_addr_record=pool_user.payment,
-            name_template=temp_template,
+            tx_name=temp_template,
         )
 
         # deregister stake address
@@ -705,10 +704,10 @@ class TestRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
 
-        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 160
+        sleep_time = cluster.time_to_next_epoch_start() - 160
         if sleep_time < 0:
             cluster.wait_for_new_epoch()
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 160
+            sleep_time = cluster.time_to_next_epoch_start() - 160
         time.sleep(sleep_time)
 
         init_epoch = cluster.get_last_block_epoch()
@@ -750,7 +749,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 30
+            sleep_time = cluster.time_to_next_epoch_start() - 30
             assert sleep_time >= 0, "Not enough time left in epoch"
             time.sleep(sleep_time)
 
@@ -798,11 +797,10 @@ class TestRewards:
         # withdraw rewards to payment address
         if this_epoch == cluster.get_last_block_epoch():
             cluster.wait_for_new_epoch()
-        clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster,
+        cluster.withdraw_reward(
             stake_addr_record=pool_user.stake,
             dst_addr_record=pool_user.payment,
-            name_template=temp_template,
+            tx_name=temp_template,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -832,10 +830,10 @@ class TestRewards:
         pool_reward_addr_dec = helpers.decode_bech32(pool_reward.stake.address)[2:]
         pool_stake_addr_dec = helpers.decode_bech32(pool_owner.stake.address)[2:]
 
-        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        sleep_time = cluster.time_to_next_epoch_start() - 18
         if sleep_time < 0:
             cluster.wait_for_new_epoch()
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+            sleep_time = cluster.time_to_next_epoch_start() - 18
         time.sleep(sleep_time)
 
         init_epoch = cluster.get_last_block_epoch()
@@ -849,9 +847,7 @@ class TestRewards:
         ]
 
         # save ledger state
-        clusterlib_utils.save_ledger_state(
-            cluster_obj=cluster, name_template=f"{temp_template}_{init_epoch}"
-        )
+        cluster.save_ledger_state(state_name=f"{temp_template}_{init_epoch}")
         ledger_state: dict = cluster.get_ledger_state()
         es_snapshots = {init_epoch: ledger_state["nesEs"]["esSnapshots"]}
         rs_records = {init_epoch: ledger_state["nesRu"]["rs"]}
@@ -888,7 +884,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 5
+            sleep_time = cluster.time_to_next_epoch_start() - 5
             assert sleep_time >= 0, "Not enough time left in epoch"
             time.sleep(sleep_time)
 
@@ -927,9 +923,7 @@ class TestRewards:
             )
 
             # save ledger state
-            clusterlib_utils.save_ledger_state(
-                cluster_obj=cluster, name_template=f"{temp_template}_{this_epoch}"
-            )
+            cluster.save_ledger_state(state_name=f"{temp_template}_{this_epoch}")
             ledger_state = cluster.get_ledger_state()
             es_snapshot: dict = ledger_state["nesEs"]["esSnapshots"]
             es_snapshots[this_epoch] = es_snapshot
@@ -998,11 +992,10 @@ class TestRewards:
         # withdraw rewards to payment address
         if this_epoch == cluster.get_last_block_epoch():
             cluster.wait_for_new_epoch()
-        clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster,
+        cluster.withdraw_reward(
             stake_addr_record=pool_user.stake,
             dst_addr_record=pool_user.payment,
-            name_template=temp_template,
+            tx_name=temp_template,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1056,10 +1049,10 @@ class TestRewards:
         )
         pool_data_updated = loaded_data._replace(pool_pledge=0)
 
-        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+        sleep_time = cluster.time_to_next_epoch_start() - 18
         if sleep_time < 0:
             cluster.wait_for_new_epoch()
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+            sleep_time = cluster.time_to_next_epoch_start() - 18
         time.sleep(sleep_time)
 
         init_epoch = cluster.get_last_block_epoch()
@@ -1086,9 +1079,7 @@ class TestRewards:
         ]
 
         # save ledger state
-        clusterlib_utils.save_ledger_state(
-            cluster_obj=cluster, name_template=f"{temp_template}_{init_epoch}"
-        )
+        cluster.save_ledger_state(state_name=f"{temp_template}_{init_epoch}")
         ledger_state: dict = cluster.get_ledger_state()
         es_snapshots = {init_epoch: ledger_state["nesEs"]["esSnapshots"]}
         rs_records = {init_epoch: ledger_state["nesRu"]["rs"]}
@@ -1112,7 +1103,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 18
+            sleep_time = cluster.time_to_next_epoch_start() - 18
             assert sleep_time >= 0, "Not enough time left in epoch"
             time.sleep(sleep_time)
 
@@ -1138,9 +1129,7 @@ class TestRewards:
             )
 
             # save ledger state
-            clusterlib_utils.save_ledger_state(
-                cluster_obj=cluster, name_template=f"{temp_template}_{this_epoch}"
-            )
+            cluster.save_ledger_state(state_name=f"{temp_template}_{this_epoch}")
             ledger_state = cluster.get_ledger_state()
             es_snapshot: dict = ledger_state["nesEs"]["esSnapshots"]
             es_snapshots[this_epoch] = es_snapshot
@@ -1326,15 +1315,12 @@ class TestRewards:
                 rewards_rec.append(rewards)
                 LOGGER.info(f"epoch {epoch} - reward: {rewards}, payment: {payment_balance}")
                 # TODO - check ledger state wrt stake amount and expected reward
-                clusterlib_utils.save_ledger_state(
-                    cluster_obj=cluster, name_template=f"{temp_template}_{epoch}"
-                )
+                cluster.save_ledger_state(state_name=f"{temp_template}_{epoch}")
                 # withdraw rewards to destination address
-                clusterlib_utils.withdraw_reward(
-                    cluster_obj=cluster,
+                cluster.withdraw_reward(
                     stake_addr_record=pool_user.stake,
                     dst_addr_record=dst_addr_record,
-                    name_template=f"{temp_template}_ep{epoch}",
+                    tx_name=f"{temp_template}_ep{epoch}",
                 )
 
         LOGGER.info("Withdrawing new rewards for 4 epochs.")
@@ -1829,11 +1815,10 @@ class TestRewards:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw pool rewards to payment address
-        clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster,
+        cluster.withdraw_reward(
             stake_addr_record=pool_reward.stake,
             dst_addr_record=pool_reward.payment,
-            name_template=temp_template,
+            tx_name=temp_template,
         )
 
         # deregister the pool reward address
@@ -1979,11 +1964,10 @@ class TestRewards:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw pool rewards to payment address
-        clusterlib_utils.withdraw_reward(
-            cluster_obj=cluster,
+        cluster.withdraw_reward(
             stake_addr_record=pool_reward.stake,
             dst_addr_record=pool_reward.payment,
-            name_template=temp_template,
+            tx_name=temp_template,
         )
 
         # deregister the pool reward address
