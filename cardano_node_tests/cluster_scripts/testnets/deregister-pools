@@ -33,23 +33,31 @@ cardano-cli query protocol-parameters \
 TXOUT_ADDR="$(<"$STATE_CLUSTER/shelley/faucet.addr")"
 OWNER1_ADDR="$(<"$POOL_ARTIFACTS/node-pool1/owner.addr")"
 OWNER2_ADDR="$(<"$POOL_ARTIFACTS/node-pool2/owner.addr")"
-UTXO1="$(cardano-cli query utxo \
-          --testnet-magic "$NETWORK_MAGIC" \
-          --"$ERA"-era \
-          --address "$OWNER1_ADDR" |
-          sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
-UTXO2="$(cardano-cli query utxo \
-          --testnet-magic "$NETWORK_MAGIC" \
-          --"$ERA"-era \
-          --address "$OWNER2_ADDR" |
-          sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
-TXIN1="${UTXO1%;*}"
-[ "$TXIN1" != "#" ] || { echo "Invalid 'TXIN1' on line $LINENO" >&2; exit 1; }  # assert
-TXIN2="${UTXO2%;*}"
-[ "$TXIN2" != "#" ] || { echo "Invalid 'TXIN2' on line $LINENO" >&2; exit 1; }  # assert
-TXIN2="${UTXO2%;*}"
-TXIN1_AMOUNT="${UTXO1#*;}"
-TXIN2_AMOUNT="${UTXO2#*;}"
+
+TXINS1=()
+TXIN1_AMOUNT=0
+while read -r txhash txix amount _; do
+  TXIN1_AMOUNT="$((TXIN1_AMOUNT + amount))"
+  TXINS1+=("--tx-in" "${txhash}#${txix}")
+done <<< "$(cardano-cli query utxo --testnet-magic \
+            "$NETWORK_MAGIC" \
+            --"$ERA"-era \
+            --address "$OWNER1_ADDR" |
+            grep -E "lovelace$")"
+[ "$TXIN1_AMOUNT" -gt 0 ] || { echo "No funds in pool1 owner address, line $LINENO" >&2; exit 1; }  # assert
+
+TXINS2=()
+TXIN2_AMOUNT=0
+while read -r txhash txix amount _; do
+  TXIN2_AMOUNT="$((TXIN2_AMOUNT + amount))"
+  TXINS2+=("--tx-in" "${txhash}#${txix}")
+done <<< "$(cardano-cli query utxo --testnet-magic \
+            "$NETWORK_MAGIC" \
+            --"$ERA"-era \
+            --address "$OWNER2_ADDR" |
+            grep -E "lovelace$")"
+[ "$TXIN2_AMOUNT" -gt 0 ] || { echo "No funds in pool2 owner address, line $LINENO" >&2; exit 1; }  # assert
+
 TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
 
 # find pool deregistration epoch
@@ -61,7 +69,7 @@ cardano-cli stake-pool deregistration-certificate \
 cardano-cli transaction build-raw \
   --ttl    "$TTL" \
   --fee    1000000 \
-  --tx-in  "$TXIN1" \
+  "${TXINS1[@]}" \
   --tx-out "$TXOUT_ADDR+$((TXIN1_AMOUNT - 1000000))" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/deregister-epoch0.cert" \
   --out-file "$POOL_ARTIFACTS/deregister-tx-epoch0.txbody"
@@ -112,16 +120,19 @@ REWARD1_AMOUNT="$(jq '.[0].rewardAccountBalance' <<< "$(cardano-cli query stake-
   --testnet-magic "$NETWORK_MAGIC" \
   --"$ERA"-era \
   --address "$(<"$POOL_ARTIFACTS"/node-pool1/reward.addr)")")"
+[ -n "$REWARD1_AMOUNT" ] || REWARD1_AMOUNT=0
+
 REWARD2_AMOUNT="$(jq '.[0].rewardAccountBalance' <<< "$(cardano-cli query stake-address-info \
   --testnet-magic "$NETWORK_MAGIC" \
   --"$ERA"-era \
   --address "$(<"$POOL_ARTIFACTS"/node-pool2/reward.addr)")")"
+[ -n "$REWARD2_AMOUNT" ] || REWARD2_AMOUNT=0
 
 cardano-cli transaction build-raw \
   --ttl    "$TTL" \
   --fee    0 \
-  --tx-in  "$TXIN1" \
-  --tx-in  "$TXIN2" \
+  "${TXINS1[@]}" \
+  "${TXINS2[@]}" \
   --tx-out "$TXOUT_ADDR+0" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/stake.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/stake-reward.dereg.cert" \
@@ -149,8 +160,8 @@ TXOUT_AMOUNT="$((TXIN1_AMOUNT + TXIN2_AMOUNT + REWARD1_AMOUNT + REWARD2_AMOUNT +
 cardano-cli transaction build-raw \
   --ttl    "$TTL" \
   --fee    "$FEE" \
-  --tx-in  "$TXIN1" \
-  --tx-in  "$TXIN2" \
+  "${TXINS1[@]}" \
+  "${TXINS2[@]}" \
   --tx-out "$TXOUT_ADDR+$TXOUT_AMOUNT" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/stake.dereg.cert" \
   --certificate-file "$POOL_ARTIFACTS/node-pool1/stake-reward.dereg.cert" \
