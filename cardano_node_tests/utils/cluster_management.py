@@ -50,8 +50,8 @@ CLUSTER_DEAD_FILE = ".cluster_dead"
 
 DEV_CLUSTER_RUNNING = bool(os.environ.get("DEV_CLUSTER_RUNNING"))
 
-if helpers.IS_XDIST and DEV_CLUSTER_RUNNING:
-    raise RuntimeError("Cannot run tests in parallel when 'DEV_CLUSTER_RUNNING' is set.")
+if CLUSTERS_COUNT > 1 and DEV_CLUSTER_RUNNING:
+    raise RuntimeError("Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set.")
 
 
 def _kill_supervisor(instance_num: int) -> None:
