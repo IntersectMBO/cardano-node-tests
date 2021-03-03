@@ -888,6 +888,16 @@ class ClusterLib:
         ledger_state: dict = json.loads(self.query_cli(["ledger-state", *self.era_arg]))
         return ledger_state
 
+    def save_ledger_state(
+        self,
+        state_name: str,
+        destination_dir: FileType = ".",
+    ) -> Path:
+        """Save ledger state to file."""
+        json_file = Path(destination_dir) / f"{state_name}_ledger_state.json"
+        self.query_cli(["ledger-state", *self.era_arg, "--out-file", str(json_file)])
+        return json_file
+
     def get_protocol_state(self) -> dict:
         """Return the current protocol state info."""
         protocol_state: dict = json.loads(self.query_cli(["protocol-state", *self.era_arg]))
@@ -1845,6 +1855,13 @@ class ClusterLib:
 
         LOGGER.debug(f"Expected epoch started; epoch number: {wakeup_epoch}")
 
+    def time_to_next_epoch_start(self) -> float:
+        """How many seconds to start of new epoch."""
+        slots_to_go = (self.get_last_block_epoch() + 1) * self.epoch_length - (
+            self.get_last_block_slot_no() + self.slots_offset
+        )
+        return float(slots_to_go * self.slot_length)
+
     def register_stake_pool(
         self,
         pool_data: PoolData,
@@ -1981,6 +1998,48 @@ class ClusterLib:
             tx_raw_output=tx_raw_output,
             kes_key_pair=node_kes,
         )
+
+    def withdraw_reward(
+        self,
+        stake_addr_record: AddressRecord,
+        dst_addr_record: AddressRecord,
+        tx_name: str,
+        verify: bool = True,
+        destination_dir: FileType = ".",
+    ) -> None:
+        """Withdraw rewards to payment address."""
+        dst_address = dst_addr_record.address
+        src_init_balance = self.get_address_balance(dst_address)
+
+        tx_files_withdrawal = TxFiles(
+            signing_key_files=[dst_addr_record.skey_file, stake_addr_record.skey_file],
+        )
+
+        tx_raw_withdrawal_output = self.send_tx(
+            src_address=dst_address,
+            tx_name=f"{tx_name}_reward_withdrawal",
+            tx_files=tx_files_withdrawal,
+            withdrawals=[TxOut(address=stake_addr_record.address, amount=-1)],
+            destination_dir=destination_dir,
+        )
+        self.wait_for_new_block(new_blocks=2)
+
+        if not verify:
+            return
+
+        # check that reward is 0
+        if self.get_stake_addr_info(stake_addr_record.address).reward_account_balance != 0:
+            raise AssertionError("Not all rewards were transfered")
+
+        # check that rewards were transfered
+        src_reward_balance = self.get_address_balance(dst_address)
+        if (
+            src_reward_balance
+            != src_init_balance
+            - tx_raw_withdrawal_output.fee
+            + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
+        ):
+            raise AssertionError(f"Incorrect balance for destination address `{dst_address}`")
 
     def __repr__(self) -> str:
         return f"<ClusterLib: protocol={self.protocol}, era={self.era}, tx_era={self.tx_era}>"
