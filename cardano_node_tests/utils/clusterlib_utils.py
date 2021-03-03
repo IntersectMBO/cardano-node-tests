@@ -1,6 +1,5 @@
 import itertools
 import logging
-from pathlib import Path
 from typing import Any
 from typing import List
 from typing import NamedTuple
@@ -20,48 +19,6 @@ class UpdateProposal(NamedTuple):
     name: str = ""
 
 
-def withdraw_reward(
-    cluster_obj: clusterlib.ClusterLib,
-    stake_addr_record: clusterlib.AddressRecord,
-    dst_addr_record: clusterlib.AddressRecord,
-    name_template: str,
-) -> None:
-    """Withdraw rewards to payment address."""
-    dst_address = dst_addr_record.address
-    src_init_balance = cluster_obj.get_address_balance(dst_address)
-
-    tx_files_withdrawal = clusterlib.TxFiles(
-        signing_key_files=[dst_addr_record.skey_file, stake_addr_record.skey_file],
-    )
-
-    this_epoch = cluster_obj.get_last_block_epoch()
-
-    tx_raw_withdrawal_output = cluster_obj.send_tx(
-        src_address=dst_address,
-        tx_name=f"{name_template}_reward_withdrawal",
-        tx_files=tx_files_withdrawal,
-        withdrawals=[clusterlib.TxOut(address=stake_addr_record.address, amount=-1)],
-    )
-    cluster_obj.wait_for_new_block(new_blocks=2)
-
-    if this_epoch != cluster_obj.get_last_block_epoch():
-        LOGGER.warning("New epoch during rewards withdrawal! Reward account may not be empty.")
-    else:
-        # check that reward is 0
-        assert (
-            cluster_obj.get_stake_addr_info(stake_addr_record.address).reward_account_balance == 0
-        ), "Not all rewards were transfered"
-
-    # check that rewards were transfered
-    src_reward_balance = cluster_obj.get_address_balance(dst_address)
-    assert (
-        src_reward_balance
-        == src_init_balance
-        - tx_raw_withdrawal_output.fee
-        + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
-    ), f"Incorrect balance for destination address `{dst_address}`"
-
-
 def deregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
 ) -> clusterlib.TxRawOutput:
@@ -76,11 +33,10 @@ def deregister_stake_addr(
     )
 
     # withdraw rewards to payment address
-    withdraw_reward(
-        cluster_obj=cluster_obj,
+    cluster_obj.withdraw_reward(
         stake_addr_record=pool_user.stake,
         dst_addr_record=pool_user.payment,
-        name_template=name_template,
+        tx_name=name_template,
     )
 
     tx_raw_output = cluster_obj.send_tx(
@@ -274,14 +230,6 @@ def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib) -> dict:
     return cluster_obj.get_stake_distribution()
 
 
-def time_to_next_epoch_start(cluster_obj: clusterlib.ClusterLib) -> float:
-    """How many seconds to start of new epoch."""
-    slots_to_go = (cluster_obj.get_last_block_epoch() + 1) * cluster_obj.epoch_length - (
-        cluster_obj.get_last_block_slot_no() + cluster_obj.slots_offset
-    )
-    return float(slots_to_go * cluster_obj.slot_length)
-
-
 def load_registered_pool_data(
     cluster_obj: clusterlib.ClusterLib, pool_name: str, pool_id: str
 ) -> clusterlib.PoolData:
@@ -409,15 +357,3 @@ def update_params(
                     f"Expected: {u.value}\n"
                     f"Tip: {cluster_obj.get_tip()}"
                 )
-
-
-def save_ledger_state(
-    cluster_obj: clusterlib.ClusterLib,
-    name_template: str,
-    destination_dir: FileType = ".",
-) -> Path:
-    """Save ledger state."""
-    name_template = name_template or helpers.get_timestamped_rand_str(0)
-    json_file = Path(destination_dir) / f"{name_template}_ledger_state.json"
-    cluster_obj.query_cli(["ledger-state", *cluster_obj.era_arg, "--out-file", str(json_file)])
-    return json_file
