@@ -13,7 +13,6 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
@@ -149,12 +148,11 @@ class TestKES:
                 cluster.wait_for_new_epoch()
 
             # wait for the end of the epoch
-            time.sleep(clusterlib_utils.time_to_next_epoch_start(cluster) - 5)
+            time.sleep(cluster.time_to_next_epoch_start() - 5)
 
             # save ledger state
-            clusterlib_utils.save_ledger_state(
-                cluster_obj=cluster,
-                name_template=f"{temp_template}_{cluster.get_last_block_epoch()}",
+            cluster.save_ledger_state(
+                state_name=f"{temp_template}_{cluster.get_last_block_epoch()}",
             )
 
         with cluster_manager.restart_on_failure():
@@ -262,13 +260,12 @@ class TestKES:
                     cluster.wait_for_new_epoch()
 
                 # wait for the end of the epoch
-                time.sleep(clusterlib_utils.time_to_next_epoch_start(cluster) - 5)
+                time.sleep(cluster.time_to_next_epoch_start() - 5)
                 this_epoch = cluster.get_last_block_epoch()
 
                 # save ledger state
-                clusterlib_utils.save_ledger_state(
-                    cluster_obj=cluster,
-                    name_template=f"{temp_template}_{this_epoch}",
+                cluster.save_ledger_state(
+                    state_name=f"{temp_template}_{this_epoch}",
                 )
 
                 # check that the pool is still producing blocks
