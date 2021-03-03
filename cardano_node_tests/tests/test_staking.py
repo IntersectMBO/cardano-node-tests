@@ -705,10 +705,10 @@ class TestRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
 
-        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 80
+        sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 160
         if sleep_time < 0:
             cluster.wait_for_new_epoch()
-            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 80
+            sleep_time = clusterlib_utils.time_to_next_epoch_start(cluster) - 160
         time.sleep(sleep_time)
 
         init_epoch = cluster.get_last_block_epoch()
