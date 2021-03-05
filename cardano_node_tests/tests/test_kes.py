@@ -159,9 +159,9 @@ class TestKES:
             # generate new operational certificate with `--kes-period` in the past
             invalid_opcert_file = cluster.gen_node_operational_cert(
                 node_name=node_name,
-                node_kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
-                node_cold_skey_file=pool_rec["cold_key_pair"].skey_file,
-                node_cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+                kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+                cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+                cold_counter_file=pool_rec["cold_key_pair"].counter_file,
                 kes_period=cluster.get_last_block_kes_period() - 1,
             )
 
@@ -191,9 +191,9 @@ class TestKES:
             os.remove(opcert_file)
             valid_opcert_file = cluster.gen_node_operational_cert(
                 node_name=node_name,
-                node_kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
-                node_cold_skey_file=pool_rec["cold_key_pair"].skey_file,
-                node_cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+                kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+                cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+                cold_counter_file=pool_rec["cold_key_pair"].counter_file,
                 kes_period=cluster.get_last_block_kes_period(),
             )
             # copy the new certificate and restart the node
@@ -241,9 +241,9 @@ class TestKES:
             # generate new operational certificate with valid `--kes-period`
             new_opcert_file = cluster.gen_node_operational_cert(
                 node_name=node_name,
-                node_kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
-                node_cold_skey_file=pool_rec["cold_key_pair"].skey_file,
-                node_cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+                kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+                cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+                cold_counter_file=pool_rec["cold_key_pair"].counter_file,
                 kes_period=cluster.get_last_block_kes_period(),
             )
 

@@ -176,7 +176,7 @@ def _mint_or_burn_witness(
     witness_files = [
         cluster_obj.witness_tx(
             tx_body_file=tx_raw_output.out_file,
-            tx_name=f"{temp_template}_skey{idx}",
+            witness_name=f"{temp_template}_skey{idx}",
             signing_key_files=[skey],
         )
         for idx, skey in enumerate(issuers_skey_files)
@@ -185,7 +185,7 @@ def _mint_or_burn_witness(
         [
             cluster_obj.witness_tx(
                 tx_body_file=tx_raw_output.out_file,
-                tx_name=f"{temp_template}_script{idx}",
+                witness_name=f"{temp_template}_script{idx}",
                 script_file=token.script,
             )
             for idx, token in enumerate(new_tokens)
