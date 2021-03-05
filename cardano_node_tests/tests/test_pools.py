@@ -1184,7 +1184,7 @@ class TestStakePool:
         witness_files = [
             cluster.witness_tx(
                 tx_body_file=tx_raw_output.out_file,
-                tx_name=f"{temp_template}_skey{idx}",
+                witness_name=f"{temp_template}_skey{idx}",
                 signing_key_files=[skey],
             )
             for idx, skey in enumerate(witness_skeys)
