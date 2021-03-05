@@ -91,7 +91,7 @@ def multisig_tx(
     witness_files = [
         cluster_obj.witness_tx(
             tx_body_file=tx_raw_output.out_file,
-            tx_name=f"{temp_template}_skey{idx}",
+            witness_name=f"{temp_template}_skey{idx}",
             signing_key_files=[skey],
         )
         for idx, skey in enumerate(payment_skey_files)
@@ -100,7 +100,7 @@ def multisig_tx(
         witness_files.append(
             cluster_obj.witness_tx(
                 tx_body_file=tx_raw_output.out_file,
-                tx_name=f"{temp_template}_script",
+                witness_name=f"{temp_template}_script",
                 script_file=multisig_script,
             )
         )
