@@ -62,9 +62,9 @@ done
 echo "Waiting to make sure the chain is synced"
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
 while :; do
-  start_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+  start_slot="$(jq '.slot' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
   sleep 30
-  end_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+  end_slot="$(jq '.slot' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
   if [ "$start_slot" -ne "$end_slot" ] && [ "$((end_slot - start_slot))" -lt 100 ]; then
     break
   fi
