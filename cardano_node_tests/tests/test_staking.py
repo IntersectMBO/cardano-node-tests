@@ -693,10 +693,9 @@ class TestRewards:
         """Check that the stake address and pool owner are receiving rewards.
 
         * delegate to pool
-        * collect data for pool owner and pool users for 6 epochs
+        * wait for rewards for pool owner and pool users for up to 6 epochs
         * withdraw rewards to payment address
         """
-        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
@@ -704,21 +703,16 @@ class TestRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
 
-        sleep_time = cluster.time_to_next_epoch_start() - 160
+        # make sure we have enough time to finish the registration/delegation in one epoch
+        sleep_time = cluster.time_to_next_epoch_start() - 600
         if sleep_time < 0:
             cluster.wait_for_new_epoch()
-            sleep_time = cluster.time_to_next_epoch_start() - 160
+            sleep_time = cluster.time_to_next_epoch_start() - 600
         time.sleep(sleep_time)
 
-        init_epoch = cluster.get_last_block_epoch()
-        user_rewards = [(init_epoch, 0, 0)]
-        owner_rewards = [
-            (
-                init_epoch,
-                cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance,
-                0,
-            )
-        ]
+        init_owner_rewards = cluster.get_stake_addr_info(
+            pool_reward.stake.address
+        ).reward_account_balance
 
         # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
@@ -729,73 +723,24 @@ class TestRewards:
             check_delegation=False,
         )
 
-        # make sure we managed to finish registration in the expected epoch
+        LOGGER.info("Waiting up to 6 epochs for first reward.")
+        stake_reward_received = helpers.wait_for(
+            lambda: cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance > 0,
+            delay=600,
+            num_sec=6 * cluster.epoch_length_sec + 600,
+            message="receive rewards",
+            silent=True,
+        )
+        assert stake_reward_received, f"User of pool '{pool_name}' hasn't received any rewards"
         assert (
-            cluster.get_last_block_epoch() == init_epoch
-        ), "Registration took longer than expected and would affect other checks"
+            cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
+            > init_owner_rewards
+        ), f"Owner of pool '{pool_name}' hasn't received any rewards"
 
-        LOGGER.info("Checking rewards for 6 epochs.")
-        for __ in range(6):
-            # reward balances in previous epoch
-            prev_user_epoch, prev_user_reward, __ = user_rewards[-1]
-            (
-                prev_owner_epoch,
-                prev_owner_reward,
-                __,  # prev_abs_owner_reward
-            ) = owner_rewards[-1]
-
-            # wait for new epoch
-            if cluster.get_last_block_epoch() == prev_owner_epoch:
-                cluster.wait_for_new_epoch()
-
-            # sleep till the end of epoch
-            sleep_time = cluster.time_to_next_epoch_start() - 30
-            assert sleep_time >= 0, "Not enough time left in epoch"
-            time.sleep(sleep_time)
-
-            this_epoch = cluster.get_last_block_epoch()
-
-            # current reward balances
-            user_reward = cluster.get_stake_addr_info(
-                pool_user.stake.address
-            ).reward_account_balance
-            owner_reward = cluster.get_stake_addr_info(
-                pool_reward.stake.address
-            ).reward_account_balance
-
-            # absolute reward amounts received this epoch
-            abs_user_reward = (
-                user_reward - prev_user_reward if this_epoch == prev_user_epoch + 1 else 0
-            )
-            abs_owner_reward = (
-                owner_reward - prev_owner_reward if this_epoch == prev_owner_epoch + 1 else 0
-            )
-
-            # store collected rewards info
-            user_rewards.append(
-                (
-                    this_epoch,
-                    user_reward,
-                    abs_user_reward,
-                )
-            )
-            owner_rewards.append(
-                (
-                    this_epoch,
-                    owner_reward,
-                    abs_owner_reward,
-                )
-            )
-
-            if this_epoch >= init_epoch + 4:
-                # wait 4 epochs for first rewards
-                assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
-                assert (
-                    user_reward > prev_user_reward
-                ), "New reward was not received by stake address"
-
-        # withdraw rewards to payment address
-        if this_epoch == cluster.get_last_block_epoch():
+        # withdraw rewards to payment address, make sure we have enough time to finish
+        # the withdrawal in one epoch
+        sleep_time = cluster.time_to_next_epoch_start() - 600
+        if sleep_time < 0:
             cluster.wait_for_new_epoch()
         cluster.withdraw_reward(
             stake_addr_record=pool_user.stake,
@@ -830,6 +775,7 @@ class TestRewards:
         pool_reward_addr_dec = helpers.decode_bech32(pool_reward.stake.address)[2:]
         pool_stake_addr_dec = helpers.decode_bech32(pool_owner.stake.address)[2:]
 
+        # make sure we have enough time to finish the registration/delegation in one epoch
         sleep_time = cluster.time_to_next_epoch_start() - 18
         if sleep_time < 0:
             cluster.wait_for_new_epoch()
