@@ -427,46 +427,33 @@ class ClusterLib:
             )
         )
 
-        def _get_tokens_utxo(data: list) -> List[Tuple[int, str]]:
-            tokens_db = []
-            for policyid_rec in data:
-                policyid = policyid_rec[0]
-                for coin_rec in policyid_rec[1]:
-                    coin = coin_rec[0]
-                    coin = f".{coin}" if coin else ""
-                    amount = coin_rec[1]
-                    tokens_db.append((amount, f"{policyid}{coin}"))
-            return tokens_db
-
         utxo = []
         for utxo_rec, utxo_data in utxo_dict.items():
             utxo_hash, utxo_ix = utxo_rec.split("#")
-            amount = utxo_data["amount"]
-
-            # check if there's native tokens info available
-            if not isinstance(amount, int):
-                amount, tokens = amount[0], amount[1]
-                native_tokens = _get_tokens_utxo(tokens)
-                for token in native_tokens:
+            addr = utxo_data["address"]
+            addr_data = utxo_data["value"]
+            for policyid, coin_data in addr_data.items():
+                if policyid == DEFAULT_COIN:
                     utxo.append(
                         UTXOData(
                             utxo_hash=utxo_hash,
                             utxo_ix=utxo_ix,
-                            amount=token[0],
-                            address=utxo_data["address"],
-                            coin=token[1],
+                            amount=coin_data,
+                            address=addr,
+                            coin=DEFAULT_COIN,
                         )
                     )
-
-            utxo.append(
-                UTXOData(
-                    utxo_hash=utxo_hash,
-                    utxo_ix=utxo_ix,
-                    amount=amount,
-                    address=utxo_data["address"],
-                    coin=DEFAULT_COIN,
-                )
-            )
+                    continue
+                for asset_name, amount in coin_data.items():
+                    utxo.append(
+                        UTXOData(
+                            utxo_hash=utxo_hash,
+                            utxo_ix=utxo_ix,
+                            amount=amount,
+                            address=addr,
+                            coin=f"{policyid}.{asset_name}",
+                        )
+                    )
 
         if coins:
             filtered_utxo = [u for u in utxo if u.coin in coins]
@@ -1207,11 +1194,11 @@ class ClusterLib:
 
     def get_last_block_slot_no(self) -> int:
         """Return slot number of last block that was successfully applied to the ledger."""
-        return int(self.get_tip()["slotNo"])
+        return int(self.get_tip()["slot"])
 
     def get_last_block_block_no(self) -> int:
         """Return block number of last block that was successfully applied to the ledger."""
-        return int(self.get_tip()["blockNo"])
+        return int(self.get_tip()["block"])
 
     def get_last_block_epoch(self) -> int:
         """Return epoch of last block that was successfully applied to the ledger."""
