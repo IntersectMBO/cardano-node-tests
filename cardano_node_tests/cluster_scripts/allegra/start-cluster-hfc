@@ -264,20 +264,22 @@ cardano-cli governance create-update-proposal \
 # Tranfer funds, register pools and delegations, submit update proposal, all in one big transaction:
 
 cardano-cli query protocol-parameters \
-  --testnet-magic "$NETWORK_MAGIC" \
   --shelley-era \
+  --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
 TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-001-converted)"
 UTXO="$(cardano-cli query utxo \
+          --shelley-era \
           --testnet-magic "$NETWORK_MAGIC" \
           --address "$TXIN_ADDR" |
           sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
 TXIN="${UTXO%;*}"
 TXIN_AMOUNT="${UTXO#*;}"
-TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+TTL="$(jq '.slot + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
 
 cardano-cli transaction build-raw \
+  --shelley-era \
   --ttl    "$TTL" \
   --fee    0 \
   --tx-in  "$TXIN" \
@@ -310,6 +312,7 @@ DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - (DEPOSITS + POOL_PLEDGE) * 2))"
 
 cardano-cli transaction build-raw \
+  --shelley-era \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   --tx-in  "$TXIN" \
