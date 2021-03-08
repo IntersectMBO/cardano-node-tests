@@ -199,9 +199,9 @@ echo "node started" >> "$STATE_CLUSTER/start-cluster.log"
 echo "Waiting to make sure the chain is synced"
 echo "waiting for chain to sync" >> "$STATE_CLUSTER/start-cluster.log"
 while :; do
-  start_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+  start_slot="$(jq '.slot' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
   sleep 30
-  end_slot="$(jq '.slotNo' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+  end_slot="$(jq '.slot' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
   if [ "$start_slot" -ne "$end_slot" ] && [ "$((end_slot - start_slot))" -lt 100 ]; then
     break
   fi
@@ -249,7 +249,7 @@ done <<< "$(cardano-cli query utxo --testnet-magic \
             --address "$TXIN_ADDR" |
             grep -E "lovelace$")"
 
-TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+TTL="$(jq '.slot + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
 
 cardano-cli transaction build-raw \
   --ttl    "$TTL" \

@@ -649,7 +649,7 @@ class TestPolicies:
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
-            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
+            invalid_hereafter=cluster.get_last_block_slot_no() + 1000,
         )
 
         for t in tokens_to_mint:
@@ -663,7 +663,7 @@ class TestPolicies:
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
-            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
+            invalid_hereafter=cluster.get_last_block_slot_no() + 1000,
         )
 
         for t in tokens_to_burn:
@@ -682,7 +682,7 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        before_slot = cluster.get_tip()["slotNo"] + 10_000
+        before_slot = cluster.get_last_block_slot_no() + 10_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -720,7 +720,7 @@ class TestPolicies:
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
-            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
+            invalid_hereafter=cluster.get_last_block_slot_no() + 1000,
         )
 
         for t in tokens_to_mint:
@@ -734,7 +734,7 @@ class TestPolicies:
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
-            invalid_hereafter=cluster.get_tip()["slotNo"] + 1000,
+            invalid_hereafter=cluster.get_last_block_slot_no() + 1000,
         )
 
         for t in tokens_to_burn:
@@ -753,7 +753,7 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        before_slot = cluster.get_tip()["slotNo"] - 1
+        before_slot = cluster.get_last_block_slot_no() - 1
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -826,7 +826,7 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        before_slot = cluster.get_tip()["slotNo"] + 10_000
+        before_slot = cluster.get_last_block_slot_no() + 10_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -888,7 +888,7 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        after_slot = cluster.get_tip()["slotNo"] + 10_000
+        after_slot = cluster.get_last_block_slot_no() + 10_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -961,7 +961,7 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        after_slot = cluster.get_tip()["slotNo"] - 1
+        after_slot = cluster.get_last_block_slot_no() - 1
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
