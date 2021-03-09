@@ -25,6 +25,7 @@ from cardano_node_tests.utils.types import UnpackableSequence
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_COIN = "lovelace"
+MAINNET_MAGIC = 764824073
 
 
 class CLIOut(NamedTuple):
@@ -204,13 +205,18 @@ class ClusterLib:
         with open(self.genesis_json) as in_json:
             self.genesis = json.load(in_json)
 
-        self.network_magic = self.genesis["networkMagic"]
         self.slot_length = self.genesis["slotLength"]
         self.epoch_length = self.genesis["epochLength"]
         self.epoch_length_sec = self.epoch_length * self.slot_length
         self.slots_per_kes_period = self.genesis["slotsPerKESPeriod"]
         self.max_kes_evolutions = self.genesis["maxKESEvolutions"]
         self.slots_offset = slots_offset
+
+        self.network_magic = self.genesis["networkMagic"]
+        if self.network_magic == MAINNET_MAGIC:
+            self.magic_args = ["--mainnet"]
+        else:
+            self.magic_args = ["--testnet-magic", str(self.network_magic)]
 
         self.ttl_length = 1000
 
@@ -399,8 +405,7 @@ class ClusterLib:
             [
                 "query",
                 *cli_args,
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 f"--{self.protocol}-mode",
             ]
         ).stdout
@@ -491,8 +496,7 @@ class ClusterLib:
             [
                 "genesis",
                 "initial-addr",
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 "--verification-key-file",
                 str(vkey_file),
                 "--out-file",
@@ -532,8 +536,7 @@ class ClusterLib:
             [
                 "address",
                 "build",
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 *cli_args,
                 "--out-file",
                 str(out_file),
@@ -565,8 +568,7 @@ class ClusterLib:
                 "build",
                 "--stake-verification-key-file",
                 str(stake_vkey_file),
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 "--out-file",
                 str(out_file),
             ]
@@ -597,8 +599,7 @@ class ClusterLib:
                 "build-script",
                 "--script-file",
                 str(script_file),
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 "--out-file",
                 str(out_file),
             ]
@@ -1027,8 +1028,7 @@ class ClusterLib:
                 *self._prepend_flag(
                     "--pool-owner-stake-verification-key-file", owner_stake_vkey_files
                 ),
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 "--out-file",
                 str(out_file),
                 *metadata_cmd,
@@ -1768,8 +1768,7 @@ class ClusterLib:
             [
                 "transaction",
                 "calculate-min-fee",
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 "--protocol-params-file",
                 str(self.pparams_file),
                 "--tx-in-count",
@@ -1890,8 +1889,7 @@ class ClusterLib:
                 str(tx_body_file),
                 "--out-file",
                 str(out_file),
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 *self._prepend_flag("--signing-key-file", signing_key_files),
                 *self._prepend_flag("--script-file", script_files),
             ]
@@ -1935,8 +1933,7 @@ class ClusterLib:
                 str(tx_body_file),
                 "--out-file",
                 str(out_file),
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 *self._prepend_flag("--signing-key-file", signing_key_files),
                 *cli_args,
             ]
@@ -1991,8 +1988,7 @@ class ClusterLib:
             [
                 "transaction",
                 "submit",
-                "--testnet-magic",
-                str(self.network_magic),
+                *self.magic_args,
                 "--tx-file",
                 str(tx_file),
                 f"--{self.protocol}-mode",
