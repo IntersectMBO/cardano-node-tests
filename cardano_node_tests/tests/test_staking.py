@@ -100,6 +100,14 @@ def _get_val_for_key_hash(key_hash: str, rec: list) -> Any:
     return None
 
 
+def _get_reward_for_key_hash(key_hash: str, rec: list) -> Any:
+    """Get reward value for key hash in ledger state snapshot record."""
+    for r in rec:
+        if r[0]["key hash"] == key_hash:
+            return r[1][0]["rewardAmount"]
+    return None
+
+
 def _delegate_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     addrs_data: dict,
@@ -759,7 +767,7 @@ class TestRewards:
         * delegate to pool
         * collect data for pool owner and pool users for 9 epochs
 
-           - each epoch check ledger state (expected data in `_pstake*`, delegation, stake amount)
+           - each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
            - each epoch check received reward with reward in ledger state
 
         * withdraw rewards to payment address
@@ -795,8 +803,8 @@ class TestRewards:
         # save ledger state
         cluster.save_ledger_state(state_name=f"{temp_template}_{init_epoch}")
         ledger_state: dict = cluster.get_ledger_state()
-        es_snapshots = {init_epoch: ledger_state["nesEs"]["esSnapshots"]}
-        rs_records = {init_epoch: ledger_state["nesRu"]["rs"]}
+        es_snapshots = {init_epoch: ledger_state["stateBefore"]["esSnapshots"]}
+        rs_records = {init_epoch: ledger_state["possibleRewardUpdate"]["rs"]}
 
         # submit registration certificate and delegate to pool
         pool_user = _delegate_stake_addr(
@@ -871,48 +879,48 @@ class TestRewards:
             # save ledger state
             cluster.save_ledger_state(state_name=f"{temp_template}_{this_epoch}")
             ledger_state = cluster.get_ledger_state()
-            es_snapshot: dict = ledger_state["nesEs"]["esSnapshots"]
+            es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
             es_snapshots[this_epoch] = es_snapshot
-            rs_record: list = ledger_state["nesRu"]["rs"]
+            rs_record: list = ledger_state["possibleRewardUpdate"]["rs"]
             rs_records[this_epoch] = rs_record
 
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             if abs_user_reward:
-                assert abs_user_reward == _get_val_for_key_hash(
+                assert abs_user_reward == _get_reward_for_key_hash(
                     user_stake_addr_dec, rs_records[this_epoch - 1]
                 )
             if abs_owner_reward:
-                assert abs_owner_reward == _get_val_for_key_hash(
+                assert abs_owner_reward == _get_reward_for_key_hash(
                     pool_reward_addr_dec, rs_records[this_epoch - 1]
                 )
 
-            _pstake_mark = _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-            _pstake_set = _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-            _pstake_go = _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+            pstake_mark = _get_key_hashes(es_snapshot["pstakeMark"]["stake"])
+            pstake_set = _get_key_hashes(es_snapshot["pstakeSet"]["stake"])
+            pstake_go = _get_key_hashes(es_snapshot["pstakeGo"]["stake"])
 
             if this_epoch == init_epoch + 1:
-                assert pool_stake_addr_dec in _pstake_mark
-                assert pool_stake_addr_dec in _pstake_set
+                assert pool_stake_addr_dec in pstake_mark
+                assert pool_stake_addr_dec in pstake_set
 
-                assert user_stake_addr_dec in _pstake_mark
-                assert user_stake_addr_dec not in _pstake_set
-                assert user_stake_addr_dec not in _pstake_go
+                assert user_stake_addr_dec in pstake_mark
+                assert user_stake_addr_dec not in pstake_set
+                assert user_stake_addr_dec not in pstake_go
 
             if this_epoch == init_epoch + 2:
-                assert user_stake_addr_dec in _pstake_mark
-                assert user_stake_addr_dec in _pstake_set
-                assert user_stake_addr_dec not in _pstake_go
+                assert user_stake_addr_dec in pstake_mark
+                assert user_stake_addr_dec in pstake_set
+                assert user_stake_addr_dec not in pstake_go
 
             if this_epoch >= init_epoch + 2:
-                assert pool_stake_addr_dec in _pstake_mark
-                assert pool_stake_addr_dec in _pstake_set
-                assert pool_stake_addr_dec in _pstake_go
+                assert pool_stake_addr_dec in pstake_mark
+                assert pool_stake_addr_dec in pstake_set
+                assert pool_stake_addr_dec in pstake_go
 
             if this_epoch >= init_epoch + 3:
-                assert user_stake_addr_dec in _pstake_mark
-                assert user_stake_addr_dec in _pstake_set
-                assert user_stake_addr_dec in _pstake_go
+                assert user_stake_addr_dec in pstake_mark
+                assert user_stake_addr_dec in pstake_set
+                assert user_stake_addr_dec in pstake_go
 
             if this_epoch >= init_epoch + 4:
                 # wait 4 epochs for first rewards
@@ -923,15 +931,15 @@ class TestRewards:
 
                 # make sure ledger state and actual stake correspond
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["_pstakeMark"]["_stake"])
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == user_reward + user_payment_balance
                 )
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["_pstakeSet"]["_stake"])
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == prev_user_reward + user_payment_balance
                 )
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["_pstakeGo"]["_stake"])
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeGo"]["stake"])
                     == user_rewards[-3][1] + user_payment_balance
                 )
 
@@ -960,7 +968,7 @@ class TestRewards:
 
         * delegate reward address to stake pool
         * deregister pool owner's stake address
-        * each epoch check ledger state (expected data in `_pstake*`, delegation, stake amount)
+        * each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
         * each epoch check received reward with reward in ledger state
         * check that reward address still receives rewards for its staked amount even after
           the pool owner's stake address is deregistered
@@ -1027,8 +1035,8 @@ class TestRewards:
         # save ledger state
         cluster.save_ledger_state(state_name=f"{temp_template}_{init_epoch}")
         ledger_state: dict = cluster.get_ledger_state()
-        es_snapshots = {init_epoch: ledger_state["nesEs"]["esSnapshots"]}
-        rs_records = {init_epoch: ledger_state["nesRu"]["rs"]}
+        es_snapshots = {init_epoch: ledger_state["stateBefore"]["esSnapshots"]}
+        rs_records = {init_epoch: ledger_state["possibleRewardUpdate"]["rs"]}
 
         # make sure we managed to finish pool update in the expected epoch
         assert (
@@ -1077,25 +1085,25 @@ class TestRewards:
             # save ledger state
             cluster.save_ledger_state(state_name=f"{temp_template}_{this_epoch}")
             ledger_state = cluster.get_ledger_state()
-            es_snapshot: dict = ledger_state["nesEs"]["esSnapshots"]
+            es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
             es_snapshots[this_epoch] = es_snapshot
-            rs_record: list = ledger_state["nesRu"]["rs"]
+            rs_record: list = ledger_state["possibleRewardUpdate"]["rs"]
             rs_records[this_epoch] = rs_record
 
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             if abs_owner_reward:
-                assert abs_owner_reward == _get_val_for_key_hash(
+                assert abs_owner_reward == _get_reward_for_key_hash(
                     reward_addr_dec, rs_records[this_epoch - 1]
                 )
 
-            _pstake_mark = _get_key_hashes(es_snapshot["_pstakeMark"]["_stake"])
-            _pstake_set = _get_key_hashes(es_snapshot["_pstakeSet"]["_stake"])
-            _pstake_go = _get_key_hashes(es_snapshot["_pstakeGo"]["_stake"])
+            pstake_mark = _get_key_hashes(es_snapshot["pstakeMark"]["stake"])
+            pstake_set = _get_key_hashes(es_snapshot["pstakeSet"]["stake"])
+            pstake_go = _get_key_hashes(es_snapshot["pstakeGo"]["stake"])
 
             if this_epoch == init_epoch + 2:
-                assert reward_addr_dec not in _pstake_mark
-                assert stake_addr_dec in _pstake_mark
+                assert reward_addr_dec not in pstake_mark
+                assert stake_addr_dec in pstake_mark
 
                 # delegate pool rewards address to pool
                 node_cold = pool_rec["cold_key_pair"]
@@ -1144,43 +1152,43 @@ class TestRewards:
                 ), "Deregistration took longer than expected and would affect other checks"
 
             if this_epoch == init_epoch + 3:
-                assert reward_addr_dec in _pstake_mark
-                assert reward_addr_dec not in _pstake_set
-                assert reward_addr_dec not in _pstake_go
+                assert reward_addr_dec in pstake_mark
+                assert reward_addr_dec not in pstake_set
+                assert reward_addr_dec not in pstake_go
 
-                assert stake_addr_dec not in _pstake_mark
-                assert stake_addr_dec in _pstake_set
-                assert stake_addr_dec in _pstake_go
+                assert stake_addr_dec not in pstake_mark
+                assert stake_addr_dec in pstake_set
+                assert stake_addr_dec in pstake_go
 
             if this_epoch == init_epoch + 4:
-                assert reward_addr_dec in _pstake_mark
-                assert reward_addr_dec in _pstake_set
-                assert reward_addr_dec not in _pstake_go
+                assert reward_addr_dec in pstake_mark
+                assert reward_addr_dec in pstake_set
+                assert reward_addr_dec not in pstake_go
 
-                assert stake_addr_dec not in _pstake_mark
-                assert stake_addr_dec not in _pstake_set
-                assert stake_addr_dec in _pstake_go
+                assert stake_addr_dec not in pstake_mark
+                assert stake_addr_dec not in pstake_set
+                assert stake_addr_dec in pstake_go
 
             if this_epoch >= init_epoch + 5:
-                assert reward_addr_dec in _pstake_mark
-                assert reward_addr_dec in _pstake_set
-                assert reward_addr_dec in _pstake_go
+                assert reward_addr_dec in pstake_mark
+                assert reward_addr_dec in pstake_set
+                assert reward_addr_dec in pstake_go
 
-                assert stake_addr_dec not in _pstake_mark
-                assert stake_addr_dec not in _pstake_set
-                assert stake_addr_dec not in _pstake_go
+                assert stake_addr_dec not in pstake_mark
+                assert stake_addr_dec not in pstake_set
+                assert stake_addr_dec not in pstake_go
 
                 # make sure ledger state and actual stake correspond
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeMark"]["_stake"])
+                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == owner_reward
                 )
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeSet"]["_stake"])
+                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == prev_owner_reward
                 )
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["_pstakeGo"]["_stake"])
+                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
                     == owner_rewards[-3][1]
                 )
 
