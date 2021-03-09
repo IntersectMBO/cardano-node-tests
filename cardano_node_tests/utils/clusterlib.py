@@ -430,8 +430,13 @@ class ClusterLib:
         utxo = []
         for utxo_rec, utxo_data in utxo_dict.items():
             utxo_hash, utxo_ix = utxo_rec.split("#")
-            addr = utxo_data["address"]
-            addr_data = utxo_data["value"]
+            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/2460
+            if "address" not in utxo_data:
+                addr = next(iter(utxo_data))  # first key
+                addr_data = next(iter(utxo_data.values()))  # first value
+            else:
+                addr = utxo_data["address"]
+                addr_data = utxo_data["value"]
             for policyid, coin_data in addr_data.items():
                 if policyid == DEFAULT_COIN:
                     utxo.append(
@@ -1106,7 +1111,11 @@ class ClusterLib:
             Path: A path to the generated state JSON file.
         """
         json_file = Path(destination_dir) / f"{state_name}_ledger_state.json"
-        self.query_cli(["ledger-state", *self.era_arg, "--out-file", str(json_file)])
+        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/2461
+        # self.query_cli(["ledger-state", *self.era_arg, "--out-file", str(json_file)])
+        ledger_state = self.get_ledger_state()
+        with open(json_file, "w") as fp_out:
+            json.dump(ledger_state, fp_out, indent=4)
         return json_file
 
     def get_protocol_state(self) -> dict:
@@ -1123,9 +1132,9 @@ class ClusterLib:
 
     def get_registered_stake_pools_ledger_state(self) -> dict:
         """Return ledger state info for registered stake pools."""
-        registered_pools_details: dict = self.get_ledger_state()["nesEs"]["esLState"][
-            "_delegationState"
-        ]["_pstate"]["_pParams"]
+        registered_pools_details: dict = self.get_ledger_state()["stateBefore"]["esLState"][
+            "delegationState"
+        ]["pstate"]["pParams pState"]
         return registered_pools_details
 
     def get_stake_pool_id(self, cold_vkey_file: FileType) -> str:
