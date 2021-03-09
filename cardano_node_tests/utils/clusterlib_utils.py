@@ -1,5 +1,7 @@
 import itertools
+import json
 import logging
+from pathlib import Path
 from typing import Any
 from typing import List
 from typing import NamedTuple
@@ -17,6 +19,15 @@ class UpdateProposal(NamedTuple):
     arg: str
     value: Any
     name: str = ""
+
+
+class TokenRecord(NamedTuple):
+    token: str
+    asset_name: str
+    amount: int
+    issuers_addrs: List[clusterlib.AddressRecord]
+    token_mint_addr: clusterlib.AddressRecord
+    script: Path
 
 
 def deregister_stake_addr(
@@ -357,3 +368,106 @@ def update_params(
                     f"Expected: {u.value}\n"
                     f"Tip: {cluster_obj.get_tip()}"
                 )
+
+
+def mint_or_burn_sign(
+    cluster_obj: clusterlib.ClusterLib,
+    new_tokens: List[TokenRecord],
+    temp_template: str,
+) -> None:
+    """Mint or burn tokens, depending on the `amount` value. Sign using skeys.
+
+    Positive `amount` value means minting, negative means burning.
+    """
+    _issuers_addrs = [n.issuers_addrs for n in new_tokens]
+    issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
+    issuers_skey_files = [p.skey_file for p in issuers_addrs]
+    token_mint_addr_skey_files = [t.token_mint_addr.skey_file for t in new_tokens]
+    src_address = new_tokens[0].token_mint_addr.address
+
+    tx_files = clusterlib.TxFiles(
+        signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files]
+    )
+
+    # build and sign a transaction
+    ttl = cluster_obj.calculate_tx_ttl()
+    fee = cluster_obj.calculate_tx_fee(
+        src_address=src_address,
+        tx_name=temp_template,
+        tx_files=tx_files,
+        ttl=ttl,
+        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+        witness_count_add=len(issuers_skey_files) * 2,
+    )
+    tx_raw_output = cluster_obj.build_raw_tx(
+        src_address=src_address,
+        tx_name=temp_template,
+        tx_files=tx_files,
+        fee=fee,
+        ttl=ttl,
+        mint=[
+            clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
+            for n in new_tokens
+        ],
+    )
+    out_file_signed = cluster_obj.sign_tx(
+        tx_body_file=tx_raw_output.out_file,
+        signing_key_files=tx_files.signing_key_files,
+        tx_name=temp_template,
+        script_files=[n.script for n in new_tokens],
+    )
+
+    # submit signed transaction
+    cluster_obj.submit_tx(out_file_signed)
+    cluster_obj.wait_for_new_block(new_blocks=2)
+
+
+def new_tokens(
+    *asset_names: str,
+    cluster_obj: clusterlib.ClusterLib,
+    temp_template: str,
+    token_mint_addr: clusterlib.AddressRecord,
+    issuer_addr: clusterlib.AddressRecord,
+    amount: int,
+) -> List[TokenRecord]:
+    """Mint new token, sign using skeys."""
+    # create simple script
+    keyhash = cluster_obj.get_payment_vkey_hash(issuer_addr.vkey_file)
+    script_content = {"keyHash": keyhash, "type": "sig"}
+    script = Path(f"{temp_template}.script")
+    with open(f"{temp_template}.script", "w") as out_json:
+        json.dump(script_content, out_json)
+
+    policyid = cluster_obj.get_policyid(script)
+
+    tokens_to_mint = []
+    for asset_name in asset_names:
+        token = f"{policyid}.{asset_name}"
+
+        if cluster_obj.get_utxo(token_mint_addr.address, coins=[token]):
+            raise AssertionError("The token already exists")
+
+        tokens_to_mint.append(
+            TokenRecord(
+                token=token,
+                asset_name=asset_name,
+                amount=amount,
+                issuers_addrs=[issuer_addr],
+                token_mint_addr=token_mint_addr,
+                script=script,
+            )
+        )
+
+    # token minting
+    mint_or_burn_sign(
+        cluster_obj=cluster_obj,
+        new_tokens=tokens_to_mint,
+        temp_template=f"{temp_template}_mint",
+    )
+
+    for token_rec in tokens_to_mint:
+        token_utxo = cluster_obj.get_utxo(token_mint_addr.address, coins=[token_rec.token])
+        if not (token_utxo and token_utxo[0].amount == amount):
+            raise AssertionError("The token was not minted")
+
+    return tokens_to_mint
