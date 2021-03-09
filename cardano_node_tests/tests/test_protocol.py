@@ -1,4 +1,5 @@
 """Tests for protocol state and protocol parameters."""
+import json
 import logging
 from pathlib import Path
 
@@ -59,6 +60,14 @@ class TestProtocol:
     def test_protocol_state_keys(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-state`."""
         protocol_state = cluster.get_protocol_state()
+        assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
+
+    @allure.link(helpers.get_vcs_link())
+    def test_protocol_state_outfile(self, cluster: clusterlib.ClusterLib):
+        """Check output file produced by `query protocol-state`."""
+        protocol_state: dict = json.loads(
+            cluster.query_cli(["protocol-state", *cluster.era_arg, "--out-file", "/dev/stdout"])
+        )
         assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
