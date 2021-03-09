@@ -25,36 +25,44 @@ def temp_dir(create_temp_dir: Path):
         yield create_temp_dir
 
 
+# use the "temp_dir" fixture for all tests automatically
+pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
+PROTOCOL_STATE_KEYS = ("csLabNonce", "csProtocol", "csTickn")
+PROTOCOL_PARAM_KEYS = (
+    "decentralization",
+    "extraPraosEntropy",
+    "maxBlockBodySize",
+    "maxBlockHeaderSize",
+    "maxTxSize",
+    "minPoolCost",
+    "minUTxOValue",
+    "monetaryExpansion",
+    "poolPledgeInfluence",
+    "poolRetireMaxEpoch",
+    "protocolVersion",
+    "stakeAddressDeposit",
+    "stakePoolDeposit",
+    "stakePoolTargetNum",
+    "treasuryCut",
+    "txFeeFixed",
+    "txFeePerByte",
+)
+
+
 @pytest.mark.testnets
 class TestProtocol:
     """Basic tests for protocol."""
 
     @allure.link(helpers.get_vcs_link())
-    def test_protocol_state(self, cluster: clusterlib.ClusterLib):
+    def test_protocol_state_keys(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-state`."""
         protocol_state = cluster.get_protocol_state()
-        assert sorted(protocol_state) == ["csLabNonce", "csProtocol", "csTickn"]
+        assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
     def test_protocol_params(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-parameters`."""
         protocol_params = cluster.get_protocol_params()
-        assert sorted(protocol_params.keys()) == [
-            "a0",
-            "decentralisationParam",
-            "eMax",
-            "extraEntropy",
-            "keyDeposit",
-            "maxBlockBodySize",
-            "maxBlockHeaderSize",
-            "maxTxSize",
-            "minFeeA",
-            "minFeeB",
-            "minPoolCost",
-            "minUTxOValue",
-            "nOpt",
-            "poolDeposit",
-            "protocolVersion",
-            "rho",
-            "tau",
-        ]
+        assert tuple(sorted(protocol_params.keys())) == PROTOCOL_PARAM_KEYS

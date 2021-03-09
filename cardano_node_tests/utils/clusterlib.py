@@ -1178,18 +1178,15 @@ class ClusterLib:
             reward_account_balance=reward_account_balance,
         )
 
-    def get_key_deposit(self) -> int:
-        """Return key deposit amount."""
+    def get_address_deposit(self) -> int:
+        """Return stake address deposit amount."""
         pparams = self.get_protocol_params()
-        # TODO: change once the old "keyDeposit" is no longer needed, possibly change
-        # the function name as well
-        return int(pparams.get("keyDeposit") or pparams.get("stakeAddressDeposit") or 0)
+        return pparams.get("stakeAddressDeposit") or 0
 
     def get_pool_deposit(self) -> int:
-        """Return pool deposit amount."""
+        """Return stake pool deposit amount."""
         pparams = self.get_protocol_params()
-        # TODO: change once the old "poolDeposit" is no longer needed
-        return int(pparams.get("poolDeposit") or pparams.get("stakePoolDeposit") or 0)
+        return pparams.get("stakePoolDeposit") or 0
 
     def get_stake_distribution(self) -> dict:
         """Return current aggregated stake distribution per stake pool."""
@@ -1275,9 +1272,8 @@ class ClusterLib:
             return 0
 
         pparams = self.get_protocol_params()
-        # TODO: change once the old "keyDeposit" and "poolDeposit" are no longer needed
-        key_deposit = pparams.get("keyDeposit") or pparams.get("stakeAddressDeposit") or 0
-        pool_deposit = pparams.get("poolDeposit") or pparams.get("stakePoolDeposit") or 0
+        key_deposit = pparams.get("stakeAddressDeposit") or 0
+        pool_deposit = pparams.get("stakePoolDeposit") or 0
 
         deposit = 0
         for cert in tx_files.certificate_files:

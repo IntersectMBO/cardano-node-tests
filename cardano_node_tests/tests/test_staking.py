@@ -173,7 +173,7 @@ def _delegate_stake_addr(
     # check that the balance for source address was correctly updated
     assert (
         cluster_obj.get_address_balance(src_address)
-        == src_init_balance - tx_raw_output.fee - cluster_obj.get_key_deposit()
+        == src_init_balance - tx_raw_output.fee - cluster_obj.get_address_deposit()
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that the stake address was delegated
@@ -320,7 +320,7 @@ class TestDelegateAddr:
         # check that the key deposit was returned
         assert (
             cluster.get_address_balance(src_address)
-            == src_reward_balance - tx_raw_deregister_output.fee + cluster.get_key_deposit()
+            == src_reward_balance - tx_raw_deregister_output.fee + cluster.get_address_deposit()
         ), f"Incorrect balance for source address `{src_address}`"
 
         # check that the stake address is no longer delegated
@@ -433,7 +433,7 @@ class TestDelegateAddr:
         # check that the balance for source address was correctly updated
         assert (
             cluster.get_address_balance(user_payment.address)
-            == src_init_balance - tx_raw_output_reg.fee - cluster.get_key_deposit()
+            == src_init_balance - tx_raw_output_reg.fee - cluster.get_address_deposit()
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
         src_registered_balance = cluster.get_address_balance(user_payment.address)
@@ -461,7 +461,7 @@ class TestDelegateAddr:
         # deposit was returned
         assert (
             cluster.get_address_balance(user_payment.address)
-            == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_key_deposit()
+            == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_address_deposit()
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
         clusterlib_utils.wait_for_stake_distribution(cluster)
@@ -1652,7 +1652,7 @@ class TestRewards:
             # check that the key deposit was returned
             assert (
                 cluster.get_address_balance(pool_owner.payment.address)
-                == src_init_balance - tx_raw_deregister_output.fee + cluster.get_key_deposit()
+                == src_init_balance - tx_raw_deregister_output.fee + cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
             cluster.wait_for_new_epoch(4, padding_seconds=30)
@@ -1715,7 +1715,7 @@ class TestRewards:
             # check that the balance for source address was correctly updated
             assert (
                 cluster.get_address_balance(pool_owner.payment.address)
-                == src_updated_balance - tx_raw_output.fee - cluster.get_key_deposit()
+                == src_updated_balance - tx_raw_output.fee - cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
             cluster.wait_for_new_epoch(4, padding_seconds=30)
@@ -1820,7 +1820,7 @@ class TestRewards:
             # check that the key deposit was returned
             assert (
                 cluster.get_address_balance(pool_reward.payment.address)
-                == src_init_balance - tx_raw_deregister_output.fee + cluster.get_key_deposit()
+                == src_init_balance - tx_raw_deregister_output.fee + cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
             cluster.wait_for_new_epoch(4, padding_seconds=30)
@@ -1881,7 +1881,7 @@ class TestRewards:
             # check that the balance for source address was correctly updated
             assert (
                 cluster.get_address_balance(pool_reward.payment.address)
-                == src_updated_balance - tx_raw_output.fee - cluster.get_key_deposit()
+                == src_updated_balance - tx_raw_output.fee - cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
             cluster.wait_for_new_epoch(4, padding_seconds=30)
@@ -1969,7 +1969,7 @@ class TestRewards:
             # check that the key deposit was returned
             assert (
                 cluster.get_address_balance(pool_reward.payment.address)
-                == src_init_balance - tx_raw_deregister_output.fee + cluster.get_key_deposit()
+                == src_init_balance - tx_raw_deregister_output.fee + cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
             cluster.wait_for_new_epoch(4, padding_seconds=30)
@@ -2082,7 +2082,7 @@ class TestRewards:
                 == src_updated_balance
                 - tx_raw_output.fee
                 - cluster.get_pool_deposit()
-                - cluster.get_key_deposit()
+                - cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
             LOGGER.info("Waiting up to 5 epochs for stake pool to be reregistered.")
