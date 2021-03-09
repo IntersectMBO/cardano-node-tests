@@ -245,7 +245,7 @@ def _create_register_pool_delegate_stake_tx(
         cluster_obj.get_address_balance(src_address)
         == src_init_balance
         - tx_raw_output.fee
-        - len(pool_owners) * cluster_obj.get_key_deposit()
+        - len(pool_owners) * cluster_obj.get_address_deposit()
         - cluster_obj.get_pool_deposit()
     ), f"Incorrect balance for source address `{src_address}`"
 
@@ -325,7 +325,9 @@ def _create_register_pool_tx_delegate_stake_tx(
     # check that the balance for source address was correctly updated
     assert (
         cluster_obj.get_address_balance(src_address)
-        == src_init_balance - tx_raw_output.fee - len(pool_owners) * cluster_obj.get_key_deposit()
+        == src_init_balance
+        - tx_raw_output.fee
+        - len(pool_owners) * cluster_obj.get_address_deposit()
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that staking was correctly setup
