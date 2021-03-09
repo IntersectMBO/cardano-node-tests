@@ -765,12 +765,14 @@ class TestRewards:
         """Check that the stake address and pool owner are receiving rewards.
 
         * delegate to pool
+        * create UTxOs with native tokens
         * collect data for pool owner and pool users for 9 epochs
 
            - each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
            - each epoch check received reward with reward in ledger state
 
         * withdraw rewards to payment address
+        * burn native tokens
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         pool_name = "node-pool1"
@@ -782,6 +784,9 @@ class TestRewards:
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
         pool_reward_addr_dec = helpers.decode_bech32(pool_reward.stake.address)[2:]
         pool_stake_addr_dec = helpers.decode_bech32(pool_owner.stake.address)[2:]
+
+        token_rand = clusterlib.get_rand_str(5)
+        token_amount = 1_000_000
 
         # make sure we have enough time to finish the registration/delegation in one epoch
         sleep_time = cluster.time_to_next_epoch_start() - 18
@@ -813,6 +818,16 @@ class TestRewards:
             temp_template=temp_template,
             pool_name=pool_name,
             check_delegation=False,
+        )
+
+        # create native tokens UTxOs for pool user
+        native_tokens = clusterlib_utils.new_tokens(
+            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{token_rand}",
+            token_mint_addr=pool_user.payment,
+            issuer_addr=pool_user.payment,
+            amount=token_amount,
         )
 
         # make sure we managed to finish registration in the expected epoch
@@ -950,6 +965,14 @@ class TestRewards:
             stake_addr_record=pool_user.stake,
             dst_addr_record=pool_user.payment,
             tx_name=temp_template,
+        )
+
+        # burn native tokens
+        tokens_to_burn = [t._replace(amount=-token_amount) for t in native_tokens]
+        clusterlib_utils.mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=tokens_to_burn,
+            temp_template=f"{temp_template}_burn",
         )
 
     @allure.link(helpers.get_vcs_link())
