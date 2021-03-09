@@ -10,7 +10,6 @@ import json
 import logging
 from pathlib import Path
 from typing import List
-from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
 
@@ -28,15 +27,6 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-
-
-class TokenRecord(NamedTuple):
-    token: str
-    asset_name: str
-    amount: int
-    issuers_addrs: List[clusterlib.AddressRecord]
-    token_mint_addr: clusterlib.AddressRecord
-    script: Path
 
 
 @pytest.fixture(scope="module")
@@ -136,7 +126,7 @@ def multisig_script_policyid(
 
 def _mint_or_burn_witness(
     cluster_obj: clusterlib.ClusterLib,
-    new_tokens: List[TokenRecord],
+    new_tokens: List[clusterlib_utils.TokenRecord],
     temp_template: str,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
@@ -204,58 +194,6 @@ def _mint_or_burn_witness(
     cluster_obj.wait_for_new_block(new_blocks=2)
 
 
-def _mint_or_burn_sign(
-    cluster_obj: clusterlib.ClusterLib,
-    new_tokens: List[TokenRecord],
-    temp_template: str,
-) -> None:
-    """Mint or burn tokens, depending on the `amount` value. Sign using skeys.
-
-    Positive `amount` value means minting, negative means burning.
-    """
-    _issuers_addrs = [n.issuers_addrs for n in new_tokens]
-    issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
-    issuers_skey_files = [p.skey_file for p in issuers_addrs]
-    token_mint_addr_skey_files = [t.token_mint_addr.skey_file for t in new_tokens]
-    src_address = new_tokens[0].token_mint_addr.address
-
-    tx_files = clusterlib.TxFiles(
-        signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files]
-    )
-
-    # build and sign a transaction
-    ttl = cluster_obj.calculate_tx_ttl()
-    fee = cluster_obj.calculate_tx_fee(
-        src_address=src_address,
-        tx_name=temp_template,
-        tx_files=tx_files,
-        ttl=ttl,
-        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files) * 2,
-    )
-    tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=src_address,
-        tx_name=temp_template,
-        tx_files=tx_files,
-        fee=fee,
-        ttl=ttl,
-        mint=[
-            clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
-            for n in new_tokens
-        ],
-    )
-    out_file_signed = cluster_obj.sign_tx(
-        tx_body_file=tx_raw_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=temp_template,
-        script_files=[n.script for n in new_tokens],
-    )
-
-    # submit signed transaction
-    cluster_obj.submit_tx(out_file_signed)
-    cluster_obj.wait_for_new_block(new_blocks=2)
-
-
 @pytest.mark.testnets
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
@@ -290,7 +228,7 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        token_mint = TokenRecord(
+        token_mint = clusterlib_utils.TokenRecord(
             token=token,
             asset_name=asset_name,
             amount=amount,
@@ -346,7 +284,7 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        token_mint = TokenRecord(
+        token_mint = clusterlib_utils.TokenRecord(
             token=token,
             asset_name=asset_name,
             amount=amount,
@@ -356,7 +294,7 @@ class TestMinting:
         )
 
         # token minting
-        _mint_or_burn_sign(
+        clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
@@ -367,7 +305,7 @@ class TestMinting:
 
         # token burning
         token_burn = token_mint._replace(amount=-amount)
-        _mint_or_burn_sign(
+        clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
@@ -399,7 +337,7 @@ class TestMinting:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                TokenRecord(
+                clusterlib_utils.TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -474,7 +412,7 @@ class TestMinting:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                TokenRecord(
+                clusterlib_utils.TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -500,14 +438,14 @@ class TestMinting:
         )
         if tokens_num >= too_high:
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                _mint_or_burn_sign(**minting_args)  # type: ignore
+                clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
             if tokens_num >= 1000:
                 assert "(UtxoFailure (MaxTxSizeUTxO" in str(excinfo.value)
             else:
                 assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
             return
 
-        _mint_or_burn_sign(**minting_args)  # type: ignore
+        clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
@@ -515,7 +453,7 @@ class TestMinting:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        _mint_or_burn_sign(
+        clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -551,7 +489,7 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        token_mint = TokenRecord(
+        token_mint = clusterlib_utils.TokenRecord(
             token=token,
             asset_name=asset_name,
             amount=amount,
@@ -633,7 +571,7 @@ class TestPolicies:
             ), "The token already exists"
 
             tokens_to_mint.append(
-                TokenRecord(
+                clusterlib_utils.TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -704,7 +642,7 @@ class TestPolicies:
             ), "The token already exists"
 
             tokens_to_mint.append(
-                TokenRecord(
+                clusterlib_utils.TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -775,7 +713,7 @@ class TestPolicies:
             ), "The token already exists"
 
             tokens_to_mint.append(
-                TokenRecord(
+                clusterlib_utils.TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -848,7 +786,7 @@ class TestPolicies:
             ), "The token already exists"
 
             tokens_to_mint.append(
-                TokenRecord(
+                clusterlib_utils.TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -910,7 +848,7 @@ class TestPolicies:
             ), "The token already exists"
 
             tokens_to_mint.append(
-                TokenRecord(
+                clusterlib_utils.TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -983,7 +921,7 @@ class TestPolicies:
             ), "The token already exists"
 
             tokens_to_mint.append(
-                TokenRecord(
+                clusterlib_utils.TokenRecord(
                     token=token,
                     asset_name=asset_name,
                     amount=amount,
@@ -1016,55 +954,6 @@ class TestPolicies:
 )
 class TestTransfer:
     """Tests for transfering tokens."""
-
-    def _new_token(
-        self,
-        cluster_obj: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-    ) -> TokenRecord:
-        """Mint new token, sign using skeys."""
-        rand = clusterlib.get_rand_str(4)
-        temp_template = f"test_tx_new_token_{rand}"
-        asset_name = f"couttscoin{rand}"
-        amount = 20_000_000
-
-        token_mint_addr = payment_addrs[0]
-        issuer_addr = payment_addrs[1]
-
-        # create simple script
-        keyhash = cluster_obj.get_payment_vkey_hash(issuer_addr.vkey_file)
-        script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
-        with open(f"{temp_template}.script", "w") as out_json:
-            json.dump(script_content, out_json)
-
-        policyid = cluster_obj.get_policyid(script)
-        token = f"{policyid}.{asset_name}"
-
-        assert not cluster_obj.get_utxo(
-            token_mint_addr.address, coins=[token]
-        ), "The token already exists"
-
-        token_mint = TokenRecord(
-            token=token,
-            asset_name=asset_name,
-            amount=amount,
-            issuers_addrs=[issuer_addr],
-            token_mint_addr=token_mint_addr,
-            script=script,
-        )
-
-        # token minting
-        _mint_or_burn_sign(
-            cluster_obj=cluster_obj,
-            new_tokens=[token_mint],
-            temp_template=f"{temp_template}_mint",
-        )
-
-        token_utxo = cluster_obj.get_utxo(token_mint_addr.address, coins=[token])
-        assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
-
-        return token_mint
 
     @pytest.fixture
     def payment_addrs(
@@ -1099,12 +988,24 @@ class TestTransfer:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-    ) -> TokenRecord:
+    ) -> clusterlib_utils.TokenRecord:
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
-            new_token = self._new_token(cluster_obj=cluster, payment_addrs=payment_addrs)
+            rand = clusterlib.get_rand_str(4)
+            temp_template = f"test_tx_new_token_{rand}"
+            asset_name = f"couttscoin{rand}"
+
+            new_tokens = clusterlib_utils.new_tokens(
+                asset_name,
+                cluster_obj=cluster,
+                temp_template=temp_template,
+                token_mint_addr=payment_addrs[0],
+                issuer_addr=payment_addrs[1],
+                amount=20_000_000,
+            )
+            new_token = new_tokens[0]
             fixture_cache.value = new_token
 
         return new_token
@@ -1115,7 +1016,7 @@ class TestTransfer:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        new_token: TokenRecord,
+        new_token: clusterlib_utils.TokenRecord,
         amount: int,
     ):
         """Test sending tokens to payment address.
@@ -1163,7 +1064,7 @@ class TestTransfer:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        new_token: TokenRecord,
+        new_token: clusterlib_utils.TokenRecord,
     ):
         """Test sending multiple different tokens to payment address.
 
@@ -1173,10 +1074,16 @@ class TestTransfer:
         """
         temp_template = helpers.get_func_name()
         amount = 1000
+        rand = clusterlib.get_rand_str(5)
 
-        new_tokens = [
-            self._new_token(cluster_obj=cluster, payment_addrs=payment_addrs) for __ in range(5)
-        ]
+        new_tokens = clusterlib_utils.new_tokens(
+            *[f"couttscoin{rand}{i}" for i in range(5)],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{rand}",
+            token_mint_addr=payment_addrs[0],
+            issuer_addr=payment_addrs[1],
+            amount=1_000_000,
+        )
         new_tokens.append(new_token)
 
         src_address = new_token.token_mint_addr.address
@@ -1232,7 +1139,7 @@ class TestNegative:
     def _mint_tx(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        new_tokens: List[TokenRecord],
+        new_tokens: List[clusterlib_utils.TokenRecord],
         temp_template: str,
     ) -> Path:
         """Return signed TX for minting new token. Sign using skeys."""
@@ -1297,7 +1204,7 @@ class TestNegative:
         issuer_addr = issuers_addrs[1]
         amount = 20_000_000
 
-        token_mint = TokenRecord(
+        token_mint = clusterlib_utils.TokenRecord(
             token=token,
             asset_name=asset_name,
             amount=amount,
