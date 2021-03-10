@@ -8,7 +8,8 @@ from typing import NamedTuple
 from typing import Optional
 from typing import Union
 
-from cardano_node_tests.utils import clusterlib
+from cardano_clusterlib import clusterlib
+
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 
