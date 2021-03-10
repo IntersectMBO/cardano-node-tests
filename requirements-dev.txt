@@ -16,6 +16,7 @@ allure-pytest
 cbor2
 filelock
 hypothesis
+pydantic
 pytest
 pytest-metadata
 pytest-ordering
