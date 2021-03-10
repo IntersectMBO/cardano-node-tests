@@ -60,11 +60,13 @@ EXPECTED_METRICS = [
     "cardano_node_metrics_density_real",
     "cardano_node_metrics_epoch_int",
     "cardano_node_metrics_mempoolBytes_int",
+    "cardano_node_metrics_myBlocksUncoupled_int",
     "cardano_node_metrics_nodeIsLeaderNum_int",
     "cardano_node_metrics_nodeStartTime_int",
     "cardano_node_metrics_operationalCertificateExpiryKESPeriod_int",
     "cardano_node_metrics_operationalCertificateStartKESPeriod_int",
     "cardano_node_metrics_remainingKESPeriods_int",
+    "cardano_node_metrics_served_header_counter_int",
     "cardano_node_metrics_slotInEpoch_int",
     "cardano_node_metrics_slotNum_int",
     "cardano_node_metrics_txsInMempool_int",
@@ -122,7 +124,7 @@ class TestPrometheus:
         prometheus_port = (
             cluster_nodes.get_cluster_type()
             .cluster_scripts.get_instance_ports(cluster_nodes.get_cluster_env().instance_num)
-            .prometheus_bft1
+            .prometheus_pool1
         )
 
         response = get_prometheus_metrics(prometheus_port)
