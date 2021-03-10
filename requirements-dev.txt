@@ -13,6 +13,7 @@ sphinx_rtd_theme
 
 # install
 allure-pytest
+cardano-clusterlib
 cbor2
 filelock
 hypothesis

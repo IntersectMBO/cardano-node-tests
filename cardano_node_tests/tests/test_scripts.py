@@ -15,10 +15,10 @@ import allure
 import cbor2
 import pytest
 from _pytest.tmpdir import TempdirFactory
+from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.utils import cluster_management
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS

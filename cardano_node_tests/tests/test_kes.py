@@ -9,10 +9,10 @@ from pathlib import Path
 import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
+from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
