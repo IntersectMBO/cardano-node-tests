@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Optional
 
 from _pytest.config import Config
+from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)

@@ -17,10 +17,10 @@ from typing import Optional
 import pytest
 from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
+from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_cli_coverage
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
