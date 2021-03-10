@@ -8,11 +8,11 @@ import pytest
 from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
+from cardano_clusterlib import clusterlib
 from xdist import workermanage
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 

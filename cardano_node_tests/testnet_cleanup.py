@@ -14,8 +14,9 @@ from pathlib import Path
 from typing import Generator
 from typing import List
 
+from cardano_clusterlib import clusterlib
+
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 

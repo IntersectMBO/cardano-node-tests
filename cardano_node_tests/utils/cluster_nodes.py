@@ -15,9 +15,9 @@ from typing import NamedTuple
 from typing import Optional
 
 from _pytest.config import Config
+from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_scripts
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers

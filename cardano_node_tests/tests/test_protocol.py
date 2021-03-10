@@ -6,8 +6,8 @@ from pathlib import Path
 import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
+from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
