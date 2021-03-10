@@ -28,6 +28,22 @@ cardano\_node\_tests.tests.test\_kes module
    :undoc-members:
    :show-inheritance:
 
+cardano\_node\_tests.tests.test\_ledger\_state module
+-----------------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_ledger_state
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.tests.test\_metrics module
+-----------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_metrics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 cardano\_node\_tests.tests.test\_native\_tokens module
 ------------------------------------------------------
 

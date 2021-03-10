@@ -131,7 +131,7 @@ def create_addr_record(addr_file: Path) -> clusterlib.AddressRecord:
 
 
 def find_files(location: FileType) -> Generator[Path, None, None]:
-    """Find all '*.addr' files in given location and it's subdirectories."""
+    r"""Find all '\*.addr' files in given location and it's subdirectories."""
     location = Path(location).expanduser().resolve()
     return location.glob("**/*.addr")
 

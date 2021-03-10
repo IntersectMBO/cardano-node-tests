@@ -121,7 +121,7 @@ $ git add docs
 # commit changes
 $ git commit
 # push to origin/test_reports (upstream/test_reports)
-$ git push origin/test_reports
+$ git push origin test_reports
 ```
 
 
