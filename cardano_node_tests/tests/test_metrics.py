@@ -1,4 +1,4 @@
-"""Tests for Prometheus metrics."""
+"""Tests for Prometheus and EKG metrics."""
 import logging
 from pathlib import Path
 
@@ -11,6 +11,7 @@ from packaging import version
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import model_ekg
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -111,6 +112,15 @@ def get_prometheus_metrics(port: int) -> requests.Response:
     return response
 
 
+def get_ekg_metrics(port: int) -> requests.Response:
+    response = requests.get(
+        f"http://localhost:{port}/",
+        headers={"Accept": "application/json"},
+    )
+    assert response, f"Request failed, status code {response.status_code}"
+    return response
+
+
 class TestPrometheus:
     """Prometheus metrics tests."""
 
@@ -132,3 +142,23 @@ class TestPrometheus:
         metrics = response.text.strip().split("\n")
         metrics_keys = sorted(m.split(" ")[0] for m in metrics)
         assert metrics_keys == EXPECTED_METRICS, "Metrics differ"
+
+
+class TestEKG:
+    """EKG metrics tests."""
+
+    @allure.link(helpers.get_vcs_link())
+    def test_available_metrics(
+        self,
+        wait_epochs,
+    ):
+        """Test that available EKG metrics matches the expected schema."""
+        # pylint: disable=unused-argument
+        ekg_port = (
+            cluster_nodes.get_cluster_type()
+            .cluster_scripts.get_instance_ports(cluster_nodes.get_cluster_env().instance_num)
+            .ekg_pool1
+        )
+
+        response = get_ekg_metrics(ekg_port)
+        model_ekg.Model.validate(response.json())
