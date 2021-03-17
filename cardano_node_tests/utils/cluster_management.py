@@ -346,14 +346,14 @@ class _ClusterGetter:
 
         cluster_nodes.save_cluster_artifacts(artifacts_dir=self.cm.pytest_tmp_dir, clean=clean)
 
-    def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> None:  # noqa: C901
+    def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> bool:  # noqa: C901
         """Restart cluster.
 
         Not called under global lock!
         """
         # don't restart cluster if it was started outside of test framework
         if self.cm.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
-            return None
+            return True
 
         # using `_locked_log` because restart is not called under global lock
         self.cm._locked_log(
@@ -407,7 +407,7 @@ class _ClusterGetter:
             if not helpers.IS_XDIST:
                 pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
             open(self.cm.instance_dir / CLUSTER_DEAD_FILE, "a").close()
-            return None
+            return False
 
         # setup faucet addresses
         tmp_path = Path(self.cm.tmp_path_factory.mktemp("addrs_data"))
@@ -418,7 +418,7 @@ class _ClusterGetter:
         if not cluster_running_file.exists():
             open(cluster_running_file, "a").close()
 
-        return None
+        return True
 
     def _is_restart_needed(self, instance_num: int) -> bool:
         """Check if it is necessary to restart cluster."""
@@ -586,6 +586,11 @@ class _ClusterGetter:
 
         # don't start new cluster if it was already started outside of test framework
         if self.cm.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
+            if start_cmd:
+                LOGGER.warning(
+                    f"Ignoring the '{start_cmd}' cluster start command as "
+                    "'DEV_CLUSTER_RUNNING' is set"
+                )
             return self._reuse_dev_cluster()
 
         selected_instance = -1
@@ -645,6 +650,7 @@ class _ClusterGetter:
                     # if the selected instance failed to start, move on to other instance
                     if (instance_dir / CLUSTER_DEAD_FILE).exists():
                         selected_instance = -1
+                        restart_ready = False
                         # remove status files that are checked by other workers
                         for sf in (
                             *instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"),
