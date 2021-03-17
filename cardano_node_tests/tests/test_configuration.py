@@ -11,7 +11,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -120,9 +119,6 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
 
 
 @pytest.mark.run(order=3)
-@pytest.mark.skipif(
-    configuration.CLUSTER_ERA != "shelley", reason="meant to run on shelley-only cluster"
-)
 class TestBasic:
     """Basic tests for node configuration."""
 
