@@ -13,7 +13,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 
@@ -59,7 +59,7 @@ def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         with open(startup_files.genesis_spec) as fp_in:
             genesis_spec = json.load(fp_in)
 
-        genesis_spec["slotsPerKESPeriod"] = 300
+        genesis_spec["slotsPerKESPeriod"] = 700
         genesis_spec["maxKESEvolutions"] = 5
 
         with open(startup_files.genesis_spec, "w") as fp_out:
@@ -79,9 +79,6 @@ def cluster_kes(
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-@pytest.mark.skipif(
-    configuration.CLUSTER_ERA != "shelley", reason="meant to run on shelley-only cluster"
-)
 class TestKES:
     """Basic tests for KES period."""
 
@@ -102,6 +99,7 @@ class TestKES:
             ("*.stdout", "TraceNoLedgerView"),
             ("*.stdout", "KESKeyAlreadyPoisoned"),
             ("*.stdout", "KESCouldNotEvolve"),
+            ("*.stdout", r"ExceededTimeLimit \(ChainSync"),
         ]
         with logfiles.expect_errors(expected_errors):
             LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
@@ -151,7 +149,8 @@ class TestKES:
             time.sleep(cluster.time_to_next_epoch_start() - 5)
 
             # save ledger state
-            cluster.save_ledger_state(
+            clusterlib_utils.save_ledger_state(
+                cluster_obj=cluster,
                 state_name=f"{temp_template}_{cluster.get_last_block_epoch()}",
             )
 
@@ -162,7 +161,7 @@ class TestKES:
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-                kes_period=cluster.get_last_block_kes_period() - 1,
+                kes_period=cluster.get_last_block_kes_period() - 5,
             )
 
             expected_errors = [
@@ -173,6 +172,7 @@ class TestKES:
                 logfiles.add_ignore_rule("*.stdout", "MuxBearerClosed")
                 shutil.copy(invalid_opcert_file, opcert_file)
                 cluster_nodes.restart_node(node_name)
+                cluster.wait_for_new_epoch()
 
                 LOGGER.info("Checking blocks production for 5 epochs.")
                 this_epoch = -1
@@ -181,7 +181,9 @@ class TestKES:
                     this_epoch = cluster.get_last_block_epoch()
 
                     # check that the pool is not producing any blocks
-                    blocks_made = cluster.get_ledger_state()["nesBcur"]["unBlocksMade"]
+                    blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)[
+                        "blocksCurrent"
+                    ]
                     if blocks_made:
                         assert (
                             stake_pool_id_dec not in blocks_made
@@ -199,14 +201,17 @@ class TestKES:
             # copy the new certificate and restart the node
             shutil.move(str(valid_opcert_file), str(opcert_file))
             cluster_nodes.restart_node(node_name)
+            cluster.wait_for_new_epoch()
 
             LOGGER.info("Checking blocks production for another 3 epochs.")
             for __ in range(5):
                 _wait_epoch_chores(this_epoch)
                 this_epoch = cluster.get_last_block_epoch()
 
-                # check that the pool is not producing any blocks
-                blocks_made = cluster.get_ledger_state()["nesBcur"]["unBlocksMade"]
+                # check that the pool is producing blocks
+                blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)[
+                    "blocksCurrent"
+                ]
                 assert (
                     stake_pool_id_dec in blocks_made
                 ), f"The pool '{pool_name}' has not produced blocks in epoch {this_epoch}"
@@ -263,13 +268,17 @@ class TestKES:
                 time.sleep(cluster.time_to_next_epoch_start() - 5)
                 this_epoch = cluster.get_last_block_epoch()
 
+                ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+
                 # save ledger state
-                cluster.save_ledger_state(
+                clusterlib_utils.save_ledger_state(
+                    cluster_obj=cluster,
                     state_name=f"{temp_template}_{this_epoch}",
+                    ledger_state=ledger_state,
                 )
 
                 # check that the pool is still producing blocks
-                blocks_made = cluster.get_ledger_state()["nesBcur"]["unBlocksMade"]
+                blocks_made = ledger_state["blocksCurrent"]
                 if blocks_made:
                     assert (
                         stake_pool_id_dec in blocks_made
