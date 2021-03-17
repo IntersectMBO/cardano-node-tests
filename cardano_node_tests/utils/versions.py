@@ -29,7 +29,7 @@ class Versions:
 
     def get_cardano_version(self) -> dict:
         """Return version info for cardano-node."""
-        out = helpers.run_shell_command("cardano-node --version").decode().strip()
+        out = helpers.run_command("cardano-node --version").decode().strip()
         env_info, git_info, *__ = out.splitlines()
         node, platform, ghc, *__ = env_info.split(" - ")
         version_db = {
