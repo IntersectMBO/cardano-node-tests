@@ -819,15 +819,17 @@ class TestRewards:
             check_delegation=False,
         )
 
-        # create native tokens UTxOs for pool user
-        native_tokens = clusterlib_utils.new_tokens(
-            *[f"couttscoin{token_rand}{i}" for i in range(5)],
-            cluster_obj=cluster,
-            temp_template=f"{temp_template}_{token_rand}",
-            token_mint_addr=pool_user.payment,
-            issuer_addr=pool_user.payment,
-            amount=token_amount,
-        )
+        native_tokens: List[clusterlib_utils.TokenRecord] = []
+        if VERSIONS.transaction_era >= VERSIONS.MARY:
+            # create native tokens UTxOs for pool user
+            native_tokens = clusterlib_utils.new_tokens(
+                *[f"couttscoin{token_rand}{i}" for i in range(5)],
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_{token_rand}",
+                token_mint_addr=pool_user.payment,
+                issuer_addr=pool_user.payment,
+                amount=token_amount,
+            )
 
         # make sure we managed to finish registration in the expected epoch
         assert (
@@ -989,13 +991,14 @@ class TestRewards:
             tx_name=temp_template,
         )
 
-        # burn native tokens
-        tokens_to_burn = [t._replace(amount=-token_amount) for t in native_tokens]
-        clusterlib_utils.mint_or_burn_sign(
-            cluster_obj=cluster,
-            new_tokens=tokens_to_burn,
-            temp_template=f"{temp_template}_burn",
-        )
+        if native_tokens:
+            # burn native tokens
+            tokens_to_burn = [t._replace(amount=-token_amount) for t in native_tokens]
+            clusterlib_utils.mint_or_burn_sign(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_burn,
+                temp_template=f"{temp_template}_burn",
+            )
 
     @allure.link(helpers.get_vcs_link())
     def test_reward_addr_delegation(  # noqa: C901
