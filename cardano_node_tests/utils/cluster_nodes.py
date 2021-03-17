@@ -393,7 +393,7 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     args_str = " ".join(args)
     args_str = f" {args_str}" if args_str else ""
     LOGGER.info(f"Starting cluster with `{cmd}{args_str}`.")
-    helpers.run_shell_command(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
+    helpers.run_in_bash(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
     LOGGER.info("Cluster started.")
     return get_cluster_type().get_cluster_obj()
 
@@ -401,7 +401,7 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
 def stop_cluster(cmd: str) -> None:
     """Stop cluster."""
     LOGGER.info(f"Stopping cluster with `{cmd}`.")
-    helpers.run_shell_command(cmd, workdir=get_cluster_env().work_dir)
+    helpers.run_in_bash(cmd, workdir=get_cluster_env().work_dir)
 
 
 def restart_node(node_name: str) -> None:
