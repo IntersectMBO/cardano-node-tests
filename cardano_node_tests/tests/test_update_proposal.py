@@ -82,7 +82,7 @@ class TestBasic:
                 clusterlib_utils.UpdateProposal(
                     arg="--decentralization-parameter",
                     value=0.5,
-                    name="decentralisationParam",
+                    name="decentralization",
                 )
             ],
         )
