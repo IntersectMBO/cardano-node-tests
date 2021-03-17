@@ -650,6 +650,7 @@ class _ClusterGetter:
                     # if the selected instance failed to start, move on to other instance
                     if (instance_dir / CLUSTER_DEAD_FILE).exists():
                         selected_instance = -1
+                        restart_here = False
                         restart_ready = False
                         # remove status files that are checked by other workers
                         for sf in (
@@ -852,6 +853,7 @@ class _ClusterGetter:
                             open(restart_in_progress_file, "a").close()
 
                     # we've found suitable cluster instance
+                    selected_instance = instance_num
                     self.cm._cluster_instance = instance_num
                     cluster_nodes.set_cardano_node_socket_path(instance_num)
 
@@ -927,7 +929,7 @@ class _ClusterGetter:
 
                     break
                 else:
-                    # if the test cannot run on any instance, return to top-level loop
+                    # if the test cannot start on any instance, return to top-level loop
                     continue
 
                 test_running_file = (

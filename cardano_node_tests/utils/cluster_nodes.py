@@ -353,7 +353,7 @@ def get_cluster_type() -> ClusterType:
     return LocalCluster()
 
 
-def _get_cardano_node_socket_path(instance_num: int) -> Path:
+def get_cardano_node_socket_path(instance_num: int) -> Path:
     """Return path to socket file in the given cluster instance."""
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).resolve()
     state_cluster_dirname = f"state-cluster{instance_num}"
@@ -364,7 +364,7 @@ def _get_cardano_node_socket_path(instance_num: int) -> Path:
 
 def set_cardano_node_socket_path(instance_num: int) -> None:
     """Set the `CARDANO_NODE_SOCKET_PATH` env variable for the given cluster instance."""
-    socket_path = _get_cardano_node_socket_path(instance_num)
+    socket_path = get_cardano_node_socket_path(instance_num)
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
 
 
