@@ -67,17 +67,6 @@ def hypothesis_settings() -> Any:
     )
 
 
-def run_shell_command(command: str, workdir: FileType = "") -> bytes:
-    """Run command in shell."""
-    cmd = f"bash -c '{command}'"
-    cmd = cmd if not workdir else f"cd {workdir}; {cmd}"
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    stdout, stderr = p.communicate()
-    if p.returncode != 0:
-        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
-    return stdout
-
-
 @contextlib.contextmanager
 def change_cwd(dir_path: FileType) -> Iterator[FileType]:
     """Change and restore CWD - context manager."""
@@ -101,26 +90,30 @@ def ignore_interrupt() -> Iterator[None]:
         signal.signal(signal.SIGINT, orig_handler)
 
 
-def run_command(command: str, workdir: FileType = "") -> bytes:
+def run_command(command: str, workdir: FileType = "", shell: bool = False) -> bytes:
     """Run command."""
-    cmd = command.split(" ")
+    cmd = command if shell else command.split(" ")
     if workdir:
         with change_cwd(workdir):
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     else:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
-        raise AssertionError(f"An error occurred while running `{cmd}`: {stderr.decode()}")
+        raise AssertionError(f"An error occurred while running `{command}`: {stderr.decode()}")
     return stdout
+
+
+def run_in_bash(command: str, workdir: FileType = "") -> bytes:
+    """Run command(s) in bash."""
+    cmd = f"bash -c '{command}'"
+    return run_command(cmd, workdir=workdir, shell=True)
 
 
 @functools.lru_cache
 def get_current_commit() -> str:
     # TODO: make sure we are in correct repo
-    return (
-        os.environ.get("GIT_REVISION") or run_shell_command("git rev-parse HEAD").decode().strip()
-    )
+    return os.environ.get("GIT_REVISION") or run_command("git rev-parse HEAD").decode().strip()
 
 
 @functools.lru_cache
@@ -217,7 +210,7 @@ def write_json(location: FileType, content: dict) -> FileType:
 
 def decode_bech32(bech32: str) -> str:
     """Convert from bech32 strings."""
-    return run_shell_command(f"echo '{bech32}' | bech32").decode().strip()
+    return run_command(f"echo '{bech32}' | bech32", shell=True).decode().strip()
 
 
 def check_dir_arg(dir_path: str) -> Optional[Path]:

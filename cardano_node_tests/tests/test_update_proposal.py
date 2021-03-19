@@ -17,7 +17,9 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def create_temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir."""
-    return Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__))).resolve()
+    return Path(
+        tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__), numbered=False)
+    ).resolve()
 
 
 @pytest.fixture
@@ -82,7 +84,7 @@ class TestBasic:
                 clusterlib_utils.UpdateProposal(
                     arg="--decentralization-parameter",
                     value=0.5,
-                    name="decentralisationParam",
+                    name="decentralization",
                 )
             ],
         )

@@ -66,6 +66,13 @@ class ClusterType:
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
 
+def _datetime2timestamp(datetime_str: str) -> int:
+    """Convert UTC datetime string to timestamp."""
+    converted_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
+    timestamp = converted_time.replace(tzinfo=timezone.utc).timestamp()
+    return int(timestamp)
+
+
 class DevopsCluster(ClusterType):
     """DevOps cluster type (shelley-only mode)."""
 
@@ -125,14 +132,54 @@ class LocalCluster(ClusterType):
         self.type = ClusterType.LOCAL
         self.cluster_scripts = cluster_scripts.LocalScripts()
 
+        # cached values
+        self._slots_offset = -1
+
+    def _get_slots_offset(self, state_dir: Path) -> int:
+        """Get offset of blocks from Byron era vs current configuration."""
+        if self._slots_offset != -1:
+            return self._slots_offset
+
+        genesis_byron_json = state_dir / "byron" / "genesis.json"
+        with open(genesis_byron_json) as in_json:
+            genesis_byron = json.load(in_json)
+        genesis_shelley_json = state_dir / "shelley" / "genesis.json"
+        with open(genesis_shelley_json) as in_json:
+            genesis_shelley = json.load(in_json)
+
+        slot_duration_byron_msec = int(genesis_byron["blockVersionData"]["slotDuration"])
+        slot_duration_byron = float(slot_duration_byron_msec / 1000)
+        slot_duration_shelley = float(genesis_shelley["slotLength"])
+        slots_per_epoch_shelley = int(genesis_shelley["epochLength"])
+        byron_k = int(genesis_byron["protocolConsts"]["k"])
+
+        byron_epoch_sec = int(byron_k * 10 * slot_duration_byron)
+        shelley_epoch_sec = int(slots_per_epoch_shelley * slot_duration_shelley)
+
+        if (slot_duration_byron == slot_duration_shelley) and (
+            byron_epoch_sec == shelley_epoch_sec
+        ):
+            self._slots_offset = 0
+            return 0
+
+        # assume that shelley starts at epoch 2, i.e. after single byron epoch
+        slots_in_byron = int(byron_epoch_sec / slot_duration_byron)
+        slots_in_shelley = int(shelley_epoch_sec / slot_duration_shelley)
+        offset = slots_in_shelley - slots_in_byron
+
+        self._slots_offset = offset
+        return offset
+
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
+        slots_offset = self._get_slots_offset(cluster_env.state_dir)
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
             protocol=clusterlib.Protocols.CARDANO,
             era=cluster_env.cluster_era,
             tx_era=cluster_env.tx_era,
+            slots_offset=slots_offset,
         )
         return cluster_obj
 
@@ -216,12 +263,6 @@ class TestnetCluster(ClusterType):
         self._testnet_type = testnet_type
         return testnet_type
 
-    def _datetime2timestamp(self, datetime_str: str) -> int:
-        """Convert UTC datetime string to timestamp."""
-        converted_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-        timestamp = converted_time.replace(tzinfo=timezone.utc).timestamp()
-        return int(timestamp)
-
     def _get_slots_offset(self, state_dir: Path) -> int:
         """Get offset of blocks from Byron era vs current configuration."""
         if self._slots_offset != -1:
@@ -241,15 +282,16 @@ class TestnetCluster(ClusterType):
             self._slots_offset = 0
             return 0
 
-        testnet_timestamp = self._datetime2timestamp(shelley_start)
-
+        testnet_timestamp = _datetime2timestamp(shelley_start)
         offset_sec = testnet_timestamp - start_timestamp
-        slot_duration_byron_msec: int = genesis_byron["blockVersionData"]["slotDuration"]
-        slot_duration_byron: int = int(slot_duration_byron_msec) // 1000
-        slot_duration_shelley: int = genesis_shelley["slotLength"]
 
-        slots_in_byron = offset_sec // slot_duration_byron
-        slots_in_shelley = offset_sec // slot_duration_shelley
+        slot_duration_byron_msec = int(genesis_byron["blockVersionData"]["slotDuration"])
+        slot_duration_byron = float(slot_duration_byron_msec / 1000)
+        slot_duration_shelley = float(genesis_shelley["slotLength"])
+
+        # assume that epoch length is the same for byron and shelley
+        slots_in_byron = int(offset_sec / slot_duration_byron)
+        slots_in_shelley = int(offset_sec / slot_duration_shelley)
         offset = slots_in_shelley - slots_in_byron
 
         self._slots_offset = offset
@@ -311,7 +353,7 @@ def get_cluster_type() -> ClusterType:
     return LocalCluster()
 
 
-def _get_cardano_node_socket_path(instance_num: int) -> Path:
+def get_cardano_node_socket_path(instance_num: int) -> Path:
     """Return path to socket file in the given cluster instance."""
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).resolve()
     state_cluster_dirname = f"state-cluster{instance_num}"
@@ -322,7 +364,7 @@ def _get_cardano_node_socket_path(instance_num: int) -> Path:
 
 def set_cardano_node_socket_path(instance_num: int) -> None:
     """Set the `CARDANO_NODE_SOCKET_PATH` env variable for the given cluster instance."""
-    socket_path = _get_cardano_node_socket_path(instance_num)
+    socket_path = get_cardano_node_socket_path(instance_num)
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
 
 
@@ -351,7 +393,7 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     args_str = " ".join(args)
     args_str = f" {args_str}" if args_str else ""
     LOGGER.info(f"Starting cluster with `{cmd}{args_str}`.")
-    helpers.run_shell_command(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
+    helpers.run_in_bash(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
     LOGGER.info("Cluster started.")
     return get_cluster_type().get_cluster_obj()
 
@@ -359,7 +401,7 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
 def stop_cluster(cmd: str) -> None:
     """Stop cluster."""
     LOGGER.info(f"Stopping cluster with `{cmd}`.")
-    helpers.run_shell_command(cmd, workdir=get_cluster_env().work_dir)
+    helpers.run_in_bash(cmd, workdir=get_cluster_env().work_dir)
 
 
 def restart_node(node_name: str) -> None:
