@@ -494,14 +494,17 @@ def filtered_ledger_state(
         "'fromstream(inputs|select((length == 2 and .[0][1] == \"esLState\")|not))'"
     )
 
-    return helpers.run_command(cmd, shell=True).decode().strip()
+    return helpers.run_command(cmd, shell=True).decode("utf-8").strip()
 
 
 def get_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
 ) -> dict:
     """Return the current ledger state info."""
-    ledger_state: dict = json.loads(filtered_ledger_state(cluster_obj))
+    f_ledger_state = filtered_ledger_state(cluster_obj)
+    if not f_ledger_state:
+        return {}
+    ledger_state: dict = json.loads(f_ledger_state)
     return ledger_state
 
 
