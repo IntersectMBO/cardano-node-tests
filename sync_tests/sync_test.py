@@ -286,7 +286,7 @@ def get_current_tip(tag_no, wait=False):
                 .strip()
         )
         output_json = json.loads(output)
-        return int(output_json["blockNo"]), output_json["headerHash"], int(output_json["slotNo"])
+        return int(output_json["block"]), output_json["hash"], int(output_json["slot"])
     except subprocess.CalledProcessError as e:
         if wait:
             return int(e.returncode)
@@ -335,15 +335,16 @@ def start_node_windows(env, tag_no):
         p = subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.PIPE)
         print("waiting for db folder to be created")
         count = 0
+        count_timeout = 299
         while not os.path.isdir(current_directory / "db"):
-            time.sleep(3)
+            time.sleep(1)
             count += 1
-            if count > 9:
-                print("ERROR: waited 30 seconds and the DB folder was not created yet")
+            if count > count_timeout:
+                print(f"ERROR: waited {count_timeout} seconds and the DB folder was not created yet")
                 exit(1)
 
+        print(f"DB folder was created after {count} seconds")
         secs_to_start = wait_for_node_to_start(tag_no)
-        print("DB folder was created")
         print(f" - listdir current_directory: {os.listdir(current_directory)}")
         print(f" - listdir db: {os.listdir(current_directory / 'db')}")
         return secs_to_start
@@ -368,18 +369,19 @@ def start_node_unix(env, tag_no):
     print(f"cmd: {cmd}")
 
     try:
-        subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=subprocess.PIPE)
         print("waiting for db folder to be created")
         count = 0
+        count_timeout = 299
         while not os.path.isdir(current_directory / "db"):
-            time.sleep(3)
+            time.sleep(1)
             count += 1
-            if count > 10:
-                print("ERROR: waited 30 seconds and the DB folder was not created yet")
-                break
+            if count > count_timeout:
+                print(f"ERROR: waited {count_timeout} seconds and the DB folder was not created yet")
+                exit(1)
 
+        print(f"DB folder was created after {count} seconds")
         secs_to_start = wait_for_node_to_start(tag_no)
-        print("DB folder was created")
         print(f" - listdir current_directory: {os.listdir(current_directory)}")
         print(f" - listdir db: {os.listdir(current_directory / 'db')}")
         return secs_to_start
