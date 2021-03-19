@@ -472,3 +472,61 @@ def new_tokens(
             raise AssertionError("The token was not minted")
 
     return tokens_to_mint
+
+
+def filtered_ledger_state(
+    cluster_obj: clusterlib.ClusterLib,
+) -> str:
+    """Get filtered output of `query ledger-state`."""
+    cardano_cmd = " ".join(
+        [
+            "cardano-cli",
+            "query",
+            "ledger-state",
+            *cluster_obj.magic_args,
+            *cluster_obj.era_arg,
+            f"--{cluster_obj.protocol}-mode",
+        ]
+    )
+    # get rid of a huge amount of data we don't have any use for
+    cmd = (
+        f"{cardano_cmd} | jq -n --stream -c "
+        "'fromstream(inputs|select((length == 2 and .[0][1] == \"esLState\")|not))'"
+    )
+
+    return helpers.run_command(cmd, shell=True).decode("utf-8").strip()
+
+
+def get_ledger_state(
+    cluster_obj: clusterlib.ClusterLib,
+) -> dict:
+    """Return the current ledger state info."""
+    f_ledger_state = filtered_ledger_state(cluster_obj)
+    if not f_ledger_state:
+        return {}
+    ledger_state: dict = json.loads(f_ledger_state)
+    return ledger_state
+
+
+def save_ledger_state(
+    cluster_obj: clusterlib.ClusterLib,
+    state_name: str,
+    ledger_state: Optional[dict] = None,
+    destination_dir: FileType = ".",
+) -> Path:
+    """Save ledger state to file.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        state_name: A name of the ledger state (can be epoch number, etc.).
+        ledger_state: A dict with ledger state to save (optional).
+        destination_dir: A path to directory for storing the state JSON file (optional).
+
+    Returns:
+        Path: A path to the generated state JSON file.
+    """
+    json_file = Path(destination_dir) / f"{state_name}_ledger_state.json"
+    ledger_state = ledger_state or get_ledger_state(cluster_obj)
+    with open(json_file, "w") as fp_out:
+        json.dump(ledger_state, fp_out, indent=4)
+    return json_file

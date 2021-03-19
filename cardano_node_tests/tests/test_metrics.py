@@ -16,6 +16,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+pytest.skip("metrics data are not stable yet", allow_module_level=True)
 
 if VERSIONS.node < version.parse("1.25.0"):
     pytest.skip(
@@ -26,7 +27,9 @@ if VERSIONS.node < version.parse("1.25.0"):
 @pytest.fixture(scope="module")
 def create_temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir."""
-    return Path(tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__))).resolve()
+    return Path(
+        tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__), numbered=False)
+    ).resolve()
 
 
 @pytest.fixture
@@ -100,8 +103,8 @@ EXPECTED_METRICS = [
 
 @pytest.fixture
 def wait_epochs(cluster: clusterlib.ClusterLib):
-    """Make sure we are not checking metrics in epoch < 3."""
-    epochs_to_wait = 3 - cluster.get_last_block_epoch()
+    """Make sure we are not checking metrics in epoch < 4."""
+    epochs_to_wait = 4 - cluster.get_last_block_epoch()
     if epochs_to_wait > 0:
         cluster.wait_for_new_epoch(new_epochs=epochs_to_wait)
 
