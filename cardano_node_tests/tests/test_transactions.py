@@ -372,6 +372,53 @@ class TestBasic:
         else:
             cluster.cli(cli_args)
 
+    @allure.link(helpers.get_vcs_link())
+    def test_missing_ttl(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        temp_dir: Path,
+    ):
+        """Submit a transaction with a missing `--ttl` (`--invalid-hereafter`) parameter."""
+        temp_template = helpers.get_func_name()
+        src_address = payment_addrs[0].address
+
+        init_balance = cluster.get_address_balance(src_address)
+
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=payment_addrs[0],
+            dst_record=payment_addrs[0],
+            temp_dir=temp_dir,
+        )
+        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+
+        cluster.cli(
+            [
+                "transaction",
+                "build-raw",
+                "--fee",
+                str(tx_raw_output.fee),
+                "--out-file",
+                str(tx_raw_output.out_file),
+                *cluster._prepend_flag("--tx-in", txins),
+                *cluster._prepend_flag("--tx-out", txouts),
+            ]
+        )
+
+        tx_signed_file = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            tx_name=temp_template,
+            signing_key_files=[payment_addrs[0].skey_file],
+        )
+        cluster.submit_tx(tx_signed_file)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert (
+            cluster.get_address_balance(src_address) == init_balance - tx_raw_output.fee
+        ), f"Incorrect balance for source address `{src_address}`"
+
 
 @pytest.mark.testnets
 class TestMultiInOut:
@@ -1446,43 +1493,6 @@ class TestNegative:
                 ]
             )
         assert "fee must be specified" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    def test_missing_ttl(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
-    ):
-        """Try to build a transaction with a missing `--ttl` parameter.
-
-        Expect failure.
-        """
-        temp_template = helpers.get_func_name()
-
-        tx_raw_output = _get_raw_tx_values(
-            cluster_obj=cluster,
-            tx_name=temp_template,
-            src_record=pool_users[0].payment,
-            dst_record=pool_users[1].payment,
-            temp_dir=temp_dir,
-        )
-        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "transaction",
-                    "build-raw",
-                    "--fee",
-                    str(tx_raw_output.fee),
-                    "--out-file",
-                    str(tx_raw_output.out_file),
-                    *cluster._prepend_flag("--tx-in", txins),
-                    *cluster._prepend_flag("--tx-out", txouts),
-                ]
-            )
-        assert "TTL must be specified" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_missing_tx_in(
