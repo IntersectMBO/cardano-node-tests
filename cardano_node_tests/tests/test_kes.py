@@ -128,6 +128,7 @@ class TestKES:
         * restart the node with the new operational certificate
         * check that the pool is not producing any blocks
         * generate new operational certificate with valid `--kes-period` and restart the node
+        * check that the pool is producing blocks again
         """
         pool_name = "node-pool2"
         node_name = "pool2"
@@ -205,7 +206,10 @@ class TestKES:
             cluster_nodes.restart_node(node_name)
             cluster.wait_for_new_epoch()
 
-            LOGGER.info("Checking blocks production for another 3 epochs.")
+            LOGGER.info("Checking blocks production for another 5 epochs.")
+            blocks_made_db = []
+            this_epoch = cluster.get_last_block_epoch()
+            active_again_epoch = this_epoch
             for __ in range(5):
                 _wait_epoch_chores(this_epoch)
                 this_epoch = cluster.get_last_block_epoch()
@@ -214,9 +218,12 @@ class TestKES:
                 blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)[
                     "blocksCurrent"
                 ]
-                assert (
-                    stake_pool_id_dec in blocks_made
-                ), f"The pool '{pool_name}' has not produced blocks in epoch {this_epoch}"
+                blocks_made_db.append(stake_pool_id_dec in blocks_made)
+
+            assert any(blocks_made_db), (
+                f"The pool '{pool_name}' has not produced any blocks "
+                f"since epoch {active_again_epoch}"
+            )
 
     @pytest.mark.run(order=2)
     @allure.link(helpers.get_vcs_link())
