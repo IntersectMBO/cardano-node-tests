@@ -16,6 +16,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+pytest.skip("metrics data are not stable yet", allow_module_level=True)
 
 if VERSIONS.node < version.parse("1.25.0"):
     pytest.skip(
