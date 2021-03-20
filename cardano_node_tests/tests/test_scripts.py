@@ -31,9 +31,9 @@ DATA_DIR = Path(__file__).parent / "data"
 @pytest.fixture(scope="module")
 def create_temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir."""
-    return Path(
-        tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__), numbered=False)
-    ).resolve()
+    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
+    p.mkdir(exist_ok=True, parents=True)
+    return p
 
 
 @pytest.fixture
