@@ -114,7 +114,7 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
     cluster_obj.wait_for_new_epoch()
     epoch_no = cluster_obj.get_last_block_epoch()
-    time.sleep((cluster_obj.slot_length * cluster_obj.epoch_length) - 5)
+    time.sleep((cluster_obj.slot_length * cluster_obj.epoch_length) - 15)
     assert epoch_no == cluster_obj.get_last_block_epoch()
     time.sleep(5)
     assert epoch_no + 1 == cluster_obj.get_last_block_epoch()
