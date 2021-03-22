@@ -16,9 +16,9 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def create_temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir."""
-    return Path(
-        tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__), numbered=False)
-    ).resolve()
+    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
+    p.mkdir(exist_ok=True, parents=True)
+    return p
 
 
 @pytest.fixture
@@ -48,6 +48,6 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check the default protocol mode - command works even without specifying protocol mode."""
-        if not cluster.protocol != clusterlib.Protocols.CARDANO:
+        if cluster.protocol != clusterlib.Protocols.CARDANO:
             pytest.skip("runs on cluster in full cardano mode")
         cluster.cli(["query", "utxo", *cluster.magic_args, *cluster.era_arg])

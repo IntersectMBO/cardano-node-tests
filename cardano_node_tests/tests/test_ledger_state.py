@@ -16,9 +16,9 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def create_temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir."""
-    return Path(
-        tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__), numbered=False)
-    ).resolve()
+    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
+    p.mkdir(exist_ok=True, parents=True)
+    return p
 
 
 @pytest.fixture
@@ -42,7 +42,6 @@ LEDGER_STATE_KEYS = (
 )
 
 
-@pytest.mark.testnets
 class TestLedgerState:
     """Basic tests for ledger state."""
 
