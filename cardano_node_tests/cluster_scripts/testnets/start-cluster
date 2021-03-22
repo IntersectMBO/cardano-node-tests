@@ -28,6 +28,7 @@ fi
 
 # copy faucet address and keys
 cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
+cp -r "$TESTNET_DIR"/nodes/* "$STATE_CLUSTER/nodes"
 
 # copy and edit configuration
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
@@ -89,12 +90,16 @@ for i in {1..2}; do
   pledge_idx="$((i - 1))"
   mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
   echo "Generating Pool $i Secrets"
-  cardano-cli address key-gen \
-    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" \
-    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey"
-  cardano-cli stake-address key-gen \
-    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
-    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
+  if [ ! -e "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" ]; then
+    cardano-cli address key-gen \
+      --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" \
+      --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey"
+  fi
+  if [ ! -e "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" ]; then
+    cardano-cli stake-address key-gen \
+      --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
+      --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
+  fi
   # Payment addresses
   cardano-cli address build \
     --payment-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey" \
@@ -119,10 +124,12 @@ for i in {1..2}; do
   cardano-cli stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
-  cardano-cli node key-gen \
-    --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
-    --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
-    --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter"
+  if [ ! -e "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" ]; then
+    cardano-cli node key-gen \
+      --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+      --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
+      --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter"
+  fi
   cardano-cli node key-gen-KES \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.vkey" \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.skey"
