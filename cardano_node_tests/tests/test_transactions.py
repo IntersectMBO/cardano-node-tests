@@ -375,6 +375,10 @@ class TestBasic:
             cluster.cli(cli_args)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        reason="runs only with Allegra+ TX",
+    )
     def test_missing_ttl(
         self,
         cluster: clusterlib.ClusterLib,
@@ -406,6 +410,7 @@ class TestBasic:
                 str(tx_raw_output.out_file),
                 *cluster._prepend_flag("--tx-in", txins),
                 *cluster._prepend_flag("--tx-out", txouts),
+                *cluster.tx_era_arg,
             ]
         )
 
@@ -1495,6 +1500,48 @@ class TestNegative:
                 ]
             )
         assert "fee must be specified" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era == VERSIONS.SHELLEY,
+        reason="runs only with Shelley TX",
+    )
+    def test_missing_ttl(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        temp_dir: Path,
+    ):
+        """Try to build a Shelley era TX with a missing `--ttl` (`--invalid-hereafter`) parameter.
+
+        Expect failure.
+        """
+        temp_template = helpers.get_func_name()
+
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=pool_users[0].payment,
+            dst_record=pool_users[1].payment,
+            temp_dir=temp_dir,
+        )
+        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "build-raw",
+                    "--fee",
+                    str(tx_raw_output.fee),
+                    "--out-file",
+                    str(tx_raw_output.out_file),
+                    *cluster._prepend_flag("--tx-in", txins),
+                    *cluster._prepend_flag("--tx-out", txouts),
+                    *cluster.tx_era_arg,
+                ]
+            )
+        assert "TTL must be specified" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_missing_tx_in(
