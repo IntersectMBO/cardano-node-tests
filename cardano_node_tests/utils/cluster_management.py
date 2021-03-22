@@ -410,7 +410,7 @@ class _ClusterGetter:
             return False
 
         # setup faucet addresses
-        tmp_path = Path(self.cm.tmp_path_factory.mktemp("addrs_data", numbered=False))
+        tmp_path = Path(self.cm.tmp_path_factory.mktemp("addrs_data"))
         cluster_nodes.setup_test_addrs(cluster_obj, tmp_path)
 
         # create file that indicates that the cluster is running

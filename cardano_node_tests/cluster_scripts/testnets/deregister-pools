@@ -13,6 +13,7 @@ else
   POOL_ARTIFACTS="$STATE_CLUSTER/nodes"
 fi
 
+POOL_ARTIFACTS="$(readlink -m "$POOL_ARTIFACTS")"
 cd "$POOL_ARTIFACTS"
 
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/genesis-shelley.json")"
@@ -58,7 +59,7 @@ done <<< "$(cardano-cli query utxo --testnet-magic \
             grep -E "lovelace$")"
 [ "$TXIN2_AMOUNT" -gt 0 ] || { echo "No funds in pool2 owner address, line $LINENO" >&2; exit 1; }  # assert
 
-TTL="$(jq '.slotNo + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+TTL="$(jq '.slot + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
 
 # find pool deregistration epoch
 cardano-cli stake-pool deregistration-certificate \

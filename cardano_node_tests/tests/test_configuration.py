@@ -19,9 +19,9 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def create_temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir."""
-    return Path(
-        tmp_path_factory.mktemp(helpers.get_id_for_mktemp(__file__), numbered=False)
-    ).resolve()
+    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
+    p.mkdir(exist_ok=True, parents=True)
+    return p
 
 
 @pytest.fixture
@@ -114,7 +114,7 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
     cluster_obj.wait_for_new_epoch()
     epoch_no = cluster_obj.get_last_block_epoch()
-    time.sleep((cluster_obj.slot_length * cluster_obj.epoch_length) - 5)
+    time.sleep((cluster_obj.slot_length * cluster_obj.epoch_length) - 15)
     assert epoch_no == cluster_obj.get_last_block_epoch()
     time.sleep(5)
     assert epoch_no + 1 == cluster_obj.get_last_block_epoch()
