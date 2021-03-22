@@ -42,7 +42,6 @@ LEDGER_STATE_KEYS = (
 )
 
 
-@pytest.mark.testnets
 class TestLedgerState:
     """Basic tests for ledger state."""
 
