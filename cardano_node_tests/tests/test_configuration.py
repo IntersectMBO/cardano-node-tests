@@ -32,6 +32,10 @@ def temp_dir(create_temp_dir: Path):
         yield create_temp_dir
 
 
+# use the "temp_dir" fixture for all tests automatically
+pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
 @pytest.fixture(scope="module")
 def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     """Update *epochLength* to 1200."""
@@ -106,10 +110,6 @@ def cluster_slot_length(
     return cluster_manager.get(
         singleton=True, cleanup=True, start_cmd=str(slot_length_start_cluster)
     )
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:

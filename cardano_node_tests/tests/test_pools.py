@@ -42,6 +42,10 @@ def temp_dir(create_temp_dir: Path):
         yield create_temp_dir
 
 
+# use the "temp_dir" fixture for all tests automatically
+pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
 @pytest.fixture(scope="module")
 def pool_cost_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     """Update *minPoolCost* to 500."""
@@ -78,10 +82,6 @@ def cluster_mincost(
     return cluster_manager.get(
         mark="minPoolCost", cleanup=True, start_cmd=str(pool_cost_start_cluster)
     )
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 def _get_pool_ledger_state(
