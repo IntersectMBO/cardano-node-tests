@@ -13,6 +13,7 @@ from xdist import workermanage
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -46,6 +47,8 @@ def pytest_addoption(parser: Any) -> None:
 
 
 def pytest_configure(config: Any) -> None:
+    # for detecting if code is running in pytest, or imported while e.g. building documentation
+    configuration._called_from_test = True  # type: ignore
     config._metadata["cardano-node"] = str(VERSIONS.node)
     config._metadata["cardano-node rev"] = VERSIONS.git_rev
     config._metadata["ghc"] = VERSIONS.ghc
