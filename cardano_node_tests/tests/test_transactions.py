@@ -376,8 +376,8 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
-        reason="runs only with Allegra+ TX",
+        VERSIONS.transaction_era == VERSIONS.SHELLEY,
+        reason="doesn't run with Shelley TX",
     )
     def test_missing_ttl(
         self,
@@ -1503,7 +1503,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era == VERSIONS.SHELLEY,
+        VERSIONS.transaction_era != VERSIONS.SHELLEY,
         reason="runs only with Shelley TX",
     )
     def test_missing_ttl(
