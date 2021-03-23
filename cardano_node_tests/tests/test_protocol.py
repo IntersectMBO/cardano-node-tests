@@ -8,6 +8,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -55,6 +56,10 @@ PROTOCOL_PARAM_KEYS = (
 
 
 @pytest.mark.testnets
+@pytest.mark.skipif(
+    bool(configuration.TX_ERA),
+    reason="different TX eras doesn't affect this test, pointless to run",
+)
 class TestProtocol:
     """Basic tests for protocol."""
 
