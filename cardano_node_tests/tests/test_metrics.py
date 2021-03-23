@@ -10,6 +10,7 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import model_ekg
 from cardano_node_tests.utils.versions import VERSIONS
@@ -124,6 +125,10 @@ def get_ekg_metrics(port: int) -> requests.Response:
     return response
 
 
+@pytest.mark.skipif(
+    bool(configuration.TX_ERA),
+    reason="different TX eras doesn't affect this test, pointless to run",
+)
 class TestPrometheus:
     """Prometheus metrics tests."""
 
@@ -147,6 +152,10 @@ class TestPrometheus:
         assert metrics_keys == EXPECTED_METRICS, "Metrics differ"
 
 
+@pytest.mark.skipif(
+    bool(configuration.TX_ERA),
+    reason="different TX eras doesn't affect this test, pointless to run",
+)
 class TestEKG:
     """EKG metrics tests."""
 

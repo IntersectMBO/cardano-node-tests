@@ -14,6 +14,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 
@@ -86,6 +87,10 @@ class TestKES:
 
     @pytest.mark.run(order=3)
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        bool(configuration.TX_ERA),
+        reason="different TX eras doesn't affect this test, pointless to run",
+    )
     def test_expired_kes(
         self,
         cluster_kes: clusterlib.ClusterLib,
@@ -294,6 +299,10 @@ class TestKES:
                     ), f"The pool '{pool_name}' has not produced blocks in epoch {this_epoch}"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        bool(configuration.TX_ERA),
+        reason="different TX eras doesn't affect this test, pointless to run",
+    )
     def test_no_kes_period_arg(
         self,
         cluster: clusterlib.ClusterLib,
