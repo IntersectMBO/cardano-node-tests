@@ -7,22 +7,16 @@ import pytest
 import requests
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import model_ekg
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-pytest.skip("metrics data are not stable yet", allow_module_level=True)
-
-if VERSIONS.node < version.parse("1.25.0"):
-    pytest.skip(
-        f"metrics data not available for node version {VERSIONS.node}", allow_module_level=True
-    )
+if getattr(configuration, "_called_from_test", None):
+    pytest.skip("metrics data are not stable yet", allow_module_level=True)
 
 
 @pytest.fixture(scope="module")
