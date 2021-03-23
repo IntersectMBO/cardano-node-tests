@@ -821,7 +821,7 @@ class TestTimeLocking:
             multisig_script=multisig_script,
             payment_skey_files=payment_skey_files,
             invalid_before=100,
-            invalid_hereafter=cluster.get_last_block_slot_no() + 1000,
+            invalid_hereafter=cluster.get_slot_no() + 1000,
             script_is_src=True,
         )
 
@@ -835,7 +835,7 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        before_slot = cluster.get_last_block_slot_no() + 10_000
+        before_slot = cluster.get_slot_no() + 10_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -872,7 +872,7 @@ class TestTimeLocking:
             multisig_script=multisig_script,
             payment_skey_files=payment_skey_files,
             invalid_before=100,
-            invalid_hereafter=cluster.get_last_block_slot_no() + 1000,
+            invalid_hereafter=cluster.get_slot_no() + 1000,
             script_is_src=True,
         )
 
@@ -889,7 +889,7 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        before_slot = cluster.get_last_block_slot_no() - 1
+        before_slot = cluster.get_slot_no() - 1
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -961,7 +961,7 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        before_slot = cluster.get_last_block_slot_no() + 10_000
+        before_slot = cluster.get_slot_no() + 10_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -1017,7 +1017,7 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        after_slot = cluster.get_last_block_slot_no() + 10_000
+        after_slot = cluster.get_slot_no() + 10_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -1089,7 +1089,7 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        after_slot = cluster.get_last_block_slot_no() - 1
+        after_slot = cluster.get_slot_no() - 1
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(

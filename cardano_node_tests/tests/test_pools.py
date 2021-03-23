@@ -406,7 +406,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -472,7 +472,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -526,7 +526,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -603,7 +603,7 @@ class TestStakePool:
         __, tx_raw_output = cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -700,7 +700,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -768,7 +768,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -837,7 +837,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 2,
+            epoch=cluster.get_epoch() + 2,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -897,7 +897,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -1001,7 +1001,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -1095,7 +1095,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -1222,7 +1222,7 @@ class TestStakePool:
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=node_cold,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -1286,7 +1286,7 @@ class TestStakePool:
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
         )
 
         # register and deregister stake pool in single TX
@@ -1666,7 +1666,7 @@ class TestNegative:
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
-            epoch=cluster.get_last_block_epoch() + 2,
+            epoch=cluster.get_epoch() + 2,
         )
 
         tx_files = clusterlib.TxFiles(

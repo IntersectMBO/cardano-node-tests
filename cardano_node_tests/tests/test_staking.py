@@ -802,7 +802,7 @@ class TestRewards:
             sleep_time = cluster.time_to_next_epoch_start() - 18
         time.sleep(sleep_time)
 
-        init_epoch = cluster.get_last_block_epoch()
+        init_epoch = cluster.get_epoch()
         user_rewards = [(init_epoch, 0, 0)]
         owner_rewards = [
             (
@@ -835,7 +835,7 @@ class TestRewards:
 
         # make sure we managed to finish registration in the expected epoch
         assert (
-            cluster.get_last_block_epoch() == init_epoch
+            cluster.get_epoch() == init_epoch
         ), "Registration took longer than expected and would affect other checks"
 
         user_stake_addr_dec = helpers.decode_bech32(pool_user.stake.address)[2:]
@@ -927,7 +927,7 @@ class TestRewards:
             ) = owner_rewards[-1]
 
             # wait for new epoch
-            if cluster.get_last_block_epoch() == prev_owner_epoch:
+            if cluster.get_epoch() == prev_owner_epoch:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
@@ -935,7 +935,7 @@ class TestRewards:
             assert sleep_time >= 0, "Not enough time left in epoch"
             time.sleep(sleep_time)
 
-            this_epoch = cluster.get_last_block_epoch()
+            this_epoch = cluster.get_epoch()
 
             # current reward balances
             user_reward = cluster.get_stake_addr_info(
@@ -985,7 +985,7 @@ class TestRewards:
             )
 
         # withdraw rewards to payment address
-        if this_epoch == cluster.get_last_block_epoch():
+        if this_epoch == cluster.get_epoch():
             cluster.wait_for_new_epoch()
         cluster.withdraw_reward(
             stake_addr_record=pool_user.stake,
@@ -1071,7 +1071,7 @@ class TestRewards:
             sleep_time = cluster.time_to_next_epoch_start() - 18
         time.sleep(sleep_time)
 
-        init_epoch = cluster.get_last_block_epoch()
+        init_epoch = cluster.get_epoch()
 
         # update the pool parameters by resubmitting the pool registration certificate
         cluster.register_stake_pool(
@@ -1096,7 +1096,7 @@ class TestRewards:
 
         # make sure we managed to finish pool update in the expected epoch
         assert (
-            cluster.get_last_block_epoch() == init_epoch
+            cluster.get_epoch() == init_epoch
         ), "Pool update took longer than expected and would affect other checks"
 
         # ledger state db
@@ -1184,7 +1184,7 @@ class TestRewards:
             ) = owner_rewards[-1]
 
             # wait for new epoch
-            if cluster.get_last_block_epoch() == prev_epoch:
+            if cluster.get_epoch() == prev_epoch:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
@@ -1192,7 +1192,7 @@ class TestRewards:
             assert sleep_time >= 0, "Not enough time left in epoch"
             time.sleep(sleep_time)
 
-            this_epoch = cluster.get_last_block_epoch()
+            this_epoch = cluster.get_epoch()
 
             # current reward balances
             owner_reward = cluster.get_stake_addr_info(
@@ -1257,7 +1257,7 @@ class TestRewards:
 
                 # make sure we managed to finish deregistration in the expected epoch
                 assert (
-                    cluster.get_last_block_epoch() == this_epoch
+                    cluster.get_epoch() == this_epoch
                 ), "Deregistration took longer than expected and would affect other checks"
 
             _check_ledger_state(
@@ -1363,7 +1363,7 @@ class TestRewards:
         def _withdraw():
             rewards = cluster.get_stake_addr_info(pool_user.stake.address).reward_account_balance
             if rewards:
-                epoch = cluster.get_last_block_epoch()
+                epoch = cluster.get_epoch()
                 payment_balance = cluster.get_address_balance(pool_user.payment.address)
                 rewards_rec.append(rewards)
                 LOGGER.info(f"epoch {epoch} - reward: {rewards}, payment: {payment_balance}")
@@ -2093,7 +2093,7 @@ class TestRewards:
             __, tx_raw_output = cluster.deregister_stake_pool(
                 pool_owners=[pool_owner],
                 cold_key_pair=node_cold,
-                epoch=cluster.get_last_block_epoch() + 1,
+                epoch=cluster.get_epoch() + 1,
                 pool_name=pool_name,
                 tx_name=temp_template,
             )
