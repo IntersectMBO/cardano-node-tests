@@ -12,6 +12,14 @@ cardano\_node\_tests.tests.conftest module
    :undoc-members:
    :show-inheritance:
 
+cardano\_node\_tests.tests.test\_cli module
+-------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_cli
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 cardano\_node\_tests.tests.test\_configuration module
 -----------------------------------------------------
 
