@@ -73,7 +73,7 @@ class TestProtocol:
     def test_protocol_state_outfile(self, cluster: clusterlib.ClusterLib):
         """Check output file produced by `query protocol-state`."""
         protocol_state: dict = json.loads(
-            cluster.query_cli(["protocol-state", *cluster.era_arg, "--out-file", "/dev/stdout"])
+            cluster.query_cli(["protocol-state", "--out-file", "/dev/stdout"])
         )
         assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
 

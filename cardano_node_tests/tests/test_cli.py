@@ -9,7 +9,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,15 +38,7 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.cluster_era < VERSIONS.MARY or configuration.TX_ERA,
-        reason="runs on Mary+, different TX eras doesn't affect this test",
-    )
-    def test_default_era(self, cluster: clusterlib.ClusterLib):
-        """Check the default era - command works even without specifying era."""
-        cluster.cli(["query", "utxo", *cluster.magic_args, f"--{cluster.protocol}-mode"])
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
+        configuration.TX_ERA,
         bool(configuration.TX_ERA),
         reason="different TX eras doesn't affect this test, pointless to run",
     )
@@ -55,4 +46,4 @@ class TestCLI:
         """Check the default protocol mode - command works even without specifying protocol mode."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:
             pytest.skip("runs on cluster in full cardano mode")
-        cluster.cli(["query", "utxo", *cluster.magic_args, *cluster.era_arg])
+        cluster.cli(["query", "utxo", *cluster.magic_args])

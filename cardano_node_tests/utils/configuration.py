@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 
 
-CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or "mary"
-if CLUSTER_ERA not in ("shelley", "allegra", "mary"):
+CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
+if CLUSTER_ERA not in ("", "shelley", "allegra", "mary"):
     raise RuntimeError(f"Invalid CLUSTER_ERA: {CLUSTER_ERA}")
 
 TX_ERA = os.environ.get("TX_ERA") or ""
