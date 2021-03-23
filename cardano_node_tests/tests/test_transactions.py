@@ -1158,7 +1158,7 @@ class TestNegative:
 
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=dst_address, amount=100)]
-        ttl = cluster.get_last_block_slot_no() - 1
+        ttl = cluster.get_slot_no() - 1
         fee = cluster.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
