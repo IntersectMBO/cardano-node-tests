@@ -112,16 +112,16 @@ The documentation is generated to `docs/build/html`.
 To publish documentation to https://input-output-hk.github.io/cardano-node-tests/, run:
 
 ```sh
-# checkout the "test_reports" branch
-$ git checkout test_reports
+# checkout the "github_pages" branch
+$ git checkout github_pages
 # copy/move content of docs/build/html to docs
 $ mv docs/build/html/* docs/
 # stage changes
 $ git add docs
 # commit changes
 $ git commit
-# push to origin/test_reports (upstream/test_reports)
-$ git push origin test_reports
+# push to origin/github_pages (upstream/github_pages)
+$ git push origin github_pages
 ```
 
 
