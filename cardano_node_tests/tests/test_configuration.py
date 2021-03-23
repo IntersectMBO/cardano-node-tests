@@ -124,7 +124,7 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
 
 @pytest.mark.run(order=3)
 @pytest.mark.skipif(
-    configuration.TX_ERA,
+    bool(configuration.TX_ERA),
     reason="different TX eras doesn't affect this test, pointless to run",
 )
 class TestBasic:
