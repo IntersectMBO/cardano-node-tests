@@ -38,7 +38,6 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        configuration.TX_ERA,
         bool(configuration.TX_ERA),
         reason="different TX eras doesn't affect this test, pointless to run",
     )
