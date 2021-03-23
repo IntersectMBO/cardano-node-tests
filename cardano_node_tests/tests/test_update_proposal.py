@@ -29,15 +29,15 @@ def temp_dir(create_temp_dir: Path):
         yield create_temp_dir
 
 
+# use the "temp_dir" fixture for all tests automatically
+pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
 @pytest.fixture
 def cluster_update_proposal(
     cluster_manager: cluster_management.ClusterManager,
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(singleton=True, cleanup=True)
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 @pytest.mark.run(order=3)

@@ -35,6 +35,10 @@ def temp_dir(create_temp_dir: Path):
         yield create_temp_dir
 
 
+# use the "temp_dir" fixture for all tests automatically
+pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
 @pytest.fixture
 def cluster_use_pool1(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(use_resources=["node-pool1"])
@@ -83,10 +87,6 @@ def pool_users_disposable(
         no_of_addr=2,
     )
     return pool_users
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 def _get_key_hashes(rec: dict) -> List[str]:
