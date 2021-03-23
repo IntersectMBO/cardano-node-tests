@@ -1,14 +1,11 @@
 # Minimal makefile for Sphinx documentation
 
-SPHINXOPTS             ?=
-SPHINXBUILD            ?= sphinx-build
-SPHINXAPIDOC           ?= sphinx-apidoc
-SOURCEDIR              = source
-BUILDDIR               = build
-MODDIR                 ?= ../cardano_node_tests
-CARDANO_TESTS_GIT_REV  ?= $(shell git rev-parse HEAD)
-
-export CARDANO_TESTS_GIT_REV
+SPHINXOPTS    ?=
+SPHINXBUILD   ?= sphinx-build
+SPHINXAPIDOC  ?= sphinx-apidoc
+SOURCEDIR     = source
+BUILDDIR      = build
+MODDIR        ?= ../cardano_node_tests
 
 # Put it first so that "make" without argument is like "make help".
 help:
