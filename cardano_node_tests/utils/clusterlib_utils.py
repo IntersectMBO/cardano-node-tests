@@ -484,7 +484,6 @@ def filtered_ledger_state(
             "query",
             "ledger-state",
             *cluster_obj.magic_args,
-            *cluster_obj.era_arg,
             f"--{cluster_obj.protocol}-mode",
         ]
     )
