@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -112,15 +113,20 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
+    end_sec = 15
     cluster_obj.wait_for_new_epoch()
     epoch_no = cluster_obj.get_last_block_epoch()
-    time.sleep((cluster_obj.slot_length * cluster_obj.epoch_length) - 15)
+    time.sleep((cluster_obj.slot_length * cluster_obj.epoch_length) - end_sec)
     assert epoch_no == cluster_obj.get_last_block_epoch()
-    time.sleep(5)
+    time.sleep(end_sec)
     assert epoch_no + 1 == cluster_obj.get_last_block_epoch()
 
 
 @pytest.mark.run(order=3)
+@pytest.mark.skipif(
+    configuration.TX_ERA,
+    reason="different TX eras doesn't affect this test, pointless to run",
+)
 class TestBasic:
     """Basic tests for node configuration."""
 
