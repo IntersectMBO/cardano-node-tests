@@ -112,13 +112,13 @@ class TestKES:
             LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
             time.sleep(expire_timeout)
 
-            init_slot = cluster.get_last_block_slot_no()
+            init_slot = cluster.get_slot_no()
 
             kes_period_timeout = int(cluster.slots_per_kes_period * cluster.slot_length + 1)
             LOGGER.info(f"Waiting for {kes_period_timeout} sec for next KES period.")
             time.sleep(kes_period_timeout)
 
-        assert cluster.get_last_block_slot_no() == init_slot, "Unexpected new slots"
+        assert cluster.get_slot_no() == init_slot, "Unexpected new slots"
 
     @pytest.mark.run(order=1)
     @allure.link(helpers.get_vcs_link())
@@ -150,7 +150,7 @@ class TestKES:
 
         def _wait_epoch_chores(this_epoch: int):
             # wait for next epoch
-            if cluster.get_last_block_epoch() == this_epoch:
+            if cluster.get_epoch() == this_epoch:
                 cluster.wait_for_new_epoch()
 
             # wait for the end of the epoch
@@ -159,7 +159,7 @@ class TestKES:
             # save ledger state
             clusterlib_utils.save_ledger_state(
                 cluster_obj=cluster,
-                state_name=f"{temp_template}_{cluster.get_last_block_epoch()}",
+                state_name=f"{temp_template}_{cluster.get_epoch()}",
             )
 
         with cluster_manager.restart_on_failure():
@@ -169,7 +169,7 @@ class TestKES:
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-                kes_period=cluster.get_last_block_kes_period() - 5,
+                kes_period=cluster.get_kes_period() - 5,
             )
 
             expected_errors = [
@@ -186,7 +186,7 @@ class TestKES:
                 this_epoch = -1
                 for __ in range(5):
                     _wait_epoch_chores(this_epoch)
-                    this_epoch = cluster.get_last_block_epoch()
+                    this_epoch = cluster.get_epoch()
 
                     # check that the pool is not producing any blocks
                     blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)[
@@ -204,7 +204,7 @@ class TestKES:
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-                kes_period=cluster.get_last_block_kes_period(),
+                kes_period=cluster.get_kes_period(),
             )
             # copy the new certificate and restart the node
             shutil.move(str(valid_opcert_file), str(opcert_file))
@@ -213,11 +213,11 @@ class TestKES:
 
             LOGGER.info("Checking blocks production for another 5 epochs.")
             blocks_made_db = []
-            this_epoch = cluster.get_last_block_epoch()
+            this_epoch = cluster.get_epoch()
             active_again_epoch = this_epoch
             for __ in range(5):
                 _wait_epoch_chores(this_epoch)
-                this_epoch = cluster.get_last_block_epoch()
+                this_epoch = cluster.get_epoch()
 
                 # check that the pool is producing blocks
                 blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)[
@@ -263,7 +263,7 @@ class TestKES:
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-                kes_period=cluster.get_last_block_kes_period(),
+                kes_period=cluster.get_kes_period(),
             )
 
             # restart the node with the new operational certificate
@@ -275,12 +275,12 @@ class TestKES:
             this_epoch = -1
             for __ in range(5):
                 # wait for next epoch
-                if cluster.get_last_block_epoch() == this_epoch:
+                if cluster.get_epoch() == this_epoch:
                     cluster.wait_for_new_epoch()
 
                 # wait for the end of the epoch
                 time.sleep(cluster.time_to_next_epoch_start() - 5)
-                this_epoch = cluster.get_last_block_epoch()
+                this_epoch = cluster.get_epoch()
 
                 ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
 
