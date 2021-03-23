@@ -7,6 +7,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -38,14 +39,18 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.MARY,
-        reason="runs on Mary+",
+        VERSIONS.cluster_era < VERSIONS.MARY or configuration.TX_ERA,
+        reason="runs on Mary+, different TX eras doesn't affect this test",
     )
     def test_default_era(self, cluster: clusterlib.ClusterLib):
         """Check the default era - command works even without specifying era."""
         cluster.cli(["query", "utxo", *cluster.magic_args, f"--{cluster.protocol}-mode"])
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        bool(configuration.TX_ERA),
+        reason="different TX eras doesn't affect this test, pointless to run",
+    )
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check the default protocol mode - command works even without specifying protocol mode."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:

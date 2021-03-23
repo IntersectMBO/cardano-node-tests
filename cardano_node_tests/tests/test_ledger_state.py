@@ -8,6 +8,7 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -46,6 +47,10 @@ class TestLedgerState:
     """Basic tests for ledger state."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        bool(configuration.TX_ERA),
+        reason="different TX eras doesn't affect this test, pointless to run",
+    )
     def test_ledger_state_keys(self, cluster: clusterlib.ClusterLib):
         """Check output of `query ledger-state`."""
         ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
