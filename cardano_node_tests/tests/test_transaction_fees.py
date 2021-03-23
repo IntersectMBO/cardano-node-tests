@@ -409,7 +409,7 @@ class TestExpectedFees:
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
-            epoch=cluster.get_last_block_epoch() + 1,
+            epoch=cluster.get_epoch() + 1,
         )
 
         tx_files = clusterlib.TxFiles(
