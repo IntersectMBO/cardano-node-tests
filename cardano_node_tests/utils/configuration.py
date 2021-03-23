@@ -25,5 +25,7 @@ else:
     TESTNET_SCRIPTS_DIR = ""
 
 SCRIPTS_DIR = (
-    Path(__file__).parent.parent / "cluster_scripts" / (TESTNET_SCRIPTS_DIR or CLUSTER_ERA)
+    Path(__file__).parent.parent
+    / "cluster_scripts"
+    / (TESTNET_SCRIPTS_DIR or CLUSTER_ERA or "mary")
 )
