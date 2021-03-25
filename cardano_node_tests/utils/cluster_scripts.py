@@ -32,24 +32,21 @@ class InstancePorts(NamedTuple):
     base: int
     webserver: int
     bft1: int
-    bft2: int
-    bft3: int
     relay1: int
     pool1: int
     pool2: int
+    pool3: int
     supervisor: int
     ekg_bft1: int
-    ekg_bft2: int
-    ekg_bft3: int
     ekg_relay1: int
     ekg_pool1: int
     ekg_pool2: int
+    ekg_pool3: int
     prometheus_bft1: int
-    prometheus_bft2: int
-    prometheus_bft3: int
     prometheus_relay1: int
     prometheus_pool1: int
     prometheus_pool2: int
+    prometheus_pool3: int
 
 
 class ScriptsTypes:
@@ -101,24 +98,21 @@ class DevopsScripts(ScriptsTypes):
             base=base,
             webserver=base,
             bft1=base + 1,
-            bft2=0,
-            bft3=0,
             relay1=0,
             pool1=base + 2,
             pool2=base + 3,
+            pool3=0,
             supervisor=12001 + instance_num,
             ekg_bft1=ekg,
-            ekg_bft2=0,
-            ekg_bft3=0,
             ekg_relay1=0,
             ekg_pool1=ekg,
             ekg_pool2=ekg,
+            ekg_pool3=0,
             prometheus_bft1=prometheus,
-            prometheus_bft2=0,
-            prometheus_bft3=0,
             prometheus_relay1=0,
             prometheus_pool1=prometheus,
             prometheus_pool2=prometheus,
+            prometheus_pool3=0,
         )
         return ports
 
@@ -302,24 +296,21 @@ class LocalScripts(ScriptsTypes):
             base=base,
             webserver=base,
             bft1=base + 1,
-            bft2=base + 2,
-            bft3=base + 3,
             relay1=0,
-            pool1=base + 4,
-            pool2=base + 5,
+            pool1=base + 2,
+            pool2=base + 3,
+            pool3=base + 4,
             supervisor=12001 + instance_num,
             ekg_bft1=metrics_base,
-            ekg_bft2=metrics_base + 2,
-            ekg_bft3=metrics_base + 4,
             ekg_relay1=0,
-            ekg_pool1=metrics_base + 6,
-            ekg_pool2=metrics_base + 8,
+            ekg_pool1=metrics_base + 2,
+            ekg_pool2=metrics_base + 4,
+            ekg_pool3=metrics_base + 6,
             prometheus_bft1=metrics_base + 1,
-            prometheus_bft2=metrics_base + 3,
-            prometheus_bft3=metrics_base + 5,
             prometheus_relay1=0,
-            prometheus_pool1=metrics_base + 7,
-            prometheus_pool2=metrics_base + 9,
+            prometheus_pool1=metrics_base + 3,
+            prometheus_pool2=metrics_base + 5,
+            prometheus_pool3=metrics_base + 7,
         )
         return ports
 
@@ -422,24 +413,21 @@ class TestnetScripts(ScriptsTypes):
             base=base,
             webserver=base,
             bft1=0,
-            bft2=0,
-            bft3=0,
             relay1=base + 1,
             pool1=base + 4,
             pool2=base + 5,
+            pool3=0,
             supervisor=12001 + instance_num,
             ekg_bft1=0,
-            ekg_bft2=0,
-            ekg_bft3=0,
             ekg_relay1=metrics_base,
             ekg_pool1=metrics_base + 6,
             ekg_pool2=metrics_base + 8,
+            ekg_pool3=0,
             prometheus_bft1=0,
-            prometheus_bft2=0,
-            prometheus_bft3=0,
             prometheus_relay1=metrics_base + 1,
             prometheus_pool1=metrics_base + 7,
             prometheus_pool2=metrics_base + 9,
+            prometheus_pool3=0,
         )
         return ports
 
@@ -575,23 +563,20 @@ class TestnetNopoolsScripts(TestnetScripts):
             base=base,
             webserver=0,
             bft1=0,
-            bft2=0,
-            bft3=0,
             relay1=base + 1,
             pool1=0,
             pool2=0,
+            pool3=0,
             supervisor=12001 + instance_num,
             ekg_bft1=0,
-            ekg_bft2=0,
-            ekg_bft3=0,
             ekg_relay1=metrics_base,
             ekg_pool1=0,
             ekg_pool2=0,
+            ekg_pool3=0,
             prometheus_bft1=0,
-            prometheus_bft2=0,
-            prometheus_bft3=0,
             prometheus_relay1=metrics_base + 1,
             prometheus_pool1=0,
             prometheus_pool2=0,
+            prometheus_pool3=0,
         )
         return ports
