@@ -206,7 +206,7 @@ class LocalCluster(ClusterType):
         LOGGER.debug("Funding created addresses.")
         # update `addrs_data` with byron addresses
         byron_dir = get_cluster_env().state_dir / "byron"
-        for b in range(3):
+        for b in range(len(list(byron_dir.glob("*.skey")))):
             byron_addr = {
                 "payment": clusterlib.AddressRecord(
                     address=clusterlib.read_address_from_file(
@@ -423,16 +423,10 @@ def restart_node(node_name: str) -> None:
 def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Load data for pools existing in the cluster environment."""
     data_dir = get_cluster_env().state_dir / "nodes"
-    pools = ("node-pool1", "node-pool2")
 
     pools_data = {}
-    for pool_name in pools:
-        pool_data_dir = data_dir / pool_name
-        if not pool_data_dir.exists():
-            LOGGER.info(f"The data for pool '{pool_name}' doesn't exist.")
-            continue
-
-        pools_data[pool_name] = {
+    for pool_data_dir in data_dir.glob("node-pool*"):
+        pools_data[pool_data_dir.name] = {
             "payment": clusterlib.AddressRecord(
                 address=clusterlib.read_address_from_file(pool_data_dir / "owner.addr"),
                 vkey_file=pool_data_dir / "owner-utxo.vkey",
