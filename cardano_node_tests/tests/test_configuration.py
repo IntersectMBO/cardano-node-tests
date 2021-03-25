@@ -57,7 +57,7 @@ def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         with open(startup_files.genesis_spec) as fp_in:
             genesis_spec = json.load(fp_in)
 
-        genesis_spec["epochLength"] = 1200
+        genesis_spec["epochLength"] = 1500
 
         with open(startup_files.genesis_spec, "w") as fp_out:
             json.dump(genesis_spec, fp_out)
@@ -113,7 +113,7 @@ def cluster_slot_length(
 
 
 def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
-    end_sec = 15
+    end_sec = 30
     cluster_obj.wait_for_new_epoch()
     epoch = cluster_obj.get_epoch()
     time.sleep((cluster_obj.slot_length * cluster_obj.epoch_length) - end_sec)
@@ -136,7 +136,7 @@ class TestBasic:
         cluster = cluster_epoch_length
 
         assert cluster.slot_length == 0.2
-        assert cluster.epoch_length == 1200
+        assert cluster.epoch_length == 1500
         check_epoch_length(cluster)
 
     @pytest.mark.run(order=2)
