@@ -220,17 +220,8 @@ echo "Transfering funds to pool owners, registering pools and delegations"
 
 # Tranfer funds, register pools and delegations, all in one big transaction:
 
-# figure out what is the current era
-ERA="$({ cardano-cli query protocol-parameters \
-          --shelley-era \
-          --testnet-magic 3 \
-          --out-file /dev/null 2>&1 || :; } |
-          sed -n 's/.*{ledgerEraName = "\([^"]*\)".*/\L\1/p;')"
-[ -n "$ERA" ] || ERA="shelley"
-
 cardano-cli query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
-  --"$ERA"-era \
   --out-file "$STATE_CLUSTER/pparams.json"
 
 TXIN_ADDR="$(<"$STATE_CLUSTER"/shelley/faucet.addr)"
@@ -252,9 +243,8 @@ while read -r txhash txix amount _; do
   fi
 done <<< "$(cardano-cli query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
-            --"$ERA"-era \
             --address "$TXIN_ADDR" |
-            grep -E "lovelace$")"
+            grep -E "lovelace$|[0-9]$")"
 
 TTL="$(jq '.slot + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
 
