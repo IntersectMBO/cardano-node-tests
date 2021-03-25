@@ -36,6 +36,10 @@ def temp_dir(create_temp_dir: Path):
         yield create_temp_dir
 
 
+# use the "temp_dir" fixture for all tests automatically
+pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
 @pytest.fixture
 def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(lock_resources=["node-pool2"])
@@ -76,10 +80,6 @@ def cluster_kes(
     cluster_manager: cluster_management.ClusterManager, short_kes_start_cluster: Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(singleton=True, cleanup=True, start_cmd=str(short_kes_start_cluster))
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 class TestKES:
