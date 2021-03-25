@@ -72,13 +72,13 @@ Variables for `make tests` and `make testnets`
 * `TEST_THREADS` - specifies number of pytest workers
 * `CLUSTERS_COUNT` - number of cluster instances that will be started
 * `CLUSTER_ERA` - cluster era for cardano node - used for selecting correct cluster start script
-* `TX_ERA` - era for transactions - can be used for creating Shelley-era transactions on Allegra era
+* `TX_ERA` - era for transactions - can be used for creating Shelley-era (Allegra-era, ...) transactions
 * `NOPOOLS` - when running tests on testnet, a cluster with no staking pools will be created
 * `BOOTSTRAP_DIR` - path to a bootstrap dir for given testnet (genesis files, config files, faucet data)
 
 E.g.
 ```sh
-$ SCHEDULING_LOG=testrun_20201208_1.log TEST_THREADS=3 CLUSTER_ERA=allegra TX_ERA=shelley PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
+$ SCHEDULING_LOG=testrun_20201208_1.log TEST_THREADS=3 CLUSTER_ERA=mary TX_ERA=shelley PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
 ```
 
 

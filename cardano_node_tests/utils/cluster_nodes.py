@@ -45,7 +45,6 @@ class Testnets:
 class ClusterType:
     """Generic cluster type."""
 
-    DEVOPS = "devops"
     LOCAL = "local"
     TESTNET = "testnet"
     TESTNET_NOPOOLS = "testnet_nopools"
@@ -71,57 +70,6 @@ def _datetime2timestamp(datetime_str: str) -> int:
     converted_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
     timestamp = converted_time.replace(tzinfo=timezone.utc).timestamp()
     return int(timestamp)
-
-
-class DevopsCluster(ClusterType):
-    """DevOps cluster type (shelley-only mode)."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.type = ClusterType.DEVOPS
-        self.cluster_scripts = cluster_scripts.DevopsScripts()
-
-    def get_cluster_obj(self) -> clusterlib.ClusterLib:
-        """Return instance of `ClusterLib` (cluster_obj)."""
-        cluster_env = get_cluster_env()
-        cluster_obj = clusterlib.ClusterLib(
-            state_dir=cluster_env.state_dir,
-            protocol=clusterlib.Protocols.SHELLEY,
-            era=cluster_env.cluster_era,
-            tx_era=cluster_env.tx_era,
-        )
-        return cluster_obj
-
-    def create_addrs_data(
-        self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
-    ) -> Dict[str, Dict[str, Any]]:
-        """Create addresses and their keys for usage in tests."""
-        destination_dir = Path(destination_dir).expanduser()
-        destination_dir.mkdir(parents=True, exist_ok=True)
-        cluster_env = get_cluster_env()
-        instance_num = cluster_env.instance_num
-
-        addrs_data: Dict[str, Dict[str, Any]] = {}
-        for addr_name in self.test_addr_records:
-            addr_name_instance = f"{addr_name}_ci{instance_num}"
-            payment = cluster_obj.gen_payment_addr_and_keys(
-                name=addr_name_instance,
-                destination_dir=destination_dir,
-            )
-            addrs_data[addr_name] = {
-                "payment": payment,
-            }
-
-        LOGGER.debug("Funding created addresses.")
-        # fund from shelley genesis
-        clusterlib_utils.fund_from_genesis(
-            *[d["payment"].address for d in addrs_data.values()],
-            cluster_obj=cluster_obj,
-            amount=6_000_000_000_000,
-            destination_dir=destination_dir,
-        )
-
-        return addrs_data
 
 
 class LocalCluster(ClusterType):
@@ -162,7 +110,7 @@ class LocalCluster(ClusterType):
             self._slots_offset = 0
             return 0
 
-        # assume that shelley starts at epoch 2, i.e. after single byron epoch
+        # assume that shelley starts at epoch 1, i.e. after a single byron epoch
         slots_in_byron = int(byron_epoch_sec / slot_duration_byron)
         slots_in_shelley = int(shelley_epoch_sec / slot_duration_shelley)
         offset = slots_in_shelley - slots_in_byron
@@ -206,7 +154,7 @@ class LocalCluster(ClusterType):
         LOGGER.debug("Funding created addresses.")
         # update `addrs_data` with byron addresses
         byron_dir = get_cluster_env().state_dir / "byron"
-        for b in range(3):
+        for b in range(len(list(byron_dir.glob("*.skey")))):
             byron_addr = {
                 "payment": clusterlib.AddressRecord(
                     address=clusterlib.read_address_from_file(
@@ -289,7 +237,7 @@ class TestnetCluster(ClusterType):
         slot_duration_byron = float(slot_duration_byron_msec / 1000)
         slot_duration_shelley = float(genesis_shelley["slotLength"])
 
-        # assume that epoch length is the same for byron and shelley
+        # assume that epoch length is the same for byron and shelley epochs
         slots_in_byron = int(offset_sec / slot_duration_byron)
         slots_in_shelley = int(offset_sec / slot_duration_shelley)
         offset = slots_in_shelley - slots_in_byron
@@ -348,8 +296,6 @@ def get_cluster_type() -> ClusterType:
         return TestnetNopoolsCluster()
     if configuration.BOOTSTRAP_DIR:
         return TestnetCluster()
-    if configuration.CLUSTER_ERA == clusterlib.Eras.SHELLEY:
-        return DevopsCluster()
     return LocalCluster()
 
 
@@ -423,16 +369,10 @@ def restart_node(node_name: str) -> None:
 def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Load data for pools existing in the cluster environment."""
     data_dir = get_cluster_env().state_dir / "nodes"
-    pools = ("node-pool1", "node-pool2")
 
     pools_data = {}
-    for pool_name in pools:
-        pool_data_dir = data_dir / pool_name
-        if not pool_data_dir.exists():
-            LOGGER.info(f"The data for pool '{pool_name}' doesn't exist.")
-            continue
-
-        pools_data[pool_name] = {
+    for pool_data_dir in data_dir.glob("node-pool*"):
+        pools_data[pool_data_dir.name] = {
             "payment": clusterlib.AddressRecord(
                 address=clusterlib.read_address_from_file(pool_data_dir / "owner.addr"),
                 vkey_file=pool_data_dir / "owner-utxo.vkey",
