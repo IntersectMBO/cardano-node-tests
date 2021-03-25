@@ -14,7 +14,7 @@ class Versions:
     MARY = 4
 
     def __init__(self) -> None:
-        cluster_era = configuration.CLUSTER_ERA
+        cluster_era = configuration.CLUSTER_ERA or "mary"
         # if not specified otherwise, transaction era is the same as cluster era
         transaction_era = configuration.TX_ERA or cluster_era
 

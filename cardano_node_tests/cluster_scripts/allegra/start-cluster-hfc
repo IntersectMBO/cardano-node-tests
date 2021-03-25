@@ -264,13 +264,11 @@ cardano-cli governance create-update-proposal \
 # Tranfer funds, register pools and delegations, submit update proposal, all in one big transaction:
 
 cardano-cli query protocol-parameters \
-  --shelley-era \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
 TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-001-converted)"
 UTXO="$(cardano-cli query utxo \
-          --shelley-era \
           --testnet-magic "$NETWORK_MAGIC" \
           --address "$TXIN_ADDR" |
           sed -n 3p | { read -r txhash txix amount _; echo "${txhash}#${txix};${amount}"; })"
