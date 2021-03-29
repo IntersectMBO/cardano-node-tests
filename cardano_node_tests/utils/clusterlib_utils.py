@@ -1,6 +1,7 @@
 import itertools
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -529,3 +530,42 @@ def save_ledger_state(
     with open(json_file, "w") as fp_out:
         json.dump(ledger_state, fp_out, indent=4)
     return json_file
+
+
+def wait_for_epoch_interval(cluster_obj: clusterlib.ClusterLib, start: int, stop: int) -> None:
+    """Wait for time interval within an epoch.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        start: A start of the interval, in seconds. Negative number for counting from the
+            end of an epoch.
+        stop: An end of the interval, in seconds. Negative number for counting from the
+            end of an epoch.
+    """
+    start_abs = start if start >= 0 else cluster_obj.epoch_length_sec + start
+    stop_abs = stop if stop >= 0 else cluster_obj.epoch_length_sec + stop
+
+    if start_abs >= stop_abs:
+        raise AssertionError(
+            f"The 'start' ({start_abs}) needs to be lower than 'stop' ({stop_abs})"
+        )
+
+    s_to_epoch_stop = cluster_obj.time_to_epoch_end()
+    s_from_epoch_start = cluster_obj.epoch_length_sec - s_to_epoch_stop
+
+    # if we are already after the required interval, wait for next epoch
+    if stop_abs > s_to_epoch_stop:
+        cluster_obj.wait_for_new_epoch()
+
+    for __ in range(20):
+        # return if we are in the required interval
+        if start_abs <= s_from_epoch_start:
+            break
+
+        s_to_epoch_stop = cluster_obj.time_to_epoch_end()
+        s_from_epoch_start = cluster_obj.epoch_length_sec - s_to_epoch_stop
+        to_sleep = start_abs - s_from_epoch_start
+        if to_sleep > 0:
+            time.sleep(to_sleep if to_sleep > 1 else 1)
+    else:
+        raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s")
