@@ -154,7 +154,7 @@ class TestKES:
                 cluster.wait_for_new_epoch()
 
             # wait for the end of the epoch
-            time.sleep(cluster.time_to_next_epoch_start() - 5)
+            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
 
             # save ledger state
             clusterlib_utils.save_ledger_state(
@@ -272,14 +272,16 @@ class TestKES:
             cluster_nodes.restart_node(node_name)
 
             LOGGER.info("Checking blocks production for 5 epochs.")
+            blocks_made_db = []
             this_epoch = -1
+            updated_epoch = cluster.get_epoch()
             for __ in range(5):
                 # wait for next epoch
                 if cluster.get_epoch() == this_epoch:
                     cluster.wait_for_new_epoch()
 
                 # wait for the end of the epoch
-                time.sleep(cluster.time_to_next_epoch_start() - 5)
+                clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
                 this_epoch = cluster.get_epoch()
 
                 ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
@@ -293,10 +295,12 @@ class TestKES:
 
                 # check that the pool is still producing blocks
                 blocks_made = ledger_state["blocksCurrent"]
-                if blocks_made:
-                    assert (
-                        stake_pool_id_dec in blocks_made
-                    ), f"The pool '{pool_name}' has not produced blocks in epoch {this_epoch}"
+                blocks_made_db.append(stake_pool_id_dec in blocks_made)
+
+            assert any(blocks_made_db), (
+                f"The pool '{pool_name}' has not produced any blocks "
+                f"since epoch {updated_epoch}"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(

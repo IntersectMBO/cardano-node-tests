@@ -1,6 +1,5 @@
 """Tests for staking, rewards, blocks production on real block-producing pools."""
 import logging
-import time
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -719,11 +718,7 @@ class TestRewards:
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
 
         # make sure we have enough time to finish the registration/delegation in one epoch
-        sleep_time = cluster.time_to_next_epoch_start() - 600
-        if sleep_time < 0:
-            cluster.wait_for_new_epoch()
-            sleep_time = cluster.time_to_next_epoch_start() - 600
-        time.sleep(sleep_time)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-600, stop=-400)
 
         init_owner_rewards = cluster.get_stake_addr_info(
             pool_reward.stake.address
@@ -754,9 +749,7 @@ class TestRewards:
 
         # withdraw rewards to payment address, make sure we have enough time to finish
         # the withdrawal in one epoch
-        sleep_time = cluster.time_to_next_epoch_start() - 600
-        if sleep_time < 0:
-            cluster.wait_for_new_epoch()
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-600, stop=-400)
         cluster.withdraw_reward(
             stake_addr_record=pool_user.stake,
             dst_addr_record=pool_user.payment,
@@ -796,11 +789,7 @@ class TestRewards:
         token_amount = 1_000_000
 
         # make sure we have enough time to finish the registration/delegation in one epoch
-        sleep_time = cluster.time_to_next_epoch_start() - 18
-        if sleep_time < 0:
-            cluster.wait_for_new_epoch()
-            sleep_time = cluster.time_to_next_epoch_start() - 18
-        time.sleep(sleep_time)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
 
         init_epoch = cluster.get_epoch()
         user_rewards = [(init_epoch, 0, 0)]
@@ -931,10 +920,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            sleep_time = cluster.time_to_next_epoch_start() - 5
-            assert sleep_time >= 0, "Not enough time left in epoch"
-            time.sleep(sleep_time)
-
+            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
             this_epoch = cluster.get_epoch()
 
             # current reward balances
@@ -1065,12 +1051,8 @@ class TestRewards:
         )
         pool_data_updated = loaded_data._replace(pool_pledge=0)
 
-        sleep_time = cluster.time_to_next_epoch_start() - 18
-        if sleep_time < 0:
-            cluster.wait_for_new_epoch()
-            sleep_time = cluster.time_to_next_epoch_start() - 18
-        time.sleep(sleep_time)
-
+        # sleep till the end of epoch
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
         init_epoch = cluster.get_epoch()
 
         # update the pool parameters by resubmitting the pool registration certificate
@@ -1188,10 +1170,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            sleep_time = cluster.time_to_next_epoch_start() - 18
-            assert sleep_time >= 0, "Not enough time left in epoch"
-            time.sleep(sleep_time)
-
+            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
             this_epoch = cluster.get_epoch()
 
             # current reward balances
