@@ -18,17 +18,8 @@ cd "$POOL_ARTIFACTS"
 
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/genesis-shelley.json")"
 
-# figure out what is the current era
-ERA="$({ cardano-cli query protocol-parameters \
-          --shelley-era \
-          --testnet-magic 3 \
-          --out-file /dev/null 2>&1 || :; } |
-          sed -n 's/.*{ledgerEraName = "\([^"]*\)".*/\L\1/p;')"
-[ -n "$ERA" ] || ERA="shelley"
-
 cardano-cli query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
-  --"$ERA"-era \
   --out-file "$STATE_CLUSTER/pparams.json"
 
 TXOUT_ADDR="$(<"$STATE_CLUSTER/shelley/faucet.addr")"
@@ -42,7 +33,6 @@ while read -r txhash txix amount _; do
   TXINS1+=("--tx-in" "${txhash}#${txix}")
 done <<< "$(cardano-cli query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
-            --"$ERA"-era \
             --address "$OWNER1_ADDR" |
             grep -E "lovelace$")"
 [ "$TXIN1_AMOUNT" -gt 0 ] || { echo "No funds in pool1 owner address, line $LINENO" >&2; exit 1; }  # assert
@@ -54,7 +44,6 @@ while read -r txhash txix amount _; do
   TXINS2+=("--tx-in" "${txhash}#${txix}")
 done <<< "$(cardano-cli query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
-            --"$ERA"-era \
             --address "$OWNER2_ADDR" |
             grep -E "lovelace$")"
 [ "$TXIN2_AMOUNT" -gt 0 ] || { echo "No funds in pool2 owner address, line $LINENO" >&2; exit 1; }  # assert
@@ -119,13 +108,11 @@ done
 # transfer funds to faucet
 REWARD1_AMOUNT="$(jq '.[0].rewardAccountBalance' <<< "$(cardano-cli query stake-address-info \
   --testnet-magic "$NETWORK_MAGIC" \
-  --"$ERA"-era \
   --address "$(<"$POOL_ARTIFACTS"/node-pool1/reward.addr)")")"
 [ -n "$REWARD1_AMOUNT" ] || REWARD1_AMOUNT=0
 
 REWARD2_AMOUNT="$(jq '.[0].rewardAccountBalance' <<< "$(cardano-cli query stake-address-info \
   --testnet-magic "$NETWORK_MAGIC" \
-  --"$ERA"-era \
   --address "$(<"$POOL_ARTIFACTS"/node-pool2/reward.addr)")")"
 [ -n "$REWARD2_AMOUNT" ] || REWARD2_AMOUNT=0
 
