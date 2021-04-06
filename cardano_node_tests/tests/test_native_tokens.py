@@ -143,11 +143,9 @@ def _mint_or_burn_witness(
     src_address = new_tokens[0].token_mint_addr.address
 
     # create TX body
-    ttl = cluster_obj.calculate_tx_ttl()
     fee = cluster_obj.calculate_tx_fee(
         src_address=src_address,
         tx_name=temp_template,
-        ttl=ttl,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add=len(issuers_skey_files) * 2,
     )
@@ -155,7 +153,6 @@ def _mint_or_burn_witness(
         src_address=src_address,
         tx_name=temp_template,
         fee=fee,
-        ttl=ttl,
         invalid_hereafter=invalid_hereafter,
         invalid_before=invalid_before,
         mint=[
@@ -1014,6 +1011,7 @@ class TestTransfer:
         * check fees in Lovelace
         """
         temp_template = f"{helpers.get_func_name()}_{amount}"
+        amount_lovelace = 10
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -1022,7 +1020,10 @@ class TestTransfer:
         src_init_balance_token = cluster.get_address_balance(src_address, coin=new_token.token)
         dst_init_balance_token = cluster.get_address_balance(dst_address, coin=new_token.token)
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token)]
+        destinations = [
+            clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token),
+            clusterlib.TxOut(address=dst_address, amount=amount_lovelace),
+        ]
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
         tx_raw_output = cluster.send_funds(
@@ -1039,7 +1040,8 @@ class TestTransfer:
         ), f"Incorrect token balance for source address `{src_address}`"
 
         assert (
-            cluster.get_address_balance(src_address) == src_init_balance - tx_raw_output.fee
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - amount_lovelace
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         assert (
@@ -1062,6 +1064,7 @@ class TestTransfer:
         """
         temp_template = helpers.get_func_name()
         amount = 1000
+        amount_lovelace = 10
         rand = clusterlib.get_rand_str(5)
 
         new_tokens = clusterlib_utils.new_tokens(
@@ -1088,6 +1091,8 @@ class TestTransfer:
         destinations = [
             clusterlib.TxOut(address=dst_address, amount=amount, coin=t.token) for t in new_tokens
         ]
+        destinations.append(clusterlib.TxOut(address=dst_address, amount=amount_lovelace))
+
         tx_files = clusterlib.TxFiles(
             signing_key_files={t.token_mint_addr.skey_file for t in new_tokens}
         )
@@ -1101,7 +1106,8 @@ class TestTransfer:
         cluster.wait_for_new_block(new_blocks=2)
 
         assert (
-            cluster.get_address_balance(src_address) == src_init_balance - tx_raw_output.fee
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - amount_lovelace
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         for idx, token in enumerate(new_tokens):
@@ -1142,13 +1148,11 @@ class TestNegative:
         )
 
         # build and sign a transaction
-        ttl = cluster_obj.calculate_tx_ttl()
         tx_raw_output = cluster_obj.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
             fee=100_000,
-            ttl=ttl,
             mint=[
                 clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
                 for n in new_tokens
