@@ -275,3 +275,11 @@ def get_eof_offset(infile: Path) -> int:
         in_fp.seek(0, io.SEEK_END)
         last_line_pos = in_fp.tell()
     return last_line_pos
+
+
+def is_in_interval(num1: float, num2: float, frac: float = 0.1) -> bool:
+    """Check that the num1 is in the interval defined by num2 and its fraction."""
+    num2_frac = num2 * frac
+    _min = num2 - num2_frac
+    _max = num2 + num2_frac
+    return _min <= num1 <= _max
