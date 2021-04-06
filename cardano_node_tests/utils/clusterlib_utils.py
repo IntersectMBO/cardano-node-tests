@@ -376,7 +376,7 @@ def mint_or_burn_sign(
     cluster_obj: clusterlib.ClusterLib,
     new_tokens: List[TokenRecord],
     temp_template: str,
-) -> None:
+) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using skeys.
 
     Positive `amount` value means minting, negative means burning.
@@ -422,6 +422,8 @@ def mint_or_burn_sign(
     # submit signed transaction
     cluster_obj.submit_tx(out_file_signed)
     cluster_obj.wait_for_new_block(new_blocks=2)
+
+    return tx_raw_output
 
 
 def new_tokens(

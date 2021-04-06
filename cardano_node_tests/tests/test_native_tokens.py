@@ -132,7 +132,7 @@ def _mint_or_burn_witness(
     temp_template: str,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
-) -> None:
+) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using witnesses.
 
     Positive `amount` value means minting, negative means burning.
@@ -192,6 +192,8 @@ def _mint_or_burn_witness(
     cluster_obj.submit_tx(tx_witnessed_file)
     cluster_obj.wait_for_new_block(new_blocks=2)
 
+    return tx_raw_output
+
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
@@ -206,6 +208,8 @@ class TestMinting:
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses."""
+        expected_fee = 201141
+
         temp_template = helpers.get_func_name()
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 5
@@ -237,7 +241,7 @@ class TestMinting:
         )
 
         # token minting
-        _mint_or_burn_witness(
+        tx_out_mint = _mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
@@ -248,7 +252,7 @@ class TestMinting:
 
         # token burning
         token_burn = token_mint._replace(amount=-amount)
-        _mint_or_burn_witness(
+        tx_out_burn = _mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
@@ -257,11 +261,20 @@ class TestMinting:
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
     @allure.link(helpers.get_vcs_link())
     def test_minting_and_burning_sign(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting and burning of tokens, sign the transaction using skeys."""
+        expected_fee = 188821
+
         temp_template = helpers.get_func_name()
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 5
@@ -293,7 +306,7 @@ class TestMinting:
         )
 
         # token minting
-        clusterlib_utils.mint_or_burn_sign(
+        tx_out_mint = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
@@ -304,7 +317,7 @@ class TestMinting:
 
         # token burning
         token_burn = token_mint._replace(amount=-amount)
-        clusterlib_utils.mint_or_burn_sign(
+        tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
@@ -313,19 +326,36 @@ class TestMinting:
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
-    @pytest.mark.parametrize("tokens_num", (5, 10, 50, 100, 1000))
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
+    @pytest.mark.parametrize(
+        "tokens_db",
+        (
+            (5, 351093),
+            (10, 538533),
+            (50, 2038053),
+            (100, 3912453),
+            (1000, 288789),
+        ),
+    )
     @allure.link(helpers.get_vcs_link())
     def test_multi_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: List[clusterlib.AddressRecord],
         multisig_script_policyid: Tuple[Path, str],
-        tokens_num: int,
+        tokens_db: Tuple[int, int],
     ):
         """Test minting and burning multiple different tokens, sign the TX using witnesses."""
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(8)
         amount = 5
+        tokens_num, expected_fee = tokens_db
 
         token_mint_addr = issuers_addrs[0]
         script, policyid = multisig_script_policyid
@@ -362,7 +392,7 @@ class TestMinting:
                 assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
             return
 
-        _mint_or_burn_witness(**minting_args)  # type: ignore
+        tx_out_mint = _mint_or_burn_witness(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
@@ -370,7 +400,7 @@ class TestMinting:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        _mint_or_burn_witness(
+        tx_out_burn = _mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -380,19 +410,36 @@ class TestMinting:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
-    @pytest.mark.parametrize("tokens_num", (5, 10, 50, 100, 1000))
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
+    @pytest.mark.parametrize(
+        "tokens_db",
+        (
+            (5, 288789),
+            (10, 413749),
+            (50, 1413429),
+            (100, 2663029),
+            (1000, 0),
+        ),
+    )
     @allure.link(helpers.get_vcs_link())
     def test_multi_minting_and_burning_sign(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: List[clusterlib.AddressRecord],
         simple_script_policyid: Tuple[Path, str],
-        tokens_num: int,
+        tokens_db: Tuple[int, int],
     ):
         """Test minting and burning multiple different tokens, sign the TX using skeys."""
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(8)
         amount = 5
+        tokens_num, expected_fee = tokens_db
 
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
@@ -430,7 +477,7 @@ class TestMinting:
                 assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
             return
 
-        clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
+        tx_out_mint = clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
@@ -438,7 +485,7 @@ class TestMinting:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        clusterlib_utils.mint_or_burn_sign(
+        tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -448,11 +495,20 @@ class TestMinting:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
     @allure.link(helpers.get_vcs_link())
     def test_minting_and_partial_burning(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting and partial burning of tokens."""
+        expected_fee = 201141
+
         temp_template = helpers.get_func_name()
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 50
@@ -484,7 +540,7 @@ class TestMinting:
         )
 
         # token minting
-        _mint_or_burn_witness(
+        tx_out_mint = _mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
@@ -515,6 +571,11 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
+        # check expected fee
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
@@ -529,6 +590,8 @@ class TestPolicies:
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting and burning tokens after given slot."""
+        expected_fee = 351093
+
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(4)
         amount = 5
@@ -567,7 +630,7 @@ class TestPolicies:
             )
 
         # token minting
-        _mint_or_burn_witness(
+        tx_out_mint = _mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
@@ -581,7 +644,7 @@ class TestPolicies:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        _mint_or_burn_witness(
+        tx_out_burn = _mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -593,11 +656,20 @@ class TestPolicies:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
     @allure.link(helpers.get_vcs_link())
     def test_valid_policy_before(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting and burning tokens before given slot."""
+        expected_fee = 351093
+
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(4)
         amount = 5
@@ -638,7 +710,7 @@ class TestPolicies:
             )
 
         # token minting
-        _mint_or_burn_witness(
+        tx_out_mint = _mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
@@ -652,7 +724,7 @@ class TestPolicies:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        _mint_or_burn_witness(
+        tx_out_burn = _mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -663,6 +735,13 @@ class TestPolicies:
         for t in tokens_to_burn:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
+
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
     @allure.link(helpers.get_vcs_link())
     def test_policy_before_past(

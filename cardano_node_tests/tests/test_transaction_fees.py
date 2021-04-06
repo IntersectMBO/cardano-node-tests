@@ -311,7 +311,9 @@ class TestExpectedFees:
         tx_fee = cluster_obj.calculate_tx_fee(
             src_address=src_address, tx_name=tx_name, txins=txins, txouts=txouts, tx_files=tx_files
         )
-        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(
+            tx_fee, expected_fee
+        ), "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 197753), (3, 234009), (5, 270265), (10, 360905)])
     @allure.link(helpers.get_vcs_link())
@@ -362,7 +364,9 @@ class TestExpectedFees:
         tx_fee = cluster.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(
+            tx_fee, expected_fee
+        ), "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 185213), (3, 210205), (5, 235197), (10, 297677)])
     @allure.link(helpers.get_vcs_link())
@@ -425,7 +429,9 @@ class TestExpectedFees:
         tx_fee = cluster.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(
+            tx_fee, expected_fee
+        ), "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 178965), (3, 206949), (5, 234933), (10, 304893)])
     @allure.link(helpers.get_vcs_link())
@@ -461,7 +467,9 @@ class TestExpectedFees:
         tx_fee = cluster.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(
+            tx_fee, expected_fee
+        ), "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize("addr_fee", [(1, 178965), (3, 206949), (5, 234933), (10, 304893)])
     @allure.link(helpers.get_vcs_link())
@@ -497,7 +505,9 @@ class TestExpectedFees:
         tx_fee = cluster.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert tx_fee == expected_fee, "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(
+            tx_fee, expected_fee
+        ), "Expected fee doesn't match the actual fee"
 
     @pytest.mark.parametrize(
         "amount_expected", [(1, 176677), (100, 176721), (11_000, 176765), (100_000, 176853)]
