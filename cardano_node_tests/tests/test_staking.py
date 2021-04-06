@@ -870,7 +870,7 @@ class TestRewards:
 
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
-            prev_rs_record = rs_records[this_epoch - 1]
+            prev_rs_record = rs_records.get(this_epoch - 1)
             if abs_user_reward and prev_rs_record:
                 assert abs_user_reward == _get_reward_for_key_hash(
                     user_stake_addr_dec, prev_rs_record
@@ -938,7 +938,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
+            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-5)
             this_epoch = cluster.get_epoch()
 
             # current reward balances
@@ -1121,7 +1121,7 @@ class TestRewards:
 
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
-            prev_rs_record = rs_records[this_epoch - 1]
+            prev_rs_record = rs_records.get(this_epoch - 1)
             if abs_owner_reward and prev_rs_record:
                 assert abs_owner_reward == _get_reward_for_key_hash(reward_addr_dec, prev_rs_record)
 
@@ -1188,7 +1188,7 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
+            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-5)
             this_epoch = cluster.get_epoch()
 
             # current reward balances
