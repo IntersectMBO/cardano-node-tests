@@ -1121,6 +1121,32 @@ class TestTransfer:
                 == dst_init_balance_tokens[idx] + amount
             ), f"Incorrect token #{idx} balance for destination address `{dst_address}`"
 
+    @allure.link(helpers.get_vcs_link())
+    def test_transfer_no_ada(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        new_token: clusterlib_utils.TokenRecord,
+    ):
+        """Try to create an UTxO with just native tokens, no ADA. Expect failure."""
+        temp_template = helpers.get_func_name()
+        amount = 10
+
+        src_address = new_token.token_mint_addr.address
+        dst_address = payment_addrs[2].address
+
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_funds(
+                src_address=src_address,
+                destinations=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
+        assert "OutputTooSmallUTxO" in str(excinfo.value)
+
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
