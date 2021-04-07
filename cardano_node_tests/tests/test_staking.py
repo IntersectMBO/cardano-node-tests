@@ -2202,9 +2202,9 @@ class TestRewards:
     ):
         """Check that one reward address used for two pools receives rewards for both of them.
 
+        * get combined reward amount per epoch for pool1 and pool2
         * set pool2 reward address to the reward address of pool1 by resubmitting the pool
           registration certificate
-        * get combined reward amount per epoch for pool1 and pool2
         * check that the original reward address for pool2 is NOT receiving rewards
         * check that the reward address for pool1 is now receiving rewards for both pools
           by comparing reward amount received in last epoch with reward amount previously received
@@ -2238,6 +2238,36 @@ class TestRewards:
         )
         if not stake_reward:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
+
+        # get combined reward amount per epoch for pool1 and pool2
+        pool1_amount_prev = 0
+        pool2_amount_prev = 0
+        combined_reward_per_epoch = 0
+        for __ in range(3):
+            pool1_amount = cluster.get_stake_addr_info(
+                pool1_reward.stake.address
+            ).reward_account_balance
+            pool2_amount = cluster.get_stake_addr_info(
+                pool2_reward.stake.address
+            ).reward_account_balance
+
+            # make sure both pools received reward in this epoch
+            if (
+                pool1_amount_prev
+                and pool2_amount_prev
+                and pool1_amount > pool1_amount_prev
+                and pool2_amount > pool2_amount_prev
+            ):
+                combined_reward_per_epoch = (pool1_amount - pool1_amount_prev) + (
+                    pool2_amount - pool2_amount_prev
+                )
+                break
+
+            pool1_amount_prev = pool1_amount
+            pool2_amount_prev = pool2_amount
+            cluster.wait_for_new_epoch()
+
+        assert combined_reward_per_epoch > 0, "Failed to get combined reward amount"
 
         # fund source address so the pledge is still met after TX fees are deducted
         clusterlib_utils.fund_from_faucet(
@@ -2276,56 +2306,34 @@ class TestRewards:
         # pool configuration changed, restart needed
         cluster_manager.set_needs_restart()
 
-        cluster.wait_for_new_epoch()
+        cluster.wait_for_new_epoch(4)
 
-        # get combined reward amount per epoch for pool1 and pool2
-        pool1_ep1_amount = cluster.get_stake_addr_info(
-            pool1_reward.stake.address
-        ).reward_account_balance
-        pool2_ep1_amount = cluster.get_stake_addr_info(
-            pool2_reward.stake.address
-        ).reward_account_balance
+        # check reward amount once the reward address change for pool2 is completed
+        pool1_amount_prev = 0
+        pool2_amount_prev = 0
+        for __ in range(3):
+            pool1_amount = cluster.get_stake_addr_info(
+                pool1_reward.stake.address
+            ).reward_account_balance
+            pool2_amount = cluster.get_stake_addr_info(
+                pool2_reward.stake.address
+            ).reward_account_balance
 
-        cluster.wait_for_new_epoch()
+            if pool1_amount_prev and pool2_amount_prev and pool1_amount > pool1_amount_prev:
+                pool1_epoch_amount = pool1_amount - pool1_amount_prev
+                pool2_epoch_amount = pool2_amount - pool2_amount_prev
 
-        pool1_ep2_amount = cluster.get_stake_addr_info(
-            pool1_reward.stake.address
-        ).reward_account_balance
-        pool2_ep2_amount = cluster.get_stake_addr_info(
-            pool2_reward.stake.address
-        ).reward_account_balance
-        combined_reward_per_epoch = (pool1_ep2_amount - pool1_ep1_amount) + (
-            pool2_ep2_amount - pool2_ep1_amount
-        )
+                # check that the original reward address for pool2 is NOT receiving rewards
+                assert pool2_epoch_amount == 0, "Pool reward address received unexpected rewards"
 
-        cluster.wait_for_new_epoch(3)
+                # check that the reward address for pool1 is now receiving rewards
+                # for both pools by comparing reward amount received in last epoch
+                # with reward amount previously received by both pools together
+                if pool1_epoch_amount >= combined_reward_per_epoch * 0.9:
+                    break
 
-        # get reward amount once the reward address change for pool2 is completed
-        pool1_done1_amount = cluster.get_stake_addr_info(
-            pool1_reward.stake.address
-        ).reward_account_balance
-        pool2_done1_amount = cluster.get_stake_addr_info(
-            pool2_reward.stake.address
-        ).reward_account_balance
-
-        cluster.wait_for_new_epoch()
-
-        pool1_done2_amount = cluster.get_stake_addr_info(
-            pool1_reward.stake.address
-        ).reward_account_balance
-        pool2_done2_amount = cluster.get_stake_addr_info(
-            pool2_reward.stake.address
-        ).reward_account_balance
-
-        pool1_epoch_amount = pool1_done2_amount - pool1_done1_amount
-        pool2_epoch_amount = pool2_done2_amount - pool2_done1_amount
-
-        # check that the original reward address for pool2 is NOT receiving rewards
-        assert pool2_epoch_amount == 0, "Pool reward address received unexpected rewards"
-
-        # check that the reward address for pool1 is now receiving rewards for both pools
-        # by comparing reward amount received in last epoch with reward amount previously received
-        # by both pools together
-        assert (
-            pool1_epoch_amount >= combined_reward_per_epoch * 0.9
-        ), "New reward was not received by pool reward address"
+            pool1_amount_prev = pool1_amount
+            pool2_amount_prev = pool2_amount
+            cluster.wait_for_new_epoch()
+        else:
+            raise AssertionError("New reward was not received by pool reward address")
