@@ -70,6 +70,7 @@ class TestProtocol:
         assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xfail
     def test_protocol_state_outfile(self, cluster: clusterlib.ClusterLib):
         """Check output file produced by `query protocol-state`."""
         protocol_state: dict = json.loads(
