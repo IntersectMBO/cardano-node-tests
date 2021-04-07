@@ -113,12 +113,13 @@ def cluster_slot_length(
 
 
 def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
-    end_sec = 20
+    end_sec = 15
     end_sec_padded = end_sec + 15  # padded to make sure tip got updated
 
     cluster_obj.wait_for_new_epoch()
     epoch = cluster_obj.get_epoch()
-    time.sleep(cluster_obj.epoch_length_sec - end_sec)
+    sleep_time = cluster_obj.epoch_length_sec - end_sec
+    time.sleep(sleep_time)
     assert epoch == cluster_obj.get_epoch()
 
     time.sleep(end_sec_padded)
