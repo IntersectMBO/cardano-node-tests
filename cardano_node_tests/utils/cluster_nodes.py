@@ -80,14 +80,10 @@ class LocalCluster(ClusterType):
         self.type = ClusterType.LOCAL
         self.cluster_scripts = cluster_scripts.LocalScripts()
 
-        # cached values
-        self._slots_offset = -1
-
     def _get_slots_offset(self, state_dir: Path) -> int:
         """Get offset of blocks from Byron era vs current configuration."""
-        if self._slots_offset != -1:
-            return self._slots_offset
-
+        # unlike in `TestnetCluster`, don't cache slots offset value, we might
+        # test different configurations of slot length etc.
         genesis_byron_json = state_dir / "byron" / "genesis.json"
         with open(genesis_byron_json) as in_json:
             genesis_byron = json.load(in_json)
@@ -107,7 +103,6 @@ class LocalCluster(ClusterType):
         if (slot_duration_byron == slot_duration_shelley) and (
             byron_epoch_sec == shelley_epoch_sec
         ):
-            self._slots_offset = 0
             return 0
 
         # assume that shelley starts at epoch 1, i.e. after a single byron epoch
@@ -115,7 +110,6 @@ class LocalCluster(ClusterType):
         slots_in_shelley = int(shelley_epoch_sec / slot_duration_shelley)
         offset = slots_in_shelley - slots_in_byron
 
-        self._slots_offset = offset
         return offset
 
     def get_cluster_obj(self) -> clusterlib.ClusterLib:
