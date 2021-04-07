@@ -534,7 +534,9 @@ def save_ledger_state(
     return json_file
 
 
-def wait_for_epoch_interval(cluster_obj: clusterlib.ClusterLib, start: int, stop: int) -> None:
+def wait_for_epoch_interval(
+    cluster_obj: clusterlib.ClusterLib, start: int, stop: int, force_epoch: bool = True
+) -> None:
     """Wait for time interval within an epoch.
 
     Args:
@@ -543,6 +545,7 @@ def wait_for_epoch_interval(cluster_obj: clusterlib.ClusterLib, start: int, stop
             end of an epoch.
         stop: An end of the interval, in seconds. Negative number for counting from the
             end of an epoch.
+        force_epoch: A bool indicating whether the interval must be in current epoch.
     """
     start_abs = start if start >= 0 else cluster_obj.epoch_length_sec + start
     stop_abs = stop if stop >= 0 else cluster_obj.epoch_length_sec + stop
@@ -552,20 +555,23 @@ def wait_for_epoch_interval(cluster_obj: clusterlib.ClusterLib, start: int, stop
             f"The 'start' ({start_abs}) needs to be lower than 'stop' ({stop_abs})"
         )
 
-    s_to_epoch_stop = cluster_obj.time_to_epoch_end()
-    s_from_epoch_start = cluster_obj.epoch_length_sec - s_to_epoch_stop
-
-    # if we are already after the required interval, wait for next epoch
-    if stop_abs > s_to_epoch_stop:
-        cluster_obj.wait_for_new_epoch()
-
     for __ in range(20):
-        # return if we are in the required interval
-        if start_abs <= s_from_epoch_start:
-            break
-
         s_to_epoch_stop = cluster_obj.time_to_epoch_end()
         s_from_epoch_start = cluster_obj.epoch_length_sec - s_to_epoch_stop
+
+        # return if we are in the required interval
+        if start_abs <= s_from_epoch_start <= stop_abs:
+            break
+
+        # if we are already after the required interval, wait for next epoch
+        if stop_abs < s_from_epoch_start:
+            if force_epoch:
+                raise AssertionError(
+                    f"Cannot reach the given interval ({start_abs}s to {stop_abs}s) in this epoch"
+                )
+            cluster_obj.wait_for_new_epoch()
+
+        # try to sleep as close to the `start_abs` as possible
         to_sleep = start_abs - s_from_epoch_start
         if to_sleep > 0:
             time.sleep(to_sleep if to_sleep > 1 else 1)

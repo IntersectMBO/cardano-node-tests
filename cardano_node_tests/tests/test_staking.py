@@ -807,7 +807,9 @@ class TestRewards:
         token_amount = 1_000_000
 
         # make sure we have enough time to finish the registration/delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=-50, stop=-20, force_epoch=False
+        )
 
         init_epoch = cluster.get_epoch()
         user_rewards = [(init_epoch, 0, 0)]
@@ -1070,7 +1072,9 @@ class TestRewards:
         pool_data_updated = loaded_data._replace(pool_pledge=0)
 
         # sleep till the end of epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-9)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=-50, stop=-20, force_epoch=False
+        )
         init_epoch = cluster.get_epoch()
 
         # update the pool parameters by resubmitting the pool registration certificate
