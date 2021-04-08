@@ -119,7 +119,6 @@ class LocalCluster(ClusterType):
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
             protocol=clusterlib.Protocols.CARDANO,
-            era=cluster_env.cluster_era,
             tx_era=cluster_env.tx_era,
             slots_offset=slots_offset,
         )
@@ -246,7 +245,6 @@ class TestnetCluster(ClusterType):
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
             protocol=clusterlib.Protocols.CARDANO,
-            era=cluster_env.cluster_era,
             tx_era=cluster_env.tx_era,
             slots_offset=slots_offset,
         )
