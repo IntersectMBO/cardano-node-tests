@@ -32,6 +32,7 @@ cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER/byron-params.json"
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/config-*.json "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 chmod u+w "$STATE_CLUSTER"/config-*.json
 
 FUNDS_PER_GENESIS_ADDRESS="$((INIT_SUPPLY / NUM_BFT_NODES))"
@@ -190,11 +191,29 @@ for i in $(seq 1 $NUM_POOLS); do
     --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/op.cert"
 
+  POOL_NAME="TestPool$i"
+  POOL_DESC="Test Pool $i"
+  POOL_TICKER="TEST$i"
+
+  cat > "$STATE_CLUSTER/webserver/pool$i.html" <<EoF
+<!DOCTYPE html>
+<html>
+<head>
+<title>$POOL_NAME</title>
+</head>
+<body>
+name: <strong>$POOL_NAME</strong><br>
+description: <strong>$POOL_DESC</strong><br>
+ticker: <strong>$POOL_TICKER</strong><br>
+</body>
+</html>
+EoF
+
   echo "Generating Pool $i Metadata"
   jq -n \
-    --arg name "TestPool$i" \
-    --arg description "Test Pool $i" \
-    --arg ticker "TEST$i" \
+    --arg name "$POOL_NAME" \
+    --arg description "$POOL_DESC" \
+    --arg ticker "$POOL_TICKER" \
     --arg homepage "http://localhost:30000/pool$i.html" \
     '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
     > "$STATE_CLUSTER/webserver/pool$i.json"
@@ -233,7 +252,7 @@ printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
   > "$STATE_CLUSTER/supervisord_start"
 chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_start}
 
-supervisord --config "$SCRIPT_DIR/supervisor.conf" "$@"
+supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
 while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
   echo "Waiting 5 seconds for bft node to start"; sleep 5

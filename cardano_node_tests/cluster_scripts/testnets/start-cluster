@@ -150,11 +150,29 @@ for i in {1..2}; do
     --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/op.cert"
 
+  POOL_NAME="TestPool${RAND_POOL}_${i}"
+  POOL_DESC="Test Pool $RAND_POOL $i"
+  POOL_TICKER="TP${RAND_POOL}${i}"
+
+  cat > "$STATE_CLUSTER/webserver/pool$i.html" <<EoF
+<!DOCTYPE html>
+<html>
+<head>
+<title>$POOL_NAME</title>
+</head>
+<body>
+name: <strong>$POOL_NAME</strong><br>
+description: <strong>$POOL_DESC</strong><br>
+ticker: <strong>$POOL_TICKER</strong><br>
+</body>
+</html>
+EoF
+
   echo "Generating Pool $i Metadata"
   jq -n \
-    --arg name "TestPool${RAND_POOL}_${i}" \
-    --arg description "Test Pool $RAND_POOL $i" \
-    --arg ticker "TP${RAND_POOL}${i}" \
+    --arg name "$POOL_NAME" \
+    --arg description "$POOL_DESC" \
+    --arg ticker "$POOL_TICKER" \
     --arg homepage "http://${RELAY1_HOST}:30000/pool$i.html" \
     '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
     > "$STATE_CLUSTER/webserver/pool$i.json"
