@@ -10,7 +10,6 @@ import json
 import logging
 from pathlib import Path
 from typing import List
-from typing import Optional
 from typing import Tuple
 
 import allure
@@ -126,75 +125,6 @@ def multisig_script_policyid(
     return multisig_script, policyid
 
 
-def _mint_or_burn_witness(
-    cluster_obj: clusterlib.ClusterLib,
-    new_tokens: List[clusterlib_utils.TokenRecord],
-    temp_template: str,
-    invalid_hereafter: Optional[int] = None,
-    invalid_before: Optional[int] = None,
-) -> clusterlib.TxRawOutput:
-    """Mint or burn tokens, depending on the `amount` value. Sign using witnesses.
-
-    Positive `amount` value means minting, negative means burning.
-    """
-    _issuers_addrs = [n.issuers_addrs for n in new_tokens]
-    issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
-    issuers_skey_files = [p.skey_file for p in issuers_addrs]
-    src_address = new_tokens[0].token_mint_addr.address
-
-    # create TX body
-    fee = cluster_obj.calculate_tx_fee(
-        src_address=src_address,
-        tx_name=temp_template,
-        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files) * 2,
-    )
-    tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=src_address,
-        tx_name=temp_template,
-        fee=fee,
-        invalid_hereafter=invalid_hereafter,
-        invalid_before=invalid_before,
-        mint=[
-            clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
-            for n in new_tokens
-        ],
-    )
-
-    # create witness file for each required key
-    witness_files = [
-        cluster_obj.witness_tx(
-            tx_body_file=tx_raw_output.out_file,
-            witness_name=f"{temp_template}_skey{idx}",
-            signing_key_files=[skey],
-        )
-        for idx, skey in enumerate(issuers_skey_files)
-    ]
-    witness_files.extend(
-        [
-            cluster_obj.witness_tx(
-                tx_body_file=tx_raw_output.out_file,
-                witness_name=f"{temp_template}_script{idx}",
-                script_file=token.script,
-            )
-            for idx, token in enumerate(new_tokens)
-        ]
-    )
-
-    # sign TX using witness files
-    tx_witnessed_file = cluster_obj.assemble_tx(
-        tx_body_file=tx_raw_output.out_file,
-        witness_files=witness_files,
-        tx_name=temp_template,
-    )
-
-    # submit signed TX
-    cluster_obj.submit_tx(tx_witnessed_file)
-    cluster_obj.wait_for_new_block(new_blocks=2)
-
-    return tx_raw_output
-
-
 @pytest.mark.testnets
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
@@ -241,7 +171,7 @@ class TestMinting:
         )
 
         # token minting
-        tx_out_mint = _mint_or_burn_witness(
+        tx_out_mint = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
@@ -252,7 +182,7 @@ class TestMinting:
 
         # token burning
         token_burn = token_mint._replace(amount=-amount)
-        tx_out_burn = _mint_or_burn_witness(
+        tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
@@ -385,14 +315,14 @@ class TestMinting:
 
         if tokens_num >= 500:
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                _mint_or_burn_witness(**minting_args)  # type: ignore
+                clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
             if tokens_num >= 1000:
                 assert "(UtxoFailure (MaxTxSizeUTxO" in str(excinfo.value)
             else:
                 assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
             return
 
-        tx_out_mint = _mint_or_burn_witness(**minting_args)  # type: ignore
+        tx_out_mint = clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
             token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
@@ -400,7 +330,7 @@ class TestMinting:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        tx_out_burn = _mint_or_burn_witness(
+        tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -540,7 +470,7 @@ class TestMinting:
         )
 
         # token minting
-        tx_out_mint = _mint_or_burn_witness(
+        tx_out_mint = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
@@ -552,7 +482,7 @@ class TestMinting:
         # token burning
         burn_amount = amount - 10
         token_burn = token_mint._replace(amount=-burn_amount)
-        _mint_or_burn_witness(
+        clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
@@ -565,7 +495,7 @@ class TestMinting:
 
         # burn the rest of tokens
         final_burn = token_mint._replace(amount=-10)
-        _mint_or_burn_witness(
+        clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[final_burn],
             temp_template=f"{temp_template}_burn",
@@ -630,7 +560,7 @@ class TestPolicies:
             )
 
         # token minting
-        tx_out_mint = _mint_or_burn_witness(
+        tx_out_mint = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
@@ -644,7 +574,7 @@ class TestPolicies:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        tx_out_burn = _mint_or_burn_witness(
+        tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -710,7 +640,7 @@ class TestPolicies:
             )
 
         # token minting
-        tx_out_mint = _mint_or_burn_witness(
+        tx_out_mint = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
@@ -724,7 +654,7 @@ class TestPolicies:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        tx_out_burn = _mint_or_burn_witness(
+        tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -789,7 +719,7 @@ class TestPolicies:
 
         # token minting - valid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _mint_or_burn_witness(
+            clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
@@ -800,7 +730,7 @@ class TestPolicies:
 
         # token minting - invalid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _mint_or_burn_witness(
+            clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
@@ -862,7 +792,7 @@ class TestPolicies:
 
         # token minting - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _mint_or_burn_witness(
+            clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
@@ -924,7 +854,7 @@ class TestPolicies:
 
         # token minting - valid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _mint_or_burn_witness(
+            clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
@@ -935,7 +865,7 @@ class TestPolicies:
 
         # token minting - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _mint_or_burn_witness(
+            clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
@@ -997,7 +927,7 @@ class TestPolicies:
 
         # token minting - valid slot, invalid range - `invalid_hereafter` is in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _mint_or_burn_witness(
+            clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",

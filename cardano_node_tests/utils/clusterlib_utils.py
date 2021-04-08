@@ -372,6 +372,75 @@ def update_params(
                 )
 
 
+def mint_or_burn_witness(
+    cluster_obj: clusterlib.ClusterLib,
+    new_tokens: List[TokenRecord],
+    temp_template: str,
+    invalid_hereafter: Optional[int] = None,
+    invalid_before: Optional[int] = None,
+) -> clusterlib.TxRawOutput:
+    """Mint or burn tokens, depending on the `amount` value. Sign using witnesses.
+
+    Positive `amount` value means minting, negative means burning.
+    """
+    _issuers_addrs = [n.issuers_addrs for n in new_tokens]
+    issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
+    issuers_skey_files = [p.skey_file for p in issuers_addrs]
+    src_address = new_tokens[0].token_mint_addr.address
+
+    # create TX body
+    fee = cluster_obj.calculate_tx_fee(
+        src_address=src_address,
+        tx_name=temp_template,
+        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+        witness_count_add=len(issuers_skey_files) * 2,
+    )
+    tx_raw_output = cluster_obj.build_raw_tx(
+        src_address=src_address,
+        tx_name=temp_template,
+        fee=fee,
+        invalid_hereafter=invalid_hereafter,
+        invalid_before=invalid_before,
+        mint=[
+            clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
+            for n in new_tokens
+        ],
+    )
+
+    # create witness file for each required key
+    witness_files = [
+        cluster_obj.witness_tx(
+            tx_body_file=tx_raw_output.out_file,
+            witness_name=f"{temp_template}_skey{idx}",
+            signing_key_files=[skey],
+        )
+        for idx, skey in enumerate(issuers_skey_files)
+    ]
+    witness_files.extend(
+        [
+            cluster_obj.witness_tx(
+                tx_body_file=tx_raw_output.out_file,
+                witness_name=f"{temp_template}_script{idx}",
+                script_file=token.script,
+            )
+            for idx, token in enumerate(new_tokens)
+        ]
+    )
+
+    # sign TX using witness files
+    tx_witnessed_file = cluster_obj.assemble_tx(
+        tx_body_file=tx_raw_output.out_file,
+        witness_files=witness_files,
+        tx_name=temp_template,
+    )
+
+    # submit signed TX
+    cluster_obj.submit_tx(tx_witnessed_file)
+    cluster_obj.wait_for_new_block(new_blocks=2)
+
+    return tx_raw_output
+
+
 def mint_or_burn_sign(
     cluster_obj: clusterlib.ClusterLib,
     new_tokens: List[TokenRecord],
@@ -392,12 +461,10 @@ def mint_or_burn_sign(
     )
 
     # build and sign a transaction
-    ttl = cluster_obj.calculate_tx_ttl()
     fee = cluster_obj.calculate_tx_fee(
         src_address=src_address,
         tx_name=temp_template,
         tx_files=tx_files,
-        ttl=ttl,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add=len(issuers_skey_files) * 2,
     )
@@ -406,7 +473,6 @@ def mint_or_burn_sign(
         tx_name=temp_template,
         tx_files=tx_files,
         fee=fee,
-        ttl=ttl,
         mint=[
             clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
             for n in new_tokens
