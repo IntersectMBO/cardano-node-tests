@@ -263,6 +263,164 @@ class TestMinting:
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+    @allure.link(helpers.get_vcs_link())
+    def test_minting_burning_diff_tokens_single_tx(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test minting one token and burning other token in single transaction.
+
+        Sign the transaction using skeys.
+        """
+        expected_fee = 188821
+
+        temp_template = helpers.get_func_name()
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        issuer_addr = issuers_addrs[1]
+
+        # create simple script
+        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        script_content = {"keyHash": keyhash, "type": "sig"}
+        script = Path(f"{temp_template}.script")
+        with open(f"{temp_template}.script", "w") as out_json:
+            json.dump(script_content, out_json)
+
+        policyid = cluster.get_policyid(script)
+        asset_names = [
+            f"couttscoin{clusterlib.get_rand_str(4)}",
+            f"couttscoin{clusterlib.get_rand_str(4)}",
+        ]
+        tokens = [f"{policyid}.{an}" for an in asset_names]
+
+        assert not cluster.get_utxo(
+            token_mint_addr.address, coins=tokens
+        ), "The token already exists"
+
+        tokens_mint = [
+            clusterlib_utils.TokenRecord(
+                token=t,
+                asset_name=asset_names[i],
+                amount=amount,
+                issuers_addrs=[issuer_addr],
+                token_mint_addr=token_mint_addr,
+                script=script,
+            )
+            for i, t in enumerate(tokens)
+        ]
+
+        # first token minting
+        clusterlib_utils.mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=[tokens_mint[0]],
+            temp_template=f"{temp_template}_mint",
+        )
+
+        token1_mint_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[0]])
+        assert token1_mint_utxo and token1_mint_utxo[0].amount == amount, "The token was not minted"
+
+        # second token minting and first token burning in single TX
+        token_burn1 = tokens_mint[0]._replace(amount=-amount)
+        tx_out_mint_burn = clusterlib_utils.mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=[token_burn1, tokens_mint[1]],
+            temp_template=f"{temp_template}_mint_burn",
+        )
+
+        token1_burn_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[0]])
+        assert not token1_burn_utxo, "The token was not burnt"
+        token2_mint_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[1]])
+        assert token2_mint_utxo and token2_mint_utxo[0].amount == amount, "The token was not minted"
+
+        # second token burning
+        token_burn2 = tokens_mint[1]._replace(amount=-amount)
+        clusterlib_utils.mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=[token_burn2],
+            temp_template=f"{temp_template}_mint_burn",
+        )
+
+        token2_burn_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[1]])
+        assert not token2_burn_utxo, "The token was not burnt"
+
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_minting_burning_same_token_single_tx(
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test minting one token and burning the same token in single transaction.
+
+        Sign the transaction using skeys.
+        """
+        expected_fee = 188821
+
+        temp_template = helpers.get_func_name()
+        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        issuer_addr = issuers_addrs[1]
+
+        # create simple script
+        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        script_content = {"keyHash": keyhash, "type": "sig"}
+        script = Path(f"{temp_template}.script")
+        with open(f"{temp_template}.script", "w") as out_json:
+            json.dump(script_content, out_json)
+
+        policyid = cluster.get_policyid(script)
+        token = f"{policyid}.{asset_name}"
+
+        assert not cluster.get_utxo(
+            token_mint_addr.address, coins=[token]
+        ), "The token already exists"
+
+        # token minting and burning in same TX
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file]
+        )
+
+        # build and sign a transaction
+        fee = cluster.calculate_tx_fee(
+            src_address=token_mint_addr.address,
+            tx_name=f"{temp_template}_mint_burn",
+            tx_files=tx_files,
+            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            witness_count_add=2,
+        )
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=token_mint_addr.address,
+            tx_name=f"{temp_template}_mint_burn",
+            tx_files=tx_files,
+            fee=fee,
+            mint=[
+                clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
+                clusterlib.TxOut(address=token_mint_addr.address, amount=-(amount - 1), coin=token),
+            ],
+        )
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_mint_burn",
+            script_files=[script],
+        )
+
+        # submit signed transaction
+        cluster.submit_tx(out_file_signed)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
+
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_raw_output.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
     @pytest.mark.parametrize(
         "tokens_db",
         (
@@ -1065,9 +1223,9 @@ class TestTransfer:
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
     ):
-        """Test sending multiple different tokens to payment address.
+        """Test sending multiple different tokens to payment addresses.
 
-        * send multiple different tokens from 1 source address to 1 destination address
+        * send multiple different tokens from 1 source address to 2 destination addresses
         * check expected token balances for both source and destination addresses for each token
         * check fees in Lovelace
         """
@@ -1087,20 +1245,25 @@ class TestTransfer:
         new_tokens.append(new_token)
 
         src_address = new_token.token_mint_addr.address
-        dst_address = payment_addrs[2].address
+        dst_address1 = payment_addrs[1].address
+        dst_address2 = payment_addrs[2].address
 
         src_init_balance = cluster.get_address_balance(src_address)
-        src_init_balance_tokens = [
-            cluster.get_address_balance(src_address, coin=t.token) for t in new_tokens
-        ]
-        dst_init_balance_tokens = [
-            cluster.get_address_balance(dst_address, coin=t.token) for t in new_tokens
-        ]
 
-        destinations = [
-            clusterlib.TxOut(address=dst_address, amount=amount, coin=t.token) for t in new_tokens
-        ]
-        destinations.append(clusterlib.TxOut(address=dst_address, amount=amount_lovelace))
+        src_init_balance_tokens = []
+        dst_init_balance_tokens1 = []
+        dst_init_balance_tokens2 = []
+        destinations = []
+        for t in new_tokens:
+            src_init_balance_tokens.append(cluster.get_address_balance(src_address, coin=t.token))
+            dst_init_balance_tokens1.append(cluster.get_address_balance(dst_address1, coin=t.token))
+            dst_init_balance_tokens2.append(cluster.get_address_balance(dst_address2, coin=t.token))
+
+            destinations.append(clusterlib.TxOut(address=dst_address1, amount=amount, coin=t.token))
+            destinations.append(clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token))
+
+        destinations.append(clusterlib.TxOut(address=dst_address1, amount=amount_lovelace))
+        destinations.append(clusterlib.TxOut(address=dst_address2, amount=amount_lovelace))
 
         tx_files = clusterlib.TxFiles(
             signing_key_files={t.token_mint_addr.skey_file for t in new_tokens}
@@ -1116,19 +1279,24 @@ class TestTransfer:
 
         assert (
             cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - amount_lovelace
+            == src_init_balance - tx_raw_output.fee - amount_lovelace * 2
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         for idx, token in enumerate(new_tokens):
             assert (
                 cluster.get_address_balance(src_address, coin=token.token)
-                == src_init_balance_tokens[idx] - amount
+                == src_init_balance_tokens[idx] - amount * 2
             ), f"Incorrect token #{idx} balance for source address `{src_address}`"
 
             assert (
-                cluster.get_address_balance(dst_address, coin=token.token)
-                == dst_init_balance_tokens[idx] + amount
-            ), f"Incorrect token #{idx} balance for destination address `{dst_address}`"
+                cluster.get_address_balance(dst_address1, coin=token.token)
+                == dst_init_balance_tokens1[idx] + amount
+            ), f"Incorrect token #{idx} balance for destination address `{dst_address1}`"
+
+            assert (
+                cluster.get_address_balance(dst_address2, coin=token.token)
+                == dst_init_balance_tokens2[idx] + amount
+            ), f"Incorrect token #{idx} balance for destination address `{dst_address2}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_transfer_no_ada(
