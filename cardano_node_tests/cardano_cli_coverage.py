@@ -29,6 +29,7 @@ SKIPPED = (
     "--byron-mode",
     "--byron-key",
     "--mainnet",
+    "-h,--help",
 )
 
 
