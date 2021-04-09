@@ -1065,9 +1065,9 @@ class TestTransfer:
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
     ):
-        """Test sending multiple different tokens to payment address.
+        """Test sending multiple different tokens to payment addresses.
 
-        * send multiple different tokens from 1 source address to 1 destination address
+        * send multiple different tokens from 1 source address to 2 destination addresses
         * check expected token balances for both source and destination addresses for each token
         * check fees in Lovelace
         """
@@ -1087,20 +1087,25 @@ class TestTransfer:
         new_tokens.append(new_token)
 
         src_address = new_token.token_mint_addr.address
-        dst_address = payment_addrs[2].address
+        dst_address1 = payment_addrs[1].address
+        dst_address2 = payment_addrs[2].address
 
         src_init_balance = cluster.get_address_balance(src_address)
-        src_init_balance_tokens = [
-            cluster.get_address_balance(src_address, coin=t.token) for t in new_tokens
-        ]
-        dst_init_balance_tokens = [
-            cluster.get_address_balance(dst_address, coin=t.token) for t in new_tokens
-        ]
 
-        destinations = [
-            clusterlib.TxOut(address=dst_address, amount=amount, coin=t.token) for t in new_tokens
-        ]
-        destinations.append(clusterlib.TxOut(address=dst_address, amount=amount_lovelace))
+        src_init_balance_tokens = []
+        dst_init_balance_tokens1 = []
+        dst_init_balance_tokens2 = []
+        destinations = []
+        for t in new_tokens:
+            src_init_balance_tokens.append(cluster.get_address_balance(src_address, coin=t.token))
+            dst_init_balance_tokens1.append(cluster.get_address_balance(dst_address1, coin=t.token))
+            dst_init_balance_tokens2.append(cluster.get_address_balance(dst_address2, coin=t.token))
+
+            destinations.append(clusterlib.TxOut(address=dst_address1, amount=amount, coin=t.token))
+            destinations.append(clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token))
+
+        destinations.append(clusterlib.TxOut(address=dst_address1, amount=amount_lovelace))
+        destinations.append(clusterlib.TxOut(address=dst_address2, amount=amount_lovelace))
 
         tx_files = clusterlib.TxFiles(
             signing_key_files={t.token_mint_addr.skey_file for t in new_tokens}
@@ -1116,19 +1121,24 @@ class TestTransfer:
 
         assert (
             cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - amount_lovelace
+            == src_init_balance - tx_raw_output.fee - amount_lovelace * 2
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         for idx, token in enumerate(new_tokens):
             assert (
                 cluster.get_address_balance(src_address, coin=token.token)
-                == src_init_balance_tokens[idx] - amount
+                == src_init_balance_tokens[idx] - amount * 2
             ), f"Incorrect token #{idx} balance for source address `{src_address}`"
 
             assert (
-                cluster.get_address_balance(dst_address, coin=token.token)
-                == dst_init_balance_tokens[idx] + amount
-            ), f"Incorrect token #{idx} balance for destination address `{dst_address}`"
+                cluster.get_address_balance(dst_address1, coin=token.token)
+                == dst_init_balance_tokens1[idx] + amount
+            ), f"Incorrect token #{idx} balance for destination address `{dst_address1}`"
+
+            assert (
+                cluster.get_address_balance(dst_address2, coin=token.token)
+                == dst_init_balance_tokens2[idx] + amount
+            ), f"Incorrect token #{idx} balance for destination address `{dst_address2}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_transfer_no_ada(
