@@ -58,7 +58,7 @@ def issuers_addrs(
             return fixture_cache.value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"token_minting_ci{cluster_manager.cluster_instance}_{i}" for i in range(3)],
+            *[f"token_minting_ci{cluster_manager.cluster_instance}_{i}" for i in range(5)],
             cluster_obj=cluster,
         )
         fixture_cache.value = addrs
@@ -133,15 +133,19 @@ def multisig_script_policyid(
 class TestMinting:
     """Tests for minting and burning tokens."""
 
+    @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @allure.link(helpers.get_vcs_link())
     def test_minting_and_burning_witnesses(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        aname_type: str,
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses."""
         expected_fee = 201141
 
         temp_template = helpers.get_func_name()
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
@@ -151,11 +155,15 @@ class TestMinting:
         multisig_script = cluster.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
-            payment_vkey_files=payment_vkey_files[1:],
+            # Create unique script/policyid for an empty asset name. When asset name is empty, the
+            # asset ID is just policyid and no other token with the same policyid can be created.
+            payment_vkey_files=payment_vkey_files[1:]
+            if aname_type == "asset_name"
+            else payment_vkey_files[2:],
         )
 
         policyid = cluster.get_policyid(multisig_script)
-        token = f"{policyid}.{asset_name}"
+        token = f"{policyid}.{asset_name}" if asset_name else policyid
 
         assert not cluster.get_utxo(
             token_mint_addr.address, coins=[token]
@@ -198,19 +206,25 @@ class TestMinting:
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+    @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @allure.link(helpers.get_vcs_link())
     def test_minting_and_burning_sign(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        aname_type: str,
     ):
         """Test minting and burning of tokens, sign the transaction using skeys."""
         expected_fee = 188821
 
         temp_template = helpers.get_func_name()
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
-        issuer_addr = issuers_addrs[1]
+        # Create unique script/policyid for an empty asset name. When asset name is empty, the asset
+        # ID is just policyid and no other token with the same policyid can be created.
+        issuer_addr = issuers_addrs[1] if aname_type == "asset_name" else issuers_addrs[2]
 
         # create simple script
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
@@ -220,7 +234,7 @@ class TestMinting:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
-        token = f"{policyid}.{asset_name}"
+        token = f"{policyid}.{asset_name}" if asset_name else policyid
 
         assert not cluster.get_utxo(
             token_mint_addr.address, coins=[token]
