@@ -534,11 +534,11 @@ class TestMinting:
     @pytest.mark.parametrize(
         "tokens_db",
         (
-            (5, 351093),
-            (10, 538533),
-            (50, 2038053),
-            (100, 3912453),
-            (1000, 288789),
+            (5, 226133),
+            (10, 259353),
+            (50, 509273),
+            (100, 821673),
+            (1000, 0),
         ),
     )
     @allure.link(helpers.get_vcs_link())
@@ -618,10 +618,10 @@ class TestMinting:
     @pytest.mark.parametrize(
         "tokens_db",
         (
-            (5, 288789),
-            (10, 413749),
-            (50, 1413429),
-            (100, 2663029),
+            (5, 215617),
+            (10, 246857),
+            (50, 496777),
+            (100, 809177),
             (1000, 0),
         ),
     )
@@ -788,7 +788,7 @@ class TestPolicies:
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting and burning tokens after given slot."""
-        expected_fee = 351093
+        expected_fee = 228113
 
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(4)
@@ -866,7 +866,7 @@ class TestPolicies:
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting and burning tokens before given slot."""
-        expected_fee = 351093
+        expected_fee = 228113
 
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(4)
