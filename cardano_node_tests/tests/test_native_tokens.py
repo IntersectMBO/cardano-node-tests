@@ -278,6 +278,102 @@ class TestMinting:
         ), "TX fee doesn't fit the expected interval"
 
     @allure.link(helpers.get_vcs_link())
+    def test_minting_multiple_scripts(
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test minting and burning of tokens identified by policyid and policyid + asset name.
+
+        Sign the transaction using skeys.
+        """
+        num_of_scripts = 5
+        expected_fee = 263621
+
+        temp_template = helpers.get_func_name()
+        amount = 5
+        token_mint_addr = issuers_addrs[0]
+        i_addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"token_minting_{temp_template}_{i}" for i in range(num_of_scripts)],
+            cluster_obj=cluster,
+        )
+
+        tokens_mint = []
+        for i in range(num_of_scripts):
+            # create simple script
+            keyhash = cluster.get_payment_vkey_hash(i_addrs[i].vkey_file)
+            script_content = {"keyHash": keyhash, "type": "sig"}
+            script = Path(f"{temp_template}_{i}.script")
+            with open(script, "w") as out_json:
+                json.dump(script_content, out_json)
+
+            asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+            policyid = cluster.get_policyid(script)
+            aname_token = f"{policyid}.{asset_name}"
+
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[aname_token]
+            ), "The token already exists"
+            assert not cluster.get_utxo(
+                token_mint_addr.address, coins=[policyid]
+            ), "The policyid already exists"
+
+            # for each script mint both token identified by policyid + asset name and token
+            # identified by just policyid
+            tokens_mint.extend(
+                [
+                    clusterlib_utils.TokenRecord(
+                        token=aname_token,
+                        asset_name=asset_name,
+                        amount=amount,
+                        issuers_addrs=[i_addrs[i]],
+                        token_mint_addr=token_mint_addr,
+                        script=script,
+                    ),
+                    clusterlib_utils.TokenRecord(
+                        token=policyid,
+                        asset_name="",
+                        amount=amount,
+                        issuers_addrs=[i_addrs[i]],
+                        token_mint_addr=token_mint_addr,
+                        script=script,
+                    ),
+                ]
+            )
+
+        # token minting
+        tx_out_mint = clusterlib_utils.mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=tokens_mint,
+            temp_template=f"{temp_template}_mint",
+        )
+
+        for t in tokens_mint:
+            utxo_mint = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert (
+                utxo_mint and utxo_mint[0].amount == amount
+            ), f"The {t.token} token was not minted"
+
+        # token burning
+        tokens_burn = [t._replace(amount=-amount) for t in tokens_mint]
+        tx_out_burn = clusterlib_utils.mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=tokens_burn,
+            temp_template=f"{temp_template}_burn",
+        )
+
+        for t in tokens_burn:
+            utxo_burn = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            assert not utxo_burn, f"The {t.token} token was not burnt"
+
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
+    @allure.link(helpers.get_vcs_link())
     def test_minting_burning_diff_tokens_single_tx(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
