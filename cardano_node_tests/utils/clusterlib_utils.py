@@ -384,8 +384,8 @@ def mint_or_burn_witness(
     Positive `amount` value means minting, negative means burning.
     """
     _issuers_addrs = [n.issuers_addrs for n in new_tokens]
-    issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
-    issuers_skey_files = [p.skey_file for p in issuers_addrs]
+    issuers_addrs = set(itertools.chain.from_iterable(_issuers_addrs))
+    issuers_skey_files = {p.skey_file for p in issuers_addrs}
     src_address = new_tokens[0].token_mint_addr.address
 
     # create TX body
@@ -393,7 +393,7 @@ def mint_or_burn_witness(
         src_address=src_address,
         tx_name=temp_template,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files) * 2,
+        witness_count_add=len(issuers_skey_files) + len(new_tokens),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
@@ -451,9 +451,9 @@ def mint_or_burn_sign(
     Positive `amount` value means minting, negative means burning.
     """
     _issuers_addrs = [n.issuers_addrs for n in new_tokens]
-    issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
-    issuers_skey_files = [p.skey_file for p in issuers_addrs]
-    token_mint_addr_skey_files = [t.token_mint_addr.skey_file for t in new_tokens]
+    issuers_addrs = set(itertools.chain.from_iterable(_issuers_addrs))
+    issuers_skey_files = {p.skey_file for p in issuers_addrs}
+    token_mint_addr_skey_files = {t.token_mint_addr.skey_file for t in new_tokens}
     src_address = new_tokens[0].token_mint_addr.address
 
     tx_files = clusterlib.TxFiles(
@@ -466,7 +466,7 @@ def mint_or_burn_sign(
         tx_name=temp_template,
         tx_files=tx_files,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files) * 2,
+        witness_count_add=len(issuers_skey_files) + len(new_tokens),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
@@ -482,7 +482,7 @@ def mint_or_burn_sign(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=temp_template,
-        script_files=[n.script for n in new_tokens],
+        script_files={n.script for n in new_tokens},
     )
 
     # submit signed transaction
