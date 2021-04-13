@@ -141,7 +141,13 @@ class TestMinting:
         issuers_addrs: List[clusterlib.AddressRecord],
         aname_type: str,
     ):
-        """Test minting and burning of tokens, sign the transaction using witnesses."""
+        """Test minting and burning of tokens, sign the transaction using witnesses.
+
+        * mint 2 tokens - one itentified by policyid + asset name
+          and one identified by just policyid
+        * burn the minted tokens
+        * check fees in Lovelace
+        """
         expected_fee = 201141
 
         temp_template = helpers.get_func_name()
@@ -223,7 +229,13 @@ class TestMinting:
         issuers_addrs: List[clusterlib.AddressRecord],
         aname_type: str,
     ):
-        """Test minting and burning of tokens, sign the transaction using skeys."""
+        """Test minting and burning of tokens, sign the transaction using skeys.
+
+        * mint 2 tokens - one itentified by policyid + asset name
+          and one identified by just policyid
+        * burn the minted tokens
+        * check fees in Lovelace
+        """
         expected_fee = 188821
 
         temp_template = helpers.get_func_name()
@@ -297,9 +309,17 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         issuers_addrs: List[clusterlib.AddressRecord],
     ):
-        """Test minting and burning of tokens identified by policyid and policyid + asset name.
+        """Test minting of tokens using several different scripts in single transaction.
 
-        Sign the transaction using skeys.
+        * create tokens issuers
+        * create a script for each issuer
+        * mint 2 tokens with each script - one itentified by policyid + asset name
+          and one identified by just policyid. The minting is done in single transaction,
+          the transaction is signed using skeys.
+        * check that the tokens were minted
+        * burn the minted tokens
+        * check that the tokens were burnt
+        * check fees in Lovelace
         """
         num_of_scripts = 5
         expected_fee = 263621
@@ -393,7 +413,13 @@ class TestMinting:
     ):
         """Test minting one token and burning other token in single transaction.
 
-        Sign the transaction using skeys.
+        Sign transactions using skeys.
+
+        * create a script
+        * 1st TX - mint first token
+        * 2nd TX - mint second token, burn first token
+        * 3rd TX - burn second token
+        * check fees in Lovelace
         """
         expected_fee = 188821
 
@@ -478,7 +504,12 @@ class TestMinting:
     ):
         """Test minting one token and burning the same token in single transaction.
 
-        Sign the transaction using skeys.
+        Sign transactions using skeys.
+
+        * create a script
+        * specify amount to mint and amount to burn in the same transaction
+        * check that the expected amount was minted (to_mint_amount - to_burn_amount)
+        * check fees in Lovelace
         """
         expected_fee = 188821
 
@@ -503,7 +534,6 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        # token minting and burning in same TX
         tx_files = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file]
         )
@@ -521,6 +551,7 @@ class TestMinting:
             tx_name=f"{temp_template}_mint_burn",
             tx_files=tx_files,
             fee=fee,
+            # token minting and burning in the same TX
             mint=[
                 clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
                 clusterlib.TxOut(address=token_mint_addr.address, amount=-(amount - 1), coin=token),
@@ -556,14 +587,21 @@ class TestMinting:
         ),
     )
     @allure.link(helpers.get_vcs_link())
-    def test_multi_minting_and_burning_witnesses(
+    def test_bundle_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: List[clusterlib.AddressRecord],
         multisig_script_policyid: Tuple[Path, str],
         tokens_db: Tuple[int, int],
     ):
-        """Test minting and burning multiple different tokens, sign the TX using witnesses."""
+        """Test minting and burning multiple different tokens that are in single bundle.
+
+        Sign the TX using witnesses.
+
+        * mint several tokens using a single script
+        * burn the minted tokens
+        * check fees in Lovelace
+        """
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(8)
         amount = 5
@@ -640,14 +678,21 @@ class TestMinting:
         ),
     )
     @allure.link(helpers.get_vcs_link())
-    def test_multi_minting_and_burning_sign(
+    def test_bundle_minting_and_burning_sign(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: List[clusterlib.AddressRecord],
         simple_script_policyid: Tuple[Path, str],
         tokens_db: Tuple[int, int],
     ):
-        """Test minting and burning multiple different tokens, sign the TX using skeys."""
+        """Test minting and burning multiple different tokens that are in single bundle.
+
+        Sign the TX using skeys.
+
+        * mint several tokens using a single script
+        * burn the minted tokens
+        * check fees in Lovelace
+        """
         temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(8)
         amount = 5
@@ -718,7 +763,12 @@ class TestMinting:
     def test_minting_and_partial_burning(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting and partial burning of tokens."""
+        """Test minting and partial burning of tokens.
+
+        * mint a token
+        * burn part of the minted token, check the expected amount
+        * check fees in Lovelace
+        """
         expected_fee = 201141
 
         temp_template = helpers.get_func_name()
@@ -801,7 +851,7 @@ class TestPolicies:
     def test_valid_policy_after(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting and burning tokens after given slot."""
+        """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
         temp_template = helpers.get_func_name()
@@ -879,7 +929,7 @@ class TestPolicies:
     def test_valid_policy_before(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting and burning tokens before given slot."""
+        """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
         temp_template = helpers.get_func_name()
@@ -1029,7 +1079,7 @@ class TestPolicies:
     def test_policy_before_future(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test that it's NOT possible to mint tokens.
+        """Test that it's NOT possible to mint tokens when the policy is not met.
 
         The "before" slot is in the future and the given range is invalid.
         """
@@ -1091,7 +1141,7 @@ class TestPolicies:
     def test_policy_after_future(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test that it's NOT possible to mint tokens.
+        """Test that it's NOT possible to mint tokens when the policy is not met.
 
         The "after" slot is in the future and the given range is invalid.
         """
@@ -1164,7 +1214,7 @@ class TestPolicies:
     def test_policy_after_past(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test that it's NOT possible to mint tokens.
+        """Test that it's NOT possible to mint tokens when the policy is not met.
 
         The "after" slot is in the past.
         """
