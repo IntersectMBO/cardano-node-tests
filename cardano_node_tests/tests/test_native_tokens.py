@@ -92,7 +92,7 @@ def simple_script_policyid(
     keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = Path(f"{temp_template}.script")
-    with open(f"{temp_template}.script", "w") as out_json:
+    with open(script, "w") as out_json:
         json.dump(script_content, out_json)
 
     policyid = cluster.get_policyid(script)
@@ -148,18 +148,27 @@ class TestMinting:
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
-        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
         token_mint_addr = issuers_addrs[0]
+
+        # create issuers
+        if aname_type == "asset_name":
+            _issuers_vkey_files = [p.vkey_file for p in issuers_addrs]
+            payment_vkey_files = _issuers_vkey_files[1:]
+            token_issuers = issuers_addrs
+        else:
+            # create unique script/policyid for an empty asset name
+            _empty_issuers = clusterlib_utils.create_payment_addr_records(
+                *[f"token_minting_{temp_template}_{i}" for i in range(4)],
+                cluster_obj=cluster,
+            )
+            payment_vkey_files = [p.vkey_file for p in _empty_issuers]
+            token_issuers = [issuers_addrs[0], *_empty_issuers]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
-            # Create unique script/policyid for an empty asset name. When asset name is empty, the
-            # asset ID is just policyid and no other token with the same policyid can be created.
-            payment_vkey_files=payment_vkey_files[1:]
-            if aname_type == "asset_name"
-            else payment_vkey_files[2:],
+            payment_vkey_files=payment_vkey_files,
         )
 
         policyid = cluster.get_policyid(multisig_script)
@@ -173,7 +182,7 @@ class TestMinting:
             token=token,
             asset_name=asset_name,
             amount=amount,
-            issuers_addrs=issuers_addrs,
+            issuers_addrs=token_issuers,
             token_mint_addr=token_mint_addr,
             script=multisig_script,
         )
@@ -222,15 +231,20 @@ class TestMinting:
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
-        # Create unique script/policyid for an empty asset name. When asset name is empty, the asset
-        # ID is just policyid and no other token with the same policyid can be created.
-        issuer_addr = issuers_addrs[1] if aname_type == "asset_name" else issuers_addrs[2]
+        if aname_type == "asset_name":
+            issuer_addr = issuers_addrs[1]
+        else:
+            # create unique script/policyid for an empty asset name
+            issuer_addr = clusterlib_utils.create_payment_addr_records(
+                f"token_minting_{temp_template}",
+                cluster_obj=cluster,
+            )[0]
 
         # create simple script
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(f"{temp_template}.script", "w") as out_json:
+        with open(script, "w") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
@@ -393,7 +407,7 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(f"{temp_template}.script", "w") as out_json:
+        with open(script, "w") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
@@ -479,7 +493,7 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(f"{temp_template}.script", "w") as out_json:
+        with open(script, "w") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
