@@ -838,6 +838,82 @@ class TestMinting:
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+    @allure.link(helpers.get_vcs_link())
+    def test_minting_unicode_asset_name(
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test minting and burning of token with unicode non-ascii chars in its asset name.
+
+        Tests https://github.com/input-output-hk/cardano-node/issues/2337
+
+        * mint a token that has non-ascii characters in its asset name
+        * burn the minted token
+        * check fees in Lovelace
+        """
+        expected_fee = 188821
+
+        temp_template = helpers.get_func_name()
+        asset_name = f"ěůřščžďťň{clusterlib.get_rand_str(4)}"
+        amount = 5
+
+        token_mint_addr = issuers_addrs[0]
+        issuer_addr = issuers_addrs[1]
+
+        # create simple script
+        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        script_content = {"keyHash": keyhash, "type": "sig"}
+        script = Path(f"{temp_template}.script")
+        with open(script, "w") as out_json:
+            json.dump(script_content, out_json)
+
+        policyid = cluster.get_policyid(script)
+        token = f"{policyid}.{asset_name}"
+
+        assert not cluster.get_utxo(
+            token_mint_addr.address, coins=[token]
+        ), "The token already exists"
+
+        token_mint = clusterlib_utils.TokenRecord(
+            token=token,
+            asset_name=asset_name,
+            amount=amount,
+            issuers_addrs=[issuer_addr],
+            token_mint_addr=token_mint_addr,
+            script=script,
+        )
+
+        # token minting
+        tx_out_mint = clusterlib_utils.mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=[token_mint],
+            temp_template=f"{temp_template}_mint",
+        )
+
+        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        assert (
+            token_utxo and token_utxo[0].amount == amount
+        ), "The token was not minted or expected chars are not present in the asset name"
+
+        # token burning
+        token_burn = token_mint._replace(amount=-amount)
+        tx_out_burn = clusterlib_utils.mint_or_burn_sign(
+            cluster_obj=cluster,
+            new_tokens=[token_burn],
+            temp_template=f"{temp_template}_burn",
+        )
+
+        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        assert not token_utxo, "The token was not burnt"
+
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
