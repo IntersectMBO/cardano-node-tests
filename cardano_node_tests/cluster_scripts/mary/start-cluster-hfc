@@ -265,11 +265,9 @@ for i in $(seq 1 $NUM_BFT_NODES); do
     --tx "$STATE_CLUSTER/byron/tx$i.tx"
 done
 
-EPOCH_SEC="$(jq '.epochLength * .slotLength' < "$STATE_CLUSTER/shelley/genesis.json")"
-WAIT_SEC="$((EPOCH_SEC + 2))"
-
-echo "Waiting $WAIT_SEC sec for Shelley era to start"
-sleep "$WAIT_SEC"
+# length of Byron era is hardcoded to 200 sec (+2 sec buffer)
+echo "Waiting 202 sec for Shelley era to start"
+sleep 202
 
 
 #
@@ -323,7 +321,7 @@ done <<< "$(cardano-cli query utxo --testnet-magic \
             --address "$TXIN_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
-TTL="$(jq '.slot + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+TTL="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
 
 POOL_ARGS=()
 for i in $(seq 1 $NUM_POOLS); do
@@ -396,6 +394,9 @@ cardano-cli transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
+EPOCH_SEC="$(jq '.epochLength * .slotLength' < "$STATE_CLUSTER/shelley/genesis.json")"
+WAIT_SEC="$((EPOCH_SEC + 2))"
+
 echo "Waiting $WAIT_SEC sec for Allegra era to start"
 sleep "$WAIT_SEC"
 
@@ -441,7 +442,7 @@ done <<< "$(cardano-cli query utxo --testnet-magic \
             --address "$TXIN_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
-TTL="$(jq '.slot + 1000' <<< "$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC")")"
+TTL="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
 
 cardano-cli transaction build-raw \
   --allegra-era \
@@ -490,7 +491,11 @@ cardano-cli transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-echo "Waiting $WAIT_SEC sec for Mary era to start"
-sleep "$WAIT_SEC"
+FINAL_WAIT="$((WAIT_SEC + 10))"
+echo "Waiting $FINAL_WAIT sec for Mary era to start"
+sleep "$FINAL_WAIT"
+
+ERA="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
+[ "$ERA" = "Mary" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
 
 echo "Cluster started. Run \`stop-cluster\` to stop"
