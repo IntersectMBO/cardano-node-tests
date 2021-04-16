@@ -2,7 +2,7 @@ steps:
   - label: 'Run tests & generate report'
     command:
       - 'mkdir -p /scratch/cardano-node-tests'
-      - './.buildkite/run.sh'
+      - './.buildkite/nightly.sh'
     env:
       CARDANO_NODE_SOCKET_PATH_CI: '/scratch/cardano-node-tests/state-cluster0/bft1.socket'
     timeout_in_minutes: 500
@@ -11,4 +11,5 @@ steps:
     artifact_paths:
       - 'allure-report.tar.bz2'
       - 'cli_coverage.json'
+      - 'nightly-report.html'
       - 'scheduling.log'
