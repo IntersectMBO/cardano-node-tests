@@ -19,7 +19,11 @@ niv update
 # run tests and generate report
 # shellcheck disable=SC2016
 nix-shell --run \
-  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" make tests; retval="$?"; ./.buildkite/report.sh ./; exit "$retval"'
+  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" CI_ARGS="--html=nightly-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
 retval="$?"
+
+echo
+echo "Dir content:"
+ls -1
 
 exit "$retval"

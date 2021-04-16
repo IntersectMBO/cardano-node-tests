@@ -19,6 +19,7 @@ filelock
 hypothesis
 pydantic
 pytest
+pytest-html
 pytest-metadata
 pytest-ordering
 pytest-xdist
