@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # When running tests on testnet, it is necessary to do some cleanup afterwards:
 # * deregister pools
