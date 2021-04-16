@@ -14,9 +14,9 @@ let
 
       python3 = super.python3.override {
         packageOverrides = self: _: {
-          allure = self.callPackage ./nix/allure.nix {};
-          pytest-allure = self.callPackage ./nix/pytest-allure.nix {};
-          cardano-clusterlib = self.callPackage ./nix/cardano-clusterlib.nix {};
+          allure = self.callPackage ./allure.nix {};
+          pytest-allure = self.callPackage ./pytest-allure.nix {};
+          cardano-clusterlib = self.callPackage ./cardano-clusterlib.nix {};
           _hypothesis = self.hypothesis.overridePythonAttrs(old: rec {
             version = "6.8.8";
             doCheck = false;

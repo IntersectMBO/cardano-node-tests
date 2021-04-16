@@ -1,6 +1,7 @@
 steps:
   - label: 'Run tests & generate report'
     command:
+      - 'mkdir -p /scratch/cardano-node-tests'
       - './.buildkite/run.sh'
     env:
       CARDANO_NODE_SOCKET_PATH_CI: '/scratch/cardano-node-tests/state-cluster0/bft1.socket'
@@ -8,5 +9,6 @@ steps:
     agents:
       system: x86_64-linux
     artifact_paths:
-      - 'allure-report/**/*'
+      - 'allure-report.tar.bz2'
+      - 'cli_coverage.json'
       - 'scheduling.log'
