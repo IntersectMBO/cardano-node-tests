@@ -22,7 +22,7 @@ ifndef PYTEST_ARGS
 	pytest -s cardano_node_tests --skipall --alluredir=$(ALLURE_DIR) >/dev/null
 endif
 # run tests for real and produce Allure results
-	pytest cardano_node_tests $(PYTEST_ARGS) -n $(TEST_THREADS) --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
+	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) -n $(TEST_THREADS) --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
 
 # run all enabled tests on testnet, generate allure report
 # testnets: export NOPOOLS=1
@@ -35,7 +35,7 @@ ifndef PYTEST_ARGS
 	pytest -s cardano_node_tests -m testnets --skipall --alluredir=$(ALLURE_DIR) >/dev/null
 endif
 # run tests for real and produce Allure results
-	pytest cardano_node_tests $(PYTEST_ARGS) -n $(TEST_THREADS) -m testnets --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
+	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) -n $(TEST_THREADS) -m testnets --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
 
 # run linters
 lint:
