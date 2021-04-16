@@ -1,5 +1,6 @@
-#!/usr/bin/env nix-shell
-#!nix-shell -i bash -p niv nix gnumake gnutar coreutils adoptopenjdk-jre-bin curl git
+#! /usr/bin/env nix-shell
+#! nix-shell -i bash -p niv nix gnumake gnutar coreutils adoptopenjdk-jre-bin curl git
+#! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
 set -uo pipefail
