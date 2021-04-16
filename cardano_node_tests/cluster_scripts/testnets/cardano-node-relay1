@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
 echo "Starting cardano-node run: cardano-node run"
    echo "--config ./state-cluster/config-relay1.json"

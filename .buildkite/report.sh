@@ -23,4 +23,7 @@ mkdir -p "$allure_report_dir"
 
 cp -a "$reports_dir/environment.properties" "$allure_report_dir"
 allure generate "$reports_dir" -o "$allure_report_dir" --clean
-get_coverage "$allure_report_dir/cli_coverage.json"
+
+# generate artifacts
+tar -C "$tests_repo" -cjf "$tests_repo/allure-report.tar.bz2" allure-report
+get_coverage "$tests_repo/cli_coverage.json"
