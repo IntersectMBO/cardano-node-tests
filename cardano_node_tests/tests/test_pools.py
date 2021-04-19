@@ -608,15 +608,12 @@ class TestStakePool:
             tx_name=temp_template,
         )
 
-        LOGGER.info("Waiting up to 3 epochs for stake pool to be deregistered.")
+        # check that the pool was deregistered
+        cluster.wait_for_new_epoch()
         stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
-        helpers.wait_for(
-            lambda: cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
-            is None,
-            delay=10,
-            num_sec=3 * cluster.epoch_length_sec,
-            message="deregister stake pool",
-        )
+        assert not cluster.get_registered_stake_pools_ledger_state().get(
+            stake_pool_id_dec
+        ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
         # check that the balance for source address was correctly updated
         assert src_register_balance - tx_raw_output.fee == cluster.get_address_balance(
@@ -705,15 +702,12 @@ class TestStakePool:
             tx_name=temp_template,
         )
 
-        LOGGER.info("Waiting up to 3 epochs for stake pool to be deregistered.")
+        # check that the pool was deregistered
+        cluster.wait_for_new_epoch()
         stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
-        helpers.wait_for(
-            lambda: cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
-            is None,
-            delay=10,
-            num_sec=3 * cluster.epoch_length_sec,
-            message="deregister stake pool",
-        )
+        assert not cluster.get_registered_stake_pools_ledger_state().get(
+            stake_pool_id_dec
+        ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
         # check that the stake addresses are no longer delegated
         for owner_rec in pool_owners:
@@ -743,7 +737,10 @@ class TestStakePool:
         assert (
             cluster.get_address_balance(src_address)
             == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
-        ), f"Incorrect balance for source address `{src_address}`"
+        ), (
+            f"Incorrect balance for source address `{src_address}` "
+            f"({src_init_balance}, {tx_raw_output.fee}, {cluster.get_pool_deposit()})"
+        )
 
         LOGGER.info("Waiting up to 5 epochs for stake pool to be reregistered.")
         helpers.wait_for(
