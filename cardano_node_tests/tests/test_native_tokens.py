@@ -21,6 +21,7 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.utils import cluster_management
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -1549,6 +1550,10 @@ class TestTransfer:
             ), f"Incorrect token #{idx} balance for destination address `{dst_address2}`"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
+        reason="runs only on local cluster",
+    )
     def test_transfer_no_ada(
         self,
         cluster: clusterlib.ClusterLib,

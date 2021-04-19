@@ -748,7 +748,6 @@ class TestManyUTXOs:
             tx_files=tx_files,
             join_txouts=False,
         )
-        cluster_obj.wait_for_new_block(new_blocks=2)
 
     @pytest.fixture
     def many_utxos(
