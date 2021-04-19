@@ -13,8 +13,7 @@ BYRON_SECURITY_PARAM=100
 POOL_PLEDGE=1000000000000
 INIT_SUPPLY=45000000000000000
 
-if [ -f "$STATE_CLUSTER/supervisord.pid" ]
-then
+if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   echo "Cluster already running. Please run \`stop-cluster\` first!" >&2
   exit 1
 fi
@@ -496,6 +495,6 @@ echo "Waiting $FINAL_WAIT sec for Mary era to start"
 sleep "$FINAL_WAIT"
 
 ERA="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
-[ "$ERA" = "Mary" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+[ "$ERA" = "Mary" ] || [ "$ERA" = "null" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
 
 echo "Cluster started. Run \`stop-cluster\` to stop"
