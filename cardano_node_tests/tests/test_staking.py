@@ -808,7 +808,7 @@ class TestRewards:
 
         # make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=-50, stop=-20, force_epoch=False
+            cluster_obj=cluster, start=-100, stop=-40, force_epoch=False
         )
 
         init_epoch = cluster.get_epoch()
@@ -1071,9 +1071,9 @@ class TestRewards:
         )
         pool_data_updated = loaded_data._replace(pool_pledge=0)
 
-        # sleep till the end of epoch
+        # make sure we have enough time to update the pool parameters
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=-50, stop=-20, force_epoch=False
+            cluster_obj=cluster, start=-100, stop=-30, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -1191,28 +1191,7 @@ class TestRewards:
             if cluster.get_epoch() == prev_epoch:
                 cluster.wait_for_new_epoch()
 
-            # sleep till the end of epoch
-            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-5)
             this_epoch = cluster.get_epoch()
-
-            # current reward balances
-            owner_reward = cluster.get_stake_addr_info(
-                pool_reward.stake.address
-            ).reward_account_balance
-
-            # absolute reward amounts received this epoch
-            abs_owner_reward = (
-                owner_reward - prev_owner_reward if this_epoch == prev_epoch + 1 else 0
-            )
-
-            # store collected rewards info
-            owner_rewards.append(
-                (
-                    this_epoch,
-                    owner_reward,
-                    abs_owner_reward,
-                )
-            )
 
             if this_epoch == init_epoch + 2:
                 # delegate pool rewards address to pool
@@ -1260,6 +1239,28 @@ class TestRewards:
                 assert (
                     cluster.get_epoch() == this_epoch
                 ), "Deregistration took longer than expected and would affect other checks"
+
+            # sleep till the end of epoch
+            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-5)
+
+            # current reward balances
+            owner_reward = cluster.get_stake_addr_info(
+                pool_reward.stake.address
+            ).reward_account_balance
+
+            # absolute reward amounts received this epoch
+            abs_owner_reward = (
+                owner_reward - prev_owner_reward if this_epoch == prev_epoch + 1 else 0
+            )
+
+            # store collected rewards info
+            owner_rewards.append(
+                (
+                    this_epoch,
+                    owner_reward,
+                    abs_owner_reward,
+                )
+            )
 
             _check_ledger_state(
                 this_epoch=this_epoch,
