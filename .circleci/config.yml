@@ -1,0 +1,123 @@
+version: 2.1
+
+orbs:
+  win: circleci/windows@2.2.0
+
+parameters:
+  tag_no1:
+    type: string
+    default: "1.26.1"
+  tag_no2:
+    type: string
+    default: None
+
+commands:
+  install_python_libraries:
+    description: "Install Python libraries based on OS type"
+    parameters:
+      os_type:
+        type: string
+    steps:
+      - when:
+          condition:
+            equal: [ "windows", << parameters.os_type >> ]
+          steps:
+          - run:
+              name: "Install Python libraries on Windows executor"
+              command: |
+                echo "Executor type: << parameters.os_type >>"
+                pip install requests
+                pip install psutil
+                pip install sqlite-utils>=2.18
+                sqlite-utils --version
+              shell: bash.exe
+      - when:
+          condition:
+            not:
+              equal: [ "windows", << parameters.os_type >> ]
+          steps:
+            - run:
+                name: "Install Python libraries on non Windows executor"
+                command: |
+                  echo "Executor type: << parameters.os_type >>"
+                  pip3 install requests
+                  pip3 install psutil
+                  pip3 install sqlite-utils>=2.18
+                  sqlite-utils --version
+  run_sync_tests:
+    description: "Trigger the sync tests based on OS type"
+    parameters:
+      os_type:
+        type: string
+      env_type:
+        type: string
+    steps:
+      - when:
+          condition:
+            equal: [ "windows", << parameters.os_type >> ]
+          steps:
+            - run:
+                name: "Trigger the sync tests on Windows executor"
+                no_output_timeout: 600m
+                command: |
+                  echo "Executor type: << parameters.os_type >>"
+                  export PYTHONUNBUFFERED=1
+                  python ./sync_tests/sync_test.py -t1 << pipeline.parameters.tag_no1 >> -t2 << pipeline.parameters.tag_no2 >> -e << parameters.env_type >>
+                shell: bash.exe
+      - when:
+          condition:
+            not:
+              equal: [ "windows", << parameters.os_type >> ]
+          steps:
+            - run:
+                name: "Trigger the sync tests on non Windows executor"
+                no_output_timeout: 600m
+                command: |
+                  echo "Executor type: << parameters.os_type >>"
+                  export PYTHONUNBUFFERED=1
+                  python3 ./sync_tests/sync_test.py -t1 << pipeline.parameters.tag_no1 >> -t2 << pipeline.parameters.tag_no2 >> -e << parameters.env_type >>
+executors:
+  linux:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: 2xlarge
+  macos:
+    macos:
+      xcode: 11.3.0
+    resource_class: large
+  windows: win/default
+
+jobs:
+  sync_test:
+    parameters:
+      os:
+        type: string
+      env:
+        type: string
+    executor: << parameters.os >>
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - install_python_libraries:
+          os_type: << parameters.os >>
+      - run_sync_tests:
+          os_type: << parameters.os >>
+          env_type: << parameters.env >>
+      - store_artifacts:
+          path: ./sync_tests/logfile.log
+          destination: node_logs
+
+workflows:
+  sync_tests:
+    jobs:
+      - sync_test:
+          filters:
+            branches:
+              only:
+                - circle_ci_sync_tests
+          matrix:
+            parameters:
+              os: [ linux, macos, windows ]
+#              env: [shelley_qa, testnet, staging, mainnet]
+              env: [mainnet]
+          name: test-on-<< matrix.os >>-with-env-<< matrix.env >>
