@@ -18,7 +18,6 @@ import hypothesis.strategies as st
 import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
@@ -128,8 +127,8 @@ def multisig_script_policyid(
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
-    reason="runs on version >= 1.24.0 and with Mary+ TX",
+    VERSIONS.transaction_era < VERSIONS.MARY,
+    reason="runs only with Mary+ TX",
 )
 class TestMinting:
     """Tests for minting and burning tokens."""
@@ -535,15 +534,20 @@ class TestMinting:
             token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        tx_files = clusterlib.TxFiles(
-            signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file]
-        )
-
         # build and sign a transaction
+        tx_files = clusterlib.TxFiles(
+            script_files=clusterlib.ScriptFiles(minting_scripts=[script]),
+            signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file],
+        )
+        mint = [
+            clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
+            clusterlib.TxOut(address=token_mint_addr.address, amount=-(amount - 1), coin=token),
+        ]
         fee = cluster.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
             tx_files=tx_files,
+            mint=mint,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=2,
         )
@@ -553,16 +557,12 @@ class TestMinting:
             tx_files=tx_files,
             fee=fee,
             # token minting and burning in the same TX
-            mint=[
-                clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
-                clusterlib.TxOut(address=token_mint_addr.address, amount=-(amount - 1), coin=token),
-            ],
+            mint=mint,
         )
         out_file_signed = cluster.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_mint_burn",
-            script_files=[script],
         )
 
         # submit signed transaction
@@ -582,8 +582,8 @@ class TestMinting:
         (
             (5, 226133),
             (10, 259353),
-            (50, 509273),
-            (100, 821673),
+            (50, 444549),
+            (100, 684349),
             (1000, 0),
         ),
     )
@@ -651,7 +651,7 @@ class TestMinting:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        tx_out_burn = clusterlib_utils.mint_or_burn_witness(
+        clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -664,8 +664,6 @@ class TestMinting:
         # check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
     @pytest.mark.parametrize(
@@ -673,8 +671,8 @@ class TestMinting:
         (
             (5, 215617),
             (10, 246857),
-            (50, 496777),
-            (100, 809177),
+            (50, 426333),
+            (100, 666133),
             (1000, 0),
         ),
     )
@@ -743,7 +741,7 @@ class TestMinting:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        tx_out_burn = clusterlib_utils.mint_or_burn_sign(
+        clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -756,8 +754,6 @@ class TestMinting:
         # check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
     @allure.link(helpers.get_vcs_link())
@@ -918,8 +914,8 @@ class TestMinting:
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
-    reason="runs on version >= 1.24.0 and with Mary+ TX",
+    VERSIONS.transaction_era < VERSIONS.MARY,
+    reason="runs only with Mary+ TX",
 )
 class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
@@ -1352,8 +1348,8 @@ class TestPolicies:
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
-    reason="runs on version >= 1.24.0 and with Mary+ TX",
+    VERSIONS.transaction_era < VERSIONS.MARY,
+    reason="runs only with Mary+ TX",
 )
 class TestTransfer:
     """Tests for transfering tokens."""
@@ -1582,8 +1578,8 @@ class TestTransfer:
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY or VERSIONS.node < version.parse("1.24.0"),
-    reason="runs on version >= 1.24.0 and with Mary+ TX",
+    VERSIONS.transaction_era < VERSIONS.MARY,
+    reason="runs only with Mary+ TX",
 )
 class TestNegative:
     """Negative tests for minting tokens."""
@@ -1598,14 +1594,14 @@ class TestNegative:
         _issuers_addrs = [n.issuers_addrs for n in new_tokens]
         issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
         issuers_skey_files = [p.skey_file for p in issuers_addrs]
-        token_mint_addr_skey_files = [t.token_mint_addr.skey_file for t in new_tokens]
+        token_mint_addr_skey_files = [n.token_mint_addr.skey_file for n in new_tokens]
         src_address = new_tokens[0].token_mint_addr.address
 
-        tx_files = clusterlib.TxFiles(
-            signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files]
-        )
-
         # build and sign a transaction
+        tx_files = clusterlib.TxFiles(
+            script_files=clusterlib.ScriptFiles(minting_scripts=[n.script for n in new_tokens]),
+            signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files],
+        )
         tx_raw_output = cluster_obj.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
@@ -1620,7 +1616,6 @@ class TestNegative:
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
-            script_files=[n.script for n in new_tokens],
         )
 
         return out_file_signed
