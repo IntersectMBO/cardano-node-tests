@@ -22,13 +22,15 @@ LOGGER = logging.getLogger(__name__)
 ROTATED_RE = re.compile(r".+\.[0-9]+")  # detect rotated log file
 ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
 ERRORS_IGNORED = [
-    "failedScripts",
-    "EKGServerStartupError",
-    "Failed to start all required subscriptions",
     "Connection Attempt Exception",
+    "EKGServerStartupError",
+    "ExceededTimeLimit",
+    "Failed to start all required subscriptions",
+    "TraceDidntAdoptBlock",
+    "failedScripts",
 ]
 if configuration.TESTNET_SCRIPTS_DIR:
-    ERRORS_IGNORED.extend(["ExceededTimeLimit", "closed when reading data, waiting on next header"])
+    ERRORS_IGNORED.extend(["closed when reading data, waiting on next header"])
 ERRORS_RULES_FILE_NAME = ".errors_rules"
 
 

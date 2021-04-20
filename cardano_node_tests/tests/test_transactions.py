@@ -30,7 +30,6 @@ from packaging import version
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -770,9 +769,6 @@ class TestManyUTXOs:
             out_addrs1 = [payment_addrs[1] for __ in range(200)]
             out_addrs2 = [payment_addrs[2] for __ in range(200)]
             out_addrs = [*out_addrs1, *out_addrs2]
-
-            # ignore `TraceDidntAdoptBlocks` error in log files
-            logfiles.add_ignore_rule("*.stdout", "TraceDidntAdoptBlocks")
 
             for i in range(25):
                 for amount in range(1, 21):
