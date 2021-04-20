@@ -2330,7 +2330,7 @@ class TestRewards:
                 # check that the reward address for pool1 is now receiving rewards
                 # for both pools by comparing reward amount received in last epoch
                 # with reward amount previously received by both pools together
-                if pool1_epoch_amount >= combined_reward_per_epoch * 0.9:
+                if pool1_epoch_amount >= combined_reward_per_epoch * 0.75:
                     break
 
             pool1_amount_prev = pool1_amount
