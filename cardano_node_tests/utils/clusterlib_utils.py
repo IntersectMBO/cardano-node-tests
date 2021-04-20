@@ -383,28 +383,35 @@ def mint_or_burn_witness(
 
     Positive `amount` value means minting, negative means burning.
     """
-    _issuers_addrs = [n.issuers_addrs for n in new_tokens]
+    _issuers_addrs = [t.issuers_addrs for t in new_tokens]
     issuers_addrs = set(itertools.chain.from_iterable(_issuers_addrs))
     issuers_skey_files = {p.skey_file for p in issuers_addrs}
     src_address = new_tokens[0].token_mint_addr.address
 
     # create TX body
+    tx_files = clusterlib.TxFiles(
+        script_files=clusterlib.ScriptFiles(minting_scripts=[t.script for t in new_tokens]),
+    )
+    mint = [
+        clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+        for t in new_tokens
+    ]
     fee = cluster_obj.calculate_tx_fee(
         src_address=src_address,
         tx_name=temp_template,
+        tx_files=tx_files,
+        mint=mint,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files) + len(new_tokens),
+        witness_count_add=len(issuers_skey_files),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
         tx_name=temp_template,
+        tx_files=tx_files,
         fee=fee,
         invalid_hereafter=invalid_hereafter,
         invalid_before=invalid_before,
-        mint=[
-            clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
-            for n in new_tokens
-        ],
+        mint=mint,
     )
 
     # create witness file for each required key
@@ -416,16 +423,6 @@ def mint_or_burn_witness(
         )
         for idx, skey in enumerate(issuers_skey_files)
     ]
-    witness_files.extend(
-        [
-            cluster_obj.witness_tx(
-                tx_body_file=tx_raw_output.out_file,
-                witness_name=f"{temp_template}_script{idx}",
-                script_file=token.script,
-            )
-            for idx, token in enumerate(new_tokens)
-        ]
-    )
 
     # sign TX using witness files
     tx_witnessed_file = cluster_obj.assemble_tx(
@@ -450,39 +447,40 @@ def mint_or_burn_sign(
 
     Positive `amount` value means minting, negative means burning.
     """
-    _issuers_addrs = [n.issuers_addrs for n in new_tokens]
+    _issuers_addrs = [t.issuers_addrs for t in new_tokens]
     issuers_addrs = set(itertools.chain.from_iterable(_issuers_addrs))
     issuers_skey_files = {p.skey_file for p in issuers_addrs}
     token_mint_addr_skey_files = {t.token_mint_addr.skey_file for t in new_tokens}
     src_address = new_tokens[0].token_mint_addr.address
 
-    tx_files = clusterlib.TxFiles(
-        signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files]
-    )
-
     # build and sign a transaction
+    tx_files = clusterlib.TxFiles(
+        script_files=clusterlib.ScriptFiles(minting_scripts=[t.script for t in new_tokens]),
+        signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files],
+    )
+    mint = [
+        clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+        for t in new_tokens
+    ]
     fee = cluster_obj.calculate_tx_fee(
         src_address=src_address,
         tx_name=temp_template,
         tx_files=tx_files,
+        mint=mint,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files) + len(new_tokens),
+        witness_count_add=len(issuers_skey_files),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
         tx_name=temp_template,
         tx_files=tx_files,
         fee=fee,
-        mint=[
-            clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
-            for n in new_tokens
-        ],
+        mint=mint,
     )
     out_file_signed = cluster_obj.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=temp_template,
-        script_files={n.script for n in new_tokens},
     )
 
     # submit signed transaction
