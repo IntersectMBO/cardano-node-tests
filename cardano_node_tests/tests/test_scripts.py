@@ -16,7 +16,6 @@ import cbor2
 import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
@@ -53,11 +52,10 @@ def multisig_tx(
     src_address: str,
     dst_address: str,
     amount: int,
-    multisig_script: Path,
     payment_skey_files: List[Path],
+    multisig_script: Optional[Path] = None,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
-    script_is_src=False,
 ):
     """Build and submit multisig transaction."""
     # record initial balances
@@ -65,9 +63,14 @@ def multisig_tx(
     dst_init_balance = cluster_obj.get_address_balance(dst_address)
 
     # create TX body
+    tx_files = (
+        clusterlib.TxFiles(script_files=clusterlib.ScriptFiles(txin_scripts=[multisig_script]))
+        if multisig_script
+        else None
+    )
     destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
     witness_count_add = len(payment_skey_files)
-    if script_is_src:
+    if multisig_script:
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add += 5
 
@@ -76,6 +79,7 @@ def multisig_tx(
         src_address=src_address,
         tx_name=temp_template,
         txouts=destinations,
+        tx_files=tx_files,
         ttl=ttl,
         witness_count_add=witness_count_add,
     )
@@ -83,6 +87,7 @@ def multisig_tx(
         src_address=src_address,
         tx_name=temp_template,
         txouts=destinations,
+        tx_files=tx_files,
         fee=fee,
         ttl=ttl,
         invalid_hereafter=invalid_hereafter,
@@ -98,14 +103,6 @@ def multisig_tx(
         )
         for idx, skey in enumerate(payment_skey_files)
     ]
-    if script_is_src:
-        witness_files.append(
-            cluster_obj.witness_tx(
-                tx_body_file=tx_raw_output.out_file,
-                witness_name=f"{temp_template}_script",
-                script_file=multisig_script,
-            )
-        )
 
     # sign TX using witness files
     tx_witnessed_file = cluster_obj.assemble_tx(
@@ -216,7 +213,6 @@ class TestBasic:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=2_000_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -227,9 +223,8 @@ class TestBasic:
             src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
-            multisig_script=multisig_script,
             payment_skey_files=payment_skey_files,
-            script_is_src=True,
+            multisig_script=multisig_script,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -268,7 +263,6 @@ class TestBasic:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=5_000_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -280,9 +274,8 @@ class TestBasic:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
-                multisig_script=multisig_script,
                 payment_skey_files=[payment_skey_files[random.randrange(0, skeys_len)]],
-                script_is_src=True,
+                multisig_script=multisig_script,
             )
 
         # send funds from script address using multiple witnesses
@@ -294,9 +287,8 @@ class TestBasic:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
-                multisig_script=multisig_script,
                 payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
-                script_is_src=True,
+                multisig_script=multisig_script,
             )
 
     @allure.link(helpers.get_vcs_link())
@@ -332,7 +324,6 @@ class TestBasic:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=2_000_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -345,9 +336,8 @@ class TestBasic:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
-                multisig_script=multisig_script,
                 payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
-                script_is_src=True,
+                multisig_script=multisig_script,
             )
 
     @allure.link(helpers.get_vcs_link())
@@ -428,7 +418,6 @@ class TestBasic:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=300_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -438,14 +427,16 @@ class TestBasic:
 
         # send funds from script address
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
-        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
+        tx_files = clusterlib.TxFiles(
+            script_files=clusterlib.ScriptFiles(txin_scripts=[multisig_script]),
+            signing_key_files=[dst_addr.skey_file],
+        )
 
         tx_raw_output = cluster.send_tx(
             src_address=script_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
-            script_files=[multisig_script],
         )
         cluster.wait_for_new_block(new_blocks=2)
 
@@ -487,7 +478,6 @@ class TestBasic:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=2_000_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -498,12 +488,12 @@ class TestBasic:
             src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
-            script_is_src=True,
+            multisig_script=multisig_script,
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xfail
     def test_multisig_no_required_atleast(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -533,7 +523,6 @@ class TestBasic:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=2_000_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -544,9 +533,8 @@ class TestBasic:
             src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
-            multisig_script=multisig_script,
             payment_skey_files=[],
-            script_is_src=True,
+            multisig_script=multisig_script,
         )
 
 
@@ -612,7 +600,6 @@ class TestNegative:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=300_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -624,9 +611,8 @@ class TestNegative:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
-                multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files[:-1],
-                script_is_src=True,
+                multisig_script=multisig_script,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
@@ -662,7 +648,6 @@ class TestNegative:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=300_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -674,9 +659,8 @@ class TestNegative:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
-                multisig_script=multisig_script,
                 payment_skey_files=[payment_skey_files[-1]],
-                script_is_src=True,
+                multisig_script=multisig_script,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
@@ -716,12 +700,11 @@ class TestNegative:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=300_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
         # send funds from script address, use lower number of skeys then required
-        for num_of_skeys in range(required):
+        for num_of_skeys in range(1, required):
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 multisig_tx(
                     cluster_obj=cluster,
@@ -729,17 +712,16 @@ class TestNegative:
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
                     amount=1000,
-                    multisig_script=multisig_script,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
-                    script_is_src=True,
+                    multisig_script=multisig_script,
                 )
             assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALLEGRA or VERSIONS.node < version.parse("1.24.0"),
-    reason="runs on version >= 1.24.0 and with Allegra+ TX",
+    VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+    reason="runs only with Allegra+ TX",
 )
 class TestTimeLocking:
     """Tests for time locking."""
@@ -807,7 +789,6 @@ class TestTimeLocking:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=2_000_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -818,11 +799,10 @@ class TestTimeLocking:
             src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
-            multisig_script=multisig_script,
             payment_skey_files=payment_skey_files,
+            multisig_script=multisig_script,
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
-            script_is_src=True,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -858,7 +838,6 @@ class TestTimeLocking:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=2_000_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -869,11 +848,10 @@ class TestTimeLocking:
             src_address=script_address,
             dst_address=payment_addrs[0].address,
             amount=1000,
-            multisig_script=multisig_script,
             payment_skey_files=payment_skey_files,
+            multisig_script=multisig_script,
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
-            script_is_src=True,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -912,7 +890,6 @@ class TestTimeLocking:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=500_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -924,11 +901,10 @@ class TestTimeLocking:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
-                multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=before_slot,
-                script_is_src=True,
             )
         assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
 
@@ -940,11 +916,10 @@ class TestTimeLocking:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
-                multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=before_slot + 1,
-                script_is_src=True,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
@@ -984,7 +959,6 @@ class TestTimeLocking:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=500_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -996,11 +970,10 @@ class TestTimeLocking:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
-                multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=before_slot + 1,
-                script_is_src=True,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
@@ -1040,7 +1013,6 @@ class TestTimeLocking:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=500_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -1052,11 +1024,10 @@ class TestTimeLocking:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
-                multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
                 invalid_before=after_slot,
                 invalid_hereafter=after_slot + 100,
-                script_is_src=True,
             )
         assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
 
@@ -1068,11 +1039,10 @@ class TestTimeLocking:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
-                multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=after_slot,
-                script_is_src=True,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
@@ -1112,7 +1082,6 @@ class TestTimeLocking:
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=500_000,
-            multisig_script=multisig_script,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -1125,19 +1094,18 @@ class TestTimeLocking:
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
-                multisig_script=multisig_script,
                 payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=after_slot,
-                script_is_src=True,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALLEGRA or VERSIONS.node < version.parse("1.24.0"),
-    reason="runs on version >= 1.24.0 and with Allegra+ TX",
+    VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+    reason="runs only with Allegra+ TX",
 )
 class TestAuxiliaryScripts:
     """Tests for auxiliary scripts."""
@@ -1197,9 +1165,9 @@ class TestAuxiliaryScripts:
         )
 
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[0].skey_file],
             metadata_json_files=[self.JSON_METADATA_FILE],
-            script_files=[multisig_script],
+            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
+            signing_key_files=[payment_addrs[0].skey_file],
         )
         tx_raw_output = cluster.send_tx(
             src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
@@ -1211,10 +1179,10 @@ class TestAuxiliaryScripts:
             tx_body_json = json.load(body_fp)
 
         cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[1]
+        cbor_body_metadata = cbor2.loads(cbor_body)[2]
 
-        cbor_body_script = cbor_body_metadata[1]
-        assert cbor_body_script, "Auxiliary script not present"
+        cbor_body_script = cbor_body_metadata[1][0][1]
+        assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
 
     @allure.link(helpers.get_vcs_link())
     def test_tx_script_metadata_cbor(
@@ -1239,9 +1207,9 @@ class TestAuxiliaryScripts:
         )
 
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[0].skey_file],
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
-            script_files=[multisig_script],
+            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
+            signing_key_files=[payment_addrs[0].skey_file],
         )
         tx_raw_output = cluster.send_tx(
             src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
@@ -1253,10 +1221,10 @@ class TestAuxiliaryScripts:
             tx_body_json = json.load(body_fp)
 
         cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[1]
+        cbor_body_metadata = cbor2.loads(cbor_body)[2]
 
-        cbor_body_script = cbor_body_metadata[1]
-        assert cbor_body_script, "Auxiliary script not present"
+        cbor_body_script = cbor_body_metadata[1][0][2]
+        assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
 
     @allure.link(helpers.get_vcs_link())
     def test_tx_script_no_metadata(
@@ -1278,8 +1246,8 @@ class TestAuxiliaryScripts:
         )
 
         tx_files = clusterlib.TxFiles(
+            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
             signing_key_files=[payment_addrs[0].skey_file],
-            script_files=[multisig_script],
         )
         tx_raw_output = cluster.send_tx(
             src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
@@ -1291,10 +1259,10 @@ class TestAuxiliaryScripts:
             tx_body_json = json.load(body_fp)
 
         cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[1]
+        cbor_body_metadata = cbor2.loads(cbor_body)[2]
 
-        cbor_body_script = cbor_body_metadata[1]
-        assert cbor_body_script, "Auxiliary script not present"
+        cbor_body_script = cbor_body_metadata[1][0][1]
+        assert len(cbor_body_script) == len(payment_vkey_files), "Auxiliary script not present"
 
     @allure.link(helpers.get_vcs_link())
     def test_tx_script_invalid(
@@ -1307,8 +1275,9 @@ class TestAuxiliaryScripts:
         temp_template = helpers.get_func_name()
 
         tx_files = clusterlib.TxFiles(
+            # not valid script file
+            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[self.JSON_METADATA_FILE]),
             signing_key_files=[payment_addrs[0].skey_file],
-            script_files=[self.JSON_METADATA_FILE],  # not valid script file
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
