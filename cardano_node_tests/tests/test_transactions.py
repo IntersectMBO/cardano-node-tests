@@ -1711,7 +1711,7 @@ class TestMetadata:
             tx_body_json = json.load(body_fp)
 
         cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[1]
+        cbor_body_metadata = cbor2.loads(cbor_body)[2]
         # dump it as JSON first, so keys are converted to strings
         cbor_body_metadata = json.loads(json.dumps(cbor_body_metadata))
 
@@ -1750,7 +1750,7 @@ class TestMetadata:
             tx_body_json = json.load(body_fp)
 
         cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[1]
+        cbor_body_metadata = cbor2.loads(cbor_body)[2]
 
         with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp:
             cbor_file_metadata = cbor2.load(metadata_fp)
@@ -1788,7 +1788,7 @@ class TestMetadata:
             tx_body_json = json.load(body_fp)
 
         cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[1]
+        cbor_body_metadata = cbor2.loads(cbor_body)[2]
         # dump it as JSON first, so keys are converted to strings
         cbor_body_metadata = json.loads(json.dumps(cbor_body_metadata))
 
@@ -1799,10 +1799,7 @@ class TestMetadata:
             cbor_file_metadata = cbor2.load(metadata_fp_cbor)
         cbor_file_metadata = json.loads(json.dumps(cbor_file_metadata))
 
-        try:
-            cbor_body_metadata = cbor_body_metadata[0]
-        except KeyError:
-            pass
+        cbor_body_metadata = cbor_body_metadata[0]
         assert cbor_body_metadata == {
             **json_file_metadata,
             **cbor_file_metadata,
