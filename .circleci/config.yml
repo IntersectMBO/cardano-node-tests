@@ -62,7 +62,7 @@ commands:
                 command: |
                   echo "Executor type: << parameters.os_type >>"
                   export PYTHONUNBUFFERED=1
-                  python ./sync_tests/sync_test2.py -t1 << pipeline.parameters.tag_no1 >> -t2 << pipeline.parameters.tag_no2 >> -e << parameters.env_type >>
+                  python ./sync_tests/sync_test.py -t1 << pipeline.parameters.tag_no1 >> -t2 << pipeline.parameters.tag_no2 >> -e << parameters.env_type >>
                 shell: bash.exe
       - when:
           condition:
@@ -75,7 +75,7 @@ commands:
                 command: |
                   echo "Executor type: << parameters.os_type >>"
                   export PYTHONUNBUFFERED=1
-                  python3 ./sync_tests/sync_test2.py -t1 << pipeline.parameters.tag_no1 >> -t2 << pipeline.parameters.tag_no2 >> -e << parameters.env_type >>
+                  python3 ./sync_tests/sync_test.py -t1 << pipeline.parameters.tag_no1 >> -t2 << pipeline.parameters.tag_no2 >> -e << parameters.env_type >>
 executors:
   linux:
     machine:
@@ -86,7 +86,6 @@ executors:
       xcode: 11.3.0
     resource_class: large
   windows: win/default
-    size: 2xlarge # resource class, can be "medium", "large", "xlarge", "2xlarge", defaults to "medium" if not specified a
 
 jobs:
   sync_test:
