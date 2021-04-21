@@ -112,8 +112,7 @@ def multisig_tx(
     )
 
     # submit signed TX
-    cluster_obj.submit_tx(tx_witnessed_file)
-    cluster_obj.wait_for_new_block(new_blocks=2)
+    cluster_obj.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
     # check final balances
     assert (
@@ -375,7 +374,6 @@ class TestBasic:
             destinations=destinations,
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check final balances
         assert (
@@ -438,7 +436,6 @@ class TestBasic:
             txouts=destinations,
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check final balances
         assert (
@@ -1172,7 +1169,6 @@ class TestAuxiliaryScripts:
         tx_raw_output = cluster.send_tx(
             src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 
         with open(tx_raw_output.out_file) as body_fp:
@@ -1214,7 +1210,6 @@ class TestAuxiliaryScripts:
         tx_raw_output = cluster.send_tx(
             src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 
         with open(tx_raw_output.out_file) as body_fp:
@@ -1252,7 +1247,6 @@ class TestAuxiliaryScripts:
         tx_raw_output = cluster.send_tx(
             src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 
         with open(tx_raw_output.out_file) as body_fp:
