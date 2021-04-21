@@ -167,7 +167,6 @@ class TestBasic:
             tx_name=temp_template,
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -206,7 +205,6 @@ class TestBasic:
             tx_name=temp_template,
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address) == 0
@@ -243,9 +241,8 @@ class TestBasic:
             tx_name=temp_template,
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
-        txid = cluster.get_txid(tx_raw_output.out_file)
+        txid = cluster.get_txid_body(tx_raw_output.out_file)
         utxo_src = cluster.get_utxo(src_address)
         utxo_dst = cluster.get_utxo(dst_address)
         assert len(txid) == 64
@@ -282,7 +279,6 @@ class TestBasic:
         tx_raw_output = cluster.send_tx(
             src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -322,7 +318,6 @@ class TestBasic:
         tx_raw_output = cluster.send_tx(
             src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -419,8 +414,7 @@ class TestBasic:
             tx_name=temp_template,
             signing_key_files=[payment_addrs[0].skey_file],
         )
-        cluster.submit_tx(tx_signed_file)
-        cluster.wait_for_new_block(new_blocks=2)
+        cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
 
         assert (
             cluster.get_address_balance(src_address) == init_balance - tx_raw_output.fee
@@ -499,7 +493,6 @@ class TestMultiInOut:
             tx_name=f"{tx_name}_add_funds",
             tx_files=fund_tx_files,
         )
-        cluster_obj.wait_for_new_block(new_blocks=2)
 
         # record initial balances
         src_init_balance = cluster_obj.get_address_balance(src_address)
@@ -525,7 +518,6 @@ class TestMultiInOut:
             txouts=txouts,
             tx_files=tx_files,
         )
-        cluster_obj.wait_for_new_block(new_blocks=2)
 
         # check balances
         from_final_balance = functools.reduce(
@@ -592,7 +584,6 @@ class TestMultiInOut:
                 fee=fee,
                 ttl=ttl,
             )
-            cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -747,7 +738,6 @@ class TestManyUTXOs:
             tx_files=tx_files,
             join_txouts=False,
         )
-        cluster_obj.wait_for_new_block(new_blocks=2)
 
     @pytest.fixture
     def many_utxos(
@@ -879,8 +869,7 @@ class TestManyUTXOs:
             tx_name=temp_template,
             signing_key_files=tx_files.signing_key_files,
         )
-        cluster.submit_tx(tx_signed_file)
-        cluster.wait_for_new_block(new_blocks=2)
+        cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -1046,7 +1035,7 @@ class TestNotBalanced:
 
         # it should NOT be possible to submit an unbalanced transaction
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx(out_file_signed)
+            cluster.submit_tx_bare(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
 
@@ -1184,7 +1173,7 @@ class TestNegative:
 
         # it should NOT be possible to submit a transaction with ttl in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx(out_file_signed)
+            cluster.submit_tx_bare(out_file_signed)
         exc_val = str(excinfo.value)
         assert "ExpiredUTxO" in exc_val or "ValidityIntervalUTxO" in exc_val
 
@@ -1231,8 +1220,7 @@ class TestNegative:
         )
 
         # submit a transaction for the first time
-        cluster.submit_tx(out_file_signed)
-        cluster.wait_for_new_block(new_blocks=2)
+        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -1245,7 +1233,7 @@ class TestNegative:
 
         # it should NOT be possible to submit a transaction twice
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx(out_file_signed)
+            cluster.submit_tx_bare(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -1699,7 +1687,6 @@ class TestMetadata:
         tx_raw_output = cluster.send_tx(
             src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
         # TODO: check that the data is on blockchain
 
@@ -1739,7 +1726,6 @@ class TestMetadata:
         tx_raw_output = cluster.send_tx(
             src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 
         with open(tx_raw_output.out_file) as body_fp:
@@ -1777,7 +1763,6 @@ class TestMetadata:
         tx_raw_output = cluster.send_tx(
             src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
         assert tx_raw_output.fee, "Transaction had no fee"
 
         with open(tx_raw_output.out_file) as body_fp:

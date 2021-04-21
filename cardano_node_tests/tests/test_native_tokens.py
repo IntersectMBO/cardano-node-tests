@@ -566,8 +566,7 @@ class TestMinting:
         )
 
         # submit signed transaction
-        cluster.submit_tx(out_file_signed)
-        cluster.wait_for_new_block(new_blocks=2)
+        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
@@ -1446,7 +1445,6 @@ class TestTransfer:
             tx_name=temp_template,
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address, coin=new_token.token)
@@ -1522,7 +1520,6 @@ class TestTransfer:
             tx_name=temp_template,
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         assert (
             cluster.get_address_balance(src_address)

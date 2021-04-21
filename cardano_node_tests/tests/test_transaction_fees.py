@@ -179,7 +179,6 @@ class TestFee:
             tx_files=tx_files,
             fee=fee,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         assert tx_raw_output.fee == fee, "The actual fee doesn't match the specified fee"
 
