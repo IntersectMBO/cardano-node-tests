@@ -59,7 +59,6 @@ def withdraw_reward(
         )
     except clusterlib.CLIError:
         return
-    cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def deregister_stake_addr(
@@ -84,7 +83,6 @@ def deregister_stake_addr(
         )
     except clusterlib.CLIError:
         return
-    cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def return_funds_to_faucet(
@@ -107,6 +105,7 @@ def return_funds_to_faucet(
             destinations=fund_dst,
             tx_name=tx_name,
             tx_files=fund_tx_files,
+            verify_tx=False,
         )
     except clusterlib.CLIError:
         pass

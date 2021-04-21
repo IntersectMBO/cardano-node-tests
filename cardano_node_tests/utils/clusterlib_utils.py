@@ -57,7 +57,6 @@ def deregister_stake_addr(
         tx_name=f"{name_template}_dereg_stake_addr",
         tx_files=tx_files_deregister,
     )
-    cluster_obj.wait_for_new_block(new_blocks=2)
     return tx_raw_output
 
 
@@ -94,7 +93,6 @@ def fund_from_genesis(
             tx_files=fund_tx_files,
             destination_dir=destination_dir,
         )
-        cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def return_funds_to_faucet(
@@ -126,7 +124,6 @@ def return_funds_to_faucet(
                         tx_files=fund_tx_files,
                         destination_dir=destination_dir,
                     )
-                    cluster_obj.wait_for_new_block(new_blocks=2)
                 except Exception:
                     pass
         finally:
@@ -169,7 +166,6 @@ def fund_from_faucet(
             tx_files=fund_tx_files,
             destination_dir=destination_dir,
         )
-        cluster_obj.wait_for_new_block(new_blocks=2)
 
 
 def create_payment_addr_records(
@@ -432,8 +428,7 @@ def mint_or_burn_witness(
     )
 
     # submit signed TX
-    cluster_obj.submit_tx(tx_witnessed_file)
-    cluster_obj.wait_for_new_block(new_blocks=2)
+    cluster_obj.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
     return tx_raw_output
 
@@ -484,8 +479,7 @@ def mint_or_burn_sign(
     )
 
     # submit signed transaction
-    cluster_obj.submit_tx(out_file_signed)
-    cluster_obj.wait_for_new_block(new_blocks=2)
+    cluster_obj.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
     return tx_raw_output
 

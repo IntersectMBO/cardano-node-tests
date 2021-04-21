@@ -174,7 +174,6 @@ def _delegate_stake_addr(
     tx_raw_output = cluster_obj.send_tx(
         src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
     )
-    cluster_obj.wait_for_new_block(new_blocks=2)
 
     # check that the balance for source address was correctly updated
     assert (
@@ -333,7 +332,6 @@ class TestDelegateAddr:
             tx_name=f"{temp_template}_dereg",
             tx_files=tx_files_deregister,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the key deposit was returned
         assert (
@@ -388,7 +386,6 @@ class TestDelegateAddr:
             tx_name=f"{temp_template}_reg_dereg",
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated and that key deposit
         # was not needed
@@ -450,7 +447,6 @@ class TestDelegateAddr:
             tx_name=f"{temp_template}_reg",
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -477,7 +473,6 @@ class TestDelegateAddr:
             tx_name=f"{temp_template}_deleg_dereg",
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated and that the key
         # deposit was returned
@@ -609,7 +604,6 @@ class TestNegative:
         cluster.send_tx(
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
@@ -1217,7 +1211,6 @@ class TestRewards:
                     tx_name=f"{temp_template}_deleg_rewards",
                     tx_files=tx_files,
                 )
-                cluster.wait_for_new_block(new_blocks=2)
 
                 # deregister stake address
                 stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -1233,7 +1226,6 @@ class TestRewards:
                     tx_name=f"{temp_template}_dereg",
                     tx_files=tx_files_deregister,
                 )
-                cluster.wait_for_new_block(new_blocks=2)
 
                 # make sure we managed to finish deregistration in the expected epoch
                 assert (
@@ -1584,7 +1576,6 @@ class TestRewards:
             tx_name=f"{temp_template}_withdraw_pledge",
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         assert cluster.get_address_balance(pool_owner.payment.address) < loaded_data.pool_pledge, (
             f"Pledge still high - pledge: {loaded_data.pool_pledge}, "
@@ -1639,7 +1630,6 @@ class TestRewards:
                 tx_name=f"{temp_template}_return_pledge",
                 tx_files=tx_files,
             )
-            cluster.wait_for_new_block(new_blocks=2)
 
             assert (
                 cluster.get_address_balance(pool_owner.payment.address) >= loaded_data.pool_pledge
@@ -1726,7 +1716,6 @@ class TestRewards:
             tx_name=f"{temp_template}_dereg",
             tx_files=tx_files_deregister,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         with cluster_manager.restart_on_failure():
             # check that the key deposit was returned
@@ -1790,7 +1779,6 @@ class TestRewards:
                 tx_name=f"{temp_template}_rereg_deleg",
                 tx_files=tx_files,
             )
-            cluster.wait_for_new_block(new_blocks=2)
 
             # check that the balance for source address was correctly updated
             assert (
@@ -1894,7 +1882,6 @@ class TestRewards:
             tx_name=f"{temp_template}_dereg_reward",
             tx_files=tx_files_deregister,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         with cluster_manager.restart_on_failure():
             # check that the key deposit was returned
@@ -1956,7 +1943,6 @@ class TestRewards:
                 tx_name=f"{temp_template}_rereg_deleg",
                 tx_files=tx_files,
             )
-            cluster.wait_for_new_block(new_blocks=2)
 
             # check that the balance for source address was correctly updated
             assert (
@@ -2043,7 +2029,6 @@ class TestRewards:
             tx_name=f"{temp_template}_dereg_reward",
             tx_files=tx_files_deregister,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         with cluster_manager.restart_on_failure():
             # check that the key deposit was returned
@@ -2153,7 +2138,6 @@ class TestRewards:
                 tx_name=f"{temp_template}_rereg_pool",
                 tx_files=tx_files,
             )
-            cluster.wait_for_new_block(new_blocks=2)
 
             # check that the balance for source address was correctly updated and that the
             # pool deposit was needed
@@ -2302,7 +2286,6 @@ class TestRewards:
             tx_files=tx_files,
             deposit=0,  # no additional deposit, the pool is already registered
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # pool configuration changed, restart needed
         cluster_manager.set_needs_restart()

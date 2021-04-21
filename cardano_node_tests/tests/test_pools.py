@@ -240,7 +240,6 @@ def _create_register_pool_delegate_stake_tx(
     tx_raw_output = cluster_obj.send_tx(
         src_address=src_address, tx_name=temp_template, tx_files=tx_files
     )
-    cluster_obj.wait_for_new_block(new_blocks=2)
 
     # check that the balance for source address was correctly updated
     assert (
@@ -322,7 +321,6 @@ def _create_register_pool_tx_delegate_stake_tx(
     tx_raw_output = cluster_obj.send_tx(
         src_address=src_address, tx_name=temp_template, tx_files=tx_files
     )
-    cluster_obj.wait_for_new_block(new_blocks=2)
 
     # check that the balance for source address was correctly updated
     assert (
@@ -731,7 +729,6 @@ class TestStakePool:
         tx_raw_output = cluster.send_tx(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -859,7 +856,6 @@ class TestStakePool:
             tx_files=tx_files,
             deposit=0,  # no additional deposit, the pool is already registered
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         # and no additional pool deposit was used
@@ -1196,8 +1192,7 @@ class TestStakePool:
             tx_body_file=tx_raw_output.out_file, witness_files=witness_files, tx_name=temp_template
         )
         # create and register pool
-        cluster.submit_tx(tx_witnessed_file)
-        cluster.wait_for_new_block(new_blocks=2)
+        cluster.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
         # check that the balance for source address was correctly updated
         assert (
@@ -1300,7 +1295,6 @@ class TestStakePool:
             tx_name="conflicting_certs",
             tx_files=tx_files,
         )
-        cluster.wait_for_new_block(new_blocks=2)
 
         # check that the balance for source address was correctly updated
         assert (
