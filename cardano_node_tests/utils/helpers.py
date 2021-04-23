@@ -154,9 +154,9 @@ def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
 
 
 def get_vcs_link() -> str:
-    """Return link to the current+1 line in GitHub."""
+    """Return link to the current line in GitHub."""
     calling_frame = inspect.currentframe().f_back  # type: ignore
-    lineno = calling_frame.f_lineno + 1  # type: ignore
+    lineno = calling_frame.f_lineno  # type: ignore
     fpath = calling_frame.f_globals["__file__"]  # type: ignore
     fpart = fpath[fpath.find("cardano_node_tests") :]
     url = f"{GITHUB_URL}/blob/{get_current_commit()}/{fpart}#L{lineno}"

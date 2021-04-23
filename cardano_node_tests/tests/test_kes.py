@@ -85,8 +85,8 @@ def cluster_kes(
 class TestKES:
     """Basic tests for KES period."""
 
-    @pytest.mark.run(order=3)
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.run(order=3)
     @pytest.mark.skipif(
         bool(configuration.TX_ERA),
         reason="different TX eras doesn't affect this test, pointless to run",
@@ -120,8 +120,8 @@ class TestKES:
 
         assert cluster.get_slot_no() == init_slot, "Unexpected new slots"
 
-    @pytest.mark.run(order=1)
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.run(order=1)
     def test_opcert_past_kes_period(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
@@ -232,8 +232,8 @@ class TestKES:
                 f"since epoch {active_again_epoch}"
             )
 
-    @pytest.mark.run(order=2)
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.run(order=2)
     def test_update_valid_opcert(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,

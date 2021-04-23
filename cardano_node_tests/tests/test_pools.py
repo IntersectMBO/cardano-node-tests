@@ -475,8 +475,8 @@ class TestStakePool:
             tx_name=temp_template,
         )
 
-    @pytest.mark.parametrize("no_of_addr", [1, 3])
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("no_of_addr", [1, 3])
     def test_create_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -529,8 +529,8 @@ class TestStakePool:
             tx_name=temp_template,
         )
 
-    @pytest.mark.parametrize("no_of_addr", [1, 3])
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("no_of_addr", [1, 3])
     def test_deregister_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -895,8 +895,8 @@ class TestStakePool:
             tx_name=temp_template,
         )
 
-    @pytest.mark.parametrize("no_of_addr", [1, 2])
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -999,8 +999,8 @@ class TestStakePool:
             tx_name=temp_template,
         )
 
-    @pytest.mark.parametrize("no_of_addr", [1, 2])
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_parameters(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1350,9 +1350,9 @@ class TestPoolCost:
 
         return pool_owners
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_cost=st.integers(max_value=499))  # minPoolCost is now 500
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_low_cost(
         self,
         cluster_mincost: clusterlib.ClusterLib,
@@ -1387,8 +1387,8 @@ class TestPoolCost:
         expected_msg = "--pool-cost: Failed reading" if pool_cost < 0 else "StakePoolCostTooLowPOOL"
         assert expected_msg in str(excinfo.value)
 
-    @pytest.mark.parametrize("pool_cost", [500, 9999999])
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("pool_cost", [500, 9999999])
     def test_stake_pool_cost(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1773,9 +1773,9 @@ class TestNegative:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert 'key "homepage" not found' in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_name=st.text(min_size=51))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_name(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1806,9 +1806,9 @@ class TestNegative:
             or '"name" must have at most 50 characters' in err_value
         )
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_description=st.text(min_size=256))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_description(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1839,9 +1839,9 @@ class TestNegative:
             or '"description" must have at most 255 characters' in err_value
         )
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_ticker=st.text())
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_ticker(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1870,9 +1870,9 @@ class TestNegative:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert '"ticker" must have at least 3 and at most 5 characters' in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_homepage=st.text(min_size=425))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_metadata_long_homepage(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1899,11 +1899,11 @@ class TestNegative:
             cluster.gen_pool_metadata_hash(pool_metadata_file)
         assert "Stake pool metadata must consist of at most 512 bytes" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
         metadata_url=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=25)
     )
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_stake_pool_long_metadata_url(
         self,
         cluster: clusterlib.ClusterLib,

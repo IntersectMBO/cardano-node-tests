@@ -133,8 +133,8 @@ def multisig_script_policyid(
 class TestMinting:
     """Tests for minting and burning tokens."""
 
-    @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     def test_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
@@ -221,8 +221,8 @@ class TestMinting:
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
-    @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     def test_minting_and_burning_sign(
         self,
         cluster: clusterlib.ClusterLib,
@@ -576,6 +576,7 @@ class TestMinting:
             tx_raw_output.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "tokens_db",
         (
@@ -586,7 +587,6 @@ class TestMinting:
             (1000, 0),
         ),
     )
-    @allure.link(helpers.get_vcs_link())
     def test_bundle_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
@@ -665,6 +665,7 @@ class TestMinting:
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "tokens_db",
         (
@@ -675,7 +676,6 @@ class TestMinting:
             (1000, 0),
         ),
     )
-    @allure.link(helpers.get_vcs_link())
     def test_bundle_minting_and_burning_sign(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1408,8 +1408,8 @@ class TestTransfer:
 
         return new_token
 
-    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     def test_transfer_tokens(
         self,
         cluster: clusterlib.ClusterLib,
