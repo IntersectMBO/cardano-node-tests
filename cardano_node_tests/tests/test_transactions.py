@@ -137,8 +137,8 @@ class TestBasic:
         )
         return addrs
 
-    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     def test_transfer_funds(
         self,
         cluster: clusterlib.ClusterLib,
@@ -595,8 +595,8 @@ class TestMultiInOut:
             == dst_init_balance + amount * no_of_transactions
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-    @pytest.mark.parametrize("amount", (1, 100, 11_000))
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("amount", (1, 100, 11_000))
     def test_transaction_to_10_addrs_from_1_addr(
         self,
         cluster: clusterlib.ClusterLib,
@@ -617,8 +617,8 @@ class TestMultiInOut:
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", (1, 100, 11_000, 100_000))
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("amount", (1, 100, 11_000, 100_000))
     def test_transaction_to_1_addr_from_10_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -639,8 +639,8 @@ class TestMultiInOut:
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", (1, 100, 11_000))
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("amount", (1, 100, 11_000))
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -661,8 +661,8 @@ class TestMultiInOut:
             amount=amount,
         )
 
-    @pytest.mark.parametrize("amount", (1, 100, 1000))
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("amount", (1, 100, 1000))
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -966,9 +966,9 @@ class TestNotBalanced:
             or "AdaAssetId,-1" in exc_val
         )
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_wrong_balance(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1291,9 +1291,9 @@ class TestNegative:
             cluster_obj=cluster, pool_users=pool_users, addr=utxo_addr
         )
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_non_existent_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1307,9 +1307,9 @@ class TestNegative:
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1323,11 +1323,11 @@ class TestNegative:
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_send_funds_to_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1341,9 +1341,9 @@ class TestNegative:
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_non_existent_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1357,9 +1357,9 @@ class TestNegative:
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1373,11 +1373,11 @@ class TestNegative:
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_send_funds_from_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1430,9 +1430,9 @@ class TestNegative:
         )
         assert "BadInputsUTxO" in err
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
     @helpers.hypothesis_settings()
-    @allure.link(helpers.get_vcs_link())
     def test_invalid_lenght_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,

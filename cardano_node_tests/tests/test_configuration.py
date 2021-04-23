@@ -143,8 +143,8 @@ class TestBasic:
         assert cluster.epoch_length == 1500
         check_epoch_length(cluster)
 
-    @pytest.mark.run(order=2)
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.run(order=2)
     def test_slot_length(self, cluster_slot_length: clusterlib.ClusterLib):
         """Test the *slotLength* configuration."""
         cluster = cluster_slot_length

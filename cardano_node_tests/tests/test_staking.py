@@ -251,8 +251,8 @@ class TestDelegateAddr:
             pool_name=pool_name,
         )
 
-    @pytest.mark.run(order=2)
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.run(order=2)
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
         reason="supposed to run on cluster with pools",
@@ -2175,11 +2175,11 @@ class TestRewards:
                 pool_reward.stake.address
             ).reward_account_balance, "New reward was not received by pool reward address"
 
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="needs Allegra+ TX to run",
     )
-    @allure.link(helpers.get_vcs_link())
     def test_2_pools_same_reward_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
