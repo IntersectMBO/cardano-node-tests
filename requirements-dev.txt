@@ -17,6 +17,7 @@ cardano-clusterlib
 cbor2
 filelock
 hypothesis
+psycopg2-binary
 pydantic
 pytest
 pytest-html

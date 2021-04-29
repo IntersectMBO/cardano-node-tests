@@ -14,6 +14,7 @@ from xdist import workermanage
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -91,6 +92,16 @@ def change_dir(tmp_path_factory: TempdirFactory) -> None:
     LOGGER.info(f"Changed CWD to '{tmp_path}'.")
 
 
+@pytest.fixture(scope="session")
+def close_dbconn() -> Generator[None, None, None]:
+    """Close connection to db-sync database at the end of session."""
+    yield
+    if dbsync_utils.DBSync.conn_cache is None or dbsync_utils.DBSync.conn_cache.closed == 1:
+        return
+    LOGGER.info("Closing connection to db-sync database.")
+    dbsync_utils.DBSync.conn_cache.close()
+
+
 def _stop_all_cluster_instances(
     tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config, pytest_tmp_dir: Path
 ) -> None:
@@ -159,7 +170,7 @@ def cluster_cleanup(
 
 
 @pytest.fixture(scope="session", autouse=True)
-def session_autouse(change_dir: Any, cluster_cleanup: Any) -> None:
+def session_autouse(change_dir: Any, close_dbconn: Any, cluster_cleanup: Any) -> None:
     """Autouse session fixtures that are required for session setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
     pass

@@ -49,9 +49,12 @@ CLUSTER_STOPPED_FILE = ".cluster_stopped"
 CLUSTER_DEAD_FILE = ".cluster_dead"
 
 DEV_CLUSTER_RUNNING = bool(os.environ.get("DEV_CLUSTER_RUNNING"))
+FORBID_RESTART = bool(os.environ.get("FORBID_RESTART"))
 
 if CLUSTERS_COUNT > 1 and DEV_CLUSTER_RUNNING:
     raise RuntimeError("Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set.")
+if CLUSTERS_COUNT > 1 and configuration.HAS_DBSYNC:
+    raise RuntimeError("Cannot run multiple cluster instances when running with db-sync.")
 
 
 def _kill_supervisor(instance_num: int) -> None:
@@ -351,9 +354,22 @@ class _ClusterGetter:
 
         Not called under global lock!
         """
+        # pylint: disable=too-many-branches
+        cluster_running_file = self.cm.instance_dir / CLUSTER_RUNNING_FILE
+
         # don't restart cluster if it was started outside of test framework
-        if self.cm.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
+        if DEV_CLUSTER_RUNNING:
+            if cluster_running_file.exists():
+                LOGGER.warning(
+                    "Ignoring requested cluster restart as 'DEV_CLUSTER_RUNNING' is set."
+                )
+            else:
+                open(cluster_running_file, "a").close()
             return True
+
+        # fail if cluster restart is forbidden and it was already started
+        if FORBID_RESTART and cluster_running_file.exists():
+            raise RuntimeError("Cannot restart cluster when 'FORBID_RESTART' is set.")
 
         # using `_locked_log` because restart is not called under global lock
         self.cm._locked_log(
@@ -414,7 +430,6 @@ class _ClusterGetter:
         cluster_nodes.setup_test_addrs(cluster_obj, tmp_path)
 
         # create file that indicates that the cluster is running
-        cluster_running_file = self.cm.instance_dir / CLUSTER_RUNNING_FILE
         if not cluster_running_file.exists():
             open(cluster_running_file, "a").close()
 
@@ -585,13 +600,16 @@ class _ClusterGetter:
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
 
         # don't start new cluster if it was already started outside of test framework
-        if self.cm.num_of_instances == 1 and DEV_CLUSTER_RUNNING:
+        if DEV_CLUSTER_RUNNING:
             if start_cmd:
                 LOGGER.warning(
                     f"Ignoring the '{start_cmd}' cluster start command as "
-                    "'DEV_CLUSTER_RUNNING' is set"
+                    "'DEV_CLUSTER_RUNNING' is set."
                 )
             return self._reuse_dev_cluster()
+
+        if FORBID_RESTART and start_cmd:
+            raise RuntimeError("Cannot use custom start command when 'FORBID_RESTART' is set.")
 
         selected_instance = -1
         restart_here = False
@@ -663,7 +681,7 @@ class _ClusterGetter:
                             self.cm.lock_dir.glob(f"{CLUSTER_DIR_TEMPLATE}*/{CLUSTER_DEAD_FILE}")
                         )
                         if len(dead_clusters) == self.cm.num_of_instances:
-                            raise RuntimeError("All clusters are dead, cannot run")
+                            raise RuntimeError("All clusters are dead, cannot run.")
                         continue
 
                     # singleton test is running, so no other test can be started

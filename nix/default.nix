@@ -49,6 +49,7 @@ let
           _hypothesis
           cbor2
           requests
+          psycopg2
         ])) ];
       });
     });
