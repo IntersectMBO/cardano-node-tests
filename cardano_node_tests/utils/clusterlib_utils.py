@@ -635,3 +635,13 @@ def wait_for_epoch_interval(
             time.sleep(to_sleep if to_sleep > 1 else 1)
     else:
         raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s")
+
+
+def get_amount(
+    records: Union[List[clusterlib.UTXOData], List[clusterlib.TxOut]],
+    coin: str = clusterlib.DEFAULT_COIN,
+) -> int:
+    """Get sum of amounts from all records."""
+    filtered_amounts = [r.amount for r in records if r.coin == coin]
+    amount = sum(filtered_amounts)
+    return amount
