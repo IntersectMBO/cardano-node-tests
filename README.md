@@ -16,6 +16,8 @@ $ . .env/bin/activate
 $ make install
 ```
 
+Requires Python 3.8 or newer.
+
 Usage
 -----
 
