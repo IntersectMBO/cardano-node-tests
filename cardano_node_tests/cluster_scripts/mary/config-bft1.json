@@ -1,4 +1,6 @@
 {
+    "ApplicationName": "cardano-sl",
+    "ApplicationVersion": 1,
     "ByronGenesisFile": "byron/genesis.json",
     "LastKnownBlockVersion-Alt": 0,
     "LastKnownBlockVersion-Major": 2,
