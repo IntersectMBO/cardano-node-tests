@@ -24,15 +24,30 @@ if [ -e "$SCRIPT_DIR/shell_env" ]; then
 fi
 
 rm -rf "$STATE_CLUSTER"
-mkdir -p "$STATE_CLUSTER"/{shelley,webserver}
+mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync}
 cd "$STATE_CLUSTER/.."
 
-cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER/byron-params.json"
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
-cp "$SCRIPT_DIR"/config-*.json "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
-chmod u+w "$STATE_CLUSTER"/config-*.json
+
+# enable db-sync service
+if [ -n "${DBSYNC_REPO:-""}" ]; then
+  [ -e "$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync" ] || \
+    { echo "The \`$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync\` not found, line $LINENO" >&2; exit 1; }  # assert
+
+  state_cluster_name="${STATE_CLUSTER##*/}"
+  cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
+
+[program:dbsync]
+command=%(ENV_DBSYNC_REPO)s/db-sync-node/bin/cardano-db-sync --config ./$state_cluster_name/dbsync-config.yaml --socket-path %(ENV_CARDANO_NODE_SOCKET_PATH)s --state-dir ./state-cluster/db-sync --schema-dir %(ENV_DBSYNC_REPO)s/schema
+stderr_logfile=./$state_cluster_name/dbsync.stderr
+stdout_logfile=./$state_cluster_name/dbsync.stdout
+autostart=false
+EoF
+fi
 
 FUNDS_PER_GENESIS_ADDRESS="$((INIT_SUPPLY / NUM_BFT_NODES))"
 FUNDS_PER_BYRON_ADDRESS="$((FUNDS_PER_GENESIS_ADDRESS * 8 / 10))"
@@ -65,6 +80,17 @@ cardano-cli genesis create \
   --gen-genesis-keys "$NUM_BFT_NODES" \
   --start-time "$START_TIME_SHELLEY" \
   --gen-utxo-keys 1
+
+BYRON_GENESIS_HASH="$(cardano-cli byron genesis print-genesis-hash --genesis-json \
+  "$STATE_CLUSTER/byron/genesis.json")"
+SHELLEY_GENESIS_HASH="$(cardano-cli genesis hash --genesis \
+  "$STATE_CLUSTER/shelley/genesis.json")"
+for conf in "$SCRIPT_DIR"/config-*.json; do
+  fname="${conf##*/}"
+  jq --arg byron_hash "$BYRON_GENESIS_HASH" --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+    '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash' \
+    "$conf" > "$STATE_CLUSTER/$fname"
+done
 
 for i in $(seq 1 $NUM_BFT_NODES); do
   mkdir -p "$STATE_CLUSTER/nodes/node-bft$i"
@@ -273,6 +299,12 @@ sleep 202
 # In Shelley era
 #
 
+
+# start db-sync
+if [ -n "${DBSYNC_REPO:-""}" ]; then
+  echo "Starting db-sync"
+  supervisorctl start dbsync
+fi
 
 echo "Submitting update proposal to transfer to Allegra, transfering funds to pool owners, registering pools and delegations"
 

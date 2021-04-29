@@ -101,8 +101,8 @@ def merge_coverage(dict_a: dict, dict_b: dict) -> dict:
 
 def cli(cli_args: UnpackableSequence) -> str:
     """Run the `cardano-cli` command."""
-    p = subprocess.Popen(list(cli_args), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    __, stderr = p.communicate()
+    with subprocess.Popen(list(cli_args), stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
+        __, stderr = p.communicate()
     return stderr.decode()
 
 

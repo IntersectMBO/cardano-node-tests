@@ -25,10 +25,10 @@ import hypothesis.strategies as st
 import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -94,8 +94,7 @@ def _get_raw_tx_values(
         tx_files=tx_files,
         out_file=out_file,
         fee=fee,
-        ttl=ttl,
-        withdrawals=(),
+        invalid_hereafter=ttl,
     )
 
 
@@ -138,6 +137,7 @@ class TestBasic:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     def test_transfer_funds(
         self,
@@ -177,7 +177,10 @@ class TestBasic:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_transfer_all_funds(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -215,6 +218,8 @@ class TestBasic:
             == dst_init_balance + src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
     def test_get_txid(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
@@ -243,6 +248,7 @@ class TestBasic:
         )
 
         txid = cluster.get_txid_body(tx_raw_output.out_file)
+        # TODO: get txid also from signed body and compare
         utxo_src = cluster.get_utxo(src_address)
         utxo_dst = cluster.get_utxo(dst_address)
         assert len(txid) == 64
@@ -250,6 +256,7 @@ class TestBasic:
         assert txid in (u.utxo_hash for u in utxo_dst)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_extra_signing_keys(
         self,
         cluster: clusterlib.ClusterLib,
@@ -289,7 +296,10 @@ class TestBasic:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_duplicate_signing_keys(
         self,
         cluster: clusterlib.ClusterLib,
@@ -328,6 +338,8 @@ class TestBasic:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
     def test_missing_tx_out(
         self,
@@ -353,8 +365,8 @@ class TestBasic:
         cli_args = [
             "transaction",
             "build-raw",
-            "--ttl",
-            str(tx_raw_output.ttl),
+            "--invalid-hereafter",
+            str(tx_raw_output.invalid_hereafter),
             "--fee",
             str(tx_raw_output.fee),
             "--out-file",
@@ -362,18 +374,14 @@ class TestBasic:
             *cluster._prepend_flag("--tx-in", txins),
         ]
 
-        if VERSIONS.node < version.parse("1.24.2"):
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.cli(cli_args)
-            assert "Missing: (--tx-out TX-OUT)" in str(excinfo.value)
-        else:
-            cluster.cli(cli_args)
+        cluster.cli(cli_args)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
         VERSIONS.transaction_era == VERSIONS.SHELLEY,
         reason="doesn't run with Shelley TX",
     )
+    @pytest.mark.dbsync
     def test_missing_ttl(
         self,
         cluster: clusterlib.ClusterLib,
@@ -386,14 +394,15 @@ class TestBasic:
 
         init_balance = cluster.get_address_balance(src_address)
 
-        tx_raw_output = _get_raw_tx_values(
+        tx_raw_template = _get_raw_tx_values(
             cluster_obj=cluster,
             tx_name=temp_template,
             src_record=payment_addrs[0],
             dst_record=payment_addrs[0],
             temp_dir=temp_dir,
         )
-        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = _get_txins_txouts(tx_raw_template.txins, tx_raw_template.txouts)
+        tx_raw_output = tx_raw_template._replace(invalid_hereafter=None)
 
         cluster.cli(
             [
@@ -419,6 +428,8 @@ class TestBasic:
         assert (
             cluster.get_address_balance(src_address) == init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
 @pytest.mark.testnets
@@ -544,7 +555,10 @@ class TestMultiInOut:
                 cluster_obj.get_address_balance(addr) == dst_init_balances[addr] + amount
             ), f"Incorrect balance for destination address `{addr}`"
 
+        dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_10_transactions(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -576,7 +590,7 @@ class TestMultiInOut:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         for i in range(no_of_transactions):
-            cluster.send_funds(
+            tx_raw_output = cluster.send_funds(
                 src_address=src_address,
                 destinations=destinations,
                 tx_name=f"{temp_template}_{i}",
@@ -584,6 +598,7 @@ class TestMultiInOut:
                 fee=fee,
                 ttl=ttl,
             )
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         assert (
             cluster.get_address_balance(src_address)
@@ -597,6 +612,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1, 100, 11_000))
+    @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_1_addr(
         self,
         cluster: clusterlib.ClusterLib,
@@ -619,6 +635,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1, 100, 11_000, 100_000))
+    @pytest.mark.dbsync
     def test_transaction_to_1_addr_from_10_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -641,6 +658,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1, 100, 11_000))
+    @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -663,6 +681,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1, 100, 1000))
+    @pytest.mark.dbsync
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
         cluster: clusterlib.ClusterLib,
@@ -790,6 +809,7 @@ class TestManyUTXOs:
         return retval
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 10_000, 100_000, 1000_000))
     def test_mini_transactions(
         self,
@@ -879,6 +899,8 @@ class TestManyUTXOs:
         assert (
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
 @pytest.mark.testnets
@@ -1479,8 +1501,8 @@ class TestNegative:
                 [
                     "transaction",
                     "build-raw",
-                    "--ttl",
-                    str(tx_raw_output.ttl),
+                    "--invalid-hereafter",
+                    str(tx_raw_output.invalid_hereafter),
                     "--out-file",
                     str(tx_raw_output.out_file),
                     *cluster._prepend_flag("--tx-in", txins),
@@ -1558,8 +1580,8 @@ class TestNegative:
                 [
                     "transaction",
                     "build-raw",
-                    "--ttl",
-                    str(tx_raw_output.ttl),
+                    "--invalid-hereafter",
+                    str(tx_raw_output.invalid_hereafter),
                     "--fee",
                     str(tx_raw_output.fee),
                     "--out-file",
@@ -1671,6 +1693,7 @@ class TestMetadata:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1709,7 +1732,10 @@ class TestMetadata:
             cbor_body_metadata == json_file_metadata
         ), "Metadata in TX body doesn't match the original metadata"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1745,7 +1771,10 @@ class TestMetadata:
             cbor_body_metadata == cbor_file_metadata
         ), "Metadata in TX body doesn't match original metadata"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1785,3 +1814,5 @@ class TestMetadata:
             **json_file_metadata,
             **cbor_file_metadata,
         }, "Metadata in TX body doesn't match original metadata"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
