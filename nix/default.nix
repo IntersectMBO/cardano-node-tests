@@ -50,6 +50,7 @@ let
           cbor2
           requests
           psycopg2
+          pandas
         ])) ];
       });
     });
