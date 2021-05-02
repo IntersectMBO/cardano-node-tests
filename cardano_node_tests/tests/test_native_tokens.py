@@ -22,6 +22,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -135,6 +136,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
+    @pytest.mark.dbsync
     def test_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
@@ -150,7 +152,7 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{aname_type}"
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
@@ -221,8 +223,12 @@ class TestMinting:
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
+    @pytest.mark.dbsync
     def test_minting_and_burning_sign(
         self,
         cluster: clusterlib.ClusterLib,
@@ -238,7 +244,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{aname_type}"
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
@@ -303,7 +309,11 @@ class TestMinting:
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_minting_multiple_scripts(
         self,
         cluster: clusterlib.ClusterLib,
@@ -407,7 +417,11 @@ class TestMinting:
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_minting_burning_diff_tokens_single_tx(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
@@ -460,7 +474,7 @@ class TestMinting:
         ]
 
         # first token minting
-        clusterlib_utils.mint_or_burn_sign(
+        tx_out_mint1 = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[tokens_mint[0]],
             temp_template=f"{temp_template}_mint",
@@ -484,10 +498,10 @@ class TestMinting:
 
         # second token burning
         token_burn2 = tokens_mint[1]._replace(amount=-amount)
-        clusterlib_utils.mint_or_burn_sign(
+        tx_out_burn2 = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_burn2],
-            temp_template=f"{temp_template}_mint_burn",
+            temp_template=f"{temp_template}_burn",
         )
 
         token2_burn_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[1]])
@@ -498,7 +512,12 @@ class TestMinting:
             tx_out_mint_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint1)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint_burn)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn2)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_minting_burning_same_token_single_tx(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
@@ -576,6 +595,8 @@ class TestMinting:
             tx_raw_output.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "tokens_db",
@@ -587,6 +608,7 @@ class TestMinting:
             (1000, 0),
         ),
     )
+    @pytest.mark.dbsync
     def test_bundle_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
@@ -602,8 +624,8 @@ class TestMinting:
         * burn the minted tokens
         * check fees in Lovelace
         """
-        temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(8)
+        temp_template = f"{helpers.get_func_name()}_{rand}"
         amount = 5
         tokens_num, expected_fee = tokens_db
 
@@ -650,7 +672,7 @@ class TestMinting:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        clusterlib_utils.mint_or_burn_witness(
+        tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -665,6 +687,9 @@ class TestMinting:
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "tokens_db",
@@ -676,6 +701,7 @@ class TestMinting:
             (1000, 0),
         ),
     )
+    @pytest.mark.dbsync
     def test_bundle_minting_and_burning_sign(
         self,
         cluster: clusterlib.ClusterLib,
@@ -691,8 +717,8 @@ class TestMinting:
         * burn the minted tokens
         * check fees in Lovelace
         """
-        temp_template = helpers.get_func_name()
         rand = clusterlib.get_rand_str(8)
+        temp_template = f"{helpers.get_func_name()}_{rand}"
         amount = 5
         tokens_num, expected_fee = tokens_db
 
@@ -740,7 +766,7 @@ class TestMinting:
 
         # token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
-        clusterlib_utils.mint_or_burn_sign(
+        tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
@@ -755,7 +781,11 @@ class TestMinting:
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_minting_and_partial_burning(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
@@ -810,10 +840,10 @@ class TestMinting:
         # token burning
         burn_amount = amount - 10
         token_burn = token_mint._replace(amount=-burn_amount)
-        clusterlib_utils.mint_or_burn_witness(
+        tx_out_burn1 = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_burn],
-            temp_template=f"{temp_template}_burn",
+            temp_template=f"{temp_template}_burn1",
         )
 
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
@@ -823,10 +853,10 @@ class TestMinting:
 
         # burn the rest of tokens
         final_burn = token_mint._replace(amount=-10)
-        clusterlib_utils.mint_or_burn_witness(
+        tx_out_burn2 = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[final_burn],
-            temp_template=f"{temp_template}_burn",
+            temp_template=f"{temp_template}_burn2",
         )
 
         # check expected fee
@@ -834,7 +864,12 @@ class TestMinting:
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn1)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn2)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_minting_unicode_asset_name(
         self,
         cluster: clusterlib.ClusterLib,
@@ -910,6 +945,9 @@ class TestMinting:
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+
 
 @pytest.mark.testnets
 @pytest.mark.skipif(
@@ -920,6 +958,7 @@ class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_valid_policy_after(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
@@ -997,7 +1036,11 @@ class TestPolicies:
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_valid_policy_before(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
@@ -1076,6 +1119,9 @@ class TestPolicies:
         ) and helpers.is_in_interval(
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
     def test_policy_before_past(
@@ -1410,6 +1456,7 @@ class TestTransfer:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
+    @pytest.mark.dbsync
     def test_transfer_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1461,7 +1508,10 @@ class TestTransfer:
             == dst_init_balance_token + amount
         ), f"Incorrect token balance for destination address `{dst_address}`"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1541,6 +1591,8 @@ class TestTransfer:
                 cluster.get_address_balance(dst_address2, coin=token.token)
                 == dst_init_balance_tokens2[idx] + amount
             ), f"Incorrect token #{idx} balance for destination address `{dst_address2}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
