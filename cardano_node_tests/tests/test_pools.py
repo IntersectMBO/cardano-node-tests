@@ -25,6 +25,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
+DEREG_BUFFER_SEC = 30
 
 
 @pytest.fixture(scope="module")
@@ -401,10 +402,11 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.get_epoch() + depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -467,10 +469,11 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.get_epoch() + depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -521,10 +524,11 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.get_epoch() + depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -598,6 +602,9 @@ class TestStakePool:
         ).reward_account_balance
 
         # deregister stake pool
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC
+        )
         __, tx_raw_output = cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
@@ -692,6 +699,9 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC
+        )
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
@@ -759,10 +769,11 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.get_epoch() + depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -828,6 +839,9 @@ class TestStakePool:
         )
 
         # deregister stake pool in epoch + 2
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC
+        )
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
@@ -887,10 +901,11 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.get_epoch() + depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -991,10 +1006,11 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.get_epoch() + depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -1085,10 +1101,11 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.get_epoch() + depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
@@ -1211,10 +1228,11 @@ class TestStakePool:
         )
 
         # deregister stake pool
+        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=node_cold,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.get_epoch() + depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
