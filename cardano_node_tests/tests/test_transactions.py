@@ -1718,28 +1718,25 @@ class TestMetadata:
             src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
         )
         assert tx_raw_output.fee, "Transaction had no fee"
-        # TODO: check that the data is on blockchain
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
-
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
-        # dump it as JSON first, so keys are converted to strings
-        cbor_body_metadata = json.loads(json.dumps(cbor_body_metadata))
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
+        # dump it as JSON, so keys are converted to strings
+        json_body_metadata = json.loads(json.dumps(cbor_body_metadata))
 
         with open(self.JSON_METADATA_FILE) as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
-        try:
-            cbor_body_metadata = cbor_body_metadata[0]
-        except KeyError:
-            pass
         assert (
-            cbor_body_metadata == json_file_metadata
+            json_body_metadata == json_file_metadata
         ), "Metadata in TX body doesn't match the original metadata"
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        # check TX and metadata in db-sync if available
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            db_metadata = dbsync_utils.convert_tx_metadata(records=tx_db_record.metadata)
+            assert (
+                db_metadata == cbor_body_metadata
+            ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1761,24 +1758,22 @@ class TestMetadata:
         )
         assert tx_raw_output.fee, "Transaction had no fee"
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
-
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
 
         with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp:
             cbor_file_metadata = cbor2.load(metadata_fp)
 
-        try:
-            cbor_body_metadata = cbor_body_metadata[0]
-        except KeyError:
-            pass
         assert (
             cbor_body_metadata == cbor_file_metadata
         ), "Metadata in TX body doesn't match original metadata"
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        # check TX and metadata in db-sync if available
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            db_metadata = dbsync_utils.convert_tx_metadata(records=tx_db_record.metadata)
+            assert (
+                db_metadata == cbor_file_metadata
+            ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1801,13 +1796,9 @@ class TestMetadata:
         )
         assert tx_raw_output.fee, "Transaction had no fee"
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
-
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
-        # dump it as JSON first, so keys are converted to strings
-        cbor_body_metadata = json.loads(json.dumps(cbor_body_metadata))
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
+        # dump it as JSON, so keys are converted to strings
+        json_body_metadata = json.loads(json.dumps(cbor_body_metadata))
 
         with open(self.JSON_METADATA_FILE) as metadata_fp_json:
             json_file_metadata = json.load(metadata_fp_json)
@@ -1816,10 +1807,15 @@ class TestMetadata:
             cbor_file_metadata = cbor2.load(metadata_fp_cbor)
         cbor_file_metadata = json.loads(json.dumps(cbor_file_metadata))
 
-        cbor_body_metadata = cbor_body_metadata[0]
-        assert cbor_body_metadata == {
+        assert json_body_metadata == {
             **json_file_metadata,
             **cbor_file_metadata,
         }, "Metadata in TX body doesn't match original metadata"
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        # check TX and metadata in db-sync if available
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            db_metadata = dbsync_utils.convert_tx_metadata(records=tx_db_record.metadata)
+            assert (
+                db_metadata == cbor_body_metadata
+            ), "Metadata in db-sync doesn't match the original metadata"
