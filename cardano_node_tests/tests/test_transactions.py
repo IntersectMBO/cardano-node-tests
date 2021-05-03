@@ -1608,6 +1608,7 @@ class TestMetadata:
     JSON_METADATA_INVALID_FILE = DATA_DIR / "tx_metadata_invalid.json"
     JSON_METADATA_LONG_FILE = DATA_DIR / "tx_metadata_long.json"
     CBOR_METADATA_FILE = DATA_DIR / "tx_metadata.cbor"
+    METADATA_DUPLICATES = "tx_metadata_duplicate_keys*.json"
 
     @pytest.fixture
     def payment_addr(
@@ -1811,6 +1812,53 @@ class TestMetadata:
             **json_file_metadata,
             **cbor_file_metadata,
         }, "Metadata in TX body doesn't match original metadata"
+
+        # check TX and metadata in db-sync if available
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            db_metadata = tx_db_record._convert_metadata()
+            assert (
+                db_metadata == cbor_body_metadata
+            ), "Metadata in db-sync doesn't match the original metadata"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_tx_duplicate_metadata_keys(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Send transaction with multiple metadata JSON files and with duplicate keys.
+
+        * check that the metadata in TX body matches the original metadata
+        * check that in case of duplicate keys the first occurrence is used
+        """
+        temp_template = helpers.get_func_name()
+
+        metadata_json_files = list(DATA_DIR.glob(self.METADATA_DUPLICATES))
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=metadata_json_files,
+        )
+
+        tx_raw_output = cluster.send_tx(
+            src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
+        )
+        assert tx_raw_output.fee, "Transaction had no fee"
+
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
+        # dump it as JSON, so keys are converted to strings
+        json_body_metadata = json.loads(json.dumps(cbor_body_metadata))
+
+        # merge the input JSON files and alter the result so it matches the expected metadata
+        with open(metadata_json_files[0]) as metadata_fp:
+            json_file_metadata1 = json.load(metadata_fp)
+        with open(metadata_json_files[1]) as metadata_fp:
+            json_file_metadata2 = json.load(metadata_fp)
+        json_file_metadata = {**json_file_metadata2, **json_file_metadata1}
+        json_file_metadata["5"] = "baz1"
+
+        assert (
+            json_body_metadata == json_file_metadata
+        ), "Metadata in TX body doesn't match the original metadata"
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
