@@ -221,6 +221,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_get_txid(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -230,6 +231,8 @@ class TestBasic:
 
         * send funds from 1 source address to 1 destination address
         * get txid from transaction body
+        * get txid from signed transaction
+        * check that txid from transaction body matches the txid from signed transaction
         * check that txid has expected lenght
         * check that the txid is listed in UTxO hashes for both source and destination addresses
         """
@@ -247,13 +250,17 @@ class TestBasic:
             tx_files=tx_files,
         )
 
-        txid = cluster.get_txid_body(tx_raw_output.out_file)
-        # TODO: get txid also from signed body and compare
+        txid_body = cluster.get_txid_body(tx_raw_output.out_file)
+        txid_signed = cluster.get_txid_signed(tx_raw_output.out_file.with_suffix(".signed"))
+        assert txid_body == txid_signed
+
         utxo_src = cluster.get_utxo(src_address)
         utxo_dst = cluster.get_utxo(dst_address)
-        assert len(txid) == 64
-        assert txid in (u.utxo_hash for u in utxo_src)
-        assert txid in (u.utxo_hash for u in utxo_dst)
+        assert len(txid_body) == 64
+        assert txid_body in (u.utxo_hash for u in utxo_src)
+        assert txid_body in (u.utxo_hash for u in utxo_dst)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
