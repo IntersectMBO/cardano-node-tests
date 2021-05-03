@@ -122,6 +122,7 @@ class LocalCluster(ClusterType):
             tx_era=cluster_env.tx_era,
             slots_offset=slots_offset,
         )
+        cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         return cluster_obj
 
     def create_addrs_data(
@@ -248,6 +249,7 @@ class TestnetCluster(ClusterType):
             tx_era=cluster_env.tx_era,
             slots_offset=slots_offset,
         )
+        cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         return cluster_obj
 
     def create_addrs_data(
