@@ -40,6 +40,11 @@ class TxRecord(NamedTuple):
     mint: List[clusterlib.UTXOData]
     metadata: List[MetadataRecord]
 
+    def _convert_metadata(self) -> dict:
+        """Convert list of `MetadataRecord`s to metadata dictionary."""
+        metadata = {int(r.key): r.json for r in self.metadata}
+        return metadata
+
 
 class TxDBRow(NamedTuple):
     tx_id: int
@@ -261,9 +266,3 @@ def check_tx(
     ), f"Number of MA minting doesn't match ({len_db_mint} != {len_out_mint})"
 
     return response
-
-
-def convert_tx_metadata(records: List[MetadataRecord]) -> dict:
-    """Convert list of `MetadataRecord`s to metadata dictionary."""
-    metadata = {int(r.key): r.json for r in records}
-    return metadata
