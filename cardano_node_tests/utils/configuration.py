@@ -19,6 +19,8 @@ NOPOOLS = bool(os.environ.get("NOPOOLS"))
 
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
 
+DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
+
 if BOOTSTRAP_DIR and NOPOOLS:
     TESTNET_SCRIPTS_DIR = "testnets_nopools"
 elif BOOTSTRAP_DIR:
