@@ -1433,7 +1433,7 @@ class TestNegative:
         temp_template = helpers.get_func_name()
 
         utxo = cluster.get_utxo(pool_users[0].payment.address)[0]
-        utxo_copy = utxo._replace(utxo_ix="5")
+        utxo_copy = utxo._replace(utxo_ix=5)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
         )
