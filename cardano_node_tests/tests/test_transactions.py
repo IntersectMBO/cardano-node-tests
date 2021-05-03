@@ -1733,7 +1733,7 @@ class TestMetadata:
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            db_metadata = dbsync_utils.convert_tx_metadata(records=tx_db_record.metadata)
+            db_metadata = tx_db_record._convert_metadata()
             assert (
                 db_metadata == cbor_body_metadata
             ), "Metadata in db-sync doesn't match the original metadata"
@@ -1770,7 +1770,7 @@ class TestMetadata:
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            db_metadata = dbsync_utils.convert_tx_metadata(records=tx_db_record.metadata)
+            db_metadata = tx_db_record._convert_metadata()
             assert (
                 db_metadata == cbor_file_metadata
             ), "Metadata in db-sync doesn't match the original metadata"
@@ -1815,7 +1815,7 @@ class TestMetadata:
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            db_metadata = dbsync_utils.convert_tx_metadata(records=tx_db_record.metadata)
+            db_metadata = tx_db_record._convert_metadata()
             assert (
                 db_metadata == cbor_body_metadata
             ), "Metadata in db-sync doesn't match the original metadata"
