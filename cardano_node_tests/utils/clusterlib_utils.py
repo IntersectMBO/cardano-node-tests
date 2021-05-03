@@ -9,6 +9,7 @@ from typing import NamedTuple
 from typing import Optional
 from typing import Union
 
+import cbor2
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import helpers
@@ -645,3 +646,22 @@ def get_amount(
     filtered_amounts = [r.amount for r in records if r.coin == coin]
     amount = sum(filtered_amounts)
     return amount
+
+
+def load_tx_metadata(tx_body_file: Path) -> dict:
+    """Load transaction metadata from file containing transaction body."""
+    with open(tx_body_file) as body_fp:
+        tx_body_json = json.load(body_fp)
+
+    cbor_body = bytes.fromhex(tx_body_json["cborHex"])
+    metadata = cbor2.loads(cbor_body)[2]
+
+    if not metadata:
+        return {}
+
+    try:
+        metadata_dict: dict = metadata[0]
+    except KeyError:
+        metadata_dict = metadata
+
+    return metadata_dict
