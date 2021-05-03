@@ -139,8 +139,14 @@ def get_tx_record(txhash: str) -> TxRecord:
     seen_ma_tx_out_ids = set()
     mint_utxo_out: List[clusterlib.UTXOData] = []
     seen_ma_tx_mint_ids = set()
+    tx_id = -1
 
     for query_row in query_tx(txhash=txhash):
+        if tx_id == -1:
+            tx_id = query_row.tx_id
+        if tx_id != query_row.tx_id:
+            raise AssertionError("Transaction ID differs from the expected ID.")
+
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:
             seen_tx_out_ids.add(query_row.tx_out_id)
@@ -190,7 +196,7 @@ def get_tx_record(txhash: str) -> TxRecord:
             )
             mint_utxo_out.append(mint_rec)
 
-    if not seen_tx_out_ids:
+    if tx_id == -1:
         raise RuntimeError("No results were returned by the SQL query.")
 
     # pylint: disable=undefined-loop-variable
@@ -203,7 +209,7 @@ def get_tx_record(txhash: str) -> TxRecord:
         ]
 
     record = TxRecord(
-        tx_id=int(query_row.tx_id),
+        tx_id=int(tx_id),
         tx_hash=query_row.tx_hash.hex(),
         block_id=int(query_row.block_id),
         block_index=int(query_row.block_index),
