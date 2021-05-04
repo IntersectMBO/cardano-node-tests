@@ -348,6 +348,44 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_no_txout(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_manager: cluster_management.ClusterManager,
+    ):
+        """Send transaction with just fee, no UTxO is produced.
+
+        * submit a transaction where all funds available on source address is used for fee
+        * check that no UTxOs are created by the transaction
+        * check that there are no funds left on source address
+        """
+        temp_template = helpers.get_func_name()
+
+        src_record = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_0", cluster_obj=cluster
+        )[0]
+        clusterlib_utils.fund_from_faucet(
+            src_record,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=200_000,
+        )
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_record.skey_file])
+        fee = cluster.get_address_balance(src_record.address)
+        tx_raw_output = cluster.send_tx(
+            src_address=src_record.address, tx_name=temp_template, tx_files=tx_files, fee=fee
+        )
+
+        assert not tx_raw_output.txouts, "Transaction has unexpected txouts"
+        assert (
+            cluster.get_address_balance(src_record.address) == 0
+        ), f"Incorrect balance for source address `{src_record.address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+    @allure.link(helpers.get_vcs_link())
     def test_missing_tx_out(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1877,29 +1915,35 @@ class TestMetadata:
     ):
         """Send transaction with just metadata, no UTxO is produced.
 
-        Check that the metadata in TX body matches the original metadata.
+        * submit a transaction where all funds available on source address is used for fee
+        * check that no UTxOs are created by the transaction
+        * check that there are no funds left on source address
+        * check that the metadata in TX body matches the original metadata
         """
         temp_template = helpers.get_func_name()
 
-        src_records = clusterlib_utils.create_payment_addr_records(
+        src_record = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_0", cluster_obj=cluster
         )[0]
         clusterlib_utils.fund_from_faucet(
-            src_records,
+            src_record,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=500_000,
         )
 
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[src_records.skey_file],
+            signing_key_files=[src_record.skey_file],
             metadata_json_files=[self.JSON_METADATA_FILE],
         )
-        fee = cluster.get_address_balance(src_records.address)
+        fee = cluster.get_address_balance(src_record.address)
         tx_raw_output = cluster.send_tx(
-            src_address=src_records.address, tx_name=temp_template, tx_files=tx_files, fee=fee
+            src_address=src_record.address, tx_name=temp_template, tx_files=tx_files, fee=fee
         )
         assert not tx_raw_output.txouts, "Transaction has unexpected txouts"
+        assert (
+            cluster.get_address_balance(src_record.address) == 0
+        ), f"Incorrect balance for source address `{src_record.address}`"
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
         # dump it as JSON, so keys are converted to strings
