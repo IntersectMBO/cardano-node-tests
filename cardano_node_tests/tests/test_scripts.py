@@ -19,6 +19,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -56,7 +57,7 @@ def multisig_tx(
     multisig_script: Optional[Path] = None,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
-):
+) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
     # record initial balances
     src_init_balance = cluster_obj.get_address_balance(src_address)
@@ -124,6 +125,8 @@ def multisig_tx(
         cluster_obj.get_address_balance(dst_address) == dst_init_balance + amount
     ), f"Incorrect balance for script address `{dst_address}`"
 
+    return tx_raw_output
+
 
 @pytest.mark.testnets
 class TestBasic:
@@ -184,6 +187,7 @@ class TestBasic:
         assert len(script_address) == len(payment_addrs[0].address)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_multisig_all(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -206,7 +210,7 @@ class TestBasic:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -216,7 +220,7 @@ class TestBasic:
         )
 
         # send funds from script address
-        multisig_tx(
+        tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
             src_address=script_address,
@@ -226,7 +230,11 @@ class TestBasic:
             multisig_script=multisig_script,
         )
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_multisig_any(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -255,42 +263,54 @@ class TestBasic:
             addr_name=temp_template, script_file=multisig_script
         )
 
+        tx_raw_outputs = []
+
         # send funds to script address
-        multisig_tx(
-            cluster_obj=cluster,
-            temp_template=f"{temp_template}_to",
-            src_address=payment_addrs[0].address,
-            dst_address=script_address,
-            amount=5_000_000,
-            payment_skey_files=[payment_skey_files[0]],
+        tx_raw_outputs.append(
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_to",
+                src_address=payment_addrs[0].address,
+                dst_address=script_address,
+                amount=5_000_000,
+                payment_skey_files=[payment_skey_files[0]],
+            )
         )
 
         # send funds from script address using single witness
         for i in range(5):
-            multisig_tx(
-                cluster_obj=cluster,
-                temp_template=f"{temp_template}_from_single_{i}",
-                src_address=script_address,
-                dst_address=payment_addrs[0].address,
-                amount=1000,
-                payment_skey_files=[payment_skey_files[random.randrange(0, skeys_len)]],
-                multisig_script=multisig_script,
+            tx_raw_outputs.append(
+                multisig_tx(
+                    cluster_obj=cluster,
+                    temp_template=f"{temp_template}_from_single_{i}",
+                    src_address=script_address,
+                    dst_address=payment_addrs[0].address,
+                    amount=1000,
+                    payment_skey_files=[payment_skey_files[random.randrange(0, skeys_len)]],
+                    multisig_script=multisig_script,
+                )
             )
 
         # send funds from script address using multiple witnesses
         for i in range(5):
             num_of_skeys = random.randrange(2, skeys_len)
-            multisig_tx(
-                cluster_obj=cluster,
-                temp_template=f"{temp_template}_from_multi_{i}",
-                src_address=script_address,
-                dst_address=payment_addrs[0].address,
-                amount=1000,
-                payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
-                multisig_script=multisig_script,
+            tx_raw_outputs.append(
+                multisig_tx(
+                    cluster_obj=cluster,
+                    temp_template=f"{temp_template}_from_multi_{i}",
+                    src_address=script_address,
+                    dst_address=payment_addrs[0].address,
+                    amount=1000,
+                    payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
+                    multisig_script=multisig_script,
+                )
             )
 
+        for tx_out in tx_raw_outputs:
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_multisig_atleast(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -316,30 +336,40 @@ class TestBasic:
             addr_name=temp_template, script_file=multisig_script
         )
 
+        tx_raw_outputs = []
+
         # send funds to script address
-        multisig_tx(
-            cluster_obj=cluster,
-            temp_template=f"{temp_template}_to",
-            src_address=payment_addrs[0].address,
-            dst_address=script_address,
-            amount=2_000_000,
-            payment_skey_files=[payment_skey_files[0]],
+        tx_raw_outputs.append(
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_to",
+                src_address=payment_addrs[0].address,
+                dst_address=script_address,
+                amount=2_000_000,
+                payment_skey_files=[payment_skey_files[0]],
+            )
         )
 
         # send funds from script address
         for i in range(5):
             num_of_skeys = random.randrange(required, skeys_len)
-            multisig_tx(
-                cluster_obj=cluster,
-                temp_template=f"{temp_template}_from_{i}",
-                src_address=script_address,
-                dst_address=payment_addrs[0].address,
-                amount=1000,
-                payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
-                multisig_script=multisig_script,
+            tx_raw_outputs.append(
+                multisig_tx(
+                    cluster_obj=cluster,
+                    temp_template=f"{temp_template}_from_{i}",
+                    src_address=script_address,
+                    dst_address=payment_addrs[0].address,
+                    amount=1000,
+                    payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
+                    multisig_script=multisig_script,
+                )
             )
 
+        for tx_out in tx_raw_outputs:
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_normal_tx_to_script_addr(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -385,7 +415,10 @@ class TestBasic:
             cluster.get_address_balance(script_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{script_address}`"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_normal_tx_from_script_addr(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -410,9 +443,9 @@ class TestBasic:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_out_to = multisig_tx(
             cluster_obj=cluster,
-            temp_template=temp_template,
+            temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=300_000,
@@ -430,9 +463,9 @@ class TestBasic:
             signing_key_files=[dst_addr.skey_file],
         )
 
-        tx_raw_output = cluster.send_tx(
+        tx_out_from = cluster.send_tx(
             src_address=script_address,
-            tx_name=temp_template,
+            tx_name=f"{temp_template}_from",
             txouts=destinations,
             tx_files=tx_files,
         )
@@ -440,14 +473,18 @@ class TestBasic:
         # check final balances
         assert (
             cluster.get_address_balance(script_address)
-            == src_init_balance - tx_raw_output.fee - amount
+            == src_init_balance - tx_out_from.fee - amount
         ), f"Incorrect balance for script address `{script_address}`"
 
         assert (
             cluster.get_address_balance(dst_addr.address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_multisig_empty_all(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -469,7 +506,7 @@ class TestBasic:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -479,7 +516,7 @@ class TestBasic:
         )
 
         # send funds from script address
-        multisig_tx(
+        tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
             src_address=script_address,
@@ -489,7 +526,11 @@ class TestBasic:
             multisig_script=multisig_script,
         )
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.xfail
     def test_multisig_no_required_atleast(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
@@ -514,7 +555,7 @@ class TestBasic:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -524,7 +565,7 @@ class TestBasic:
         )
 
         # send funds from script address
-        multisig_tx(
+        tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
             src_address=script_address,
@@ -533,6 +574,9 @@ class TestBasic:
             payment_skey_files=[],
             multisig_script=multisig_script,
         )
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
 
 @pytest.mark.testnets
@@ -566,6 +610,7 @@ class TestNegative:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_multisig_all_missing_skey(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -591,9 +636,9 @@ class TestNegative:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_raw_output = multisig_tx(
             cluster_obj=cluster,
-            temp_template=temp_template,
+            temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=300_000,
@@ -604,7 +649,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=temp_template,
+                temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
@@ -613,7 +658,10 @@ class TestNegative:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_multisig_any_unlisted_skey(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -639,9 +687,9 @@ class TestNegative:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_raw_output = multisig_tx(
             cluster_obj=cluster,
-            temp_template=temp_template,
+            temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=300_000,
@@ -652,7 +700,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=temp_template,
+                temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=1000,
@@ -661,7 +709,10 @@ class TestNegative:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_multisig_atleast_low_num_of_skeys(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -691,9 +742,9 @@ class TestNegative:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_raw_output = multisig_tx(
             cluster_obj=cluster,
-            temp_template=temp_template,
+            temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
             amount=300_000,
@@ -705,7 +756,7 @@ class TestNegative:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 multisig_tx(
                     cluster_obj=cluster,
-                    temp_template=temp_template,
+                    temp_template=f"{temp_template}_from_fail{num_of_skeys}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
                     amount=1000,
@@ -713,6 +764,8 @@ class TestNegative:
                     multisig_script=multisig_script,
                 )
             assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
 @pytest.mark.testnets
@@ -756,6 +809,7 @@ class TestTimeLocking:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_script_after(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -780,7 +834,7 @@ class TestTimeLocking:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -790,7 +844,7 @@ class TestTimeLocking:
         )
 
         # send funds from script address
-        multisig_tx(
+        tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
             src_address=script_address,
@@ -802,7 +856,11 @@ class TestTimeLocking:
             invalid_hereafter=cluster.get_slot_no() + 1000,
         )
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_script_before(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -829,7 +887,7 @@ class TestTimeLocking:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -839,7 +897,7 @@ class TestTimeLocking:
         )
 
         # send funds from script address
-        multisig_tx(
+        tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
             src_address=script_address,
@@ -851,7 +909,11 @@ class TestTimeLocking:
             invalid_hereafter=cluster.get_slot_no() + 1000,
         )
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_before_past(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -881,7 +943,7 @@ class TestTimeLocking:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_raw_output = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -894,7 +956,7 @@ class TestTimeLocking:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=f"{temp_template}_from",
+                temp_template=f"{temp_template}_from_fail1",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
@@ -909,7 +971,7 @@ class TestTimeLocking:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=f"{temp_template}_from",
+                temp_template=f"{temp_template}_from_fail2",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
@@ -920,7 +982,10 @@ class TestTimeLocking:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_before_future(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -950,7 +1015,7 @@ class TestTimeLocking:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_raw_output = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -963,7 +1028,7 @@ class TestTimeLocking:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=f"{temp_template}_from",
+                temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
@@ -974,7 +1039,10 @@ class TestTimeLocking:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_after_future(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -1004,7 +1072,7 @@ class TestTimeLocking:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_raw_output = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -1017,7 +1085,7 @@ class TestTimeLocking:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=f"{temp_template}_from",
+                temp_template=f"{temp_template}_from_fail1",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
@@ -1032,7 +1100,7 @@ class TestTimeLocking:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=f"{temp_template}_from",
+                temp_template=f"{temp_template}_from_fail2",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
@@ -1043,7 +1111,10 @@ class TestTimeLocking:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_after_past(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -1073,7 +1144,7 @@ class TestTimeLocking:
         )
 
         # send funds to script address
-        multisig_tx(
+        tx_raw_output = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
@@ -1087,7 +1158,7 @@ class TestTimeLocking:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
-                temp_template=f"{temp_template}_from",
+                temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
                 amount=10,
@@ -1097,6 +1168,8 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
 @pytest.mark.testnets
@@ -1141,6 +1214,7 @@ class TestAuxiliaryScripts:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_tx_script_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -1180,7 +1254,15 @@ class TestAuxiliaryScripts:
         cbor_body_script = cbor_body_metadata[1][0][1]
         assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
 
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            db_metadata = tx_db_record._convert_metadata()
+            assert (
+                db_metadata == cbor_body_metadata[0]
+            ), "Metadata in db-sync doesn't match the original metadata"
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_tx_script_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -1221,7 +1303,15 @@ class TestAuxiliaryScripts:
         cbor_body_script = cbor_body_metadata[1][0][2]
         assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
 
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            db_metadata = tx_db_record._convert_metadata()
+            assert (
+                db_metadata == cbor_body_metadata[0]
+            ), "Metadata in db-sync doesn't match the original metadata"
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_tx_script_no_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -1257,6 +1347,8 @@ class TestAuxiliaryScripts:
 
         cbor_body_script = cbor_body_metadata[1][0][1]
         assert len(cbor_body_script) == len(payment_vkey_files), "Auxiliary script not present"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
     def test_tx_script_invalid(
