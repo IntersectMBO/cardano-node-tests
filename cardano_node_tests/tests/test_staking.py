@@ -728,7 +728,9 @@ class TestRewards:
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
 
         # make sure we have enough time to finish the registration/delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-600, stop=-400)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-300, force_epoch=False
+        )
 
         init_owner_rewards = cluster.get_stake_addr_info(
             pool_reward.stake.address
@@ -761,7 +763,9 @@ class TestRewards:
 
         # withdraw rewards to payment address, make sure we have enough time to finish
         # the withdrawal in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-600, stop=-400)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-300, force_epoch=False
+        )
         cluster.withdraw_reward(
             stake_addr_record=pool_user.stake,
             dst_addr_record=pool_user.payment,
@@ -802,7 +806,7 @@ class TestRewards:
 
         # make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=-100, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         init_epoch = cluster.get_epoch()
@@ -1067,7 +1071,7 @@ class TestRewards:
 
         # make sure we have enough time to update the pool parameters
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=-100, stop=-30, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -2065,6 +2069,11 @@ class TestRewards:
                 force=True,
             )
 
+            # make sure we have enough time to finish deregistration in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=5, stop=-40, force_epoch=False
+            )
+
             src_dereg_balance = cluster.get_address_balance(pool_owner.payment.address)
             stake_acount_balance = cluster.get_stake_addr_info(
                 pool_owner.stake.address
@@ -2077,7 +2086,6 @@ class TestRewards:
             stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
             # deregister stake pool
-            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=1, stop=-30)
             __, tx_raw_output = cluster.deregister_stake_pool(
                 pool_owners=[pool_owner],
                 cold_key_pair=node_cold,
