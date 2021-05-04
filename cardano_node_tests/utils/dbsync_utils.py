@@ -1,5 +1,6 @@
 """Functionality for interacting with db-sync."""
 import logging
+import time
 from typing import Any
 from typing import Dict
 from typing import Generator
@@ -197,7 +198,7 @@ def get_tx_record(txhash: str) -> TxRecord:
             mint_utxo_out.append(mint_rec)
 
     if tx_id == -1:
-        raise RuntimeError("No results were returned by the SQL query.")
+        raise AssertionError("No results were returned by the SQL query.")
 
     # pylint: disable=undefined-loop-variable
 
@@ -228,14 +229,28 @@ def get_tx_record(txhash: str) -> TxRecord:
 
 
 def check_tx(
-    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
+    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry: bool = True
 ) -> Optional[TxRecord]:
     """Check a transaction in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
     txhash = cluster_obj.get_txid_body(tx_raw_output.out_file)
-    response = get_tx_record(txhash=txhash)
+
+    # under load it might be necessary to wait a bit and retry the query
+    if retry:
+        for r in range(3):
+            if r > 0:
+                LOGGER.warning(f"Repeating SQL query for '{txhash}' for the {r} time.")
+                time.sleep(2)
+            try:
+                response = get_tx_record(txhash=txhash)
+                break
+            except AssertionError:
+                if r == 2:
+                    raise
+    else:
+        response = get_tx_record(txhash=txhash)
 
     txouts_amount = clusterlib_utils.get_amount(tx_raw_output.txouts)
     assert (
