@@ -603,7 +603,7 @@ class TestStakePool:
 
         # deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
         __, tx_raw_output = cluster.deregister_stake_pool(
             pool_owners=pool_owners,
@@ -700,7 +700,7 @@ class TestStakePool:
 
         # deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
@@ -840,7 +840,7 @@ class TestStakePool:
 
         # deregister stake pool in epoch + 2
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
