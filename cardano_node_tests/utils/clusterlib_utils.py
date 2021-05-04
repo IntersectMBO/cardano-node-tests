@@ -604,7 +604,8 @@ def wait_for_epoch_interval(
             end of an epoch.
         stop: An end of the interval, in seconds. Negative number for counting from the
             end of an epoch.
-        force_epoch: A bool indicating whether the interval must be in current epoch.
+        force_epoch: A bool indicating whether the interval must be in current epoch
+            (True by default).
     """
     start_abs = start if start >= 0 else cluster_obj.epoch_length_sec + start
     stop_abs = stop if stop >= 0 else cluster_obj.epoch_length_sec + stop
