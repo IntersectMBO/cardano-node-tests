@@ -16,7 +16,6 @@ from cardano_node_tests.utils.types import UnpackableSequence
 LOGGER = logging.getLogger(__name__)
 
 SKIPPED = (
-    "Byron",
     "byron",
     "convert-byron-key",
     "convert-byron-genesis-vkey",
@@ -24,11 +23,12 @@ SKIPPED = (
     "convert-itn-extended-key",
     "convert-itn-bip32-key",
     "genesis",
-    "Miscellaneous",
+    "version",
     "--byron-era",
     "--byron-mode",
     "--byron-key",
     "--mainnet",
+    "--version",
     "-h,--help",
 )
 
@@ -117,6 +117,9 @@ def parse_cmd_output(output: str) -> List[str]:
         if section_start:
             # skip line with wrapped description from previous command
             if line.startswith("    "):
+                continue
+            # skip line with subsection description
+            if not line.startswith(" "):
                 continue
             line = line.strip()
             if not line:
