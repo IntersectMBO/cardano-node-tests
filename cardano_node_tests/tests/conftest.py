@@ -57,6 +57,7 @@ def pytest_configure(config: Any) -> None:
     config._metadata[
         "cardano-node-tests url"
     ] = f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
+    config._metadata["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
 
 
 def _skip_all_tests(config: Any, items: list) -> None:
