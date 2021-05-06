@@ -1,5 +1,5 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i bash -p niv nix gnumake gnutar coreutils adoptopenjdk-jre-bin curl git postgresql lsof
+#! nix-shell -i bash -p niv nix gnumake gnutar coreutils adoptopenjdk-jre-bin curl git
 #! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
@@ -35,33 +35,15 @@ popd
 export PGHOST=localhost
 export PGUSER=postgres
 export PGPORT=5432
-
-# try to kill whatever is listening on postgres port
-listening_pid="$(lsof -i:"$PGPORT" -t || echo "")"
-if [ -n "$listening_pid" ]; then
-  kill "$listening_pid"
-fi
-
-# setup db
-mkdir -p postgres/data
-initdb -D "$PWD/postgres/data" --encoding=UTF8 --locale=en_US.UTF-8 -A trust -U "$PGUSER"
-
-# start postgres
-postgres -D "$PWD/postgres/data" -k "$PWD/postgres" > logfile 2>&1 &
-PSQL_PID=$!
-sleep 5
-cat logfile
-ps -fp "$PSQL_PID"
-
-# prepare pgpass
-echo "${PGHOST}:${PGPORT}:dbsync:${PGUSER}:secret" > pgpass
-chmod 600 pgpass
 export PGPASSFILE="$PWD/pgpass"
 
 cd "$REPODIR"
 
+# setup and start postgres
+./scripts/postgres-start.sh "$WORKDIR/postgres" -k
+
 # setup dbsync
-./.buildkite/postgresql-setup.sh --createdb
+./scripts/postgres-setup.sh --createdb
 
 # run tests and generate report
 set +e

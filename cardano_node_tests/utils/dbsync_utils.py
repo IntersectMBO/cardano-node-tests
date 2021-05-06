@@ -100,7 +100,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
             " tx.invalid_before, tx.invalid_hereafter,"
             " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.value,"
-            " (SELECT COUNT(id) FROM tx_metadata WHERE tx_metadata.tx_id=tx.id) as metadata_count,"
+            " (SELECT COUNT(id) FROM tx_metadata WHERE tx_metadata.tx_id=tx.id) AS metadata_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -198,7 +198,7 @@ def get_tx_record(txhash: str) -> TxRecord:
             mint_utxo_out.append(mint_rec)
 
     if tx_id == -1:
-        raise AssertionError("No results were returned by the SQL query.")
+        raise RuntimeError("No results were returned by the SQL query.")
 
     # pylint: disable=undefined-loop-variable
 
@@ -246,7 +246,7 @@ def check_tx(
             try:
                 response = get_tx_record(txhash=txhash)
                 break
-            except AssertionError:
+            except RuntimeError:
                 if r == 2:
                     raise
     else:
