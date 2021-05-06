@@ -10,15 +10,17 @@ POSTGRES_DIR="${1:?"Need path to postgres dir"}"
 export PGHOST="${PGHOST:-localhost}"
 export PGUSER="${PGUSER:-postgres}"
 export PGPORT="${PGPORT:-5432}"
+ORIG_PGPASSFILE="${PGPASSFILE:-""}"
 export PGPASSFILE="${PGPASSFILE:-$POSTGRES_DIR/pgpass}"
 
-# kill running db and clear it's data
+# kill running postgres and clear its data
 if [ "${2:-""}" = "-k" ]; then
   # try to kill whatever is listening on postgres port
   listening_pid="$(lsof -i:"$PGPORT" -t || echo "")"
   if [ -n "$listening_pid" ]; then
     kill "$listening_pid"
   fi
+
   rm -rf "$POSTGRES_DIR/data"
 fi
 
@@ -30,7 +32,7 @@ fi
 
 # start postgres
 postgres -D "$POSTGRES_DIR/data" -k "$POSTGRES_DIR" > "$POSTGRES_DIR/postgres.log" 2>&1 &
-PSQL_PID=$!
+PSQL_PID="$!"
 sleep 5
 cat "$POSTGRES_DIR/postgres.log"
 echo
@@ -40,4 +42,7 @@ echo
 # prepare pgpass
 echo "${PGHOST}:${PGPORT}:dbsync:${PGUSER}:secret" > "$PGPASSFILE"
 chmod 600 "$PGPASSFILE"
-echo Run \`export PGPASSFILE="$PGPASSFILE"\`
+
+if [ -z "$ORIG_PGPASSFILE" ]; then
+  echo Run \`export PGPASSFILE="$PGPASSFILE"\`
+fi

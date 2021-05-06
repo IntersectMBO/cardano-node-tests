@@ -31,15 +31,15 @@ nix-build -A cardano-db-sync -o db-sync-node
 export DBSYNC_REPO="$PWD"
 popd
 
+cd "$REPODIR"
+
 # set postgres env variables
 export PGHOST=localhost
 export PGUSER=postgres
 export PGPORT=5432
-export PGPASSFILE="$PWD/pgpass"
+export PGPASSFILE="$WORKDIR/postgres/pgpass"
 
-cd "$REPODIR"
-
-# setup and start postgres
+# start and setup postgres
 ./scripts/postgres-start.sh "$WORKDIR/postgres" -k
 
 # setup dbsync
