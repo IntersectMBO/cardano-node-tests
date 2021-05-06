@@ -27,6 +27,7 @@ endif
 # run all enabled tests on testnet, generate allure report
 # testnets: export NOPOOLS=1
 testnets: export CLUSTERS_COUNT=1
+testnets: export FORBID_RESTART=1
 testnets: TEST_THREADS ?= 15
 testnets: .dirs
 # First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.

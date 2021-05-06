@@ -13,14 +13,14 @@
 set -euo pipefail
 
 ARTIFACTS_DIR="${1:?"Need path to testing artifacts"}"
-SCRIPT_DIR="$(readlink -m "${0%/*}")"
+TOP_DIR="$(readlink -m "${0%/*}/..")"
 
 # deregister pools
 while read -r d; do
   if [ -e "$d/nodes" ] && [ ! -e "$d/nodes/dereg_success" ]; then
-    "$SCRIPT_DIR/cardano_node_tests/cluster_scripts/testnets/deregister-pools" "$d/nodes" || :
+    "$TOP_DIR/cardano_node_tests/cluster_scripts/testnets/deregister-pools" "$d/nodes" || :
   fi
 done <<< "$(find "$ARTIFACTS_DIR" -type d -name "cluster_artifacts_*")"
 
 # return funds to faucet
-"$SCRIPT_DIR/cardano_node_tests/testnet_cleanup.py" -a "$ARTIFACTS_DIR"
+"$TOP_DIR/cardano_node_tests/testnet_cleanup.py" -a "$ARTIFACTS_DIR"
