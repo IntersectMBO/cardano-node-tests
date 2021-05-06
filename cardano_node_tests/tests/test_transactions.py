@@ -250,8 +250,8 @@ class TestBasic:
             tx_files=tx_files,
         )
 
-        txid_body = cluster.get_txid_body(tx_raw_output.out_file)
-        txid_signed = cluster.get_txid_signed(tx_raw_output.out_file.with_suffix(".signed"))
+        txid_body = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
+        txid_signed = cluster.get_txid(tx_file=tx_raw_output.out_file.with_suffix(".signed"))
         assert txid_body == txid_signed
 
         utxo_src = cluster.get_utxo(src_address)
