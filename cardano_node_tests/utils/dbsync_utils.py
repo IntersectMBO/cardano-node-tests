@@ -235,7 +235,7 @@ def check_tx(
     if not configuration.HAS_DBSYNC:
         return None
 
-    txhash = cluster_obj.get_txid_body(tx_raw_output.out_file)
+    txhash = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
 
     # under load it might be necessary to wait a bit and retry the query
     if retry:
