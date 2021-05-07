@@ -85,34 +85,22 @@ def cluster_mincost(
     )
 
 
-def _get_pool_ledger_state(
-    cluster_obj: clusterlib.ClusterLib,
-    stake_pool_id: str,
-) -> dict:
-    """Get ledger state of the pool."""
-    stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
-    pool_ledger_state: dict = (
-        cluster_obj.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec) or {}
-    )
-    return pool_ledger_state
-
-
 def _check_pool(
     cluster_obj: clusterlib.ClusterLib,
     stake_pool_id: str,
     pool_data: clusterlib.PoolData,
 ):
     """Check and return ledger state of the pool."""
-    pool_ledger_state: dict = _get_pool_ledger_state(
-        cluster_obj=cluster_obj, stake_pool_id=stake_pool_id
-    )
+    pool_params: dict = cluster_obj.get_pool_params(stake_pool_id).pool_params
 
-    assert pool_ledger_state, (
+    assert pool_params, (
         "The newly created stake pool id is not shown inside the available stake pools;\n"
         f"Pool ID: {stake_pool_id} vs Existing IDs: "
         f"{list(cluster_obj.get_registered_stake_pools_ledger_state())}"
     )
-    assert not clusterlib_utils.check_pool_data(pool_ledger_state, pool_data)
+    assert not clusterlib_utils.check_pool_data(
+        pool_params=pool_params, pool_creation_data=pool_data
+    )
 
 
 def _check_staking(
@@ -121,9 +109,7 @@ def _check_staking(
     stake_pool_id: str,
 ):
     """Check that staking was correctly setup."""
-    pool_ledger_state: dict = _get_pool_ledger_state(
-        cluster_obj=cluster_obj, stake_pool_id=stake_pool_id
-    )
+    pool_params: dict = cluster_obj.get_pool_params(stake_pool_id).pool_params
 
     LOGGER.info("Waiting up to 3 epochs for stake pool to be registered.")
     helpers.wait_for(
@@ -143,7 +129,7 @@ def _check_staking(
         assert (
             # strip 'e0' from the beginning of the address hash
             helpers.decode_bech32(stake_addr_info.address)[2:]
-            in pool_ledger_state["owners"]
+            in pool_params["owners"]
         ), "'owner' value is different than expected"
 
 
@@ -605,19 +591,20 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
+        depoch = cluster.get_epoch() + 1
         __, tx_raw_output = cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
+        assert cluster.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
 
         # check that the pool was deregistered
         cluster.wait_for_new_epoch()
-        stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
-        assert not cluster.get_registered_stake_pools_ledger_state().get(
-            stake_pool_id_dec
+        assert not (
+            cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
         # check that the balance for source address was correctly updated
@@ -702,19 +689,20 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
+        depoch = cluster.get_epoch() + 1
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 1,
+            epoch=depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
+        assert cluster.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
 
         # check that the pool was deregistered
         cluster.wait_for_new_epoch()
-        stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
-        assert not cluster.get_registered_stake_pools_ledger_state().get(
-            stake_pool_id_dec
+        assert not (
+            cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
         # check that the stake addresses are no longer delegated
@@ -842,13 +830,15 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
+        depoch = cluster.get_epoch() + 2
         cluster.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + 2,
+            epoch=depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
+        assert cluster.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
 
         cluster.wait_for_new_epoch()
 
@@ -878,10 +868,8 @@ class TestStakePool:
         ), f"Incorrect balance for source address `{src_address}`"
 
         LOGGER.info("Checking for 3 epochs that the stake pool will NOT get deregistered.")
-        stake_pool_id_dec = helpers.decode_bech32(pool_creation_out.stake_pool_id)
         pool_deregistered = helpers.wait_for(
-            lambda: cluster.get_registered_stake_pools_ledger_state().get(stake_pool_id_dec)
-            is None,
+            lambda: not cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params,
             delay=10,
             num_sec=3 * cluster.epoch_length_sec,
             silent=True,
@@ -996,6 +984,13 @@ class TestStakePool:
             tx_name=temp_template,
             deposit=0,  # no additional deposit, the pool is already registered
         )
+
+        # check that pool is going to be updated with correct data
+        future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
+        assert not clusterlib_utils.check_pool_data(
+            pool_params=future_params, pool_creation_data=pool_data_updated
+        )
+
         cluster.wait_for_new_epoch()
 
         # check that the pool metadata hash was correctly updated on chain
@@ -1091,6 +1086,13 @@ class TestStakePool:
             tx_name=temp_template,
             deposit=0,  # no additional deposit, the pool is already registered
         )
+
+        # check that pool is going to be updated with correct data
+        future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
+        assert not clusterlib_utils.check_pool_data(
+            pool_params=future_params, pool_creation_data=pool_data_updated
+        )
+
         cluster.wait_for_new_epoch()
 
         # check that the pool parameters were correctly updated on chain

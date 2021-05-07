@@ -247,7 +247,7 @@ def load_registered_pool_data(
     if pool_id.startswith("pool"):
         pool_id = helpers.decode_bech32(pool_id)
 
-    pool_state: dict = cluster_obj.get_registered_stake_pools_ledger_state().get(pool_id) or {}
+    pool_state: dict = cluster_obj.get_pool_params(pool_id).pool_params
     metadata = pool_state.get("metadata") or {}
 
     # TODO: extend to handle more relays records
@@ -270,38 +270,38 @@ def load_registered_pool_data(
 
 
 def check_pool_data(  # noqa: C901
-    pool_ledger_state: dict, pool_creation_data: clusterlib.PoolData
+    pool_params: dict, pool_creation_data: clusterlib.PoolData
 ) -> str:
     """Check that actual pool state corresponds with pool creation data."""
     errors_list = []
 
-    if pool_ledger_state["cost"] != pool_creation_data.pool_cost:
+    if pool_params["cost"] != pool_creation_data.pool_cost:
         errors_list.append(
             "'cost' value is different than expected; "
-            f"Expected: {pool_creation_data.pool_cost} vs Returned: {pool_ledger_state['cost']}"
+            f"Expected: {pool_creation_data.pool_cost} vs Returned: {pool_params['cost']}"
         )
 
-    if pool_ledger_state["margin"] != pool_creation_data.pool_margin:
+    if pool_params["margin"] != pool_creation_data.pool_margin:
         errors_list.append(
             "'margin' value is different than expected; "
-            f"Expected: {pool_creation_data.pool_margin} vs Returned: {pool_ledger_state['margin']}"
+            f"Expected: {pool_creation_data.pool_margin} vs Returned: {pool_params['margin']}"
         )
 
-    if pool_ledger_state["pledge"] != pool_creation_data.pool_pledge:
+    if pool_params["pledge"] != pool_creation_data.pool_pledge:
         errors_list.append(
             "'pledge' value is different than expected; "
-            f"Expected: {pool_creation_data.pool_pledge} vs Returned: {pool_ledger_state['pledge']}"
+            f"Expected: {pool_creation_data.pool_pledge} vs Returned: {pool_params['pledge']}"
         )
 
-    if pool_ledger_state["relays"] != (pool_creation_data.pool_relay_dns or []):
+    if pool_params["relays"] != (pool_creation_data.pool_relay_dns or []):
         errors_list.append(
             "'relays' value is different than expected; "
             f"Expected: {pool_creation_data.pool_relay_dns} vs "
-            f"Returned: {pool_ledger_state['relays']}"
+            f"Returned: {pool_params['relays']}"
         )
 
     if pool_creation_data.pool_metadata_url and pool_creation_data.pool_metadata_hash:
-        metadata = pool_ledger_state.get("metadata") or {}
+        metadata = pool_params.get("metadata") or {}
 
         metadata_hash = metadata.get("hash")
         if metadata_hash != pool_creation_data.pool_metadata_hash:
@@ -318,16 +318,16 @@ def check_pool_data(  # noqa: C901
                 f"Expected: {pool_creation_data.pool_metadata_url} vs "
                 f"Returned: {metadata_url}"
             )
-    elif pool_ledger_state["metadata"] is not None:
+    elif pool_params["metadata"] is not None:
         errors_list.append(
             "'metadata' value is different than expected; "
-            f"Expected: None vs Returned: {pool_ledger_state['metadata']}"
+            f"Expected: None vs Returned: {pool_params['metadata']}"
         )
 
     if errors_list:
         for err in errors_list:
             LOGGER.error(err)
-        LOGGER.error(f"Stake Pool Details: \n{pool_ledger_state}")
+        LOGGER.error(f"Stake Pool Details: \n{pool_params}")
 
     return "\n\n".join(errors_list)
 
