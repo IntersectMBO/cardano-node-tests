@@ -2086,20 +2086,21 @@ class TestRewards:
             stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
             # deregister stake pool
+            depoch = cluster.get_epoch() + 1
             __, tx_raw_output = cluster.deregister_stake_pool(
                 pool_owners=[pool_owner],
                 cold_key_pair=node_cold,
-                epoch=cluster.get_epoch() + 1,
+                epoch=depoch,
                 pool_name=pool_name,
                 tx_name=temp_template,
             )
+            assert cluster.get_pool_params(stake_pool_id).retiring == depoch
 
             # check that the pool was deregistered
             cluster.wait_for_new_epoch()
-            stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
-            assert not cluster.get_registered_stake_pools_ledger_state().get(
-                stake_pool_id_dec
-            ), f"The pool {stake_pool_id} was not deregistered"
+            assert not cluster.get_pool_params(
+                stake_pool_id
+            ).pool_params, f"The pool {stake_pool_id} was not deregistered"
 
             # check that the balance for source address was correctly updated
             assert src_dereg_balance - tx_raw_output.fee == cluster.get_address_balance(
