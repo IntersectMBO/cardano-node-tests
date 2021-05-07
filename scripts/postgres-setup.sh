@@ -1,4 +1,6 @@
-#!/usr/bin/env bash
+#! /usr/bin/env nix-shell
+#! nix-shell -i bash -p postgresql
+# shellcheck shell=bash
 
 # Unoffiical bash strict mode.
 # See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
