@@ -228,7 +228,7 @@ def check_file_arg(file_path: str) -> Optional[Path]:
     if not file_path:
         return None
     abs_path = Path(file_path).expanduser().resolve()
-    if not abs_path.exists() and abs_path.is_file():
+    if not (abs_path.exists() and abs_path.is_file()):
         raise argparse.ArgumentTypeError(f"check_file_arg: file '{file_path}' doesn't exist")
     return abs_path
 
