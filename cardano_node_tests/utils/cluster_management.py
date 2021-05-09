@@ -395,14 +395,14 @@ class _ClusterGetter:
             excp = None
             if i > 0:
                 self.cm._locked_log(
-                    f"c{self.cm.cluster_instance}: failed to start cluster, retrying"
+                    f"c{self.cm.cluster_instance}: failed to start cluster:\n{excp}\nretrying"
                 )
                 time.sleep(0.2)
 
             try:
                 cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
-            except Exception:
-                pass
+            except Exception as err:
+                self.cm._locked_log(f"c{self.cm.cluster_instance}: failed to stop cluster:\n{err}")
 
             self._restart_save_cluster_artifacts(clean=True)
             try:
