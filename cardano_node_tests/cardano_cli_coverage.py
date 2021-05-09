@@ -228,7 +228,7 @@ def main() -> int:
         "cardano-cli": get_available_commands(["cardano-cli"], ignore_skips=args.ignore_skips)
     }
     try:
-        coverage = get_coverage(args.input_files, available_commands)
+        coverage = get_coverage(input_jsons=args.input_files, available_commands=available_commands)
     except AttributeError as exc:
         LOGGER.error(str(exc))
         return 1
