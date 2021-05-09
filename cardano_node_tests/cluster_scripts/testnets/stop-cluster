@@ -18,6 +18,7 @@ supervisorctl stop all
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]
 then
   kill "$(<"$STATE_CLUSTER/supervisord.pid")"
+  rm -f "$STATE_CLUSTER/supervisord.pid"
   echo "Cluster terminated!"
 else
   echo "Cluster is not running!"
