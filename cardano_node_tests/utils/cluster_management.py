@@ -390,9 +390,8 @@ class _ClusterGetter:
             f"stop_cmd='{startup_files.stop_script}'"
         )
 
-        excp: Optional[Exception]
+        excp: Optional[Exception] = None
         for i in range(2):
-            excp = None
             if i > 0:
                 self.cm._locked_log(
                     f"c{self.cm.cluster_instance}: failed to start cluster:\n{excp}\nretrying"
@@ -420,6 +419,9 @@ class _ClusterGetter:
             else:
                 break
         else:
+            self.cm._locked_log(
+                f"c{self.cm.cluster_instance}: failed to start cluster:\n{excp}\ncluster dead"
+            )
             if not helpers.IS_XDIST:
                 pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
             open(self.cm.instance_dir / CLUSTER_DEAD_FILE, "a").close()
