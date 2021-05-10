@@ -100,7 +100,9 @@ def run_command(command: str, workdir: FileType = "", shell: bool = False) -> by
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
-        raise AssertionError(f"An error occurred while running `{command}`: {stderr.decode()}")
+        err_dec = stderr.decode()
+        err_dec = err_dec or stdout.decode()
+        raise AssertionError(f"An error occurred while running `{command}`: {err_dec}")
     return stdout
 
 
