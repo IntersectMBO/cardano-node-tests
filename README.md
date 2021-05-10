@@ -86,6 +86,23 @@ $ SCHEDULING_LOG=testrun_20201208_1.log TEST_THREADS=3 CLUSTER_ERA=mary TX_ERA=s
 ```
 
 
+Tests development
+-----------------
+
+When running tests, the framework start and stop cluster instances as needed. That is not ideal for tests development, as starting a cluster instance takes several epochs (to get from Byron to Mary). To keep cardano cluster running in-between test runs, one needs to start it in "development mode".
+
+```sh
+# activate virtual env
+$ . .env/bin/activate
+# prepare cluster scripts
+$ prepare-cluster-scripts -d scripts/destination/dir -s cardano_node_tests/cluster_scripts/mary/
+# set env variables
+$ export CARDANO_NODE_SOCKET_PATH=/path/to/cardano-node/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
+# start the cluster instance in development mode
+$ scripts/destination/dir/start-cluster-hfc
+```
+
+
 Test coverage of cardano-cli commands
 -------------------------------------
 
