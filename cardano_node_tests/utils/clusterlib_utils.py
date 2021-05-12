@@ -616,8 +616,7 @@ def wait_for_epoch_interval(
         )
 
     for __ in range(20):
-        s_to_epoch_stop = cluster_obj.time_to_epoch_end()
-        s_from_epoch_start = cluster_obj.epoch_length_sec - s_to_epoch_stop
+        s_from_epoch_start = cluster_obj.time_from_epoch_start()
 
         # return if we are in the required interval
         if start_abs <= s_from_epoch_start <= stop_abs:
