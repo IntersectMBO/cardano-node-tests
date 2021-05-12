@@ -536,6 +536,32 @@ def new_tokens(
     return tokens_to_mint
 
 
+def node_tip(
+    cluster_obj: clusterlib.ClusterLib,
+) -> str:
+    """Get output of `cardano-cli query tip`."""
+    cardano_query_tip_cmd = " ".join(
+        [
+            "cardano-cli",
+            "query",
+            "tip",
+            *cluster_obj.magic_args,
+        ]
+    )
+    return helpers.run_command(cardano_query_tip_cmd, shell=True).decode("utf-8").strip()
+
+
+def get_node_tip(
+    cluster_obj: clusterlib.ClusterLib,
+) -> dict:
+    """Return the current node tip."""
+    node_tip_json = node_tip(cluster_obj)
+    if not node_tip:
+        return {}
+    node_tip: dict = json.loads(node_tip_json)
+    return node_tip
+
+
 def filtered_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
 ) -> str:
