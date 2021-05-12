@@ -2,6 +2,8 @@ name: sync tests from clean and existing state
 
 on:
   workflow_dispatch:
+    branches:
+      - sync_tests
     inputs:
       tag_no1:
         description: tag number1 - used for initial sync, from clean state
@@ -10,13 +12,37 @@ on:
         description: tag number2 - used for final sync, from existing state
         required: false
         default: "None"
+      db_sync_tag_no1:
+        description: db_sync tag number1 - used for initial sync, from clean state
+        required: false
+        default: "None"
+      db_sync_tag_no2:
+        description: db_sync tag number2 - used for final sync, from existing state
+        required: false
+        default: "None"
 
 jobs:
+  sync_test_mainnet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: trigger the Buildkite pipeline - run sync tests on mainnet
+        uses: zegocover/buildkite-pipeline-action@master
+        with:
+          access_token: '${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}'
+          pipeline: 'input-output-hk/qa-sync-tests'
+          message: ':github: Triggered by GitHub Action'
+          env: '{
+          "tag_no1":"${{ github.event.inputs.tag_no1 }}",
+          "tag_no2":"${{ github.event.inputs.tag_no2 }}",
+          "dt_tag_no1":"${{ github.event.inputs.db_sync_tag_no1 }}",
+          "dt_tag_no2":"${{ github.event.inputs.db_sync_tag_no2 }}"
+          }'
+          branch: 'sync_tests'
   sync_test:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        env: [shelley_qa, testnet, staging, mainnet]
+        env: [shelley_qa, testnet, staging]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     timeout-minutes: 600
@@ -24,22 +50,7 @@ jobs:
       - name: checkout cardano-node-tests repo
         uses: actions/checkout@v2
         with:
-          path: cardano-node-tests
-      - name: checkout cardano-node repo
-        uses: actions/checkout@v2
-        with:
-          repository: input-output-hk/cardano-node
-          path: cardano-node
-      - name: print test details
-        run: |
-          echo "tag_no1: ${{ github.event.inputs.tag_no1 }}"
-          echo "tag_no2: ${{ github.event.inputs.tag_no2 }}"
-      - name: cardano-node - fetch all tags
-        run: |
-          cd cardano-node
-          git checkout master
-          git pull origin master
-          git fetch --all --tags
+          path: cardano_node_tests
       - name: run actions/setup-python@v2
         uses: actions/setup-python@v2
         with:
@@ -51,28 +62,32 @@ jobs:
           pip install sqlite-utils>=2.18
           sqlite-utils --version
           pip install pandas
-      - name: run sync test
+      - name: checkout sync_tests repo
         run: |
-          cd cardano-node-tests
-          cd ..
-          python cardano-node-tests/sync_tests/sync_test.py -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -e ${{ matrix.env }}
-      - name: commit and push DB changes for the sync test
-        run: |
-          cd cardano-node-tests
+          cd cardano_node_tests
           git config --global user.name "sync_tests"
           git config --global user.email "action@github.com"
+          git checkout sync_tests
+          echo "current branch1: $(git branch --show-current)"
+      - name: run sync test
+        run: |
+          cd cardano_node_tests
+          echo "current branch2: $(git branch --show-current)"
+          python sync_tests/sync_test.py -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -e ${{ matrix.env }}
+      - name: commit and push DB changes for the sync test
+        run: |
+          cd cardano_node_tests
+          echo "current branch3: $(git branch --show-current)"
           git config pull.rebase true
-          git pull origin master
-
+          git pull origin sync_tests
           python sync_tests/write_values_to_db.py -e ${{ matrix.env }}
-
-          git add sync_tests/sync_results.db
+          git add sync_tests/sync_tests_results.db
           git add sync_tests/csv_files
           git commit -m "added sync values for tag ${{ github.event.inputs.tag_no1 }} ${{ github.event.inputs.tag_no2 }} - ${{ matrix.env }} - ${{ matrix.os }}"
-          git push origin master
+          git push origin HEAD:sync_tests --force
       - name: generate artifacts
         uses: actions/upload-artifact@v2
         if: always()
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.os }}
-          path: cardano-node-tests/logfile.log
+          path: cardano_node_tests/logfile.log
