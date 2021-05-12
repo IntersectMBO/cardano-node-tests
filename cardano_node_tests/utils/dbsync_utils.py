@@ -26,6 +26,12 @@ class MetadataRecord(NamedTuple):
     bytes: memoryview
 
 
+class ADAStashRecord(NamedTuple):
+    addr_id: int
+    cert_index: int
+    amount: int
+
+
 class TxRecord(NamedTuple):
     tx_id: int
     tx_hash: str
@@ -40,6 +46,8 @@ class TxRecord(NamedTuple):
     txouts: List[clusterlib.UTXOData]
     mint: List[clusterlib.UTXOData]
     metadata: List[MetadataRecord]
+    reserve: List[ADAStashRecord]
+    treasury: List[ADAStashRecord]
 
     def _convert_metadata(self) -> dict:
         """Convert list of `MetadataRecord`s to metadata dictionary."""
@@ -64,6 +72,8 @@ class TxDBRow(NamedTuple):
     tx_out_addr: str
     tx_out_value: int
     metadata_count: int
+    reserve_count: int
+    treasury_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -79,6 +89,14 @@ class MetadataDBRow(NamedTuple):
     key: int
     json: Any
     bytes: memoryview
+    tx_id: int
+
+
+class ADAStashDBRow(NamedTuple):
+    id: int
+    addr_id: int
+    cert_index: int
+    amount: int
     tx_id: int
 
 
@@ -101,6 +119,8 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " tx.invalid_before, tx.invalid_hereafter,"
             " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.value,"
             " (SELECT COUNT(id) FROM tx_metadata WHERE tx_metadata.tx_id=tx.id) AS metadata_count,"
+            " (SELECT COUNT(id) FROM reserve WHERE reserve.tx_id=tx.id) AS reserve_count,"
+            " (SELECT COUNT(id) FROM treasury WHERE treasury.tx_id=tx.id) AS treasury_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -132,7 +152,39 @@ def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
             yield MetadataDBRow(*result)
 
 
-def get_tx_record(txhash: str) -> TxRecord:
+def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
+    """Query transaction reserve record in db-sync."""
+    with DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " reserve.id, reserve.addr_id, reserve.cert_index, reserve.amount, reserve.tx_id "
+            "FROM reserve "
+            "INNER JOIN tx ON tx.id = reserve.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield ADAStashDBRow(*result)
+
+
+def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
+    """Query transaction treasury record in db-sync."""
+    with DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " treasury.id, treasury.addr_id, treasury.cert_index, treasury.amount, treasury.tx_id "
+            "FROM treasury "
+            "INNER JOIN tx ON tx.id = treasury.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield ADAStashDBRow(*result)
+
+
+def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     """Get transaction data from db-sync."""
     utxo_out: List[clusterlib.UTXOData] = []
     seen_tx_out_ids = set()
@@ -209,6 +261,24 @@ def get_tx_record(txhash: str) -> TxRecord:
             for r in query_tx_metadata(txhash=txhash)
         ]
 
+    reserve = []
+    if query_row.reserve_count:
+        reserve = [
+            ADAStashRecord(
+                addr_id=int(r.addr_id), cert_index=int(r.cert_index), amount=int(r.amount)
+            )
+            for r in query_tx_reserve(txhash=txhash)
+        ]
+
+    treasury = []
+    if query_row.treasury_count:
+        treasury = [
+            ADAStashRecord(
+                addr_id=int(r.addr_id), cert_index=int(r.cert_index), amount=int(r.amount)
+            )
+            for r in query_tx_treasury(txhash=txhash)
+        ]
+
     record = TxRecord(
         tx_id=int(tx_id),
         tx_hash=query_row.tx_hash.hex(),
@@ -223,6 +293,8 @@ def get_tx_record(txhash: str) -> TxRecord:
         txouts=[*utxo_out, *ma_utxo_out],
         mint=mint_utxo_out,
         metadata=metadata,
+        reserve=reserve,
+        treasury=treasury,
     )
 
     return record
