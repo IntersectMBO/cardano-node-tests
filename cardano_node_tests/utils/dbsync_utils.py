@@ -43,6 +43,7 @@ class TxRecord(NamedTuple):
     size: int
     invalid_before: Optional[int]
     invalid_hereafter: Optional[int]
+    txins: List[clusterlib.UTXOData]
     txouts: List[clusterlib.UTXOData]
     mint: List[clusterlib.UTXOData]
     metadata: List[MetadataRecord]
@@ -84,6 +85,13 @@ class TxDBRow(NamedTuple):
     ma_tx_mint_quantity: Optional[int]
 
 
+class TxPrelimRecord(NamedTuple):
+    utxo_out: List[clusterlib.UTXOData]
+    ma_utxo_out: List[clusterlib.UTXOData]
+    mint_utxo_out: List[clusterlib.UTXOData]
+    last_row: TxDBRow
+
+
 class MetadataDBRow(NamedTuple):
     id: int
     key: int
@@ -98,6 +106,18 @@ class ADAStashDBRow(NamedTuple):
     cert_index: int
     amount: int
     tx_id: int
+
+
+class TxInDBRow(NamedTuple):
+    tx_out_id: int
+    utxo_ix: int
+    address: str
+    value: int
+    tx_hash: memoryview
+    ma_tx_out_id: Optional[int]
+    ma_tx_out_policy: Optional[memoryview]
+    ma_tx_out_name: Optional[memoryview]
+    ma_tx_out_quantity: Optional[int]
 
 
 class DBSync:
@@ -118,9 +138,9 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
             " tx.invalid_before, tx.invalid_hereafter,"
             " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.value,"
-            " (SELECT COUNT(id) FROM tx_metadata WHERE tx_metadata.tx_id=tx.id) AS metadata_count,"
-            " (SELECT COUNT(id) FROM reserve WHERE reserve.tx_id=tx.id) AS reserve_count,"
-            " (SELECT COUNT(id) FROM treasury WHERE treasury.tx_id=tx.id) AS treasury_count,"
+            " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
+            " (SELECT COUNT(id) FROM reserve WHERE tx_id=tx.id) AS reserve_count,"
+            " (SELECT COUNT(id) FROM treasury WHERE tx_id=tx.id) AS treasury_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -133,6 +153,27 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
 
         while (result := cur.fetchone()) is not None:
             yield TxDBRow(*result)
+
+
+def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
+    """Query transaction txins in db-sync."""
+    with DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " tx_out.id, tx_out.index, tx_out.address, tx_out.value, "
+            " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash, "
+            " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity "
+            "FROM tx_in "
+            "LEFT JOIN tx_out "
+            "ON (tx_out.tx_id = tx_in.tx_out_id AND tx_out.index = tx_in.tx_out_index) "
+            "LEFT JOIN tx ON tx.id = tx_in.tx_in_id "
+            "LEFT JOIN ma_tx_out ON tx_out.id = ma_tx_out.tx_out_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield TxInDBRow(*result)
 
 
 def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
@@ -184,8 +225,8 @@ def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
             yield ADAStashDBRow(*result)
 
 
-def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
-    """Get transaction data from db-sync."""
+def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
+    """Get first batch of transaction data from db-sync."""
     utxo_out: List[clusterlib.UTXOData] = []
     seen_tx_out_ids = set()
     ma_utxo_out: List[clusterlib.UTXOData] = []
@@ -250,19 +291,78 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
             mint_utxo_out.append(mint_rec)
 
     if tx_id == -1:
-        raise RuntimeError("No results were returned by the SQL query.")
+        raise RuntimeError("No results were returned by the TX SQL query.")
 
     # pylint: disable=undefined-loop-variable
+    txdata = TxPrelimRecord(
+        utxo_out=utxo_out,
+        ma_utxo_out=ma_utxo_out,
+        mint_utxo_out=mint_utxo_out,
+        last_row=query_row,
+    )
+
+    return txdata
+
+
+def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
+    """Get txins of a transaction from db-sync."""
+    txins: List[clusterlib.UTXOData] = []
+    seen_txins_out_ids = set()
+    seen_txins_ma_ids = set()
+
+    for txins_row in query_tx_ins(txhash=txhash):
+        # Lovelace inputs
+        if txins_row.tx_out_id and txins_row.tx_out_id not in seen_txins_out_ids:
+            seen_txins_out_ids.add(txins_row.tx_out_id)
+            txins.append(
+                clusterlib.UTXOData(
+                    utxo_hash=txins_row.tx_hash.hex(),
+                    utxo_ix=int(txins_row.utxo_ix),
+                    amount=int(txins_row.value),
+                    address=str(txins_row.address),
+                )
+            )
+
+        # MA inputs
+        if txins_row.ma_tx_out_id and txins_row.ma_tx_out_id not in seen_txins_ma_ids:
+            seen_txins_ma_ids.add(txins_row.ma_tx_out_id)
+            asset_name = (
+                bytearray.fromhex(txins_row.ma_tx_out_name.hex()).decode()
+                if txins_row.ma_tx_out_name
+                else None
+            )
+            policyid = txins_row.ma_tx_out_policy.hex() if txins_row.ma_tx_out_policy else ""
+            coin = f"{policyid}.{asset_name}" if asset_name else policyid
+            txins.append(
+                clusterlib.UTXOData(
+                    utxo_hash=txins_row.tx_hash.hex(),
+                    utxo_ix=int(txins_row.utxo_ix),
+                    amount=int(txins_row.ma_tx_out_quantity or 0),
+                    address=str(txins_row.address),
+                    coin=coin,
+                )
+            )
+
+    return txins
+
+
+def get_tx_record(txhash: str) -> TxRecord:
+    """Get transaction data from db-sync.
+
+    Compile data from multiple SQL queries to get as much information about the TX as possible.
+    """
+    txdata = get_prelim_tx_record(txhash)
+    txins = get_txins(txhash)
 
     metadata = []
-    if query_row.metadata_count:
+    if txdata.last_row.metadata_count:
         metadata = [
             MetadataRecord(key=int(r.key), json=r.json, bytes=r.bytes)
             for r in query_tx_metadata(txhash=txhash)
         ]
 
     reserve = []
-    if query_row.reserve_count:
+    if txdata.last_row.reserve_count:
         reserve = [
             ADAStashRecord(
                 addr_id=int(r.addr_id), cert_index=int(r.cert_index), amount=int(r.amount)
@@ -271,7 +371,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
         ]
 
     treasury = []
-    if query_row.treasury_count:
+    if txdata.last_row.treasury_count:
         treasury = [
             ADAStashRecord(
                 addr_id=int(r.addr_id), cert_index=int(r.cert_index), amount=int(r.amount)
@@ -280,18 +380,23 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
         ]
 
     record = TxRecord(
-        tx_id=int(tx_id),
-        tx_hash=query_row.tx_hash.hex(),
-        block_id=int(query_row.block_id),
-        block_index=int(query_row.block_index),
-        out_sum=int(query_row.out_sum),
-        fee=int(query_row.fee),
-        deposit=int(query_row.deposit),
-        size=int(query_row.size),
-        invalid_before=int(query_row.invalid_before) if query_row.invalid_before else None,
-        invalid_hereafter=int(query_row.invalid_hereafter) if query_row.invalid_hereafter else None,
-        txouts=[*utxo_out, *ma_utxo_out],
-        mint=mint_utxo_out,
+        tx_id=int(txdata.last_row.tx_id),
+        tx_hash=txdata.last_row.tx_hash.hex(),
+        block_id=int(txdata.last_row.block_id),
+        block_index=int(txdata.last_row.block_index),
+        out_sum=int(txdata.last_row.out_sum),
+        fee=int(txdata.last_row.fee),
+        deposit=int(txdata.last_row.deposit),
+        size=int(txdata.last_row.size),
+        invalid_before=int(txdata.last_row.invalid_before)
+        if txdata.last_row.invalid_before
+        else None,
+        invalid_hereafter=int(txdata.last_row.invalid_hereafter)
+        if txdata.last_row.invalid_hereafter
+        else None,
+        txins=txins,
+        txouts=[*txdata.utxo_out, *txdata.ma_utxo_out],
+        mint=txdata.mint_utxo_out,
         metadata=metadata,
         reserve=reserve,
         treasury=treasury,
@@ -313,7 +418,7 @@ def check_tx(
     if retry:
         for r in range(3):
             if r > 0:
-                LOGGER.warning(f"Repeating SQL query for '{txhash}' for the {r} time.")
+                LOGGER.warning(f"Repeating TX SQL query for '{txhash}' for the {r} time.")
                 time.sleep(2)
             try:
                 response = get_tx_record(txhash=txhash)
@@ -328,9 +433,11 @@ def check_tx(
     assert (
         response.out_sum == txouts_amount
     ), f"Sum of TX amounts doesn't match ({response.out_sum} != {txouts_amount})"
+
     assert (
         response.fee == tx_raw_output.fee
     ), f"TX fee doesn't match ({response.fee} != {tx_raw_output.fee})"
+
     assert response.invalid_before == tx_raw_output.invalid_before, (
         "TX invalid_before doesn't match "
         f"({response.invalid_before} != {tx_raw_output.invalid_before})"
@@ -339,10 +446,19 @@ def check_tx(
         "TX invalid_hereafter doesn't match "
         f"({response.invalid_hereafter} != {tx_raw_output.invalid_hereafter})"
     )
+
     len_db_txouts, len_out_txouts = len(response.txouts), len(tx_raw_output.txouts)
     assert (
         len_db_txouts == len_out_txouts
     ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts})"
+
+    tx_txouts = sorted(tx_raw_output.txouts)
+    db_txouts = sorted(clusterlib_utils.utxodata2txout(r) for r in response.txouts)
+    assert tx_txouts == db_txouts, f"TX txouts don't match ({tx_txouts} != {db_txouts})"
+
+    tx_txins = sorted(tx_raw_output.txins)
+    db_txins = sorted(response.txins)
+    assert tx_txins == db_txins, f"TX txins don't match ({tx_txins} != {db_txins})"
 
     # calculate minting amount sum for records with same address and token
     mint_txouts: Dict[str, clusterlib.TxOut] = {}
