@@ -665,3 +665,8 @@ def load_tx_metadata(tx_body_file: Path) -> dict:
         metadata_dict = metadata
 
     return metadata_dict
+
+
+def utxodata2txout(utxodata: clusterlib.UTXOData) -> clusterlib.TxOut:
+    """Convert `clusterlib.UTXOData` to `clusterlib.TxOut`."""
+    return clusterlib.TxOut(address=utxodata.address, amount=utxodata.amount, coin=utxodata.coin)
