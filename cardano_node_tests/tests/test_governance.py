@@ -5,6 +5,7 @@
 """
 import logging
 from pathlib import Path
+from typing import List
 
 import allure
 import pytest
@@ -99,73 +100,62 @@ class TestMIRCerts:
     """Tests for MIR certificates."""
 
     @pytest.fixture
-    def pool_user(
+    def pool_users(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> clusterlib.PoolUser:
+    ) -> List[clusterlib.PoolUser]:
         """Create pool user."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
-            created_user = clusterlib_utils.create_pool_users(
+            created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster,
                 name_template=f"test_mir_certs_ci{cluster_manager.cluster_instance}",
-                no_of_addr=1,
-            )[0]
-            fixture_cache.value = created_user
+                no_of_addr=2,
+            )
+            fixture_cache.value = created_users
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
-            created_user,
+            *created_users,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
-        return created_user
+        return created_users
 
     @pytest.fixture
     def registered_user(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        pool_user: clusterlib.PoolUser,
+        pool_users: List[clusterlib.PoolUser],
     ) -> clusterlib.PoolUser:
         """Register pool user's stake address."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
-            fixture_cache.value = pool_user
+            fixture_cache.value = pool_users[1]
 
         temp_template = f"test_mir_certs_ci{cluster_manager.cluster_instance}"
-
-        addr_reg_cert = cluster.gen_stake_addr_registration_cert(
-            addr_name=temp_template,
-            stake_vkey_file=pool_user.stake.vkey_file,
+        pool_user = pool_users[1]
+        clusterlib_utils.register_stake_address(
+            cluster_obj=cluster, pool_user=pool_users[1], name_template=temp_template
         )
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[addr_reg_cert],
-            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
-        )
-        cluster.send_tx(
-            src_address=pool_user.payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
-        )
-        assert cluster.get_stake_addr_info(
-            pool_user.stake.address
-        ), f"The address {pool_user.stake.address} was not registered"
-
         return pool_user
 
     @allure.link(helpers.get_vcs_link())
     def test_transfer_to_treasury(
-        self, cluster: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser
+        self, cluster: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
         """Send funds from the reserves pot to the treasury pot.
 
         Expected to fail until Alonzo.
         """
         temp_template = helpers.get_func_name()
+        pool_user = pool_users[0]
         amount = 50_000
 
         mir_cert = cluster.gen_mir_cert_to_treasury(transfer=amount, tx_name=temp_template)
@@ -189,13 +179,14 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     def test_transfer_to_rewards(
-        self, cluster: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser
+        self, cluster: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
         """Send funds from the treasury pot to the reserves pot.
 
         Expected to fail until Alonzo.
         """
         temp_template = helpers.get_func_name()
+        pool_user = pool_users[0]
         amount = 50_000
 
         mir_cert = cluster.gen_mir_cert_to_rewards(transfer=amount, tx_name=temp_template)
