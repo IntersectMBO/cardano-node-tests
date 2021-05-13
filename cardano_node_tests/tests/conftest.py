@@ -1,3 +1,4 @@
+import distutils.spawn
 import logging
 import os
 from pathlib import Path
@@ -58,6 +59,11 @@ def pytest_configure(config: Any) -> None:
         "cardano-node-tests url"
     ] = f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
     config._metadata["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
+    config._metadata["CARDANO_NODE_SOCKET_PATH"] = os.environ.get("CARDANO_NODE_SOCKET_PATH")
+    config._metadata["cardano-cli exe"] = distutils.spawn.find_executable("cardano-cli") or ""
+
+    if "nix/store" not in config._metadata["cardano-cli exe"]:
+        LOGGER.warning("WARNING: Not using `cardano-cli` from nix!")
 
 
 def _skip_all_tests(config: Any, items: list) -> None:
