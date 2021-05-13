@@ -33,6 +33,32 @@ class TokenRecord(NamedTuple):
     script: Path
 
 
+def register_stake_address(
+    cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
+) -> clusterlib.TxRawOutput:
+    """Register stake address."""
+    # files for registering stake address
+    addr_reg_cert = cluster_obj.gen_stake_addr_registration_cert(
+        addr_name=name_template,
+        stake_vkey_file=pool_user.stake.vkey_file,
+    )
+    tx_files = clusterlib.TxFiles(
+        certificate_files=[addr_reg_cert],
+        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+    )
+
+    tx_raw_output = cluster_obj.send_tx(
+        src_address=pool_user.payment.address,
+        tx_name=f"{name_template}_reg_stake_addr",
+        tx_files=tx_files,
+    )
+
+    if not cluster_obj.get_stake_addr_info(pool_user.stake.address):
+        raise AssertionError(f"The address {pool_user.stake.address} was not registered")
+
+    return tx_raw_output
+
+
 def deregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
 ) -> clusterlib.TxRawOutput:
