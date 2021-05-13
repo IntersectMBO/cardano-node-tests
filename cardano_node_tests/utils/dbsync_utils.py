@@ -405,29 +405,52 @@ def get_tx_record(txhash: str) -> TxRecord:
     return record
 
 
+def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
+    """Retry `get_tx_record` when data is anticipated and are not available yet.
+
+    Under load it might be necessary to wait a bit and retry the query.
+    """
+    retry_num = retry_num if retry_num > 1 else 1
+    last_retry_idx = retry_num - 1
+
+    for r in range(retry_num):
+        if r > 0:
+            LOGGER.warning(f"Repeating TX SQL query for '{txhash}' for the {r} time.")
+            time.sleep(2)
+        try:
+            response = get_tx_record(txhash=txhash)
+            break
+        except RuntimeError:
+            if r == last_retry_idx:
+                raise
+
+    return response
+
+
+def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> List[clusterlib.TxOut]:
+    """Calculate minting amount sum for records with same address and token."""
+    mint_txouts: Dict[str, clusterlib.TxOut] = {}
+
+    for mt in txouts:
+        mt_id = f"{mt.address}_{mt.coin}"
+        if mt_id in mint_txouts:
+            mt_stored = mint_txouts[mt_id]
+            mint_txouts[mt_id] = mt_stored._replace(amount=mt_stored.amount + mt.amount)
+        else:
+            mint_txouts[mt_id] = mt
+
+    return list(mint_txouts.values())
+
+
 def check_tx(
-    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry: bool = True
+    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
 ) -> Optional[TxRecord]:
     """Check a transaction in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
     txhash = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
-
-    # under load it might be necessary to wait a bit and retry the query
-    if retry:
-        for r in range(3):
-            if r > 0:
-                LOGGER.warning(f"Repeating TX SQL query for '{txhash}' for the {r} time.")
-                time.sleep(2)
-            try:
-                response = get_tx_record(txhash=txhash)
-                break
-            except RuntimeError:
-                if r == 2:
-                    raise
-    else:
-        response = get_tx_record(txhash=txhash)
+    response = get_tx_record_retry(txhash=txhash, retry_num=retry_num)
 
     txouts_amount = clusterlib_utils.get_amount(tx_raw_output.txouts)
     assert (
@@ -447,6 +470,15 @@ def check_tx(
         f"({response.invalid_hereafter} != {tx_raw_output.invalid_hereafter})"
     )
 
+    len_db_txins, len_out_txins = len(response.txins), len(tx_raw_output.txins)
+    assert (
+        len_db_txins == len_out_txins
+    ), f"Number of TX inputs doesn't match ({len_db_txins} != {len_out_txins})"
+
+    tx_txins = sorted(tx_raw_output.txins)
+    db_txins = sorted(response.txins)
+    assert tx_txins == db_txins, f"TX inputs don't match ({tx_txins} != {db_txins})"
+
     len_db_txouts, len_out_txouts = len(response.txouts), len(tx_raw_output.txouts)
     assert (
         len_db_txouts == len_out_txouts
@@ -454,24 +486,17 @@ def check_tx(
 
     tx_txouts = sorted(tx_raw_output.txouts)
     db_txouts = sorted(clusterlib_utils.utxodata2txout(r) for r in response.txouts)
-    assert tx_txouts == db_txouts, f"TX txouts don't match ({tx_txouts} != {db_txouts})"
+    assert tx_txouts == db_txouts, f"TX outputs don't match ({tx_txouts} != {db_txouts})"
 
-    tx_txins = sorted(tx_raw_output.txins)
-    db_txins = sorted(response.txins)
-    assert tx_txins == db_txins, f"TX txins don't match ({tx_txins} != {db_txins})"
-
-    # calculate minting amount sum for records with same address and token
-    mint_txouts: Dict[str, clusterlib.TxOut] = {}
-    for mt in tx_raw_output.mint:
-        mt_id = f"{mt.address}_{mt.coin}"
-        if mt_id in mint_txouts:
-            mt_stored = mint_txouts[mt_id]
-            mint_txouts[mt_id] = mt_stored._replace(amount=mt_stored.amount + mt.amount)
-        else:
-            mint_txouts[mt_id] = mt
-    len_db_mint, len_out_mint = len(response.mint), len(mint_txouts.values())
+    tx_mint_txouts = sorted(_sum_mint_txouts(tx_raw_output.mint))
+    len_db_mint, len_out_mint = len(response.mint), len(tx_mint_txouts)
     assert (
         len_db_mint == len_out_mint
     ), f"Number of MA minting doesn't match ({len_db_mint} != {len_out_mint})"
+
+    db_mint_txouts = sorted(clusterlib_utils.utxodata2txout(r) for r in response.mint)
+    assert (
+        tx_mint_txouts == db_mint_txouts
+    ), f"MA minting outputs don't match ({tx_mint_txouts} != {db_mint_txouts})"
 
     return response
