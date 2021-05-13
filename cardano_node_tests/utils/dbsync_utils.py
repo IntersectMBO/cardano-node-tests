@@ -1,4 +1,5 @@
 """Functionality for interacting with db-sync."""
+import decimal
 import logging
 import time
 from typing import Any
@@ -120,6 +121,19 @@ class TxInDBRow(NamedTuple):
     ma_tx_out_quantity: Optional[int]
 
 
+class ADAPotsDBRow(NamedTuple):
+    id: int
+    slot_no: int
+    epoch_no: int
+    treasury: decimal.Decimal
+    reserves: decimal.Decimal
+    rewards: decimal.Decimal
+    utxo: decimal.Decimal
+    deposits: decimal.Decimal
+    fees: decimal.Decimal
+    block_id: int
+
+
 class DBSync:
     conn_cache: Optional[psycopg2.extensions.connection] = None
 
@@ -223,6 +237,23 @@ def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
 
         while (result := cur.fetchone()) is not None:
             yield ADAStashDBRow(*result)
+
+
+def query_ada_pots(
+    epoch_from: int = 0, epoch_to: int = 99999999
+) -> Generator[ADAPotsDBRow, None, None]:
+    """Query ADA pots record in db-sync."""
+    with DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " id, slot_no, epoch_no, treasury, reserves, rewards, utxo, deposits, fees, block_id "
+            "FROM ada_pots "
+            "WHERE epoch_no BETWEEN %s AND %s;",
+            (epoch_from, epoch_to),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield ADAPotsDBRow(*result)
 
 
 def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
