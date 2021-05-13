@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import platform
+import random
 import re
 import signal
 import subprocess
@@ -85,7 +86,7 @@ def git_get_commit_sha_for_tag_no(tag_no):
     # there is a rate limit for the provided url that we want to overpass with the below while loop
     count = 0
     while not response.ok:
-        time.sleep(30)
+        time.sleep(random.randint(30, 60))
         count += 1
         response = requests.get(url)
         if count > 10:
@@ -548,8 +549,8 @@ def wait_for_node_to_sync(env, tag_no):
                 # TODO: to remove this after 'tip' bug returning None/null will be fixed
                 # https://github.com/input-output-hk/cardano-node/issues/2568
                 actual_epoch = 1
-            actual_era_start_time = get_epoch_start_datetime(env, actual_epoch)
             current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            actual_era_start_time = get_epoch_start_datetime(env, actual_epoch)
             actual_era_dict = {"start_epoch": actual_epoch,
                                "start_time": actual_era_start_time,
                                "start_sync_time": current_time}
@@ -590,7 +591,10 @@ def wait_for_node_to_sync(env, tag_no):
         actual_era_dict = era_details_dict[era]
         actual_era_dict["last_epoch"] = last_epoch
         actual_era_dict["end_sync_time"] = end_sync_time
-        actual_era_dict["slots_in_era"] = get_no_of_slots_per_era(env, era)
+
+        no_of_epochs_in_era = int(last_epoch) - int(era_details_dict[eras_list[eras_list.index(era)]]["start_epoch"]) + 1
+        actual_era_dict["slots_in_era"] = get_no_of_slots_in_era(env, era, no_of_epochs_in_era)
+
         actual_era_dict["sync_duration_secs"] = date_diff_in_seconds(
             datetime.strptime(end_sync_time, "%Y-%m-%dT%H:%M:%SZ"),
             datetime.strptime(actual_era_dict["start_sync_time"], "%Y-%m-%dT%H:%M:%SZ"))
@@ -628,15 +632,17 @@ def seconds_to_time(seconds_val):
     return time.strftime("%H:%M:%S", time.gmtime(seconds_val))
 
 
-def get_no_of_slots_per_era(env, era_name):
+def get_no_of_slots_in_era(env, era_name, no_of_epochs_in_era):
     slot_length_secs = 1
-    if env == "shelley_qa":
-        epoch_length_secs = 7200
-    else:
-        epoch_length_secs = 432000
     if era_name.lower() == "byron":
         slot_length_secs = 20
-    return int(epoch_length_secs / slot_length_secs)
+
+    if env == "shelley_qa":
+        epoch_length_secs = 7200 * slot_length_secs
+    else:
+        epoch_length_secs = 432000 * slot_length_secs
+
+    return int(epoch_length_secs / slot_length_secs) * no_of_epochs_in_era
 
 
 def get_data_from_logs(log_file):
