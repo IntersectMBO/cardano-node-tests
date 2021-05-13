@@ -62,28 +62,28 @@ class TxDBRow(NamedTuple):
     tx_hash: memoryview
     block_id: int
     block_index: int
-    out_sum: int
-    fee: int
+    out_sum: decimal.Decimal
+    fee: decimal.Decimal
     deposit: int
     size: int
-    invalid_before: Optional[int]
-    invalid_hereafter: Optional[int]
+    invalid_before: Optional[decimal.Decimal]
+    invalid_hereafter: Optional[decimal.Decimal]
     tx_out_id: int
     tx_out_tx_id: int
     utxo_ix: int
     tx_out_addr: str
-    tx_out_value: int
+    tx_out_value: decimal.Decimal
     metadata_count: int
     reserve_count: int
     treasury_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
-    ma_tx_out_quantity: Optional[int]
+    ma_tx_out_quantity: Optional[decimal.Decimal]
     ma_tx_mint_id: Optional[int]
     ma_tx_mint_policy: Optional[memoryview]
     ma_tx_mint_name: Optional[memoryview]
-    ma_tx_mint_quantity: Optional[int]
+    ma_tx_mint_quantity: Optional[decimal.Decimal]
 
 
 class TxPrelimRecord(NamedTuple):
@@ -95,7 +95,7 @@ class TxPrelimRecord(NamedTuple):
 
 class MetadataDBRow(NamedTuple):
     id: int
-    key: int
+    key: decimal.Decimal
     json: Any
     bytes: memoryview
     tx_id: int
@@ -105,7 +105,7 @@ class ADAStashDBRow(NamedTuple):
     id: int
     addr_id: int
     cert_index: int
-    amount: int
+    amount: decimal.Decimal
     tx_id: int
 
 
@@ -113,12 +113,12 @@ class TxInDBRow(NamedTuple):
     tx_out_id: int
     utxo_ix: int
     address: str
-    value: int
+    value: decimal.Decimal
     tx_hash: memoryview
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
-    ma_tx_out_quantity: Optional[int]
+    ma_tx_out_quantity: Optional[decimal.Decimal]
 
 
 class ADAPotsDBRow(NamedTuple):
