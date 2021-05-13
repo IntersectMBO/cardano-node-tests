@@ -222,6 +222,53 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    def test_funds_to_valid_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Send funds to a valid payment address.
+
+        The destination address is a valid address that was generated sometime
+        in the past. The test verifies it is possible to use a valid address
+        even though it was not generated while running a speciffic cardano
+        network.
+
+        * send funds from 1 source address to 1 destination address
+        * check expected balances for both source and destination addresses
+        """
+        temp_template = helpers.get_func_name()
+        amount = 100
+
+        src_address = payment_addrs[0].address
+        dst_address = "addr_test1vpst87uzwafqkxumyf446zr2jsyn44cfpu9fe8yqanyuh6glj2hkl"
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        tx_raw_output = cluster.send_funds(
+            src_address=src_address,
+            destinations=destinations,
+            tx_name=temp_template,
+            tx_files=tx_files,
+        )
+
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_get_txid(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -1361,7 +1408,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @helpers.hypothesis_settings()
-    def test_send_funds_to_non_existent_address(
+    def test_send_funds_to_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
@@ -1411,7 +1458,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @helpers.hypothesis_settings()
-    def test_send_funds_from_non_existent_address(
+    def test_send_funds_from_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
