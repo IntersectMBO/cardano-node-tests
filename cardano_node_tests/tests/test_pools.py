@@ -1350,7 +1350,7 @@ class TestPoolCost:
 
             rand_str = clusterlib.get_rand_str()
             temp_template = (
-                f"{helpers.get_func_name()}_{rand_str}_ci{cluster_manager.cluster_instance}"
+                f"{helpers.get_func_name()}_{rand_str}_ci{cluster_manager.cluster_instance_num}"
             )
 
             pool_owners = clusterlib_utils.create_pool_users(
@@ -1469,7 +1469,7 @@ class TestNegative:
 
             created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster,
-                name_template=f"test_negative_ci{cluster_manager.cluster_instance}",
+                name_template=f"test_negative_ci{cluster_manager.cluster_instance_num}",
                 no_of_addr=2,
             )
             fixture_cache.value = created_users

@@ -144,7 +144,7 @@ class TestBasic:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"multi_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(20)],
+                *[f"multi_addr_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(20)],
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -595,7 +595,10 @@ class TestNegative:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"multi_neg_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(10)],
+                *[
+                    f"multi_neg_addr_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(10)
+                ],
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -791,7 +794,7 @@ class TestTimeLocking:
 
             addrs = clusterlib_utils.create_payment_addr_records(
                 *[
-                    f"multi_addr_time_locking_ci{cluster_manager.cluster_instance}_{i}"
+                    f"multi_addr_time_locking_ci{cluster_manager.cluster_instance_num}_{i}"
                     for i in range(20)
                 ],
                 cluster_obj=cluster,
@@ -1196,7 +1199,7 @@ class TestAuxiliaryScripts:
 
             addrs = clusterlib_utils.create_payment_addr_records(
                 *[
-                    f"multi_addr_aux_scripts_ci{cluster_manager.cluster_instance}_{i}"
+                    f"multi_addr_aux_scripts_ci{cluster_manager.cluster_instance_num}_{i}"
                     for i in range(20)
                 ],
                 cluster_obj=cluster,
