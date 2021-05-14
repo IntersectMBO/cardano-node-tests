@@ -165,10 +165,22 @@ class TestMIRCerts:
     TREASURY = "treasury"
 
     @pytest.fixture
+    def cluster_pots(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+    ) -> clusterlib.ClusterLib:
+        return cluster_manager.get(
+            lock_resources=[
+                cluster_management.Resources.RESERVES,
+                cluster_management.Resources.TREASURY,
+            ]
+        )
+
+    @pytest.fixture
     def pool_users(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
+        cluster_pots: clusterlib.ClusterLib,
     ) -> List[clusterlib.PoolUser]:
         """Create pool user."""
         with cluster_manager.cache_fixture() as fixture_cache:
@@ -176,7 +188,7 @@ class TestMIRCerts:
                 return fixture_cache.value  # type: ignore
 
             created_users = clusterlib_utils.create_pool_users(
-                cluster_obj=cluster,
+                cluster_obj=cluster_pots,
                 name_template=f"test_mir_certs_ci{cluster_manager.cluster_instance_num}",
                 no_of_addr=2,
             )
@@ -185,7 +197,7 @@ class TestMIRCerts:
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
             *created_users,
-            cluster_obj=cluster,
+            cluster_obj=cluster_pots,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
@@ -195,7 +207,7 @@ class TestMIRCerts:
     def registered_user(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
+        cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ) -> clusterlib.PoolUser:
         """Register pool user's stake address."""
@@ -207,19 +219,20 @@ class TestMIRCerts:
         temp_template = f"test_mir_certs_ci{cluster_manager.cluster_instance_num}"
         pool_user = pool_users[1]
         clusterlib_utils.register_stake_address(
-            cluster_obj=cluster, pool_user=pool_users[1], name_template=temp_template
+            cluster_obj=cluster_pots, pool_user=pool_users[1], name_template=temp_template
         )
         return pool_user
 
     @allure.link(helpers.get_vcs_link())
     def test_transfer_to_treasury(
-        self, cluster: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
+        self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
         """Send funds from the reserves pot to the treasury pot.
 
         Expected to fail until Alonzo.
         """
         temp_template = helpers.get_func_name()
+        cluster = cluster_pots
         pool_user = pool_users[0]
         amount = 50_000
 
@@ -244,13 +257,14 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     def test_transfer_to_rewards(
-        self, cluster: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
+        self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
         """Send funds from the treasury pot to the reserves pot.
 
         Expected to fail until Alonzo.
         """
         temp_template = helpers.get_func_name()
+        cluster = cluster_pots
         pool_user = pool_users[0]
         amount = 50_000
 
@@ -277,7 +291,10 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_stake_addr_from(
-        self, cluster: clusterlib.ClusterLib, registered_user: clusterlib.PoolUser, fund_src: str
+        self,
+        cluster_pots: clusterlib.ClusterLib,
+        registered_user: clusterlib.PoolUser,
+        fund_src: str,
     ):
         """Send funds from the reserves or treasury pot to stake address.
 
@@ -286,6 +303,7 @@ class TestMIRCerts:
         * check that the expected amount was added to the stake address reward account
         """
         temp_template = helpers.get_func_name()
+        cluster = cluster_pots
         amount = 50_000_000
 
         init_reward = cluster.get_stake_addr_info(
@@ -347,7 +365,7 @@ class TestMIRCerts:
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_unregistered_stake_addr_from(
         self,
-        cluster: clusterlib.ClusterLib,
+        cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         fund_src: str,
     ):
@@ -358,6 +376,7 @@ class TestMIRCerts:
         * check that the amount was NOT added to the stake address reward account
         """
         temp_template = helpers.get_func_name()
+        cluster = cluster_pots
         pool_user = pool_users[0]
 
         if fund_src == self.TREASURY:
@@ -423,6 +442,8 @@ class TestMIRCerts:
             # check that the amount was not transferred out of the pot
             pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
             if fund_src == self.TREASURY:
+                # normally `treasury[-1]` < `treasury[0]`
                 assert abs(pots_records[-1].treasury - pots_records[0].treasury) < amount
             else:
-                assert abs(pots_records[-1].reserves - pots_records[0].reserves) < amount
+                # normally `reserves[0]` < `reserves[-1]`
+                assert abs(pots_records[0].reserves - pots_records[-1].reserves) < amount
