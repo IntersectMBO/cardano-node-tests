@@ -136,33 +136,33 @@ class ClusterManager:
         self.cluster_lock = f"{self.lock_dir}/{CLUSTER_LOCK}"
         self.lock_log = self._init_log()
 
-        self._cluster_instance = -1
+        self._cluster_instance_num = -1
 
     @property
-    def cluster_instance(self) -> int:
-        if self._cluster_instance == -1:
+    def cluster_instance_num(self) -> int:
+        if self._cluster_instance_num == -1:
             raise RuntimeError("Cluster instance not set.")
-        return self._cluster_instance
+        return self._cluster_instance_num
 
     @property
     def cache(self) -> ClusterManagerCache:
         _cache = self.get_cache()
-        instance_cache = _cache.get(self.cluster_instance)
+        instance_cache = _cache.get(self.cluster_instance_num)
         if not instance_cache:
             instance_cache = ClusterManagerCache()
-            _cache[self.cluster_instance] = instance_cache
+            _cache[self.cluster_instance_num] = instance_cache
         return instance_cache
 
     @property
     def instance_dir(self) -> Path:
-        instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{self.cluster_instance}"
+        instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{self.cluster_instance_num}"
         return instance_dir
 
     @property
     def ports(self) -> cluster_scripts.InstancePorts:
         """Return port mappings for current cluster instance."""
         return cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
-            self.cluster_instance
+            self.cluster_instance_num
         )
 
     def _init_log(self) -> Path:
@@ -252,7 +252,7 @@ class ClusterManager:
     def set_needs_restart(self) -> None:
         """Indicate that the cluster needs restart."""
         with helpers.FileLockIfXdist(self.cluster_lock):
-            self._log(f"c{self.cluster_instance}: called `set_needs_restart`")
+            self._log(f"c{self.cluster_instance_num}: called `set_needs_restart`")
             open(self.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
 
     @contextlib.contextmanager
@@ -278,11 +278,11 @@ class ClusterManager:
 
     def on_test_stop(self) -> None:
         """Perform actions after the test finished."""
-        if self._cluster_instance == -1:
+        if self._cluster_instance_num == -1:
             return
 
         with helpers.FileLockIfXdist(self.cluster_lock):
-            self._log(f"c{self.cluster_instance}: called `on_test_stop`")
+            self._log(f"c{self.cluster_instance_num}: called `on_test_stop`")
 
             # remove resource locking files created by the worker
             resource_locking_files = list(
@@ -373,19 +373,19 @@ class _ClusterGetter:
 
         # using `_locked_log` because restart is not called under global lock
         self.cm._locked_log(
-            f"c{self.cm.cluster_instance}: called `_restart`, start_cmd='{start_cmd}', "
+            f"c{self.cm.cluster_instance_num}: called `_restart`, start_cmd='{start_cmd}', "
             f"stop_cmd='{stop_cmd}'"
         )
 
         startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
-            destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance),
-            instance_num=self.cm.cluster_instance,
+            destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance_num),
+            instance_num=self.cm.cluster_instance_num,
             start_script=start_cmd,
             stop_script=stop_cmd,
         )
 
         self.cm._locked_log(
-            f"c{self.cm.cluster_instance}: in `_restart`, new files "
+            f"c{self.cm.cluster_instance_num}: in `_restart`, new files "
             f"start_cmd='{startup_files.start_script}', "
             f"stop_cmd='{startup_files.stop_script}'"
         )
@@ -394,18 +394,20 @@ class _ClusterGetter:
         for i in range(2):
             if i > 0:
                 self.cm._locked_log(
-                    f"c{self.cm.cluster_instance}: failed to start cluster:\n{excp}\nretrying"
+                    f"c{self.cm.cluster_instance_num}: failed to start cluster:\n{excp}\nretrying"
                 )
                 time.sleep(0.2)
 
             try:
                 cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
             except Exception as err:
-                self.cm._locked_log(f"c{self.cm.cluster_instance}: failed to stop cluster:\n{err}")
+                self.cm._locked_log(
+                    f"c{self.cm.cluster_instance_num}: failed to stop cluster:\n{err}"
+                )
 
             self._restart_save_cluster_artifacts(clean=True)
             try:
-                _kill_supervisor(self.cm.cluster_instance)
+                _kill_supervisor(self.cm.cluster_instance_num)
             except Exception:
                 pass
 
@@ -420,7 +422,7 @@ class _ClusterGetter:
                 break
         else:
             self.cm._locked_log(
-                f"c{self.cm.cluster_instance}: failed to start cluster:\n{excp}\ncluster dead"
+                f"c{self.cm.cluster_instance_num}: failed to start cluster:\n{excp}\ncluster dead"
             )
             if not helpers.IS_XDIST:
                 pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
@@ -563,7 +565,7 @@ class _ClusterGetter:
     def _reuse_dev_cluster(self) -> clusterlib.ClusterLib:
         """Reuse cluster that was already started outside of test framework."""
         instance_num = 0
-        self.cm._cluster_instance = instance_num
+        self.cm._cluster_instance_num = instance_num
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
         # make sure instance dir exists
@@ -648,14 +650,14 @@ class _ClusterGetter:
                 if (
                     first_iteration
                     and test_on_worker
-                    and self.cm._cluster_instance != -1
+                    and self.cm._cluster_instance_num != -1
                     and self.cm.cache.cluster_obj
                 ):
                     self.cm._log(f"{test_on_worker[0]} already exists")
                     return self.cm.cache.cluster_obj
 
                 first_iteration = False  # needs to be set here, before the first `continue`
-                self.cm._cluster_instance = -1
+                self.cm._cluster_instance_num = -1
 
                 # try all existing cluster instances
                 for instance_num in range(self.cm.num_of_instances):
@@ -874,7 +876,7 @@ class _ClusterGetter:
 
                     # we've found suitable cluster instance
                     selected_instance = instance_num
-                    self.cm._cluster_instance = instance_num
+                    self.cm._cluster_instance_num = instance_num
                     cluster_nodes.set_cardano_node_socket_path(instance_num)
 
                     if restart_here:
@@ -955,7 +957,7 @@ class _ClusterGetter:
                 test_running_file = (
                     self.cm.instance_dir / f"{TEST_RUNNING_GLOB}_{self.cm.worker_id}"
                 )
-                self.cm._log(f"c{self.cm.cluster_instance}: creating {test_running_file}")
+                self.cm._log(f"c{self.cm.cluster_instance_num}: creating {test_running_file}")
                 open(test_running_file, "a").close()
 
                 # check if it is necessary to reload data

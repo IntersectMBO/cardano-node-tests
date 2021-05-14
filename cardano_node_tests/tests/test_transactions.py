@@ -122,8 +122,8 @@ class TestBasic:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                f"addr_basic_ci{cluster_manager.cluster_instance}_0",
-                f"addr_basic_ci{cluster_manager.cluster_instance}_1",
+                f"addr_basic_ci{cluster_manager.cluster_instance_num}_0",
+                f"addr_basic_ci{cluster_manager.cluster_instance_num}_1",
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -541,7 +541,7 @@ class TestMultiInOut:
 
             addrs = clusterlib_utils.create_payment_addr_records(
                 *[
-                    f"multi_in_out_addr_ci{cluster_manager.cluster_instance}_{i}"
+                    f"multi_in_out_addr_ci{cluster_manager.cluster_instance_num}_{i}"
                     for i in range(201)
                 ],
                 cluster_obj=cluster,
@@ -810,7 +810,7 @@ class TestManyUTXOs:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"tiny_tx_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(3)],
+                *[f"tiny_tx_addr_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(3)],
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -1011,8 +1011,8 @@ class TestNotBalanced:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                f"addr_not_balanced_ci{cluster_manager.cluster_instance}_0",
-                f"addr_not_balanced_ci{cluster_manager.cluster_instance}_1",
+                f"addr_not_balanced_ci{cluster_manager.cluster_instance_num}_0",
+                f"addr_not_balanced_ci{cluster_manager.cluster_instance_num}_1",
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -1170,7 +1170,7 @@ class TestNegative:
 
             created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster,
-                name_template=f"test_negative_ci{cluster_manager.cluster_instance}",
+                name_template=f"test_negative_ci{cluster_manager.cluster_instance_num}",
                 no_of_addr=2,
             )
             fixture_cache.value = created_users
@@ -1707,7 +1707,8 @@ class TestMetadata:
                 return fixture_cache.value  # type: ignore
 
             addr = clusterlib_utils.create_payment_addr_records(
-                f"addr_test_metadata_ci{cluster_manager.cluster_instance}_0", cluster_obj=cluster
+                f"addr_test_metadata_ci{cluster_manager.cluster_instance_num}_0",
+                cluster_obj=cluster,
             )[0]
             fixture_cache.value = addr
 
