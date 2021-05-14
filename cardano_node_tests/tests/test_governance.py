@@ -161,6 +161,9 @@ class TestUpdateProposal:
 class TestMIRCerts:
     """Tests for MIR certificates."""
 
+    RESERVES = "reserves"
+    TREASURY = "treasury"
+
     @pytest.fixture
     def pool_users(
         self,
@@ -272,7 +275,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.parametrize("fund_src", ("reserves", "treasury"))
+    @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_stake_addr_from(
         self, cluster: clusterlib.ClusterLib, registered_user: clusterlib.PoolUser, fund_src: str
     ):
@@ -294,7 +297,7 @@ class TestMIRCerts:
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
-            use_treasury=fund_src == "treasury",
+            use_treasury=fund_src == self.TREASURY,
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -328,7 +331,7 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            if fund_src == "treasury":
+            if fund_src == self.TREASURY:
                 assert tx_db_record.treasury[0].amount == amount, (
                     "Incorrect amount transferred from treasury "
                     f"({tx_db_record.treasury[0].amount} != {amount})"
@@ -341,7 +344,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.parametrize("fund_src", ("reserves", "treasury"))
+    @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_unregistered_stake_addr_from(
         self,
         cluster: clusterlib.ClusterLib,
@@ -357,7 +360,7 @@ class TestMIRCerts:
         temp_template = helpers.get_func_name()
         pool_user = pool_users[0]
 
-        if fund_src == "treasury":
+        if fund_src == self.TREASURY:
             amount = 1_500_000_000_000
         else:
             amount = 50_000_000_000_000
@@ -368,7 +371,7 @@ class TestMIRCerts:
             stake_addr=pool_user.stake.address,
             reward=amount,
             tx_name=temp_template,
-            use_treasury=fund_src == "treasury",
+            use_treasury=fund_src == self.TREASURY,
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -397,7 +400,7 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            if fund_src == "treasury":
+            if fund_src == self.TREASURY:
                 assert tx_db_record.treasury[0].amount == amount, (
                     "Incorrect amount transferred from treasury "
                     f"({tx_db_record.treasury[0].amount} != {amount})"
@@ -419,7 +422,7 @@ class TestMIRCerts:
         if tx_db_record:
             # check that the amount was not transferred out of the pot
             pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
-            if fund_src == "treasury":
+            if fund_src == self.TREASURY:
                 assert abs(pots_records[-1].treasury - pots_records[0].treasury) < amount
             else:
                 assert abs(pots_records[-1].reserves - pots_records[0].reserves) < amount
