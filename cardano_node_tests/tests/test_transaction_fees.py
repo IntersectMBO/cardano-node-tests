@@ -54,8 +54,8 @@ class TestFee:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                f"addr_test_fee_ci{cluster_manager.cluster_instance}_0",
-                f"addr_test_fee_ci{cluster_manager.cluster_instance}_1",
+                f"addr_test_fee_ci{cluster_manager.cluster_instance_num}_0",
+                f"addr_test_fee_ci{cluster_manager.cluster_instance_num}_1",
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -208,7 +208,7 @@ class TestExpectedFees:
 
             created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster,
-                name_template=f"test_expected_fees_ci{cluster_manager.cluster_instance}",
+                name_template=f"test_expected_fees_ci{cluster_manager.cluster_instance_num}",
                 no_of_addr=201,
             )
             fixture_cache.value = created_users

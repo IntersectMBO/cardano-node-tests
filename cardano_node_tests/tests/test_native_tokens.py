@@ -59,7 +59,7 @@ def issuers_addrs(
             return fixture_cache.value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"token_minting_ci{cluster_manager.cluster_instance}_{i}" for i in range(5)],
+            *[f"token_minting_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(5)],
             cluster_obj=cluster,
         )
         fixture_cache.value = addrs
@@ -1411,7 +1411,10 @@ class TestTransfer:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"token_transfer_ci{cluster_manager.cluster_instance}_{i}" for i in range(10)],
+                *[
+                    f"token_transfer_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(10)
+                ],
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs

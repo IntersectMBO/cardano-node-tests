@@ -367,32 +367,30 @@ def update_params(
     _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
     cli_args = list(itertools.chain.from_iterable(_cli_args))
 
-    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/update_params.lock"):
-        LOGGER.info("Waiting for new epoch to submit proposal.")
-        cluster_obj.wait_for_new_epoch()
+    LOGGER.info("Waiting for new epoch to submit proposal.")
+    cluster_obj.wait_for_new_epoch()
 
-        cluster_obj.submit_update_proposal(
-            cli_args=cli_args,
-            src_address=src_addr_record.address,
-            src_skey_file=src_addr_record.skey_file,
-            tx_name=helpers.get_timestamped_rand_str(),
-        )
+    cluster_obj.submit_update_proposal(
+        cli_args=cli_args,
+        src_address=src_addr_record.address,
+        src_skey_file=src_addr_record.skey_file,
+        tx_name=helpers.get_timestamped_rand_str(),
+    )
 
-        LOGGER.info(f"Update Proposal submitted ({cli_args})")
-        cluster_obj.wait_for_new_epoch()
+    LOGGER.info(f"Update Proposal submitted ({cli_args})")
+    cluster_obj.wait_for_new_epoch()
 
-        protocol_params = cluster_obj.get_protocol_params()
-        for u in update_proposals:
-            # TODO: handle nested dictionaries
-            if not u.name:
-                continue
-            updated_value = protocol_params[u.name]
-            if str(updated_value) != str(u.value):
-                raise AssertionError(
-                    f"Cluster update proposal failed! Param value for {u.name}: {updated_value}.\n"
-                    f"Expected: {u.value}\n"
-                    f"Tip: {cluster_obj.get_tip()}"
-                )
+    protocol_params = cluster_obj.get_protocol_params()
+    for u in update_proposals:
+        # TODO: handle nested dictionaries
+        if not u.name:
+            continue
+        updated_value = protocol_params[u.name]
+        if str(updated_value) != str(u.value):
+            raise AssertionError(
+                f"Cluster update proposal failed! Param value for {u.name}: {updated_value}.\n"
+                f"Expected: {u.value}"
+            )
 
 
 def mint_or_burn_witness(

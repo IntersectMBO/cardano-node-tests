@@ -60,7 +60,7 @@ def pool_users(
 
         created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
-            name_template=f"test_staking_pool_users_ci{cluster_manager.cluster_instance}",
+            name_template=f"test_staking_pool_users_ci{cluster_manager.cluster_instance_num}",
             no_of_addr=2,
         )
         fixture_cache.value = created_users
