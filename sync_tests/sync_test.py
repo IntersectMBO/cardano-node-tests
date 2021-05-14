@@ -858,7 +858,7 @@ def main():
     test_values_dict["sync_duration_per_epoch"] = json.dumps(epoch_details)
     test_values_dict["eras_in_test"] = json.dumps(list(era_details_dict1.keys()))
     test_values_dict["no_of_cpu_cores"] = get_no_of_cpu_cores()
-    test_values_dict["epoch_no_d_zero,"] = get_epoch_no_d_zero()
+    test_values_dict["epoch_no_d_zero"] = get_epoch_no_d_zero()
 
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
