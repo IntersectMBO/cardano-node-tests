@@ -80,18 +80,80 @@ class TestUpdateProposal:
 
     @allure.link(helpers.get_vcs_link())
     def test_update_proposal(
-        self, cluster_update_proposal: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+        self,
+        cluster_update_proposal: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
     ):
-        """Test changing *decentralisationParam* using update proposal ."""
+        """Test changing protocol parameters using update proposal ."""
         clusterlib_utils.update_params(
             cluster_obj=cluster_update_proposal,
             src_addr_record=payment_addr,
             update_proposals=[
                 clusterlib_utils.UpdateProposal(
+                    arg="--min-fee-linear",
+                    value=45,
+                    name="txFeePerByte",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--min-utxo-value",
+                    value=2,
+                    name="minUTxOValue",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--pool-reg-deposit",
+                    value=400000000,
+                    name="stakePoolDeposit",
+                ),
+                clusterlib_utils.UpdateProposal(
                     arg="--decentralization-parameter",
                     value=0.5,
                     name="decentralization",
-                )
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--pool-retirement-epoch-boundary",
+                    value=19,
+                    name="poolRetireMaxEpoch",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--number-of-pools",
+                    value=9,
+                    name="stakePoolTargetNum",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-block-body-size",
+                    value=65544,
+                    name="maxBlockBodySize",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-tx-size",
+                    value=16392,
+                    name="maxTxSize",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--min-pool-cost",
+                    value=1,
+                    name="minPoolCost",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-block-header-size",
+                    value=1200,
+                    name="maxBlockHeaderSize",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--min-fee-constant",
+                    value=155380,
+                    name="txFeeFixed",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--key-reg-deposit-amt",
+                    value=300000,
+                    name="stakeAddressDeposit",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--pool-influence",
+                    value=0.4,
+                    name="poolPledgeInfluence",
+                ),
             ],
         )
 
