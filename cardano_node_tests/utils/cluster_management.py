@@ -29,6 +29,17 @@ from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
+
+class Resources:
+    """Resources that can be used for `lock_resources` or `use_resources`."""
+
+    POOL1 = "node-pool1"
+    POOL2 = "node-pool2"
+    POOL3 = "node-pool3"
+    RESERVES = "reserves"
+    TREASURY = "treasury"
+
+
 CLUSTER_LOCK = ".cluster.lock"
 RUN_LOG_FILE = ".cluster_manager.log"
 TEST_SINGLETON_FILE = ".test_singleton"

@@ -42,7 +42,7 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 @pytest.fixture
 def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
-    return cluster_manager.get(lock_resources=["node-pool2"])
+    return cluster_manager.get(lock_resources=[cluster_management.Resources.POOL2])
 
 
 @pytest.fixture(scope="module")
