@@ -48,7 +48,7 @@ def add_test_values_into_db(table_name, col_names_list, col_values_list):
 
 
 def export_db_table_to_csv(table_name):
-    print(f"Export {table_name} table into CSV file")
+    print(f"Exporting {table_name} table into CSV file")
     current_directory = Path.cwd()
 
     database_path = Path(current_directory) / DATABASE_NAME
@@ -75,7 +75,7 @@ def export_db_table_to_csv(table_name):
 
         print(f"  -- Data exported Successfully into {csv_files_path / f'{table_name}.csv'}")
     except sqlite3.Error as error:
-        print(f"!!! ERROR: Failed to insert data into {table_name} table:\n", error)
+        print(f"!!! ERROR: Failed to export {table_name} table to CSV:\n", error)
         return False
     finally:
         if conn:
@@ -217,7 +217,10 @@ def main():
 
         col_list2 = list(line_dict.keys())
         col_values2 = list(line_dict.values())
-        add_test_values_into_db(env + "_logs", col_list2, col_values2)
+        if not add_test_values_into_db(env + "_logs", col_list2, col_values2):
+            print(f"col_list2  : {col_list2}")
+            print(f"col_values2: {col_values2}")
+            exit(1)
 
     print(f"  ==== Write test values into the {env + '_epoch_duration_table'} DB table")
     sync_duration_values_json = ast.literal_eval(str(sync_test_results_dict["sync_duration_per_epoch"]))
@@ -232,7 +235,10 @@ def main():
 
         col_list3 = list(sync_duration_per_epoch_dict.keys())
         col_values3 = list(sync_duration_per_epoch_dict.values())
-        add_test_values_into_db(env + "_epoch_duration", col_list3, col_values3)
+        if not add_test_values_into_db(env + "_epoch_duration", col_list3, col_values3):
+            print(f"col_list3  : {col_list3}")
+            print(f"col_values3: {col_values3}")
+            exit(1)
 
     print(f"  ==== Write test values into the {env} DB table")
     del sync_test_results_dict["sync_duration_per_epoch"]
@@ -240,7 +246,10 @@ def main():
 
     col_list = list(sync_test_results_dict.keys())
     col_values = list(sync_test_results_dict.values())
-    add_test_values_into_db(env, col_list, col_values)
+    if not add_test_values_into_db(env, col_list, col_values):
+        print(f"col_list  : {col_list}")
+        print(f"col_values: {col_values}")
+        exit(1)
 
     print(f"  ==== Exporting the {env} table as CSV")
     export_db_table_to_csv(env)
