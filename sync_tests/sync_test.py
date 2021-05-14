@@ -8,6 +8,7 @@ import signal
 import subprocess
 import tarfile
 
+import psutil
 import requests
 import time
 import urllib.request
@@ -83,10 +84,10 @@ def git_get_commit_sha_for_tag_no(tag_no):
     url = "https://api.github.com/repos/input-output-hk/cardano-node/tags"
     response = requests.get(url)
 
-    # there is a rate limit for the provided url that we want to overpass with the below while loop
+    # there is a rate limit for the provided url that we want to overpass with the below loop
     count = 0
     while not response.ok:
-        time.sleep(random.randint(30, 60))
+        time.sleep(random.randint(30, 120))
         count += 1
         response = requests.get(url)
         if count > 10:
@@ -302,6 +303,10 @@ def get_os_type():
 
 def get_no_of_cpu_cores():
     return os.cpu_count()
+
+
+def get_total_ram_in_GB():
+    return int(psutil.virtual_memory().total / 1000000000)
 
 
 def get_epoch_no_d_zero():
@@ -858,6 +863,7 @@ def main():
     test_values_dict["sync_duration_per_epoch"] = json.dumps(epoch_details)
     test_values_dict["eras_in_test"] = json.dumps(list(era_details_dict1.keys()))
     test_values_dict["no_of_cpu_cores"] = get_no_of_cpu_cores()
+    test_values_dict["total_ram_in_GB"] = get_total_ram_in_GB()
     test_values_dict["epoch_no_d_zero"] = get_epoch_no_d_zero()
 
     os.chdir(Path(ROOT_TEST_PATH))

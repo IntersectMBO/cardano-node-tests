@@ -51,6 +51,7 @@ let
           requests
           psycopg2
           pandas
+          psutil
         ])) ];
       });
     });
