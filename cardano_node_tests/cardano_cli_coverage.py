@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import List
 from typing import Tuple
 
+from cardano_clusterlib import clusterlib
+
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import UnpackableSequence
 
@@ -22,7 +24,6 @@ SKIPPED = (
     "convert-itn-key",
     "convert-itn-extended-key",
     "convert-itn-bip32-key",
-    "genesis",
     "version",
     "--byron-era",
     "--byron-mode",
@@ -146,16 +147,33 @@ def get_available_commands(cli_args: UnpackableSequence, ignore_skips: bool = Fa
     return command_dict
 
 
-def get_coverage(input_jsons: List[Path], available_commands: dict) -> dict:
+def get_log_coverage(log_file: Path) -> dict:
+    """Get coverage info from log file containing CLI commands."""
+    coverage_dict: dict = {}
+    with open(log_file) as infile:
+        for line in infile:
+            if not line.startswith("cardano-cli"):
+                continue
+            clusterlib.record_cli_coverage(cli_args=line.split(" "), coverage_dict=coverage_dict)
+
+    return coverage_dict
+
+
+def get_coverage(coverage_files: List[Path], available_commands: dict) -> dict:
     """Get coverage info by merging available data."""
     coverage_dict = copy.deepcopy(available_commands)
-    for in_json in input_jsons:
-        with open(in_json) as infile:
-            coverage = json.load(infile)
+    for in_coverage in coverage_files:
+        if in_coverage.suffix == ".json":
+            with open(in_coverage) as infile:
+                coverage = json.load(infile)
+        else:
+            coverage = get_log_coverage(in_coverage)
+
         if coverage.get("cardano-cli", {}).get("_count") is None:
             raise AttributeError(
-                f"Data in '{in_json}' doesn't seem to be in proper coverage format."
+                f"Data in '{in_coverage}' doesn't seem to be in proper coverage format."
             )
+
         coverage_dict = merge_coverage(coverage_dict, coverage)
 
     return coverage_dict
@@ -228,7 +246,9 @@ def main() -> int:
         "cardano-cli": get_available_commands(["cardano-cli"], ignore_skips=args.ignore_skips)
     }
     try:
-        coverage = get_coverage(input_jsons=args.input_files, available_commands=available_commands)
+        coverage = get_coverage(
+            coverage_files=args.input_files, available_commands=available_commands
+        )
     except AttributeError as exc:
         LOGGER.error(str(exc))
         return 1
