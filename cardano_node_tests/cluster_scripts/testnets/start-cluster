@@ -12,6 +12,11 @@ if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   exit 1
 fi
 
+cardano_cli_log() {
+  echo cardano-cli "$@" >> "$STATE_CLUSTER/start_cluster_cmds.log"
+  cardano-cli "$@"
+}
+
 if [ -e "$SCRIPT_DIR/shell_env" ]; then
   # shellcheck disable=SC1090
   source "$SCRIPT_DIR/shell_env"
@@ -91,59 +96,59 @@ for i in {1..2}; do
   mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
   echo "Generating Pool $i Secrets"
   if [ ! -e "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" ]; then
-    cardano-cli address key-gen \
+    cardano_cli_log address key-gen \
       --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" \
       --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey"
   fi
   if [ ! -e "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" ]; then
-    cardano-cli stake-address key-gen \
+    cardano_cli_log stake-address key-gen \
       --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
       --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
   fi
   # Payment addresses
-  cardano-cli address build \
+  cardano_cli_log address build \
     --payment-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner.addr"
   # Stake addresses
-  cardano-cli stake-address build \
+  cardano_cli_log stake-address build \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
   # Stake addresses registration certs
-  cardano-cli stake-address registration-certificate \
+  cardano_cli_log stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
 
   # Stake reward keys
-  cardano-cli stake-address key-gen \
+  cardano_cli_log stake-address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey"
   # Stake reward addresses registration certs
-  cardano-cli stake-address registration-certificate \
+  cardano_cli_log stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
   if [ ! -e "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" ]; then
-    cardano-cli node key-gen \
+    cardano_cli_log node key-gen \
       --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
       --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
       --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter"
   fi
-  cardano-cli node key-gen-KES \
+  cardano_cli_log node key-gen-KES \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.vkey" \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.skey"
-  cardano-cli node key-gen-VRF \
+  cardano_cli_log node key-gen-VRF \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.skey"
 
   # Stake address delegation certs
-  cardano-cli stake-address delegation-certificate \
+  cardano_cli_log stake-address delegation-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
 
-  cardano-cli node issue-op-cert \
+  cardano_cli_log node issue-op-cert \
     --kes-period "$KES_PERIOD" \
     --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
     --kes-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.vkey" \
@@ -178,14 +183,14 @@ EoF
     > "$STATE_CLUSTER/webserver/pool$i.json"
 
   METADATA_URL="http://${RELAY1_HOST}:30000/pool$i.json"
-  METADATA_HASH=$(cardano-cli stake-pool metadata-hash --pool-metadata-file \
+  METADATA_HASH=$(cardano_cli_log stake-pool metadata-hash --pool-metadata-file \
                   "$STATE_CLUSTER/webserver/pool$i.json")
   POOL_PORT=$(("30000" + "$POOL_PORT_OFFSET" + i))
   POOL_COST="$(jq '.protocolParams.minPoolCost' "$STATE_CLUSTER/shelley/genesis.json")"
   echo "$POOL_PORT" > "$STATE_CLUSTER/nodes/node-pool$i/port"
   echo "${POOL_PLEDGES[$pledge_idx]}" > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
 
-  cardano-cli stake-pool registration-certificate \
+  cardano_cli_log stake-pool registration-certificate \
     --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --vrf-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
     --pool-pledge "${POOL_PLEDGES[$pledge_idx]}" \
@@ -238,7 +243,7 @@ echo "Transfering funds to pool owners, registering pools and delegations"
 
 # Tranfer funds, register pools and delegations, all in one big transaction:
 
-cardano-cli query protocol-parameters \
+cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
@@ -259,14 +264,14 @@ while read -r txhash txix amount _; do
   if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
     break
   fi
-done <<< "$(cardano-cli query utxo --testnet-magic \
+done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$TXIN_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
-TTL="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
 
-cardano-cli transaction build-raw \
+cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
@@ -283,7 +288,7 @@ cardano-cli transaction build-raw \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/owner-stake.deleg.cert" \
   --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody"
 
-FEE="$(cardano-cli transaction calculate-min-fee \
+FEE="$(cardano_cli_log transaction calculate-min-fee \
         --testnet-magic "$NETWORK_MAGIC" \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count "$TXIN_COUNT" \
@@ -295,7 +300,7 @@ FEE="$(cardano-cli transaction calculate-min-fee \
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
 
-cardano-cli transaction build-raw \
+cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
@@ -312,7 +317,7 @@ cardano-cli transaction build-raw \
   --certificate-file "$STATE_CLUSTER/nodes/node-pool2/owner-stake.deleg.cert" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
 
-cardano-cli transaction sign \
+cardano_cli_log transaction sign \
   --signing-key-file "$STATE_CLUSTER/nodes/node-pool1/owner-stake.skey" \
   --signing-key-file "$STATE_CLUSTER/nodes/node-pool1/reward.skey" \
   --signing-key-file "$STATE_CLUSTER/nodes/node-pool1/cold.skey" \
@@ -324,7 +329,7 @@ cardano-cli transaction sign \
   --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
 
-cardano-cli transaction submit \
+cardano_cli_log transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
