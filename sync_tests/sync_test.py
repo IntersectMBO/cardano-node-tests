@@ -639,15 +639,16 @@ def seconds_to_time(seconds_val):
 
 def get_no_of_slots_in_era(env, era_name, no_of_epochs_in_era):
     slot_length_secs = 1
+    epoch_length_slots = 432000
+
     if era_name.lower() == "byron":
         slot_length_secs = 20
-
     if env == "shelley_qa":
-        epoch_length_secs = 7200 * slot_length_secs
-    else:
-        epoch_length_secs = 432000 * slot_length_secs
+        epoch_length_slots = 7200
 
-    return int(epoch_length_secs / slot_length_secs) * no_of_epochs_in_era
+    epoch_length_secs = int(epoch_length_slots / slot_length_secs)
+
+    return int(epoch_length_secs * no_of_epochs_in_era)
 
 
 def get_data_from_logs(log_file):
