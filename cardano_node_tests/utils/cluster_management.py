@@ -19,9 +19,9 @@ from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import cli_coverage
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
-from cardano_node_tests.utils import clusterlib_cli_coverage
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
@@ -66,6 +66,8 @@ if CLUSTERS_COUNT > 1 and DEV_CLUSTER_RUNNING:
     raise RuntimeError("Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set.")
 if CLUSTERS_COUNT > 1 and configuration.HAS_DBSYNC:
     raise RuntimeError("Cannot run multiple cluster instances when running with db-sync.")
+
+CLUSTER_START_CMDS_LOG = "start_cluster_cmds.log"
 
 
 def _kill_supervisor(instance_num: int) -> None:
@@ -226,7 +228,7 @@ class ClusterManager:
             if not cluster_obj:
                 continue
 
-            clusterlib_cli_coverage.save_cli_coverage(
+            cli_coverage.save_cli_coverage(
                 cluster_obj=cluster_obj, pytest_config=self.pytest_config
             )
 
@@ -251,11 +253,17 @@ class ClusterManager:
                 f"stopping cluster instance {instance_num} with `{startup_files.stop_script}`"
             )
 
+            state_dir = cluster_nodes.get_cluster_env().state_dir
+
             try:
                 cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
             except Exception as exc:
                 LOGGER.error(f"While stopping cluster: {exc}")
 
+            cli_coverage.save_start_script_coverage(
+                log_file=state_dir / CLUSTER_START_CMDS_LOG,
+                pytest_config=self.pytest_config,
+            )
             cluster_nodes.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=True)
             open(instance_dir / CLUSTER_STOPPED_FILE, "a").close()
             self._log(f"stopped cluster instance {instance_num}")
@@ -395,6 +403,8 @@ class _ClusterGetter:
             stop_script=stop_cmd,
         )
 
+        state_dir = cluster_nodes.get_cluster_env().state_dir
+
         self.cm._locked_log(
             f"c{self.cm.cluster_instance_num}: in `_restart`, new files "
             f"start_cmd='{startup_files.start_script}', "
@@ -416,7 +426,14 @@ class _ClusterGetter:
                     f"c{self.cm.cluster_instance_num}: failed to stop cluster:\n{err}"
                 )
 
-            self._restart_save_cluster_artifacts(clean=True)
+            # save artifacts only when produced during this test run
+            if cluster_running_file.exists():
+                cli_coverage.save_start_script_coverage(
+                    log_file=state_dir / CLUSTER_START_CMDS_LOG,
+                    pytest_config=self.cm.pytest_config,
+                )
+                self._restart_save_cluster_artifacts(clean=True)
+
             try:
                 _kill_supervisor(self.cm.cluster_instance_num)
             except Exception:
@@ -555,9 +572,7 @@ class _ClusterGetter:
         if not cluster_obj:
             return
 
-        clusterlib_cli_coverage.save_cli_coverage(
-            cluster_obj=cluster_obj, pytest_config=self.cm.pytest_config
-        )
+        cli_coverage.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.cm.pytest_config)
 
     def _reload_cluster_obj(self, state_dir: Path) -> None:
         """Reload cluster data if necessary."""
