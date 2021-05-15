@@ -323,6 +323,21 @@ def get_epoch_no_d_zero():
         return None
 
 
+def get_start_slot_no_d_zero():
+    env = vars(args)["environment"]
+
+    if env == "mainnet":
+        return 25661009
+    elif env == "testnet":
+        return 21902400
+    elif env == "staging":
+        return None
+    elif env == "shelley_qa":
+        return 18375135
+    else:
+        return None
+
+
 def get_testnet_value():
     env = vars(args)["environment"]
     if env == "mainnet":
@@ -866,6 +881,7 @@ def main():
     test_values_dict["no_of_cpu_cores"] = get_no_of_cpu_cores()
     test_values_dict["total_ram_in_GB"] = get_total_ram_in_GB()
     test_values_dict["epoch_no_d_zero"] = get_epoch_no_d_zero()
+    test_values_dict["start_slot_no_d_zero"] = get_start_slot_no_d_zero()
 
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
