@@ -41,6 +41,7 @@ class Resources:
 
 
 CLUSTER_LOCK = ".cluster.lock"
+LOG_LOCK = ".manager_log.lock"
 RUN_LOG_FILE = ".cluster_manager.log"
 TEST_SINGLETON_FILE = ".test_singleton"
 RESOURCE_LOCKED_GLOB = ".resource_locked"
@@ -147,7 +148,8 @@ class ClusterManager:
             self.num_of_instances = 1
 
         self.cluster_lock = f"{self.lock_dir}/{CLUSTER_LOCK}"
-        self.lock_log = self._init_log()
+        self.log_lock = f"{self.lock_dir}/{LOG_LOCK}"
+        self.manager_log = self._init_log()
 
         self._cluster_instance_num = -1
 
@@ -194,18 +196,11 @@ class ClusterManager:
         return run_log.resolve()
 
     def _log(self, msg: str) -> None:
-        """Log message - needs to be called while having lock."""
-        if not self.lock_log.is_file():
+        """Log message."""
+        if not self.manager_log.is_file():
             return
-        with open(self.lock_log, "a") as logfile:
-            logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
-
-    def _locked_log(self, msg: str) -> None:
-        """Log message - will obtain lock first."""
-        if not self.lock_log.is_file():
-            return
-        with helpers.FileLockIfXdist(self.cluster_lock):
-            with open(self.lock_log, "a") as logfile:
+        with helpers.FileLockIfXdist(self.log_lock):
+            with open(self.manager_log, "a") as logfile:
                 logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
 
     def _create_startup_files_dir(self, instance_num: int) -> Path:
@@ -390,8 +385,7 @@ class _ClusterGetter:
         if FORBID_RESTART and cluster_running_file.exists():
             raise RuntimeError("Cannot restart cluster when 'FORBID_RESTART' is set.")
 
-        # using `_locked_log` because restart is not called under global lock
-        self.cm._locked_log(
+        self.cm._log(
             f"c{self.cm.cluster_instance_num}: called `_restart`, start_cmd='{start_cmd}', "
             f"stop_cmd='{stop_cmd}'"
         )
@@ -405,7 +399,7 @@ class _ClusterGetter:
 
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
-        self.cm._locked_log(
+        self.cm._log(
             f"c{self.cm.cluster_instance_num}: in `_restart`, new files "
             f"start_cmd='{startup_files.start_script}', "
             f"stop_cmd='{startup_files.stop_script}'"
@@ -414,7 +408,7 @@ class _ClusterGetter:
         excp: Optional[Exception] = None
         for i in range(2):
             if i > 0:
-                self.cm._locked_log(
+                self.cm._log(
                     f"c{self.cm.cluster_instance_num}: failed to start cluster:\n{excp}\nretrying"
                 )
                 time.sleep(0.2)
@@ -422,9 +416,7 @@ class _ClusterGetter:
             try:
                 cluster_nodes.stop_cluster(cmd=str(startup_files.stop_script))
             except Exception as err:
-                self.cm._locked_log(
-                    f"c{self.cm.cluster_instance_num}: failed to stop cluster:\n{err}"
-                )
+                self.cm._log(f"c{self.cm.cluster_instance_num}: failed to stop cluster:\n{err}")
 
             # save artifacts only when produced during this test run
             if cluster_running_file.exists():
@@ -449,7 +441,7 @@ class _ClusterGetter:
             else:
                 break
         else:
-            self.cm._locked_log(
+            self.cm._log(
                 f"c{self.cm.cluster_instance_num}: failed to start cluster:\n{excp}\ncluster dead"
             )
             if not helpers.IS_XDIST:
