@@ -149,6 +149,7 @@ class TestMinting:
           and one identified by just policyid
         * burn the minted tokens
         * check fees in Lovelace
+        * check output of the `transaction view` command
         """
         expected_fee = 201141
 
@@ -204,6 +205,9 @@ class TestMinting:
 
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
+
+        # check `transaction view` command
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
 
         # token burning
         token_burn = token_mint._replace(amount=-amount)

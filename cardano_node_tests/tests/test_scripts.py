@@ -847,6 +847,7 @@ class TestTimeLocking:
         )
 
         # send funds from script address
+        invalid_hereafter = cluster.get_slot_no() + 1000
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
@@ -856,8 +857,11 @@ class TestTimeLocking:
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1000,
+            invalid_hereafter=invalid_hereafter,
         )
+
+        # check `transaction view` command
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
