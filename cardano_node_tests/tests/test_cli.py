@@ -11,6 +11,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
+DATA_DIR = Path(__file__).parent / "data"
 
 
 @pytest.fixture(scope="module")
@@ -36,6 +37,10 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 class TestCLI:
     """Tests for cardano-cli."""
 
+    TX_BODY_FILE = DATA_DIR / "test_tx_metadata_both_tx.body"
+    TX_FILE = DATA_DIR / "test_tx_metadata_both_tx.signed"
+    TX_OUT = DATA_DIR / "test_tx_metadata_both_tx.out"
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
         bool(configuration.TX_ERA),
@@ -46,6 +51,17 @@ class TestCLI:
         if cluster.protocol != clusterlib.Protocols.CARDANO:
             pytest.skip("runs on cluster in full cardano mode")
         cluster.cli(["query", "utxo", *cluster.magic_args])
+
+    @allure.link(helpers.get_vcs_link())
+    def test_tx_view(self, cluster: clusterlib.ClusterLib):
+        """Check that the output of `transaction view` is as expected."""
+        tx_body = cluster.view_tx(tx_body_file=self.TX_BODY_FILE)
+        tx = cluster.view_tx(tx_file=self.TX_FILE)
+        assert tx_body == tx
+
+        with open(self.TX_OUT) as infile:
+            tx_view_out = infile.read()
+        assert tx == tx_view_out.strip()
 
 
 @pytest.mark.testnets
