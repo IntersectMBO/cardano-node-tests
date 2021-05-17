@@ -1,0 +1,27 @@
+auxiliary data: AuxiliaryDataRaw {txMetadata = fromList [(1,S "foo"),(2,S "bar"),(3,S
+  "baz"),(5,S "cardano"),(6,S "rules")], auxiliaryScripts = StrictSeq {fromStrict
+  = fromList []}}
+auxiliary data hash: AuxiliaryDataHash {unsafeAuxiliaryDataHash = SafeHash "abef182880e3772e9f6fbd087caef3f82166203aff9ea314442e8b0565b8564b"}
+certificates: []
+era: Mary
+fee: 190182
+inputs:
+- 9d43c61d25e780112200a023840b2fdfdf318c12acc9b230685f788167a9419f#0
+mint:
+  lovelace: 0
+  policies: {}
+outputs:
+- address:
+    Bech32: addr_test1vz2522g9f8lznckrujg9zxxkyk7qd9thnq292855sxz3gmszxqcfc
+    credential:
+      key hash: 9545290549fe29e2c3e4905118d625bc0695779814551e948185146e
+    network: Testnet
+    stake reference: StakeRefNull
+  amount:
+    lovelace: 2809818
+    policies: {}
+update: null
+validity interval:
+  invalid before: null
+  invalid hereafter: null
+withdrawals: []

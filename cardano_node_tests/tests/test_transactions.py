@@ -189,6 +189,7 @@ class TestBasic:
         * send all available funds from 1 source address to 1 destination address
         * check expected balance for destination addresses
         * check that balance for source address is 0 Lovelace
+        * check output of the `transaction view` command
         """
         temp_template = helpers.get_func_name()
 
@@ -217,6 +218,9 @@ class TestBasic:
             cluster.get_address_balance(dst_address)
             == dst_init_balance + src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
+
+        # check `transaction view` command
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1898,6 +1902,10 @@ class TestMetadata:
             **json_file_metadata,
             **cbor_file_metadata,
         }, "Metadata in TX body doesn't match original metadata"
+
+        # check `transaction view` command
+        tx_view = clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        assert 'txMetadata = fromList [(1,S "foo")' in tx_view
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)

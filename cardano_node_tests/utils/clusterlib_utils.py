@@ -694,3 +694,36 @@ def load_tx_metadata(tx_body_file: Path) -> dict:
 def utxodata2txout(utxodata: clusterlib.UTXOData) -> clusterlib.TxOut:
     """Convert `clusterlib.UTXOData` to `clusterlib.TxOut`."""
     return clusterlib.TxOut(address=utxodata.address, amount=utxodata.amount, coin=utxodata.coin)
+
+
+def check_tx_view(cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput) -> str:
+    """Check output of the `transaction view` command."""
+    tx_view = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
+
+    for out in tx_raw_output.txouts:
+        if out.address not in tx_view:
+            raise AssertionError(f"Output address '{out.address}' not in\n{tx_view}")
+
+    if f"fee: {tx_raw_output.fee}" not in tx_view:
+        raise AssertionError(f"'fee: {tx_raw_output.fee}' not in\n{tx_view}")
+
+    invalid_before = (
+        tx_raw_output.invalid_before if tx_raw_output.invalid_before is not None else "null"
+    )
+    invalid_hereafter = (
+        tx_raw_output.invalid_hereafter if tx_raw_output.invalid_hereafter is not None else "null"
+    )
+    if f"invalid before: {invalid_before}" not in tx_view:
+        raise AssertionError(f"'invalid before: {invalid_before}' not in\n{tx_view}")
+    if f"invalid hereafter: {invalid_hereafter}" not in tx_view:
+        raise AssertionError(f"'invalid hereafter: {invalid_hereafter}' not in\n{tx_view}")
+
+    if tx_raw_output.mint:
+        for mint in tx_raw_output.mint:
+            policyid = mint.coin.split(".")[0]
+            if policyid not in tx_view:
+                raise AssertionError(f"The policyid '{policyid}' not in\n{tx_view}")
+            if mint.address not in tx_view:
+                raise AssertionError(f"Mint address '{mint.address}' not in\n{tx_view}")
+
+    return tx_view
