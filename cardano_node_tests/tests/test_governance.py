@@ -361,6 +361,58 @@ class TestMIRCerts:
                 )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
+    def test_exceed_pay_stake_addr_from(
+        self,
+        cluster_pots: clusterlib.ClusterLib,
+        registered_user: clusterlib.PoolUser,
+        fund_src: str,
+    ):
+        """Try to send more funds than available from the reserves or treasury pot to stake address.
+
+        Expect failure.
+
+        * generate an MIR certificate
+        * submit a TX with the MIR certificate
+        * check that submitting the transaction fails with an expected error
+        """
+        temp_template = helpers.get_func_name()
+        cluster = cluster_pots
+        amount = 30_000_000_000_000_000
+
+        init_balance = cluster.get_address_balance(registered_user.payment.address)
+
+        mir_cert = cluster.gen_mir_cert_stake_addr(
+            stake_addr=registered_user.stake.address,
+            reward=amount,
+            tx_name=temp_template,
+            use_treasury=fund_src == self.TREASURY,
+        )
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[mir_cert],
+            signing_key_files=[
+                registered_user.payment.skey_file,
+                *cluster.genesis_keys.delegate_skeys,
+            ],
+        )
+
+        # send the transaction at the beginning of an epoch
+        if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
+            cluster.wait_for_new_epoch()
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(
+                src_address=registered_user.payment.address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
+        assert "InsufficientForInstantaneousRewardsDELEG" in str(excinfo.value)
+
+        assert (
+            cluster.get_address_balance(registered_user.payment.address) == init_balance
+        ), f"Incorrect balance for source address `{registered_user.payment.address}`"
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_unregistered_stake_addr_from(
