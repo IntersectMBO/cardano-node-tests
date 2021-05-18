@@ -1463,7 +1463,6 @@ class TestTransfer:
         * check fees in Lovelace
         """
         temp_template = f"{helpers.get_func_name()}_{amount}"
-        amount_lovelace = 10
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -1472,10 +1471,21 @@ class TestTransfer:
         src_init_balance_token = cluster.get_address_balance(src_address, coin=new_token.token)
         dst_init_balance_token = cluster.get_address_balance(dst_address, coin=new_token.token)
 
-        destinations = [
+        ma_destinations = [
             clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token),
+        ]
+
+        min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
+        assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value.value, "No Lovelace required for `min-ada-value`"
+
+        amount_lovelace = min_value.value
+
+        destinations = [
+            *ma_destinations,
             clusterlib.TxOut(address=dst_address, amount=amount_lovelace),
         ]
+
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
         tx_raw_output = cluster.send_funds(
@@ -1540,17 +1550,30 @@ class TestTransfer:
         src_init_balance_tokens = []
         dst_init_balance_tokens1 = []
         dst_init_balance_tokens2 = []
-        destinations = []
+        ma_destinations = []
         for t in new_tokens:
             src_init_balance_tokens.append(cluster.get_address_balance(src_address, coin=t.token))
             dst_init_balance_tokens1.append(cluster.get_address_balance(dst_address1, coin=t.token))
             dst_init_balance_tokens2.append(cluster.get_address_balance(dst_address2, coin=t.token))
 
-            destinations.append(clusterlib.TxOut(address=dst_address1, amount=amount, coin=t.token))
-            destinations.append(clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token))
+            ma_destinations.append(
+                clusterlib.TxOut(address=dst_address1, amount=amount, coin=t.token)
+            )
+            ma_destinations.append(
+                clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token)
+            )
 
-        destinations.append(clusterlib.TxOut(address=dst_address1, amount=amount_lovelace))
-        destinations.append(clusterlib.TxOut(address=dst_address2, amount=amount_lovelace))
+        min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
+        assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value.value, "No Lovelace required for `min-ada-value`"
+
+        amount_lovelace = min_value.value
+
+        destinations = [
+            *ma_destinations,
+            clusterlib.TxOut(address=dst_address1, amount=amount_lovelace),
+            clusterlib.TxOut(address=dst_address2, amount=amount_lovelace),
+        ]
 
         tx_files = clusterlib.TxFiles(
             signing_key_files={t.token_mint_addr.skey_file for t in new_tokens}
