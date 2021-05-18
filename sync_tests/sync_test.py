@@ -87,7 +87,7 @@ def git_get_commit_sha_for_tag_no(tag_no):
     # there is a rate limit for the provided url that we want to overpass with the below loop
     count = 0
     while not response.ok:
-        time.sleep(random.randint(30, 120))
+        time.sleep(random.randint(30, 240))
         count += 1
         response = requests.get(url)
         if count > 10:
