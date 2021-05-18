@@ -189,7 +189,6 @@ class TestMinting:
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=token_issuers,
             token_mint_addr=token_mint_addr,
@@ -278,7 +277,6 @@ class TestMinting:
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=[issuer_addr],
             token_mint_addr=token_mint_addr,
@@ -372,7 +370,6 @@ class TestMinting:
                 [
                     clusterlib_utils.TokenRecord(
                         token=aname_token,
-                        asset_name=asset_name,
                         amount=amount,
                         issuers_addrs=[i_addrs[i]],
                         token_mint_addr=token_mint_addr,
@@ -380,7 +377,6 @@ class TestMinting:
                     ),
                     clusterlib_utils.TokenRecord(
                         token=policyid,
-                        asset_name="",
                         amount=amount,
                         issuers_addrs=[i_addrs[i]],
                         token_mint_addr=token_mint_addr,
@@ -468,13 +464,12 @@ class TestMinting:
         tokens_mint = [
             clusterlib_utils.TokenRecord(
                 token=t,
-                asset_name=asset_names[i],
                 amount=amount,
                 issuers_addrs=[issuer_addr],
                 token_mint_addr=token_mint_addr,
                 script=script,
             )
-            for i, t in enumerate(tokens)
+            for t in tokens
         ]
 
         # first token minting
@@ -644,7 +639,6 @@ class TestMinting:
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -738,7 +732,6 @@ class TestMinting:
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=[issuer_addr],
                     token_mint_addr=token_mint_addr,
@@ -824,7 +817,6 @@ class TestMinting:
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=issuers_addrs,
             token_mint_addr=token_mint_addr,
@@ -912,7 +904,6 @@ class TestMinting:
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=[issuer_addr],
             token_mint_addr=token_mint_addr,
@@ -998,7 +989,6 @@ class TestPolicies:
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1082,7 +1072,6 @@ class TestPolicies:
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1163,7 +1152,6 @@ class TestPolicies:
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1236,7 +1224,6 @@ class TestPolicies:
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1298,7 +1285,6 @@ class TestPolicies:
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1371,7 +1357,6 @@ class TestPolicies:
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1707,7 +1692,6 @@ class TestNegative:
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=[issuer_addr],
             token_mint_addr=token_mint_addr,
