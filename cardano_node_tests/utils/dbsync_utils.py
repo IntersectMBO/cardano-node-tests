@@ -50,6 +50,8 @@ class TxRecord(NamedTuple):
     metadata: List[MetadataRecord]
     reserve: List[ADAStashRecord]
     treasury: List[ADAStashRecord]
+    stake_registration: List[str]
+    stake_deregistration: List[str]
 
     def _convert_metadata(self) -> dict:
         """Convert list of `MetadataRecord`s to metadata dictionary."""
@@ -76,6 +78,8 @@ class TxDBRow(NamedTuple):
     metadata_count: int
     reserve_count: int
     treasury_count: int
+    stake_reg_count: int
+    stake_dereg_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -106,6 +110,12 @@ class ADAStashDBRow(NamedTuple):
     addr_id: int
     cert_index: int
     amount: decimal.Decimal
+    tx_id: int
+
+
+class StakeAddrDBRow(NamedTuple):
+    id: int
+    view: str
     tx_id: int
 
 
@@ -155,6 +165,8 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
             " (SELECT COUNT(id) FROM reserve WHERE tx_id=tx.id) AS reserve_count,"
             " (SELECT COUNT(id) FROM treasury WHERE tx_id=tx.id) AS treasury_count,"
+            " (SELECT COUNT(id) FROM stake_registration WHERE tx_id=tx.id) AS reg_count,"
+            " (SELECT COUNT(id) FROM stake_deregistration WHERE tx_id=tx.id) AS dereg_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -221,6 +233,40 @@ def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
 
         while (result := cur.fetchone()) is not None:
             yield ADAStashDBRow(*result)
+
+
+def query_tx_stake_reg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
+    """Query stake registration record in db-sync."""
+    with DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " stake_registration.addr_id, stake_address.view, stake_registration.tx_id "
+            "FROM stake_registration "
+            "INNER JOIN stake_address ON stake_registration.addr_id = stake_address.id "
+            "INNER JOIN tx ON tx.id = stake_registration.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield StakeAddrDBRow(*result)
+
+
+def query_tx_stake_dereg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
+    """Query stake deregistration record in db-sync."""
+    with DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " stake_deregistration.addr_id, stake_address.view, stake_deregistration.tx_id "
+            "FROM stake_deregistration "
+            "INNER JOIN stake_address ON stake_deregistration.addr_id = stake_address.id "
+            "INNER JOIN tx ON tx.id = stake_deregistration.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield StakeAddrDBRow(*result)
 
 
 def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
@@ -410,6 +456,14 @@ def get_tx_record(txhash: str) -> TxRecord:
             for r in query_tx_treasury(txhash=txhash)
         ]
 
+    stake_registration = []
+    if txdata.last_row.stake_reg_count:
+        stake_registration = [r.view for r in query_tx_stake_reg(txhash=txhash)]
+
+    stake_deregistration = []
+    if txdata.last_row.stake_dereg_count:
+        stake_deregistration = [r.view for r in query_tx_stake_dereg(txhash=txhash)]
+
     record = TxRecord(
         tx_id=int(txdata.last_row.tx_id),
         tx_hash=txdata.last_row.tx_hash.hex(),
@@ -431,6 +485,8 @@ def get_tx_record(txhash: str) -> TxRecord:
         metadata=metadata,
         reserve=reserve,
         treasury=treasury,
+        stake_registration=stake_registration,
+        stake_deregistration=stake_deregistration,
     )
 
     return record

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Tuple
 
 import allure
 import pytest
@@ -13,6 +14,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -121,7 +123,7 @@ def _delegate_stake_addr(
     amount: int = 100_000_000,
     delegate_with_pool_id: bool = False,
     check_delegation: bool = True,
-) -> clusterlib.PoolUser:
+) -> Tuple[clusterlib.PoolUser, clusterlib.TxRawOutput]:
     """Submit registration certificate and delegate to pool."""
     node_cold = addrs_data[pool_name]["cold_key_pair"]
     stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
@@ -188,7 +190,7 @@ def _delegate_stake_addr(
         assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
         assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
-    return pool_user
+    return pool_user, tx_raw_output
 
 
 @pytest.mark.testnets
@@ -197,6 +199,7 @@ class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
         reason="supposed to run on cluster with pools",
@@ -216,7 +219,7 @@ class TestDelegateAddr:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        _delegate_stake_addr(
+        pool_user, tx_raw_output = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
@@ -224,7 +227,12 @@ class TestDelegateAddr:
             pool_name=pool_name,
         )
 
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            assert pool_user.stake.address in tx_db_record.stake_registration
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
         reason="supposed to run on cluster with pools",
@@ -244,15 +252,20 @@ class TestDelegateAddr:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        _delegate_stake_addr(
+        pool_user, tx_raw_output = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             pool_name=pool_name,
         )
 
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            assert pool_user.stake.address in tx_db_record.stake_registration
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.run(order=2)
+    @pytest.mark.dbsync
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
         reason="supposed to run on cluster with pools",
@@ -277,12 +290,17 @@ class TestDelegateAddr:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        pool_user = _delegate_stake_addr(
+        pool_user, tx_deleg_output = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             pool_name=pool_name,
         )
+
+        tx_db_deleg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_deleg_output)
+        if tx_db_deleg:
+            assert pool_user.stake.address in tx_db_deleg.stake_registration
+
         clusterlib_utils.wait_for_stake_distribution(cluster)
 
         src_address = pool_user.payment.address
@@ -345,7 +363,14 @@ class TestDelegateAddr:
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
 
+        tx_db_dereg = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
+        )
+        if tx_db_dereg:
+            assert pool_user.stake.address in tx_db_dereg.stake_deregistration
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_addr_registration_deregistration(
         self,
         cluster: clusterlib.ClusterLib,
@@ -394,7 +419,13 @@ class TestDelegateAddr:
             == src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            assert user_registered.stake.address in tx_db_record.stake_registration
+            assert user_registered.stake.address in tx_db_record.stake_deregistration
+
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
         reason="supposed to run on cluster with pools",
@@ -447,6 +478,10 @@ class TestDelegateAddr:
             tx_name=f"{temp_template}_reg",
             tx_files=tx_files,
         )
+
+        tx_db_reg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_reg)
+        if tx_db_reg:
+            assert user_registered.stake.address in tx_db_reg.stake_registration
 
         # check that the balance for source address was correctly updated
         assert (
@@ -737,7 +772,7 @@ class TestRewards:
         ).reward_account_balance
 
         # submit registration certificate and delegate to pool
-        pool_user = _delegate_stake_addr(
+        pool_user, __ = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
@@ -791,6 +826,7 @@ class TestRewards:
         * burn native tokens
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
+        __: Any  # mypy workaround
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
@@ -820,7 +856,7 @@ class TestRewards:
         ]
 
         # submit registration certificate and delegate to pool
-        pool_user = _delegate_stake_addr(
+        pool_user, __ = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
@@ -1314,7 +1350,7 @@ class TestRewards:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        pool_user = _delegate_stake_addr(
+        pool_user, __ = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
@@ -1415,7 +1451,7 @@ class TestRewards:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        pool_user = _delegate_stake_addr(
+        pool_user, __ = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
@@ -1543,7 +1579,7 @@ class TestRewards:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        pool_user = _delegate_stake_addr(
+        pool_user, __ = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
@@ -1686,7 +1722,7 @@ class TestRewards:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        pool_user = _delegate_stake_addr(
+        pool_user, __ = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
@@ -1845,7 +1881,7 @@ class TestRewards:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        pool_user = _delegate_stake_addr(
+        pool_user, __ = _delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
