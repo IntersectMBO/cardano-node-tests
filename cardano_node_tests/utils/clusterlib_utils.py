@@ -26,7 +26,6 @@ class UpdateProposal(NamedTuple):
 
 class TokenRecord(NamedTuple):
     token: str
-    asset_name: str
     amount: int
     issuers_addrs: List[clusterlib.AddressRecord]
     token_mint_addr: clusterlib.AddressRecord
@@ -537,7 +536,6 @@ def new_tokens(
         tokens_to_mint.append(
             TokenRecord(
                 token=token,
-                asset_name=asset_name,
                 amount=amount,
                 issuers_addrs=[issuer_addr],
                 token_mint_addr=token_mint_addr,

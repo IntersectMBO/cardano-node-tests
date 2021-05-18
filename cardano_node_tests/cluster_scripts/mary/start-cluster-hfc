@@ -24,7 +24,7 @@ cardano_cli_log() {
 }
 
 if [ -e "$SCRIPT_DIR/shell_env" ]; then
-  # shellcheck disable=SC1090
+  # shellcheck disable=SC1090,SC1091
   source "$SCRIPT_DIR/shell_env"
 fi
 
