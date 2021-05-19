@@ -34,6 +34,7 @@ class ADAStashRecord(NamedTuple):
 
 
 class DelegationRecord(NamedTuple):
+    address: str
     pool_id: str
     active_epoch_no: int
 
@@ -129,7 +130,8 @@ class StakeAddrDBRow(NamedTuple):
 class StakeDelegDBRow(NamedTuple):
     tx_id: int
     active_epoch_no: Optional[int]
-    view: Optional[str]
+    pool_id: Optional[str]
+    address: Optional[str]
 
 
 class TxInDBRow(NamedTuple):
@@ -235,6 +237,7 @@ def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
 
 def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction reserve record in db-sync."""
+    # TODO: return address instead of addr_id
     with DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
@@ -251,6 +254,7 @@ def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
 
 def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction treasury record in db-sync."""
+    # TODO: return address instead of addr_id
     with DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
@@ -304,8 +308,10 @@ def query_tx_stake_deleg(txhash: str) -> Generator[StakeDelegDBRow, None, None]:
     with DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
-            " tx.id, delegation.active_epoch_no, pool_hash.view "
+            " tx.id, delegation.active_epoch_no, pool_hash.view AS pool_view,"
+            " stake_address.view AS address_view "
             "FROM delegation "
+            "INNER JOIN stake_address ON delegation.addr_id = stake_address.id "
             "INNER JOIN tx ON tx.id = delegation.tx_id "
             "INNER JOIN pool_hash ON pool_hash.id = delegation.pool_hash_id "
             "WHERE tx.hash = %s;",
@@ -498,9 +504,11 @@ def get_tx_record(txhash: str) -> TxRecord:
     stake_delegation = []
     if txdata.last_row.stake_deleg_count:
         stake_delegation = [
-            DelegationRecord(pool_id=r.view, active_epoch_no=r.active_epoch_no)
+            DelegationRecord(
+                address=r.address, pool_id=r.pool_id, active_epoch_no=r.active_epoch_no
+            )
             for r in query_tx_stake_deleg(txhash=txhash)
-            if (r.view and r.active_epoch_no is not None)
+            if (r.address and r.pool_id and r.active_epoch_no)
         ]
 
     record = TxRecord(
