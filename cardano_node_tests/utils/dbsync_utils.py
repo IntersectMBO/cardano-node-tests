@@ -33,6 +33,12 @@ class ADAStashRecord(NamedTuple):
     amount: int
 
 
+class DelegationRecord(NamedTuple):
+    address: str
+    pool_id: str
+    active_epoch_no: int
+
+
 class TxRecord(NamedTuple):
     tx_id: int
     tx_hash: str
@@ -52,6 +58,7 @@ class TxRecord(NamedTuple):
     treasury: List[ADAStashRecord]
     stake_registration: List[str]
     stake_deregistration: List[str]
+    stake_delegation: List[DelegationRecord]
 
     def _convert_metadata(self) -> dict:
         """Convert list of `MetadataRecord`s to metadata dictionary."""
@@ -80,6 +87,7 @@ class TxDBRow(NamedTuple):
     treasury_count: int
     stake_reg_count: int
     stake_dereg_count: int
+    stake_deleg_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -117,6 +125,13 @@ class StakeAddrDBRow(NamedTuple):
     id: int
     view: str
     tx_id: int
+
+
+class StakeDelegDBRow(NamedTuple):
+    tx_id: int
+    active_epoch_no: Optional[int]
+    pool_id: Optional[str]
+    address: Optional[str]
 
 
 class TxInDBRow(NamedTuple):
@@ -167,6 +182,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM treasury WHERE tx_id=tx.id) AS treasury_count,"
             " (SELECT COUNT(id) FROM stake_registration WHERE tx_id=tx.id) AS reg_count,"
             " (SELECT COUNT(id) FROM stake_deregistration WHERE tx_id=tx.id) AS dereg_count,"
+            " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -221,12 +237,30 @@ def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
 
 def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction reserve record in db-sync."""
+    # TODO: return address instead of addr_id
     with DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " reserve.id, reserve.addr_id, reserve.cert_index, reserve.amount, reserve.tx_id "
             "FROM reserve "
             "INNER JOIN tx ON tx.id = reserve.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield ADAStashDBRow(*result)
+
+
+def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
+    """Query transaction treasury record in db-sync."""
+    # TODO: return address instead of addr_id
+    with DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " treasury.id, treasury.addr_id, treasury.cert_index, treasury.amount, treasury.tx_id "
+            "FROM treasury "
+            "INNER JOIN tx ON tx.id = treasury.tx_id "
             "WHERE tx.hash = %s;",
             (rf"\x{txhash}",),
         )
@@ -269,20 +303,23 @@ def query_tx_stake_dereg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
             yield StakeAddrDBRow(*result)
 
 
-def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
-    """Query transaction treasury record in db-sync."""
+def query_tx_stake_deleg(txhash: str) -> Generator[StakeDelegDBRow, None, None]:
+    """Query stake registration record in db-sync."""
     with DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
-            " treasury.id, treasury.addr_id, treasury.cert_index, treasury.amount, treasury.tx_id "
-            "FROM treasury "
-            "INNER JOIN tx ON tx.id = treasury.tx_id "
+            " tx.id, delegation.active_epoch_no, pool_hash.view AS pool_view,"
+            " stake_address.view AS address_view "
+            "FROM delegation "
+            "INNER JOIN stake_address ON delegation.addr_id = stake_address.id "
+            "INNER JOIN tx ON tx.id = delegation.tx_id "
+            "INNER JOIN pool_hash ON pool_hash.id = delegation.pool_hash_id "
             "WHERE tx.hash = %s;",
             (rf"\x{txhash}",),
         )
 
         while (result := cur.fetchone()) is not None:
-            yield ADAStashDBRow(*result)
+            yield StakeDelegDBRow(*result)
 
 
 def query_ada_pots(
@@ -464,6 +501,16 @@ def get_tx_record(txhash: str) -> TxRecord:
     if txdata.last_row.stake_dereg_count:
         stake_deregistration = [r.view for r in query_tx_stake_dereg(txhash=txhash)]
 
+    stake_delegation = []
+    if txdata.last_row.stake_deleg_count:
+        stake_delegation = [
+            DelegationRecord(
+                address=r.address, pool_id=r.pool_id, active_epoch_no=r.active_epoch_no
+            )
+            for r in query_tx_stake_deleg(txhash=txhash)
+            if (r.address and r.pool_id and r.active_epoch_no)
+        ]
+
     record = TxRecord(
         tx_id=int(txdata.last_row.tx_id),
         tx_hash=txdata.last_row.tx_hash.hex(),
@@ -487,6 +534,7 @@ def get_tx_record(txhash: str) -> TxRecord:
         treasury=treasury,
         stake_registration=stake_registration,
         stake_deregistration=stake_deregistration,
+        stake_delegation=stake_delegation,
     )
 
     return record
