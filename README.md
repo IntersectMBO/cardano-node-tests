@@ -5,8 +5,7 @@ README for cardano-node-tests
 
 Integration tests for cardano-node.
 
-Installation
-------------
+## <a id="Installation"></a> Installation
 
 ```sh
 # create and activate virtual env
@@ -18,8 +17,7 @@ $ make install
 
 Requires Python 3.8 or newer.
 
-Usage
------
+## <a id="Usage"></a> Usage
 
 Preparing env:
 
@@ -85,9 +83,7 @@ E.g.
 $ SCHEDULING_LOG=testrun_20201208_1.log TEST_THREADS=3 CLUSTER_ERA=mary TX_ERA=shelley PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
 ```
 
-
-Tests development
------------------
+## <a id="Tests_development"></a> Tests development
 
 When running tests, the framework start and stop cluster instances as needed. That is not ideal for tests development, as starting a cluster instance takes several epochs (to get from Byron to Mary). To keep cardano cluster running in-between test runs, one needs to start it in "development mode".
 
@@ -101,6 +97,156 @@ $ export CARDANO_NODE_SOCKET_PATH=/path/to/cardano-node/state-cluster0/bft1.sock
 # start the cluster instance in development mode
 $ scripts/destination/dir/start-cluster-hfc
 ```
+
+Enabling db-sync supporting
+---------------------------
+
+In order to enable **db-sync** support for local cluster one needs to:
+
+- setup **db-sync**. The easiest way is to build **db-sync** with **nix**
+
+ ```sh
+git clone https://github.com/input-output-hk/cardano-db-sync
+cd cardano-db-sync
+nix-build -A cardano-db-sync -o db-sync-node
+```
+
+ Detailed Instructions can be found [here](https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/building-running.md)
+
+
+- follow steps related to virtual environment and package [Installation](#Installation) and run commands from [Usage](#Usage) section
+
+- export **ENVIRONMENT VARIABLES**
+
+ ```sh
+export PGHOST=localhost PGUSER=postgres DB_SYNC_REPO="/path/to/cardano-db-sync-repo" PGPASSFILE="/path/to/postgres/pgpass" CLUSTER_COUNT=1 FORBID_RESTART=1
+```
+ **Note**: There is no need to manually create pgpass file - script will do that, provide only desired location for it.
+
+- From terminal with **nix-shell** move to `cardano-node-tests` and run:
+
+ ```sh
+./scripts/postgres-start.sh "path/to/postgres"
+#e.g.
+./scripts/postgres-start.sh "/tmp/postgres-local"
+```
+
+ At the moment of writing this (19.V.2021) running `postgres-start.sh` may result in following output:
+
+ ```sh
+initdb: invalid locale name "en_US.UTF-8"
+```
+
+ If you encounter such error edit `cardano-node-tests/scripts/postgres-start.sh` and change following line:
+
+ ```sh
+initdb -D "$POSTGRES_DIR/data" --encoding=UTF8 --locale=en_US.UTF-8 -A trust -U "$PGUSER"
+```
+
+ to:
+
+ ```sh
+initdb -D "$POSTGRES_DIR/data" --encoding=UTF8 --no-locale -A trust -U "$PGUSER"
+```
+
+ and run script again. The successful output should look like this:
+
+ ```sh
+ 2021-05-19 15:26:02.624 CEST [8454] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2021-05-19 15:26:02.628 CEST [8454] LOG:  listening on Unix socket "path/to/postgres/.s.PGSQL.5432"
+2021-05-19 15:26:02.639 CEST [8456] LOG:  database system was shut down at 2021-05-19 15:26:02 CEST
+2021-05-19 15:26:02.642 CEST [8454] LOG:  database system is ready to accept connections
+UID          PID    PPID  C STIME TTY          TIME CMD
+username    8454    8378  0 15:26 pts/0    00:00:00 postgres -D path/to/postgres/data -k path/to/postgres
+```
+
+- Create database:
+```sh
+./scripts/postgres-setup.sh --createdb
+All good!
+```
+
+- **db-sync** is enabled. One can start local cluster in [Tests Development](#Tests_development) mode with **db-sync** support. Any test with `@pytest.mark.dbsync` can be run now.
+
+ ```sh
+# example - test suite
+pytest -k "test_native_tokens" cardano_node_tests
+
+ # example - single test using db-sync checkup
+pytest cardano_node_tests/tests/test_native_tokens.py -k "test_minting_unicode_asset_name"
+```
+
+
+ ### Troubleshooting:
+
+ If after running script there is following error:
+ ```sh
+ postgres: could not access the server configuration file "path/to/postgres/data/postgresql.conf": No such file or directory
+ ```
+ make sure that chosen directory has proper permissions and file can be created there. It is safe to use `/tmp` directory as the destination for your postgres installation: `/tmp/postgres-local`
+
+ If script returns with output:
+
+ ```sh
+2021-05-19 15:14:46.706 CEST [7394] LOG:  could not bind IPv4 address "127.0.0.1": Address already in use
+2021-05-19 15:14:46.706 CEST [7394] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2021-05-19 15:14:46.706 CEST [7394] WARNING:  could not create listen socket for "localhost"
+2021-05-19 15:14:46.719 CEST [7394] FATAL:  could not create any TCP/IP sockets
+2021-05-19 15:14:46.720 CEST [7394] LOG:  database system is shut down
+ ```
+It means that `postgres` is already running on your machine. `postgres-start.sh` can kill existing `postgres` processes that were started by normal user only. In such situation one can kill `postgres` started as system process with:
+```sh
+systemctl stop postgresql
+```
+or export **PGPORT** to another port that is not occupied.
+
+Debugging with IPython
+----------------------
+
+- Install `ipython` package in a shell that is not a `nix-shell` and where there was activated virtual environment
+
+ ```sh
+ pip install ipython
+ ```
+
+- insert:
+ ```sh
+from IPython import embed; embed()
+```
+to the line of code above the one where it fails in the test
+
+ ```python
+def test_minting_unicode_asset_name(
+    self,
+    cluster: clusterlib.ClusterLib,
+    issuers_addrs: List[clusterlib.AddressRecord],
+):
+
+    token_mint = clusterlib_utils.TokenRecord(
+        token=token,
+        amount=amount,
+        issuers_addrs=[issuer_addr],
+        token_mint_addr=token_mint_addr,
+        script=script,
+    )
+    from IPython import embed; embed()
+```
+
+- run with `pytest -s ...` and inspect the runtime state once it gives you the `ipython` shell
+
+ ```sh
+pytest -s cardano_node_tests/tests/test_native_tokens.py -k "test_minting_unicode_asset_name"
+
+ Python 3.8.5 (default, Jan 27 2021, 15:41:15)
+Type 'copyright', 'credits' or 'license' for more information
+IPython 7.19.0 -- An enhanced Interactive Python. Type '?' for help.
+
+ In [1]: token_mint
+Out[1]: TokenRecord(token='a7eb2fe41a690735883134ce854128f07da96bed9ac056f5fc68b3301.ᘓऩ⣆nqge', amount=5, issuers_addrs=[AddressRecord(address='addr_test1vzdnfs753u3q08g5ue9t2g7c6hvtpdy5m332rxqxu9lkg3gxtejfd', vkey_file=PosixPath('token_minting_ci0_1.vkey'), skey_file=PosixPath('token_minting_ci0_1.skey'))], token_mint_addr=AddressRecord(address='addr_test1vqmhhujvsrpau0vhpkmjz0xzhxl80u4satu596eqm3zanwcxmle2u', vkey_file=PosixPath('token_minting_ci0_0.vkey'), skey_file=PosixPath('token_minting_ci0_0.skey')), script=PosixPath('test_minting_unicode_asset_name.script'))
+```
+
+- leave `IPython` interactive mode by typing `exit();`
+
 
 
 Test coverage of cardano-cli commands
