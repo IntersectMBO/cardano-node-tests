@@ -382,11 +382,13 @@ class TestDelegateAddr:
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
         # withdraw rewards to payment address
-        cluster.withdraw_reward(
+        tx_raw_withdrawal_output = cluster.withdraw_reward(
             stake_addr_record=delegation_out.pool_user.stake,
             dst_addr_record=delegation_out.pool_user.payment,
             tx_name=temp_template,
         )
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_withdrawal_output)
 
         # deregister stake address
         src_reward_balance = cluster.get_address_balance(src_address)
