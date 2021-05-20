@@ -1,4 +1,4 @@
-name: sync tests from clean and existing state
+name: node sync tests
 
 on:
   workflow_dispatch:

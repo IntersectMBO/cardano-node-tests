@@ -1,0 +1,54 @@
+name: node cli nighlty results
+
+on:
+  schedule:
+    - cron:  '0 7 * * *'
+  workflow_dispatch:
+    branches:
+      - dorin/sync_test1
+      - sync_tests
+
+jobs:
+  cli_nightly_last_run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout cardano-node-tests repo
+        uses: actions/checkout@v2
+        with:
+          path: cardano_node_tests
+      - name: run actions/setup-python@v2
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          pip install requests
+          pip install psutil
+          pip install sqlite-utils>=2.18
+          sqlite-utils --version
+          pip install pandas
+      - name: checkout sync_tests repo
+        run: |
+          cd cardano_node_tests
+          git config --global user.name "sync_tests"
+          git config --global user.email "action@github.com"
+
+          git checkout sync_tests
+          echo "current branch1: $(git branch --show-current)"
+      - name: get the cli nightly results for the latest run
+        run: |
+          cd cardano_node_tests
+          echo "current branch2: $(git branch --show-current)"
+          python sync_tests/get_node_cli_nightly_last_run.py -t ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+      - name: commit and push changes
+        run: |
+          cd cardano_node_tests
+          echo "current branch3: $(git branch --show-current)"
+
+          git config pull.rebase true
+          git pull origin sync_tests
+
+          git add sync_tests/csv_files
+
+          git commit -m "added niglty CLI results"
+          git push origin HEAD:sync_tests --force

@@ -8,7 +8,6 @@ import signal
 import subprocess
 import tarfile
 
-import psutil
 import requests
 import time
 import urllib.request
@@ -18,11 +17,12 @@ from datetime import datetime
 from pathlib import Path
 
 from psutil import process_iter
-from write_values_to_db import add_test_values_into_db, get_column_names_from_table, \
-    add_column_to_table, export_db_table_to_csv
 
-# python3 ./sync_tests/sync_test.py -d -t1 << tag_no1 >> -t2 << tag_no2 >> -e << env_type >>
+current_directory = os.getcwd()
+print(f" - current_directory aaa: {current_directory}")
 
+from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
+    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB
 
 NODE = "./cardano-node"
 CLI = "./cardano-cli"
@@ -257,25 +257,25 @@ def get_node_config_files(env):
         + env
         + "-config.json",
         env + "-config.json",
-    )
+        )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-byron-genesis.json",
         env + "-byron-genesis.json",
-    )
+        )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-shelley-genesis.json",
         env + "-shelley-genesis.json",
-    )
+        )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-topology.json",
         env + "-topology.json",
-    )
+        )
 
 
 def enable_cardano_node_resources_monitoring(node_config_filepath):
@@ -295,18 +295,6 @@ def set_node_socket_path_env_var():
         socket_path = (Path(ROOT_TEST_PATH) / "db" / "node.socket").expanduser().absolute()
 
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
-
-
-def get_os_type():
-    return [platform.system(), platform.release(), platform.version()]
-
-
-def get_no_of_cpu_cores():
-    return os.cpu_count()
-
-
-def get_total_ram_in_GB():
-    return int(psutil.virtual_memory().total / 1000000000)
 
 
 def get_epoch_no_d_zero():
@@ -501,29 +489,6 @@ def stop_node():
             print(f" !!! ERROR: `cardano-node` process is still active - {proc}")
 
 
-def show_percentage(part, whole):
-    return round(100 * float(part) / float(whole), 2)
-
-
-def get_current_date_time():
-    now = datetime.now()
-    return now.strftime("%d/%m/%Y %H:%M:%S")
-
-
-def get_file_creation_date(path_to_file):
-    return time.ctime(os.path.getmtime(path_to_file))
-
-
-def get_size(start_path='.'):
-    # returns directory size in bytes
-    total_size = 0
-    for dirpath, dirnames, filenames in os.walk(start_path):
-        for f in filenames:
-            fp = os.path.join(dirpath, f)
-            total_size += os.path.getsize(fp)
-    return total_size
-
-
 def get_calculated_slot_no(env):
     current_time = datetime.utcnow()
     shelley_start_time = byron_start_time = current_time
@@ -640,16 +605,6 @@ def wait_for_node_to_sync(env, tag_no):
         epoch_details_dict[epoch] = actual_epoch_dict
 
     return sync_time_seconds, last_slot_no, latest_chunk_no, era_details_dict, epoch_details_dict
-
-
-def date_diff_in_seconds(dt2, dt1):
-    # dt1 and dt2 should be datetime types
-    timedelta = dt2 - dt1
-    return int(timedelta.days * 24 * 3600 + timedelta.seconds)
-
-
-def seconds_to_time(seconds_val):
-    return time.strftime("%H:%M:%S", time.gmtime(seconds_val))
 
 
 def get_no_of_slots_in_era(env, era_name, no_of_epochs_in_era):
@@ -822,7 +777,7 @@ def main():
             env, tag_no2)
         end_sync_time2 = get_current_date_time()
 
-    chain_size = get_size(Path(ROOT_TEST_PATH) / "db")
+    chain_size = get_directory_size(Path(ROOT_TEST_PATH) / "db")
 
     test_values_dict = OrderedDict()
     print(" === Parse the node logs and get the relevant data")
@@ -904,14 +859,6 @@ if __name__ == "__main__":
         "-e",
         "--environment",
         help="the environment on which to run the tests - shelley_qa, testnet, staging or mainnet.",
-    )
-    parser.add_argument(
-        "-dt1", "--db_sync_tag_no1",
-        help="db_sync tag number1 - used for initial sync, from clean state"
-    )
-    parser.add_argument(
-        "-dt2", "--db_sync_tag_no2",
-        help="db_sync tag number2 - used for final sync, from existing state"
     )
 
     args = parser.parse_args()
