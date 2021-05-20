@@ -59,6 +59,7 @@ class TxRecord(NamedTuple):
     stake_registration: List[str]
     stake_deregistration: List[str]
     stake_delegation: List[DelegationRecord]
+    withdrawals: List[clusterlib.TxOut]
 
     def _convert_metadata(self) -> dict:
         """Convert list of `MetadataRecord`s to metadata dictionary."""
@@ -88,6 +89,7 @@ class TxDBRow(NamedTuple):
     stake_reg_count: int
     stake_dereg_count: int
     stake_deleg_count: int
+    withdrawal_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -132,6 +134,12 @@ class StakeDelegDBRow(NamedTuple):
     active_epoch_no: Optional[int]
     pool_id: Optional[str]
     address: Optional[str]
+
+
+class WithdrawalDBRow(NamedTuple):
+    tx_id: int
+    address: str
+    amount: int
 
 
 class TxInDBRow(NamedTuple):
@@ -183,6 +191,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM stake_registration WHERE tx_id=tx.id) AS reg_count,"
             " (SELECT COUNT(id) FROM stake_deregistration WHERE tx_id=tx.id) AS dereg_count,"
             " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
+            " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -320,6 +329,23 @@ def query_tx_stake_deleg(txhash: str) -> Generator[StakeDelegDBRow, None, None]:
 
         while (result := cur.fetchone()) is not None:
             yield StakeDelegDBRow(*result)
+
+
+def query_tx_withdrawal(txhash: str) -> Generator[WithdrawalDBRow, None, None]:
+    """Query reward withdrawal record in db-sync."""
+    with DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " tx.id, stake_address.view, amount "
+            "FROM withdrawal "
+            "INNER JOIN stake_address ON withdrawal.addr_id = stake_address.id "
+            "INNER JOIN tx ON tx.id = withdrawal.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield WithdrawalDBRow(*result)
 
 
 def query_ada_pots(
@@ -511,6 +537,13 @@ def get_tx_record(txhash: str) -> TxRecord:
             if (r.address and r.pool_id and r.active_epoch_no)
         ]
 
+    withdrawals = []
+    if txdata.last_row.withdrawal_count:
+        withdrawals = [
+            clusterlib.TxOut(address=r.address, amount=r.amount)
+            for r in query_tx_withdrawal(txhash=txhash)
+        ]
+
     record = TxRecord(
         tx_id=int(txdata.last_row.tx_id),
         tx_hash=txdata.last_row.tx_hash.hex(),
@@ -535,6 +568,7 @@ def get_tx_record(txhash: str) -> TxRecord:
         stake_registration=stake_registration,
         stake_deregistration=stake_deregistration,
         stake_delegation=stake_delegation,
+        withdrawals=withdrawals,
     )
 
     return record
@@ -633,5 +667,17 @@ def check_tx(
     assert (
         tx_mint_txouts == db_mint_txouts
     ), f"MA minting outputs don't match ({tx_mint_txouts} != {db_mint_txouts})"
+
+    len_db_withdrawals = len(response.withdrawals)
+    len_out_withdrawals = len(tx_raw_output.withdrawals)
+    assert (
+        len_db_withdrawals == len_out_withdrawals
+    ), f"Number of TX withdrawals doesn't match ({len_db_withdrawals} != {len_out_withdrawals})"
+
+    tx_withdrawals = sorted(tx_raw_output.withdrawals)
+    db_withdrawals = sorted(response.withdrawals)
+    assert (
+        tx_withdrawals == db_withdrawals
+    ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
 
     return response
