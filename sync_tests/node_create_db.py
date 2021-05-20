@@ -1,7 +1,7 @@
 import sqlite3
 from sqlite3 import Error
 
-DATABASE_NAME = r"./sync_tests_results.db"
+DATABASE_NAME = r"./node_sync_tests_results.db"
 
 
 def create_connection(db_file):

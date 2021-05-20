@@ -8,7 +8,7 @@ from pathlib import Path
 import argparse
 import pandas as pd
 
-DATABASE_NAME = r"sync_tests_results.db"
+DATABASE_NAME = r"node_sync_tests_results.db"
 RESULTS_FILE_NAME = r"sync_results.json"
 
 
