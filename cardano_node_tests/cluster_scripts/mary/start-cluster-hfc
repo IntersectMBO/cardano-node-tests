@@ -40,14 +40,17 @@ cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 
 # enable db-sync service
 if [ -n "${DBSYNC_REPO:-""}" ]; then
-  [ -e "$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync" ] || \
-    { echo "The \`$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync\` not found, line $LINENO" >&2; exit 1; }  # assert
+  [ -e "$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended" ] || \
+    { echo "The \`$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended\` not found, line $LINENO" >&2; exit 1; }  # assert
+
+  # create clean database
+  "$SCRIPT_DIR/postgres-setup.sh"
 
   state_cluster_name="${STATE_CLUSTER##*/}"
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:dbsync]
-command=%(ENV_DBSYNC_REPO)s/db-sync-node/bin/cardano-db-sync --config ./$state_cluster_name/dbsync-config.yaml --socket-path %(ENV_CARDANO_NODE_SOCKET_PATH)s --state-dir ./state-cluster/db-sync --schema-dir %(ENV_DBSYNC_REPO)s/schema
+command=$SCRIPT_DIR/run_dbsync.sh
 stderr_logfile=./$state_cluster_name/dbsync.stderr
 stdout_logfile=./$state_cluster_name/dbsync.stdout
 autostart=false

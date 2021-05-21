@@ -15,7 +15,7 @@ from xdist import workermanage
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
-from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -103,10 +103,7 @@ def change_dir(tmp_path_factory: TempdirFactory) -> None:
 def close_dbconn() -> Generator[None, None, None]:
     """Close connection to db-sync database at the end of session."""
     yield
-    if dbsync_utils.DBSync.conn_cache is None or dbsync_utils.DBSync.conn_cache.closed == 1:
-        return
-    LOGGER.info("Closing connection to db-sync database.")
-    dbsync_utils.DBSync.conn_cache.close()
+    dbsync_conn.DBSync.close_all()
 
 
 def _stop_all_cluster_instances(
