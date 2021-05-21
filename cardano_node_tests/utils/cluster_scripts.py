@@ -157,7 +157,7 @@ class LocalScripts(ScriptsTypes):
                 out_fp.write(new_content)
 
             # make files without extension executable
-            if "." not in fname:
+            if "." not in fname or fname.endswith(".sh"):
                 dest_file.chmod(0o755)
 
     def prepare_scripts_files(
@@ -286,7 +286,7 @@ class TestnetScripts(ScriptsTypes):
                 out_fp.write(new_content)
 
             # make files without extension executable
-            if "." not in fname:
+            if "." not in fname or fname.endswith(".sh"):
                 dest_file.chmod(0o755)
 
     def _is_bootstrap_conf_dir(self, bootstrap_dir: Path) -> bool:

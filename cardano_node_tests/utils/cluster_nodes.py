@@ -302,10 +302,18 @@ def get_cardano_node_socket_path(instance_num: int) -> Path:
     return new_socket_path
 
 
-def set_cardano_node_socket_path(instance_num: int) -> None:
-    """Set the `CARDANO_NODE_SOCKET_PATH` env variable for the given cluster instance."""
+def set_cluster_env(instance_num: int) -> None:
+    """Set env variables for the given cluster instance."""
     socket_path = get_cardano_node_socket_path(instance_num)
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
+
+    os.environ["PGPASSFILE"] = str(socket_path.parent / "pgpass")
+    if not os.environ.get("PGHOST"):
+        os.environ["PGHOST"] = "localhost"
+    if not os.environ.get("PGPORT"):
+        os.environ["PGPORT"] = "5432"
+    if not os.environ.get("PGUSER"):
+        os.environ["PGUSER"] = "postgres"
 
 
 def get_cluster_env() -> ClusterEnv:
