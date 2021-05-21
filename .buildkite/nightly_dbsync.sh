@@ -27,7 +27,7 @@ export PATH="$PWD/allure_install/allure-2.13.9/bin:$PATH"
 # build dbsync
 git clone --depth 1 git@github.com:input-output-hk/cardano-db-sync.git
 pushd cardano-db-sync
-nix-build -A cardano-db-sync -o db-sync-node
+nix-build -A cardano-db-sync-extended -o db-sync-node-extended
 export DBSYNC_REPO="$PWD"
 popd
 
@@ -37,19 +37,15 @@ cd "$REPODIR"
 export PGHOST=localhost
 export PGUSER=postgres
 export PGPORT=5432
-export PGPASSFILE="$WORKDIR/postgres/pgpass"
 
 # start and setup postgres
 ./scripts/postgres-start.sh "$WORKDIR/postgres" -k
-
-# setup dbsync
-./scripts/postgres-setup.sh --createdb
 
 # run tests and generate report
 set +e
 # shellcheck disable=SC2016
 nix-shell --run \
-  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" TEST_THREADS=5 CLUSTERS_COUNT=1 FORBID_RESTART=1 CI_ARGS="-m dbsync --html=nightly-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
+  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" TEST_THREADS=5 CLUSTERS_COUNT=5 CI_ARGS="-m dbsync --html=nightly-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
 retval="$?"
 
 echo

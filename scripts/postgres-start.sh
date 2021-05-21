@@ -1,17 +1,16 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i bash -p postgresql lsof
+#! nix-shell -i bash --pure --keep PGHOST --keep PGPORT --keep PGUSER -p glibcLocales postgresql lsof procps
 # shellcheck shell=bash
 
 set -euo pipefail
 
 POSTGRES_DIR="${1:?"Need path to postgres dir"}"
+POSTGRES_DIR="$(readlink -m "$POSTGRES_DIR")"
 
 # set postgres env variables
 export PGHOST="${PGHOST:-localhost}"
-export PGUSER="${PGUSER:-postgres}"
 export PGPORT="${PGPORT:-5432}"
-ORIG_PGPASSFILE="${PGPASSFILE:-""}"
-export PGPASSFILE="${PGPASSFILE:-$POSTGRES_DIR/pgpass}"
+export PGUSER="${PGUSER:-postgres}"
 
 # kill running postgres and clear its data
 if [ "${2:-""}" = "-k" ]; then
@@ -37,12 +36,3 @@ sleep 5
 cat "$POSTGRES_DIR/postgres.log"
 echo
 ps -fp "$PSQL_PID"
-echo
-
-# prepare pgpass
-echo "${PGHOST}:${PGPORT}:dbsync:${PGUSER}:secret" > "$PGPASSFILE"
-chmod 600 "$PGPASSFILE"
-
-if [ -z "$ORIG_PGPASSFILE" ]; then
-  echo Run \`export PGPASSFILE="$PGPASSFILE"\`
-fi

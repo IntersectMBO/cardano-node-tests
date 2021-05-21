@@ -65,8 +65,6 @@ FORBID_RESTART = bool(os.environ.get("FORBID_RESTART"))
 
 if CLUSTERS_COUNT > 1 and DEV_CLUSTER_RUNNING:
     raise RuntimeError("Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set.")
-if CLUSTERS_COUNT > 1 and configuration.HAS_DBSYNC:
-    raise RuntimeError("Cannot run multiple cluster instances when running with db-sync.")
 
 CLUSTER_START_CMDS_LOG = "start_cluster_cmds.log"
 
@@ -243,7 +241,7 @@ class ClusterManager:
                 destdir=self._create_startup_files_dir(instance_num),
                 instance_num=instance_num,
             )
-            cluster_nodes.set_cardano_node_socket_path(instance_num)
+            cluster_nodes.set_cluster_env(instance_num)
             self._log(
                 f"stopping cluster instance {instance_num} with `{startup_files.stop_script}`"
             )
@@ -584,6 +582,7 @@ class _ClusterGetter:
         """Reuse cluster that was already started outside of test framework."""
         instance_num = 0
         self.cm._cluster_instance_num = instance_num
+        cluster_nodes.set_cluster_env(instance_num)
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
         # make sure instance dir exists
@@ -895,7 +894,7 @@ class _ClusterGetter:
                     # we've found suitable cluster instance
                     selected_instance = instance_num
                     self.cm._cluster_instance_num = instance_num
-                    cluster_nodes.set_cardano_node_socket_path(instance_num)
+                    cluster_nodes.set_cluster_env(instance_num)
 
                     if restart_here:
                         if restart_ready:
