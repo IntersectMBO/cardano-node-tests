@@ -44,10 +44,9 @@ jobs:
           cd cardano_node_tests
           echo "current branch3: $(git branch --show-current)"
 
-          git config pull.rebase true
-          git pull origin sync_tests
+          git status
 
-          git add sync_tests/csv_files
+          git add sync_tests/csv_files/nightly_build.json
 
-          git commit -m "added niglty CLI results"
+          git commit -m "added niglty CLI results - nightly_build.json"
           git push origin HEAD:sync_tests --force
