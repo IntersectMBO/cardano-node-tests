@@ -9,11 +9,11 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 
-import psycopg2
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_conn
 
 LOGGER = logging.getLogger(__name__)
 
@@ -167,19 +167,9 @@ class ADAPotsDBRow(NamedTuple):
     block_id: int
 
 
-class DBSync:
-    conn_cache: Optional[psycopg2.extensions.connection] = None
-
-    @classmethod
-    def conn(cls) -> psycopg2.extensions.connection:
-        if cls.conn_cache is None or cls.conn_cache.closed == 1:
-            cls.conn_cache = psycopg2.connect(f"dbname={DBSYNC_DB}")
-        return cls.conn_cache
-
-
 def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
     """Query a transaction in db-sync."""
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
@@ -208,7 +198,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
 
 def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
     """Query transaction txins in db-sync."""
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " tx_out.id, tx_out.index, tx_out.address, tx_out.value, "
@@ -229,7 +219,7 @@ def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
 
 def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
     """Query transaction metadata in db-sync."""
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " tx_metadata.id, tx_metadata.key, tx_metadata.json, tx_metadata.bytes,"
@@ -247,7 +237,7 @@ def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
 def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction reserve record in db-sync."""
     # TODO: return address instead of addr_id
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " reserve.id, reserve.addr_id, reserve.cert_index, reserve.amount, reserve.tx_id "
@@ -264,7 +254,7 @@ def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
 def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction treasury record in db-sync."""
     # TODO: return address instead of addr_id
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " treasury.id, treasury.addr_id, treasury.cert_index, treasury.amount, treasury.tx_id "
@@ -280,7 +270,7 @@ def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
 
 def query_tx_stake_reg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
     """Query stake registration record in db-sync."""
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " stake_registration.addr_id, stake_address.view, stake_registration.tx_id "
@@ -297,7 +287,7 @@ def query_tx_stake_reg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
 
 def query_tx_stake_dereg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
     """Query stake deregistration record in db-sync."""
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " stake_deregistration.addr_id, stake_address.view, stake_deregistration.tx_id "
@@ -314,7 +304,7 @@ def query_tx_stake_dereg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
 
 def query_tx_stake_deleg(txhash: str) -> Generator[StakeDelegDBRow, None, None]:
     """Query stake registration record in db-sync."""
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " tx.id, delegation.active_epoch_no, pool_hash.view AS pool_view,"
@@ -333,7 +323,7 @@ def query_tx_stake_deleg(txhash: str) -> Generator[StakeDelegDBRow, None, None]:
 
 def query_tx_withdrawal(txhash: str) -> Generator[WithdrawalDBRow, None, None]:
     """Query reward withdrawal record in db-sync."""
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " tx.id, stake_address.view, amount "
@@ -352,7 +342,7 @@ def query_ada_pots(
     epoch_from: int = 0, epoch_to: int = 99999999
 ) -> Generator[ADAPotsDBRow, None, None]:
     """Query ADA pots record in db-sync."""
-    with DBSync.conn().cursor() as cur:
+    with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
             " id, slot_no, epoch_no, treasury, reserves, rewards, utxo, deposits, fees, block_id "
