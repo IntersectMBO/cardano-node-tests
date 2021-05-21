@@ -2,7 +2,7 @@ name: node cli nighlty results
 
 on:
   schedule:
-    - cron:  '0 7 * * *'
+    - cron:  '0 4 * * *'
   workflow_dispatch:
     branches:
       - dorin/sync_test1
