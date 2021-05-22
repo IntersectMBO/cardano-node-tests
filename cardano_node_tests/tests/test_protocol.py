@@ -35,11 +35,16 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 PROTOCOL_STATE_KEYS = ("csLabNonce", "csProtocol", "csTickn")
 PROTOCOL_PARAM_KEYS = (
+    "costModels",
     "decentralization",
+    "executionUnitPrices",
     "extraPraosEntropy",
     "maxBlockBodySize",
+    "maxBlockExecutionUnits",
     "maxBlockHeaderSize",
+    "maxTxExecutionUnits",
     "maxTxSize",
+    "maxValSize",
     "minPoolCost",
     "minUTxOValue",
     "monetaryExpansion",
