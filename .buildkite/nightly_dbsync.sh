@@ -11,27 +11,31 @@ WORKDIR="/scratch/workdir"
 rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR"
 
-# update to latest cardano-node
-niv update
+# update cardano-node to specified branch and/or revision, or to the latest available
+# shellcheck disable=SC1090
+. "$REPODIR/.buildkite/niv_update_cardano_node.sh"
 
 pushd "$WORKDIR"
 
 # install Allure
-mkdir allure_install
-curl -sfLo \
-  allure_install/allure.tgz \
-  "https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.13.9/allure-commandline-2.13.9.tgz"
-tar xzf allure_install/allure.tgz -C allure_install
-export PATH="$PWD/allure_install/allure-2.13.9/bin:$PATH"
+# shellcheck disable=SC1090
+. "$REPODIR/.buildkite/allure_install.sh"
 
-# build dbsync
-git clone --depth 1 git@github.com:input-output-hk/cardano-db-sync.git
+# clone db-sync
+git clone git@github.com:input-output-hk/cardano-db-sync.git
 pushd cardano-db-sync
+git fetch
+if [ -n "${DBSYNC_REV:-""}" ]; then
+  git checkout "$DBSYNC_REV"
+elif [ -n "${DBSYNC_BRANCH:-""}" ]; then
+  git checkout "$DBSYNC_BRANCH"
+fi
+
+# build db-sync
 nix-build -A cardano-db-sync-extended -o db-sync-node-extended
 export DBSYNC_REPO="$PWD"
-popd
 
-cd "$REPODIR"
+pushd "$REPODIR"
 
 # set postgres env variables
 export PGHOST=localhost
