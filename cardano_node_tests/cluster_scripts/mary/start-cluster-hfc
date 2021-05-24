@@ -127,7 +127,7 @@ for i in $(seq 1 $NUM_BFT_NODES); do
     --testnet-magic "$NETWORK_MAGIC" \
     --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key" > "$STATE_CLUSTER/byron/address-$INDEX"
 
-  # Write Genesis addresses to files
+  # write Genesis addresses to files
   cardano_cli_log signing-key-address \
     --byron-formats  \
     --testnet-magic "$NETWORK_MAGIC" \
@@ -137,8 +137,7 @@ for i in $(seq 1 $NUM_BFT_NODES); do
   ln -s "../../byron/delegate-keys.$INDEX.key" "$STATE_CLUSTER/nodes/node-bft$i/byron-deleg.key"
   ln -s "../../byron/delegation-cert.$INDEX.json" "$STATE_CLUSTER/nodes/node-bft$i/byron-deleg.json"
 
-  # Create Byron address that moves funds out of the genesis UTxO into a regular
-  # address.
+  # create Byron address that moves funds out of the genesis UTxO into a regular address
   cardano_cli_log byron transaction issue-genesis-utxo-expenditure \
     --genesis-json "$STATE_CLUSTER/byron/genesis.json" \
     --testnet-magic "$NETWORK_MAGIC" \
@@ -148,7 +147,7 @@ for i in $(seq 1 $NUM_BFT_NODES); do
     --rich-addr-from "$(head -n 1 "$STATE_CLUSTER/byron/genesis-address-$INDEX")" \
     --txout "(\"$(head -n 1 "$STATE_CLUSTER/byron/address-$INDEX")\", $FUNDS_PER_BYRON_ADDRESS)"
 
-  # Convert to Shelley addresses and keys
+  # convert to Shelley addresses and keys
   cardano_cli_log key convert-byron-key \
     --byron-signing-key-file "$STATE_CLUSTER/byron/payment-keys.$INDEX.key" \
     --out-file "$STATE_CLUSTER/byron/payment-keys.$INDEX-converted.skey" \
@@ -176,27 +175,27 @@ for i in $(seq 1 $NUM_POOLS); do
   cardano_cli_log stake-address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
-  # Payment addresses
+  # payment addresses
   cardano_cli_log address build \
     --payment-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner.addr"
-  # Stake addresses
+  # stake addresses
   cardano_cli_log stake-address build \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
-  # Stake addresses registration certs
+  # stake addresses registration certs
   cardano_cli_log stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
 
-  # Stake reward keys
+  # stake reward keys
   cardano_cli_log stake-address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey"
-  # Stake reward addresses registration certs
+  # stake reward addresses registration certs
   cardano_cli_log stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
@@ -211,7 +210,7 @@ for i in $(seq 1 $NUM_POOLS); do
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.skey"
 
-  # Stake address delegation certs
+  # stake address delegation certs
   cardano_cli_log stake-address delegation-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
@@ -281,9 +280,10 @@ rmdir "$STATE_CLUSTER/shelley/utxo-keys"
 # create scripts for cluster starting / stopping
 printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
 printf "#!/bin/sh\n\nsupervisorctl stop all" > "$STATE_CLUSTER/supervisorctl_stop"
+printf "#!/bin/sh\n\nsupervisorctl restart nodes:" > "$STATE_CLUSTER/supervisorctl_restart_nodes"
 printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
   > "$STATE_CLUSTER/supervisord_start"
-chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_start}
+chmod u+x "$STATE_CLUSTER"/{supervisorctl_*,supervisord_start}
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
@@ -307,6 +307,9 @@ sleep 202
 # In Shelley era
 #
 
+
+ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
+[ "$ERA" = "Shelley" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
 
 # start db-sync
 if [ -n "${DBSYNC_REPO:-""}" ]; then
@@ -342,7 +345,7 @@ TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-000-converted)"
 DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' \
   < "$STATE_CLUSTER/shelley/genesis.json")"
 NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
-FEE_BUFFER=1000000000000
+FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE_BUFFER))"
 
 TXINS=()
@@ -444,6 +447,10 @@ sleep "$WAIT_SEC"
 # In Allegra era
 #
 
+
+ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
+[ "$ERA" = "Allegra" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+
 echo "Submitting update proposal to transfer to Mary, set d = 0"
 
 MARY_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-mary.proposal"
@@ -460,10 +467,7 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' \
-  < "$STATE_CLUSTER/shelley/genesis.json")"
-NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
-FEE_BUFFER=1000000000000
+FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT=$FEE_BUFFER
 
 TXINS=()
@@ -530,11 +534,10 @@ cardano_cli_log transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-FINAL_WAIT="$((WAIT_SEC + 10))"
-echo "Waiting $FINAL_WAIT sec for Mary era to start"
-sleep "$FINAL_WAIT"
+echo "Waiting $WAIT_SEC sec for Mary era to start"
+sleep "$WAIT_SEC"
 
 ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
-[ "$ERA" = "Mary" ] || [ "$ERA" = "null" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+[ "$ERA" = "Mary" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
 
 echo "Cluster started. Run \`stop-cluster\` to stop"
