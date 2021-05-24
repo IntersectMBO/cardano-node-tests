@@ -29,7 +29,8 @@ ERRORS_IGNORED = [
     "TraceDidntAdoptBlock",
     "failedScripts",
 ]
-if configuration.TESTNET_SCRIPTS_DIR:
+# if running on testnet, not local cluster
+if configuration.BOOTSTRAP_DIR:
     ERRORS_IGNORED.extend(["closed when reading data, waiting on next header"])
 ERRORS_RULES_FILE_NAME = ".errors_rules"
 
