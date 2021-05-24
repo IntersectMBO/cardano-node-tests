@@ -134,19 +134,20 @@ class LocalCluster(ClusterType):
         cluster_env = get_cluster_env()
         instance_num = cluster_env.instance_num
 
-        addrs_data: Dict[str, Dict[str, Any]] = {}
+        # create new addresses
+        new_addrs_data: Dict[str, Dict[str, Any]] = {}
         for addr_name in self.test_addr_records:
             addr_name_instance = f"{addr_name}_ci{instance_num}"
             payment = cluster_obj.gen_payment_addr_and_keys(
                 name=addr_name_instance,
                 destination_dir=destination_dir,
             )
-            addrs_data[addr_name] = {
+            new_addrs_data[addr_name] = {
                 "payment": payment,
             }
 
-        LOGGER.debug("Funding created addresses.")
-        # update `addrs_data` with byron addresses
+        # create records for existing byron addresses
+        byron_addrs_data: Dict[str, Dict[str, Any]] = {}
         byron_dir = get_cluster_env().state_dir / "byron"
         for b in range(len(list(byron_dir.glob("*.skey")))):
             byron_addr = {
@@ -158,19 +159,21 @@ class LocalCluster(ClusterType):
                     skey_file=byron_dir / f"payment-keys.00{b}-converted.skey",
                 )
             }
-            addrs_data[f"byron00{b}"] = byron_addr
+            byron_addrs_data[f"byron00{b}"] = byron_addr
 
-        # fund from converted byron address
-        to_fund = [d["payment"] for d in addrs_data.values()]
+        # fund new addresses from byron address
+        LOGGER.debug("Funding created addresses.")
+        to_fund = [d["payment"] for d in new_addrs_data.values()]
         clusterlib_utils.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
-            faucet_data=addrs_data["byron000"],
-            amount=6_000_000_000_000,
+            faucet_data=byron_addrs_data["byron000"],
+            amount=60_000_000_000_000,
             destination_dir=destination_dir,
             force=True,
         )
 
+        addrs_data = {**new_addrs_data, **byron_addrs_data}
         return addrs_data
 
 
