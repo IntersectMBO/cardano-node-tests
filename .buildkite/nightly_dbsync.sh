@@ -18,16 +18,17 @@ mkdir -p "$WORKDIR"
 pushd "$WORKDIR"
 
 # install Allure
-# shellcheck disable=SC1090
+# shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/allure_install.sh"
 
 # clone db-sync
 git clone git@github.com:input-output-hk/cardano-db-sync.git
 pushd cardano-db-sync
-git fetch
 if [ -n "${DBSYNC_REV:-""}" ]; then
+  git fetch
   git checkout "$DBSYNC_REV"
 elif [ -n "${DBSYNC_BRANCH:-""}" ]; then
+  git fetch
   git checkout "$DBSYNC_BRANCH"
 fi
 

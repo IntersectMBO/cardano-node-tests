@@ -18,7 +18,7 @@ mkdir -p "$WORKDIR"
 pushd "$WORKDIR"
 
 # install Allure
-# shellcheck disable=SC1090
+# shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/allure_install.sh"
 
 pushd "$REPODIR"
