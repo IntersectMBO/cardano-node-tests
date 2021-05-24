@@ -12,6 +12,7 @@ class Versions:
     SHELLEY = 2
     ALLEGRA = 3
     MARY = 4
+    ALONZO = 5
 
     def __init__(self) -> None:
         cluster_era = configuration.CLUSTER_ERA or "mary"
