@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
+echo "Starting cardano-node run: cardano-node run"
+   echo "--config ./state-cluster/config-pool2.json"
+   echo "--database-path ./state-cluster/db-pool2"
+   echo "--topology ./state-cluster/topology-pool2.json"
+   echo "--host-addr 127.0.0.1"
+   echo "--port 30003"
+   echo "--socket-path ./state-cluster/pool2.socket"
+   echo "--shelley-vrf-key ./state-cluster/nodes/node-pool2/vrf.skey"
+   echo "--shelley-kes-key ./state-cluster/nodes/node-pool2/kes.skey"
+   echo "--shelley-operational-certificate ./state-cluster/nodes/node-pool2/op.cert"
+echo "..or, once again, in a single line:"
+echo "cardano-node run --config ./state-cluster/config-pool2.json --database-path ./state-cluster/db-pool2 --topology ./state-cluster/topology-pool2.json --host-addr 127.0.0.1 --port 30003 --socket-path ./state-cluster/pool2.socket --shelley-vrf-key ./state-cluster/nodes/node-pool2/vrf.skey --shelley-kes-key ./state-cluster/nodes/node-pool2/kes.skey --shelley-operational-certificate ./state-cluster/nodes/node-pool2/op.cert"
+
+
+exec cardano-node run --config ./state-cluster/config-pool2.json --database-path ./state-cluster/db-pool2 --topology ./state-cluster/topology-pool2.json --host-addr 127.0.0.1 --port 30003 --socket-path ./state-cluster/pool2.socket --shelley-vrf-key ./state-cluster/nodes/node-pool2/vrf.skey --shelley-kes-key ./state-cluster/nodes/node-pool2/kes.skey --shelley-operational-certificate ./state-cluster/nodes/node-pool2/op.cert
