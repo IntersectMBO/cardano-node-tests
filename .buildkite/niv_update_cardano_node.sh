@@ -5,4 +5,6 @@ if [ -n "${NODE_REV:-""}" ]; then
   niv update cardano-node --rev "$NODE_REV"
 elif [ -n "${NODE_BRANCH:-""}" ]; then
   niv update cardano-node --branch "$NODE_BRANCH"
+else
+  niv update cardano-node
 fi
