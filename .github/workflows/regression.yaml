@@ -1,4 +1,4 @@
-name: CI regression tests
+name: CLI regression tests
 
 on:
   workflow_dispatch:
@@ -10,10 +10,10 @@ on:
         description: "cardano-node branch (default: master)"
         required: false
       cluster_era:
-        description: "Cluster era (mary, alonzo)"
+        description: "Cluster era (default: empty)"
         required: false
       tx_era:
-        description: "Tx era (shelley, allegra, mary, alonzo)"
+        description: "Tx era (default: empty)"
         required: false
       test_threads:
         description: "Num of pytest workers (default: 15)"
@@ -23,10 +23,10 @@ on:
         required: false
 
 jobs:
-  sync_test_mainnet:
+  cli_regression:
     runs-on: ubuntu-latest
     steps:
-      - name: trigger the Buildkite pipeline - run CI regression tests
+      - name: trigger the Buildkite pipeline - run CLI regression tests
         uses: zegocover/buildkite-pipeline-action@master
         with:
           access_token: "${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}"
@@ -36,7 +36,7 @@ jobs:
           "NODE_REV":"${{ github.event.inputs.node_rev }}",
           "NODE_BRANCH":"${{ github.event.inputs.node_branch }}",
           "CLUSTER_ERA":"${{ github.event.inputs.cluster_era }}",
-          "TX_ERA":"${{ github.event.inputs.tx_era }}"
-          "TEST_THREADS":"${{ github.event.inputs.test_threads }}"
+          "TX_ERA":"${{ github.event.inputs.tx_era }}",
+          "TEST_THREADS":"${{ github.event.inputs.test_threads }}",
           "CLUSTERS_COUNT":"${{ github.event.inputs.clusters_count }}"
           }'
