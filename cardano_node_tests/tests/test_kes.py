@@ -122,14 +122,14 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.run(order=1)
-    def test_opcert_past_kes_period(
+    def test_opcert_future_kes_period(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
     ):
-        """Start a stake pool with an operational certificate created with expired `--kes-period`.
+        """Start a stake pool with an operational certificate created with invalid `--kes-period`.
 
-        * generate new operational certificate with `--kes-period` in the past
+        * generate new operational certificate with `--kes-period` in the future
         * restart the node with the new operational certificate
         * check that the pool is not producing any blocks
         * generate new operational certificate with valid `--kes-period` and restart the node
@@ -171,7 +171,7 @@ class TestKES:
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-                kes_period=cluster.get_kes_period() - 5,
+                kes_period=cluster.get_kes_period() + 5,
             )
 
             expected_errors = [
@@ -181,7 +181,7 @@ class TestKES:
                 # restart the node with the new operational certificate
                 logfiles.add_ignore_rule("*.stdout", "MuxBearerClosed")
                 shutil.copy(invalid_opcert_file, opcert_file)
-                cluster_nodes.restart_node(node_name)
+                cluster_nodes.restart_nodes([node_name])
                 cluster.wait_for_new_epoch()
 
                 LOGGER.info("Checking blocks production for 5 epochs.")
@@ -210,7 +210,7 @@ class TestKES:
             )
             # copy the new certificate and restart the node
             shutil.move(str(valid_opcert_file), str(opcert_file))
-            cluster_nodes.restart_node(node_name)
+            cluster_nodes.restart_nodes([node_name])
             cluster.wait_for_new_epoch()
 
             LOGGER.info("Checking blocks production for another 5 epochs.")
@@ -271,7 +271,7 @@ class TestKES:
             # restart the node with the new operational certificate
             logfiles.add_ignore_rule("*.stdout", "MuxBearerClosed")
             shutil.copy(new_opcert_file, opcert_file)
-            cluster_nodes.restart_node(node_name)
+            cluster_nodes.restart_nodes([node_name])
 
             LOGGER.info("Checking blocks production for 5 epochs.")
             blocks_made_db = []
