@@ -355,20 +355,37 @@ def stop_cluster(cmd: str) -> None:
     helpers.run_in_bash(cmd, workdir=get_cluster_env().work_dir)
 
 
-def restart_node(node_name: str) -> None:
-    """Restart single node of the running cluster."""
-    LOGGER.info(f"Restarting cluster node `{node_name}`.")
+def restart_all_nodes() -> None:
+    """Restart all Cardano nodes of the running cluster."""
+    LOGGER.info("Restarting all cluster nodes.")
     cluster_env = get_cluster_env()
     supervisor_port = (
         get_cluster_type().cluster_scripts.get_instance_ports(cluster_env.instance_num).supervisor
     )
     try:
         helpers.run_command(
-            f"supervisorctl -s http://localhost:{supervisor_port} restart {node_name}",
+            f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:",
             workdir=cluster_env.work_dir,
         )
     except Exception as exc:
-        LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
+        LOGGER.debug(f"Failed to restart cluster nodes: {exc}")
+
+
+def restart_nodes(node_names: List[str]) -> None:
+    """Restart list of Cardano nodes of the running cluster."""
+    LOGGER.info(f"Restarting cluster nodes {node_names}.")
+    cluster_env = get_cluster_env()
+    supervisor_port = (
+        get_cluster_type().cluster_scripts.get_instance_ports(cluster_env.instance_num).supervisor
+    )
+    for node_name in node_names:
+        try:
+            helpers.run_command(
+                f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:{node_name}",
+                workdir=cluster_env.work_dir,
+            )
+        except Exception as exc:
+            LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
 
 
 def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
