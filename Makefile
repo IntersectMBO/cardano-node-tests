@@ -14,8 +14,10 @@ ALLURE_DIR ?= .reports/
 	mkdir -p docs/build
 
 # run all tests, generate allure report
-tests: TEST_THREADS ?= 15
 tests: .dirs
+ifeq ($(TEST_THREADS),)
+	TEST_THREADS := 15
+endif
 # First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.
 ifndef PYTEST_ARGS
 	rm -f $(ALLURE_DIR)/{*-attachment.txt,*-result.json,*-container.json}
@@ -28,8 +30,10 @@ endif
 # testnets: export NOPOOLS=1
 testnets: export CLUSTERS_COUNT=1
 testnets: export FORBID_RESTART=1
-testnets: TEST_THREADS ?= 15
 testnets: .dirs
+ifeq ($(TEST_THREADS),)
+	TEST_THREADS := 15
+endif
 # First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.
 ifndef PYTEST_ARGS
 	rm -f $(ALLURE_DIR)/{*-attachment.txt,*-result.json,*-container.json}
