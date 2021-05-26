@@ -6,6 +6,10 @@ install:
 ARTIFACTS_DIR ?= .artifacts/
 COVERAGE_DIR ?= .cli_coverage/
 ALLURE_DIR ?= .reports/
+# set even when empty value is passed
+ifeq ($(TEST_THREADS),)
+	TEST_THREADS := 15
+endif
 
 .dirs:
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(ALLURE_DIR)
@@ -15,9 +19,6 @@ ALLURE_DIR ?= .reports/
 
 # run all tests, generate allure report
 tests: .dirs
-ifeq ($(TEST_THREADS),)
-	TEST_THREADS := 15
-endif
 # First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.
 ifndef PYTEST_ARGS
 	rm -f $(ALLURE_DIR)/{*-attachment.txt,*-result.json,*-container.json}
@@ -31,9 +32,6 @@ endif
 testnets: export CLUSTERS_COUNT=1
 testnets: export FORBID_RESTART=1
 testnets: .dirs
-ifeq ($(TEST_THREADS),)
-	TEST_THREADS := 15
-endif
 # First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.
 ifndef PYTEST_ARGS
 	rm -f $(ALLURE_DIR)/{*-attachment.txt,*-result.json,*-container.json}
