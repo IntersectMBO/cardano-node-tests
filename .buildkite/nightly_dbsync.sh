@@ -50,7 +50,7 @@ export PGPORT=5432
 set +e
 # shellcheck disable=SC2016
 nix-shell --run \
-  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" CLUSTERS_COUNT=5 CI_ARGS="-m dbsync --html=nightly-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
+  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" CLUSTERS_COUNT=5 CI_ARGS="-m dbsync --html=testrun-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
 retval="$?"
 
 echo
