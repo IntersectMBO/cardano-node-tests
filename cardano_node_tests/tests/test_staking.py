@@ -310,9 +310,8 @@ class TestDelegateAddr:
         * submit registration certificate and delegate to pool
         * attempt to deregister the stake address - deregistration is expected to fail
           because there are rewards in the stake address
-        * withdraw rewards to payment address
-        * deregister stake address
-        * check that the key deposit was returned
+        * withdraw rewards to payment address and deregister stake address
+        * check that the key deposit was returned and rewards withdrawn
         * check that the stake address is no longer delegated
         """
         pool_name = "node-pool1"
@@ -345,17 +344,14 @@ class TestDelegateAddr:
 
         src_address = delegation_out.pool_user.payment.address
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for __ in range(5):
+            if cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
-            ).reward_account_balance,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+            ).reward_account_balance:
+                break
+            cluster.wait_for_new_epoch(padding_seconds=10)
+        else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # files for deregistering stake address
@@ -381,28 +377,28 @@ class TestDelegateAddr:
             )
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
-        # withdraw rewards to payment address
-        tx_raw_withdrawal_output = cluster.withdraw_reward(
-            stake_addr_record=delegation_out.pool_user.stake,
-            dst_addr_record=delegation_out.pool_user.payment,
-            tx_name=temp_template,
-        )
+        src_payment_balance = cluster.get_address_balance(src_address)
+        reward_balance = cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_withdrawal_output)
-
-        # deregister stake address
-        src_reward_balance = cluster.get_address_balance(src_address)
-
+        # withdraw rewards to payment address, deregister stake address
         tx_raw_deregister_output = cluster.send_tx(
             src_address=src_address,
-            tx_name=f"{temp_template}_dereg",
+            tx_name=f"{temp_template}_dereg_withdraw",
             tx_files=tx_files_deregister,
+            withdrawals=[
+                clusterlib.TxOut(address=delegation_out.pool_user.stake.address, amount=-1)
+            ],
         )
 
-        # check that the key deposit was returned
+        # check that the key deposit was returned and rewards withdrawn
         assert (
             cluster.get_address_balance(src_address)
-            == src_reward_balance - tx_raw_deregister_output.fee + cluster.get_address_deposit()
+            == src_payment_balance
+            - tx_raw_deregister_output.fee
+            + reward_balance
+            + cluster.get_address_deposit()
         ), f"Incorrect balance for source address `{src_address}`"
 
         # check that the stake address is no longer delegated
