@@ -12,7 +12,7 @@ rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR"
 
 # update cardano-node to specified branch and/or revision, or to the latest available
-# shellcheck disable=SC1090
+# shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/niv_update_cardano_node.sh"
 
 pushd "$WORKDIR"
@@ -50,7 +50,7 @@ export PGPORT=5432
 set +e
 # shellcheck disable=SC2016
 nix-shell --run \
-  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" TEST_THREADS=5 CLUSTERS_COUNT=5 CI_ARGS="-m dbsync --html=nightly-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
+  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" CLUSTERS_COUNT=5 CI_ARGS="-m dbsync --html=nightly-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
 retval="$?"
 
 echo
