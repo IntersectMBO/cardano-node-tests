@@ -530,7 +530,7 @@ def get_tx_record(txhash: str) -> TxRecord:
     withdrawals = []
     if txdata.last_row.withdrawal_count:
         withdrawals = [
-            clusterlib.TxOut(address=r.address, amount=r.amount)
+            clusterlib.TxOut(address=r.address, amount=int(r.amount))
             for r in query_tx_withdrawal(txhash=txhash)
         ]
 
