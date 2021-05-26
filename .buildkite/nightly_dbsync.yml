@@ -11,5 +11,5 @@ steps:
     artifact_paths:
       - 'allure-report.tar.bz2'
       - 'cli_coverage.json'
-      - 'nightly-report.html'
+      - 'testrun-report.html'
       - 'scheduling.log'
