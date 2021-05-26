@@ -1,10 +1,6 @@
 name: repo_lint
 
 on:
-  push:
-    branches-ignore:
-    # already tested in PR
-    - master
   pull_request:
     branches:
     - master
