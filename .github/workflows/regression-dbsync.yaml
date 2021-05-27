@@ -3,6 +3,9 @@ name: db-sync regression tests
 on:
   workflow_dispatch:
     inputs:
+      tests_rev:
+        description: "cardano-node-tests revision (default: HEAD)"
+        required: false
       node_rev:
         description: "cardano-node revision (default: HEAD)"
         required: false
@@ -21,12 +24,6 @@ on:
       tx_era:
         description: "Tx era (default: empty)"
         required: false
-      test_threads:
-        description: "Num of pytest workers (default: 15)"
-        required: false
-      clusters_count:
-        description: "Num of cluster instances (default: 5)"
-        required: false
 
 jobs:
   dbsync_regression:
@@ -37,6 +34,7 @@ jobs:
         with:
           access_token: "${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}"
           pipeline: "input-output-hk/cardano-node-tests-dbsync"
+          commit: "${{ github.event.inputs.tests_rev }}"
           message: ":github: Triggered by GitHub Action"
           env: '{
           "NODE_REV":"${{ github.event.inputs.node_rev }}",
@@ -44,7 +42,5 @@ jobs:
           "DBSYNC_REV":"${{ github.event.inputs.dbsync_rev }}",
           "DBSYNC_BRANCH":"${{ github.event.inputs.dbsync_branch }}",
           "CLUSTER_ERA":"${{ github.event.inputs.cluster_era }}",
-          "TX_ERA":"${{ github.event.inputs.tx_era }}",
-          "TEST_THREADS":"${{ github.event.inputs.test_threads }}",
-          "CLUSTERS_COUNT":"${{ github.event.inputs.clusters_count }}"
+          "TX_ERA":"${{ github.event.inputs.tx_era }}"
           }'
