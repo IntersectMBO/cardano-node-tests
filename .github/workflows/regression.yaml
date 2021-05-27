@@ -3,6 +3,9 @@ name: CLI regression tests
 on:
   workflow_dispatch:
     inputs:
+      tests_rev:
+        description: "cardano-node-tests revision (default: HEAD)"
+        required: false
       node_rev:
         description: "cardano-node revision (default: HEAD)"
         required: false
@@ -15,12 +18,6 @@ on:
       tx_era:
         description: "Tx era (default: empty)"
         required: false
-      test_threads:
-        description: "Num of pytest workers (default: 15)"
-        required: false
-      clusters_count:
-        description: "Num of cluster instances (default: 9)"
-        required: false
 
 jobs:
   cli_regression:
@@ -31,12 +28,11 @@ jobs:
         with:
           access_token: "${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}"
           pipeline: "input-output-hk/cardano-node-tests"
+          commit: "${{ github.event.inputs.tests_rev }}"
           message: ":github: Triggered by GitHub Action"
           env: '{
           "NODE_REV":"${{ github.event.inputs.node_rev }}",
           "NODE_BRANCH":"${{ github.event.inputs.node_branch }}",
           "CLUSTER_ERA":"${{ github.event.inputs.cluster_era }}",
-          "TX_ERA":"${{ github.event.inputs.tx_era }}",
-          "TEST_THREADS":"${{ github.event.inputs.test_threads }}",
-          "CLUSTERS_COUNT":"${{ github.event.inputs.clusters_count }}"
+          "TX_ERA":"${{ github.event.inputs.tx_era }}"
           }'
