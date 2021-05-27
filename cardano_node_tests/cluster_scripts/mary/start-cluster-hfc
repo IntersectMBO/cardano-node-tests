@@ -287,9 +287,14 @@ chmod u+x "$STATE_CLUSTER"/{supervisorctl_*,supervisord_start}
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
-while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
-  echo "Waiting 5 seconds for bft node to start"; sleep 5
+for _ in {1..5}; do
+  if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
+    break
+  fi
+  echo "Waiting 5 seconds for bft node to start"
+  sleep 5
 done
+[ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the bft node, line $LINENO" >&2; exit 1; }  # assert
 
 echo "Moving funds out of Byron genesis"
 for i in $(seq 1 $NUM_BFT_NODES); do
