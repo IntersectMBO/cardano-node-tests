@@ -221,9 +221,14 @@ done
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
 echo "waiting for node to start" >> "$STATE_CLUSTER/start-cluster.log"
-while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
-  echo "Waiting 5 seconds for relay node to start"; sleep 5
+for _ in {1..5}; do
+  if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
+    break
+  fi
+  echo "Waiting 5 seconds for relay node to start"
+  sleep 5
 done
+[ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the relay node, line $LINENO" >&2; exit 1; }  # assert
 echo "node started" >> "$STATE_CLUSTER/start-cluster.log"
 
 echo "Waiting to make sure the chain is synced"
