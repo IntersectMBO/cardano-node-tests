@@ -40,13 +40,5 @@
   "slotsPerKESPeriod": 129600,
   "slotLength": 0.2,
   "maxKESEvolutions": 64,
-  "securityParam": 10,
-  "adaPerUTxOWord": 0,
-  "executionPrices": {"prMem": 1, "prSteps": 1},
-  "maxTxExUnits": {"exUnitsMem": 1, "exUnitsSteps": 1},
-  "maxBlockExUnits": {"exUnitsMem": 1, "exUnitsSteps": 1},
-  "maxValueSize": 1000,
-  "collateralPercentage": 100,
-  "maxCollateralInputs": 1,
-  "costModels": "shelley/alonzo/shelley_qa_cost-model.json"
+  "securityParam": 10
 }

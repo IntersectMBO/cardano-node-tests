@@ -60,9 +60,14 @@ cp -r "$TESTNET_DIR/node1-db" "$STATE_CLUSTER/db-relay1"
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
-while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
-  echo "Waiting 5 seconds for relay node to start"; sleep 5
+for _ in {1..5}; do
+  if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
+    break
+  fi
+  echo "Waiting 5 seconds for relay node to start"
+  sleep 5
 done
+[ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the relay node, line $LINENO" >&2; exit 1; }  # assert
 
 echo "Waiting to make sure the chain is synced"
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
