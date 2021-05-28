@@ -75,6 +75,7 @@ def main():
         for build in pipeline_builds:
             # don't add the same build no twice
             if build["state"] == "running":
+                print(f"  ==== build no {build['number']} is still running; not adding it into the DB yet")
                 continue
             if build["number"] not in get_column_values(database_path, env, "build_no"):
                 build_results_dict["build_no"] = build["number"]
