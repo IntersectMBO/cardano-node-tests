@@ -1,4 +1,4 @@
-name: node cli nighlty results
+name: get automated test results
 
 on:
   schedule:
@@ -34,11 +34,11 @@ jobs:
 
           git checkout sync_tests
           echo "current branch1: $(git branch --show-current)"
-      - name: get the cli nightly results for the latest run
+      - name: get the automated tests results
         run: |
           cd cardano_node_tests
           echo "current branch2: $(git branch --show-current)"
-          python sync_tests/get_node_cli_nightly_last_run.py -t ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          python sync_tests/results_write_values_to_db.py -t ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
       - name: commit and push changes
         run: |
           cd cardano_node_tests
@@ -46,7 +46,8 @@ jobs:
 
           git status
 
-          git add sync_tests/csv_files/nightly_build.json
+          git add sync_tests/automated_tests_results.db
+          git add sync_tests/csv_files
 
-          git commit -m "added niglty CLI results - nightly_build.json"
+          git commit -m "added automated test results"
           git push origin HEAD:sync_tests --force
