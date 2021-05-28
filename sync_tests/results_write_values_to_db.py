@@ -19,8 +19,10 @@ nightly_envs = ["node_nightly", "dbsync_nightly"]
 
 def get_buildkite_pipeline_builds(buildkite_token, pipeline_slug):
     url = f"https://api.buildkite.com/v2/organizations/{ORG_SLUG}/pipelines/{pipeline_slug}/builds"
+    web_url = f"https://buildkite.com/{ORG_SLUG}/{pipeline_slug}"
     headers = {'Authorization': "Bearer " + buildkite_token}
     print(f"url: {url}")
+    print(f"web_url: {web_url}")
     response = requests.get(url, headers=headers)
 
     status_code = response.status_code
@@ -72,6 +74,8 @@ def main():
         build_results_dict = OrderedDict()
         for build in pipeline_builds:
             # don't add the same build no twice
+            if build["state"] == "running":
+                continue
             if build["number"] not in get_column_values(database_path, env, "build_no"):
                 build_results_dict["build_no"] = build["number"]
                 build_results_dict["build_id"] = build["id"]
