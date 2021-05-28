@@ -54,12 +54,13 @@ def main():
 
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
-    # print("  ==== Move to 'sync_tests' directory")
-    # os.chdir(current_directory / "sync_tests")
-    # current_directory = Path.cwd()
+    print("  ==== Move to 'sync_tests' directory")
+    os.chdir(current_directory / "sync_tests")
+    current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
 
     database_path = Path(current_directory) / DATABASE_NAME
+    print(f"database_path: {database_path}")
 
     for env in cli_envs:
         print(f" === env: {env}")
