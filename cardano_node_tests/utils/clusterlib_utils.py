@@ -670,13 +670,23 @@ def get_amount(
     return amount
 
 
-def load_tx_metadata(tx_body_file: Path) -> dict:
-    """Load transaction metadata from file containing transaction body."""
+def load_body_metadata(tx_body_file: Path) -> Any:
+    """Load metadata from file containing transaction body."""
     with open(tx_body_file) as body_fp:
         tx_body_json = json.load(body_fp)
 
     cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-    metadata = cbor2.loads(cbor_body)[2]
+    metadata = cbor2.loads(cbor_body)[3]
+
+    if not metadata:
+        return []
+
+    return metadata
+
+
+def load_tx_metadata(tx_body_file: Path) -> dict:
+    """Load transaction metadata from file containing transaction body."""
+    metadata = load_body_metadata(tx_body_file=tx_body_file)
 
     if not metadata:
         return {}
