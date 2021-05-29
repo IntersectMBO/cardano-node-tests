@@ -577,7 +577,7 @@ def filtered_ledger_state(
         "'fromstream(inputs|select((length == 2 and .[0][1] == \"esLState\")|not))'"
     )
 
-    return helpers.run_command(cmd, shell=True).decode("utf-8").strip()
+    return helpers.run_in_bash(cmd).decode("utf-8").strip()
 
 
 def get_ledger_state(
