@@ -21,6 +21,7 @@ from typing import Callable
 from typing import Dict
 from typing import Iterator
 from typing import Optional
+from typing import Union
 
 from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
@@ -90,26 +91,33 @@ def ignore_interrupt() -> Iterator[None]:
         signal.signal(signal.SIGINT, orig_handler)
 
 
-def run_command(command: str, workdir: FileType = "", shell: bool = False) -> bytes:
+def run_command(command: Union[str, list], workdir: FileType = "", shell: bool = False) -> bytes:
     """Run command."""
-    cmd = command if shell else command.split(" ")
+    cmd: Union[str, list]
+    if isinstance(command, str):
+        cmd = command if shell else command.split(" ")
+    else:
+        cmd = command
+
     if workdir:
         with change_cwd(workdir):
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     else:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     stdout, stderr = p.communicate()
+
     if p.returncode != 0:
         err_dec = stderr.decode()
         err_dec = err_dec or stdout.decode()
         raise AssertionError(f"An error occurred while running `{command}`: {err_dec}")
+
     return stdout
 
 
 def run_in_bash(command: str, workdir: FileType = "") -> bytes:
     """Run command(s) in bash."""
-    cmd = f"bash -c '{command}'"
-    return run_command(cmd, workdir=workdir, shell=True)
+    cmd = ["bash", "-o", "pipefail", "-c", f"{command}"]
+    return run_command(cmd, workdir=workdir)
 
 
 @functools.lru_cache
