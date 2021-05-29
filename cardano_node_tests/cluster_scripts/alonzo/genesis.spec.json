@@ -26,7 +26,7 @@
   },
   "protocolMagicId": 42,
   "genDelegs": {},
-  "updateQuorum": 3,
+  "updateQuorum": 1,
   "networkId": "Testnet",
   "initialFunds": {},
   "maxLovelaceSupply": 45000000000000000,
@@ -40,5 +40,7 @@
   "slotsPerKESPeriod": 129600,
   "slotLength": 0.2,
   "maxKESEvolutions": 64,
-  "securityParam": 10
+  "securityParam": 10,
+  "maxValueSize": 4000,
+  "adaPerUTxOWord": 1
 }
