@@ -26,7 +26,7 @@
   },
   "protocolMagicId": 42,
   "genDelegs": {},
-  "updateQuorum": 3,
+  "updateQuorum": 1,
   "networkId": "Testnet",
   "initialFunds": {},
   "maxLovelaceSupply": 45000000000000000,
