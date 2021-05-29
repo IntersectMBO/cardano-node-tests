@@ -4,7 +4,6 @@
 * time locking
 * auxiliary scripts
 """
-import json
 import logging
 import random
 from pathlib import Path
@@ -12,7 +11,6 @@ from typing import List
 from typing import Optional
 
 import allure
-import cbor2
 import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
@@ -1252,11 +1250,9 @@ class TestAuxiliaryScripts:
         )
         assert tx_raw_output.fee, "Transaction had no fee"
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
-
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
+        cbor_body_metadata = clusterlib_utils.load_body_metadata(
+            tx_body_file=tx_raw_output.out_file
+        )
 
         cbor_body_script = cbor_body_metadata[1][0][1]
         assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
@@ -1301,11 +1297,9 @@ class TestAuxiliaryScripts:
         )
         assert tx_raw_output.fee, "Transaction had no fee"
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
-
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
+        cbor_body_metadata = clusterlib_utils.load_body_metadata(
+            tx_body_file=tx_raw_output.out_file
+        )
 
         cbor_body_script = cbor_body_metadata[1][0][2]
         assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
@@ -1346,11 +1340,9 @@ class TestAuxiliaryScripts:
         )
         assert tx_raw_output.fee, "Transaction had no fee"
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
-
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
+        cbor_body_metadata = clusterlib_utils.load_body_metadata(
+            tx_body_file=tx_raw_output.out_file
+        )
 
         cbor_body_script = cbor_body_metadata[1][0][1]
         assert len(cbor_body_script) == len(payment_vkey_files), "Auxiliary script not present"
