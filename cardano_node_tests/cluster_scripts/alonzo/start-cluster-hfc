@@ -38,6 +38,7 @@ cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/genesis.spec.json" "$STATE_CLUSTER/shelley/genesis.spec.json"
 cp "$SCRIPT_DIR/shelley_qa_cost-model.json" "$STATE_CLUSTER/shelley/alonzo"
 
 # enable db-sync service
@@ -81,9 +82,6 @@ cardano_cli_log byron genesis genesis \
 
 mv "$STATE_CLUSTER/byron-params.json" "$STATE_CLUSTER/byron/params.json"
 
-jq -r '.securityParam = 10 | .updateQuorum = 1' \
-  < "$SCRIPT_DIR/genesis.spec.json" > "$STATE_CLUSTER/shelley/genesis.spec.json"
-
 cardano_cli_log genesis create \
   --genesis-dir "$STATE_CLUSTER/shelley" \
   --testnet-magic "$NETWORK_MAGIC" \
@@ -91,8 +89,8 @@ cardano_cli_log genesis create \
   --start-time "$START_TIME_SHELLEY" \
   --gen-utxo-keys 1
 
-# TODO: workaround - change maxValueSize to 100
-jq -r '.maxValueSize = 100' < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
+jq -r '.maxValueSize = 4000 | .adaPerUTxOWord = 1' \
+  < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
 cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
 rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
 
