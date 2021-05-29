@@ -37,6 +37,7 @@ cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/genesis.spec.json" "$STATE_CLUSTER/shelley/genesis.spec.json"
 
 # enable db-sync service
 if [ -n "${DBSYNC_REPO:-""}" ]; then
