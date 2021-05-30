@@ -295,6 +295,7 @@ class TestDelegateAddr:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.run(order=2)
+    @pytest.mark.rewards
     @pytest.mark.dbsync
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
@@ -798,6 +799,7 @@ class TestRewards:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @pytest.mark.rewards
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET,
         reason="supposed to run on testnet with pools",
