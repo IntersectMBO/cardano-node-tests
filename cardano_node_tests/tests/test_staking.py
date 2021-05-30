@@ -345,12 +345,13 @@ class TestDelegateAddr:
         src_address = delegation_out.pool_user.payment.address
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
-        for __ in range(5):
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
             if cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
             ).reward_account_balance:
                 break
-            cluster.wait_for_new_epoch(padding_seconds=10)
         else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
@@ -837,18 +838,15 @@ class TestRewards:
             check_delegation=False,
         )
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+            if cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
-            ).reward_account_balance
-            > 0,
-            delay=600,
-            num_sec=4 * cluster.epoch_length_sec + 600,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+            ).reward_account_balance:
+                break
+        else:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         assert (
@@ -1373,17 +1371,14 @@ class TestRewards:
         owner_reward = cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
         ep6_owner_reward = owner_rewards[5][1]
         if owner_reward == ep6_owner_reward:
-            LOGGER.info("Waiting up to 4 epochs for first reward for delegated reward amount.")
-            reward_for_reward = helpers.wait_for(
-                lambda: cluster.get_stake_addr_info(
-                    pool_reward.stake.address
-                ).reward_account_balance,
-                delay=10,
-                num_sec=4 * cluster.epoch_length_sec + 100,
-                message="receive rewards",
-                silent=True,
-            )
-            assert reward_for_reward, "Haven't received any reward for delegated reward address"
+            LOGGER.info("Waiting up to 4 full epochs for first reward for delegated reward amount.")
+            for i in range(5):
+                if i > 0:
+                    cluster.wait_for_new_epoch(padding_seconds=10)
+                if cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance:
+                    break
+            else:
+                raise AssertionError("Haven't received any reward for delegated reward address")
 
     @allure.link(helpers.get_vcs_link())
     def test_decreasing_reward_transfered_funds(
@@ -1429,17 +1424,15 @@ class TestRewards:
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+            if cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
-            ).reward_account_balance,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+            ).reward_account_balance:
+                break
+        else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # transfer all funds from payment address back to faucet, so no funds are staked
@@ -1478,13 +1471,11 @@ class TestRewards:
                     tx_name=f"{temp_template}_ep{epoch}",
                 )
 
-        LOGGER.info("Withdrawing new rewards for 4 epochs.")
-        helpers.wait_for(
-            _withdraw,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            silent=True,
-        )
+        LOGGER.info("Withdrawing new rewards for next 4 epochs.")
+        _withdraw()
+        for __ in range(4):
+            cluster.wait_for_new_epoch(padding_seconds=10)
+            _withdraw()
 
         assert rewards_rec[-1] < rewards_rec[-2] // 3, "Rewards are not decreasing"
 
@@ -1524,17 +1515,15 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+            if cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
-            ).reward_account_balance,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+            ).reward_account_balance:
+                break
+        else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         node_cold = pool_rec["cold_key_pair"]
@@ -1658,17 +1647,15 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+            if cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
-            ).reward_account_balance,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+            ).reward_account_balance:
+                break
+        else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         node_cold = pool_rec["cold_key_pair"]
@@ -1811,17 +1798,15 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+            if cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
-            ).reward_account_balance,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+            ).reward_account_balance:
+                break
+        else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # deregister stake address - owner's stake is lower than pledge
@@ -1976,17 +1961,16 @@ class TestRewards:
             pool_name=pool_name,
         )
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+            if cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
-            ).reward_account_balance,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+            ).reward_account_balance:
+                break
+            cluster.wait_for_new_epoch(padding_seconds=10)
+        else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw pool rewards to payment address
@@ -2121,6 +2105,7 @@ class TestRewards:
         * check that pool owner is receiving rewards
         """
         # pylint: disable=too-many-statements
+        __: Any  # mypy workaround
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
 
@@ -2129,15 +2114,13 @@ class TestRewards:
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = helpers.get_func_name()
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+            if cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance:
+                break
+        else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw pool rewards to payment address
@@ -2287,12 +2270,14 @@ class TestRewards:
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
             LOGGER.info("Waiting up to 5 epochs for stake pool to be reregistered.")
-            helpers.wait_for(
-                lambda: stake_pool_id in cluster.get_stake_distribution(),
-                delay=10,
-                num_sec=5 * cluster.epoch_length_sec,
-                message="reregister stake pool",
-            )
+            for __ in range(5):
+                cluster.wait_for_new_epoch(padding_seconds=10)
+                if stake_pool_id in cluster.get_stake_distribution():
+                    break
+            else:
+                raise AssertionError(
+                    f"Stake pool `{stake_pool_id}` not registered even after 5 epochs"
+                )
 
             # wait before checking delegation and rewards
             cluster.wait_for_new_epoch(3, padding_seconds=30)
@@ -2350,15 +2335,13 @@ class TestRewards:
             cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=stake_pool_id
         )
 
-        LOGGER.info("Waiting up to 4 epochs for first reward.")
-        stake_reward = helpers.wait_for(
-            lambda: cluster.get_stake_addr_info(pool2_reward.stake.address).reward_account_balance,
-            delay=10,
-            num_sec=4 * cluster.epoch_length_sec + 100,
-            message="receive rewards",
-            silent=True,
-        )
-        if not stake_reward:
+        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        for i in range(5):
+            if i > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+            if cluster.get_stake_addr_info(pool2_reward.stake.address).reward_account_balance:
+                break
+        else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # get combined reward amount per epoch for pool1 and pool2

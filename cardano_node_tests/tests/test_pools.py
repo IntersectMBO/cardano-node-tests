@@ -111,13 +111,14 @@ def _check_staking(
     """Check that staking was correctly setup."""
     pool_params: dict = cluster_obj.get_pool_params(stake_pool_id).pool_params
 
-    LOGGER.info("Waiting up to 3 epochs for stake pool to be registered.")
-    helpers.wait_for(
-        lambda: stake_pool_id in cluster_obj.get_stake_distribution(),
-        delay=10,
-        num_sec=3 * cluster_obj.epoch_length_sec,
-        message="register stake pool",
-    )
+    LOGGER.info("Waiting up to 3 full epochs for stake pool to be registered.")
+    for i in range(4):
+        if i > 0:
+            cluster_obj.wait_for_new_epoch(padding_seconds=10)
+        if stake_pool_id in cluster_obj.get_stake_distribution():
+            break
+    else:
+        raise AssertionError(f"Stake pool `{stake_pool_id}` not registered even after 3 epochs")
 
     for owner in pool_owners:
         stake_addr_info = cluster_obj.get_stake_addr_info(owner.stake.address)
@@ -737,13 +738,15 @@ class TestStakePool:
             f"({src_init_balance}, {tx_raw_output.fee}, {cluster.get_pool_deposit()})"
         )
 
-        LOGGER.info("Waiting up to 5 epochs for stake pool to be reregistered.")
-        helpers.wait_for(
-            lambda: pool_creation_out.stake_pool_id in cluster.get_stake_distribution(),
-            delay=10,
-            num_sec=5 * cluster.epoch_length_sec,
-            message="reregister stake pool",
-        )
+        LOGGER.info("Waiting up to 5 full epochs for stake pool to be reregistered.")
+        for __ in range(5):
+            cluster.wait_for_new_epoch(padding_seconds=10)
+            if pool_creation_out.stake_pool_id in cluster.get_stake_distribution():
+                break
+        else:
+            raise AssertionError(
+                f"Stake pool `{pool_creation_out.stake_pool_id}` not registered even after 5 epochs"
+            )
         # check that pool was correctly setup
         _check_pool(
             cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data
@@ -868,13 +871,10 @@ class TestStakePool:
         ), f"Incorrect balance for source address `{src_address}`"
 
         LOGGER.info("Checking for 3 epochs that the stake pool will NOT get deregistered.")
-        pool_deregistered = helpers.wait_for(
-            lambda: not cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params,
-            delay=10,
-            num_sec=3 * cluster.epoch_length_sec,
-            silent=True,
-        )
-        assert not pool_deregistered, "Pool got deregistered"
+        for __ in range(3):
+            cluster.wait_for_new_epoch(padding_seconds=10)
+            if not cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params:
+                raise AssertionError("Pool `{pool_creation_out.stake_pool_id}` got deregistered")
 
         # check that pool is still correctly setup
         _check_pool(
