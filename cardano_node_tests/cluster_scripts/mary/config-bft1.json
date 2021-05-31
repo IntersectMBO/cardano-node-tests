@@ -9,7 +9,6 @@
     "Protocol": "Cardano",
     "RequiresNetworkMagic": "RequiresMagic",
     "ShelleyGenesisFile": "shelley/genesis.json",
-    "AlonzoGenesisFile": "shelley/genesis.alonzo.json",
     "TraceBlockFetchClient": false,
     "TraceBlockFetchDecisions": false,
     "TraceBlockFetchProtocol": false,

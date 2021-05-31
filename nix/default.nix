@@ -33,7 +33,7 @@ let
       cardanoNodeShell = import (sources.cardano-node + "/shell.nix") { inherit pkgs; };
 
       cardanoNodeTestsShell = self.cardanoNodeShell.devops.overrideAttrs (oldAttrs: rec {
-        nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [ pkgs.git (pkgs.python3.withPackages (ps: with ps; [
+        buildInputs = oldAttrs.buildInputs ++ [ pkgs.git (pkgs.python3.withPackages (ps: with ps; [
           pytest
           allure
           cardano-clusterlib
