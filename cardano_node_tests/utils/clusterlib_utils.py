@@ -676,7 +676,8 @@ def load_body_metadata(tx_body_file: Path) -> Any:
         tx_body_json = json.load(body_fp)
 
     cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-    metadata = cbor2.loads(cbor_body)[3]
+    loaded_body = cbor2.loads(cbor_body)
+    metadata = loaded_body[-1]
 
     if not metadata:
         return []
