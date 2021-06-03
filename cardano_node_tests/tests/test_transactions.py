@@ -27,6 +27,7 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -138,7 +139,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
+    @pytest.mark.parametrize("amount", (30, 100, 200, 2000, 1000_000, 2000_000))
     def test_transfer_funds(
         self,
         cluster: clusterlib.ClusterLib,
@@ -150,6 +151,12 @@ class TestBasic:
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
         """
+        if (
+            amount < 1000_000
+            and cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL
+        ):
+            pytest.skip("Supposed to run on local cluster.")
+
         temp_template = f"{helpers.get_func_name()}_{amount}"
 
         src_address = payment_addrs[0].address
@@ -242,7 +249,7 @@ class TestBasic:
         * check expected balances for both source and destination addresses
         """
         temp_template = helpers.get_func_name()
-        amount = 100
+        amount = 1000_000
 
         src_address = payment_addrs[0].address
         dst_address = "addr_test1vpst87uzwafqkxumyf446zr2jsyn44cfpu9fe8yqanyuh6glj2hkl"
@@ -292,7 +299,7 @@ class TestBasic:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=2000)]
+        destinations = [clusterlib.TxOut(address=dst_address, amount=1000_000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         tx_raw_output = cluster.send_funds(
             src_address=src_address,
@@ -326,7 +333,7 @@ class TestBasic:
         signing keys for signing the transaction.
         """
         temp_template = helpers.get_func_name()
-        amount = 100
+        amount = 1000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -368,7 +375,7 @@ class TestBasic:
         Check that it is possible to specify the same signing key twice.
         """
         temp_template = helpers.get_func_name()
-        amount = 100
+        amount = 1000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -420,7 +427,7 @@ class TestBasic:
             src_record,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=200_000,
+            amount=1000_000,
         )
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_record.skey_file])
@@ -557,7 +564,7 @@ class TestMultiInOut:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=100_000_000,
+            amount=9000_000_000,
         )
 
         return addrs
@@ -585,13 +592,15 @@ class TestMultiInOut:
         # returned to `src_address`, so it should always have enough funds. The "from" addresses has
         # zero balance after each test.
         fund_amount = int(amount * len(dst_addresses) / len(from_addr_recs))
+        # min UTxO on testnets is 1 ADA
+        fund_amount = fund_amount if fund_amount >= 1000_000 else 1000_000
         fund_dst = [
             clusterlib.TxOut(address=d.address, amount=fund_amount) for d in from_addr_recs[:-1]
         ]
         # add more funds to the last "from" address so it can cover TX fee
         last_from_addr_rec = from_addr_recs[-1]
         fund_dst.append(
-            clusterlib.TxOut(address=last_from_addr_rec.address, amount=fund_amount + 5_000_000)
+            clusterlib.TxOut(address=last_from_addr_rec.address, amount=fund_amount + 5000_000)
         )
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         cluster_obj.send_funds(
@@ -682,7 +691,7 @@ class TestMultiInOut:
             tx_files=tx_files,
             ttl=ttl,
         )
-        amount = int(fee / no_of_transactions + 1000)
+        amount = 1000_000
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         for i in range(no_of_transactions):
@@ -707,7 +716,7 @@ class TestMultiInOut:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1, 100, 11_000))
+    @pytest.mark.parametrize("amount", (30, 100, 1000_000))
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_1_addr(
         self,
@@ -720,6 +729,12 @@ class TestMultiInOut:
         * send funds from 1 source address to 10 destination addresses
         * check expected balances for both source and destination addresses
         """
+        if (
+            amount < 1000_000
+            and cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL
+        ):
+            pytest.skip("Supposed to run on local cluster.")
+
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
@@ -730,7 +745,7 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1, 100, 11_000, 100_000))
+    @pytest.mark.parametrize("amount", (500, 1000, 11_000, 1000_000))
     @pytest.mark.dbsync
     def test_transaction_to_1_addr_from_10_addrs(
         self,
@@ -743,6 +758,12 @@ class TestMultiInOut:
         * send funds from 10 source addresses to 1 destination address
         * check expected balances for both source and destination addresses
         """
+        if (
+            amount < 1000_000
+            and cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL
+        ):
+            pytest.skip("Supposed to run on local cluster.")
+
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
@@ -753,7 +774,7 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1, 100, 11_000))
+    @pytest.mark.parametrize("amount", (50, 100, 1000_000))
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
@@ -766,6 +787,12 @@ class TestMultiInOut:
         * send funds from 10 source addresses to 10 destination addresses
         * check expected balances for both source and destination addresses
         """
+        if (
+            amount < 1000_000
+            and cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL
+        ):
+            pytest.skip("Supposed to run on local cluster.")
+
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
@@ -776,7 +803,7 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1, 100, 1000))
+    @pytest.mark.parametrize("amount", (50, 100, 1000_000))
     @pytest.mark.dbsync
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
@@ -789,6 +816,12 @@ class TestMultiInOut:
         * send funds from 50 source addresses to 100 destination addresses
         * check expected balances for both source and destination addresses
         """
+        if (
+            amount < 1000_000
+            and cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL
+        ):
+            pytest.skip("Supposed to run on local cluster.")
+
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
@@ -876,7 +909,7 @@ class TestManyUTXOs:
             out_addrs = [*out_addrs1, *out_addrs2]
 
             for i in range(25):
-                for amount in range(1, 21):
+                for amount in range(30, 51):
                     self._from_to_transactions(
                         cluster_obj=cluster,
                         payment_addr=payment_addr,
@@ -906,7 +939,7 @@ class TestManyUTXOs:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 10_000, 100_000, 1000_000))
+    @pytest.mark.parametrize("amount", (30, 60, 200, 2000, 10_000, 100_000, 1000_000))
     def test_mini_transactions(
         self,
         cluster: clusterlib.ClusterLib,
@@ -921,6 +954,12 @@ class TestManyUTXOs:
           to destination address
         * check expected balances for both source and destination addresses
         """
+        if (
+            amount < 1000_000
+            and cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL
+        ):
+            pytest.skip("Supposed to run on local cluster.")
+
         temp_template = f"{helpers.get_func_name()}_{amount}"
         big_funds_idx = -190
 
@@ -1184,7 +1223,6 @@ class TestNegative:
             *created_users,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=1_000_000,
         )
 
         return created_users
@@ -1306,7 +1344,7 @@ class TestNegative:
         Expect failure.
         """
         temp_template = helpers.get_func_name()
-        amount = 100
+        amount = 1000_000
 
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
@@ -1368,7 +1406,7 @@ class TestNegative:
 
         # use wrong signing key
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[1].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=100)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000)]
 
         # it should NOT be possible to submit a transaction with wrong signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1985,7 +2023,7 @@ class TestMetadata:
             src_record,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=500_000,
+            amount=1000_000,
         )
 
         tx_files = clusterlib.TxFiles(

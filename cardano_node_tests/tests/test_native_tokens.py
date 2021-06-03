@@ -69,7 +69,7 @@ def issuers_addrs(
         addrs[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=900_000_000,
+        amount=9000_000_000,
     )
 
     return addrs
@@ -1413,7 +1413,6 @@ class TestTransfer:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=20_000_000,
         )
 
         return addrs
@@ -1528,7 +1527,6 @@ class TestTransfer:
         """
         temp_template = helpers.get_func_name()
         amount = 1000
-        amount_lovelace = 10
         rand = clusterlib.get_rand_str(5)
 
         new_tokens = clusterlib_utils.new_tokens(
