@@ -10,6 +10,10 @@ ALLURE_DIR ?= .reports/
 ifeq ($(TEST_THREADS),)
 	TEST_THREADS := 15
 endif
+# TODO: use TEST_THREADS for testnets
+ifeq ($(TESTNETS_THREADS),)
+	TESTNETS_THREADS := 20
+endif
 
 .dirs:
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(ALLURE_DIR)
@@ -38,7 +42,7 @@ ifndef PYTEST_ARGS
 	pytest -s cardano_node_tests -m testnets --skipall --alluredir=$(ALLURE_DIR) >/dev/null
 endif
 # run tests for real and produce Allure results
-	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) -n $(TEST_THREADS) -m "testnets and not rewards" --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
+	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) -n $(TESTNETS_THREADS) -m "testnets and not rewards" --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
 
 # run linters
 lint:

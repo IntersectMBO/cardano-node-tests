@@ -16,6 +16,7 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -229,7 +230,7 @@ class TestMIRCerts:
     ):
         """Send funds from the reserves pot to the treasury pot.
 
-        Expected to fail until Alonzo.
+        Expected to fail when Era < Alonzo.
         """
         temp_template = helpers.get_func_name()
         cluster = cluster_pots
@@ -246,14 +247,29 @@ class TestMIRCerts:
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
-        # fail is expected until Alonzo
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
-                src_address=pool_user.payment.address,
-                tx_name=temp_template,
-                tx_files=tx_files,
+        # fail is expected when Era < Alonzo
+        if VERSIONS.cluster_era < VERSIONS.ALONZO:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.send_tx(
+                    src_address=pool_user.payment.address,
+                    tx_name=temp_template,
+                    tx_files=tx_files,
+                )
+            assert "MIRTransferNotCurrentlyAllowed" in str(excinfo.value)
+            return
+
+        tx_raw_output = cluster.send_tx(
+            src_address=pool_user.payment.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+        )
+
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            assert tx_db_record.treasury[0].amount == amount, (
+                "Incorrect amount transferred from treasury "
+                f"({tx_db_record.treasury[0].amount} != {amount})"
             )
-        assert "MIRTransferNotCurrentlyAllowed" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_transfer_to_rewards(
@@ -261,12 +277,14 @@ class TestMIRCerts:
     ):
         """Send funds from the treasury pot to the reserves pot.
 
-        Expected to fail until Alonzo.
+        Expected to fail when Era < Alonzo.
         """
         temp_template = helpers.get_func_name()
         cluster = cluster_pots
         pool_user = pool_users[0]
         amount = 50_000
+
+        init_balance = cluster.get_address_balance(pool_user.payment.address)
 
         mir_cert = cluster.gen_mir_cert_to_rewards(transfer=amount, tx_name=temp_template)
         tx_files = clusterlib.TxFiles(
@@ -278,14 +296,34 @@ class TestMIRCerts:
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
-        # fail is expected until Alonzo
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
-                src_address=pool_user.payment.address,
-                tx_name=temp_template,
-                tx_files=tx_files,
+        # fail is expected when Era < Alonzo
+        if VERSIONS.cluster_era < VERSIONS.ALONZO:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.send_tx(
+                    src_address=pool_user.payment.address,
+                    tx_name=temp_template,
+                    tx_files=tx_files,
+                )
+            assert "MIRTransferNotCurrentlyAllowed" in str(excinfo.value)
+            return
+
+        tx_raw_output = cluster.send_tx(
+            src_address=pool_user.payment.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+        )
+
+        assert (
+            cluster.get_address_balance(pool_user.payment.address)
+            == init_balance - tx_raw_output.fee
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            assert tx_db_record.reserve[0].amount == amount, (
+                "Incorrect amount transferred from reserve "
+                f"({tx_db_record.reserve[0].amount} != {amount})"
             )
-        assert "MIRTransferNotCurrentlyAllowed" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

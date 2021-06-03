@@ -328,6 +328,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     return pool_creation_out
 
 
+@pytest.mark.run(order=2)
 @pytest.mark.testnets
 class TestStakePool:
     """General tests for stake pools."""
@@ -964,7 +965,7 @@ class TestStakePool:
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=900_000_000,
+            amount=900_000_000 * no_of_addr,
         )
 
         # register pool
@@ -1066,7 +1067,7 @@ class TestStakePool:
             pool_owners[0].payment,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=900_000_000,
+            amount=900_000_000 * no_of_addr,
         )
 
         # register pool
