@@ -606,6 +606,10 @@ class TestNegative:
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
+        reason="supposed to run on cluster with pools",
+    )
     def test_delegation_cert_with_wrong_key(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -665,6 +669,10 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
+        reason="supposed to run on cluster with pools",
+    )
     def test_delegate_addr_with_wrong_key(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -721,6 +729,10 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
+        reason="supposed to run on cluster with pools",
+    )
     def test_delegate_unregistered_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,

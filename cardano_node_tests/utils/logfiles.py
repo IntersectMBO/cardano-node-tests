@@ -29,9 +29,11 @@ ERRORS_IGNORED = [
     "TraceDidntAdoptBlock",
     "failedScripts",
 ]
+if configuration.CLUSTER_ERA == "alonzo":
+    ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
 # if running on testnet, not local cluster
 if configuration.BOOTSTRAP_DIR:
-    ERRORS_IGNORED.extend(["closed when reading data, waiting on next header"])
+    ERRORS_IGNORED.append("closed when reading data, waiting on next header")
 ERRORS_RULES_FILE_NAME = ".errors_rules"
 
 
