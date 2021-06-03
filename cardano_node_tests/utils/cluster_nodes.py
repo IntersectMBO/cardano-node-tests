@@ -168,7 +168,7 @@ class LocalCluster(ClusterType):
             *to_fund,
             cluster_obj=cluster_obj,
             faucet_data=byron_addrs_data["byron000"],
-            amount=60_000_000_000_000,
+            amount=100_000_000_000_000,
             destination_dir=destination_dir,
             force=True,
         )
@@ -253,6 +253,7 @@ class TestnetCluster(ClusterType):
             slots_offset=slots_offset,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
+        cluster_obj._min_change_value = 1000_000  # TODO: hardcoded `minUTxOValue`
         return cluster_obj
 
     def create_addrs_data(

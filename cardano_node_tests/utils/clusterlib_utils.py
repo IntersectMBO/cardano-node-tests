@@ -160,7 +160,7 @@ def fund_from_faucet(
     *dst_addrs: Union[clusterlib.AddressRecord, clusterlib.PoolUser],
     cluster_obj: clusterlib.ClusterLib,
     faucet_data: dict,
-    amount: int = 3_000_000,
+    amount: int = 1000_000_000,
     tx_name: Optional[str] = None,
     destination_dir: FileType = ".",
     force: bool = False,
