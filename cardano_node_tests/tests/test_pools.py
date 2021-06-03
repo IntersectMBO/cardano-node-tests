@@ -10,12 +10,14 @@ import json
 import logging
 from pathlib import Path
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
+from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
@@ -139,6 +141,7 @@ def _create_register_pool(
     temp_template: str,
     pool_owners: List[clusterlib.PoolUser],
     pool_data: clusterlib.PoolData,
+    request: Optional[FixtureRequest] = None,
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool.
 
@@ -151,6 +154,20 @@ def _create_register_pool(
     pool_creation_out = cluster_obj.create_stake_pool(
         pool_data=pool_data, pool_owners=pool_owners, tx_name=temp_template
     )
+
+    # deregister stake pool
+    def _deregister():
+        depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        cluster_obj.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=pool_creation_out.cold_key_pair,
+            epoch=cluster_obj.get_epoch() + depoch,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
+    if request is not None:
+        request.addfinalizer(_deregister)
 
     # check that the balance for source address was correctly updated
     assert (
@@ -173,6 +190,7 @@ def _create_register_pool_delegate_stake_tx(
     pool_owners: List[clusterlib.PoolUser],
     temp_template: str,
     pool_data: clusterlib.PoolData,
+    request: Optional[FixtureRequest] = None,
 ):
     """Create and register a stake pool, delegate stake address - all in single TX.
 
@@ -229,6 +247,20 @@ def _create_register_pool_delegate_stake_tx(
         src_address=src_address, tx_name=temp_template, tx_files=tx_files
     )
 
+    # deregister stake pool
+    def _deregister():
+        depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        cluster_obj.deregister_stake_pool(
+            pool_owners=pool_owners,
+            cold_key_pair=node_cold,
+            epoch=cluster_obj.get_epoch() + depoch,
+            pool_name=pool_data.pool_name,
+            tx_name=temp_template,
+        )
+
+    if request is not None:
+        request.addfinalizer(_deregister)
+
     # check that the balance for source address was correctly updated
     assert (
         cluster_obj.get_address_balance(src_address)
@@ -263,6 +295,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     pool_owners: List[clusterlib.PoolUser],
     temp_template: str,
     pool_data: clusterlib.PoolData,
+    request: Optional[FixtureRequest] = None,
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool - first TX; delegate stake address - second TX.
 
@@ -274,6 +307,7 @@ def _create_register_pool_tx_delegate_stake_tx(
         temp_template=temp_template,
         pool_owners=pool_owners,
         pool_data=pool_data,
+        request=request,
     )
 
     # create stake address registration certs
@@ -339,6 +373,7 @@ class TestStakePool:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
+        request: FixtureRequest,
     ):
         """Create and register a stake pool with metadata.
 
@@ -382,21 +417,12 @@ class TestStakePool:
         )
 
         # register pool and delegate stake address
-        pool_creation_out = _create_register_pool_delegate_stake_tx(
+        _create_register_pool_delegate_stake_tx(
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
             pool_data=pool_data,
-        )
-
-        # deregister stake pool
-        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
+            request=request,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -405,6 +431,7 @@ class TestStakePool:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
+        request: FixtureRequest,
     ):
         """Create and register a stake pool with metadata file not available.
 
@@ -449,21 +476,12 @@ class TestStakePool:
         )
 
         # register pool and delegate stake address
-        pool_creation_out = _create_register_pool_tx_delegate_stake_tx(
+        _create_register_pool_tx_delegate_stake_tx(
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
             pool_data=pool_data,
-        )
-
-        # deregister stake pool
-        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
+            request=request,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -473,6 +491,7 @@ class TestStakePool:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         no_of_addr: int,
+        request: FixtureRequest,
     ):
         """Create and register a stake pool (without metadata).
 
@@ -504,21 +523,12 @@ class TestStakePool:
         )
 
         # register pool
-        pool_creation_out = _create_register_pool(
+        _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
             pool_owners=pool_owners,
             pool_data=pool_data,
-        )
-
-        # deregister stake pool
-        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
+            request=request,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -633,6 +643,7 @@ class TestStakePool:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
+        request: FixtureRequest,
     ):
         """Reregister stake pool.
 
@@ -730,6 +741,19 @@ class TestStakePool:
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
 
+        # deregister stake pool
+        def _deregister():
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            cluster.deregister_stake_pool(
+                pool_owners=pool_owners,
+                cold_key_pair=pool_creation_out.cold_key_pair,
+                epoch=cluster.get_epoch() + depoch,
+                pool_name=pool_data.pool_name,
+                tx_name=temp_template,
+            )
+
+        request.addfinalizer(_deregister)
+
         # check that the balance for source address was correctly updated
         assert (
             cluster.get_address_balance(src_address)
@@ -760,22 +784,13 @@ class TestStakePool:
             stake_pool_id=pool_creation_out.stake_pool_id,
         )
 
-        # deregister stake pool
-        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
-        )
-
     @allure.link(helpers.get_vcs_link())
     def test_cancel_stake_pool_deregistration(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
+        request: FixtureRequest,
     ):
         """Reregister a stake pool that is in course of being retired.
 
@@ -865,6 +880,19 @@ class TestStakePool:
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
+        # deregister stake pool
+        def _deregister():
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            cluster.deregister_stake_pool(
+                pool_owners=pool_owners,
+                cold_key_pair=pool_creation_out.cold_key_pair,
+                epoch=cluster.get_epoch() + depoch,
+                pool_name=pool_data.pool_name,
+                tx_name=temp_template,
+            )
+
+        request.addfinalizer(_deregister)
+
         # check that the balance for source address was correctly updated
         # and no additional pool deposit was used
         assert (
@@ -889,16 +917,6 @@ class TestStakePool:
             stake_pool_id=pool_creation_out.stake_pool_id,
         )
 
-        # deregister stake pool
-        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
-        )
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_metadata(
@@ -907,6 +925,7 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         no_of_addr: int,
+        request: FixtureRequest,
     ):
         """Update stake pool metadata.
 
@@ -974,6 +993,7 @@ class TestStakePool:
             temp_template=temp_template,
             pool_owners=pool_owners,
             pool_data=pool_data,
+            request=request,
         )
 
         # update the pool metadata by resubmitting the pool registration certificate
@@ -1001,16 +1021,6 @@ class TestStakePool:
             pool_data=pool_data_updated,
         )
 
-        # deregister stake pool
-        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
-        )
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("no_of_addr", [1, 2])
     def test_update_stake_pool_parameters(
@@ -1019,6 +1029,7 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
         temp_dir: Path,
         no_of_addr: int,
+        request: FixtureRequest,
     ):
         """Update stake pool parameters.
 
@@ -1076,6 +1087,7 @@ class TestStakePool:
             temp_template=temp_template,
             pool_owners=pool_owners,
             pool_data=pool_data,
+            request=request,
         )
 
         # update the pool parameters by resubmitting the pool registration certificate
@@ -1103,21 +1115,12 @@ class TestStakePool:
             pool_data=pool_data_updated,
         )
 
-        # deregister stake pool
-        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
-        )
-
     @allure.link(helpers.get_vcs_link())
     def test_sign_in_multiple_stages(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
+        request: FixtureRequest,
     ):
         """Create and register a stake pool with TX signed in multiple stages.
 
@@ -1214,6 +1217,19 @@ class TestStakePool:
         # create and register pool
         cluster.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
+        # deregister stake pool
+        def _deregister():
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            cluster.deregister_stake_pool(
+                pool_owners=pool_owners,
+                cold_key_pair=node_cold,
+                epoch=cluster.get_epoch() + depoch,
+                pool_name=pool_data.pool_name,
+                tx_name=temp_template,
+            )
+
+        request.addfinalizer(_deregister)
+
         # check that the balance for source address was correctly updated
         assert (
             cluster.get_address_balance(src_address)
@@ -1228,16 +1244,6 @@ class TestStakePool:
             cluster_obj=cluster,
             stake_pool_id=stake_pool_id,
             pool_data=pool_data,
-        )
-
-        # deregister stake pool
-        depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=node_cold,
-            epoch=cluster.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1416,6 +1422,7 @@ class TestPoolCost:
         cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
         pool_cost: int,
+        request: FixtureRequest,
     ):
         """Create and register a stake pool with *pool cost* >= *minPoolCost*."""
         cluster = cluster_mincost
@@ -1450,6 +1457,7 @@ class TestPoolCost:
             temp_template=temp_template,
             pool_owners=pool_owners,
             pool_data=pool_data,
+            request=request,
         )
 
 
