@@ -5,6 +5,8 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import NamedTuple
+from typing import Optional
+from typing import Tuple
 
 import allure
 import pytest
@@ -44,6 +46,31 @@ def temp_dir(create_temp_dir: Path):
 
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
+@pytest.fixture
+def cluster_and_pool(
+    cluster_manager: cluster_management.ClusterManager,
+) -> Tuple[clusterlib.ClusterLib, str]:
+    """Return instance of `clusterlib.ClusterLib`, and pool id to delegate to.
+
+    We need to mark the pool as "in use" when requesting local cluster
+    instance, that's why cluster instance and pool id are tied together in
+    single fixture.
+    """
+    if cluster_nodes.ClusterType.TESTNET_NOPOOLS:
+        cluster_obj = cluster_manager.get()
+        stake_dist = cluster_obj.get_stake_distribution()
+        # TODO: make sure the pool is not private
+        pool_id = max(stake_dist, key=lambda key: stake_dist[key])
+    else:
+        cluster_obj = cluster_manager.get(use_resources=[cluster_management.Resources.POOL1])
+        pool_id = _get_pool_id(
+            cluster_obj=cluster_obj,
+            addrs_data=cluster_manager.cache.addrs_data,
+            pool_name="node-pool1",
+        )
+    return cluster_obj, pool_id
 
 
 @pytest.fixture
@@ -121,19 +148,26 @@ def _get_reward_for_key_hash(key_hash: str, rec: list) -> int:
     return 0
 
 
-def _delegate_stake_addr(
+def _get_pool_id(
+    cluster_obj: clusterlib.ClusterLib,
+    addrs_data: dict,
+    pool_name: str,
+) -> str:
+    """Return stake pool id."""
+    node_cold = addrs_data[pool_name]["cold_key_pair"]
+    return cluster_obj.get_stake_pool_id(node_cold.vkey_file)
+
+
+def _delegate_stake_add(
     cluster_obj: clusterlib.ClusterLib,
     addrs_data: dict,
     temp_template: str,
-    pool_name: str,
+    pool_id: str = "",
+    cold_vkey: Optional[Path] = None,
     amount: int = 100_000_000,
-    delegate_with_pool_id: bool = False,
     check_delegation: bool = True,
 ) -> DelegationOut:
     """Submit registration certificate and delegate to pool."""
-    node_cold = addrs_data[pool_name]["cold_key_pair"]
-    stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
-
     # create key pairs and addresses
     stake_addr_rec = clusterlib_utils.create_stake_addr_records(
         f"{temp_template}_addr0", cluster_obj=cluster_obj
@@ -156,10 +190,11 @@ def _delegate_stake_addr(
         "addr_name": f"{temp_template}_addr0",
         "stake_vkey_file": stake_addr_rec.vkey_file,
     }
-    if delegate_with_pool_id:
-        deleg_kwargs["stake_pool_id"] = stake_pool_id
-    else:
-        deleg_kwargs["cold_vkey_file"] = node_cold.vkey_file
+    if pool_id:
+        deleg_kwargs["stake_pool_id"] = pool_id
+    elif cold_vkey:
+        deleg_kwargs["cold_vkey_file"] = cold_vkey
+        pool_id = cluster_obj.get_stake_pool_id(cold_vkey)
 
     stake_addr_deleg_cert_file = cluster_obj.gen_stake_addr_delegation_cert(**deleg_kwargs)
 
@@ -194,9 +229,9 @@ def _delegate_stake_addr(
         clusterlib_utils.wait_for_stake_distribution(cluster_obj)
         stake_addr_info = cluster_obj.get_stake_addr_info(stake_addr_rec.address)
         assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
-        assert stake_pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
+        assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
-    return DelegationOut(pool_user=pool_user, pool_id=stake_pool_id, tx_raw_output=tx_raw_output)
+    return DelegationOut(pool_user=pool_user, pool_id=pool_id, tx_raw_output=tx_raw_output)
 
 
 @pytest.mark.testnets
@@ -206,22 +241,17 @@ class TestDelegateAddr:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
-        reason="supposed to run on cluster with pools",
-    )
     def test_delegate_using_pool_id(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
     ):
         """Submit registration certificate and delegate to pool using pool id.
 
         * register stake address and delegate it to pool
         * check that the stake address was delegated
         """
-        pool_name = "node-pool1"
-        cluster = cluster_use_pool1
+        cluster, pool_id = cluster_and_pool
         temp_template = helpers.get_func_name()
 
         clusterlib_utils.wait_for_epoch_interval(
@@ -230,12 +260,11 @@ class TestDelegateAddr:
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            delegate_with_pool_id=True,
-            pool_name=pool_name,
+            pool_id=pool_id,
         )
 
         tx_db_record = dbsync_utils.check_tx(
@@ -275,11 +304,12 @@ class TestDelegateAddr:
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            cold_vkey=node_cold.vkey_file,
         )
 
         tx_db_record = dbsync_utils.check_tx(
@@ -295,16 +325,11 @@ class TestDelegateAddr:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.run(order=2)
-    @pytest.mark.rewards
     @pytest.mark.dbsync
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
-        reason="supposed to run on cluster with pools",
-    )
     def test_deregister(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
     ):
         """Deregister stake address.
 
@@ -315,8 +340,7 @@ class TestDelegateAddr:
         * check that the key deposit was returned and rewards withdrawn
         * check that the stake address is no longer delegated
         """
-        pool_name = "node-pool1"
-        cluster = cluster_use_pool1
+        cluster, pool_id = cluster_and_pool
         temp_template = helpers.get_func_name()
 
         clusterlib_utils.wait_for_epoch_interval(
@@ -325,11 +349,11 @@ class TestDelegateAddr:
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
         )
 
         tx_db_deleg = dbsync_utils.check_tx(
@@ -354,7 +378,7 @@ class TestDelegateAddr:
             ).reward_account_balance:
                 break
         else:
-            pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
+            pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
 
         # files for deregistering stake address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -472,14 +496,9 @@ class TestDelegateAddr:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
-        reason="supposed to run on cluster with pools",
-    )
     def test_addr_delegation_deregistration(
         self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
@@ -494,11 +513,8 @@ class TestDelegateAddr:
           deposit was returned
         * check that the stake address was NOT delegated
         """
-        pool_name = "node-pool1"
-        cluster = cluster_use_pool1
-
+        cluster, pool_id = cluster_and_pool
         temp_template = helpers.get_func_name()
-        node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -541,7 +557,7 @@ class TestDelegateAddr:
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
-            cold_vkey_file=node_cold.vkey_file,
+            stake_pool_id=pool_id,
         )
 
         clusterlib_utils.wait_for_epoch_interval(
@@ -578,7 +594,6 @@ class TestDelegateAddr:
             assert user_registered.stake.address in tx_db_deleg.stake_deregistration
             assert user_registered.stake.address == tx_db_deleg.stake_delegation[0].address
             assert tx_db_deleg.stake_delegation[0].active_epoch_no == init_epoch + 2
-            pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
             assert pool_id == tx_db_deleg.stake_delegation[0].pool_id
 
 
@@ -606,24 +621,16 @@ class TestNegative:
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
-        reason="supposed to run on cluster with pools",
-    )
     def test_delegation_cert_with_wrong_key(
         self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
         pool_users: List[clusterlib.PoolUser],
     ):
         """Try to generate stake address delegation certificate using wrong stake vkey.
 
         Expect failure.
         """
-        pool_name = "node-pool1"
-        cluster = cluster_use_pool1
-
-        node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
+        cluster, pool_id = cluster_and_pool
         temp_template = helpers.get_func_name()
 
         # create stake address delegation cert, use wrong stake vkey
@@ -631,7 +638,7 @@ class TestNegative:
             cluster.gen_stake_addr_delegation_cert(
                 addr_name=f"{temp_template}_addr0",
                 stake_vkey_file=pool_users[0].payment.vkey_file,
-                cold_vkey_file=node_cold.vkey_file,
+                stake_pool_id=pool_id,
             )
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
@@ -669,14 +676,9 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
-        reason="supposed to run on cluster with pools",
-    )
     def test_delegate_addr_with_wrong_key(
         self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
@@ -684,11 +686,8 @@ class TestNegative:
 
         Expect failure.
         """
-        pool_name = "node-pool1"
-        cluster = cluster_use_pool1
-
+        cluster, pool_id = cluster_and_pool
         temp_template = helpers.get_func_name()
-        node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -711,7 +710,7 @@ class TestNegative:
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
-            cold_vkey_file=node_cold.vkey_file,
+            stake_pool_id=pool_id,
         )
 
         # delegate stake address, use wrong payment skey
@@ -729,14 +728,9 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
-        reason="supposed to run on cluster with pools",
-    )
     def test_delegate_unregistered_addr(
         self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
     ):
@@ -744,11 +738,8 @@ class TestNegative:
 
         Expect failure.
         """
-        pool_name = "node-pool1"
-        cluster = cluster_use_pool1
-
+        cluster, pool_id = cluster_and_pool
         temp_template = helpers.get_func_name()
-        node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -757,7 +748,7 @@ class TestNegative:
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
-            cold_vkey_file=node_cold.vkey_file,
+            stake_pool_id=pool_id,
         )
 
         # delegate unregistered stake address
@@ -811,15 +802,14 @@ class TestRewards:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @pytest.mark.rewards
     @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET,
-        reason="supposed to run on testnet with pools",
+        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
+        reason="supposed to run on testnet",
     )
     def test_reward_simple(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake address and pool owner are receiving rewards.
 
@@ -827,28 +817,31 @@ class TestRewards:
         * wait for rewards for pool owner and pool users for up to 4 epochs
         * withdraw rewards to payment address
         """
-        pool_name = "node-pool1"
-        cluster = cluster_use_pool1
-
+        cluster, pool_id = cluster_and_pool
         temp_template = helpers.get_func_name()
-        pool_rec = cluster_manager.cache.addrs_data[pool_name]
-        pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
+        # check pool rewards only when own pool is available
+        check_pool_rewards = (
+            cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET
+        )
 
         # make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-300, force_epoch=False
         )
 
-        init_owner_rewards = cluster.get_stake_addr_info(
-            pool_reward.stake.address
-        ).reward_account_balance
+        if check_pool_rewards:
+            pool_rec = cluster_manager.cache.addrs_data["node-pool1"]
+            pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
+            init_owner_rewards = cluster.get_stake_addr_info(
+                pool_reward.stake.address
+            ).reward_account_balance
 
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
             check_delegation=False,
         )
 
@@ -861,12 +854,13 @@ class TestRewards:
             ).reward_account_balance:
                 break
         else:
-            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
+            pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
 
-        assert (
-            cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
-            > init_owner_rewards
-        ), f"Owner of pool '{pool_name}' hasn't received any rewards"
+        if check_pool_rewards:
+            assert (
+                cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
+                > init_owner_rewards
+            ), f"Owner of pool '{pool_id}' hasn't received any rewards"
 
         # withdraw rewards to payment address, make sure we have enough time to finish
         # the withdrawal in one epoch
@@ -928,11 +922,14 @@ class TestRewards:
         ]
 
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        pool_id = _get_pool_id(
+            cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
+        )
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
             check_delegation=False,
         )
 
@@ -1157,23 +1154,24 @@ class TestRewards:
             force=True,
         )
 
+        pool_id = _get_pool_id(
+            cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
+        )
+
         # delegate to pool to make the pool more attractive after the owner's
         # stake address is deregistered
-        _delegate_stake_addr(
+        _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
             amount=500_000_000_000,
             check_delegation=False,
         )
 
-        node_cold = pool_rec["cold_key_pair"]
-        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
-
         # load and update original pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
-            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=stake_pool_id
+            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool_id
         )
         pool_data_updated = loaded_data._replace(pool_pledge=0)
 
@@ -1419,11 +1417,14 @@ class TestRewards:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        pool_id = _get_pool_id(
+            cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
+        )
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
         )
 
         # create destination address for rewards
@@ -1447,7 +1448,7 @@ class TestRewards:
             ).reward_account_balance:
                 break
         else:
-            pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
+            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # transfer all funds from payment address back to faucet, so no funds are staked
         clusterlib_utils.return_funds_to_faucet(
@@ -1521,12 +1522,16 @@ class TestRewards:
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = helpers.get_func_name()
 
+        pool_id = _get_pool_id(
+            cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
+        )
+
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
         )
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
@@ -1538,14 +1543,11 @@ class TestRewards:
             ).reward_account_balance:
                 break
         else:
-            pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
-
-        node_cold = pool_rec["cold_key_pair"]
-        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # load and update original pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
-            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=stake_pool_id
+            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool_id
         )
         pool_data_updated = loaded_data._replace(pool_pledge=loaded_data.pool_pledge * 9)
 
@@ -1653,12 +1655,16 @@ class TestRewards:
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = helpers.get_func_name()
 
+        pool_id = _get_pool_id(
+            cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
+        )
+
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
         )
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
@@ -1670,14 +1676,11 @@ class TestRewards:
             ).reward_account_balance:
                 break
         else:
-            pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
-
-        node_cold = pool_rec["cold_key_pair"]
-        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # load pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
-            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=stake_pool_id
+            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool_id
         )
 
         pledge_amount = loaded_data.pool_pledge // 2
@@ -1804,12 +1807,16 @@ class TestRewards:
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = helpers.get_func_name()
 
+        pool_id = _get_pool_id(
+            cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
+        )
+
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
         )
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
@@ -1821,7 +1828,7 @@ class TestRewards:
             ).reward_account_balance:
                 break
         else:
-            pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
+            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # deregister stake address - owner's stake is lower than pledge
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -1919,11 +1926,7 @@ class TestRewards:
                 stake_addr_info.delegation
             ), f"Stake address was not delegated yet: {stake_addr_info}"
 
-            node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
-            stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
-            assert (
-                stake_pool_id == stake_addr_info.delegation
-            ), "Stake address delegated to wrong pool"
+            assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
             # check that new rewards were received by those delegating to the pool
             assert (
@@ -1968,11 +1971,14 @@ class TestRewards:
         temp_template = helpers.get_func_name()
 
         # submit registration certificate and delegate to pool
-        delegation_out = _delegate_stake_addr(
+        pool_id = _get_pool_id(
+            cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
+        )
+        delegation_out = _delegate_stake_add(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
-            pool_name=pool_name,
+            pool_id=pool_id,
         )
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
@@ -1985,7 +1991,7 @@ class TestRewards:
                 break
             cluster.wait_for_new_epoch(padding_seconds=10)
         else:
-            pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
+            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # withdraw pool rewards to payment address
         cluster.withdraw_reward(
@@ -2210,7 +2216,7 @@ class TestRewards:
             ).reward_account_balance
 
             node_cold = pool_rec["cold_key_pair"]
-            stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+            pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
             # deregister stake pool
             depoch = cluster.get_epoch() + 1
@@ -2221,13 +2227,13 @@ class TestRewards:
                 pool_name=pool_name,
                 tx_name=temp_template,
             )
-            assert cluster.get_pool_params(stake_pool_id).retiring == depoch
+            assert cluster.get_pool_params(pool_id).retiring == depoch
 
             # check that the pool was deregistered
             cluster.wait_for_new_epoch()
             assert not cluster.get_pool_params(
-                stake_pool_id
-            ).pool_params, f"The pool {stake_pool_id} was not deregistered"
+                pool_id
+            ).pool_params, f"The pool {pool_id} was not deregistered"
 
             # check that the balance for source address was correctly updated
             assert src_dereg_balance - tx_raw_output.fee == cluster.get_address_balance(
@@ -2248,9 +2254,6 @@ class TestRewards:
             # the reward address, delegate the stake address to the pool.
 
             src_updated_balance = cluster.get_address_balance(pool_reward.payment.address)
-
-            node_cold = pool_rec["cold_key_pair"]
-            stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
 
             # reregister the pool by resubmitting the pool registration certificate,
             # delegate stake address to pool again, reregister reward address
@@ -2286,12 +2289,10 @@ class TestRewards:
             LOGGER.info("Waiting up to 5 epochs for stake pool to be reregistered.")
             for __ in range(5):
                 cluster.wait_for_new_epoch(padding_seconds=10)
-                if stake_pool_id in cluster.get_stake_distribution():
+                if pool_id in cluster.get_stake_distribution():
                     break
             else:
-                raise AssertionError(
-                    f"Stake pool `{stake_pool_id}` not registered even after 5 epochs"
-                )
+                raise AssertionError(f"Stake pool `{pool_id}` not registered even after 5 epochs")
 
             # wait before checking delegation and rewards
             cluster.wait_for_new_epoch(3, padding_seconds=30)
@@ -2302,9 +2303,7 @@ class TestRewards:
                 stake_addr_info.delegation
             ), f"Stake address was not delegated yet: {stake_addr_info}"
 
-            assert (
-                stake_pool_id == stake_addr_info.delegation
-            ), "Stake address delegated to wrong pool"
+            assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
             # check that pool owner is receiving rewards
             assert cluster.get_stake_addr_info(
@@ -2344,9 +2343,9 @@ class TestRewards:
 
         # load pool data
         node_cold = pool2_rec["cold_key_pair"]
-        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+        pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
         loaded_data = clusterlib_utils.load_registered_pool_data(
-            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=stake_pool_id
+            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool_id
         )
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
