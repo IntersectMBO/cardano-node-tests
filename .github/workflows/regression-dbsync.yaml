@@ -19,7 +19,7 @@ on:
         description: "db-sync branch (default: master)"
         required: false
       cluster_era:
-        description: "Cluster era (default: empty)"
+        description: "Cluster era (mary, alonzo; default: mary)"
         required: false
       tx_era:
         description: "Tx era (default: empty)"
