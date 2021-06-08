@@ -569,18 +569,18 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
 
     Under load it might be necessary to wait a bit and retry the query.
     """
-    retry_num = retry_num if retry_num > 1 else 1
-    last_retry_idx = retry_num - 1
+    retry_num = retry_num if retry_num >= 0 else 0
 
-    for r in range(retry_num):
+    # first try + number of retries
+    for r in range(1 + retry_num):
         if r > 0:
             LOGGER.warning(f"Repeating TX SQL query for '{txhash}' for the {r} time.")
-            time.sleep(2)
+            time.sleep(2 + r)
         try:
             response = get_tx_record(txhash=txhash)
             break
         except RuntimeError:
-            if r == last_retry_idx:
+            if r == retry_num:
                 raise
 
     return response
