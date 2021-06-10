@@ -1606,7 +1606,11 @@ class TestNegative:
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
         )
-        assert "Incorrect transaction id format" in err or "Failed reading" in err
+        assert (
+            "Incorrect transaction id format" in err
+            or "Failed reading" in err
+            or "expecting transaction id (hexadecimal)" in err
+        )
 
     @allure.link(helpers.get_vcs_link())
     def test_missing_fee(
