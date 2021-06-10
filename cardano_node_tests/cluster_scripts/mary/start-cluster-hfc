@@ -91,10 +91,15 @@ BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis
   "$STATE_CLUSTER/byron/genesis.json")"
 SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.json")"
+ALONZO_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+  "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
 for conf in "$SCRIPT_DIR"/config-*.json; do
   fname="${conf##*/}"
-  jq --arg byron_hash "$BYRON_GENESIS_HASH" --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
-    '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash' \
+  jq \
+    --arg byron_hash "$BYRON_GENESIS_HASH" \
+    --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+    --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+    '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
     "$conf" > "$STATE_CLUSTER/$fname"
 done
 
