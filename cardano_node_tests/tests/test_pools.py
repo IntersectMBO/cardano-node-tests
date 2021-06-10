@@ -1411,8 +1411,11 @@ class TestPoolCost:
             )
 
         # check that it failed in an expected way
-        expected_msg = "--pool-cost: Failed reading" if pool_cost < 0 else "StakePoolCostTooLowPOOL"
-        assert expected_msg in str(excinfo.value)
+        err = str(excinfo.value)
+        if pool_cost < 0:
+            assert "--pool-cost: Failed reading" in err or "expecting digit" in err
+        else:
+            assert "StakePoolCostTooLowPOOL" in err
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("pool_cost", [500, 9999999])
