@@ -59,6 +59,7 @@ PROTOCOL_PARAM_KEYS = (
     "treasuryCut",
     "txFeeFixed",
     "txFeePerByte",
+    "utxoCostPerWord",
 )
 
 
