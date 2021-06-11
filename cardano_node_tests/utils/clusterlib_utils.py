@@ -32,6 +32,11 @@ class TokenRecord(NamedTuple):
     script: Path
 
 
+class TxMetadata(NamedTuple):
+    metadata: dict
+    aux_data: list
+
+
 def register_stake_address(
     cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
 ) -> clusterlib.TxRawOutput:
@@ -685,19 +690,35 @@ def load_body_metadata(tx_body_file: Path) -> Any:
     return metadata
 
 
-def load_tx_metadata(tx_body_file: Path) -> dict:
+def load_tx_metadata(tx_body_file: Path) -> TxMetadata:
     """Load transaction metadata from file containing transaction body."""
-    metadata = load_body_metadata(tx_body_file=tx_body_file)
+    metadata_section = load_body_metadata(tx_body_file=tx_body_file)
 
-    if not metadata:
-        return {}
+    if not metadata_section:
+        return TxMetadata(metadata={}, aux_data=[])
+
+    # the `metadata_section` can be either list or `CBORTag`- check if it is `CBORTag`
+    try:
+        metadata_value = metadata_section.value
+    except AttributeError:
+        pass
+    else:
+        return TxMetadata(
+            metadata=metadata_value.get(0) or {}, aux_data=metadata_value.get(1) or []
+        )
+
+    # now we know the `metadata_section` is list
+    try:
+        metadata: dict = metadata_section[0]
+    except KeyError:
+        return TxMetadata(metadata=metadata_section, aux_data=[])
 
     try:
-        metadata_dict: dict = metadata[0]
+        aux_data: list = metadata_section[1]
     except KeyError:
-        metadata_dict = metadata
+        return TxMetadata(metadata=metadata, aux_data=[])
 
-    return metadata_dict
+    return TxMetadata(metadata=metadata, aux_data=aux_data)
 
 
 def utxodata2txout(utxodata: clusterlib.UTXOData) -> clusterlib.TxOut:

@@ -206,7 +206,12 @@ class TestMinting:
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        # TODO: Alonzo workaround
+        try:
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
 
         # token burning
         token_burn = token_mint._replace(amount=-amount)
@@ -1446,6 +1451,11 @@ class TestTransfer:
         return new_token
 
     @allure.link(helpers.get_vcs_link())
+    # TODO: Alonzo workaround
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era == VERSIONS.ALONZO,
+        reason="calculate-min-value not supported in Alonzo",
+    )
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     @pytest.mark.dbsync
     def test_transfer_tokens(
@@ -1512,6 +1522,11 @@ class TestTransfer:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    # TODO: Alonzo workaround
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era == VERSIONS.ALONZO,
+        reason="calculate-min-value not supported in Alonzo",
+    )
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
         self,
