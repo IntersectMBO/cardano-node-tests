@@ -227,7 +227,12 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        # TODO: Alonzo workaround
+        try:
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1854,7 +1859,7 @@ class TestMetadata:
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
         # dump it as JSON, so keys are converted to strings
-        json_body_metadata = json.loads(json.dumps(cbor_body_metadata))
+        json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         with open(self.JSON_METADATA_FILE) as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
@@ -1868,7 +1873,7 @@ class TestMetadata:
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
-                db_metadata == cbor_body_metadata
+                db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
@@ -1897,7 +1902,7 @@ class TestMetadata:
             cbor_file_metadata = cbor2.load(metadata_fp)
 
         assert (
-            cbor_body_metadata == cbor_file_metadata
+            cbor_body_metadata.metadata == cbor_file_metadata
         ), "Metadata in TX body doesn't match original metadata"
 
         # check TX and metadata in db-sync if available
@@ -1931,7 +1936,7 @@ class TestMetadata:
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
         # dump it as JSON, so keys are converted to strings
-        json_body_metadata = json.loads(json.dumps(cbor_body_metadata))
+        json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         with open(self.JSON_METADATA_FILE) as metadata_fp_json:
             json_file_metadata = json.load(metadata_fp_json)
@@ -1946,15 +1951,23 @@ class TestMetadata:
         }, "Metadata in TX body doesn't match original metadata"
 
         # check `transaction view` command
-        tx_view = clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
-        assert 'txMetadata = fromList [(1,S "foo")' in tx_view
+        # TODO: Alonzo workaround
+        try:
+            tx_view = clusterlib_utils.check_tx_view(
+                cluster_obj=cluster, tx_raw_output=tx_raw_output
+            )
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
+        else:
+            assert 'txMetadata = fromList [(1,S "foo")' in tx_view
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
-                db_metadata == cbor_body_metadata
+                db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
@@ -1982,7 +1995,7 @@ class TestMetadata:
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
         # dump it as JSON, so keys are converted to strings
-        json_body_metadata = json.loads(json.dumps(cbor_body_metadata))
+        json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         # merge the input JSON files and alter the result so it matches the expected metadata
         with open(metadata_json_files[0]) as metadata_fp:
@@ -2001,7 +2014,7 @@ class TestMetadata:
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
-                db_metadata == cbor_body_metadata
+                db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
@@ -2045,7 +2058,7 @@ class TestMetadata:
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
         # dump it as JSON, so keys are converted to strings
-        json_body_metadata = json.loads(json.dumps(cbor_body_metadata))
+        json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         with open(self.JSON_METADATA_FILE) as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
@@ -2059,5 +2072,5 @@ class TestMetadata:
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
-                db_metadata == cbor_body_metadata
+                db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"

@@ -858,7 +858,12 @@ class TestTimeLocking:
         )
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
+        # TODO: Alonzo workaround
+        try:
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -1248,18 +1253,16 @@ class TestAuxiliaryScripts:
         )
         assert tx_raw_output.fee, "Transaction had no fee"
 
-        cbor_body_metadata = clusterlib_utils.load_body_metadata(
-            tx_body_file=tx_raw_output.out_file
-        )
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
 
-        cbor_body_script = cbor_body_metadata[1][0][1]
+        cbor_body_script = cbor_body_metadata.aux_data[0][1]
         assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
-                db_metadata == cbor_body_metadata[0]
+                db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
@@ -1295,18 +1298,16 @@ class TestAuxiliaryScripts:
         )
         assert tx_raw_output.fee, "Transaction had no fee"
 
-        cbor_body_metadata = clusterlib_utils.load_body_metadata(
-            tx_body_file=tx_raw_output.out_file
-        )
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
 
-        cbor_body_script = cbor_body_metadata[1][0][2]
+        cbor_body_script = cbor_body_metadata.aux_data[0][2]
         assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
-                db_metadata == cbor_body_metadata[0]
+                db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
@@ -1338,11 +1339,9 @@ class TestAuxiliaryScripts:
         )
         assert tx_raw_output.fee, "Transaction had no fee"
 
-        cbor_body_metadata = clusterlib_utils.load_body_metadata(
-            tx_body_file=tx_raw_output.out_file
-        )
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
 
-        cbor_body_script = cbor_body_metadata[1][0][1]
+        cbor_body_script = cbor_body_metadata.aux_data[0][1]
         assert len(cbor_body_script) == len(payment_vkey_files), "Auxiliary script not present"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
