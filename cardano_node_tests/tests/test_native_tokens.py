@@ -1453,7 +1453,7 @@ class TestTransfer:
     @allure.link(helpers.get_vcs_link())
     # TODO: Alonzo workaround
     @pytest.mark.skipif(
-        VERSIONS.transaction_era == VERSIONS.ALONZO,
+        VERSIONS.cluster_era == VERSIONS.ALONZO,
         reason="calculate-min-value not supported in Alonzo",
     )
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
@@ -1524,7 +1524,7 @@ class TestTransfer:
     @allure.link(helpers.get_vcs_link())
     # TODO: Alonzo workaround
     @pytest.mark.skipif(
-        VERSIONS.transaction_era == VERSIONS.ALONZO,
+        VERSIONS.cluster_era == VERSIONS.ALONZO,
         reason="calculate-min-value not supported in Alonzo",
     )
     @pytest.mark.dbsync
