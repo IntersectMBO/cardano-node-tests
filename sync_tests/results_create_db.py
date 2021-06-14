@@ -38,7 +38,9 @@ def create_db_tables():
                                         build_web_url text NOT NULL,
                                         test_branch text,                                    
                                         node_branch text,
-                                        node_rev text   
+                                        node_rev text,
+                                        cluster_era text NOT NULL,                                        
+                                        tx_era text NOT NULL 
                                     ); """
 
     dbsync_nightly_table = """ CREATE TABLE IF NOT EXISTS dbsync_nightly (
@@ -53,7 +55,9 @@ def create_db_tables():
                                         node_branch text NOT NULL,
                                         node_rev text,   
                                         dbsync_branch text,                                        
-                                        dbsync_rev text                                     
+                                        dbsync_rev text,
+                                        cluster_era text NOT NULL,                                        
+                                        tx_era text NOT NULL                                     
                                     ); """
 
     node_cli_table = """ CREATE TABLE IF NOT EXISTS node_cli (

@@ -12,7 +12,7 @@ from utils import seconds_to_time, date_diff_in_seconds
 DATABASE_NAME = r"automated_tests_results.db"
 ORG_SLUG = "input-output-hk"
 cli_envs = ["node_cli", "dbsync_cli"]
-nightly_envs = ["node_nightly", "dbsync_nightly"]
+nightly_envs = ["node_nightly", "node_nightly_alonzo_mary_tx", "node_nightly_alonzo_alonzo-tx", "dbsync_nightly"]
 
 
 def get_buildkite_pipeline_builds(buildkite_token, pipeline_slug):
@@ -43,6 +43,10 @@ def get_buildkite_pipeline_slug(env):
         pileline_slug = "cardano-node-tests-dbsync"
     elif env == "dbsync_nightly":
         pileline_slug = "cardano-node-tests-nightly-dbsync"
+    elif env == "node_nightly_alonzo_mary_tx":
+        pileline_slug = "cardano-node-tests-nightly-alonzo-mary-tx"
+    elif env == "node_nightly_alonzo_alonzo-tx":
+        pileline_slug = "cardano-node-tests-nightly-alonzo-alonzo-tx"
     else:
         print(f"!!! ERROR: env {env} not expected - use one of: {cli_envs + nightly_envs}")
         exit(1)
@@ -111,6 +115,7 @@ def main():
     for env in nightly_envs:
         print(f" === env: {env}")
         pileline_slug = get_buildkite_pipeline_slug(env)
+
         pipeline_builds = get_buildkite_pipeline_builds(secret, pileline_slug)
 
         print(f" - there are {len(pipeline_builds)} builds")
@@ -123,7 +128,10 @@ def main():
             if build["state"] == "running":
                 print(f"  ==== build no {build['number']} is still running; not adding it into the DB yet")
                 continue
-            if build["number"] not in get_column_values(database_path, env, "build_no"):
+            table_name = env
+            if "node_nightly" in env:
+                table_name = "node_nightly"
+            if build["number"] not in get_column_values(database_path, table_name, "build_no"):
                 build_results_dict["build_no"] = build["number"]
                 build_results_dict["build_id"] = build["id"]
                 build_results_dict["build_web_url"] = build["web_url"]
@@ -134,6 +142,14 @@ def main():
                     datetime.strptime(build_results_dict["build_finished_at"], "%Y-%m-%dT%H:%M:%S.%fZ"),
                     datetime.strptime(build_results_dict["build_started_at"], "%Y-%m-%dT%H:%M:%S.%fZ")))
                 build_results_dict["test_branch"] = build["branch"]
+
+                if "CLUSTER_ERA" in build["env"]:
+                    build_results_dict["cluster_era"] = build["env"]["CLUSTER_ERA"]
+                    build_results_dict["tx_era"] = build["env"]["TX_ERA"]
+                else:
+                    build_results_dict["cluster_era"] = "mary"
+                    build_results_dict["tx_era"] = "mary"
+
                 build_results_dict["node_branch"] = "master"
                 if "dbsync" in env:
                     build_results_dict["dbsync_branch"] = "master"
