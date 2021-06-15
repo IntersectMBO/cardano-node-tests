@@ -132,7 +132,7 @@ def main():
                 print(f"  ==== build no {build['number']} is still running; not adding it into the DB yet")
                 continue
 
-            if build["number"] not in get_column_values(database_path, table_name, "build_no"):
+            if build["web_url"] not in get_column_values(database_path, table_name, "build_web_url"):
                 build_results_dict["build_no"] = build["number"]
                 build_results_dict["build_id"] = build["id"]
                 build_results_dict["build_web_url"] = build["web_url"]
