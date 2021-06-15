@@ -86,6 +86,9 @@ class TestUpdateProposal:
         payment_addr: clusterlib.AddressRecord,
     ):
         """Test changing protocol parameters using update proposal ."""
+        max_tx_execution_units = 11000000000
+        max_block_execution_units = 110000000000
+
         update_proposals = [
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-linear",
@@ -99,7 +102,7 @@ class TestUpdateProposal:
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--decentralization-parameter",
-                value=0.5,
+                value=0.1,
                 name="decentralization",
             ),
             clusterlib_utils.UpdateProposal(
@@ -156,12 +159,59 @@ class TestUpdateProposal:
                     name="minUTxOValue",
                 )
             )
+        if VERSIONS.cluster_era >= VERSIONS.ALONZO:
+            update_proposals.extend(
+                [
+                    clusterlib_utils.UpdateProposal(
+                        arg="--price-execution-steps",
+                        value=2,
+                        name="executionUnitPrices,priceSteps",
+                    ),
+                    clusterlib_utils.UpdateProposal(
+                        arg="--price-execution-memory",
+                        value=2,
+                        name="executionUnitPrices,priceMemory",
+                    ),
+                    clusterlib_utils.UpdateProposal(
+                        arg="--max-value-size",
+                        value=5000,
+                        name="maxValueSize",
+                    ),
+                    clusterlib_utils.UpdateProposal(
+                        arg="--collateral-percent",
+                        value=2,
+                        name="collateralPercentage",
+                    ),
+                    clusterlib_utils.UpdateProposal(
+                        arg="--max-collateral-inputs",
+                        value=6,
+                        name="maxCollateralInputs",
+                    ),
+                    clusterlib_utils.UpdateProposal(
+                        arg="--max-tx-execution-units",
+                        value=f"({max_tx_execution_units},{max_tx_execution_units})",
+                        name="",  # needs custom check
+                    ),
+                    clusterlib_utils.UpdateProposal(
+                        arg="--max-block-execution-units",
+                        value=f"({max_block_execution_units},{max_block_execution_units})",
+                        name="",  # needs custom check
+                    ),
+                ]
+            )
 
         clusterlib_utils.update_params(
             cluster_obj=cluster_update_proposal,
             src_addr_record=payment_addr,
             update_proposals=update_proposals,
         )
+
+        if VERSIONS.cluster_era >= VERSIONS.ALONZO:
+            protocol_params = cluster_update_proposal.get_protocol_params()
+            assert protocol_params["maxTxExecutionUnits"]["memory"] == max_tx_execution_units
+            assert protocol_params["maxTxExecutionUnits"]["steps"] == max_tx_execution_units
+            assert protocol_params["maxBlockExecutionUnits"]["memory"] == max_block_execution_units
+            assert protocol_params["maxBlockExecutionUnits"]["steps"] == max_block_execution_units
 
 
 class TestMIRCerts:

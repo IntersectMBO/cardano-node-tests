@@ -386,10 +386,16 @@ def update_params(
 
     protocol_params = cluster_obj.get_protocol_params()
     for u in update_proposals:
-        # TODO: handle nested dictionaries
         if not u.name:
             continue
-        updated_value = protocol_params[u.name]
+
+        # nested dictionaries - keys are seperated with comma (,)
+        names = u.name.split(",")
+        nested = protocol_params
+        for n in names:
+            nested = nested[n.strip()]
+        updated_value = nested
+
         if str(updated_value) != str(u.value):
             raise AssertionError(
                 f"Cluster update proposal failed! Param value for {u.name}: {updated_value}.\n"
