@@ -12,7 +12,8 @@ from utils import seconds_to_time, date_diff_in_seconds
 DATABASE_NAME = r"automated_tests_results.db"
 ORG_SLUG = "input-output-hk"
 cli_envs = ["node_cli", "dbsync_cli"]
-nightly_envs = ["node_nightly", "node_nightly_alonzo_mary_tx", "node_nightly_alonzo_alonzo-tx", "dbsync_nightly"]
+nightly_envs = ["node_nightly", "node_nightly_alonzo_mary_tx", "node_nightly_alonzo_alonzo-tx",
+                "dbsync_nightly"]
 
 
 def get_buildkite_pipeline_builds(buildkite_token, pipeline_slug):
@@ -115,8 +116,10 @@ def main():
     for env in nightly_envs:
         print(f" === env: {env}")
         pileline_slug = get_buildkite_pipeline_slug(env)
-
         pipeline_builds = get_buildkite_pipeline_builds(secret, pileline_slug)
+        table_name = env
+        if "node_nightly" in env:
+            table_name = "node_nightly"
 
         print(f" - there are {len(pipeline_builds)} builds")
         print("Adding build results into the DB")
@@ -128,9 +131,7 @@ def main():
             if build["state"] == "running":
                 print(f"  ==== build no {build['number']} is still running; not adding it into the DB yet")
                 continue
-            table_name = env
-            if "node_nightly" in env:
-                table_name = "node_nightly"
+
             if build["number"] not in get_column_values(database_path, table_name, "build_no"):
                 build_results_dict["build_no"] = build["number"]
                 build_results_dict["build_id"] = build["id"]
@@ -158,7 +159,7 @@ def main():
                 col_list = list(build_results_dict.keys())
                 col_values = list(build_results_dict.values())
 
-                if not add_test_values_into_db(database_path, env, col_list, col_values):
+                if not add_test_values_into_db(database_path, table_name, col_list, col_values):
                     print(f"col_list  : {col_list}")
                     print(f"col_values: {col_values}")
                     exit(1)
@@ -166,7 +167,7 @@ def main():
                 print(f" -- results for build {build['number']} are already into the DB")
 
         print(f"  ==== Exporting the {env} table as CSV")
-        export_db_table_to_csv(database_path, env)
+        export_db_table_to_csv(database_path, table_name)
 
 
 if __name__ == "__main__":
