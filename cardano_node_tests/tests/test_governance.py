@@ -159,9 +159,14 @@ class TestUpdateProposal:
                     name="minUTxOValue",
                 )
             )
-        if VERSIONS.cluster_era >= VERSIONS.ALONZO:
+        if VERSIONS.transaction_era >= VERSIONS.ALONZO:
             update_proposals.extend(
                 [
+                    clusterlib_utils.UpdateProposal(
+                        arg="--utxo-cost-per-word",
+                        value=2,
+                        name="utxoCostPerWord",
+                    ),
                     clusterlib_utils.UpdateProposal(
                         arg="--price-execution-steps",
                         value=2,
@@ -206,7 +211,7 @@ class TestUpdateProposal:
             update_proposals=update_proposals,
         )
 
-        if VERSIONS.cluster_era >= VERSIONS.ALONZO:
+        if VERSIONS.transaction_era >= VERSIONS.ALONZO:
             protocol_params = cluster_update_proposal.get_protocol_params()
             assert protocol_params["maxTxExecutionUnits"]["memory"] == max_tx_execution_units
             assert protocol_params["maxTxExecutionUnits"]["steps"] == max_tx_execution_units
