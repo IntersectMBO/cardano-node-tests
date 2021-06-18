@@ -40,7 +40,5 @@
   "slotsPerKESPeriod": 129600,
   "slotLength": 0.2,
   "maxKESEvolutions": 64,
-  "securityParam": 10,
-  "maxValueSize": 4000,
-  "adaPerUTxOWord": 1
+  "securityParam": 10
 }
