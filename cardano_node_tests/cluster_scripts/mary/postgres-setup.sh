@@ -14,8 +14,9 @@ PGHOST="${PGHOST:-localhost}"
 PGPORT="${PGPORT:-5432}"
 PGUSER="${PGUSER:-postgres}"
 
-echo "Setting up db $DATABASE_NAME"
+echo "Deleting db $DATABASE_NAME"
 dropdb --if-exists "$DATABASE_NAME" > /dev/null
+echo "Setting up db $DATABASE_NAME"
 createdb -T template0 --owner="$PGUSER" --encoding=UTF8 "$DATABASE_NAME"
 
 echo "${PGHOST}:${PGPORT}:${DATABASE_NAME}:${PGUSER}:secret" > "$PGPASSFILE"
