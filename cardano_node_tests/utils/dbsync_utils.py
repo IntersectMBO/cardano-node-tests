@@ -39,6 +39,54 @@ class DelegationRecord(NamedTuple):
     active_epoch_no: int
 
 
+class PoolDataDBRow(NamedTuple):
+    id: int
+    hash: memoryview
+    view: str
+    cert_index: int
+    vrf_key_hash: memoryview
+    pledge: int
+    reward_addr: memoryview
+    active_epoch_no: int
+    meta_id: int
+    margin: decimal.Decimal
+    fixed_cost: int
+    registered_tx_id: int
+    metadata_url: str
+    metadata_hash: memoryview
+    owner_stake_address_id: int
+    owner: memoryview
+    ipv4: str
+    ipv6: str
+    dns_name: str
+    port: int
+    retire_cert_index: int
+    retire_announced_tx_id: int
+    retiring_epoch: int
+
+
+class PoolDataRecord(NamedTuple):
+    id: int
+    hash: str
+    view: str
+    cert_index: int
+    vrf_key_hash: str
+    pledge: int
+    reward_addr: str
+    active_epoch_no: int
+    meta_id: int
+    margin: float
+    fixed_cost: int
+    registered_tx_id: int
+    metadata_url: str
+    metadata_hash: str
+    owners: List[str]
+    relays: List[Dict[str, Dict[str, Any]]]
+    retire_cert_index: int
+    retire_announced_tx_id: int
+    retiring_epoch: int
+
+
 class TxRecord(NamedTuple):
     tx_id: int
     tx_hash: str
@@ -353,6 +401,87 @@ def query_ada_pots(
 
         while (result := cur.fetchone()) is not None:
             yield ADAPotsDBRow(*result)
+
+
+def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]:
+    """Query pool data record in db-sync."""
+    with dbsync_conn.DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT DISTINCT"
+            " pool_hash.id, pool_hash.hash_raw, pool_hash.view,"
+            " pool_update.cert_index, pool_update.vrf_key_hash, pool_update.pledge,"
+            " pool_update.reward_addr, pool_update.active_epoch_no, pool_update.meta_id,"
+            " pool_update.margin, pool_update.fixed_cost, pool_update.registered_tx_id,"
+            " pool_metadata_ref.url as metadata_url,pool_metadata_ref.hash as metadata_hash,"
+            " pool_owner.addr_id as owner_stake_address_id,"
+            " stake_address.hash_raw AS owner,"
+            " pool_relay.ipv4, pool_relay.ipv6, pool_relay.dns_name, pool_relay.port,"
+            " pool_retire.cert_index as retire_cert_index,"
+            " pool_retire.announced_tx_id as retire_announced_tx_id, pool_retire.retiring_epoch "
+            "FROM pool_hash "
+            "INNER JOIN pool_update ON pool_hash.id=pool_update.hash_id "
+            "FULL JOIN pool_metadata_ref ON pool_update.meta_id=pool_metadata_ref.id "
+            "INNER JOIN pool_owner ON pool_hash.id=pool_owner.pool_hash_id "
+            "FULL JOIN pool_relay ON pool_update.id=pool_relay.update_id "
+            "FULL JOIN pool_retire ON pool_hash.id=pool_retire.hash_id "
+            "INNER JOIN stake_address ON pool_owner.addr_id=stake_address.id "
+            "WHERE pool_hash.view = %s order by registered_tx_id;",
+            [pool_id_bech32],
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield PoolDataDBRow(*result)
+
+
+def get_pool_data(pool_id_bech32: str) -> PoolDataRecord:
+    """Get pool data from db-sync."""
+    pools = list(query_pool_data(pool_id_bech32))
+    known_owners = set()
+    single_host_names = []
+    single_host_addresses = []
+
+    latest_registered_tx_id = max(pool.registered_tx_id for pool in pools)
+    latest_pools = [pool for pool in pools if pool.registered_tx_id == latest_registered_tx_id]
+
+    pool = None
+    for pool in latest_pools:
+        if pool.owner:
+            owner = pool.owner.hex()[2:]
+            known_owners.add(owner)
+        if pool.dns_name:
+            host_name = {"single host name": {"dnsName": pool.dns_name, "port": pool.port}}
+            if host_name not in single_host_names:
+                single_host_names.append(host_name)
+        if pool.ipv4:
+            host_address = {
+                "single host address": {"IPv4": pool.ipv4, "IPv6": pool.ipv6, "port": pool.port}
+            }
+            if host_address not in single_host_addresses:
+                single_host_addresses.append(host_address)
+
+    pool_data = PoolDataRecord(
+        id=pool.id,
+        hash=pool.hash.hex(),
+        view=pool.view,
+        cert_index=pool.cert_index,
+        vrf_key_hash=pool.vrf_key_hash.hex(),
+        pledge=int(pool.pledge),
+        reward_addr=pool.reward_addr.hex()[2:],
+        active_epoch_no=pool.active_epoch_no,
+        meta_id=pool.meta_id,
+        margin=float(pool.margin),
+        fixed_cost=int(pool.fixed_cost),
+        registered_tx_id=pool.registered_tx_id,
+        metadata_url=pool.metadata_url,
+        metadata_hash=pool.metadata_hash.hex(),
+        owners=list(known_owners),
+        relays=[*single_host_names, *single_host_addresses],
+        retire_cert_index=pool.retire_cert_index,
+        retire_announced_tx_id=pool.retire_announced_tx_id,
+        retiring_epoch=pool.retiring_epoch,
+    )
+
+    return pool_data
 
 
 def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
