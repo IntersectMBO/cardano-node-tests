@@ -24,6 +24,8 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -85,6 +87,113 @@ def cluster_mincost(
     return cluster_manager.get(
         mark="minPoolCost", cleanup=True, start_cmd=str(pool_cost_start_cluster)
     )
+
+
+def _check_pool_deregistration_in_db(stake_pool_id: str, retiring_epoch: int):
+    """Check pool retirement in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    pool_data_in_db = dbsync_utils.get_pool_data(stake_pool_id)
+
+    if pool_data_in_db.retire_announced_tx_id and pool_data_in_db.retiring_epoch:
+        assert (
+            retiring_epoch == pool_data_in_db.retiring_epoch
+        ), f"Mismatch in epoch values: {retiring_epoch} VS {pool_data_in_db.retiring_epoch}"
+    else:
+        raise AssertionError(f"Stake pool `{stake_pool_id}` not retired.")
+
+    return None
+
+
+def _check_pool_data_in_db(ledger_pool_data: dict, db_pool_data: dbsync_utils.PoolDataRecord):
+    """Check comparison for pool data between ledger and db-sync."""
+    # pylint: disable=too-many-statements,too-many-locals,too-many-branches
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    errors_list = []
+
+    if ledger_pool_data["publicKey"] != db_pool_data.hash:
+        errors_list.append(
+            "'publicKey' value is different than expected; "
+            f"Expected: {ledger_pool_data['publicKey']} vs Returned: {db_pool_data.hash}"
+        )
+
+    if ledger_pool_data["cost"] != db_pool_data.fixed_cost:
+        errors_list.append(
+            "'cost' value is different than expected; "
+            f"Expected: {ledger_pool_data['cost']} vs Returned: {db_pool_data.fixed_cost}"
+        )
+
+    metadata = ledger_pool_data.get("metadata") or {}
+
+    if metadata["hash"] and metadata["url"]:
+        metadata_hash = metadata["hash"]
+        if metadata_hash != db_pool_data.metadata_hash:
+            errors_list.append(
+                "'metadata hash' value is different than expected; "
+                f"Expected: {metadata_hash} vs "
+                f"Returned: {db_pool_data.metadata_hash}"
+            )
+
+        metadata_url = metadata["url"]
+        if metadata_url != db_pool_data.metadata_url:
+            errors_list.append(
+                "'metadata url' value is different than expected; "
+                f"Expected: {metadata_url} vs "
+                f"Returned: {db_pool_data.metadata_url}"
+            )
+
+    elif ledger_pool_data["metadata"] is not None:
+        errors_list.append(
+            "'metadata' value is different than expected; "
+            f"Expected: None vs Returned: {ledger_pool_data['metadata']}"
+        )
+
+    if sorted(ledger_pool_data["owners"]) != sorted(db_pool_data.owners):
+        errors_list.append(
+            "'owners' value is different than expected; "
+            f"Expected: {ledger_pool_data['owners']} vs Returned: {db_pool_data.owners}"
+        )
+
+    if ledger_pool_data["vrf"] != db_pool_data.vrf_key_hash:
+        errors_list.append(
+            "'vrf' value is different than expected; "
+            f"Expected: {ledger_pool_data['vrf']} vs Returned: {db_pool_data.vrf_key_hash}"
+        )
+
+    if ledger_pool_data["pledge"] != db_pool_data.pledge:
+        errors_list.append(
+            "'pledge' value is different than expected; "
+            f"Expected: {ledger_pool_data['pledge']} vs Returned: {db_pool_data.pledge}"
+        )
+
+    if ledger_pool_data["margin"] != db_pool_data.margin:
+        errors_list.append(
+            "'margin' value is different than expected; "
+            f"Expected: {ledger_pool_data['margin']} vs Returned: {db_pool_data.margin}"
+        )
+
+    ledger_reward_address = ledger_pool_data["rewardAccount"]["credential"]["key hash"]
+    if ledger_reward_address != db_pool_data.reward_addr:
+        errors_list.append(
+            "'reward address' value is different than expected; "
+            f"Expected: {ledger_reward_address} vs Returned: {db_pool_data.reward_addr}"
+        )
+
+    if ledger_pool_data["relays"]:
+        if ledger_pool_data["relays"] != db_pool_data.relays:
+            errors_list.append(
+                "'relays' value is different than expected; "
+                f"Expected: {ledger_pool_data['relays']} vs Returned: {db_pool_data.relays}"
+            )
+
+    if errors_list:
+        errors_str = "\n\n".join(errors_list)
+        raise AssertionError(f"{errors_str}\n\nStake Pool Details: \n{ledger_pool_data}")
+
+    return None
 
 
 def _check_pool(
@@ -531,6 +640,7 @@ class TestStakePool:
             request=request,
         )
 
+    @pytest.mark.dbsync
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("no_of_addr", [1, 3])
     def test_deregister_stake_pool(
@@ -592,6 +702,15 @@ class TestStakePool:
             pool_data=pool_data,
         )
 
+        # check in db-sync that the pool was registered
+        pool_id = pool_creation_out.stake_pool_id
+        pool_data_in_db = dbsync_utils.get_pool_data(pool_id)
+
+        _check_pool_data_in_db(
+            ledger_pool_data=cluster.get_pool_params(pool_id).pool_params,
+            db_pool_data=pool_data_in_db,
+        )
+
         pool_owner = pool_owners[0]
         src_register_balance = cluster.get_address_balance(pool_owner.payment.address)
 
@@ -618,6 +737,10 @@ class TestStakePool:
         assert not (
             cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
+
+        _check_pool_deregistration_in_db(
+            stake_pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
+        )
 
         # check that the balance for source address was correctly updated
         assert src_register_balance - tx_raw_output.fee == cluster.get_address_balance(
