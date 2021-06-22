@@ -33,7 +33,6 @@ def temp_dir(create_temp_dir: Path):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-@pytest.mark.testnets
 class TestCLI:
     """Tests for cardano-cli."""
 
@@ -42,6 +41,7 @@ class TestCLI:
     TX_OUT = DATA_DIR / "test_tx_metadata_both_tx.out"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.skipif(
         bool(configuration.TX_ERA),
         reason="different TX eras doesn't affect this test, pointless to run",
@@ -50,9 +50,36 @@ class TestCLI:
         """Check the default protocol mode - command works even without specifying protocol mode."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:
             pytest.skip("runs on cluster in full cardano mode")
-        cluster.cli(["query", "utxo", *cluster.magic_args])
+        cluster.cli(
+            [
+                "query",
+                "utxo",
+                "--address",
+                "addr_test1vpst87uzwafqkxumyf446zr2jsyn44cfpu9fe8yqanyuh6glj2hkl",
+                *cluster.magic_args,
+            ]
+        )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        bool(configuration.TX_ERA),
+        reason="different TX eras doesn't affect this test, pointless to run",
+    )
+    def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
+        """Check that it is possible to return the whole UTxO on local cluster."""
+        if cluster.protocol != clusterlib.Protocols.CARDANO:
+            pytest.skip("runs on cluster in full cardano mode")
+        cluster.cli(
+            [
+                "query",
+                "utxo",
+                "----whole-utxo",  # TODO: should be two hyphens
+                *cluster.magic_args,
+            ]
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
         tx_body = cluster.view_tx(tx_body_file=self.TX_BODY_FILE)
