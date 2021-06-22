@@ -295,7 +295,7 @@ class TestMIRCerts:
         temp_template = helpers.get_func_name()
         cluster = cluster_pots
         pool_user = pool_users[0]
-        amount = 50_000
+        amount = 10_000_000_000_000
 
         mir_cert = cluster.gen_mir_cert_to_treasury(transfer=amount, tx_name=temp_template)
         tx_files = clusterlib.TxFiles(
@@ -324,15 +324,32 @@ class TestMIRCerts:
             tx_files=tx_files,
         )
 
+        tx_epoch = cluster.get_epoch()
+
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            assert tx_db_record.treasury[0].amount == amount, (
-                "Incorrect amount transferred from treasury "
-                f"({tx_db_record.treasury[0].amount} != {amount})"
+            # TODO: remove the workaround below and add dbsync mark once this is merged:
+            # https://github.com/input-output-hk/cardano-db-sync/pull/660
+            amount = -amount
+            assert tx_db_record.pot_transfers[0].reserves == -amount, (
+                "Incorrect amount transferred from reserves "
+                f"({tx_db_record.pot_transfers[0].reserves} != {-amount})"
+            )
+            assert tx_db_record.pot_transfers[0].treasury == amount, (
+                "Incorrect amount transferred to treasury "
+                f"({tx_db_record.pot_transfers[0].treasury} != {amount})"
             )
 
+            cluster.wait_for_new_epoch()
+
+            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            # normally `treasury[-1]` > `treasury[-2]`
+            assert (pots_records[-1].treasury - pots_records[-2].treasury) > amount
+            # normally `reserves[-1]` < `reserves[-2]`
+            assert (pots_records[-2].reserves - pots_records[-1].reserves) > amount
+
     @allure.link(helpers.get_vcs_link())
-    def test_transfer_to_rewards(
+    def test_transfer_to_reserves(
         self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
         """Send funds from the treasury pot to the reserves pot.
@@ -342,7 +359,7 @@ class TestMIRCerts:
         temp_template = helpers.get_func_name()
         cluster = cluster_pots
         pool_user = pool_users[0]
-        amount = 50_000
+        amount = 1_000_000_000_000
 
         init_balance = cluster.get_address_balance(pool_user.payment.address)
 
@@ -373,6 +390,8 @@ class TestMIRCerts:
             tx_files=tx_files,
         )
 
+        tx_epoch = cluster.get_epoch()
+
         assert (
             cluster.get_address_balance(pool_user.payment.address)
             == init_balance - tx_raw_output.fee
@@ -380,10 +399,25 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            assert tx_db_record.reserve[0].amount == amount, (
-                "Incorrect amount transferred from reserve "
-                f"({tx_db_record.reserve[0].amount} != {amount})"
+            # TODO: remove the workaround below and add dbsync mark once this is merged:
+            # https://github.com/input-output-hk/cardano-db-sync/pull/660
+            amount = -amount
+            assert tx_db_record.pot_transfers[0].treasury == -amount, (
+                "Incorrect amount transferred from treasury "
+                f"({tx_db_record.pot_transfers[0].treasury} != {-amount})"
             )
+            assert tx_db_record.pot_transfers[0].reserves == amount, (
+                "Incorrect amount transferred to reserves "
+                f"({tx_db_record.pot_transfers[0].reserves} != {amount})"
+            )
+
+            cluster.wait_for_new_epoch()
+
+            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            # normally `treasury[-1]` > `treasury[-2]`
+            assert pots_records[-1].treasury < pots_records[-2].treasury
+            # normally `reserves[-1]` < `reserves[-2]`
+            assert pots_records[-1].reserves > pots_records[-2].reserves
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -592,8 +626,8 @@ class TestMIRCerts:
             # check that the amount was not transferred out of the pot
             pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
             if fund_src == self.TREASURY:
-                # normally `treasury[-1]` < `treasury[0]`
-                assert abs(pots_records[-1].treasury - pots_records[0].treasury) < amount
+                # normally `treasury[-1]` > `treasury[-2]`
+                assert abs(pots_records[-1].treasury - pots_records[-2].treasury) < amount
             else:
-                # normally `reserves[0]` < `reserves[-1]`
-                assert abs(pots_records[0].reserves - pots_records[-1].reserves) < amount
+                # normally `reserves[-1]` < `reserves[-2]`
+                assert abs(pots_records[-2].reserves - pots_records[-1].reserves) < amount

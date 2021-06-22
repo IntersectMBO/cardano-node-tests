@@ -33,6 +33,11 @@ class ADAStashRecord(NamedTuple):
     amount: int
 
 
+class PotTransferRecord(NamedTuple):
+    treasury: int
+    reserves: int
+
+
 class DelegationRecord(NamedTuple):
     address: str
     pool_id: str
@@ -56,6 +61,7 @@ class TxRecord(NamedTuple):
     metadata: List[MetadataRecord]
     reserve: List[ADAStashRecord]
     treasury: List[ADAStashRecord]
+    pot_transfers: List[PotTransferRecord]
     stake_registration: List[str]
     stake_deregistration: List[str]
     stake_delegation: List[DelegationRecord]
@@ -86,6 +92,7 @@ class TxDBRow(NamedTuple):
     metadata_count: int
     reserve_count: int
     treasury_count: int
+    pot_transfer_count: int
     stake_reg_count: int
     stake_dereg_count: int
     stake_deleg_count: int
@@ -120,6 +127,14 @@ class ADAStashDBRow(NamedTuple):
     addr_id: int
     cert_index: int
     amount: decimal.Decimal
+    tx_id: int
+
+
+class PotTransferDBRow(NamedTuple):
+    id: int
+    cert_index: int
+    treasury: decimal.Decimal
+    reserves: decimal.Decimal
     tx_id: int
 
 
@@ -178,6 +193,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
             " (SELECT COUNT(id) FROM reserve WHERE tx_id=tx.id) AS reserve_count,"
             " (SELECT COUNT(id) FROM treasury WHERE tx_id=tx.id) AS treasury_count,"
+            " (SELECT COUNT(id) FROM pot_transfer WHERE tx_id=tx.id) AS pot_transfer_count,"
             " (SELECT COUNT(id) FROM stake_registration WHERE tx_id=tx.id) AS reg_count,"
             " (SELECT COUNT(id) FROM stake_deregistration WHERE tx_id=tx.id) AS dereg_count,"
             " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
@@ -266,6 +282,23 @@ def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
 
         while (result := cur.fetchone()) is not None:
             yield ADAStashDBRow(*result)
+
+
+def query_tx_pot_transfers(txhash: str) -> Generator[PotTransferDBRow, None, None]:
+    """Query transaction MIR certificate records in db-sync."""
+    with dbsync_conn.DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " pot_transfer.id, pot_transfer.cert_index, pot_transfer.treasury,"
+            " pot_transfer.reserves, pot_transfer.tx_id "
+            "FROM pot_transfer "
+            "INNER JOIN tx ON tx.id = pot_transfer.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield PotTransferDBRow(*result)
 
 
 def query_tx_stake_reg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
@@ -509,6 +542,13 @@ def get_tx_record(txhash: str) -> TxRecord:
             for r in query_tx_treasury(txhash=txhash)
         ]
 
+    pot_transfers = []
+    if txdata.last_row.pot_transfer_count:
+        pot_transfers = [
+            PotTransferRecord(treasury=int(r.treasury), reserves=int(r.reserves))
+            for r in query_tx_pot_transfers(txhash=txhash)
+        ]
+
     stake_registration = []
     if txdata.last_row.stake_reg_count:
         stake_registration = [r.view for r in query_tx_stake_reg(txhash=txhash)]
@@ -555,6 +595,7 @@ def get_tx_record(txhash: str) -> TxRecord:
         metadata=metadata,
         reserve=reserve,
         treasury=treasury,
+        pot_transfers=pot_transfers,
         stake_registration=stake_registration,
         stake_deregistration=stake_deregistration,
         stake_delegation=stake_delegation,
