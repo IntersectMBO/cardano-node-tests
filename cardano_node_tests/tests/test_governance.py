@@ -481,16 +481,17 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            if fund_src == self.TREASURY:
-                assert tx_db_record.treasury[0].amount == amount, (
-                    "Incorrect amount transferred from treasury "
-                    f"({tx_db_record.treasury[0].amount} != {amount})"
-                )
-            else:
-                assert tx_db_record.reserve[0].amount == amount, (
-                    "Incorrect amount transferred from reserve "
-                    f"({tx_db_record.reserve[0].amount} != {amount})"
-                )
+            stash_record = (
+                tx_db_record.treasury[0] if fund_src == self.TREASURY else tx_db_record.reserve[0]
+            )
+            assert stash_record.amount == amount, (
+                "Incorrect amount transferred using MIR certificate "
+                f"({stash_record.amount} != {amount})"
+            )
+            assert stash_record.address == registered_user.stake.address, (
+                "Incorrect stake address "
+                f"({stash_record.address} != {registered_user.stake.address})"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))

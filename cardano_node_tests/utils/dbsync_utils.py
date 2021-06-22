@@ -28,7 +28,7 @@ class MetadataRecord(NamedTuple):
 
 
 class ADAStashRecord(NamedTuple):
-    addr_id: int
+    address: str
     cert_index: int
     amount: int
 
@@ -124,7 +124,7 @@ class MetadataDBRow(NamedTuple):
 
 class ADAStashDBRow(NamedTuple):
     id: int
-    addr_id: int
+    addr_view: str
     cert_index: int
     amount: decimal.Decimal
     tx_id: int
@@ -252,12 +252,12 @@ def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
 
 def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction reserve record in db-sync."""
-    # TODO: return address instead of addr_id
     with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
-            " reserve.id, reserve.addr_id, reserve.cert_index, reserve.amount, reserve.tx_id "
+            " reserve.id, stake_address.view, reserve.cert_index, reserve.amount, reserve.tx_id "
             "FROM reserve "
+            "INNER JOIN stake_address ON reserve.addr_id = stake_address.id "
             "INNER JOIN tx ON tx.id = reserve.tx_id "
             "WHERE tx.hash = %s;",
             (rf"\x{txhash}",),
@@ -269,12 +269,13 @@ def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
 
 def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction treasury record in db-sync."""
-    # TODO: return address instead of addr_id
     with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
-            " treasury.id, treasury.addr_id, treasury.cert_index, treasury.amount, treasury.tx_id "
+            " treasury.id, stake_address.view, treasury.cert_index, "
+            "treasury.amount, treasury.tx_id "
             "FROM treasury "
+            "INNER JOIN stake_address ON treasury.addr_id = stake_address.id "
             "INNER JOIN tx ON tx.id = treasury.tx_id "
             "WHERE tx.hash = %s;",
             (rf"\x{txhash}",),
@@ -528,7 +529,7 @@ def get_tx_record(txhash: str) -> TxRecord:
     if txdata.last_row.reserve_count:
         reserve = [
             ADAStashRecord(
-                addr_id=int(r.addr_id), cert_index=int(r.cert_index), amount=int(r.amount)
+                address=str(r.addr_view), cert_index=int(r.cert_index), amount=int(r.amount)
             )
             for r in query_tx_reserve(txhash=txhash)
         ]
@@ -537,7 +538,7 @@ def get_tx_record(txhash: str) -> TxRecord:
     if txdata.last_row.treasury_count:
         treasury = [
             ADAStashRecord(
-                addr_id=int(r.addr_id), cert_index=int(r.cert_index), amount=int(r.amount)
+                address=str(r.addr_view), cert_index=int(r.cert_index), amount=int(r.amount)
             )
             for r in query_tx_treasury(txhash=txhash)
         ]
