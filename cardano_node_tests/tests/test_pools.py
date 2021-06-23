@@ -89,28 +89,34 @@ def cluster_mincost(
     )
 
 
-def _check_pool_deregistration_in_db(stake_pool_id: str, retiring_epoch: int):
+def _check_pool_deregistration_in_db(
+    stake_pool_id: str, retiring_epoch: int
+) -> Optional[dbsync_utils.PoolDataRecord]:
     """Check pool retirement in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
-    pool_data_in_db = dbsync_utils.get_pool_data(stake_pool_id)
+    db_pool_data = dbsync_utils.get_pool_data(stake_pool_id)
 
-    if pool_data_in_db.retire_announced_tx_id and pool_data_in_db.retiring_epoch:
+    if db_pool_data.retire_announced_tx_id and db_pool_data.retiring_epoch:
         assert (
-            retiring_epoch == pool_data_in_db.retiring_epoch
-        ), f"Mismatch in epoch values: {retiring_epoch} VS {pool_data_in_db.retiring_epoch}"
+            retiring_epoch == db_pool_data.retiring_epoch
+        ), f"Mismatch in epoch values: {retiring_epoch} VS {db_pool_data.retiring_epoch}"
     else:
         raise AssertionError(f"Stake pool `{stake_pool_id}` not retired.")
 
-    return None
+    return db_pool_data
 
 
-def _check_pool_data_in_db(ledger_pool_data: dict, db_pool_data: dbsync_utils.PoolDataRecord):
+def _check_pool_data_in_db(  # noqa: C901
+    ledger_pool_data: dict, pool_id: str
+) -> Optional[dbsync_utils.PoolDataRecord]:
     """Check comparison for pool data between ledger and db-sync."""
-    # pylint: disable=too-many-statements,too-many-locals,too-many-branches
+    # pylint: disable=too-many-branches
     if not configuration.HAS_DBSYNC:
         return None
+
+    db_pool_data = dbsync_utils.get_pool_data(pool_id)
 
     errors_list = []
 
@@ -193,7 +199,7 @@ def _check_pool_data_in_db(ledger_pool_data: dict, db_pool_data: dbsync_utils.Po
         errors_str = "\n\n".join(errors_list)
         raise AssertionError(f"{errors_str}\n\nStake Pool Details: \n{ledger_pool_data}")
 
-    return None
+    return db_pool_data
 
 
 def _check_pool(
@@ -704,11 +710,10 @@ class TestStakePool:
 
         # check in db-sync that the pool was registered
         pool_id = pool_creation_out.stake_pool_id
-        pool_data_in_db = dbsync_utils.get_pool_data(pool_id)
 
         _check_pool_data_in_db(
             ledger_pool_data=cluster.get_pool_params(pool_id).pool_params,
-            db_pool_data=pool_data_in_db,
+            pool_id=pool_id,
         )
 
         pool_owner = pool_owners[0]
