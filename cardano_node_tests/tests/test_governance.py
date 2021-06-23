@@ -285,6 +285,7 @@ class TestMIRCerts:
         return pool_user
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_transfer_to_treasury(
         self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
@@ -328,9 +329,6 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            # TODO: remove the workaround below and add dbsync mark once this is merged:
-            # https://github.com/input-output-hk/cardano-db-sync/pull/660
-            amount = -amount
             assert tx_db_record.pot_transfers[0].reserves == -amount, (
                 "Incorrect amount transferred from reserves "
                 f"({tx_db_record.pot_transfers[0].reserves} != {-amount})"
@@ -349,6 +347,7 @@ class TestMIRCerts:
             assert (pots_records[-2].reserves - pots_records[-1].reserves) > amount
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_transfer_to_reserves(
         self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
@@ -399,9 +398,6 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            # TODO: remove the workaround below and add dbsync mark once this is merged:
-            # https://github.com/input-output-hk/cardano-db-sync/pull/660
-            amount = -amount
             assert tx_db_record.pot_transfers[0].treasury == -amount, (
                 "Incorrect amount transferred from treasury "
                 f"({tx_db_record.pot_transfers[0].treasury} != {-amount})"
