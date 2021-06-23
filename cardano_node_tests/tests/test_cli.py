@@ -73,7 +73,7 @@ class TestCLI:
             [
                 "query",
                 "utxo",
-                "----whole-utxo",  # TODO: should be two hyphens
+                "--whole-utxo",
                 *cluster.magic_args,
             ]
         )
