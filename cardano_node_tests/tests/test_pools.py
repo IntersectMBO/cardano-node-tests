@@ -646,8 +646,8 @@ class TestStakePool:
             request=request,
         )
 
-    @pytest.mark.dbsync
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.parametrize("no_of_addr", [1, 3])
     def test_deregister_stake_pool(
         self,
