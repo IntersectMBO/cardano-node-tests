@@ -474,7 +474,7 @@ def get_pool_data(pool_id_bech32: str) -> PoolDataRecord:
     single_host_names = []
     single_host_addresses = []
 
-    latest_registered_tx_id = max(pool.registered_tx_id for pool in pools)
+    latest_registered_tx_id = pools[-1].registered_tx_id
     latest_pools = [pool for pool in pools if pool.registered_tx_id == latest_registered_tx_id]
 
     pool = None
