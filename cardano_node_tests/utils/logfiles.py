@@ -28,6 +28,7 @@ ERRORS_IGNORED = [
     "Failed to start all required subscriptions",
     "TraceDidntAdoptBlock",
     "failedScripts",
+    "db-sync-node:.* AsyncCancelled",
 ]
 if configuration.CLUSTER_ERA == "alonzo":
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
