@@ -1096,7 +1096,8 @@ class TestRewards:
         # withdraw rewards to payment address
         if this_epoch == cluster.get_epoch():
             cluster.wait_for_new_epoch()
-        cluster.withdraw_reward(
+
+        withdraw_out = cluster.withdraw_reward(
             stake_addr_record=delegation_out.pool_user.stake,
             dst_addr_record=delegation_out.pool_user.payment,
             tx_name=temp_template,
@@ -1110,6 +1111,14 @@ class TestRewards:
                 new_tokens=tokens_to_burn,
                 temp_template=f"{temp_template}_burn",
             )
+
+        # check `transaction view` command
+        # TODO: Alonzo workaround
+        try:
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=withdraw_out)
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
 
     @allure.link(helpers.get_vcs_link())
     def test_reward_addr_delegation(  # noqa: C901

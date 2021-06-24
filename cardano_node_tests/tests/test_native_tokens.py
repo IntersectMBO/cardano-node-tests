@@ -205,14 +205,6 @@ class TestMinting:
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
-        # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
-
         # token burning
         token_burn = token_mint._replace(amount=-amount)
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
@@ -230,6 +222,15 @@ class TestMinting:
         ) and helpers.is_in_interval(
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
+
+        # check `transaction view` command
+        # TODO: Alonzo workaround
+        try:
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -421,6 +422,15 @@ class TestMinting:
         ) and helpers.is_in_interval(
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
+
+        # check `transaction view` command
+        # TODO: Alonzo workaround
+        try:
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -689,6 +699,15 @@ class TestMinting:
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
+
+        # check `transaction view` command
+        # TODO: Alonzo workaround
+        try:
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
