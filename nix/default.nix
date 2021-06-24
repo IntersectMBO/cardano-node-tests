@@ -41,6 +41,7 @@ let
           pytest-html
           pytest-ordering
           pytest_xdist
+          pyyaml
           setuptools
           filelock
           pydantic

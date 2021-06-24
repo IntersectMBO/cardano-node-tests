@@ -24,5 +24,6 @@ pytest-html
 pytest-metadata
 pytest-ordering
 pytest-xdist
+pyyaml
 requests
 setuptools>=21.0.0
