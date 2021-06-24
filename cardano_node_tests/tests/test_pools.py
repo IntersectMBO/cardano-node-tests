@@ -306,7 +306,7 @@ def _create_register_pool_delegate_stake_tx(
     temp_template: str,
     pool_data: clusterlib.PoolData,
     request: Optional[FixtureRequest] = None,
-):
+) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool, delegate stake address - all in single TX.
 
     Common functionality for tests.
@@ -532,7 +532,7 @@ class TestStakePool:
         )
 
         # register pool and delegate stake address
-        _create_register_pool_delegate_stake_tx(
+        pool_creation_out = _create_register_pool_delegate_stake_tx(
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
@@ -540,8 +540,18 @@ class TestStakePool:
             request=request,
         )
 
+        # check `transaction view` command
+        # TODO: Alonzo workaround
+        try:
+            clusterlib_utils.check_tx_view(
+                cluster_obj=cluster, tx_raw_output=pool_creation_out.tx_raw_output
+            )
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
+
     @allure.link(helpers.get_vcs_link())
-    def test_stake_pool_metadata_not_avail(
+    def test_stake_pool_not_avail_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
