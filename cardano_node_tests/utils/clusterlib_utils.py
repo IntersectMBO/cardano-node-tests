@@ -7,9 +7,12 @@ from typing import Any
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Set
+from typing import Tuple
 from typing import Union
 
 import cbor2
+import yaml
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import helpers
@@ -732,34 +735,97 @@ def utxodata2txout(utxodata: clusterlib.UTXOData) -> clusterlib.TxOut:
     return clusterlib.TxOut(address=utxodata.address, amount=utxodata.amount, coin=utxodata.coin)
 
 
-def check_tx_view(cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput) -> str:
+def load_tx_view(tx_view: str) -> dict:
+    """Load tx view output as YAML."""
+    tx_loaded: dict = yaml.safe_load(tx_view)
+    return tx_loaded
+
+
+def _load_coins_data(coins_data: dict) -> List[Tuple[int, str]]:
+    loaded_data = []
+    amount_lovelace = coins_data.get("lovelace")
+    if amount_lovelace:
+        loaded_data.append((amount_lovelace, "lovelace"))
+    policies_data = coins_data.get("policies") or {}
+    for policyid, policy_rec in policies_data.items():
+        for asset_name_hex, amount in policy_rec.items():
+            asset_name = bytes.fromhex(asset_name_hex).decode()
+            token = f"{policyid}.{asset_name}" if asset_name else policyid
+            loaded_data.append((amount, token))
+
+    return loaded_data
+
+
+def check_tx_view(  # noqa: C901
+    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
+) -> dict:
     """Check output of the `transaction view` command."""
     tx_view = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
+    tx_loaded: dict = load_tx_view(tx_view=tx_view)
 
-    for out in tx_raw_output.txouts:
-        if out.address not in tx_view:
-            raise AssertionError(f"Output address '{out.address}' not in\n{tx_view}")
+    # check inputs
+    loaded_txins = set(tx_loaded.get("inputs") or [])
+    tx_raw_txins = {f"{r.utxo_hash}#{r.utxo_ix}" for r in tx_raw_output.txins}
 
-    if f"fee: {tx_raw_output.fee}" not in tx_view:
-        raise AssertionError(f"'fee: {tx_raw_output.fee}' not in\n{tx_view}")
+    if tx_raw_txins != loaded_txins:
+        raise AssertionError(f"txins: {tx_raw_txins} != {loaded_txins}")
 
-    invalid_before = (
-        tx_raw_output.invalid_before if tx_raw_output.invalid_before is not None else "null"
-    )
-    invalid_hereafter = (
-        tx_raw_output.invalid_hereafter if tx_raw_output.invalid_hereafter is not None else "null"
-    )
-    if f"invalid before: {invalid_before}" not in tx_view:
-        raise AssertionError(f"'invalid before: {invalid_before}' not in\n{tx_view}")
-    if f"invalid hereafter: {invalid_hereafter}" not in tx_view:
-        raise AssertionError(f"'invalid hereafter: {invalid_hereafter}' not in\n{tx_view}")
+    # check outputs
+    tx_loaded_outputs = tx_loaded.get("outputs") or []
+    loaded_txouts: Set[Tuple[str, int, str]] = set()
+    for txout in tx_loaded_outputs:
+        address = txout["address"]["Bech32"]
+        for amount in _load_coins_data(txout["amount"]):
+            loaded_txouts.add((address, amount[0], amount[1]))
 
-    if tx_raw_output.mint:
-        for mint in tx_raw_output.mint:
-            policyid = mint.coin.split(".")[0]
-            if policyid not in tx_view:
-                raise AssertionError(f"The policyid '{policyid}' not in\n{tx_view}")
-            if mint.address not in tx_view:
-                raise AssertionError(f"Mint address '{mint.address}' not in\n{tx_view}")
+    tx_raw_txouts = {(r.address, r.amount, r.coin) for r in tx_raw_output.txouts}
 
-    return tx_view
+    if tx_raw_txouts != loaded_txouts:
+        raise AssertionError(f"txouts: {tx_raw_txouts} != {loaded_txouts}")
+
+    # check fee
+    if tx_raw_output.fee != tx_loaded.get("fee"):
+        raise AssertionError(f"fee: {tx_raw_output.fee} != {tx_loaded.get('fee')}")
+
+    # check validity intervals
+    loaded_invalid_before = tx_loaded.get("validity interval", {}).get("invalid before")
+    if tx_raw_output.invalid_before != loaded_invalid_before:
+        raise AssertionError(
+            f"invalid before: {tx_raw_output.invalid_before} != {loaded_invalid_before}"
+        )
+
+    loaded_invalid_hereafter = tx_loaded.get("validity interval", {}).get("invalid hereafter")
+    if tx_raw_output.invalid_hereafter != loaded_invalid_hereafter:
+        raise AssertionError(
+            f"invalid before: {tx_raw_output.invalid_hereafter} != {loaded_invalid_hereafter}"
+        )
+
+    # check minting and burning
+    loaded_mint = set(_load_coins_data(tx_loaded.get("mint") or {}))
+    tx_raw_mint = {(r.amount, r.coin) for r in tx_raw_output.mint}
+
+    if tx_raw_mint != loaded_mint:
+        raise AssertionError(f"mint: {tx_raw_mint} != {loaded_mint}")
+
+    # check withdrawals
+    tx_loaded_withdrawals = tx_loaded.get("withdrawals")
+    loaded_withdrawals = set()
+    if tx_loaded_withdrawals:
+        for withdrawal in tx_loaded_withdrawals:
+            loaded_withdrawals.add((withdrawal[0]["credential"]["key hash"], withdrawal[1]))
+
+    tx_raw_withdrawals = {
+        (helpers.decode_bech32(r.address)[2:], r.amount) for r in tx_raw_output.withdrawals
+    }
+
+    if tx_raw_withdrawals != loaded_withdrawals:
+        raise AssertionError(f"withdrawals: {tx_raw_withdrawals} != {loaded_withdrawals}")
+
+    # check certificates
+    tx_raw_len_certs = len(set(tx_raw_output.tx_files.certificate_files))
+    loaded_len_certs = len(set(tx_loaded["certificates"]))
+
+    if tx_raw_len_certs != loaded_len_certs:
+        raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")
+
+    return tx_loaded
