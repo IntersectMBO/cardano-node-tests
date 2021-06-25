@@ -746,7 +746,7 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
     for r in range(1 + retry_num):
         if r > 0:
             LOGGER.warning(f"Repeating TX SQL query for '{txhash}' for the {r} time.")
-            time.sleep(2 + r)
+            time.sleep(2 + r * r)
         try:
             response = get_tx_record(txhash=txhash)
             break
