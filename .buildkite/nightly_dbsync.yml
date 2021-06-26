@@ -5,8 +5,6 @@ steps:
       - './.buildkite/nightly_dbsync.sh'
     env:
       CARDANO_NODE_SOCKET_PATH_CI: '/scratch/cardano-node-tests/state-cluster0/bft1.socket'
-      # TODO: not using master until alonzo changes stabilizes
-      NODE_REV: 'alonzo-blue2.0'
     timeout_in_minutes: 500
     agents:
       system: x86_64-linux
