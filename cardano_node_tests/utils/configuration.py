@@ -18,6 +18,15 @@ BOOTSTRAP_DIR = os.environ.get("BOOTSTRAP_DIR") or ""
 NOPOOLS = bool(os.environ.get("NOPOOLS"))
 
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
+if HAS_DBSYNC:
+    DBSYNC_BIN = (
+        Path(os.environ["DBSYNC_REPO"])
+        / "db-sync-node-extended"
+        / "bin"
+        / "cardano-db-sync-extended"
+    ).resolve()
+else:
+    DBSYNC_BIN = Path("nonexistent")
 
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 

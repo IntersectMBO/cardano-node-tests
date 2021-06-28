@@ -8,6 +8,7 @@ from typing import Generator
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Tuple
 
 from cardano_clusterlib import clusterlib
 
@@ -465,6 +466,20 @@ def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]
 
         while (result := cur.fetchone()) is not None:
             yield PoolDataDBRow(*result)
+
+
+def query_table_names() -> List[str]:
+    """Query table names in db-sync."""
+    with dbsync_conn.DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT tablename "
+            "FROM pg_catalog.pg_tables "
+            "WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema' "
+            "ORDER BY tablename ASC;"
+        )
+        results: List[Tuple[str]] = cur.fetchall()
+        table_names = [r[0] for r in results]
+        return table_names
 
 
 def get_pool_data(pool_id_bech32: str) -> PoolDataRecord:
