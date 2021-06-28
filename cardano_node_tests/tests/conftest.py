@@ -66,29 +66,48 @@ def pytest_configure(config: Any) -> None:
         LOGGER.warning("WARNING: Not using `cardano-cli` from nix!")
 
 
-def _skip_all_tests(config: Any, items: list) -> None:
+def _skip_all_tests(config: Any, items: list) -> bool:
     """Skip all tests if specified on command line.
 
     Can be used for collecting all tests and having "skipped" result before running them for real.
     This is useful when a test run is interrupted (for any reason) and needs to be restarted with
     just tests that were not run yet.
     """
-    # prevent on slave nodes (xdist)
-    if hasattr(config, "slaveinput"):
-        return
-
     if not config.getvalue("skipall"):
-        return
+        return False
 
     marker = pytest.mark.skip(reason="collected, not run")
 
     for item in items:
         item.add_marker(marker)
 
+    return True
+
+
+def _skip_dbsync_tests(items: list) -> bool:
+    """Skip all tests that require db-sync when db-sync is not available."""
+    if configuration.HAS_DBSYNC:
+        return False
+
+    marker = pytest.mark.skip(reason="db-sync not available")
+
+    for item in items:
+        if "needs_dbsync" in item.keywords:
+            item.add_marker(marker)
+
+    return True
+
 
 @pytest.mark.tryfirst
 def pytest_collection_modifyitems(config: Any, items: list) -> None:
-    _skip_all_tests(config=config, items=items)
+    # prevent on slave nodes (xdist)
+    if hasattr(config, "slaveinput"):
+        return
+
+    if _skip_all_tests(config=config, items=items):
+        return
+
+    _skip_dbsync_tests(items=items)
 
 
 @pytest.fixture(scope="session")
