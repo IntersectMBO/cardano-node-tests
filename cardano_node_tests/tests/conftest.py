@@ -90,16 +90,23 @@ def _skip_all_tests(config: Any, items: list) -> bool:
     return True
 
 
-def _skip_dbsync_tests(items: list) -> bool:
-    """Skip all tests that require db-sync when db-sync is not available."""
-    if configuration.HAS_DBSYNC:
-        return False
-
-    marker = pytest.mark.skip(reason="db-sync not available")
+def _mark_needs_dbsync_tests(items: list) -> bool:
+    """Mark 'needs_dbsync' tests with additional markers."""
+    skip_marker = pytest.mark.skip(reason="db-sync not available")
+    dbsync_marker = pytest.mark.dbsync
 
     for item in items:
-        if "needs_dbsync" in item.keywords:
-            item.add_marker(marker)
+        if "needs_dbsync" not in item.keywords:
+            continue
+
+        # all tests marked with 'needs_dbsync' are db-sync tests, and should be marked
+        # with the 'dbsync' marker as well
+        if "dbsync" not in item.keywords:
+            item.add_marker(dbsync_marker)
+
+        # skip all tests that require db-sync when db-sync is not available
+        if not configuration.HAS_DBSYNC:
+            item.add_marker(skip_marker)
 
     return True
 
@@ -113,7 +120,7 @@ def pytest_collection_modifyitems(config: Any, items: list) -> None:
     if _skip_all_tests(config=config, items=items):
         return
 
-    _skip_dbsync_tests(items=items)
+    _mark_needs_dbsync_tests(items=items)
 
 
 @pytest.fixture(scope="session")
