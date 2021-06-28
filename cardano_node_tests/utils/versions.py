@@ -29,7 +29,7 @@ class Versions:
         self.git_rev = cardano_version_db["git_rev"]
 
         dbsync_version_db = self.get_dbsync_version() if configuration.HAS_DBSYNC else {}
-        self.dbsync = version.parse(dbsync_version_db.get("version") or "")
+        self.dbsync = version.parse(dbsync_version_db.get("version") or "0")
         self.dbsync_platform = dbsync_version_db.get("platform")
         self.dbsync_ghc = dbsync_version_db.get("ghc")
         self.dbsync_git_rev = dbsync_version_db.get("git_rev")
