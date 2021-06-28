@@ -58,9 +58,15 @@ def pytest_configure(config: Any) -> None:
     config._metadata[
         "cardano-node-tests url"
     ] = f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
-    config._metadata["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
     config._metadata["CARDANO_NODE_SOCKET_PATH"] = os.environ.get("CARDANO_NODE_SOCKET_PATH")
     config._metadata["cardano-cli exe"] = distutils.spawn.find_executable("cardano-cli") or ""
+
+    config._metadata["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
+    if configuration.HAS_DBSYNC:
+        config._metadata["db-sync"] = str(VERSIONS.dbsync)
+        config._metadata["db-sync rev"] = VERSIONS.dbsync_git_rev
+        config._metadata["db-sync ghc"] = VERSIONS.dbsync_ghc
+        config._metadata["db-sync exe"] = str(configuration.DBSYNC_BIN)
 
     if "nix/store" not in config._metadata["cardano-cli exe"]:
         LOGGER.warning("WARNING: Not using `cardano-cli` from nix!")
