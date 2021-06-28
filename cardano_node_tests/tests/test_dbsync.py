@@ -30,7 +30,7 @@ def temp_dir(create_temp_dir: Path):
 
 
 # use the "temp_dir" fixture for all tests automatically; all tests in this module need dbsync
-pytestmark = [pytest.mark.usefixtures("temp_dir"), pytest.mark.dbsync, pytest.mark.needs_dbsync]
+pytestmark = [pytest.mark.usefixtures("temp_dir"), pytest.mark.needs_dbsync]
 
 
 class TestDBSync:
