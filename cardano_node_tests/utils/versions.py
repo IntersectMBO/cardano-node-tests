@@ -22,11 +22,17 @@ class Versions:
         self.cluster_era = getattr(self, cluster_era.upper(), 1)
         self.transaction_era = getattr(self, transaction_era.upper(), 1)
 
-        versions_db = self.get_cardano_version()
-        self.node = version.parse(versions_db["cardano-node"])
-        self.ghc = versions_db["ghc"]
-        self.platform = versions_db["platform"]
-        self.git_rev = versions_db["git_rev"]
+        cardano_version_db = self.get_cardano_version()
+        self.node = version.parse(cardano_version_db["version"])
+        self.ghc = cardano_version_db["ghc"]
+        self.platform = cardano_version_db["platform"]
+        self.git_rev = cardano_version_db["git_rev"]
+
+        dbsync_version_db = self.get_dbsync_version() if configuration.HAS_DBSYNC else {}
+        self.dbsync = version.parse(dbsync_version_db.get("version") or "")
+        self.dbsync_platform = dbsync_version_db.get("platform")
+        self.dbsync_ghc = dbsync_version_db.get("ghc")
+        self.dbsync_git_rev = dbsync_version_db.get("git_rev")
 
     def get_cardano_version(self) -> dict:
         """Return version info for cardano-node."""
@@ -34,7 +40,20 @@ class Versions:
         env_info, git_info, *__ = out.splitlines()
         node, platform, ghc, *__ = env_info.split(" - ")
         version_db = {
-            "cardano-node": node.split(" ")[-1],
+            "version": node.split(" ")[-1],
+            "platform": platform,
+            "ghc": ghc,
+            "git_rev": git_info.split(" ")[-1],
+        }
+        return version_db
+
+    def get_dbsync_version(self) -> dict:
+        """Return version info for db-sync."""
+        out = helpers.run_command(f"{configuration.DBSYNC_BIN} --version").decode().strip()
+        env_info, git_info, *__ = out.splitlines()
+        dbsync, platform, ghc, *__ = env_info.split(" - ")
+        version_db = {
+            "version": dbsync.split(" ")[-1],
             "platform": platform,
             "ghc": ghc,
             "git_rev": git_info.split(" ")[-1],
@@ -45,7 +64,8 @@ class Versions:
         return (
             f"<Versions: cluster_era={self.cluster_era}, "
             f"transaction_era={self.transaction_era}, "
-            f"node={self.node}>"
+            f"node={self.node}, "
+            f"dbsync={self.dbsync}>"
         )
 
 
