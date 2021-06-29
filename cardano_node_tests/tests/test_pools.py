@@ -477,7 +477,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     return pool_creation_out
 
 
-@pytest.mark.run(order=2)
+@pytest.mark.order(2)
 @pytest.mark.testnets
 class TestStakePool:
     """General tests for stake pools."""
@@ -1476,7 +1476,7 @@ class TestStakePool:
         )
 
 
-@pytest.mark.run(order=2)
+@pytest.mark.order(2)
 class TestPoolCost:
     """Tests for stake pool cost."""
 

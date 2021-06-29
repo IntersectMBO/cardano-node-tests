@@ -39,7 +39,7 @@ let
           cardano-clusterlib
           pytest-allure
           pytest-html
-          pytest-ordering
+          pytest-order
           pytest_xdist
           pyyaml
           setuptools

@@ -86,7 +86,7 @@ class TestKES:
     """Basic tests for KES period."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.run(order=3)
+    @pytest.mark.order(3)
     @pytest.mark.skipif(
         bool(configuration.TX_ERA),
         reason="different TX eras doesn't affect this test, pointless to run",
@@ -121,7 +121,7 @@ class TestKES:
         assert cluster.get_slot_no() == init_slot, "Unexpected new slots"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.run(order=1)
+    @pytest.mark.order(1)
     def test_opcert_future_kes_period(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
@@ -233,7 +233,7 @@ class TestKES:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.run(order=2)
+    @pytest.mark.order(2)
     def test_update_valid_opcert(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
