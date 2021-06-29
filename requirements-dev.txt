@@ -22,7 +22,7 @@ pydantic
 pytest
 pytest-html
 pytest-metadata
-pytest-ordering
+pytest-order
 pytest-xdist
 pyyaml
 requests
