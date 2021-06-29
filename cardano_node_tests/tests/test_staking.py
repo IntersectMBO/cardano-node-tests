@@ -235,7 +235,7 @@ def _delegate_stake_add(
 
 
 @pytest.mark.testnets
-@pytest.mark.run(order=3)
+@pytest.mark.order(3)
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
@@ -324,7 +324,7 @@ class TestDelegateAddr:
             assert delegation_out.pool_id == tx_db_record.stake_delegation[0].pool_id
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.run(order=2)
+    @pytest.mark.order(2)
     @pytest.mark.dbsync
     def test_deregister(
         self,
@@ -796,7 +796,7 @@ class TestNegative:
         assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
 
 
-@pytest.mark.run(order=1)
+@pytest.mark.order(1)
 class TestRewards:
     """Tests for checking expected rewards."""
 
