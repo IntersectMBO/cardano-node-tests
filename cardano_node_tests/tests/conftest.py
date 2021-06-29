@@ -185,6 +185,7 @@ def cluster_cleanup(
 
     lock_dir = pytest_tmp_dir = pytest_tmp_dir.parent
 
+    # pylint: disable=consider-using-with
     open(lock_dir / f".started_session_{worker_id}", "a").close()
 
     yield

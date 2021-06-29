@@ -25,7 +25,7 @@ LOGGER = logging.getLogger(__name__)
 
 def get_args() -> argparse.Namespace:
     """Get command line arguments."""
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n", maxsplit=1)[0])
     parser.add_argument(
         "-a",
         "--artifacts-base-dir",
