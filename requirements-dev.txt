@@ -3,7 +3,7 @@
 # linting
 mypy==0.812
 pre-commit
-pylint
+pylint==2.8.3
 
 # documentation
 Sphinx==3.2.1
