@@ -126,7 +126,7 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
     assert epoch + 1 == cluster_obj.get_epoch()
 
 
-@pytest.mark.run(order=3)
+@pytest.mark.order(3)
 @pytest.mark.skipif(
     bool(configuration.TX_ERA),
     reason="different TX eras doesn't affect this test, pointless to run",
@@ -144,7 +144,7 @@ class TestBasic:
         check_epoch_length(cluster)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.run(order=2)
+    @pytest.mark.order(2)
     def test_slot_length(self, cluster_slot_length: clusterlib.ClusterLib):
         """Test the *slotLength* configuration."""
         cluster = cluster_slot_length

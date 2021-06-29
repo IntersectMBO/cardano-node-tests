@@ -40,7 +40,7 @@ def temp_dir(create_temp_dir: Path):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-@pytest.mark.run(order=3)
+@pytest.mark.order(3)
 class TestUpdateProposal:
     """Tests for update proposal."""
 
