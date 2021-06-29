@@ -1,4 +1,5 @@
 """Functionality for parallel execution of tests on multiple cluster instances."""
+# pylint: disable=consider-using-with
 import contextlib
 import dataclasses
 import datetime
