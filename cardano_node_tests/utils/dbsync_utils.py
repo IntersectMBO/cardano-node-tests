@@ -45,32 +45,6 @@ class DelegationRecord(NamedTuple):
     active_epoch_no: int
 
 
-class PoolDataDBRow(NamedTuple):
-    id: int
-    hash: memoryview
-    view: str
-    cert_index: int
-    vrf_key_hash: memoryview
-    pledge: int
-    reward_addr: memoryview
-    active_epoch_no: int
-    meta_id: int
-    margin: decimal.Decimal
-    fixed_cost: int
-    registered_tx_id: int
-    metadata_url: str
-    metadata_hash: memoryview
-    owner_stake_address_id: int
-    owner: memoryview
-    ipv4: str
-    ipv6: str
-    dns_name: str
-    port: int
-    retire_cert_index: int
-    retire_announced_tx_id: int
-    retiring_epoch: int
-
-
 class PoolDataRecord(NamedTuple):
     id: int
     hash: str
@@ -120,6 +94,32 @@ class TxRecord(NamedTuple):
         """Convert list of `MetadataRecord`s to metadata dictionary."""
         metadata = {int(r.key): r.json for r in self.metadata}
         return metadata
+
+
+class PoolDataDBRow(NamedTuple):
+    id: int
+    hash: memoryview
+    view: str
+    cert_index: int
+    vrf_key_hash: memoryview
+    pledge: int
+    reward_addr: memoryview
+    active_epoch_no: int
+    meta_id: int
+    margin: decimal.Decimal
+    fixed_cost: int
+    registered_tx_id: int
+    metadata_url: str
+    metadata_hash: memoryview
+    owner_stake_address_id: int
+    owner: memoryview
+    ipv4: str
+    ipv6: str
+    dns_name: str
+    port: int
+    retire_cert_index: int
+    retire_announced_tx_id: int
+    retiring_epoch: int
 
 
 class TxDBRow(NamedTuple):
@@ -482,9 +482,12 @@ def query_table_names() -> List[str]:
         return table_names
 
 
-def get_pool_data(pool_id_bech32: str) -> PoolDataRecord:
+def get_pool_data(pool_id_bech32: str) -> Optional[PoolDataRecord]:
     """Get pool data from db-sync."""
     pools = list(query_pool_data(pool_id_bech32))
+    if not pools:
+        return None
+
     known_owners = set()
     single_host_names = []
     single_host_addresses = []
@@ -492,7 +495,6 @@ def get_pool_data(pool_id_bech32: str) -> PoolDataRecord:
     latest_registered_tx_id = pools[-1].registered_tx_id
     latest_pools = [pool for pool in pools if pool.registered_tx_id == latest_registered_tx_id]
 
-    pool = None
     for pool in latest_pools:
         if pool.owner:
             owner = pool.owner.hex()[2:]
@@ -508,6 +510,7 @@ def get_pool_data(pool_id_bech32: str) -> PoolDataRecord:
             if host_address not in single_host_addresses:
                 single_host_addresses.append(host_address)
 
+    # pylint: disable=undefined-loop-variable
     pool_data = PoolDataRecord(
         id=pool.id,
         hash=pool.hash.hex(),

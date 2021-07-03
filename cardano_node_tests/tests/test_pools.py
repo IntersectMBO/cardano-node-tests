@@ -90,20 +90,22 @@ def cluster_mincost(
 
 
 def _check_pool_deregistration_in_db(
-    stake_pool_id: str, retiring_epoch: int
+    pool_id: str, retiring_epoch: int
 ) -> Optional[dbsync_utils.PoolDataRecord]:
     """Check pool retirement in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
-    db_pool_data = dbsync_utils.get_pool_data(stake_pool_id)
+    db_pool_data = dbsync_utils.get_pool_data(pool_id)
+    if not db_pool_data:
+        raise AssertionError(f"No data returned from db-sync for pool {pool_id}.")
 
     if db_pool_data.retire_announced_tx_id and db_pool_data.retiring_epoch:
         assert (
             retiring_epoch == db_pool_data.retiring_epoch
         ), f"Mismatch in epoch values: {retiring_epoch} VS {db_pool_data.retiring_epoch}"
     else:
-        raise AssertionError(f"Stake pool `{stake_pool_id}` not retired.")
+        raise AssertionError(f"Stake pool `{pool_id}` not retired.")
 
     return db_pool_data
 
@@ -117,6 +119,8 @@ def _check_pool_data_in_db(  # noqa: C901
         return None
 
     db_pool_data = dbsync_utils.get_pool_data(pool_id)
+    if not db_pool_data:
+        raise AssertionError(f"No data returned from db-sync for pool {pool_id}.")
 
     errors_list = []
 
@@ -754,7 +758,7 @@ class TestStakePool:
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
         _check_pool_deregistration_in_db(
-            stake_pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
+            pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
         )
 
         # check that the balance for source address was correctly updated
