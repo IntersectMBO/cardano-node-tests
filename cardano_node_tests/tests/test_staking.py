@@ -255,7 +255,7 @@ class TestDelegateAddr:
         temp_template = helpers.get_func_name()
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-5, force_epoch=False
+            cluster_obj=cluster, start=0, stop=-10, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -299,7 +299,7 @@ class TestDelegateAddr:
         temp_template = helpers.get_func_name()
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-5, force_epoch=False
+            cluster_obj=cluster, start=0, stop=-10, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -344,7 +344,7 @@ class TestDelegateAddr:
         temp_template = helpers.get_func_name()
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-5, force_epoch=False
+            cluster_obj=cluster, start=0, stop=-10, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -379,6 +379,11 @@ class TestDelegateAddr:
                 break
         else:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
+
+        # make sure we have enough time to finish deregistration in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+        )
 
         # files for deregistering stake address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -561,7 +566,7 @@ class TestDelegateAddr:
         )
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-5, force_epoch=False
+            cluster_obj=cluster, start=0, stop=-10, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -1496,6 +1501,11 @@ class TestRewards:
         else:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
+        # make sure we have enough time to finish the transfer in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+        )
+
         # transfer all funds from payment address back to faucet, so no funds are staked
         clusterlib_utils.return_funds_to_faucet(
             delegation_out.pool_user.payment,
@@ -1590,6 +1600,11 @@ class TestRewards:
                 break
         else:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
+
+        # make sure we have enough time to finish the pool update in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+        )
 
         # load and update original pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
@@ -1723,6 +1738,11 @@ class TestRewards:
                 break
         else:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
+
+        # make sure we have enough time to withdraw the pledge in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+        )
 
         # load pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
@@ -1876,6 +1896,11 @@ class TestRewards:
         else:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
+        # make sure we have enough time to finish deregistration in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+        )
+
         # deregister stake address - owner's stake is lower than pledge
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_owner.stake.vkey_file
@@ -1900,12 +1925,12 @@ class TestRewards:
                 == src_init_balance - tx_raw_deregister_output.fee + cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
-            cluster.wait_for_new_epoch(4, padding_seconds=30)
-
             # check that the stake address is no longer delegated
             assert not cluster.get_stake_addr_info(
                 pool_owner.stake.address
             ), "Stake address still delegated"
+
+            cluster.wait_for_new_epoch(4, padding_seconds=30)
 
             orig_owner_reward = cluster.get_stake_addr_info(
                 pool_rec["reward"].address
@@ -2039,6 +2064,11 @@ class TestRewards:
         else:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
+        # make sure we have enough time to finish deregistration in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+        )
+
         # withdraw pool rewards to payment address
         cluster.withdraw_reward(
             stake_addr_record=pool_reward.stake,
@@ -2070,16 +2100,11 @@ class TestRewards:
                 == src_init_balance - tx_raw_deregister_output.fee + cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
-            cluster.wait_for_new_epoch(4, padding_seconds=30)
-
             # check that the reward address is no longer delegated
             assert not cluster.get_stake_addr_info(
                 pool_reward.stake.address
             ), "Stake address still delegated"
 
-            orig_pool_reward = cluster.get_stake_addr_info(
-                pool_reward.stake.address
-            ).reward_account_balance
             orig_user_reward = cluster.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
             ).reward_account_balance
@@ -2088,8 +2113,7 @@ class TestRewards:
 
             # check that pool owner is NOT receiving rewards
             assert (
-                orig_pool_reward
-                == cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
+                cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance == 0
             ), "Pool owner received unexpected rewards"
 
             # check that new rewards are received by those delegating to the pool
@@ -2144,8 +2168,7 @@ class TestRewards:
 
             # check that pool owner is also receiving rewards
             assert (
-                orig_pool_reward
-                < cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
+                cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance > 0
             ), "New reward was not received by pool reward address"
 
     @allure.link(helpers.get_vcs_link())
@@ -2189,6 +2212,11 @@ class TestRewards:
         else:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
+        # make sure we have enough time to finish reward address deregistration in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+        )
+
         # withdraw pool rewards to payment address
         cluster.withdraw_reward(
             stake_addr_record=pool_reward.stake,
@@ -2220,23 +2248,16 @@ class TestRewards:
                 == src_init_balance - tx_raw_deregister_output.fee + cluster.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
-            cluster.wait_for_new_epoch(4, padding_seconds=30)
-
             # check that the reward address is no longer delegated
             assert not cluster.get_stake_addr_info(
                 pool_reward.stake.address
             ), "Stake address still delegated"
 
-            orig_pool_reward = cluster.get_stake_addr_info(
-                pool_reward.stake.address
-            ).reward_account_balance
-
             cluster.wait_for_new_epoch(3)
 
             # check that pool owner is NOT receiving rewards
             assert (
-                orig_pool_reward
-                == cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
+                cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance == 0
             ), "Pool owner received unexpected rewards"
 
             # fund source address
@@ -2248,7 +2269,7 @@ class TestRewards:
                 force=True,
             )
 
-            # make sure we have enough time to finish deregistration in one epoch
+            # make sure we have enough time to finish pool deregistration in one epoch
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster, start=5, stop=-40, force_epoch=False
             )
