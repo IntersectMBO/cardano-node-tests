@@ -10,9 +10,9 @@ INSTANCE_NUM="${STATE_CLUSTER#*state-cluster}"
 DATABASE_NAME="dbsync${INSTANCE_NUM}"
 
 PGPASSFILE="$STATE_CLUSTER/pgpass"
-PGHOST="${PGHOST:-localhost}"
-PGPORT="${PGPORT:-5432}"
-PGUSER="${PGUSER:-postgres}"
+export PGHOST="${PGHOST:-localhost}"
+export PGPORT="${PGPORT:-5432}"
+export PGUSER="${PGUSER:-postgres}"
 
 echo "Deleting db $DATABASE_NAME"
 dropdb --if-exists "$DATABASE_NAME" > /dev/null
