@@ -13,3 +13,4 @@ steps:
       - 'cli_coverage.json'
       - 'testrun-report.html'
       - 'scheduling.log'
+      - 'errors_all.log'
