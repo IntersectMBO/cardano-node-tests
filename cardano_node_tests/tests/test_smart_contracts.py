@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -71,6 +72,7 @@ class TestPlutus:
         return addr
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_txin_locking(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -187,3 +189,6 @@ class TestPlutus:
         assert (
             cluster.get_address_balance(script_address) == script_init_balance
         ), f"Incorrect balance for script address `{script_address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_datum)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_spend)
