@@ -95,6 +95,7 @@ class TxRecord(NamedTuple):
     txins: List[clusterlib.UTXOData]
     txouts: List[clusterlib.UTXOData]
     mint: List[clusterlib.UTXOData]
+    collaterals: List[clusterlib.UTXOData]
     metadata: List[MetadataRecord]
     reserve: List[ADAStashRecord]
     treasury: List[ADAStashRecord]
@@ -160,6 +161,7 @@ class TxDBRow(NamedTuple):
     stake_dereg_count: int
     stake_deleg_count: int
     withdrawal_count: int
+    collateral_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -232,6 +234,14 @@ class TxInDBRow(NamedTuple):
     ma_tx_out_quantity: Optional[decimal.Decimal]
 
 
+class CollateralTxInDBRow(NamedTuple):
+    tx_out_id: int
+    utxo_ix: int
+    address: str
+    value: decimal.Decimal
+    tx_hash: memoryview
+
+
 class ADAPotsDBRow(NamedTuple):
     id: int
     slot_no: int
@@ -269,6 +279,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM stake_deregistration WHERE tx_id=tx.id) AS dereg_count,"
             " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
             " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
+            " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -288,8 +299,8 @@ def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
     with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
-            " tx_out.id, tx_out.index, tx_out.address, tx_out.value, "
-            " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash, "
+            " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
+            " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity "
             "FROM tx_in "
             "LEFT JOIN tx_out "
@@ -302,6 +313,26 @@ def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
 
         while (result := cur.fetchone()) is not None:
             yield TxInDBRow(*result)
+
+
+def query_collateral_tx_ins(txhash: str) -> Generator[CollateralTxInDBRow, None, None]:
+    """Query transaction collateral txins in db-sync."""
+    with dbsync_conn.DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
+            " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash "
+            "FROM collateral_tx_in "
+            "LEFT JOIN tx_out "
+            "ON (tx_out.tx_id = collateral_tx_in.tx_out_id AND"
+            "    tx_out.index = collateral_tx_in.tx_out_index) "
+            "LEFT JOIN tx ON tx.id = collateral_tx_in.tx_in_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield CollateralTxInDBRow(*result)
 
 
 def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
@@ -826,6 +857,18 @@ def get_tx_record(txhash: str) -> TxRecord:
             for r in query_tx_withdrawal(txhash=txhash)
         ]
 
+    collaterals = []
+    if txdata.last_row.collateral_count:
+        collaterals = [
+            clusterlib.UTXOData(
+                utxo_hash=r.tx_hash.hex(),
+                utxo_ix=int(r.utxo_ix),
+                amount=int(r.value),
+                address=str(r.address),
+            )
+            for r in query_collateral_tx_ins(txhash=txhash)
+        ]
+
     record = TxRecord(
         tx_id=int(txdata.last_row.tx_id),
         tx_hash=txdata.last_row.tx_hash.hex(),
@@ -844,6 +887,7 @@ def get_tx_record(txhash: str) -> TxRecord:
         txins=txins,
         txouts=[*txdata.utxo_out, *txdata.ma_utxo_out],
         mint=txdata.mint_utxo_out,
+        collaterals=collaterals,
         metadata=metadata,
         reserve=reserve,
         treasury=treasury,
@@ -922,12 +966,13 @@ def check_tx(
         f"({response.invalid_hereafter} != {tx_raw_output.invalid_hereafter})"
     )
 
-    len_db_txins, len_out_txins = len(response.txins), len(tx_raw_output.txins)
+    combined_txins = [*tx_raw_output.txins, *[p.txin for p in tx_raw_output.plutus_txins]]
+    len_db_txins, len_out_txins = len(response.txins), len(combined_txins)
     assert (
         len_db_txins == len_out_txins
     ), f"Number of TX inputs doesn't match ({len_db_txins} != {len_out_txins})"
 
-    tx_txins = sorted(tx_raw_output.txins)
+    tx_txins = sorted(combined_txins)
     db_txins = sorted(response.txins)
     assert tx_txins == db_txins, f"TX inputs don't match ({tx_txins} != {db_txins})"
 
@@ -936,7 +981,8 @@ def check_tx(
         len_db_txouts == len_out_txouts
     ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts})"
 
-    tx_txouts = sorted(tx_raw_output.txouts)
+    # cannot get datum hash from db-sync, we need to strip it from tx data as well
+    tx_txouts = sorted(r._replace(datum_hash="") for r in tx_raw_output.txouts)
     db_txouts = sorted(clusterlib_utils.utxodata2txout(r) for r in response.txouts)
     assert tx_txouts == db_txouts, f"TX outputs don't match ({tx_txouts} != {db_txouts})"
 
@@ -962,5 +1008,11 @@ def check_tx(
     assert (
         tx_withdrawals == db_withdrawals
     ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
+
+    tx_collaterals = sorted(r.collateral for r in tx_raw_output.plutus_txins)
+    db_collaterals = sorted(response.collaterals)
+    assert (
+        tx_collaterals == db_collaterals
+    ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
 
     return response
