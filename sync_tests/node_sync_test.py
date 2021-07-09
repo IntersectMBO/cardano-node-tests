@@ -367,9 +367,13 @@ def get_current_tip(tag_no=None, timeout_seconds=10):
             output_json = json.loads(output)
             if output_json["epoch"] is not None:
                 output_json["epoch"] = int(output_json["epoch"])
+            if "syncProgress" not in output_json:
+                output_json["syncProgress"] = None
+            else:
+                output_json["syncProgress"] = int(output_json["syncProgress"])
 
             return output_json["epoch"], int(output_json["block"]), output_json["hash"], \
-                   int(output_json["slot"]), output_json["era"].lower()
+                   int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
         except subprocess.CalledProcessError as e:
             print(f" === Waiting 1s before retrying to get the tip again - {i}")
             print(f"     !!!ERROR: command {e.cmd} return with error (code {e.returncode}): {' '.join(str(e.output).split())}")
@@ -516,39 +520,61 @@ def wait_for_node_to_sync(env, tag_no):
     era_details_dict = OrderedDict()
     epoch_details_dict = OrderedDict()
 
+    actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip(tag_no)
     last_slot_no = get_calculated_slot_no(env)
-
-    actual_epoch, actual_block, actual_hash, actual_slot, actual_era = get_current_tip(tag_no)
-
     start_sync = time.perf_counter()
 
     count = 0
-    while actual_slot <= last_slot_no:
-        if count % 60 == 0:
-            print(f"actual_era  : {actual_era} "
-                  f" - actual_epoch: {actual_epoch} "
-                  f" - actual_block: {actual_block} "
-                  f" - actual_slot : {actual_slot}")
-        if actual_era not in era_details_dict:
-            if actual_epoch is None:
-                # TODO: to remove this after 'tip' bug returning None/null will be fixed
-                # https://github.com/input-output-hk/cardano-node/issues/2568
-                actual_epoch = 1
-            current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-            actual_era_start_time = get_epoch_start_datetime(env, actual_epoch)
-            actual_era_dict = {"start_epoch": actual_epoch,
-                               "start_time": actual_era_start_time,
-                               "start_sync_time": current_time}
-            era_details_dict[actual_era] = actual_era_dict
-        if actual_epoch not in epoch_details_dict:
-            current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-            actual_epoch_dict = {"start_sync_time": current_time}
-            epoch_details_dict[actual_epoch] = actual_epoch_dict
+    if syncProgress is not None:
+        while syncProgress < 100:
+            if count % 60 == 0:
+                print(f"actual_era  : {actual_era} "
+                      f" - actual_epoch: {actual_epoch} "
+                      f" - actual_block: {actual_block} "
+                      f" - actual_slot : {actual_slot} "
+                      f" - syncProgress: {syncProgress}")
+            if actual_era not in era_details_dict:
+                current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+                actual_era_start_time = get_epoch_start_datetime(env, actual_epoch)
+                actual_era_dict = {"start_epoch": actual_epoch,
+                                   "start_time": actual_era_start_time,
+                                   "start_sync_time": current_time}
+                era_details_dict[actual_era] = actual_era_dict
+            if actual_epoch not in epoch_details_dict:
+                current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+                actual_epoch_dict = {"start_sync_time": current_time}
+                epoch_details_dict[actual_epoch] = actual_epoch_dict
 
-        time.sleep(1)
-        count += 1
+            time.sleep(1)
+            count += 1
+            actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip(tag_no)
+    else:
+        while actual_slot <= last_slot_no:
+            if count % 60 == 0:
+                print(f"actual_era  : {actual_era} "
+                      f" - actual_epoch: {actual_epoch} "
+                      f" - actual_block: {actual_block} "
+                      f" - actual_slot : {actual_slot} "
+                      f" - syncProgress: {syncProgress}")
+            if actual_era not in era_details_dict:
+                if actual_epoch is None:
+                    # TODO: to remove this after 'tip' bug returning None/null will be fixed
+                    # https://github.com/input-output-hk/cardano-node/issues/2568
+                    actual_epoch = 1
+                current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+                actual_era_start_time = get_epoch_start_datetime(env, actual_epoch)
+                actual_era_dict = {"start_epoch": actual_epoch,
+                                   "start_time": actual_era_start_time,
+                                   "start_sync_time": current_time}
+                era_details_dict[actual_era] = actual_era_dict
+            if actual_epoch not in epoch_details_dict:
+                current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+                actual_epoch_dict = {"start_sync_time": current_time}
+                epoch_details_dict[actual_epoch] = actual_epoch_dict
 
-        actual_epoch, actual_block, actual_hash, actual_slot, actual_era = get_current_tip(tag_no)
+            time.sleep(1)
+            count += 1
+            actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip(tag_no)
 
     end_sync = time.perf_counter()
 
