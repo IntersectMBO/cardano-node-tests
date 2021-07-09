@@ -169,7 +169,7 @@ def get_hydra_build_download_url(eval_url, os_type):
 
 
 def check_string_format(input_string):
-    if len(input_string == 40):
+    if len(input_string) == 40:
         return "commit_sha_format"
     else:
         return "tag_format"
