@@ -309,6 +309,7 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
         node_config_json = json.load(json_file)
 
     node_config_json["options"]["mapBackends"]["cardano.node.resources"] = ["KatipBK"]
+    node_config_json["TestEnableDevelopmentNetworkProtocols"] = "true"
 
     with open(node_config_filepath, "w") as json_file:
         json.dump(node_config_json, json_file, indent=2)
