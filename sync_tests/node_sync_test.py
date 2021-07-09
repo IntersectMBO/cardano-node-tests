@@ -390,7 +390,13 @@ def get_current_tip(tag_no=None, timeout_seconds=10):
                     .decode("utf-8")
                     .strip()
             )
+
+            print(f" === output: {output}")
+
             output_json = json.loads(output)
+
+            print(f" === output_json: {output_json}")
+
             if output_json["epoch"] is not None:
                 output_json["epoch"] = int(output_json["epoch"])
             if "syncProgress" not in output_json:
