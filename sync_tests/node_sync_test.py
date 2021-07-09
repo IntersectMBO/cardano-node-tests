@@ -108,10 +108,17 @@ def git_get_hydra_eval_link_for_commit_sha(commit_sha):
     global jData
     url = f"https://api.github.com/repos/input-output-hk/cardano-node/commits/{commit_sha}/status"
     response = requests.get(url)
-    if response.ok:
-        jData = json.loads(response.content)
-    else:
-        response.raise_for_status()
+
+    # there is a rate limit for the provided url that we want to overpass with the below loop
+    count = 0
+    while not response.ok:
+        time.sleep(random.randint(30, 240))
+        count += 1
+        response = requests.get(url)
+        if count > 10:
+            print(f"!!!! ERROR: Could not get the commit sha for tag {commit_sha} after {count} retries")
+            response.raise_for_status()
+    jData = json.loads(response.content)
 
     for status in jData.get('statuses'):
         if "hydra.iohk.io/eval" in status.get("target_url"):
@@ -286,7 +293,7 @@ def get_node_config_files(env):
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
-        + "-shelley-genesis.json",
+        + "-alonzo-genesis.json",
         env + "-alonzo-genesis.json",
         )
     urllib.request.urlretrieve(
