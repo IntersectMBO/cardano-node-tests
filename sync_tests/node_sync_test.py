@@ -168,13 +168,26 @@ def get_hydra_build_download_url(eval_url, os_type):
     return None
 
 
+def check_string_format(input_string):
+    if len(input_string == 40):
+        return "commit_sha_format"
+    else:
+        return "tag_format"
+
+
 def get_and_extract_node_files(tag_no):
     print(" - get and extract the pre-built node files")
     current_directory = os.getcwd()
-    print(f" - current_directory: {current_directory}")
+    print(f" - current_directory for extracting node files: {current_directory}")
     platform_system, platform_release, platform_version = get_os_type()
 
-    commit_sha = git_get_commit_sha_for_tag_no(tag_no)
+    if check_string_format(tag_no) == "tag_format":
+        commit_sha = git_get_commit_sha_for_tag_no(tag_no)
+    elif check_string_format(tag_no) == "commit_sha_format":
+        commit_sha = tag_no
+    else:
+        print(f" !!! ERROR: invalid format for tag_no - {tag_no}; Expected tag_no or commit_sha.")
+        commit_sha = None
     eval_url = git_get_hydra_eval_link_for_commit_sha(commit_sha)
 
     print(f"commit_sha  : {commit_sha}")
@@ -269,6 +282,12 @@ def get_node_config_files(env):
         + env
         + "-shelley-genesis.json",
         env + "-shelley-genesis.json",
+        )
+    urllib.request.urlretrieve(
+        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
+        + env
+        + "-shelley-genesis.json",
+        env + "-alonzo-genesis.json",
         )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
