@@ -14,7 +14,7 @@ POOL_PLEDGE=1000000000000
 INIT_SUPPLY=45000000000000000
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
-  echo "Cluster already running. Please run \`stop-cluster\` first!" >&2
+  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster-hfc\` first!" >&2
   exit 1
 fi
 
