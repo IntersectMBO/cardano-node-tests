@@ -30,7 +30,6 @@ fi
 
 rm -rf "$STATE_CLUSTER"
 mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync}
-mkdir "$STATE_CLUSTER/shelley/alonzo"
 cd "$STATE_CLUSTER/.."
 
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
@@ -39,7 +38,6 @@ cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/genesis.spec.json" "$STATE_CLUSTER/shelley/genesis.spec.json"
-cp "$SCRIPT_DIR/shelley_qa_cost-model.json" "$STATE_CLUSTER/shelley/alonzo"
 
 # enable db-sync service
 if [ -n "${DBSYNC_REPO:-""}" ]; then

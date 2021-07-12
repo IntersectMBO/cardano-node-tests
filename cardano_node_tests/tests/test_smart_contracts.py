@@ -1,4 +1,5 @@
 """Tests for smart contracts."""
+import decimal
 import logging
 from pathlib import Path
 
@@ -43,7 +44,8 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 class TestPlutus:
     """Tests for Plutus smart contracts."""
 
-    ALWAYS_SUCCEEDS_PLUTUS = DATA_DIR / "untyped-always-succeeds-txin.plutus"
+    PLUTUS_DIR = DATA_DIR / "plutus"
+    ALWAYS_SUCCEEDS_PLUTUS = PLUTUS_DIR / "always-succeeds-spending.plutus"
 
     @pytest.fixture
     def payment_addr(
@@ -66,7 +68,7 @@ class TestPlutus:
             addr,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=2000_000_000,
+            amount=500_000_000,
         )
 
         return addr
@@ -87,8 +89,14 @@ class TestPlutus:
         * check that the expected amount was spent
         """
         amount = 50_000_000
-        expected_fee = 801_000_000
-        datum_value = "49"
+
+        plutusrequiredspace = decimal.Decimal(70_000_000)
+        plutusrequiredtime = decimal.Decimal(70_000_000)
+        fee_redeem = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
+        collateral_amount = fee_redeem
+
+        datum_file = self.PLUTUS_DIR / "42.datum"
+        redeemer_file = self.PLUTUS_DIR / "42.redeemer"
 
         temp_template = helpers.get_func_name()
 
@@ -102,12 +110,13 @@ class TestPlutus:
         tx_files_datum = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
         )
-        datum_hash = cluster.get_hash_script_data(script_data_value=datum_value)
+        datum_hash = cluster.get_hash_script_data(script_data_file=datum_file)
         txouts_datum = [
             clusterlib.TxOut(
-                address=script_address, amount=amount + expected_fee, datum_hash=datum_hash
+                address=script_address, amount=amount + fee_redeem, datum_hash=datum_hash
             ),
-            clusterlib.TxOut(address=payment_addr.address, amount=expected_fee),  # for collateral
+            # for collateral
+            clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
         ]
         fee_datum = cluster.calculate_tx_fee(
             src_address=payment_addr.address,
@@ -123,7 +132,8 @@ class TestPlutus:
             txouts=txouts_datum,
             tx_files=tx_files_datum,
             fee=fee_datum,
-            join_txouts=False,  # don't join change and collateral txouts, we need separate UTxOs
+            # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+            join_txouts=False,
         )
         tx_signed_datum = cluster.sign_tx(
             tx_body_file=tx_raw_output_datum.out_file,
@@ -134,7 +144,7 @@ class TestPlutus:
 
         script_datum_balance = cluster.get_address_balance(script_address)
         assert (
-            script_datum_balance == script_init_balance + amount + expected_fee
+            script_datum_balance == script_init_balance + amount + fee_redeem
         ), f"Incorrect balance for script address `{script_address}`"
 
         src_init_balance = cluster.get_address_balance(payment_addr.address)
@@ -144,20 +154,20 @@ class TestPlutus:
         script_utxo = clusterlib.UTXOData(
             utxo_hash=txid_body,
             utxo_ix=0,
-            amount=amount + expected_fee,
+            amount=amount + fee_redeem,
             address=script_address,
         )
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body, utxo_ix=1, amount=expected_fee, address=payment_addr.address
+            utxo_hash=txid_body, utxo_ix=1, amount=collateral_amount, address=payment_addr.address
         )
         plutus_txins = [
             clusterlib.PlutusTxIn(
                 txin=script_utxo,
                 collateral=collateral_utxo,
                 script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
-                execution_units=(200000000, 200000000),
-                datum_value=datum_value,
-                redeemer_value=datum_value,
+                execution_units=(plutusrequiredspace, plutusrequiredtime),
+                datum_file=datum_file,
+                redeemer_file=redeemer_file,
             )
         ]
         txouts_spend = [
@@ -170,7 +180,7 @@ class TestPlutus:
             out_file=f"{temp_template}_spend_tx.body",
             txouts=txouts_spend,
             tx_files=tx_files_spend,
-            fee=expected_fee,
+            fee=fee_redeem,
             plutus_txins=plutus_txins,
         )
         tx_signed_spend = cluster.sign_tx(
