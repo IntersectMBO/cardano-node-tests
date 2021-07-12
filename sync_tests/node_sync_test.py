@@ -311,9 +311,6 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
     node_config_json["options"]["mapBackends"]["cardano.node.resources"] = ["KatipBK"]
     node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
 
-    # TODO: clean this
-    print(json.dumps(node_config_json, indent=2))
-
     with open(node_config_filepath, "w") as json_file:
         json.dump(node_config_json, json_file, indent=2)
 
@@ -394,19 +391,14 @@ def get_current_tip(tag_no=None, timeout_seconds=10):
                     .decode("utf-8")
                     .strip()
             )
-
-            print(f" === output: {output}")
-
             output_json = json.loads(output)
-
-            print(f" === output_json: {output_json}")
 
             if output_json["epoch"] is not None:
                 output_json["epoch"] = int(output_json["epoch"])
             if "syncProgress" not in output_json:
                 output_json["syncProgress"] = None
             else:
-                output_json["syncProgress"] = int(output_json["syncProgress"])
+                output_json["syncProgress"] = int(float(output_json["syncProgress"]))
 
             return output_json["epoch"], int(output_json["block"]), output_json["hash"], \
                    int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
