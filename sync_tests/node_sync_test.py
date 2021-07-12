@@ -311,6 +311,7 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
     node_config_json["options"]["mapBackends"]["cardano.node.resources"] = ["KatipBK"]
     node_config_json["TestEnableDevelopmentNetworkProtocols"] = "true"
 
+    # TODO: clean this
     print(json.dumps(node_config_json, indent=2))
 
     with open(node_config_filepath, "w") as json_file:
@@ -487,10 +488,10 @@ def start_node_unix(env, tag_no):
     )
 
     logfile = open(NODE_LOG_FILE, "w+")
-    print(f"cmd: {cmd}")
+    print(f"start node cmd: {cmd}")
 
     try:
-        p = subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=logfile)
         print("waiting for db folder to be created")
         count = 0
         count_timeout = 299
