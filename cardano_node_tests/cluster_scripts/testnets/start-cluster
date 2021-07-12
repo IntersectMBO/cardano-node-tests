@@ -8,7 +8,7 @@ SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
-  echo "Cluster already running. Please run \`stop-cluster\` first!" >&2
+  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster\` first!" >&2
   exit 1
 fi
 
