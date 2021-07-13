@@ -83,4 +83,4 @@ while :; do
   sleep 5
 done
 
-echo "Cluster started. Run \`stop-cluster\` to stop"
+echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
