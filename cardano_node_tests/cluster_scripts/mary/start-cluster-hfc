@@ -560,4 +560,4 @@ sleep "$WAIT_SEC"
 ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
 [ "$ERA" = "Mary" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
 
-echo "Cluster started. Run \`stop-cluster\` to stop"
+echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster-hfc\` to stop"

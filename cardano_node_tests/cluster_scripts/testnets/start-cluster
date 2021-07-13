@@ -342,4 +342,4 @@ cardano_cli_log transaction submit \
 
 
 echo "cluster started" >> "$STATE_CLUSTER/start-cluster.log"
-echo "Cluster started. Run \`stop-cluster\` to stop"
+echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
