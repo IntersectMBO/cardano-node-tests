@@ -388,6 +388,7 @@ def update_params(
     cluster_obj.wait_for_new_epoch()
 
     protocol_params = cluster_obj.get_protocol_params()
+    failures = []
     for u in update_proposals:
         if not u.name:
             continue
@@ -400,10 +401,11 @@ def update_params(
         updated_value = nested
 
         if str(updated_value) != str(u.value):
-            raise AssertionError(
-                f"Cluster update proposal failed! Param value for {u.name}: {updated_value}.\n"
-                f"Expected: {u.value}"
-            )
+            failures.append(f"Param value for {u.name}: {updated_value}.\nExpected: {u.value}")
+
+    if failures:
+        failures_str = "\n".join(failures)
+        raise AssertionError(f"Cluster update proposal failed!\n{failures_str}")
 
 
 def mint_or_burn_witness(
