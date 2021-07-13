@@ -88,6 +88,8 @@ class TestUpdateProposal:
         """Test changing protocol parameters using update proposal ."""
         max_tx_execution_units = 11000000000
         max_block_execution_units = 110000000000
+        # TODO: broken on Alonzo
+        # execution_unit_prices = 120, 100
 
         update_proposals = [
             clusterlib_utils.UpdateProposal(
@@ -168,16 +170,6 @@ class TestUpdateProposal:
                         name="utxoCostPerWord",
                     ),
                     clusterlib_utils.UpdateProposal(
-                        arg="--price-execution-steps",
-                        value=2,
-                        name="executionUnitPrices,priceSteps",
-                    ),
-                    clusterlib_utils.UpdateProposal(
-                        arg="--price-execution-memory",
-                        value=2,
-                        name="executionUnitPrices,priceMemory",
-                    ),
-                    clusterlib_utils.UpdateProposal(
                         arg="--max-value-size",
                         value=5000,
                         name="maxValueSize",
@@ -202,6 +194,17 @@ class TestUpdateProposal:
                         value=f"({max_block_execution_units},{max_block_execution_units})",
                         name="",  # needs custom check
                     ),
+                    # TODO: broken on Alonzo
+                    # clusterlib_utils.UpdateProposal(
+                    #     arg="--price-execution-steps",
+                    #     value=f"({execution_unit_prices[0]},{execution_unit_prices[1]})",
+                    #     name="",  # needs custom check
+                    # ),
+                    # clusterlib_utils.UpdateProposal(
+                    #     arg="--price-execution-memory",
+                    #     value=f"({execution_unit_prices[0]},{execution_unit_prices[1]})",
+                    #     name="",  # needs custom check
+                    # ),
                 ]
             )
 
@@ -217,6 +220,23 @@ class TestUpdateProposal:
             assert protocol_params["maxTxExecutionUnits"]["steps"] == max_tx_execution_units
             assert protocol_params["maxBlockExecutionUnits"]["memory"] == max_block_execution_units
             assert protocol_params["maxBlockExecutionUnits"]["steps"] == max_block_execution_units
+            # TODO: broken on Alonzo
+            # assert (
+            #     protocol_params["executionUnitPrices"]["priceSteps"]["numerator"]
+            #     == execution_unit_prices[0]
+            # )
+            # assert (
+            #     protocol_params["executionUnitPrices"]["priceSteps"]["denominator"]
+            #     == execution_unit_prices[1]
+            # )
+            # assert (
+            #     protocol_params["executionUnitPrices"]["priceMemory"]["numerator"]
+            #     == execution_unit_prices[0]
+            # )
+            # assert (
+            #     protocol_params["executionUnitPrices"]["priceMemory"]["denominator"]
+            #     == execution_unit_prices[1]
+            # )
 
 
 class TestMIRCerts:
