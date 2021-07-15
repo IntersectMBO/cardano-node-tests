@@ -87,8 +87,7 @@ cardano_cli_log genesis create \
   --start-time "$START_TIME_SHELLEY" \
   --gen-utxo-keys 1
 
-# TODO: remove obsolete `adaPerUTxOWord`
-jq -r '.maxValueSize = 4000 | .adaPerUTxOWord = 1 | .utxoCostPerWord = 1' \
+jq -r '.maxValueSize = 5000' \
   < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
 cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
 rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
