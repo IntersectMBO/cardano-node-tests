@@ -966,7 +966,11 @@ def check_tx(
         f"({response.invalid_hereafter} != {tx_raw_output.invalid_hereafter})"
     )
 
-    combined_txins = [*tx_raw_output.txins, *[p.txin for p in tx_raw_output.plutus_txins]]
+    combined_txins = [
+        *tx_raw_output.txins,
+        *[p.txin for p in tx_raw_output.plutus_txins],
+        *[p.txin for p in tx_raw_output.plutus_mint],
+    ]
     len_db_txins, len_out_txins = len(response.txins), len(combined_txins)
     assert (
         len_db_txins == len_out_txins
@@ -1009,7 +1013,9 @@ def check_tx(
         tx_withdrawals == db_withdrawals
     ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
 
-    tx_collaterals = sorted(r.collateral for r in tx_raw_output.plutus_txins)
+    tx_collaterals = sorted(
+        r.collateral for r in (*tx_raw_output.plutus_txins, *tx_raw_output.plutus_mint)
+    )
     db_collaterals = sorted(response.collaterals)
     assert (
         tx_collaterals == db_collaterals
