@@ -1,7 +1,7 @@
 """Tests for smart contracts."""
-import decimal
 import logging
 from pathlib import Path
+from typing import List
 
 import allure
 import pytest
@@ -48,36 +48,37 @@ class TestPlutus:
     ALWAYS_SUCCEEDS_PLUTUS = PLUTUS_DIR / "always-succeeds-spending.plutus"
 
     @pytest.fixture
-    def payment_addr(
+    def payment_addrs(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> clusterlib.AddressRecord:
+    ) -> List[clusterlib.AddressRecord]:
         """Create new payment address."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
-            addr = cluster.gen_payment_addr_and_keys(
-                name=f"token_transfer_ci{cluster_manager.cluster_instance_num}",
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[f"plutus_payment_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(3)],
+                cluster_obj=cluster,
             )
-            fixture_cache.value = addr
+            fixture_cache.value = addrs
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
-            addr,
+            addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=500_000_000,
         )
 
-        return addr
+        return addrs
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_txin_locking(
-        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -88,17 +89,17 @@ class TestPlutus:
         * spend the locked UTxO
         * check that the expected amount was spent
         """
+        temp_template = helpers.get_func_name()
+        payment_addr = payment_addrs[0]
         amount = 50_000_000
 
-        plutusrequiredspace = decimal.Decimal(70_000_000)
-        plutusrequiredtime = decimal.Decimal(70_000_000)
+        plutusrequiredspace = 70_000_000
+        plutusrequiredtime = 70_000_000
         fee_redeem = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
         collateral_amount = fee_redeem
 
         datum_file = self.PLUTUS_DIR / "42.datum"
         redeemer_file = self.PLUTUS_DIR / "42.redeemer"
-
-        temp_template = helpers.get_func_name()
 
         script_address = cluster.gen_script_addr(
             addr_name=temp_template, script_file=self.ALWAYS_SUCCEEDS_PLUTUS
@@ -106,7 +107,8 @@ class TestPlutus:
 
         script_init_balance = cluster.get_address_balance(script_address)
 
-        # create a Tx ouput with a datum hash at the script address
+        # Step 1: create a Tx ouput with a datum hash at the script address
+
         tx_files_datum = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
         )
@@ -149,7 +151,8 @@ class TestPlutus:
 
         src_init_balance = cluster.get_address_balance(payment_addr.address)
 
-        # spend the "locked" UTxO
+        # Step 2: spend the "locked" UTxO
+
         txid_body = cluster.get_txid(tx_body_file=tx_raw_output_datum.out_file)
         script_utxo = clusterlib.UTXOData(
             utxo_hash=txid_body,
@@ -170,12 +173,12 @@ class TestPlutus:
                 redeemer_file=redeemer_file,
             )
         ]
-        txouts_spend = [
-            clusterlib.TxOut(address=payment_addr.address, amount=amount),
-        ]
         tx_files_spend = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
         )
+        txouts_spend = [
+            clusterlib.TxOut(address=payment_addr.address, amount=amount),
+        ]
         tx_raw_output_spend = cluster.build_raw_tx_bare(
             out_file=f"{temp_template}_spend_tx.body",
             txouts=txouts_spend,
