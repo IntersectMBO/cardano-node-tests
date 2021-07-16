@@ -46,6 +46,7 @@ class TestPlutus:
 
     PLUTUS_DIR = DATA_DIR / "plutus"
     ALWAYS_SUCCEEDS_PLUTUS = PLUTUS_DIR / "always-succeeds-spending.plutus"
+    GUESSING_GAME_PLUTUS = PLUTUS_DIR / "custom-guess-42-datum-42.plutus"
     MINTING_PLUTUS = PLUTUS_DIR / "anyone-can-mint.plutus"
 
     @pytest.fixture
@@ -65,18 +66,12 @@ class TestPlutus:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # fund source address
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=500_000_000,
-        )
-        clusterlib_utils.fund_from_faucet(
-            addrs[1],
-            cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=5000_000_000,
+            amount=10_000_000_000,
         )
 
         return addrs
@@ -84,8 +79,9 @@ class TestPlutus:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("script", ("always_succeeds", "guessing_game_42"))
     def test_txin_locking(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord], script
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -97,21 +93,31 @@ class TestPlutus:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = helpers.get_func_name()
+        # pylint: disable=too-many-locals
+        temp_template = f"{helpers.get_func_name()}_{script}"
         payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
         amount = 50_000_000
 
-        plutusrequiredspace = 70_000_000
-        plutusrequiredtime = 70_000_000
+        if script == "always_succeeds":
+            plutusrequiredspace = 70_000_000
+            plutusrequiredtime = 70_000_000
+
+            datum_file = self.PLUTUS_DIR / "42.datum"
+            redeemer_file = self.PLUTUS_DIR / "42.redeemer"
+            script_file = self.ALWAYS_SUCCEEDS_PLUTUS
+        else:
+            plutusrequiredspace = 700_000_000
+            plutusrequiredtime = 700_000_000
+
+            datum_file = self.PLUTUS_DIR / "typed-42.datum"
+            redeemer_file = self.PLUTUS_DIR / "typed-42.redeemer"
+            script_file = self.GUESSING_GAME_PLUTUS
+
+        script_address = cluster.gen_script_addr(addr_name=temp_template, script_file=script_file)
+
         fee_redeem = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
         collateral_amount = fee_redeem
-
-        datum_file = self.PLUTUS_DIR / "42.datum"
-        redeemer_file = self.PLUTUS_DIR / "42.redeemer"
-
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=self.ALWAYS_SUCCEEDS_PLUTUS
-        )
 
         script_init_balance = cluster.get_address_balance(script_address)
 
@@ -126,7 +132,7 @@ class TestPlutus:
                 address=script_address, amount=amount + fee_redeem, datum_hash=datum_hash
             ),
             # for collateral
-            clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
+            clusterlib.TxOut(address=dst_addr.address, amount=collateral_amount),
         ]
         fee_datum = cluster.calculate_tx_fee(
             src_address=payment_addr.address,
@@ -157,7 +163,7 @@ class TestPlutus:
             script_datum_balance == script_init_balance + amount + fee_redeem
         ), f"Incorrect balance for script address `{script_address}`"
 
-        src_init_balance = cluster.get_address_balance(payment_addr.address)
+        dst_init_balance = cluster.get_address_balance(dst_addr.address)
 
         # Step 2: spend the "locked" UTxO
 
@@ -169,23 +175,23 @@ class TestPlutus:
             address=script_address,
         )
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body, utxo_ix=1, amount=collateral_amount, address=payment_addr.address
+            utxo_hash=txid_body, utxo_ix=1, amount=collateral_amount, address=dst_addr.address
         )
         plutus_txins = [
             clusterlib.PlutusTxIn(
                 txin=script_utxo,
                 collateral=collateral_utxo,
-                script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+                script_file=script_file,
                 execution_units=(plutusrequiredspace, plutusrequiredtime),
                 datum_file=datum_file,
                 redeemer_file=redeemer_file,
             )
         ]
         tx_files_spend = clusterlib.TxFiles(
-            signing_key_files=[payment_addr.skey_file],
+            signing_key_files=[dst_addr.skey_file, payment_addr.skey_file],
         )
         txouts_spend = [
-            clusterlib.TxOut(address=payment_addr.address, amount=amount),
+            clusterlib.TxOut(address=dst_addr.address, amount=amount),
         ]
         tx_raw_output_spend = cluster.build_raw_tx_bare(
             out_file=f"{temp_template}_spend_tx.body",
@@ -204,8 +210,8 @@ class TestPlutus:
         )
 
         assert (
-            cluster.get_address_balance(payment_addr.address) == src_init_balance + amount
-        ), f"Incorrect balance for source address `{payment_addr.address}`"
+            cluster.get_address_balance(dst_addr.address) == dst_init_balance + amount
+        ), f"Incorrect balance for source address `{dst_addr.address}`"
 
         assert (
             cluster.get_address_balance(script_address) == script_init_balance
@@ -230,7 +236,7 @@ class TestPlutus:
         """
         # pylint: disable=too-many-locals
         temp_template = helpers.get_func_name()
-        payment_addr = payment_addrs[1]
+        payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[2]
 
         lovelace_amount = 5000
