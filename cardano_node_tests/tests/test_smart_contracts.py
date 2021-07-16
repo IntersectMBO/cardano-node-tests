@@ -222,7 +222,7 @@ class TestPlutus:
             assert (
                 cluster.get_address_balance(dst_addr.address)
                 == dst_init_balance - collateral_amount
-            ), f"Incorrect balance for source address `{dst_addr.address}`"
+            ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
             assert (
                 cluster.get_address_balance(script_address) == script_datum_balance
@@ -236,7 +236,7 @@ class TestPlutus:
 
         assert (
             cluster.get_address_balance(dst_addr.address) == dst_init_balance + amount
-        ), f"Incorrect balance for source address `{dst_addr.address}`"
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
         assert (
             cluster.get_address_balance(script_address) == script_init_balance
