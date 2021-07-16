@@ -79,9 +79,12 @@ class TestPlutus:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @pytest.mark.parametrize("script", ("always_succeeds", "guessing_game_42"))
+    @pytest.mark.parametrize("script", ("always_succeeds", "guessing_game_42", "guessing_game_43"))
     def test_txin_locking(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord], script
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        script: str,
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -90,14 +93,24 @@ class TestPlutus:
         * create a Tx ouput with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
-        * check that the expected amount was spent
+        * check that the expected amount was spent when success is expected
+        * OR check that the amount was not transferred and collateral UTxO was spent
+          when failure is expected
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals,too-many-statements
         temp_template = f"{helpers.get_func_name()}_{script}"
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
         amount = 50_000_000
+
+        plutusrequiredspace = 700_000_000
+        plutusrequiredtime = 700_000_000
+
+        datum_file = self.PLUTUS_DIR / "typed-42.datum"
+        redeemer_file = self.PLUTUS_DIR / "typed-42.redeemer"
+        script_file = self.GUESSING_GAME_PLUTUS
+        expect_failure = False
 
         if script == "always_succeeds":
             plutusrequiredspace = 70_000_000
@@ -106,13 +119,10 @@ class TestPlutus:
             datum_file = self.PLUTUS_DIR / "42.datum"
             redeemer_file = self.PLUTUS_DIR / "42.redeemer"
             script_file = self.ALWAYS_SUCCEEDS_PLUTUS
-        else:
-            plutusrequiredspace = 700_000_000
-            plutusrequiredtime = 700_000_000
-
-            datum_file = self.PLUTUS_DIR / "typed-42.datum"
-            redeemer_file = self.PLUTUS_DIR / "typed-42.redeemer"
-            script_file = self.GUESSING_GAME_PLUTUS
+        elif script.endswith("_43"):
+            datum_file = self.PLUTUS_DIR / "typed-43.datum"
+            redeemer_file = self.PLUTUS_DIR / "typed-43.redeemer"
+            expect_failure = True
 
         script_address = cluster.gen_script_addr(addr_name=temp_template, script_file=script_file)
 
@@ -188,7 +198,7 @@ class TestPlutus:
             )
         ]
         tx_files_spend = clusterlib.TxFiles(
-            signing_key_files=[dst_addr.skey_file, payment_addr.skey_file],
+            signing_key_files=[dst_addr.skey_file],
         )
         txouts_spend = [
             clusterlib.TxOut(address=dst_addr.address, amount=amount),
@@ -205,6 +215,21 @@ class TestPlutus:
             signing_key_files=tx_files_spend.signing_key_files,
             tx_name=f"{temp_template}_spend",
         )
+
+        if expect_failure:
+            cluster.submit_tx(tx_file=tx_signed_spend, txins=[collateral_utxo])
+
+            assert (
+                cluster.get_address_balance(dst_addr.address)
+                == dst_init_balance - collateral_amount
+            ), f"Incorrect balance for source address `{dst_addr.address}`"
+
+            assert (
+                cluster.get_address_balance(script_address) == script_datum_balance
+            ), f"Incorrect balance for script address `{script_address}`"
+
+            return
+
         cluster.submit_tx(
             tx_file=tx_signed_spend, txins=[t.txin for t in tx_raw_output_spend.plutus_txins]
         )
