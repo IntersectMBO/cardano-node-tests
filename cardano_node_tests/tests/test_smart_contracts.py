@@ -50,6 +50,18 @@ class TestPlutus:
     MINTING_PLUTUS = PLUTUS_DIR / "anyone-can-mint.plutus"
 
     @pytest.fixture
+    def cluster_lock_txin_scripts(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+    ) -> clusterlib.ClusterLib:
+        """Make sure just one txin plutus test run at a time.
+
+        Plutus script always has the same address. When one script is used in multiple
+        tests that are running in parallel, the blanaces etc. don't add up.
+        """
+        return cluster_manager.get(lock_resources=["txin_plutus_scripts"])
+
+    @pytest.fixture
     def payment_addrs(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -82,7 +94,7 @@ class TestPlutus:
     @pytest.mark.parametrize("script", ("always_succeeds", "guessing_game_42", "guessing_game_43"))
     def test_txin_locking(
         self,
-        cluster: clusterlib.ClusterLib,
+        cluster_lock_txin_scripts: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         script: str,
     ):
@@ -99,6 +111,7 @@ class TestPlutus:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
+        cluster = cluster_lock_txin_scripts
         temp_template = f"{helpers.get_func_name()}_{script}"
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
