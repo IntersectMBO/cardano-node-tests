@@ -152,7 +152,7 @@ class TestFee:
     ):
         """Send a transaction with fee that is same or higher than expected."""
         temp_template = f"{helpers.get_func_name()}_{fee_add}"
-        amount = 1000_000
+        amount = 2000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address

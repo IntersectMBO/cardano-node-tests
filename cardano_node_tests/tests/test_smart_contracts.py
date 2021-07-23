@@ -87,7 +87,7 @@ class TestPlutus:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=15_000_000_000,
+            amount=20_000_000_000,
         )
 
         return addrs
@@ -114,7 +114,7 @@ class TestPlutus:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=5000_000_000,
+            amount=10_000_000_000,
         )
 
         return addrs
@@ -193,7 +193,7 @@ class TestPlutus:
         script_address = cluster.gen_script_addr(addr_name=temp_template, script_file=script_file)
 
         fee_redeem = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
-        collateral_amount = fee_redeem
+        collateral_amount = int(fee_redeem * 1.5)
 
         script_init_balance = cluster.get_address_balance(script_address)
 
@@ -330,12 +330,12 @@ class TestPlutus:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000
+        lovelace_amount = 5000_000
         token_amount = 5
         plutusrequiredspace = 700_000_000
         plutusrequiredtime = 700_000_000
         fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
-        collateral_amount = fee_step2
+        collateral_amount = int(fee_step2 * 1.5)
 
         redeemer_file = self.PLUTUS_DIR / "42.redeemer"
 
