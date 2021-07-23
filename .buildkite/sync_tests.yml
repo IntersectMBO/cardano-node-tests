@@ -6,7 +6,7 @@ steps:
       - nix-shell --run 'python ./sync_tests/node_write_values_to_db.py -e "mainnet"'
       - './.buildkite/sync_tests_push.sh'
     branches: "sync_tests"
-    timeout_in_minutes: 2400
+    timeout_in_minutes: 4000
     agents:
       system: x86_64-linux
       queue: benchmark
