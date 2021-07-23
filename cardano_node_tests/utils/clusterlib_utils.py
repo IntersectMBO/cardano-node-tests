@@ -743,12 +743,21 @@ def load_tx_view(tx_view: str) -> dict:
     return tx_loaded
 
 
-def _load_coins_data(coins_data: dict) -> List[Tuple[int, str]]:
+def _load_coins_data(coins_data: Union[dict, int]) -> List[Tuple[int, str]]:
+    # `coins_data` for Mary+ Tx era has Lovelace amount and policies info,
+    # for older Tx eras it's just Lovelace amount
+    try:
+        amount_lovelace = coins_data.get("lovelace")  # type: ignore
+        policies_data = coins_data.get("policies") or {}  # type: ignore
+    except AttributeError:
+        amount_lovelace = coins_data
+        policies_data = {}
+
     loaded_data = []
-    amount_lovelace = coins_data.get("lovelace")
+
     if amount_lovelace:
         loaded_data.append((amount_lovelace, "lovelace"))
-    policies_data = coins_data.get("policies") or {}
+
     for policyid, policy_rec in policies_data.items():
         for asset_name_hex, amount in policy_rec.items():
             asset_name = bytes.fromhex(asset_name_hex).decode()
@@ -796,7 +805,9 @@ def check_tx_view(  # noqa: C901
             f"invalid before: {tx_raw_output.invalid_before} != {loaded_invalid_before}"
         )
 
-    loaded_invalid_hereafter = tx_loaded.get("validity interval", {}).get("invalid hereafter")
+    loaded_invalid_hereafter = tx_loaded.get("validity interval", {}).get(
+        "invalid hereafter"
+    ) or tx_loaded.get("time to live")
     if tx_raw_output.invalid_hereafter != loaded_invalid_hereafter:
         raise AssertionError(
             f"invalid before: {tx_raw_output.invalid_hereafter} != {loaded_invalid_hereafter}"
