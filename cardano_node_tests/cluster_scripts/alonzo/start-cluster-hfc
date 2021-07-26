@@ -87,7 +87,17 @@ cardano_cli_log genesis create \
   --start-time "$START_TIME_SHELLEY" \
   --gen-utxo-keys 1
 
-jq -r '.maxValueSize = 5000' \
+jq -r '
+  .maxValueSize = 5000 |
+  .collateralPercentage = 150 |
+  .maxBlockExUnits.memory = 110000000000 |
+  .maxBlockExUnits.steps = 110000000000 |
+  .maxCollateralInputs = 6 |
+  .executionUnitPrices.priceSteps.demoninator = 100 |
+  .executionUnitPrices.priceMemory.demoninator = 1000 |
+  .lovelacePerUTxOWord = 34483 |
+  .maxTxExecutionUnits.memory = 11000000000 |
+  .maxTxExecutionUnits.steps = 11000000000' \
   < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
 cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
 rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
