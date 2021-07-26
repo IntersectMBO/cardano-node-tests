@@ -6,7 +6,7 @@
       "minor": 0,
       "major": 2
     },
-    "minUTxOValue": 1,
+    "minUTxOValue": 1000000,
     "decentralisationParam": 0.8,
     "maxTxSize": 16384,
     "minPoolCost": 0,

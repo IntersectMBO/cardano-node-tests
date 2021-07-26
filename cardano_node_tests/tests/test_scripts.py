@@ -213,7 +213,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=5000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -223,7 +223,7 @@ class TestBasic:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000_000,
+            amount=2000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
         )
@@ -270,7 +270,7 @@ class TestBasic:
                 temp_template=f"{temp_template}_to",
                 src_address=payment_addrs[0].address,
                 dst_address=script_address,
-                amount=25_000_000,
+                amount=50_000_000,
                 payment_skey_files=[payment_skey_files[0]],
             )
         )
@@ -283,7 +283,7 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_single_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=1000_000,
+                    amount=2000_000,
                     payment_skey_files=[payment_skey_files[random.randrange(0, skeys_len)]],
                     multisig_script=multisig_script,
                 )
@@ -298,7 +298,7 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_multi_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=1000_000,
+                    amount=2000_000,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
                 )
@@ -343,7 +343,7 @@ class TestBasic:
                 temp_template=f"{temp_template}_to",
                 src_address=payment_addrs[0].address,
                 dst_address=script_address,
-                amount=10_000_000,
+                amount=20_000_000,
                 payment_skey_files=[payment_skey_files[0]],
             )
         )
@@ -357,7 +357,7 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=1000_000,
+                    amount=2000_000,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
                 )
@@ -374,7 +374,7 @@ class TestBasic:
         """Send funds to script address using TX signed with skeys (not using witness files)."""
         temp_template = helpers.get_func_name()
         src_address = payment_addrs[0].address
-        amount = 1000_000
+        amount = 2000_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -423,7 +423,7 @@ class TestBasic:
         """Send funds from script address using TX signed with skeys (not using witness files)."""
         temp_template = helpers.get_func_name()
         dst_addr = payment_addrs[1]
-        amount = 1000_000
+        amount = 2000_000
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -509,7 +509,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -519,7 +519,7 @@ class TestBasic:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000_000,
+            amount=1500_000,
             payment_skey_files=[payment_skey_files[0]],
             multisig_script=multisig_script,
         )
@@ -704,7 +704,7 @@ class TestNegative:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1000_000,
+                amount=2000_000,
                 payment_skey_files=[payment_skey_files[-1]],
                 multisig_script=multisig_script,
             )
@@ -839,7 +839,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -850,7 +850,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000_000,
+            amount=2000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             invalid_before=100,
@@ -901,7 +901,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -911,7 +911,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000_000,
+            amount=2000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             invalid_before=100,

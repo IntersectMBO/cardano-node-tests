@@ -87,11 +87,6 @@ cardano_cli_log genesis create \
   --start-time "$START_TIME_SHELLEY" \
   --gen-utxo-keys 1
 
-jq -r '.maxValueSize = 5000' \
-  < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
-cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
-rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
-
 BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
   "$STATE_CLUSTER/byron/genesis.json")"
 SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
