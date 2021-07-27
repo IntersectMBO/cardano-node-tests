@@ -12,7 +12,7 @@ EnableLogging: True
 # config, it will likely lead to db-sync throwing up weird error messages from
 # the consensus layer.
 # The path to the node config file is relative to this config file.
-NodeConfigFile: ./config-bft1.json
+NodeConfigFile: config-bft1.json
 
 # ------------------------------------------------------------------------------
 # Logging configuration follows.
