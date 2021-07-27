@@ -31,7 +31,10 @@ if [ -n "${DBSYNC_REV:-""}" ]; then
 elif [ -n "${DBSYNC_BRANCH:-""}" ]; then
   git fetch
   git checkout "$DBSYNC_BRANCH"
+else
+  git pull origin master
 fi
+git rev-parse HEAD
 
 # build db-sync
 nix-build -A cardano-db-sync-extended -o db-sync-node-extended
