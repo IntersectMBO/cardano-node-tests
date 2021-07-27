@@ -8,3 +8,5 @@ elif [ -n "${NODE_BRANCH:-""}" ]; then
 else
   niv update cardano-node
 fi
+
+cat nix/sources.json
