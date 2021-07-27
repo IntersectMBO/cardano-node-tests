@@ -653,7 +653,9 @@ def wait_for_epoch_interval(
             f"The 'start' ({start_abs}) needs to be lower than 'stop' ({stop_abs})"
         )
 
-    for __ in range(20):
+    start_epoch = cluster_obj.get_epoch()
+
+    for __ in range(40):
         s_from_epoch_start = cluster_obj.time_from_epoch_start()
 
         # return if we are in the required interval
@@ -665,6 +667,11 @@ def wait_for_epoch_interval(
             if force_epoch:
                 raise AssertionError(
                     f"Cannot reach the given interval ({start_abs}s to {stop_abs}s) in this epoch"
+                )
+            if start_epoch >= cluster_obj.get_epoch() + 2:
+                raise AssertionError(
+                    f"Was unable to reach the given interval ({start_abs}s to {stop_abs}s) "
+                    "in past 3 epochs"
                 )
             cluster_obj.wait_for_new_epoch()
 
