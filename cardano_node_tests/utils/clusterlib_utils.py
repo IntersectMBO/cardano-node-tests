@@ -668,16 +668,18 @@ def wait_for_epoch_interval(
                 raise AssertionError(
                     f"Cannot reach the given interval ({start_abs}s to {stop_abs}s) in this epoch"
                 )
-            if start_epoch >= cluster_obj.get_epoch() + 2:
+            if cluster_obj.get_epoch() >= start_epoch + 2:
                 raise AssertionError(
                     f"Was unable to reach the given interval ({start_abs}s to {stop_abs}s) "
                     "in past 3 epochs"
                 )
             cluster_obj.wait_for_new_epoch()
+            continue
 
         # try to sleep as close to the `start_abs` as possible
         to_sleep = start_abs - s_from_epoch_start
         if to_sleep > 0:
+            # `to_sleep` is float, wait for at least 1 second
             time.sleep(to_sleep if to_sleep > 1 else 1)
     else:
         raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s")
