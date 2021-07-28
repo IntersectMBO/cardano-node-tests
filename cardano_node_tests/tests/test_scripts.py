@@ -446,7 +446,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=4500_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
