@@ -13,7 +13,9 @@ def date_diff_in_seconds(dt2, dt1):
 
 
 def seconds_to_time(seconds_val):
-    return time.strftime("%H:%M:%S", time.gmtime(seconds_val))
+    mins, secs = divmod(seconds_val, 60)
+    hour, mins = divmod(mins, 60)
+    return "%d:%02d:%02d" % (hour, mins, secs)
 
 
 def get_os_type():

@@ -64,7 +64,7 @@ def main():
 
     sync_test_results_dict["identifier"] = sync_test_results_dict["env"] + "_" + str(get_last_row_no(database_path, env))
 
-    print(f"  ==== Write test values into the {env + '_logs_table'} DB table")
+    print(f"  ==== Write test values into the {env + '_logs'} DB table")
     log_values_json = ast.literal_eval(str((sync_test_results_dict["log_values"])))
     timestamp_list = list(log_values_json.keys())
     for timestamp1 in timestamp_list:
@@ -82,7 +82,7 @@ def main():
             print(f"col_values2: {col_values2}")
             exit(1)
 
-    print(f"  ==== Write test values into the {env + '_epoch_duration_table'} DB table")
+    print(f"  ==== Write test values into the {env + '_epoch_duration'} DB table")
     sync_duration_values_json = ast.literal_eval(str(sync_test_results_dict["sync_duration_per_epoch"]))
     epoch_list = list(sync_duration_values_json.keys())
     print(f"epoch_list: {epoch_list}")
