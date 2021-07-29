@@ -19,9 +19,9 @@ nightly_envs = ["node_nightly", "node_nightly_alonzo_mary_tx", "node_nightly_alo
 def get_buildkite_pipeline_builds(buildkite_token, pipeline_slug):
     url = f"https://api.buildkite.com/v2/organizations/{ORG_SLUG}/pipelines/{pipeline_slug}/builds"
     web_url = f"https://buildkite.com/{ORG_SLUG}/{pipeline_slug}"
-    headers = {'Authorization': "Bearer " + buildkite_token}
     print(f"url: {url}")
     print(f"web_url: {web_url}")
+    headers = {'Authorization': "Bearer " + buildkite_token}
     response = requests.get(url, headers=headers)
 
     status_code = response.status_code
@@ -71,7 +71,6 @@ def main():
         print(f" === env: {env}")
         pileline_slug = get_buildkite_pipeline_slug(env)
         pipeline_builds = get_buildkite_pipeline_builds(secret, pileline_slug)
-
         print(f" - there are {len(pipeline_builds)} builds")
         print("Adding build results into the DB")
         build_results_dict = OrderedDict()
@@ -91,13 +90,13 @@ def main():
                     datetime.strptime(build_results_dict["build_finished_at"], "%Y-%m-%dT%H:%M:%S.%fZ"),
                     datetime.strptime(build_results_dict["build_started_at"], "%Y-%m-%dT%H:%M:%S.%fZ")))
                 build_results_dict["test_branch"] = build["branch"]
-                build_results_dict["node_branch"] = build["env"]["NODE_BRANCH"]
-                build_results_dict["node_rev"] = build["env"]["NODE_REV"]
-                build_results_dict["cluster_era"] = build["env"]["CLUSTER_ERA"]
-                build_results_dict["tx_era"] = build["env"]["TX_ERA"]
+                build_results_dict["node_branch"] = build["env"]["NODE_BRANCH"] if "NODE_BRANCH" in build["env"] else None
+                build_results_dict["node_rev"] = build["env"]["NODE_REV"] if "NODE_REV" in build["env"] else None
+                build_results_dict["cluster_era"] = build["env"]["CLUSTER_ERA"] if "CLUSTER_ERA" in build["env"] else None
+                build_results_dict["tx_era"] = build["env"]["TX_ERA"] if "TX_ERA" in build["env"] else None
                 if "dbsync" in env:
-                    build_results_dict["dbsync_branch"] = build["env"]["DBSYNC_BRANCH"]
-                    build_results_dict["dbsync_rev"] = build["env"]["DBSYNC_REV"]
+                    build_results_dict["dbsync_branch"] = build["env"]["DBSYNC_BRANCH"] if "DBSYNC_BRANCH" in build["env"] else None
+                    build_results_dict["dbsync_rev"] = build["env"]["DBSYNC_REV"] if "DBSYNC_REV" in build["env"] else None
 
                 print(f"  ==== Writing test results into the {env} DB table for build no {build['number']}")
                 col_list = list(build_results_dict.keys())
