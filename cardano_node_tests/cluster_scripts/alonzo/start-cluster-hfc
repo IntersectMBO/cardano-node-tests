@@ -90,14 +90,16 @@ cardano_cli_log genesis create \
 jq -r '
   .maxValueSize = 5000 |
   .collateralPercentage = 150 |
-  .maxBlockExUnits.memory = 110000000000 |
-  .maxBlockExUnits.steps = 110000000000 |
-  .maxCollateralInputs = 6 |
+  .maxBlockExUnits.memory = 40000000000 |
+  .maxBlockExUnits.steps = 40000000000 |
+  .maxCollateralInputs = 3 |
+  .executionUnitPrices.priceSteps.numerator = 1 |
   .executionUnitPrices.priceSteps.demoninator = 100 |
-  .executionUnitPrices.priceMemory.demoninator = 1000 |
-  .lovelacePerUTxOWord = 34483 |
-  .maxTxExecutionUnits.memory = 11000000000 |
-  .maxTxExecutionUnits.steps = 11000000000' \
+  .executionUnitPrices.priceMemory.numerator = 1 |
+  .executionUnitPrices.priceMemory.demoninator = 200 |
+  .lovelacePerUTxOWord = 34482 |
+  .maxTxExecutionUnits.memory = 10000000000 |
+  .maxTxExecutionUnits.steps = 10000000000' \
   < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
 cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
 rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
