@@ -283,12 +283,13 @@ class TestPlutus:
         )
 
         if expect_failure:
-            cluster.submit_tx(tx_file=tx_signed_step2, txins=[collateral_utxo])
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.submit_tx(tx_file=tx_signed_step2, txins=[collateral_utxo])
+            assert "ValidationTagMismatch (IsValidating True)" in str(excinfo.value)
 
             assert (
-                cluster.get_address_balance(dst_addr.address)
-                == dst_init_balance - collateral_amount
-            ), f"Incorrect balance for destination address `{dst_addr.address}`"
+                cluster.get_address_balance(dst_addr.address) == dst_init_balance
+            ), f"Collateral was taken from `{dst_addr.address}`"
 
             assert (
                 cluster.get_address_balance(script_address) == script_step1_balance
