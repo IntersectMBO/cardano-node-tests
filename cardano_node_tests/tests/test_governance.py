@@ -219,10 +219,8 @@ class TestUpdateProposal:
             assert protocol_params["maxTxExecutionUnits"]["steps"] == max_tx_execution_units
             assert protocol_params["maxBlockExecutionUnits"]["memory"] == max_block_execution_units
             assert protocol_params["maxBlockExecutionUnits"]["steps"] == max_block_execution_units
-            assert protocol_params["executionUnitPrices"]["priceSteps"]["numerator"] == 6
-            assert protocol_params["executionUnitPrices"]["priceSteps"]["denominator"] == 5
-            assert protocol_params["executionUnitPrices"]["priceMemory"]["numerator"] == 13
-            assert protocol_params["executionUnitPrices"]["priceMemory"]["denominator"] == 10
+            assert protocol_params["executionUnitPrices"]["priceSteps"] == 1.2
+            assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
 
 
 class TestMIRCerts:
