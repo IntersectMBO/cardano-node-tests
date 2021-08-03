@@ -1137,29 +1137,28 @@ class TestRewards:
             assert tx_db_record.stake_delegation[0].active_epoch_no == init_epoch + 2
             assert delegation_out.pool_id == tx_db_record.stake_delegation[0].pool_id
 
-            # In db-sync, `epoch_no` corresponds to epoch FOR which the reward was paid.
-            # In `user_rewards`, the epoch number corresponds to epoch IN which the reward
-            # was received.
-            # Therefore there's 2 epochs difference between epoch numbers in data
-            # collected by the test and data in the db-sync.
-            pool_user_db_record = dbsync_utils.get_address_reward(
-                address=delegation_out.pool_user.stake.address, epoch_to=user_rewards[-1][0] - 2
+            pool_user_db_record = dbsync_utils.check_address_reward(
+                address=delegation_out.pool_user.stake.address, epoch_to=user_rewards[-1][0]
             )
             assert pool_user_db_record
             assert pool_user_db_record.pool_id == pool_id
-            user_rewards_dict = {r[0] - 2: r[2] for r in user_rewards if r[2]}
-            user_db_rewards_dict = {r.epoch_no: r.amount for r in pool_user_db_record.rewards}
+            user_rewards_dict = {r[0]: r[2] for r in user_rewards if r[2]}
+            user_db_rewards_dict = {
+                r.spendable_epoch: r.amount for r in pool_user_db_record.rewards
+            }
             assert user_rewards_dict == user_db_rewards_dict
 
-            owner_rewards_db_record = dbsync_utils.get_address_reward(
+            owner_rewards_db_record = dbsync_utils.check_address_reward(
                 address=pool_reward.stake.address,
-                epoch_from=owner_rewards[1][0] - 2,
-                epoch_to=owner_rewards[-1][0] - 2,
+                epoch_from=owner_rewards[1][0],
+                epoch_to=owner_rewards[-1][0],
             )
             assert owner_rewards_db_record
             assert owner_rewards_db_record.pool_id == pool_id
-            owner_rewards_dict = {r[0] - 2: r[2] for r in owner_rewards if r[2]}
-            owner_db_rewards_dict = {r.epoch_no: r.amount for r in owner_rewards_db_record.rewards}
+            owner_rewards_dict = {r[0]: r[2] for r in owner_rewards if r[2]}
+            owner_db_rewards_dict = {
+                r.spendable_epoch: r.amount for r in owner_rewards_db_record.rewards
+            }
             assert owner_rewards_dict == owner_db_rewards_dict
 
     @allure.link(helpers.get_vcs_link())
