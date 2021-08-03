@@ -79,6 +79,48 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        bool(configuration.TX_ERA),
+        reason="different TX eras doesn't affect this test, pointless to run",
+    )
+    def test_utxo_txin(self, cluster: clusterlib.ClusterLib):
+        """Check that it is possible to filter UTxO based on transaction input on local cluster."""
+        if cluster.protocol != clusterlib.Protocols.CARDANO:
+            pytest.skip("runs on cluster in full cardano mode")
+        utxos = cluster.cli(
+            [
+                "query",
+                "utxo",
+                "--whole-utxo",
+                *cluster.magic_args,
+            ]
+        )
+
+        utxo = utxos[0].splitlines()[2].decode("UTF-8").split()
+        if not utxo:
+            raise AssertionError("No data returned from 'cardano-cli query utxo --whole-utxo'.")
+
+        tx_hash, tx_ix, _, _, _, _ = utxo
+
+        txin_query = cluster.cli(
+            [
+                "query",
+                "utxo",
+                "--tx-in",
+                f"{tx_hash}#{tx_ix}",
+                *cluster.magic_args,
+            ]
+        )
+
+        utxo_txin = txin_query[0].splitlines()[2].decode("UTF-8").split()
+        if not utxo:
+            raise AssertionError(
+                f"No data returned from: cardano-cli query utxo --tx-in `{tx_hash}#{tx_ix}`."
+            )
+
+        assert utxo == utxo_txin
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
