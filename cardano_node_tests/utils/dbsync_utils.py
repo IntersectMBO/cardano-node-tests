@@ -4,7 +4,6 @@ import functools
 import logging
 import time
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import Generator
 from typing import List
@@ -49,7 +48,8 @@ class DelegationRecord(NamedTuple):
 
 class RewardEpochRecord(NamedTuple):
     amount: int
-    epoch_no: int
+    earned_epoch: int
+    spendable_epoch: int
 
 
 class RewardRecord(NamedTuple):
@@ -256,6 +256,15 @@ class ADAPotsDBRow(NamedTuple):
 
 
 class RewardDBRow(NamedTuple):
+    address: str
+    type: str
+    amount: decimal.Decimal
+    earned_epoch: int
+    spendable_epoch: int
+    pool_id: str
+
+
+class OrphanedRewardDBRow(NamedTuple):
     address: str
     type: str
     amount: decimal.Decimal
@@ -498,12 +507,12 @@ def query_address_reward(
     with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
-            " stake_address.view, reward.type, reward.amount, reward.epoch_no,"
-            " pool_hash.view AS pool_view "
+            " stake_address.view, reward.type, reward.amount, reward.earned_epoch,"
+            " reward.spendable_epoch, pool_hash.view AS pool_view "
             "FROM reward "
             "INNER JOIN stake_address ON reward.addr_id = stake_address.id "
             "INNER JOIN pool_hash ON pool_hash.id = reward.pool_id "
-            "WHERE (stake_address.view = %s) AND (reward.epoch_no BETWEEN %s AND %s);",
+            "WHERE (stake_address.view = %s) AND (reward.spendable_epoch BETWEEN %s AND %s);",
             (address, epoch_from, epoch_to),
         )
 
@@ -511,24 +520,24 @@ def query_address_reward(
             yield RewardDBRow(*result)
 
 
-def query_address_obsolete_reward(
+def query_address_orphaned_reward(
     address: str, epoch_from: int = 0, epoch_to: int = 99999999
-) -> Generator[RewardDBRow, None, None]:
-    """Query obsolete reward records for stake address in db-sync."""
+) -> Generator[OrphanedRewardDBRow, None, None]:
+    """Query orphaned reward records for stake address in db-sync."""
     with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
-            " stake_address.view, obsolete_reward.type, obsolete_reward.amount,"
-            " obsolete_reward.epoch_no, pool_hash.view AS pool_view "
-            "FROM obsolete_reward "
-            "INNER JOIN stake_address ON obsolete_reward.addr_id = stake_address.id "
-            "INNER JOIN pool_hash ON pool_hash.id = obsolete_reward.pool_id "
-            "WHERE (stake_address.view = %s) AND (obsolete_reward.epoch_no BETWEEN %s AND %s);",
+            " stake_address.view, orphaned_reward.type, orphaned_reward.amount,"
+            " orphaned_reward.epoch_no, pool_hash.view AS pool_view "
+            "FROM orphaned_reward "
+            "INNER JOIN stake_address ON orphaned_reward.addr_id = stake_address.id "
+            "INNER JOIN pool_hash ON pool_hash.id = orphaned_reward.pool_id "
+            "WHERE (stake_address.view = %s) AND (orphaned_reward.epoch_no BETWEEN %s AND %s);",
             (address, epoch_from, epoch_to),
         )
 
         while (result := cur.fetchone()) is not None:
-            yield RewardDBRow(*result)
+            yield OrphanedRewardDBRow(*result)
 
 
 def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]:
@@ -575,15 +584,20 @@ def query_table_names() -> List[str]:
         return table_names
 
 
-def _get_reward(
-    func: Callable, address: str, epoch_from: int, epoch_to: int
+def get_address_reward(
+    address: str, epoch_from: int = 0, epoch_to: int = 99999999
 ) -> Optional[RewardRecord]:
+    """Get reward data for stake address from db-sync.
+
+    The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
+    """
     rewards = []
-    for db_row in func(address=address, epoch_from=epoch_from, epoch_to=epoch_to):
+    for db_row in query_address_reward(address=address, epoch_from=epoch_from, epoch_to=epoch_to):
         rewards.append(
             RewardEpochRecord(
                 amount=int(db_row.amount),
-                epoch_no=db_row.epoch_no,
+                earned_epoch=db_row.earned_epoch,
+                spendable_epoch=db_row.spendable_epoch,
             )
         )
     if not rewards:
@@ -596,24 +610,55 @@ def _get_reward(
     )
 
 
-def get_address_reward(
+def check_address_reward(
     address: str, epoch_from: int = 0, epoch_to: int = 99999999
 ) -> Optional[RewardRecord]:
-    """Get reward data for stake address from db-sync."""
-    return _get_reward(
-        func=query_address_reward, address=address, epoch_from=epoch_from, epoch_to=epoch_to
-    )
+    """Check reward data for stake address in db-sync.
+
+    The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
+    """
+    reward = get_address_reward(address=address, epoch_from=epoch_from, epoch_to=epoch_to)
+    if reward is None:
+        return None
+
+    errors = []
+    for r in reward.rewards:
+        if r.spendable_epoch != r.earned_epoch + 2:
+            errors.append(f"{r.earned_epoch} != {r.spendable_epoch} + 2")
+
+    if errors:
+        err_str = ", ".join(errors)
+        raise AssertionError(f"The 'earned epoch' and 'spendable epoch' don't match: {err_str}")
+
+    return reward
 
 
-def get_address_obsolete_reward(
+def get_address_orphaned_reward(
     address: str, epoch_from: int = 0, epoch_to: int = 99999999
 ) -> Optional[RewardRecord]:
-    """Get data about obsolete rewards for stake address from db-sync."""
-    return _get_reward(
-        func=query_address_obsolete_reward,
-        address=address,
-        epoch_from=epoch_from,
-        epoch_to=epoch_to,
+    """Get data about orphaned rewards for stake address from db-sync.
+
+    The `epoch_from` and `epoch_to` are epochs where the reward was earned, not epochs
+    where the reward can be spent.
+    """
+    rewards = []
+    for db_row in query_address_orphaned_reward(
+        address=address, epoch_from=epoch_from, epoch_to=epoch_to
+    ):
+        rewards.append(
+            RewardEpochRecord(
+                amount=int(db_row.amount),
+                earned_epoch=db_row.epoch_no,
+                spendable_epoch=-1,
+            )
+        )
+    if not rewards:
+        return None
+
+    reward_sum = functools.reduce(lambda x, y: x + y.amount, rewards, 0)
+    # pylint: disable=undefined-loop-variable
+    return RewardRecord(
+        address=db_row.address, pool_id=db_row.pool_id, rewards=rewards, reward_sum=reward_sum
     )
 
 
