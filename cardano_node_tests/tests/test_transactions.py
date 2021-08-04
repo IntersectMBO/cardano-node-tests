@@ -1927,7 +1927,7 @@ class TestMetadata:
             if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
                 raise
         else:
-            assert 'txMetadata = fromList [(1,S "foo")' in tx_view["auxiliary data"]
+            assert ' = fromList [(1,S "foo")' in tx_view["auxiliary data"]
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
