@@ -285,7 +285,7 @@ class TestPlutus:
         if expect_failure:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 cluster.submit_tx(tx_file=tx_signed_step2, txins=[collateral_utxo])
-            assert "ValidationTagMismatch (IsValidating True)" in str(excinfo.value)
+            assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
 
             assert (
                 cluster.get_address_balance(dst_addr.address) == dst_init_balance
