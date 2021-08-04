@@ -199,7 +199,7 @@ class TestPlutus:
 
         # Step 1: create a Tx ouput with a datum hash at the script address
 
-        txfiles_step1 = clusterlib.TxFiles(
+        tx_files_step1 = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
         )
         datum_hash = cluster.get_hash_script_data(script_data_file=datum_file)
@@ -214,7 +214,7 @@ class TestPlutus:
             src_address=payment_addr.address,
             txouts=txouts_step1,
             tx_name=f"{temp_template}_step1",
-            tx_files=txfiles_step1,
+            tx_files=tx_files_step1,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=2,
         )
@@ -222,14 +222,14 @@ class TestPlutus:
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step1",
             txouts=txouts_step1,
-            tx_files=txfiles_step1,
+            tx_files=tx_files_step1,
             fee=fee_step1,
             # don't join 'change' and 'collateral' txouts, we need separate UTxOs
             join_txouts=False,
         )
         tx_signed_step1 = cluster.sign_tx(
             tx_body_file=tx_raw_output_step1.out_file,
-            signing_key_files=txfiles_step1.signing_key_files,
+            signing_key_files=tx_files_step1.signing_key_files,
             tx_name=f"{temp_template}_step1",
         )
         cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_raw_output_step1.txins)
