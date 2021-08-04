@@ -12,6 +12,7 @@ import itertools
 import json
 import logging
 import random
+import re
 import string
 import time
 from pathlib import Path
@@ -1698,7 +1699,7 @@ class TestNegative:
                     *cluster._prepend_flag("--tx-out", txouts),
                 ]
             )
-        assert "Missing: (--tx-in TX-IN)" in str(excinfo.value)
+        assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
 
 
 @pytest.mark.testnets
