@@ -632,7 +632,11 @@ def save_ledger_state(
 
 
 def wait_for_epoch_interval(
-    cluster_obj: clusterlib.ClusterLib, start: int, stop: int, force_epoch: bool = True
+    cluster_obj: clusterlib.ClusterLib,
+    start: int,
+    stop: int,
+    force_epoch: bool = True,
+    check_slot: bool = True,
 ) -> None:
     """Wait for time interval within an epoch.
 
@@ -644,6 +648,7 @@ def wait_for_epoch_interval(
             end of an epoch.
         force_epoch: A bool indicating whether the interval must be in current epoch
             (True by default).
+        check_slot: A bool indicating whether current slot number must match the time interval.
     """
     start_abs = start if start >= 0 else cluster_obj.epoch_length_sec + start
     stop_abs = stop if stop >= 0 else cluster_obj.epoch_length_sec + stop
@@ -654,6 +659,9 @@ def wait_for_epoch_interval(
         )
 
     start_epoch = cluster_obj.get_epoch()
+
+    # wait for new block so we start counting with an up-to-date slot number
+    cluster_obj.wait_for_new_block()
 
     for __ in range(40):
         s_from_epoch_start = cluster_obj.time_from_epoch_start()
@@ -676,11 +684,16 @@ def wait_for_epoch_interval(
             cluster_obj.wait_for_new_epoch()
             continue
 
-        # try to sleep as close to the `start_abs` as possible
+        # sleep until `start_abs`
         to_sleep = start_abs - s_from_epoch_start
         if to_sleep > 0:
             # `to_sleep` is float, wait for at least 1 second
             time.sleep(to_sleep if to_sleep > 1 else 1)
+
+        # we can finish if slot number of last minted block doesn't need
+        # to match the time interval
+        if not check_slot:
+            break
     else:
         raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s")
 
