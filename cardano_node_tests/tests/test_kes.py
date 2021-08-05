@@ -155,7 +155,7 @@ class TestKES:
 
             # wait for the end of the epoch
             clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=-19, stop=-9, force_epoch=False
+                cluster_obj=cluster, start=-19, stop=-15, check_slot=False
             )
 
             # save ledger state
@@ -284,7 +284,7 @@ class TestKES:
 
                 # wait for the end of the epoch
                 clusterlib_utils.wait_for_epoch_interval(
-                    cluster_obj=cluster, start=-19, stop=-9, force_epoch=False
+                    cluster_obj=cluster, start=-19, stop=-15, check_slot=False
                 )
                 this_epoch = cluster.get_epoch()
 
