@@ -1049,7 +1049,9 @@ class TestRewards:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
-            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-5)
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=-19, stop=-15, check_slot=False
+            )
             this_epoch = cluster.get_epoch()
 
             # current reward balances
@@ -1393,7 +1395,9 @@ class TestRewards:
                 ), "Deregistration took longer than expected and would affect other checks"
 
             # sleep till the end of epoch
-            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=-19, stop=-5)
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=-19, stop=-15, check_slot=False
+            )
 
             # current reward balances
             owner_reward = cluster.get_stake_addr_info(
