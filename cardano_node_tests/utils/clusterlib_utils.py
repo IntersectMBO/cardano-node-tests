@@ -648,7 +648,8 @@ def wait_for_epoch_interval(
             end of an epoch.
         force_epoch: A bool indicating whether the interval must be in current epoch
             (True by default).
-        check_slot: A bool indicating whether current slot number must match the time interval.
+        check_slot: A bool indicating whether current slot number must match the time interval
+            (True by default).
     """
     start_abs = start if start >= 0 else cluster_obj.epoch_length_sec + start
     stop_abs = stop if stop >= 0 else cluster_obj.epoch_length_sec + stop
