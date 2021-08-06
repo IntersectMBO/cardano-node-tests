@@ -321,6 +321,8 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 10_000_000_000_000
 
+        init_balance = cluster.get_address_balance(pool_user.payment.address)
+
         mir_cert = cluster.gen_mir_cert_to_treasury(transfer=amount, tx_name=temp_template)
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -348,10 +350,83 @@ class TestMIRCerts:
             tx_files=tx_files,
         )
 
-        tx_epoch = cluster.get_epoch()
+        assert (
+            cluster.get_address_balance(pool_user.payment.address)
+            == init_balance - tx_raw_output.fee
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
+            tx_epoch = cluster.get_epoch()
+
+            assert tx_db_record.pot_transfers[0].reserves == -amount, (
+                "Incorrect amount transferred from reserves "
+                f"({tx_db_record.pot_transfers[0].reserves} != {-amount})"
+            )
+            assert tx_db_record.pot_transfers[0].treasury == amount, (
+                "Incorrect amount transferred to treasury "
+                f"({tx_db_record.pot_transfers[0].treasury} != {amount})"
+            )
+
+            cluster.wait_for_new_epoch()
+
+            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            # normally `treasury[-1]` > `treasury[-2]`
+            assert (pots_records[-1].treasury - pots_records[-2].treasury) > amount
+            # normally `reserves[-1]` < `reserves[-2]`
+            assert (pots_records[-2].reserves - pots_records[-1].reserves) > amount
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era < VERSIONS.ALONZO,
+        reason="Not supported in era < Alonzo",
+    )
+    def test_build_transfer_to_treasury(
+        self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
+    ):
+        """Send funds from the reserves pot to the treasury pot.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        """
+        temp_template = helpers.get_func_name()
+        cluster = cluster_pots
+        pool_user = pool_users[0]
+        amount = 10_000_000_000_000
+
+        init_balance = cluster.get_address_balance(pool_user.payment.address)
+
+        mir_cert = cluster.gen_mir_cert_to_treasury(transfer=amount, tx_name=temp_template)
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[mir_cert],
+            signing_key_files=[pool_user.payment.skey_file, *cluster.genesis_keys.delegate_skeys],
+        )
+
+        # send the transaction at the beginning of an epoch
+        if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
+            cluster.wait_for_new_epoch()
+
+        tx_output = cluster.build_tx(
+            src_address=pool_user.payment.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            witness_override=2,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        assert (
+            cluster.get_address_balance(pool_user.payment.address) < init_balance
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+        if tx_db_record:
+            tx_epoch = cluster.get_epoch()
+
             assert tx_db_record.pot_transfers[0].reserves == -amount, (
                 "Incorrect amount transferred from reserves "
                 f"({tx_db_record.pot_transfers[0].reserves} != {-amount})"
@@ -412,8 +487,6 @@ class TestMIRCerts:
             tx_files=tx_files,
         )
 
-        tx_epoch = cluster.get_epoch()
-
         assert (
             cluster.get_address_balance(pool_user.payment.address)
             == init_balance - tx_raw_output.fee
@@ -421,6 +494,76 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
+            tx_epoch = cluster.get_epoch()
+
+            assert tx_db_record.pot_transfers[0].treasury == -amount, (
+                "Incorrect amount transferred from treasury "
+                f"({tx_db_record.pot_transfers[0].treasury} != {-amount})"
+            )
+            assert tx_db_record.pot_transfers[0].reserves == amount, (
+                "Incorrect amount transferred to reserves "
+                f"({tx_db_record.pot_transfers[0].reserves} != {amount})"
+            )
+
+            cluster.wait_for_new_epoch()
+
+            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            # normally `treasury[-1]` > `treasury[-2]`
+            assert pots_records[-1].treasury < pots_records[-2].treasury
+            # normally `reserves[-1]` < `reserves[-2]`
+            assert pots_records[-1].reserves > pots_records[-2].reserves
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era < VERSIONS.ALONZO,
+        reason="Not supported in era < Alonzo",
+    )
+    def test_build_transfer_to_reserves(
+        self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
+    ):
+        """Send funds from the treasury pot to the reserves pot.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        """
+        temp_template = helpers.get_func_name()
+        cluster = cluster_pots
+        pool_user = pool_users[0]
+        amount = 1_000_000_000_000
+
+        init_balance = cluster.get_address_balance(pool_user.payment.address)
+
+        mir_cert = cluster.gen_mir_cert_to_rewards(transfer=amount, tx_name=temp_template)
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[mir_cert],
+            signing_key_files=[pool_user.payment.skey_file, *cluster.genesis_keys.delegate_skeys],
+        )
+
+        # send the transaction at the beginning of an epoch
+        if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
+            cluster.wait_for_new_epoch()
+
+        tx_output = cluster.build_tx(
+            src_address=pool_user.payment.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            witness_override=2,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        assert (
+            cluster.get_address_balance(pool_user.payment.address) < init_balance
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+        if tx_db_record:
+            tx_epoch = cluster.get_epoch()
+
             assert tx_db_record.pot_transfers[0].treasury == -amount, (
                 "Incorrect amount transferred from treasury "
                 f"({tx_db_record.pot_transfers[0].treasury} != {-amount})"
@@ -499,6 +642,92 @@ class TestMIRCerts:
         ), f"Incorrect reward balance for stake address `{registered_user.stake.address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            stash_record = (
+                tx_db_record.treasury[0] if fund_src == self.TREASURY else tx_db_record.reserve[0]
+            )
+            assert stash_record.amount == amount, (
+                "Incorrect amount transferred using MIR certificate "
+                f"({stash_record.amount} != {amount})"
+            )
+            assert stash_record.address == registered_user.stake.address, (
+                "Incorrect stake address "
+                f"({stash_record.address} != {registered_user.stake.address})"
+            )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era < VERSIONS.ALONZO,
+        reason="Not supported in era < Alonzo",
+    )
+    @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
+    def test_build_pay_stake_addr_from(
+        self,
+        cluster_pots: clusterlib.ClusterLib,
+        registered_user: clusterlib.PoolUser,
+        fund_src: str,
+    ):
+        """Send funds from the reserves or treasury pot to stake address.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * generate an MIR certificate
+        * submit a TX with the MIR certificate
+        * check that the expected amount was added to the stake address reward account
+        """
+        temp_template = helpers.get_func_name()
+        cluster = cluster_pots
+        amount = 50_000_000
+
+        init_reward = cluster.get_stake_addr_info(
+            registered_user.stake.address
+        ).reward_account_balance
+        init_balance = cluster.get_address_balance(registered_user.payment.address)
+
+        mir_cert = cluster.gen_mir_cert_stake_addr(
+            stake_addr=registered_user.stake.address,
+            reward=amount,
+            tx_name=temp_template,
+            use_treasury=fund_src == self.TREASURY,
+        )
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[mir_cert],
+            signing_key_files=[
+                registered_user.payment.skey_file,
+                *cluster.genesis_keys.delegate_skeys,
+            ],
+        )
+
+        # send the transaction at the beginning of an epoch
+        if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
+            cluster.wait_for_new_epoch()
+
+        tx_output = cluster.build_tx(
+            src_address=registered_user.payment.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            witness_override=2,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        assert (
+            cluster.get_address_balance(registered_user.payment.address) < init_balance
+        ), f"Incorrect balance for source address `{registered_user.payment.address}`"
+
+        cluster.wait_for_new_epoch()
+
+        assert (
+            cluster.get_stake_addr_info(registered_user.stake.address).reward_account_balance
+            == init_reward + amount
+        ), f"Incorrect reward balance for stake address `{registered_user.stake.address}`"
+
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             stash_record = (
                 tx_db_record.treasury[0] if fund_src == self.TREASURY else tx_db_record.reserve[0]
