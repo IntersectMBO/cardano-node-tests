@@ -444,6 +444,7 @@ def update_params_build(
         src_address=src_addr_record.address,
         tx_name=f"{temp_template}_submit_proposal",
         tx_files=tx_files,
+        fee_buffer=2000_000,
     )
     tx_signed = cluster_obj.sign_tx(
         tx_body_file=tx_output.out_file,
@@ -461,6 +462,7 @@ def mint_or_burn_witness(
     temp_template: str,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
+    use_build_cmd: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using witnesses.
 
@@ -479,23 +481,44 @@ def mint_or_burn_witness(
         clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
         for t in new_tokens
     ]
-    fee = cluster_obj.calculate_tx_fee(
-        src_address=src_address,
-        tx_name=temp_template,
-        tx_files=tx_files,
-        mint=mint,
-        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files),
-    )
-    tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=src_address,
-        tx_name=temp_template,
-        tx_files=tx_files,
-        fee=fee,
-        invalid_hereafter=invalid_hereafter,
-        invalid_before=invalid_before,
-        mint=mint,
-    )
+
+    if use_build_cmd:
+        txouts = [
+            # meet the minimum required UTxO value
+            clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=2000_000),
+            # leave out token burning records
+            *[t for t in mint if t.amount > 0],
+        ]
+
+        tx_raw_output = cluster_obj.build_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            txouts=txouts,
+            fee_buffer=2000_000,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            mint=mint,
+            witness_override=len(issuers_skey_files),
+        )
+    else:
+        fee = cluster_obj.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            mint=mint,
+            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            witness_count_add=len(issuers_skey_files),
+        )
+        tx_raw_output = cluster_obj.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            fee=fee,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            mint=mint,
+        )
 
     # create witness file for each required key
     witness_files = [

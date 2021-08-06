@@ -136,12 +136,26 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: List[clusterlib.AddressRecord],
         aname_type: str,
+        use_build_cmd: bool,
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses.
 
@@ -153,7 +167,7 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = f"{helpers.get_func_name()}_{aname_type}"
+        temp_template = f"{helpers.get_func_name()}_{aname_type}_{use_build_cmd}"
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
@@ -200,6 +214,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            use_build_cmd=use_build_cmd,
         )
 
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
@@ -211,17 +226,20 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
+            use_build_cmd=use_build_cmd,
         )
 
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
-        assert helpers.is_in_interval(
-            tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        # TODO: fee is not known when using `transaction build` command
+        if not use_build_cmd:
+            assert helpers.is_in_interval(
+                tx_out_mint.fee, expected_fee, frac=0.15
+            ) and helpers.is_in_interval(
+                tx_out_burn.fee, expected_fee, frac=0.15
+            ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
         # TODO: Alonzo workaround
@@ -806,9 +824,25 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_minting_and_partial_burning(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Test minting and partial burning of tokens.
 
@@ -818,7 +852,7 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 50
 
@@ -852,12 +886,15 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            use_build_cmd=use_build_cmd,
         )
 
         token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
+        # the `transaction build` command doesn't balance MAs, so use the `build-raw` with
+        # clusterlib magic for this partial burning
         burn_amount = amount - 10
         token_burn = token_mint._replace(amount=-burn_amount)
         tx_out_burn1 = clusterlib_utils.mint_or_burn_witness(
@@ -877,12 +914,15 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[final_burn],
             temp_template=f"{temp_template}_burn2",
+            use_build_cmd=use_build_cmd,
         )
 
         # check expected fee
-        assert helpers.is_in_interval(
-            tx_out_mint.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        # TODO: fee is not known when using `transaction build` command
+        if not use_build_cmd:
+            assert helpers.is_in_interval(
+                tx_out_mint.fee, expected_fee, frac=0.15
+            ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn1)
@@ -977,14 +1017,30 @@ class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_valid_policy_after(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1027,6 +1083,7 @@ class TestPolicies:
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         for t in tokens_to_mint:
@@ -1041,6 +1098,7 @@ class TestPolicies:
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         for t in tokens_to_burn:
@@ -1048,24 +1106,42 @@ class TestPolicies:
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
-        assert helpers.is_in_interval(
-            tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        # TODO: fee is not known when using `transaction build` command
+        if not use_build_cmd:
+            assert helpers.is_in_interval(
+                tx_out_mint.fee, expected_fee, frac=0.15
+            ) and helpers.is_in_interval(
+                tx_out_burn.fee, expected_fee, frac=0.15
+            ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_valid_policy_before(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1110,6 +1186,7 @@ class TestPolicies:
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         for t in tokens_to_mint:
@@ -1124,6 +1201,7 @@ class TestPolicies:
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         for t in tokens_to_burn:
@@ -1131,11 +1209,13 @@ class TestPolicies:
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
-        assert helpers.is_in_interval(
-            tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        # TODO: fee is not known when using `transaction build` command
+        if not use_build_cmd:
+            assert helpers.is_in_interval(
+                tx_out_mint.fee, expected_fee, frac=0.15
+            ) and helpers.is_in_interval(
+                tx_out_burn.fee, expected_fee, frac=0.15
+            ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
