@@ -799,7 +799,19 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1500_000, 2000_000, 10_000_000))
-    @pytest.mark.parametrize("use_build_cmd", (False, True), ids=("build_raw", "build"))
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_1_addr(
         self,
@@ -825,7 +837,19 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1500_000, 2000_000, 10_000_000))
-    @pytest.mark.parametrize("use_build_cmd", (False, True), ids=("build_raw", "build"))
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_transaction_to_1_addr_from_10_addrs(
         self,
@@ -851,7 +875,19 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1500_000, 2000_000, 10_000_000))
-    @pytest.mark.parametrize("use_build_cmd", (False, True), ids=("build_raw", "build"))
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
@@ -877,7 +913,19 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1500_000, 2000_000, 5000_000))
-    @pytest.mark.parametrize("use_build_cmd", (False, True), ids=("build_raw", "build"))
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
