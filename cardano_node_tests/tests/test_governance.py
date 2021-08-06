@@ -379,8 +379,8 @@ class TestMIRCerts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.skipif(
-        VERSIONS.cluster_era < VERSIONS.ALONZO,
-        reason="Not supported in era < Alonzo",
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
     )
     def test_build_transfer_to_treasury(
         self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
@@ -410,6 +410,7 @@ class TestMIRCerts:
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
+            fee_buffer=1000_000,
             witness_override=2,
         )
         tx_signed = cluster.sign_tx(
@@ -516,8 +517,8 @@ class TestMIRCerts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.skipif(
-        VERSIONS.cluster_era < VERSIONS.ALONZO,
-        reason="Not supported in era < Alonzo",
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
     )
     def test_build_transfer_to_reserves(
         self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
@@ -547,6 +548,7 @@ class TestMIRCerts:
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
+            fee_buffer=1000_000,
             witness_override=2,
         )
         tx_signed = cluster.sign_tx(
@@ -658,8 +660,8 @@ class TestMIRCerts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.skipif(
-        VERSIONS.cluster_era < VERSIONS.ALONZO,
-        reason="Not supported in era < Alonzo",
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
     )
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_build_pay_stake_addr_from(
@@ -707,6 +709,7 @@ class TestMIRCerts:
             src_address=registered_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
+            fee_buffer=1000_000,
             witness_override=2,
         )
         tx_signed = cluster.sign_tx(
