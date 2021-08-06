@@ -1813,6 +1813,18 @@ class TestMetadata:
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    def test_build_tx_wrong_json_metadata_format(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Try to build a transaction with wrong fromat of metadata JSON.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        The metadata file is a valid JSON, but not in a format that is expected.
+        """
+        # to be implemented
+
+    @allure.link(helpers.get_vcs_link())
     def test_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1835,6 +1847,18 @@ class TestMetadata:
         assert "Failed reading: satisfy" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    def test_build_tx_invalid_json_metadata(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Try to build a transaction with invalid metadata JSON.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        The metadata file is an invalid JSON.
+        """
+        # to be implemented
+
+    @allure.link(helpers.get_vcs_link())
     def test_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1854,6 +1878,16 @@ class TestMetadata:
         assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(
             excinfo.value
         )
+
+    @allure.link(helpers.get_vcs_link())
+    def test_build_tx_too_long_metadata_json(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Try to build a transaction with metadata JSON longer than 64 bytes.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        """
+        # to be implemented
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1984,6 +2018,19 @@ class TestMetadata:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    def test_build_tx_metadata_cbor(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Send transaction with metadata CBOR.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Check that the metadata in TX body matches the original metadata.
+        """
+        # to be implemented
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -2038,6 +2085,19 @@ class TestMetadata:
             assert (
                 db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_build_tx_metadata_both(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Send transaction with both metadata JSON and CBOR.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Check that the metadata in TX body matches the original metadata.
+        """
+        # to be implemented
 
     @allure.link(helpers.get_vcs_link())
     def test_tx_duplicate_metadata_keys(
