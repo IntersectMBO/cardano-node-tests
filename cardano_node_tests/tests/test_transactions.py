@@ -171,7 +171,7 @@ class TestBasic:
 
         assert (
             cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+            == src_init_balance - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
@@ -179,6 +179,57 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_build_transfer_funds(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Send funds to payment address.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * send funds from 1 source address to 1 destination address
+        * check expected balances for both source and destination addresses
+        """
+        temp_template = helpers.get_func_name()
+        amount = 1500_000
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        tx_output = cluster.build_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            txouts=txouts,
+            fee_buffer=1000_000,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        # TODO: we don't know fee amount
+        assert (
+            cluster.get_address_balance(src_address) < src_init_balance - amount
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
