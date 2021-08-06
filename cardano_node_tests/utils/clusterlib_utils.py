@@ -365,29 +365,8 @@ def check_pool_data(  # noqa: C901
     return "\n\n".join(errors_list)
 
 
-def update_params(
-    cluster_obj: clusterlib.ClusterLib,
-    src_addr_record: clusterlib.AddressRecord,
-    update_proposals: List[UpdateProposal],
-) -> None:
-    """Update params using update proposal."""
-    _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
-    cli_args = list(itertools.chain.from_iterable(_cli_args))
-
-    LOGGER.info("Waiting for new epoch to submit proposal.")
-    cluster_obj.wait_for_new_epoch()
-
-    cluster_obj.submit_update_proposal(
-        cli_args=cli_args,
-        src_address=src_addr_record.address,
-        src_skey_file=src_addr_record.skey_file,
-        tx_name=helpers.get_timestamped_rand_str(),
-    )
-
-    LOGGER.info(f"Update Proposal submitted ({cli_args})")
-    cluster_obj.wait_for_new_epoch()
-
-    protocol_params = cluster_obj.get_protocol_params()
+def check_updated_params(update_proposals: List[UpdateProposal], protocol_params: dict) -> None:
+    """Compare update proposals with actual protocol parameters."""
     failures = []
     for u in update_proposals:
         if not u.name:
@@ -406,6 +385,74 @@ def update_params(
     if failures:
         failures_str = "\n".join(failures)
         raise AssertionError(f"Cluster update proposal failed!\n{failures_str}")
+
+
+def update_params(
+    cluster_obj: clusterlib.ClusterLib,
+    src_addr_record: clusterlib.AddressRecord,
+    update_proposals: List[UpdateProposal],
+) -> None:
+    """Update params using update proposal."""
+    if not update_proposals:
+        return
+
+    _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
+    cli_args = list(itertools.chain.from_iterable(_cli_args))
+
+    cluster_obj.submit_update_proposal(
+        cli_args=cli_args,
+        src_address=src_addr_record.address,
+        src_skey_file=src_addr_record.skey_file,
+        tx_name=helpers.get_timestamped_rand_str(),
+    )
+
+    LOGGER.info(f"Update Proposal submitted ({cli_args})")
+
+
+def update_params_build(
+    cluster_obj: clusterlib.ClusterLib,
+    src_addr_record: clusterlib.AddressRecord,
+    update_proposals: List[UpdateProposal],
+) -> None:
+    """Update params using update proposal.
+
+    Uses `cardano-cli transaction build` command for building the transactions.
+    """
+    if not update_proposals:
+        return
+
+    _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
+    cli_args = list(itertools.chain.from_iterable(_cli_args))
+    temp_template = helpers.get_timestamped_rand_str()
+
+    # assumption is update proposals are submitted near beginning of epoch
+    epoch = cluster_obj.get_epoch()
+
+    out_file = cluster_obj.gen_update_proposal(
+        cli_args=cli_args,
+        epoch=epoch,
+        tx_name=temp_template,
+    )
+    tx_files = clusterlib.TxFiles(
+        proposal_files=[out_file],
+        signing_key_files=[
+            *cluster_obj.genesis_keys.delegate_skeys,
+            Path(src_addr_record.skey_file),
+        ],
+    )
+    tx_output = cluster_obj.build_tx(
+        src_address=src_addr_record.address,
+        tx_name=f"{temp_template}_submit_proposal",
+        tx_files=tx_files,
+    )
+    tx_signed = cluster_obj.sign_tx(
+        tx_body_file=tx_output.out_file,
+        signing_key_files=tx_files.signing_key_files,
+        tx_name=f"{temp_template}_submit_proposal",
+    )
+    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+    LOGGER.info(f"Update Proposal submitted ({cli_args})")
 
 
 def mint_or_burn_witness(
