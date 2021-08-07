@@ -1905,6 +1905,30 @@ class TestMetadata:
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    def test_build_tx_wrong_json_metadata_format(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Try to build a transaction with wrong fromat of metadata JSON.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        The metadata file is a valid JSON, but not in a format that is expected.
+        """
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=[self.JSON_METADATA_WRONG_FILE],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.build_tx(
+                src_address=payment_addr.address,
+                tx_name="wrong_json_format",
+                tx_files=tx_files,
+                fee_buffer=1000_000,
+            )
+        assert "The JSON metadata top level must be a map" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
     def test_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1927,6 +1951,31 @@ class TestMetadata:
         assert "Failed reading: satisfy" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    def test_build_tx_invalid_json_metadata(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Try to build a transaction with invalid metadata JSON.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        The metadata file is an invalid JSON.
+        """
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=[self.JSON_METADATA_INVALID_FILE],
+        )
+
+        # it should NOT be possible to build a transaction using an invalid metadata JSON
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.build_tx(
+                src_address=payment_addr.address,
+                tx_name="invalid_metadata",
+                tx_files=tx_files,
+                fee_buffer=1000_000,
+            )
+        assert "Failed reading: satisfy" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
     def test_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -1942,6 +1991,31 @@ class TestMetadata:
                 src_address=payment_addr.address,
                 tx_name="too_long_metadata",
                 tx_files=tx_files,
+            )
+        assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(
+            excinfo.value
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    def test_build_tx_too_long_metadata_json(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Try to build a transaction with metadata JSON longer than 64 bytes.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        """
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=[self.JSON_METADATA_LONG_FILE],
+        )
+
+        # it should NOT be possible to build a transaction using too long metadata JSON
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.build_tx(
+                src_address=payment_addr.address,
+                tx_name="too_long_metadata",
+                tx_files=tx_files,
+                fee_buffer=1000_000,
             )
         assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(
             excinfo.value
@@ -2080,6 +2154,55 @@ class TestMetadata:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    def test_build_tx_metadata_cbor(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Send transaction with metadata CBOR.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Check that the metadata in TX body matches the original metadata.
+        """
+        temp_template = helpers.get_func_name()
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+            metadata_cbor_files=[self.CBOR_METADATA_FILE],
+        )
+
+        tx_output = cluster.build_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            fee_buffer=1000_000,
+        )
+
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_output.out_file)
+
+        with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp:
+            cbor_file_metadata = cbor2.load(metadata_fp)
+
+        assert (
+            cbor_body_metadata.metadata == cbor_file_metadata
+        ), "Metadata in TX body doesn't match original metadata"
+
+        # check TX and metadata in db-sync if available
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+        if tx_db_record:
+            db_metadata = tx_db_record._convert_metadata()
+            assert (
+                db_metadata == cbor_file_metadata
+            ), "Metadata in db-sync doesn't match the original metadata"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -2129,6 +2252,72 @@ class TestMetadata:
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            db_metadata = tx_db_record._convert_metadata()
+            assert (
+                db_metadata == cbor_body_metadata.metadata
+            ), "Metadata in db-sync doesn't match the original metadata"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_build_tx_metadata_both(
+        self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
+    ):
+        """Send transaction with both metadata JSON and CBOR.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Check that the metadata in TX body matches the original metadata.
+        """
+        temp_template = helpers.get_func_name()
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+            metadata_json_files=[self.JSON_METADATA_FILE],
+            metadata_cbor_files=[self.CBOR_METADATA_FILE],
+        )
+
+        tx_output = cluster.build_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            fee_buffer=1000_000,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_output.out_file)
+        # dump it as JSON, so keys are converted to strings
+        json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
+
+        with open(self.JSON_METADATA_FILE) as metadata_fp_json:
+            json_file_metadata = json.load(metadata_fp_json)
+
+        with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp_cbor:
+            cbor_file_metadata = cbor2.load(metadata_fp_cbor)
+        cbor_file_metadata = json.loads(json.dumps(cbor_file_metadata))
+
+        assert json_body_metadata == {
+            **json_file_metadata,
+            **cbor_file_metadata,
+        }, "Metadata in TX body doesn't match original metadata"
+
+        # check `transaction view` command
+        # TODO: Alonzo workaround
+        try:
+            tx_view = clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
+        except clusterlib.CLIError as err:
+            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
+                raise
+        else:
+            assert ' = fromList [(1,S "foo")' in tx_view["auxiliary data"]
+
+        # check TX and metadata in db-sync if available
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
