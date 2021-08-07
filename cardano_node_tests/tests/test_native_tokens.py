@@ -49,6 +49,45 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 @pytest.fixture
+def issuers_addrs_fresh(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> List[clusterlib.AddressRecord]:
+    """Create new issuers addresses."""
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            # recreate addresses if leftover MAs are detected in-between the tests
+            cached_addrs: List[clusterlib.AddressRecord] = fixture_cache.value
+            utxos = cluster.get_utxo(address=cached_addrs[0].address)
+            for u in utxos:
+                if u.coin != clusterlib.DEFAULT_COIN:
+                    break
+            else:
+                # no MAs found in UTxOs
+                return cached_addrs
+
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[
+                f"token_minting__build_ci{helpers.get_timestamped_rand_str()}"
+                f"{cluster_manager.cluster_instance_num}_{i}"
+                for i in range(5)
+            ],
+            cluster_obj=cluster,
+        )
+        fixture_cache.value = addrs
+
+    # fund source addresses
+    clusterlib_utils.fund_from_faucet(
+        addrs[0],
+        cluster_obj=cluster,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        amount=9000_000_000,
+    )
+
+    return addrs
+
+
+@pytest.fixture
 def issuers_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
@@ -81,7 +120,7 @@ def simple_script_policyid(
     cluster: clusterlib.ClusterLib,
     issuers_addrs: List[clusterlib.AddressRecord],
 ) -> Tuple[Path, str]:
-    """Return script and it's PolicyId."""
+    """Return script and its PolicyId."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
@@ -153,7 +192,7 @@ class TestMinting:
     def test_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: List[clusterlib.AddressRecord],
+        issuers_addrs_fresh: List[clusterlib.AddressRecord],
         aname_type: str,
         use_build_cmd: bool,
     ):
@@ -171,13 +210,13 @@ class TestMinting:
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
-        token_mint_addr = issuers_addrs[0]
+        token_mint_addr = issuers_addrs_fresh[0]
 
         # create issuers
         if aname_type == "asset_name":
-            _issuers_vkey_files = [p.vkey_file for p in issuers_addrs]
+            _issuers_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
             payment_vkey_files = _issuers_vkey_files[1:]
-            token_issuers = issuers_addrs
+            token_issuers = issuers_addrs_fresh
         else:
             # create unique script/policyid for an empty asset name
             _empty_issuers = clusterlib_utils.create_payment_addr_records(
@@ -185,7 +224,7 @@ class TestMinting:
                 cluster_obj=cluster,
             )
             payment_vkey_files = [p.vkey_file for p in _empty_issuers]
-            token_issuers = [issuers_addrs[0], *_empty_issuers]
+            token_issuers = [issuers_addrs_fresh[0], *_empty_issuers]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -841,7 +880,7 @@ class TestMinting:
     def test_minting_and_partial_burning(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: List[clusterlib.AddressRecord],
+        issuers_addrs_fresh: List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Test minting and partial burning of tokens.
@@ -856,8 +895,8 @@ class TestMinting:
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 50
 
-        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
-        token_mint_addr = issuers_addrs[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
+        token_mint_addr = issuers_addrs_fresh[0]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -876,7 +915,7 @@ class TestMinting:
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
             amount=amount,
-            issuers_addrs=issuers_addrs,
+            issuers_addrs=issuers_addrs_fresh,
             token_mint_addr=token_mint_addr,
             script=multisig_script,
         )
@@ -1034,7 +1073,7 @@ class TestPolicies:
     def test_valid_policy_after(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: List[clusterlib.AddressRecord],
+        issuers_addrs_fresh: List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
@@ -1044,8 +1083,8 @@ class TestPolicies:
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
-        token_mint_addr = issuers_addrs[0]
-        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+        token_mint_addr = issuers_addrs_fresh[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -1070,7 +1109,7 @@ class TestPolicies:
                 clusterlib_utils.TokenRecord(
                     token=token,
                     amount=amount,
-                    issuers_addrs=issuers_addrs,
+                    issuers_addrs=issuers_addrs_fresh,
                     token_mint_addr=token_mint_addr,
                     script=multisig_script,
                 )
@@ -1135,7 +1174,7 @@ class TestPolicies:
     def test_valid_policy_before(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: List[clusterlib.AddressRecord],
+        issuers_addrs_fresh: List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
@@ -1145,8 +1184,8 @@ class TestPolicies:
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
-        token_mint_addr = issuers_addrs[0]
-        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+        token_mint_addr = issuers_addrs_fresh[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
 
         before_slot = cluster.get_slot_no() + 10_000
 
@@ -1173,7 +1212,7 @@ class TestPolicies:
                 clusterlib_utils.TokenRecord(
                     token=token,
                     amount=amount,
-                    issuers_addrs=issuers_addrs,
+                    issuers_addrs=issuers_addrs_fresh,
                     token_mint_addr=token_mint_addr,
                     script=multisig_script,
                 )
