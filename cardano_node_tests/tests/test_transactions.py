@@ -224,7 +224,7 @@ class TestBasic:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        # TODO: we don't know fee amount
+        # TODO: fee is not known when using `transaction build` command
         assert (
             cluster.get_address_balance(src_address) < src_init_balance - amount
         ), f"Incorrect balance for source address `{src_address}`"
