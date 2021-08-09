@@ -1590,6 +1590,19 @@ class TestTransfer:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_transfer_tokens(
         self,
@@ -1597,6 +1610,7 @@ class TestTransfer:
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
         amount: int,
+        use_build_cmd: bool,
     ):
         """Test sending tokens to payment address.
 
@@ -1604,7 +1618,7 @@ class TestTransfer:
         * check expected token balances for both source and destination addresses
         * check fees in Lovelace
         """
-        temp_template = f"{helpers.get_func_name()}_{amount}"
+        temp_template = f"{helpers.get_func_name()}_{amount}_{use_build_cmd}"
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -1633,21 +1647,39 @@ class TestTransfer:
 
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
-        tx_raw_output = cluster.send_funds(
-            src_address=src_address,
-            destinations=destinations,
-            tx_name=temp_template,
-            tx_files=tx_files,
-        )
+        if use_build_cmd:
+            # TODO: add ADA txout for change address
+            destinations.append(clusterlib.TxOut(address=src_address, amount=amount_lovelace))
+
+            tx_raw_output = cluster.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=destinations,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_funds(
+                src_address=src_address,
+                destinations=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
 
         assert (
             cluster.get_address_balance(src_address, coin=new_token.token)
             == src_init_balance_token - amount
         ), f"Incorrect token balance for source address `{src_address}`"
 
+        # TODO: fee is not known when using `transaction build` command
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - amount_lovelace
+            cluster.get_address_balance(src_address) < src_init_balance - amount_lovelace
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         assert (
@@ -1658,12 +1690,26 @@ class TestTransfer:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
+        use_build_cmd: bool,
     ):
         """Test sending multiple different tokens to payment addresses.
 
@@ -1671,7 +1717,7 @@ class TestTransfer:
         * check expected token balances for both source and destination addresses for each token
         * check fees in Lovelace
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
         amount = 1000
         rand = clusterlib.get_rand_str(5)
 
@@ -1709,7 +1755,7 @@ class TestTransfer:
 
         # TODO: calculate-min-value not supported in Alonzo
         if VERSIONS.cluster_era == VERSIONS.ALONZO:
-            amount_lovelace = 2500_000
+            amount_lovelace = 3500_000
         else:
             min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
             assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
@@ -1726,16 +1772,34 @@ class TestTransfer:
             signing_key_files={t.token_mint_addr.skey_file for t in new_tokens}
         )
 
-        tx_raw_output = cluster.send_funds(
-            src_address=src_address,
-            destinations=destinations,
-            tx_name=temp_template,
-            tx_files=tx_files,
-        )
+        if use_build_cmd:
+            # TODO: add ADA txout for change address
+            destinations.append(clusterlib.TxOut(address=src_address, amount=amount_lovelace))
 
+            tx_raw_output = cluster.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=destinations,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_funds(
+                src_address=src_address,
+                destinations=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
+
+        # TODO: fee is not known when using `transaction build` command
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - amount_lovelace * 2
+            cluster.get_address_balance(src_address) < src_init_balance - amount_lovelace * 2
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         for idx, token in enumerate(new_tokens):
@@ -1757,6 +1821,19 @@ class TestTransfer:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
         reason="runs only on local cluster",
@@ -1766,9 +1843,10 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
+        use_build_cmd: bool,
     ):
         """Try to create an UTxO with just native tokens, no ADA. Expect failure."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
         amount = 10
 
         src_address = new_token.token_mint_addr.address
@@ -1778,13 +1856,29 @@ class TestTransfer:
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_funds(
-                src_address=src_address,
-                destinations=destinations,
-                tx_name=temp_template,
-                tx_files=tx_files,
-            )
-        assert "OutputTooSmallUTxO" in str(excinfo.value)
+            if use_build_cmd:
+                expected_error = "Minimum required UTxO:"
+
+                # TODO: add ADA txout for change address
+                destinations.append(clusterlib.TxOut(address=src_address, amount=3500_000))
+
+                cluster.build_tx(
+                    src_address=src_address,
+                    tx_name=temp_template,
+                    txouts=destinations,
+                    fee_buffer=2000_000,
+                    tx_files=tx_files,
+                )
+            else:
+                expected_error = "OutputTooSmallUTxO"
+
+                cluster.send_funds(
+                    src_address=src_address,
+                    destinations=destinations,
+                    tx_name=temp_template,
+                    tx_files=tx_files,
+                )
+        assert expected_error in str(excinfo.value)
 
 
 @pytest.mark.testnets
