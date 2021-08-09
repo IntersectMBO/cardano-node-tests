@@ -1589,11 +1589,6 @@ class TestTransfer:
         return new_token
 
     @allure.link(helpers.get_vcs_link())
-    # TODO: Alonzo workaround
-    @pytest.mark.skipif(
-        VERSIONS.cluster_era == VERSIONS.ALONZO,
-        reason="calculate-min-value not supported in Alonzo",
-    )
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
     @pytest.mark.dbsync
     def test_transfer_tokens(
@@ -1622,11 +1617,14 @@ class TestTransfer:
             clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token),
         ]
 
-        min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
-        assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
-        assert min_value.value, "No Lovelace required for `min-ada-value`"
-
-        amount_lovelace = min_value.value
+        # TODO: calculate-min-value not supported in Alonzo
+        if VERSIONS.cluster_era == VERSIONS.ALONZO:
+            amount_lovelace = 1500_000
+        else:
+            min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
+            assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
+            assert min_value.value, "No Lovelace required for `min-ada-value`"
+            amount_lovelace = min_value.value
 
         destinations = [
             *ma_destinations,
@@ -1660,11 +1658,6 @@ class TestTransfer:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    # TODO: Alonzo workaround
-    @pytest.mark.skipif(
-        VERSIONS.cluster_era == VERSIONS.ALONZO,
-        reason="calculate-min-value not supported in Alonzo",
-    )
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
         self,
@@ -1688,7 +1681,7 @@ class TestTransfer:
             temp_template=f"{temp_template}_{rand}",
             token_mint_addr=payment_addrs[0],
             issuer_addr=payment_addrs[1],
-            amount=1_000_000,
+            amount=1000_000,
         )
         new_tokens.append(new_token)
 
@@ -1714,11 +1707,14 @@ class TestTransfer:
                 clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token)
             )
 
-        min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
-        assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
-        assert min_value.value, "No Lovelace required for `min-ada-value`"
-
-        amount_lovelace = min_value.value
+        # TODO: calculate-min-value not supported in Alonzo
+        if VERSIONS.cluster_era == VERSIONS.ALONZO:
+            amount_lovelace = 2500_000
+        else:
+            min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
+            assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
+            assert min_value.value, "No Lovelace required for `min-ada-value`"
+            amount_lovelace = min_value.value
 
         destinations = [
             *ma_destinations,
