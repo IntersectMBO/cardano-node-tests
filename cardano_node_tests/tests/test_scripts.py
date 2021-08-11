@@ -588,7 +588,7 @@ class TestBasic:
             tx_signed = cluster.sign_tx(
                 tx_body_file=tx_out_from.out_file,
                 signing_key_files=tx_files.signing_key_files,
-                tx_name=temp_template,
+                tx_name=f"{temp_template}_from",
             )
             cluster.submit_tx(tx_file=tx_signed, txins=tx_out_from.txins)
         else:
