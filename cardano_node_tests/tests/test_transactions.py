@@ -64,6 +64,7 @@ def _get_raw_tx_values(
     src_record: clusterlib.AddressRecord,
     dst_record: clusterlib.AddressRecord,
     temp_dir: Path,
+    for_build_command: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Get values for building raw TX using `clusterlib.build_raw_tx_bare`."""
     src_address = src_record.address
@@ -72,20 +73,27 @@ def _get_raw_tx_values(
     tx_files = clusterlib.TxFiles(signing_key_files=[src_record.skey_file])
     ttl = cluster_obj.calculate_tx_ttl()
 
-    fee = cluster_obj.calculate_tx_fee(
-        src_address=src_address,
-        tx_name=tx_name,
-        dst_addresses=[dst_address],
-        tx_files=tx_files,
-        ttl=ttl,
-    )
+    if for_build_command:
+        fee = 0
+        min_change = 1500_000
+    else:
+        fee = cluster_obj.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=tx_name,
+            dst_addresses=[dst_address],
+            tx_files=tx_files,
+            ttl=ttl,
+        )
+        min_change = 0
 
     src_addr_highest_utxo = cluster_obj.get_utxo_with_highest_amount(src_address)
 
     # use only the UTxO with highest amount
     txins = [src_addr_highest_utxo]
     txouts = [
-        clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee),
+        clusterlib.TxOut(
+            address=dst_address, amount=src_addr_highest_utxo.amount - fee - min_change
+        ),
     ]
     out_file = temp_dir / f"{helpers.get_timestamped_rand_str()}_tx.body"
 
@@ -584,6 +592,110 @@ class TestBasic:
         ), f"Incorrect balance for source address `{src_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @pytest.mark.dbsync
+    def test_multiple_same_txins(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        temp_dir: Path,
+    ):
+        """Try to build a transaction with multiple identical txins."""
+        temp_template = helpers.get_func_name()
+        src_address = payment_addrs[0].address
+
+        init_balance = cluster.get_address_balance(src_address)
+
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=payment_addrs[0],
+            dst_record=payment_addrs[0],
+            temp_dir=temp_dir,
+        )
+        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+
+        cluster.cli(
+            [
+                "transaction",
+                "build-raw",
+                "--fee",
+                str(tx_raw_output.fee),
+                "--out-file",
+                str(tx_raw_output.out_file),
+                "--invalid-hereafter",
+                str(tx_raw_output.invalid_hereafter),
+                "--tx-in",
+                str(txins[0]),
+                *cluster._prepend_flag("--tx-in", txins),
+                *cluster._prepend_flag("--tx-out", txouts),
+                *cluster.tx_era_arg,
+            ]
+        )
+
+        tx_signed_file = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            tx_name=temp_template,
+            signing_key_files=[payment_addrs[0].skey_file],
+        )
+        cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
+
+        assert (
+            cluster.get_address_balance(src_address) == init_balance - tx_raw_output.fee
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    def test_build_multiple_same_txins(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        temp_dir: Path,
+    ):
+        """Build a transaction with multiple identical txins.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        """
+        temp_template = helpers.get_func_name()
+
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=payment_addrs[0],
+            dst_record=payment_addrs[1],
+            temp_dir=temp_dir,
+            for_build_command=True,
+        )
+        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+
+        cluster.cli(
+            [
+                "transaction",
+                "build",
+                "--out-file",
+                str(tx_raw_output.out_file),
+                "--testnet-magic",
+                str(cluster.network_magic),
+                "--change-address",
+                str(payment_addrs[0].address),
+                "--tx-in",
+                str(txins[0]),
+                *cluster._prepend_flag("--tx-in", txins),
+                *cluster._prepend_flag("--tx-out", txouts),
+                *cluster.tx_era_arg,
+            ]
+        )
+        assert tx_raw_output.out_file.exists()
 
 
 @pytest.mark.testnets
@@ -1239,6 +1351,45 @@ class TestNotBalanced:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    def test_build_not_enough_for_fee(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Try to build a transaction with a negative change using `transaction build`.
+
+        Check that it is not possible to built such transaction.
+        """
+        temp_template = helpers.get_func_name()
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
+
+        # use only the UTxO with highest amount
+        txins = [src_addr_highest_utxo]
+        # try to transfer whole balance
+        txouts = [
+            clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount),
+        ]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txins=txins,
+                txouts=txouts,
+                tx_files=tx_files,
+            )
+        assert "The net balance of the transaction is negative" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
     @helpers.hypothesis_settings()
     def test_wrong_balance(
@@ -1315,6 +1466,8 @@ class TestNotBalanced:
 class TestNegative:
     """Transaction tests that are expected to fail."""
 
+    # pylint: disable=too-many-public-methods
+
     @pytest.fixture
     def pool_users(
         self,
@@ -1329,7 +1482,7 @@ class TestNegative:
             created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster,
                 name_template=f"test_negative_ci{cluster_manager.cluster_instance_num}",
-                no_of_addr=2,
+                no_of_addr=3,
             )
             fixture_cache.value = created_users
 
@@ -1343,39 +1496,87 @@ class TestNegative:
         return created_users
 
     def _send_funds_to_invalid_address(
-        self, cluster_obj: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser], addr: str
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+        use_build_cmd=False,
     ):
         """Send funds from payment address to invalid address."""
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=addr, amount=1000)]
+        destinations = [clusterlib.TxOut(address=addr, amount=1000_000)]
 
         # it should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.build_raw_tx(
-                src_address=pool_users[0].payment.address,
-                tx_name="to_invalid",
-                txouts=destinations,
-                tx_files=tx_files,
-                fee=0,
-            )
+            if use_build_cmd:
+                cluster_obj.build_tx(
+                    src_address=pool_users[0].payment.address,
+                    tx_name="to_invalid",
+                    txouts=destinations,
+                    tx_files=tx_files,
+                    fee_buffer=1000_000,
+                )
+            else:
+                cluster_obj.build_raw_tx(
+                    src_address=pool_users[0].payment.address,
+                    tx_name="to_invalid",
+                    txouts=destinations,
+                    tx_files=tx_files,
+                    fee=0,
+                )
         exc_val = str(excinfo.value)
         assert "invalid address" in exc_val or "An error occurred" in exc_val  # TODO: better match
 
     def _send_funds_from_invalid_address(
-        self, cluster_obj: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser], addr: str
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+        use_build_cmd=False,
     ):
         """Send funds from invalid payment address."""
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000_000)]
 
         # it should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.build_raw_tx(
-                src_address=addr,
-                tx_name="from_invalid",
+            if use_build_cmd:
+                cluster_obj.build_tx(
+                    src_address=addr,
+                    tx_name="from_invalid",
+                    txouts=destinations,
+                    tx_files=tx_files,
+                    fee_buffer=1000_000,
+                )
+            else:
+                cluster_obj.build_raw_tx(
+                    src_address=addr,
+                    tx_name="from_invalid",
+                    txouts=destinations,
+                    tx_files=tx_files,
+                    fee=0,
+                )
+        assert "invalid address" in str(excinfo.value)
+
+    def _send_funds_invalid_change_address(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Send funds with invalid change address."""
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000_000)]
+
+        # it should NOT be possible to build a transaction using an invalid change address
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_obj.build_tx(
+                src_address=pool_users[0].payment.address,
+                tx_name="invalid_change",
                 txouts=destinations,
+                change_address=addr,
                 tx_files=tx_files,
-                fee=0,
+                fee_buffer=1000_000,
             )
         assert "invalid address" in str(excinfo.value)
 
@@ -1385,20 +1586,31 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         utxo: clusterlib.UTXOData,
         temp_template: str,
+        use_build_cmd=False,
     ) -> str:
         """Send funds with invalid UTxO."""
         src_addr = pool_users[0].payment
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000_000)]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.send_tx(
-                src_address=src_addr.address,
-                tx_name=temp_template,
-                txins=[utxo],
-                txouts=destinations,
-                tx_files=tx_files,
-            )
+            if use_build_cmd:
+                cluster_obj.build_tx(
+                    src_address=src_addr.address,
+                    tx_name=temp_template,
+                    txins=[utxo],
+                    txouts=destinations,
+                    tx_files=tx_files,
+                    fee_buffer=1000_000,
+                )
+            else:
+                cluster_obj.send_tx(
+                    src_address=src_addr.address,
+                    tx_name=temp_template,
+                    txins=[utxo],
+                    txouts=destinations,
+                    tx_files=tx_files,
+                )
         return str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -1534,23 +1746,53 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     def test_send_funds_to_reward_address(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
     ):
         """Try to send funds from payment address to stake address.
 
         Expect failure.
         """
         addr = pool_users[0].stake.address
-        self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=use_build_cmd
+        )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     def test_send_funds_to_utxo_address(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
     ):
         """Try to send funds from payment address to UTxO address.
 
@@ -1559,7 +1801,7 @@ class TestNegative:
         dst_addr = pool_users[1].payment.address
         utxo_addr = cluster.get_utxo(dst_addr)[0].utxo_hash
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=utxo_addr
+            cluster_obj=cluster, pool_users=pool_users, addr=utxo_addr, use_build_cmd=use_build_cmd
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1579,6 +1821,30 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_to_invalid_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds from payment address to non-existent address (property-based test).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+        )
+
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @helpers.hypothesis_settings()
     def test_send_funds_to_invalid_length_address(
@@ -1593,6 +1859,30 @@ class TestNegative:
         """
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_to_invalid_length_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds from payment address to address with invalid length.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure. Property-based test.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+        )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -1613,6 +1903,32 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(
+        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
+    )
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_to_invalid_chars_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds from payment address to address with invalid characters.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure. Property-based test.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+        )
+
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @helpers.hypothesis_settings()
     def test_send_funds_from_invalid_address(
@@ -1621,12 +1937,36 @@ class TestNegative:
         pool_users: List[clusterlib.PoolUser],
         addr: str,
     ):
-        """Try to send funds from non-existent address (property-based test).
+        """Try to send funds from invalid address (property-based test).
 
         Expect failure.
         """
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_from_invalid_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds from non-existent address (property-based test).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+        )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
@@ -1643,6 +1983,30 @@ class TestNegative:
         """
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_from_invalid_length_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds from address with invalid length (property-based test).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+        )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -1663,43 +2027,187 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(
+        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
+    )
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_from_invalid_chars_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds from address with invalid characters (property-based test).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_invalid_change_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds using invalid change address (property-based test).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_invalid_change_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(
+        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
+    )
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_invalid_chars_change_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds using change address with invalid characters (property-based test).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_invalid_change_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
+    @helpers.hypothesis_settings()
+    def test_build_send_funds_invalid_length_change_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        addr: str,
+    ):
+        """Try to send funds using change address with invalid length (property-based test).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        addr = f"addr_test1{addr}"
+        self._send_funds_invalid_change_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     def test_nonexistent_utxo_ix(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
     ):
         """Try to use nonexistent UTxO TxIx as an input.
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
 
         utxo = cluster.get_utxo(pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_ix=5)
         err = self._send_funds_with_invalid_utxo(
-            cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            utxo=utxo_copy,
+            temp_template=temp_template,
+            use_build_cmd=use_build_cmd,
         )
-        assert "BadInputsUTxO" in err
+        if use_build_cmd:
+            expected_msg = "The transaction does not balance in its use of ada"
+        else:
+            expected_msg = "BadInputsUTxO"
+        assert expected_msg in err
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     def test_nonexistent_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
     ):
         """Try to use nonexistent UTxO hash as an input.
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
 
         utxo = cluster.get_utxo(pool_users[0].payment.address)[0]
         new_hash = f"{utxo.utxo_hash[:-4]}fd42"
         utxo_copy = utxo._replace(utxo_hash=new_hash)
         err = self._send_funds_with_invalid_utxo(
-            cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            utxo=utxo_copy,
+            temp_template=temp_template,
+            use_build_cmd=use_build_cmd,
         )
-        assert "BadInputsUTxO" in err
+        if use_build_cmd:
+            expected_msg = "The transaction does not balance in its use of ada"
+        else:
+            expected_msg = "BadInputsUTxO"
+        assert expected_msg in err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
@@ -1720,6 +2228,42 @@ class TestNegative:
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
+        )
+        assert (
+            "Incorrect transaction id format" in err
+            or "Failed reading" in err
+            or "expecting transaction id (hexadecimal)" in err
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
+    @helpers.hypothesis_settings()
+    def test_build_invalid_lenght_utxo_hash(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        utxo_hash: str,
+    ):
+        """Try to use invalid UTxO hash as an input (property-based test).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        temp_template = "test_build_invalid_lenght_utxo_hash"
+
+        utxo = cluster.get_utxo(pool_users[0].payment.address)[0]
+        utxo_copy = utxo._replace(utxo_hash=utxo_hash)
+        err = self._send_funds_with_invalid_utxo(
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            utxo=utxo_copy,
+            temp_template=temp_template,
+            use_build_cmd=True,
         )
         assert (
             "Incorrect transaction id format" in err
@@ -1843,6 +2387,146 @@ class TestNegative:
                 ]
             )
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    def test_build_missing_tx_in(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        temp_dir: Path,
+    ):
+        """Try to build a transaction with a missing `--tx-in` parameter.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        temp_template = helpers.get_func_name()
+
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=pool_users[0].payment,
+            dst_record=pool_users[1].payment,
+            temp_dir=temp_dir,
+            for_build_command=True,
+        )
+        __, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "build",
+                    "--out-file",
+                    str(tx_raw_output.out_file),
+                    "--change-address",
+                    str(pool_users[0].payment.address),
+                    "--testnet-magic",
+                    str(cluster.network_magic),
+                    *cluster._prepend_flag("--tx-out", txouts),
+                    *cluster.tx_era_arg,
+                ]
+            )
+        assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    def test_build_missing_change_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        temp_dir: Path,
+    ):
+        """Try to build a transaction with a missing `--change-address` parameter.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        temp_template = helpers.get_func_name()
+
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=pool_users[0].payment,
+            dst_record=pool_users[1].payment,
+            temp_dir=temp_dir,
+            for_build_command=True,
+        )
+        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "build",
+                    "--out-file",
+                    str(tx_raw_output.out_file),
+                    "--testnet-magic",
+                    str(cluster.network_magic),
+                    *cluster._prepend_flag("--tx-in", txins),
+                    *cluster._prepend_flag("--tx-out", txouts),
+                    *cluster.tx_era_arg,
+                ]
+            )
+        assert re.search(r"Missing:.* --change-address ADDRESS", str(excinfo.value))
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    def test_build_multiple_change_addresses(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        temp_dir: Path,
+    ):
+        """Try to build a transaction with multiple `--change-address` parameters.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        temp_template = helpers.get_func_name()
+
+        tx_raw_output = _get_raw_tx_values(
+            cluster_obj=cluster,
+            tx_name=temp_template,
+            src_record=pool_users[0].payment,
+            dst_record=pool_users[1].payment,
+            temp_dir=temp_dir,
+            for_build_command=True,
+        )
+        txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "build",
+                    "--out-file",
+                    str(tx_raw_output.out_file),
+                    "--testnet-magic",
+                    str(cluster.network_magic),
+                    *cluster._prepend_flag("--tx-in", txins),
+                    *cluster._prepend_flag("--tx-out", txouts),
+                    *cluster._prepend_flag(
+                        "--change-address",
+                        [pool_users[0].payment.address, pool_users[2].payment.address],
+                    ),
+                    *cluster.tx_era_arg,
+                ]
+            )
+        assert re.search(r"Invalid option.*--change-address", str(excinfo.value))
 
 
 @pytest.mark.testnets
