@@ -455,6 +455,7 @@ def _deregister_stake_pool_w_build(
 def _create_register_pool(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
+    temp_dir: Path,
     pool_owners: List[clusterlib.PoolUser],
     pool_data: clusterlib.PoolData,
     request: Optional[FixtureRequest] = None,
@@ -483,13 +484,14 @@ def _create_register_pool(
     # deregister stake pool
     def _deregister():
         depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster_obj.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=pool_creation_out.cold_key_pair,
-            epoch=cluster_obj.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
-        )
+        with helpers.change_cwd(temp_dir):
+            cluster_obj.deregister_stake_pool(
+                pool_owners=pool_owners,
+                cold_key_pair=pool_creation_out.cold_key_pair,
+                epoch=cluster_obj.get_epoch() + depoch,
+                pool_name=pool_data.pool_name,
+                tx_name=temp_template,
+            )
 
     if request is not None:
         request.addfinalizer(_deregister)
@@ -515,6 +517,7 @@ def _create_register_pool_delegate_stake_tx(
     cluster_obj: clusterlib.ClusterLib,
     pool_owners: List[clusterlib.PoolUser],
     temp_template: str,
+    temp_dir: Path,
     pool_data: clusterlib.PoolData,
     request: Optional[FixtureRequest] = None,
     use_build_cmd: bool = False,
@@ -593,13 +596,14 @@ def _create_register_pool_delegate_stake_tx(
     # deregister stake pool
     def _deregister():
         depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-        cluster_obj.deregister_stake_pool(
-            pool_owners=pool_owners,
-            cold_key_pair=node_cold,
-            epoch=cluster_obj.get_epoch() + depoch,
-            pool_name=pool_data.pool_name,
-            tx_name=temp_template,
-        )
+        with helpers.change_cwd(temp_dir):
+            cluster_obj.deregister_stake_pool(
+                pool_owners=pool_owners,
+                cold_key_pair=node_cold,
+                epoch=cluster_obj.get_epoch() + depoch,
+                pool_name=pool_data.pool_name,
+                tx_name=temp_template,
+            )
 
     if request is not None:
         request.addfinalizer(_deregister)
@@ -637,6 +641,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     cluster_obj: clusterlib.ClusterLib,
     pool_owners: List[clusterlib.PoolUser],
     temp_template: str,
+    temp_dir: Path,
     pool_data: clusterlib.PoolData,
     request: Optional[FixtureRequest] = None,
     use_build_cmd: bool = False,
@@ -649,6 +654,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     pool_creation_out = _create_register_pool(
         cluster_obj=cluster_obj,
         temp_template=temp_template,
+        temp_dir=temp_dir,
         pool_owners=pool_owners,
         pool_data=pool_data,
         request=request,
@@ -796,6 +802,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_data=pool_data,
             request=request,
             use_build_cmd=use_build_cmd,
@@ -880,6 +887,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_data=pool_data,
             request=request,
             use_build_cmd=use_build_cmd,
@@ -904,6 +912,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
+        temp_dir: Path,
         no_of_addr: int,
         request: FixtureRequest,
         use_build_cmd: bool,
@@ -941,6 +950,7 @@ class TestStakePool:
         _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1018,6 +1028,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_data=pool_data,
             use_build_cmd=use_build_cmd,
         )
@@ -1146,6 +1157,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_data=pool_data,
         )
 
@@ -1195,13 +1207,14 @@ class TestStakePool:
         # deregister stake pool
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-            cluster.deregister_stake_pool(
-                pool_owners=pool_owners,
-                cold_key_pair=pool_creation_out.cold_key_pair,
-                epoch=cluster.get_epoch() + depoch,
-                pool_name=pool_data.pool_name,
-                tx_name=temp_template,
-            )
+            with helpers.change_cwd(temp_dir):
+                cluster.deregister_stake_pool(
+                    pool_owners=pool_owners,
+                    cold_key_pair=pool_creation_out.cold_key_pair,
+                    epoch=cluster.get_epoch() + depoch,
+                    pool_name=pool_data.pool_name,
+                    tx_name=temp_template,
+                )
 
         request.addfinalizer(_deregister)
 
@@ -1293,6 +1306,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_data=pool_data,
         )
 
@@ -1334,13 +1348,14 @@ class TestStakePool:
         # deregister stake pool
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-            cluster.deregister_stake_pool(
-                pool_owners=pool_owners,
-                cold_key_pair=pool_creation_out.cold_key_pair,
-                epoch=cluster.get_epoch() + depoch,
-                pool_name=pool_data.pool_name,
-                tx_name=temp_template,
-            )
+            with helpers.change_cwd(temp_dir):
+                cluster.deregister_stake_pool(
+                    pool_owners=pool_owners,
+                    cold_key_pair=pool_creation_out.cold_key_pair,
+                    epoch=cluster.get_epoch() + depoch,
+                    pool_name=pool_data.pool_name,
+                    tx_name=temp_template,
+                )
 
         request.addfinalizer(_deregister)
 
@@ -1456,6 +1471,7 @@ class TestStakePool:
         pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1488,6 +1504,7 @@ class TestStakePool:
             )
 
         # check that pool is going to be updated with correct data
+        cluster.wait_for_new_block(2)
         future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
         assert not clusterlib_utils.check_pool_data(
             pool_params=future_params, pool_creation_data=pool_data_updated
@@ -1579,6 +1596,7 @@ class TestStakePool:
         pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1611,6 +1629,7 @@ class TestStakePool:
             )
 
         # check that pool is going to be updated with correct data
+        cluster.wait_for_new_block(2)
         future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
         assert not clusterlib_utils.check_pool_data(
             pool_params=future_params, pool_creation_data=pool_data_updated
@@ -1630,6 +1649,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
+        temp_dir: Path,
         request: FixtureRequest,
     ):
         """Create and register a stake pool with TX signed in multiple stages.
@@ -1730,13 +1750,14 @@ class TestStakePool:
         # deregister stake pool
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-            cluster.deregister_stake_pool(
-                pool_owners=pool_owners,
-                cold_key_pair=node_cold,
-                epoch=cluster.get_epoch() + depoch,
-                pool_name=pool_data.pool_name,
-                tx_name=temp_template,
-            )
+            with helpers.change_cwd(temp_dir):
+                cluster.deregister_stake_pool(
+                    pool_owners=pool_owners,
+                    cold_key_pair=node_cold,
+                    epoch=cluster.get_epoch() + depoch,
+                    pool_name=pool_data.pool_name,
+                    tx_name=temp_template,
+                )
 
         request.addfinalizer(_deregister)
 
@@ -1894,6 +1915,7 @@ class TestPoolCost:
         self,
         cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
+        temp_dir: Path,
         pool_cost: int,
     ):
         """Try to create and register a stake pool with pool cost lower than *minPoolCost*.
@@ -1916,6 +1938,7 @@ class TestPoolCost:
             _create_register_pool(
                 cluster_obj=cluster,
                 temp_template=temp_template,
+                temp_dir=temp_dir,
                 pool_owners=pool_owners,
                 pool_data=pool_data,
             )
@@ -1934,6 +1957,7 @@ class TestPoolCost:
         cluster_manager: cluster_management.ClusterManager,
         cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
+        temp_dir: Path,
         pool_cost: int,
         request: FixtureRequest,
     ):
@@ -1968,6 +1992,7 @@ class TestPoolCost:
         _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
+            temp_dir=temp_dir,
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
