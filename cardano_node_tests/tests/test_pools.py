@@ -1478,6 +1478,11 @@ class TestStakePool:
             use_build_cmd=use_build_cmd,
         )
 
+        # make sure the update doesn't happen close to epoch boundary
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=10, stop=-DEREG_BUFFER_SEC, force_epoch=False
+        )
+
         # update the pool metadata by resubmitting the pool registration certificate
         if use_build_cmd:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3040
@@ -1504,7 +1509,6 @@ class TestStakePool:
             )
 
         # check that pool is going to be updated with correct data
-        cluster.wait_for_new_block(2)
         future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
         assert not clusterlib_utils.check_pool_data(
             pool_params=future_params, pool_creation_data=pool_data_updated
@@ -1603,6 +1607,11 @@ class TestStakePool:
             use_build_cmd=use_build_cmd,
         )
 
+        # make sure the update doesn't happen close to epoch boundary
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=10, stop=-DEREG_BUFFER_SEC, force_epoch=False
+        )
+
         # update the pool parameters by resubmitting the pool registration certificate
         if use_build_cmd:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3040
@@ -1629,7 +1638,6 @@ class TestStakePool:
             )
 
         # check that pool is going to be updated with correct data
-        cluster.wait_for_new_block(2)
         future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
         assert not clusterlib_utils.check_pool_data(
             pool_params=future_params, pool_creation_data=pool_data_updated
@@ -2252,6 +2260,7 @@ class TestNegative:
                     src_address=pool_users[0].payment.address,
                     tx_name="deregister_unregistered",
                     tx_files=tx_files,
+                    fee_buffer=2000_000,
                 )
                 tx_signed = cluster.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
