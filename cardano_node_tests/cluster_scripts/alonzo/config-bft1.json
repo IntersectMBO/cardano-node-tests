@@ -151,7 +151,5 @@
             "scRotation": null
         }
     ],
-    "TestShelleyHardForkAtEpoch": 1,
-    "TestEnableDevelopmentHardForkEras": true,
-    "TestEnableDevelopmentNetworkProtocols": true
+    "TestShelleyHardForkAtEpoch": 1
 }
