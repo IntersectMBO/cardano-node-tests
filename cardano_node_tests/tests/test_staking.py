@@ -48,6 +48,64 @@ def temp_dir(create_temp_dir: Path):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
+def withdraw_reward_w_build(
+    cluster_obj: clusterlib.ClusterLib,
+    stake_addr_record: clusterlib.AddressRecord,
+    dst_addr_record: clusterlib.AddressRecord,
+    tx_name: str,
+    verify: bool = True,
+    destination_dir: clusterlib.FileType = ".",
+) -> clusterlib.TxRawOutput:
+    """Withdraw reward to payment address.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        stake_addr_record: An `AddressRecord` tuple for the stake address with reward.
+        dst_addr_record: An `AddressRecord` tuple for the destination payment address.
+        tx_name: A name of the transaction.
+        verify: A bool indicating whether to verify that the reward was transferred correctly.
+        destination_dir: A path to directory for storing artifacts (optional).
+    """
+    dst_address = dst_addr_record.address
+    src_init_balance = cluster_obj.get_address_balance(dst_address)
+
+    tx_files_withdrawal = clusterlib.TxFiles(
+        signing_key_files=[dst_addr_record.skey_file, stake_addr_record.skey_file],
+    )
+
+    tx_raw_withdrawal_output = cluster_obj.build_tx(
+        src_address=dst_address,
+        tx_name=f"{tx_name}_reward_withdrawal",
+        tx_files=tx_files_withdrawal,
+        withdrawals=[clusterlib.TxOut(address=stake_addr_record.address, amount=-1)],
+        fee_buffer=2000_000,
+        witness_override=len(tx_files_withdrawal.signing_key_files) * 2,
+        destination_dir=destination_dir,
+    )
+    tx_signed = cluster_obj.sign_tx(
+        tx_body_file=tx_raw_withdrawal_output.out_file,
+        signing_key_files=tx_files_withdrawal.signing_key_files,
+        tx_name=f"{tx_name}_reward_withdrawal",
+    )
+    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_withdrawal_output.txins)
+
+    if not verify:
+        return tx_raw_withdrawal_output
+
+    # check that reward is 0
+    if cluster_obj.get_stake_addr_info(stake_addr_record.address).reward_account_balance != 0:
+        raise AssertionError("Not all rewards were transferred.")
+
+    # check that rewards were transferred
+    # TODO: fee is not known when using `transaction build` command, assume withdrawal amount
+    # is greater than fee
+    src_reward_balance = cluster_obj.get_address_balance(dst_address)
+    if src_reward_balance < src_init_balance:
+        raise AssertionError(f"Incorrect balance for destination address `{dst_address}`.")
+
+    return tx_raw_withdrawal_output
+
+
 @pytest.fixture
 def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
@@ -2231,7 +2289,6 @@ class TestRewards:
                 delegation_out.pool_user.stake.address
             ).reward_account_balance:
                 break
-            cluster.wait_for_new_epoch(padding_seconds=10)
         else:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
@@ -2241,11 +2298,27 @@ class TestRewards:
         )
 
         # withdraw pool rewards to payment address
-        cluster.withdraw_reward(
-            stake_addr_record=pool_reward.stake,
-            dst_addr_record=pool_reward.payment,
-            tx_name=temp_template,
-        )
+        # use `transaction build` if possible
+        # TODO: disabled until BUG https://github.com/input-output-hk/cardano-node/issues/3074
+        # is fixed
+        # pylint: disable=condition-evals-to-constant
+        if (
+            False
+            and VERSIONS.transaction_era >= VERSIONS.ALONZO
+            and VERSIONS.transaction_era == VERSIONS.cluster_era
+        ):
+            withdraw_reward_w_build(
+                cluster_obj=cluster,
+                stake_addr_record=pool_reward.stake,
+                dst_addr_record=pool_reward.payment,
+                tx_name=temp_template,
+            )
+        else:
+            cluster.withdraw_reward(
+                stake_addr_record=pool_reward.stake,
+                dst_addr_record=pool_reward.payment,
+                tx_name=temp_template,
+            )
 
         # deregister the pool reward address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
