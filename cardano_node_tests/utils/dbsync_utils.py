@@ -1024,19 +1024,13 @@ def check_tx(
         f"({response.invalid_hereafter} != {tx_raw_output.invalid_hereafter})"
     )
 
-    combined_txins = [
+    combined_txins = {
         *tx_raw_output.txins,
         *[p.txin for p in tx_raw_output.plutus_txins],
         *[p.txin for p in tx_raw_output.plutus_mint],
-    ]
-    len_db_txins, len_out_txins = len(response.txins), len(combined_txins)
-    assert (
-        len_db_txins == len_out_txins
-    ), f"Number of TX inputs doesn't match ({len_db_txins} != {len_out_txins})"
-
-    tx_txins = sorted(combined_txins)
-    db_txins = sorted(response.txins)
-    assert tx_txins == db_txins, f"TX inputs don't match ({tx_txins} != {db_txins})"
+    }
+    db_txins = set(response.txins)
+    assert combined_txins == db_txins, f"TX inputs don't match ({combined_txins} != {db_txins})"
 
     tx_mint_txouts = sorted(_sum_mint_txouts(tx_raw_output.mint))
     len_db_mint, len_out_mint = len(response.mint), len(tx_mint_txouts)
@@ -1061,10 +1055,10 @@ def check_tx(
         tx_withdrawals == db_withdrawals
     ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
 
-    tx_collaterals = sorted(
+    tx_collaterals = {
         r.collateral for r in (*tx_raw_output.plutus_txins, *tx_raw_output.plutus_mint)
-    )
-    db_collaterals = sorted(response.collaterals)
+    }
+    db_collaterals = set(response.collaterals)
     assert (
         tx_collaterals == db_collaterals
     ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
