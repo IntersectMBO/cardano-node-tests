@@ -628,13 +628,13 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
 cardano_cli_log transaction build-raw \
-  --allegra-era \
+  --mary-era \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
   --update-proposal-file "$ALONZO_UPDATE_PROPOSAL" \
-  --out-file         "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.txbody"
+  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.txbody"
 
 DELEGATE_SIGNING=()
 for i in $(seq 1 $NUM_BFT_NODES); do
