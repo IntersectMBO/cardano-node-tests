@@ -323,7 +323,7 @@ class TestPlutus:
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output_step2)
 
     @pytest.fixture
-    def cluster_lock_txin(
+    def cluster_lock_always_suceeds(
         self,
         cluster_manager: cluster_management.ClusterManager,
     ) -> clusterlib.ClusterLib:
@@ -332,23 +332,23 @@ class TestPlutus:
         Plutus script always has the same address. When one script is used in multiple
         tests that are running in parallel, the blanaces etc. don't add up.
         """
-        return cluster_manager.get(lock_resources=["txin_plutus_scripts"])
+        return cluster_manager.get(lock_resources=["always_suceeds_script"])
 
     @pytest.fixture
-    def payment_addrs_lock_txin(
+    def payment_addrs_lock_always_suceeds(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_txin: clusterlib.ClusterLib,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
-        """Create new payment address while using the `cluster_lock_txin` fixture."""
-        cluster = cluster_lock_txin
+        """Create new payment address while using the `cluster_lock_always_suceeds` fixture."""
+        cluster = cluster_lock_always_suceeds
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
                 *[
-                    f"plutus_payment_lock_txin_ci{cluster_manager.cluster_instance_num}_{i}"
+                    f"plutus_payment_lock_allsucceeds_ci{cluster_manager.cluster_instance_num}_{i}"
                     for i in range(4)
                 ],
                 cluster_obj=cluster,
@@ -443,8 +443,8 @@ class TestPlutus:
     @pytest.mark.testnets
     def test_txin_locking(
         self,
-        cluster_lock_txin: clusterlib.ClusterLib,
-        payment_addrs_lock_txin: List[clusterlib.AddressRecord],
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -458,11 +458,11 @@ class TestPlutus:
           when failure is expected
         * (optional) check transactions in db-sync
         """
-        cluster = cluster_lock_txin
+        cluster = cluster_lock_always_suceeds
         temp_template = helpers.get_func_name()
 
         plutus_op = PlutusOp(
-            script_file=self.GUESSING_GAME_PLUTUS,
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=self.PLUTUS_DIR / "typed-42.datum",
             redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
             execution_units=(700_000_000, 700_000_000),
@@ -471,8 +471,8 @@ class TestPlutus:
         self._txin_locking(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_txin[0],
-            dst_addr=payment_addrs_lock_txin[1],
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
             plutus_op=plutus_op,
             amount=50_000_000,
         )
@@ -679,8 +679,8 @@ class TestPlutus:
     @pytest.mark.testnets
     def test_build_txin_locking(
         self,
-        cluster_lock_txin: clusterlib.ClusterLib,
-        payment_addrs_lock_txin: List[clusterlib.AddressRecord],
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -696,11 +696,11 @@ class TestPlutus:
           when failure is expected
         * (optional) check transactions in db-sync
         """
-        cluster = cluster_lock_txin
+        cluster = cluster_lock_always_suceeds
         temp_template = helpers.get_func_name()
 
         plutus_op = PlutusOp(
-            script_file=self.GUESSING_GAME_PLUTUS,
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=self.PLUTUS_DIR / "typed-42.datum",
             redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
         )
@@ -708,8 +708,8 @@ class TestPlutus:
         self._build_txin_locking(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_txin[2],
-            dst_addr=payment_addrs_lock_txin[3],
+            payment_addr=payment_addrs_lock_always_suceeds[2],
+            dst_addr=payment_addrs_lock_always_suceeds[3],
             plutus_op=plutus_op,
             amount=50_000_000,
         )
