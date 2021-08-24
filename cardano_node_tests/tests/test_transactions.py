@@ -1062,6 +1062,10 @@ class TestMultiInOut:
         )
 
 
+@pytest.mark.skipif(
+    VERSIONS.cluster_era != VERSIONS.transaction_era,
+    reason="expensive test, skip when cluster era is different from TX era",
+)
 class TestManyUTXOs:
     """Test transaction with many UTxOs and small amounts of Lovelace."""
 
