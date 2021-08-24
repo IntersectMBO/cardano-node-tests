@@ -72,13 +72,13 @@ class TestPlutus:
         """Test locking a Tx output with a plutus script and spending the locked UTxO."""
         # pylint: disable=too-many-locals
         assert plutus_op.execution_units, "Execution units not provided"
-        plutusrequiredspace, plutusrequiredtime = plutus_op.execution_units
+        plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
 
         script_address = cluster_obj.gen_script_addr(
             addr_name=temp_template, script_file=plutus_op.script_file
         )
 
-        fee_redeem = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
         collateral_fraction = cluster_obj.get_protocol_params()["collateralPercentage"] / 100
         collateral_amount = int(fee_redeem * collateral_fraction)
 
@@ -145,7 +145,7 @@ class TestPlutus:
                 txin=script_utxo,
                 collateral=collateral_utxo,
                 script_file=plutus_op.script_file,
-                execution_units=(plutusrequiredspace, plutusrequiredtime),
+                execution_units=(plutusrequiredtime, plutusrequiredspace),
                 datum_file=plutus_op.datum_file,
                 redeemer_file=plutus_op.redeemer_file,
             )
@@ -465,7 +465,7 @@ class TestPlutus:
             script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=self.PLUTUS_DIR / "typed-42.datum",
             redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
-            execution_units=(700_000_000, 700_000_000),
+            execution_units=(700_000_000, 10_000_000),
         )
 
         self._txin_locking(
@@ -532,7 +532,7 @@ class TestPlutus:
             script_file=self.GUESSING_GAME_PLUTUS,
             datum_file=datum_file,
             redeemer_file=redeemer_file,
-            execution_units=(700_000_000, 700_000_000),
+            execution_units=(700_000_000, 10_000_000),
         )
 
         self._txin_locking(
@@ -566,8 +566,8 @@ class TestPlutus:
 
         lovelace_amount = 5000_000
         token_amount = 5
-        plutusrequiredspace = 700_000_000
         plutusrequiredtime = 700_000_000
+        plutusrequiredspace = 10_000_000
         fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
         collateral_amount = int(fee_step2 * 1.5)
 
@@ -632,7 +632,7 @@ class TestPlutus:
                 txin=mint_utxo,
                 collateral=collateral_utxo,
                 script_file=self.MINTING_PLUTUS,
-                execution_units=(plutusrequiredspace, plutusrequiredtime),
+                execution_units=(plutusrequiredtime, plutusrequiredspace),
                 redeemer_file=redeemer_file,
             )
         ]
