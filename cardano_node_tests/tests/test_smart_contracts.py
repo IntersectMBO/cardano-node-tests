@@ -783,6 +783,7 @@ class TestPlutus:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_build_minting(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
@@ -795,6 +796,7 @@ class TestPlutus:
         * check that the expected amount was transferred to token issuer's address
         * mint the token using a plutus script
         * check that the token was minted and collateral UTxO was not spent
+        * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
         temp_template = helpers.get_func_name()
