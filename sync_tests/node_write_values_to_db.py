@@ -1,6 +1,7 @@
 import ast
 import json
 import os
+import time
 from collections import OrderedDict
 from pathlib import Path
 import argparse
@@ -51,19 +52,22 @@ def main():
 
     for era in eras_in_test:
         era_columns = [i for i in table_column_names if i.startswith(era)]
-        if len(era_columns) != 6:
+        if len(era_columns) != 7:
             print(f" === Adding columns for {era} era into the the {env} table")
             new_columns_list = [str(era + "_start_time"),
                                 str(era + "_start_epoch"),
                                 str(era + "_slots_in_era"),
                                 str(era + "_start_sync_time"),
                                 str(era + "_end_sync_time"),
-                                str(era + "_sync_duration_secs")]
+                                str(era + "_sync_duration_secs"),
+                                str(era + "_sync_speed_sps")]
             for column_name in new_columns_list:
                 if column_name not in table_column_names:
                     add_column_to_table(database_path, env, column_name, "TEXT")
 
     sync_test_results_dict["identifier"] = sync_test_results_dict["env"] + "_" + str(get_last_row_no(database_path, env))
+
+    time.sleep(5)
 
     print(f"  ==== Write test values into the {env + '_logs'} DB table")
     log_values_json = ast.literal_eval(str((sync_test_results_dict["log_values"])))
