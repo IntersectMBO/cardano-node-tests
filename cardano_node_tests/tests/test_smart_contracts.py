@@ -132,15 +132,15 @@ class TestPlutus:
 
         # Step 2: spend the "locked" UTxO
 
-        txid_body = cluster_obj.get_txid(tx_body_file=tx_raw_output_step1.out_file)
+        txid_step1 = cluster_obj.get_txid(tx_body_file=tx_raw_output_step1.out_file)
         script_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body,
+            utxo_hash=txid_step1,
             utxo_ix=0,
             amount=amount + fee_redeem,
             address=script_address,
         )
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body, utxo_ix=1, amount=collateral_amount, address=dst_addr.address
+            utxo_hash=txid_step1, utxo_ix=1, amount=collateral_amount, address=dst_addr.address
         )
         plutus_txins = [
             clusterlib.PlutusTxIn(
@@ -276,15 +276,15 @@ class TestPlutus:
 
         # Step 2: spend the "locked" UTxO
 
-        txid_body = cluster_obj.get_txid(tx_body_file=tx_output_step1.out_file)
+        txid_step1 = cluster_obj.get_txid(tx_body_file=tx_output_step1.out_file)
         script_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body,
+            utxo_hash=txid_step1,
             utxo_ix=1,
             amount=script_fund,
             address=script_address,
         )
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body, utxo_ix=2, amount=collateral_fund, address=dst_addr.address
+            utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=dst_addr.address
         )
         plutus_txins = [
             clusterlib.PlutusTxIn(
@@ -772,15 +772,15 @@ class TestPlutus:
 
         # Step 2: mint the "qacoin"
 
-        txid_body = cluster.get_txid(tx_body_file=tx_raw_output_step1.out_file)
+        txid_step1 = cluster.get_txid(tx_body_file=tx_raw_output_step1.out_file)
         mint_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body,
+            utxo_hash=txid_step1,
             utxo_ix=0,
             amount=lovelace_amount + fee_step2,
             address=issuer_addr.address,
         )
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body, utxo_ix=1, amount=collateral_amount, address=issuer_addr.address
+            utxo_hash=txid_step1, utxo_ix=1, amount=collateral_amount, address=issuer_addr.address
         )
         plutus_mint_data = [
             clusterlib.PlutusMint(
@@ -1081,15 +1081,15 @@ class TestPlutus:
 
         # Step 2: mint the "qacoin"
 
-        txid_body = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
+        txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
         mint_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body,
+            utxo_hash=txid_step1,
             utxo_ix=1,
             amount=lovelace_amount,
             address=issuer_addr.address,
         )
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_body, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
+            utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
         )
         plutus_mint_data = [
             clusterlib.PlutusMint(
