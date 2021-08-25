@@ -69,6 +69,7 @@ class TestPlutus:
         plutus_op: PlutusOp,
         amount: int,
         expect_failure: bool = False,
+        script_valid: bool = True,
     ) -> str:
         """Test locking a Tx output with a plutus script and spending the locked UTxO."""
         # pylint: disable=too-many-locals
@@ -163,6 +164,7 @@ class TestPlutus:
             tx_files=tx_files_step2,
             fee=fee_redeem,
             plutus_txins=plutus_txins,
+            script_valid=script_valid,
         )
         tx_signed_step2 = cluster_obj.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
@@ -170,11 +172,24 @@ class TestPlutus:
             tx_name=f"{temp_template}_step2",
         )
 
+        if not script_valid:
+            cluster_obj.submit_tx(tx_file=tx_signed_step2, txins=[collateral_utxo])
+
+            assert (
+                cluster_obj.get_address_balance(dst_addr.address)
+                == dst_init_balance - collateral_amount
+            ), f"Collateral was NOT spent from `{dst_addr.address}`"
+
+            assert (
+                cluster_obj.get_address_balance(script_address) == script_step1_balance
+            ), f"Incorrect balance for script address `{script_address}`"
+
+            return ""
+
         if expect_failure:
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster_obj.submit_tx(tx_file=tx_signed_step2, txins=[collateral_utxo])
+                cluster_obj.submit_tx_bare(tx_file=tx_signed_step2)
             err = str(excinfo.value)
-
             assert (
                 cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance
             ), f"Collateral was spent from `{dst_addr.address}`"
@@ -211,6 +226,7 @@ class TestPlutus:
         plutus_op: PlutusOp,
         amount: int,
         expect_failure: bool = False,
+        script_valid: bool = True,
     ) -> str:
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -303,12 +319,28 @@ class TestPlutus:
             txouts=txouts_step2,
             tx_files=tx_files_step2,
             plutus_txins=plutus_txins,
+            script_valid=script_valid,
         )
         tx_signed_step2 = cluster_obj.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
+
+        if not script_valid:
+            cluster_obj.submit_tx(tx_file=tx_signed_step2, txins=[collateral_utxo])
+
+            assert (
+                cluster_obj.get_address_balance(dst_addr.address)
+                == dst_init_balance - collateral_fund
+            ), f"Collateral was NOT spent from `{dst_addr.address}`"
+
+            assert (
+                cluster_obj.get_address_balance(script_address) == script_step1_balance
+            ), f"Incorrect balance for script address `{script_address}`"
+
+            return ""
+
         cluster_obj.submit_tx(
             tx_file=tx_signed_step2, txins=[t.txin for t in tx_output_step2.plutus_txins]
         )
@@ -633,6 +665,42 @@ class TestPlutus:
         assert "PlutusFailure" in err
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_script_invalid(
+        self,
+        cluster_lock_always_fails: clusterlib.ClusterLib,
+        payment_addrs_lock_always_fails: List[clusterlib.AddressRecord],
+    ):
+        """Test failing script together with the `--script-invalid` argument - collateral is taken.
+
+        Test with with "always fails" script that fails for all datum / redeemer values.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * try to spend the locked UTxO
+        * check that the amount was not transferred and collateral UTxO was spent
+        """
+        cluster = cluster_lock_always_fails
+        temp_template = helpers.get_func_name()
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_FAILS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        self._txin_locking(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_fails[0],
+            dst_addr=payment_addrs_lock_always_fails[1],
+            plutus_op=plutus_op,
+            amount=50_000_000,
+            script_valid=False,
+        )
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_minting(
@@ -879,6 +947,8 @@ class TestPlutus:
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
+        Uses `cardano-cli transaction build` command for building the transactions.
+
         Test with with "always fails" script that fails for all datum / redeemer values.
 
         * create a Tx ouput with a datum hash at the script address
@@ -905,6 +975,44 @@ class TestPlutus:
             expect_failure=True,
         )
         assert "The Plutus script evaluation failed" in err
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_build_script_invalid(
+        self,
+        cluster_lock_always_fails: clusterlib.ClusterLib,
+        payment_addrs_lock_always_fails: List[clusterlib.AddressRecord],
+    ):
+        """Test failing script together with the `--script-invalid` argument - collateral is taken.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Test with with "always fails" script that fails for all datum / redeemer values.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * try to spend the locked UTxO
+        * check that the amount was not transferred and collateral UTxO was spent
+        """
+        cluster = cluster_lock_always_fails
+        temp_template = helpers.get_func_name()
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_FAILS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        self._build_txin_locking(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_fails[0],
+            dst_addr=payment_addrs_lock_always_fails[1],
+            plutus_op=plutus_op,
+            amount=50_000_000,
+            script_valid=False,
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
