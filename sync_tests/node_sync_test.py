@@ -87,10 +87,10 @@ def git_get_commit_sha_for_tag_no(tag_no):
     # there is a rate limit for the provided url that we want to overpass with the below loop
     count = 0
     while not response.ok:
-        time.sleep(random.randint(30, 240))
+        time.sleep(random.randint(30, 350))
         count += 1
         response = requests.get(url)
-        if count > 10:
+        if count > 15:
             print(f"!!!! ERROR: Could not get the commit sha for tag {tag_no} after {count} retries")
             response.raise_for_status()
     jData = json.loads(response.content)
@@ -116,7 +116,7 @@ def git_get_hydra_eval_link_for_commit_sha(commit_sha):
         count += 1
         response = requests.get(url)
         if count > 10:
-            print(f"!!!! ERROR: Could not get the commit sha for tag {commit_sha} after {count} retries")
+            print(f"!!!! ERROR: Could not get the hydra eval link for tag {commit_sha} after {count} retries")
             response.raise_for_status()
     jData = json.loads(response.content)
 
