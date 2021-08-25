@@ -454,7 +454,7 @@ class TestPlutus:
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent when success is expected
-        * OR check that the amount was not transferred and collateral UTxO was spent
+        * OR check that the amount was not transferred and collateral UTxO was not spent
           when failure is expected
         * (optional) check transactions in db-sync
         """
@@ -504,7 +504,7 @@ class TestPlutus:
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent when success is expected
-        * OR check that the amount was not transferred and collateral UTxO was spent
+        * OR check that the amount was not transferred and collateral UTxO was not spent
           when failure is expected
         * (optional) check transactions in db-sync
         """
@@ -743,8 +743,7 @@ class TestPlutus:
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent when success is expected
-        * OR check that the amount was not transferred and collateral UTxO was spent
-          when failure is expected
+        * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_guessing_game
         temp_template = f"{helpers.get_func_name()}_{script}"
