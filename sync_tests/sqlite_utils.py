@@ -141,9 +141,6 @@ def add_column_to_table(database_path, env, column_name, column_type):
     try:
         cur = conn.cursor()
         cur.execute(sql_query)
-        print(f"cur.description: {cur.description}")
-        col_name_list = [res[0] for res in cur.description]
-        return col_name_list
     except sqlite3.Error as error:
         print(f"!!! ERROR: Failed to add {column_name} column into {table_name} table:\n", error)
         return False
