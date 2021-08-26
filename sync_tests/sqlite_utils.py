@@ -179,7 +179,7 @@ def delete_record(database_path, env, column_name, delete_value):
 #     for table in tables_list:
 #         export_db_table_to_csv("node_sync_tests_results.db", table)
 
-env = "testnet"
+# env = "testnet"
 # delete_strings = ["testnet_44"]
 # for del_str in delete_strings:
 #     delete_record("node_sync_tests_results.db", env, "identifier", del_str)
