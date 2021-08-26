@@ -147,3 +147,35 @@ def add_column_to_table(database_path, env, column_name, column_type):
     finally:
         if conn:
             conn.close()
+
+
+def delete_record(database_path, env, column_name, delete_value):
+    table_name = env
+    initial_rows_no = get_last_row_no(database_path, table_name)
+    print(f"Deleting {column_name} = {delete_value} from {table_name} table")
+    print(f"  -- database_path: {database_path}")
+
+    conn = create_connection(database_path)
+    sql_query = f"DELETE from {table_name} where {column_name}=\"{delete_value}\""
+    print(f"  -- sql_query: {sql_query}")
+    try:
+        cur = conn.cursor()
+        cur.execute(sql_query)
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print(f"!!! ERROR: Failed to delete record {column_name} = {delete_value} from {table_name} table:\n", error)
+        return False
+    finally:
+        if conn:
+            conn.close()
+    final_rows_no = get_last_row_no(database_path, table_name)
+    print(f"Successfully deleted {initial_rows_no - final_rows_no} rows from table {table_name}")
+
+
+# env = "shelley_qa"
+# delete_strings = ["shelley_qa_26", "shelley_qa_29"]
+# for del_str in delete_strings:
+#     delete_record("node_sync_tests_results.db", env, "identifier", del_str)
+#     delete_record("node_sync_tests_results.db", env + "_epoch_duration", "identifier", del_str)
+#     delete_record("node_sync_tests_results.db", env + "_logs", "identifier", del_str)
