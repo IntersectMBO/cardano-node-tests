@@ -173,8 +173,14 @@ def delete_record(database_path, env, column_name, delete_value):
     print(f"Successfully deleted {initial_rows_no - final_rows_no} rows from table {table_name}")
 
 
-# env = "shelley_qa"
-# delete_strings = ["shelley_qa_26", "shelley_qa_29"]
+# envs_list = ["shelley_qa", "testnet", "staging", "mainnet"]
+# for env in envs_list:
+#     tables_list = [env, env + "_epoch_duration", env + "_logs"]
+#     for table in tables_list:
+#         export_db_table_to_csv("node_sync_tests_results.db", table)
+
+# env = "testnet"
+# delete_strings = ["testnet_59"]
 # for del_str in delete_strings:
 #     delete_record("node_sync_tests_results.db", env, "identifier", del_str)
 #     delete_record("node_sync_tests_results.db", env + "_epoch_duration", "identifier", del_str)
