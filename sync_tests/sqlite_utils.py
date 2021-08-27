@@ -173,6 +173,27 @@ def delete_record(database_path, env, column_name, delete_value):
     print(f"Successfully deleted {initial_rows_no - final_rows_no} rows from table {table_name}")
 
 
+def update_record(database_path, env, column_name, old_value, new_value):
+    table_name = env
+    print(f"Updating {column_name} = {new_value} from {table_name} table")
+    print(f"  -- database_path: {database_path}")
+
+    conn = create_connection(database_path)
+    sql_query = f"UPDATE {table_name} SET {column_name}=\"{new_value}\" where {column_name}=\"{old_value}\""
+    print(f"  -- sql_query: {sql_query}")
+    try:
+        cur = conn.cursor()
+        cur.execute(sql_query)
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print(f"!!! ERROR: Failed to update record {column_name} = {new_value} from {table_name} table:\n", error)
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
 # envs_list = ["shelley_qa", "testnet", "staging", "mainnet"]
 # for env in envs_list:
 #     tables_list = [env, env + "_epoch_duration", env + "_logs"]
@@ -180,7 +201,12 @@ def delete_record(database_path, env, column_name, delete_value):
 #         export_db_table_to_csv("node_sync_tests_results.db", table)
 
 # env = "testnet"
-# delete_strings = ["testnet_44"]
+# tables_list = [env, env + "_epoch_duration", env + "_logs"]
+# for table in tables_list:
+#     update_record("node_sync_tests_results.db", table, "identifier", "testnet_67", "testnet_14")
+
+# env = "testnet"
+# delete_strings = ["testnet_19"]
 # for del_str in delete_strings:
 #     delete_record("node_sync_tests_results.db", env, "identifier", del_str)
 #     delete_record("node_sync_tests_results.db", env + "_epoch_duration", "identifier", del_str)
