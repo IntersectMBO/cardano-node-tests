@@ -616,7 +616,7 @@ def new_tokens(
     for asset_name in asset_names:
         token = f"{policyid}.{asset_name}"
 
-        if cluster_obj.get_utxo(token_mint_addr.address, coins=[token]):
+        if cluster_obj.get_utxo(address=token_mint_addr.address, coins=[token]):
             raise AssertionError("The token already exists")
 
         tokens_to_mint.append(
@@ -637,7 +637,7 @@ def new_tokens(
     )
 
     for token_rec in tokens_to_mint:
-        token_utxo = cluster_obj.get_utxo(token_mint_addr.address, coins=[token_rec.token])
+        token_utxo = cluster_obj.get_utxo(address=token_mint_addr.address, coins=[token_rec.token])
         if not (token_utxo and token_utxo[0].amount == amount):
             raise AssertionError("The token was not minted")
 

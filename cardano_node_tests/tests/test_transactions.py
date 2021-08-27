@@ -374,8 +374,8 @@ class TestBasic:
         txid_signed = cluster.get_txid(tx_file=tx_raw_output.out_file.with_suffix(".signed"))
         assert txid_body == txid_signed
 
-        utxo_src = cluster.get_utxo(src_address)
-        utxo_dst = cluster.get_utxo(dst_address)
+        utxo_src = cluster.get_utxo(address=src_address)
+        utxo_dst = cluster.get_utxo(address=dst_address)
         assert len(txid_body) == 64
         assert txid_body in (u.utxo_hash for u in utxo_src)
         assert txid_body in (u.utxo_hash for u in utxo_dst)
@@ -800,7 +800,7 @@ class TestMultiInOut:
         dst_init_balances = {addr: cluster_obj.get_address_balance(addr) for addr in dst_addresses}
 
         # create TX data
-        _txins = [cluster_obj.get_utxo(r.address) for r in from_addr_recs]
+        _txins = [cluster_obj.get_utxo(address=r.address) for r in from_addr_recs]
         # flatten the list of lists that is _txins
         txins = list(itertools.chain.from_iterable(_txins))
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
@@ -1167,8 +1167,8 @@ class TestManyUTXOs:
             retval = payment_addrs[1], payment_addrs[2]
             fixture_cache.value = retval
 
-        num_of_utxo = len(cluster.get_utxo(payment_addrs[1].address)) + len(
-            cluster.get_utxo(payment_addrs[2].address)
+        num_of_utxo = len(cluster.get_utxo(address=payment_addrs[1].address)) + len(
+            cluster.get_utxo(address=payment_addrs[2].address)
         )
         LOGGER.info(f"Generated {num_of_utxo} of UTxO addresses in {end - start} seconds.")
 
@@ -1204,7 +1204,7 @@ class TestManyUTXOs:
         dst_init_balance = cluster.get_address_balance(dst_address)
 
         # sort UTxOs by amount
-        utxos_sorted = sorted(cluster.get_utxo(src_address), key=lambda x: x.amount)
+        utxos_sorted = sorted(cluster.get_utxo(address=src_address), key=lambda x: x.amount)
 
         # select 350 UTxOs, so we are in a limit of command line arguments lenght and size of the TX
         txins = random.sample(utxos_sorted[:big_funds_idx], k=350)
@@ -1803,7 +1803,7 @@ class TestNegative:
         Expect failure.
         """
         dst_addr = pool_users[1].payment.address
-        utxo_addr = cluster.get_utxo(dst_addr)[0].utxo_hash
+        utxo_addr = cluster.get_utxo(address=dst_addr)[0].utxo_hash
         self._send_funds_to_invalid_address(
             cluster_obj=cluster, pool_users=pool_users, addr=utxo_addr, use_build_cmd=use_build_cmd
         )
@@ -2156,7 +2156,7 @@ class TestNegative:
         """
         temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
 
-        utxo = cluster.get_utxo(pool_users[0].payment.address)[0]
+        utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_ix=5)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
@@ -2197,7 +2197,7 @@ class TestNegative:
         """
         temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
 
-        utxo = cluster.get_utxo(pool_users[0].payment.address)[0]
+        utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         new_hash = f"{utxo.utxo_hash[:-4]}fd42"
         utxo_copy = utxo._replace(utxo_hash=new_hash)
         err = self._send_funds_with_invalid_utxo(
@@ -2228,7 +2228,7 @@ class TestNegative:
         """
         temp_template = "test_invalid_lenght_utxo_hash"
 
-        utxo = cluster.get_utxo(pool_users[0].payment.address)[0]
+        utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
@@ -2260,7 +2260,7 @@ class TestNegative:
         """
         temp_template = "test_build_invalid_lenght_utxo_hash"
 
-        utxo = cluster.get_utxo(pool_users[0].payment.address)[0]
+        utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
