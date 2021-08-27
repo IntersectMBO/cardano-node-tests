@@ -237,7 +237,7 @@ class TestMinting:
         token = f"{policyid}.{asset_name}" if asset_name else policyid
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         token_mint = clusterlib_utils.TokenRecord(
@@ -256,7 +256,7 @@ class TestMinting:
             use_build_cmd=use_build_cmd,
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -268,7 +268,7 @@ class TestMinting:
             use_build_cmd=use_build_cmd,
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -335,7 +335,7 @@ class TestMinting:
         token = f"{policyid}.{asset_name}" if asset_name else policyid
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         token_mint = clusterlib_utils.TokenRecord(
@@ -353,7 +353,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -364,7 +364,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -421,10 +421,10 @@ class TestMinting:
             aname_token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[aname_token]
+                address=token_mint_addr.address, coins=[aname_token]
             ), "The token already exists"
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[policyid]
+                address=token_mint_addr.address, coins=[policyid]
             ), "The policyid already exists"
 
             # for each script mint both token identified by policyid + asset name and token
@@ -456,7 +456,7 @@ class TestMinting:
         )
 
         for t in tokens_mint:
-            utxo_mint = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            utxo_mint = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert (
                 utxo_mint and utxo_mint[0].amount == amount
             ), f"The {t.token} token was not minted"
@@ -470,7 +470,7 @@ class TestMinting:
         )
 
         for t in tokens_burn:
-            utxo_burn = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            utxo_burn = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not utxo_burn, f"The {t.token} token was not burnt"
 
         # check expected fees
@@ -530,7 +530,7 @@ class TestMinting:
         tokens = [f"{policyid}.{an}" for an in asset_names]
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=tokens
+            address=token_mint_addr.address, coins=tokens
         ), "The token already exists"
 
         tokens_mint = [
@@ -551,7 +551,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        token1_mint_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[0]])
+        token1_mint_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[0]])
         assert token1_mint_utxo and token1_mint_utxo[0].amount == amount, "The token was not minted"
 
         # second token minting and first token burning in single TX
@@ -562,9 +562,9 @@ class TestMinting:
             temp_template=f"{temp_template}_mint_burn",
         )
 
-        token1_burn_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[0]])
+        token1_burn_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[0]])
         assert not token1_burn_utxo, "The token was not burnt"
-        token2_mint_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[1]])
+        token2_mint_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[1]])
         assert token2_mint_utxo and token2_mint_utxo[0].amount == amount, "The token was not minted"
 
         # second token burning
@@ -575,7 +575,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        token2_burn_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[1]])
+        token2_burn_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[1]])
         assert not token2_burn_utxo, "The token was not burnt"
 
         # check expected fees
@@ -621,7 +621,7 @@ class TestMinting:
         token = f"{policyid}.{asset_name}"
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         # build and sign a transaction
@@ -658,7 +658,7 @@ class TestMinting:
         # submit signed transaction
         cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
 
         # check expected fees
@@ -737,7 +737,7 @@ class TestMinting:
         tx_out_mint = clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -749,7 +749,7 @@ class TestMinting:
         )
 
         for t in tokens_to_burn:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -839,7 +839,7 @@ class TestMinting:
         tx_out_mint = clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -851,7 +851,7 @@ class TestMinting:
         )
 
         for t in tokens_to_burn:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -909,7 +909,7 @@ class TestMinting:
         token = f"{policyid}.{asset_name}"
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         token_mint = clusterlib_utils.TokenRecord(
@@ -928,7 +928,7 @@ class TestMinting:
             use_build_cmd=use_build_cmd,
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -942,7 +942,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn1",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert (
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not burned"
@@ -1002,7 +1002,7 @@ class TestMinting:
         token = f"{policyid}.{asset_name}"
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         token_mint = clusterlib_utils.TokenRecord(
@@ -1020,7 +1020,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert (
             token_utxo and token_utxo[0].amount == amount
         ), "The token was not minted or expected chars are not present in the asset name"
@@ -1033,7 +1033,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -1102,7 +1102,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
@@ -1126,7 +1126,7 @@ class TestPolicies:
         )
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -1141,7 +1141,7 @@ class TestPolicies:
         )
 
         for t in tokens_to_burn:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -1205,7 +1205,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
@@ -1229,7 +1229,7 @@ class TestPolicies:
         )
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -1244,7 +1244,7 @@ class TestPolicies:
         )
 
         for t in tokens_to_burn:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -1289,7 +1289,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
@@ -1325,7 +1325,7 @@ class TestPolicies:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
@@ -1361,7 +1361,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
@@ -1386,7 +1386,7 @@ class TestPolicies:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
@@ -1422,7 +1422,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
@@ -1458,7 +1458,7 @@ class TestPolicies:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
@@ -1494,7 +1494,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
@@ -1519,7 +1519,7 @@ class TestPolicies:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was minted unexpectedly"
 
 
@@ -1648,7 +1648,7 @@ class TestTransfer:
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
         if use_build_cmd:
-            # TODO: add ADA txout for change address
+            # TODO: add ADA txout for change address - see node issue #3057
             destinations.append(clusterlib.TxOut(address=src_address, amount=amount_lovelace))
 
             tx_raw_output = cluster.build_tx(
