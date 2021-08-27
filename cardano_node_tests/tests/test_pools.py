@@ -1841,6 +1841,9 @@ class TestStakePool:
         )
 
         # create pool deregistration cert
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
+        )
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
@@ -1858,7 +1861,7 @@ class TestStakePool:
         )
         tx_raw_output = cluster.send_tx(
             src_address=pool_owner.payment.address,
-            tx_name="conflicting_certs",
+            tx_name=f"{temp_template}_conflicting_certs",
             tx_files=tx_files,
         )
 
