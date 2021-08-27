@@ -28,6 +28,11 @@ class PlutusOp(NamedTuple):
     execution_units: Optional[Tuple[int, int]] = None
 
 
+class Token(NamedTuple):
+    coin: str
+    amount: int
+
+
 @pytest.fixture(scope="module")
 def create_temp_dir(tmp_path_factory: TempdirFactory):
     """Create a temporary dir."""
@@ -68,10 +73,13 @@ class TestPlutus:
         dst_addr: clusterlib.AddressRecord,
         plutus_op: PlutusOp,
         amount: int,
+        tokens: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
     ) -> clusterlib.TxRawOutput:
         """Fund a plutus script and create the locked UTxO and collateral UTxO."""
         assert plutus_op.execution_units, "Execution units not provided"
         plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
+
+        fund_tokens = tokens or ()
 
         script_address = cluster_obj.gen_script_addr(
             addr_name=temp_template, script_file=plutus_op.script_file
@@ -96,6 +104,17 @@ class TestPlutus:
             # for collateral
             clusterlib.TxOut(address=dst_addr.address, amount=collateral_amount),
         ]
+
+        for token in fund_tokens:
+            txouts.append(
+                clusterlib.TxOut(
+                    address=script_address,
+                    amount=token.amount,
+                    coin=token.coin,
+                    datum_hash=datum_hash,
+                )
+            )
+
         fee = cluster_obj.calculate_tx_fee(
             src_address=payment_addr.address,
             txouts=txouts,
@@ -110,20 +129,24 @@ class TestPlutus:
             txouts=txouts,
             tx_files=tx_files,
             fee=fee,
-            # don't join 'change' and 'collateral' txouts, we need separate UTxOs
-            join_txouts=False,
         )
         tx_signed = cluster_obj.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_step1",
         )
+
         cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
 
         script_balance = cluster_obj.get_address_balance(script_address)
         assert (
             script_balance == script_init_balance + amount + fee_redeem
         ), f"Incorrect balance for script address `{script_address}`"
+
+        for token in fund_tokens:
+            assert (
+                cluster_obj.get_address_balance(script_address, coin=token.coin) == token.amount
+            ), f"Incorrect token balance for script address `{script_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
@@ -133,16 +156,19 @@ class TestPlutus:
         self,
         temp_template: str,
         cluster_obj: clusterlib.ClusterLib,
-        tx_output_fund: clusterlib.TxRawOutput,
         dst_addr: clusterlib.AddressRecord,
+        tx_output_fund: clusterlib.TxRawOutput,
         plutus_op: PlutusOp,
         amount: int,
+        tokens: Optional[List[Token]] = None,
         expect_failure: bool = False,
         script_valid: bool = True,
     ) -> str:
         """Spend the locked UTxO."""
         assert plutus_op.execution_units, "Execution units not provided"
         plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
+
+        spent_tokens = tokens or ()
 
         script_address = tx_output_fund.txouts[0].address  # the first txout is script
         fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
@@ -154,18 +180,11 @@ class TestPlutus:
         # spend the "locked" UTxO
 
         txid = cluster_obj.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxo = clusterlib.UTXOData(
-            utxo_hash=txid,
-            utxo_ix=0,
-            amount=amount + fee_redeem,
-            address=script_address,
-        )
-        collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid, utxo_ix=1, amount=collateral_amount, address=dst_addr.address
-        )
+        script_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
+        collateral_utxo = cluster_obj.get_utxo(txin=f"{txid}#1")[0]
         plutus_txins = [
             clusterlib.PlutusTxIn(
-                txin=script_utxo,
+                txins=script_utxos,
                 collateral=collateral_utxo,
                 script_file=plutus_op.script_file,
                 execution_units=(plutusrequiredtime, plutusrequiredspace),
@@ -179,6 +198,12 @@ class TestPlutus:
         txouts = [
             clusterlib.TxOut(address=dst_addr.address, amount=amount),
         ]
+
+        for token in spent_tokens:
+            txouts.append(
+                clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
+            )
+
         tx_raw_output = cluster_obj.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txouts=txouts,
@@ -221,7 +246,9 @@ class TestPlutus:
 
             return err
 
-        cluster_obj.submit_tx(tx_file=tx_signed, txins=[t.txin for t in tx_raw_output.plutus_txins])
+        cluster_obj.submit_tx(
+            tx_file=tx_signed, txins=[t.txins[0] for t in tx_raw_output.plutus_txins]
+        )
 
         assert (
             cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance + amount
@@ -231,6 +258,11 @@ class TestPlutus:
             cluster_obj.get_address_balance(script_address)
             == script_init_balance - amount - fee_redeem
         ), f"Incorrect balance for script address `{script_address}`"
+
+        for token in spent_tokens:
+            assert (
+                cluster_obj.get_address_balance(script_address, coin=token.coin) == 0
+            ), f"Incorrect token balance for script address `{script_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
@@ -243,6 +275,7 @@ class TestPlutus:
         payment_addr: clusterlib.AddressRecord,
         dst_addr: clusterlib.AddressRecord,
         plutus_op: PlutusOp,
+        tokens: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
     ) -> clusterlib.TxRawOutput:
         """Fund a plutus script and create the locked UTxO and collateral UTxO.
 
@@ -250,6 +283,8 @@ class TestPlutus:
         """
         script_fund = 1000_000_000
         collateral_fund = 1500_000_000
+
+        fund_tokens = tokens or ()
 
         script_address = cluster_obj.gen_script_addr(
             addr_name=temp_template, script_file=plutus_op.script_file
@@ -267,14 +302,23 @@ class TestPlutus:
             # for collateral
             clusterlib.TxOut(address=dst_addr.address, amount=collateral_fund),
         ]
+
+        for token in fund_tokens:
+            txouts.append(
+                clusterlib.TxOut(
+                    address=script_address,
+                    amount=token.amount,
+                    coin=token.coin,
+                    datum_hash=datum_hash,
+                )
+            )
+
         tx_output = cluster_obj.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step1",
             txouts=txouts,
             tx_files=tx_files,
             fee_buffer=2_000_000,
-            # don't join 'change' and 'collateral' txouts, we need separate UTxOs
-            join_txouts=False,
         )
         tx_signed = cluster_obj.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -287,6 +331,11 @@ class TestPlutus:
         assert (
             script_balance == script_init_balance + script_fund
         ), f"Incorrect balance for script address `{script_address}`"
+
+        for token in fund_tokens:
+            assert (
+                cluster_obj.get_address_balance(script_address, coin=token.coin) == token.amount
+            ), f"Incorrect token balance for script address `{script_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
@@ -301,6 +350,7 @@ class TestPlutus:
         tx_output_fund: clusterlib.TxRawOutput,
         plutus_op: PlutusOp,
         amount: int,
+        tokens: Optional[List[Token]] = None,
         expect_failure: bool = False,
         script_valid: bool = True,
     ) -> str:
@@ -308,9 +358,11 @@ class TestPlutus:
 
         Uses `cardano-cli transaction build` command for building the transactions.
         """
+        # pylint: disable=too-many-arguments
         script_address = tx_output_fund.txouts[0].address  # the first txout is script
-        script_amount = tx_output_fund.txouts[0].amount
         collateral_amount = tx_output_fund.txouts[1].amount  # the second txout is collateral
+
+        spent_tokens = tokens or ()
 
         script_init_balance = cluster_obj.get_address_balance(script_address)
         dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
@@ -318,18 +370,11 @@ class TestPlutus:
         # spend the "locked" UTxO
 
         txid = cluster_obj.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxo = clusterlib.UTXOData(
-            utxo_hash=txid,
-            utxo_ix=1,
-            amount=script_amount,
-            address=script_address,
-        )
-        collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid, utxo_ix=2, amount=collateral_amount, address=dst_addr.address
-        )
+        script_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
+        collateral_utxo = cluster_obj.get_utxo(txin=f"{txid}#2")[0]
         plutus_txins = [
             clusterlib.PlutusTxIn(
-                txin=script_utxo,
+                txins=script_utxos,
                 collateral=collateral_utxo,
                 script_file=plutus_op.script_file,
                 datum_file=plutus_op.datum_file,
@@ -342,6 +387,11 @@ class TestPlutus:
         txouts = [
             clusterlib.TxOut(address=dst_addr.address, amount=amount),
         ]
+
+        for token in spent_tokens:
+            txouts.append(
+                clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
+            )
 
         if expect_failure:
             with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -382,7 +432,7 @@ class TestPlutus:
 
             return ""
 
-        cluster_obj.submit_tx(tx_file=tx_signed, txins=[t.txin for t in tx_output.plutus_txins])
+        cluster_obj.submit_tx(tx_file=tx_signed, txins=[t.txins[0] for t in tx_output.plutus_txins])
 
         assert (
             cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance + amount
@@ -392,6 +442,11 @@ class TestPlutus:
         assert (
             cluster_obj.get_address_balance(script_address) < script_init_balance - amount
         ), f"Incorrect balance for script address `{script_address}`"
+
+        for token in spent_tokens:
+            assert (
+                cluster_obj.get_address_balance(script_address, coin=token.coin) == 0
+            ), f"Incorrect token balance for script address `{script_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
@@ -571,9 +626,7 @@ class TestPlutus:
         * create a Tx ouput with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
-        * check that the expected amount was spent when success is expected
-        * OR check that the amount was not transferred and collateral UTxO was not spent
-          when failure is expected
+        * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
@@ -597,8 +650,8 @@ class TestPlutus:
         self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            tx_output_fund=tx_output_fund,
             dst_addr=payment_addrs_lock_always_suceeds[1],
+            tx_output_fund=tx_output_fund,
             plutus_op=plutus_op,
             amount=50_000_000,
         )
@@ -672,8 +725,8 @@ class TestPlutus:
         err = self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            tx_output_fund=tx_output_fund,
             dst_addr=payment_addrs_lock_guessing_game[1],
+            tx_output_fund=tx_output_fund,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=expect_failure,
@@ -719,8 +772,8 @@ class TestPlutus:
         err = self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            tx_output_fund=tx_output_fund,
             dst_addr=payment_addrs_lock_always_fails[1],
+            tx_output_fund=tx_output_fund,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=True,
@@ -764,8 +817,8 @@ class TestPlutus:
         self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            tx_output_fund=tx_output_fund,
             dst_addr=payment_addrs_lock_always_fails[1],
+            tx_output_fund=tx_output_fund,
             plutus_op=plutus_op,
             amount=50_000_000,
             script_valid=False,
@@ -844,18 +897,13 @@ class TestPlutus:
         # Step 2: mint the "qacoin"
 
         txid_step1 = cluster.get_txid(tx_body_file=tx_raw_output_step1.out_file)
-        mint_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_step1,
-            utxo_ix=0,
-            amount=lovelace_amount + fee_step2,
-            address=issuer_addr.address,
-        )
+        mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#0")
         collateral_utxo = clusterlib.UTXOData(
             utxo_hash=txid_step1, utxo_ix=1, amount=collateral_amount, address=issuer_addr.address
         )
         plutus_mint_data = [
             clusterlib.PlutusMint(
-                txin=mint_utxo,
+                txins=mint_utxos,
                 collateral=collateral_utxo,
                 script_file=self.MINTING_PLUTUS,
                 execution_units=(plutusrequiredtime, plutusrequiredspace),
@@ -887,18 +935,75 @@ class TestPlutus:
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.submit_tx(tx_file=tx_signed_step2, txins=[mint_utxo])
+        cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
 
         assert (
             cluster.get_address_balance(issuer_addr.address)
             == issuer_init_balance + collateral_amount + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo = cluster.get_utxo(issuer_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_txin_token_locking(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+
+        * create a Tx ouput that contains native tokens with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * spend the locked UTxO
+        * check that the expected amount was spent
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+        token_rand = clusterlib.get_rand_str(5)
+        payment_addr = payment_addrs_lock_always_suceeds[0]
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        tokens = clusterlib_utils.new_tokens(
+            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{token_rand}",
+            token_mint_addr=payment_addr,
+            issuer_addr=payment_addr,
+            amount=100,
+        )
+        tokens_rec = [Token(coin=t.token, amount=t.amount) for t in tokens]
+
+        tx_output_fund = self._fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+            amount=50_000_000,
+            tokens=tokens_rec,
+        )
+        self._spend_locked_txin(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            tx_output_fund=tx_output_fund,
+            plutus_op=plutus_op,
+            amount=50_000_000,
+            tokens=tokens_rec,
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1184,18 +1289,13 @@ class TestPlutus:
         # Step 2: mint the "qacoin"
 
         txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
-        mint_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_step1,
-            utxo_ix=1,
-            amount=lovelace_amount,
-            address=issuer_addr.address,
-        )
+        mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
         collateral_utxo = clusterlib.UTXOData(
             utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
         )
         plutus_mint_data = [
             clusterlib.PlutusMint(
-                txin=mint_utxo,
+                txins=mint_utxos,
                 collateral=collateral_utxo,
                 script_file=self.MINTING_PLUTUS,
                 redeemer_file=redeemer_file,
@@ -1226,12 +1326,70 @@ class TestPlutus:
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.submit_tx(tx_file=tx_signed_step2, txins=[mint_utxo])
+        cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
 
         assert (
             cluster.get_address_balance(issuer_addr.address)
             == issuer_init_balance + collateral_fund + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo = cluster.get_utxo(issuer_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_build_txin_token_locking(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx ouput that contains native tokens with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * spend the locked UTxO
+        * check that the expected amount was spent
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+        token_rand = clusterlib.get_rand_str(5)
+        payment_addr = payment_addrs_lock_always_suceeds[0]
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+        )
+
+        tokens = clusterlib_utils.new_tokens(
+            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{token_rand}",
+            token_mint_addr=payment_addr,
+            issuer_addr=payment_addr,
+            amount=100,
+        )
+        tokens_rec = [Token(coin=t.token, amount=t.amount) for t in tokens]
+
+        tx_output_fund = self._build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+            tokens=tokens_rec,
+        )
+        self._build_spend_locked_txin(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            tx_output_fund=tx_output_fund,
+            plutus_op=plutus_op,
+            amount=50_000_000,
+            tokens=tokens_rec,
+        )
