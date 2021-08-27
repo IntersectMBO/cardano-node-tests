@@ -584,6 +584,7 @@ class TestBasic:
                 txouts=destinations,
                 fee_buffer=2000_000,
                 tx_files=tx_files,
+                witness_override=2,
             )
             tx_signed = cluster.sign_tx(
                 tx_body_file=tx_out_from.out_file,
