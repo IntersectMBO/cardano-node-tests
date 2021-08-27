@@ -300,7 +300,7 @@ class TestExpectedFees:
         ]
 
         # create TX data
-        _txins = [cluster_obj.get_utxo(r.address) for r in from_addr_recs]
+        _txins = [cluster_obj.get_utxo(address=r.address) for r in from_addr_recs]
         # flatten the list of lists that is _txins
         txins = list(itertools.chain.from_iterable(_txins))
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
