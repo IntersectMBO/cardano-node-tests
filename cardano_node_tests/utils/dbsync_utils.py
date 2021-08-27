@@ -9,6 +9,7 @@ from typing import Generator
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Set
 from typing import Tuple
 
 from cardano_clusterlib import clusterlib
@@ -1024,13 +1025,16 @@ def check_tx(
         f"({response.invalid_hereafter} != {tx_raw_output.invalid_hereafter})"
     )
 
-    combined_txins = {
+    combined_txins: Set[clusterlib.UTXOData] = {
         *tx_raw_output.txins,
-        *[p.txin for p in tx_raw_output.plutus_txins],
-        *[p.txin for p in tx_raw_output.plutus_mint],
+        *[p.txins[0] for p in tx_raw_output.plutus_txins],
+        *[p.txins[0] for p in tx_raw_output.plutus_mint],
     }
-    db_txins = set(response.txins)
-    assert combined_txins == db_txins, f"TX inputs don't match ({combined_txins} != {db_txins})"
+    txin_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in combined_txins}
+    db_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in response.txins}
+    assert (
+        txin_utxos == db_utxos
+    ), f"Not all TX inputs are present in the db ({txin_utxos} != {db_utxos})"
 
     tx_mint_txouts = sorted(_sum_mint_txouts(tx_raw_output.mint))
     len_db_mint, len_out_mint = len(response.mint), len(tx_mint_txouts)
