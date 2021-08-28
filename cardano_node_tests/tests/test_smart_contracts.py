@@ -74,12 +74,14 @@ class TestPlutus:
         plutus_op: PlutusOp,
         amount: int,
         tokens: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
+        tokens_collateral: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
     ) -> clusterlib.TxRawOutput:
         """Fund a plutus script and create the locked UTxO and collateral UTxO."""
         assert plutus_op.execution_units, "Execution units not provided"
         plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
 
-        fund_tokens = tokens or ()
+        stokens = tokens or ()
+        ctokens = tokens_collateral or ()
 
         script_address = cluster_obj.gen_script_addr(
             addr_name=temp_template, script_file=plutus_op.script_file
@@ -105,13 +107,22 @@ class TestPlutus:
             clusterlib.TxOut(address=dst_addr.address, amount=collateral_amount),
         ]
 
-        for token in fund_tokens:
+        for token in stokens:
             txouts.append(
                 clusterlib.TxOut(
                     address=script_address,
                     amount=token.amount,
                     coin=token.coin,
                     datum_hash=datum_hash,
+                )
+            )
+
+        for token in ctokens:
+            txouts.append(
+                clusterlib.TxOut(
+                    address=dst_addr.address,
+                    amount=token.amount,
+                    coin=token.coin,
                 )
             )
 
@@ -143,10 +154,15 @@ class TestPlutus:
             script_balance == script_init_balance + amount + fee_redeem
         ), f"Incorrect balance for script address `{script_address}`"
 
-        for token in fund_tokens:
+        for token in stokens:
             assert (
                 cluster_obj.get_address_balance(script_address, coin=token.coin) == token.amount
             ), f"Incorrect token balance for script address `{script_address}`"
+
+        for token in ctokens:
+            assert (
+                cluster_obj.get_address_balance(dst_addr.address, coin=token.coin) == token.amount
+            ), f"Incorrect token balance for address `{dst_addr.address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
@@ -276,6 +292,7 @@ class TestPlutus:
         dst_addr: clusterlib.AddressRecord,
         plutus_op: PlutusOp,
         tokens: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
+        tokens_collateral: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
     ) -> clusterlib.TxRawOutput:
         """Fund a plutus script and create the locked UTxO and collateral UTxO.
 
@@ -284,7 +301,8 @@ class TestPlutus:
         script_fund = 1000_000_000
         collateral_fund = 1500_000_000
 
-        fund_tokens = tokens or ()
+        stokens = tokens or ()
+        ctokens = tokens_collateral or ()
 
         script_address = cluster_obj.gen_script_addr(
             addr_name=temp_template, script_file=plutus_op.script_file
@@ -303,13 +321,22 @@ class TestPlutus:
             clusterlib.TxOut(address=dst_addr.address, amount=collateral_fund),
         ]
 
-        for token in fund_tokens:
+        for token in stokens:
             txouts.append(
                 clusterlib.TxOut(
                     address=script_address,
                     amount=token.amount,
                     coin=token.coin,
                     datum_hash=datum_hash,
+                )
+            )
+
+        for token in ctokens:
+            txouts.append(
+                clusterlib.TxOut(
+                    address=dst_addr.address,
+                    amount=token.amount,
+                    coin=token.coin,
                 )
             )
 
@@ -332,10 +359,15 @@ class TestPlutus:
             script_balance == script_init_balance + script_fund
         ), f"Incorrect balance for script address `{script_address}`"
 
-        for token in fund_tokens:
+        for token in stokens:
             assert (
                 cluster_obj.get_address_balance(script_address, coin=token.coin) == token.amount
             ), f"Incorrect token balance for script address `{script_address}`"
+
+        for token in ctokens:
+            assert (
+                cluster_obj.get_address_balance(dst_addr.address, coin=token.coin) == token.amount
+            ), f"Incorrect token balance for address `{dst_addr.address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
@@ -1008,6 +1040,64 @@ class TestPlutus:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    def test_collateral_w_tokens(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test spending the locked UTxO while collateral contains native tokens.
+
+        * create a collateral UTxO with native tokens
+        * try to spend the locked UTxO
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+        token_rand = clusterlib.get_rand_str(5)
+        payment_addr = payment_addrs_lock_always_suceeds[0]
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        tokens = clusterlib_utils.new_tokens(
+            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{token_rand}",
+            token_mint_addr=payment_addr,
+            issuer_addr=payment_addr,
+            amount=100,
+        )
+        tokens_rec = [Token(coin=t.token, amount=t.amount) for t in tokens]
+
+        tx_output_fund = self._fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+            amount=50_000_000,
+            tokens_collateral=tokens_rec,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=payment_addrs_lock_always_suceeds[1],
+                tx_output_fund=tx_output_fund,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "CollateralContainsNonADA" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
     def test_build_txin_locking(
         self,
         cluster_lock_always_suceeds: clusterlib.ClusterLib,
@@ -1393,3 +1483,62 @@ class TestPlutus:
             amount=50_000_000,
             tokens=tokens_rec,
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_build_collateral_w_tokens(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test spending the locked UTxO while collateral contains native tokens.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a collateral UTxO with native tokens
+        * try to spend the locked UTxO
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+        token_rand = clusterlib.get_rand_str(5)
+        payment_addr = payment_addrs_lock_always_suceeds[0]
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+        )
+
+        tokens = clusterlib_utils.new_tokens(
+            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{token_rand}",
+            token_mint_addr=payment_addr,
+            issuer_addr=payment_addr,
+            amount=100,
+        )
+        tokens_rec = [Token(coin=t.token, amount=t.amount) for t in tokens]
+
+        tx_output_fund = self._build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+            tokens_collateral=tokens_rec,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs_lock_always_suceeds[0],
+                dst_addr=payment_addrs_lock_always_suceeds[1],
+                tx_output_fund=tx_output_fund,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "CollateralContainsNonADA" in str(excinfo.value)
