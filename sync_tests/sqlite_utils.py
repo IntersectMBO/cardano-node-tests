@@ -194,17 +194,22 @@ def update_record(database_path, env, column_name, old_value, new_value):
             conn.close()
 
 
+# Export the tables into csvs
 # envs_list = ["shelley_qa", "testnet", "staging", "mainnet"]
 # for env in envs_list:
 #     tables_list = [env, env + "_epoch_duration", env + "_logs"]
 #     for table in tables_list:
 #         export_db_table_to_csv("node_sync_tests_results.db", table)
 
-# env = "testnet"
+
+# Update the identifier values
+# env = "mainnet"
 # tables_list = [env, env + "_epoch_duration", env + "_logs"]
 # for table in tables_list:
-#     update_record("node_sync_tests_results.db", table, "identifier", "testnet_67", "testnet_14")
+#     update_record("node_sync_tests_results.db", table, "identifier", "mainnet_4", "mainnet_3")
 
+
+# Delete specified identifiers
 # env = "testnet"
 # delete_strings = ["testnet_19"]
 # for del_str in delete_strings:
