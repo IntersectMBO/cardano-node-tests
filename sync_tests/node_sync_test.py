@@ -43,6 +43,42 @@ def set_repo_paths():
     print(f"ROOT_TEST_PATH: {ROOT_TEST_PATH}")
 
 
+def get_tx_count_per_epoch(env, epoch_no):
+    global res
+    headers = {'Content-type': 'application/json'}
+    payload = '{"query":"query searchForEpochByNumber($number: Int!) {\\n  epochs(where: {number: ' \
+              '{_eq: $number}}) {\\n    ...EpochOverview\\n  }\\n}\\n\\nfragment EpochOverview on ' \
+              'Epoch {\\n  blocks(limit: 1) {\\n    protocolVersion\\n  }\\n  blocksCount\\n  ' \
+              'lastBlockTime\\n  number\\n  startedAt\\n  output\\n  transactionsCount\\n}\\n",' \
+              '"variables":{"number":' + str(epoch_no) + '}} '
+
+    if env == "mainnet":
+        url = MAINNET_EXPLORER_URL
+        res = requests.post(url, data=payload, headers=headers)
+    elif env == "staging":
+        url = STAGING_EXPLORER_URL
+        res = requests.post(url, data=payload, headers=headers)
+    elif env == "testnet":
+        url = TESTNET_EXPLORER_URL
+        res = requests.post(url, data=payload, headers=headers)
+    elif env == "shelley_qa":
+        url = SHELLEY_QA_EXPLORER_URL
+        res = requests.post(url, data=payload, headers=headers)
+    else:
+        print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
+              f"testnet, staging, mainnet")
+        exit(1)
+
+    status_code = res.status_code
+    if status_code == 200:
+        return res.json()['data']['epochs'][0]['transactionsCount']
+    else:
+        print(f"status_code: {status_code}")
+        print(f"response: {res.text}")
+        print(f"!!! ERROR: status_code =! 200 when getting txs_count for epoch {epoch_no} on {env}")
+        exit(1)
+
+
 def get_epoch_start_datetime(env, epoch_no):
     global res
     headers = {'Content-type': 'application/json'}

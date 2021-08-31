@@ -1,34 +1,10 @@
-import sqlite3
-from sqlite3 import Error
+from pathlib import Path
+
+from sync_tests.sqlite_utils import create_table
 
 DATABASE_NAME = r"./node_sync_tests_results.db"
 
-
-def create_connection(db_file):
-    conn = None
-    try:
-        conn = sqlite3.connect(db_file)
-        return conn
-    except Error as e:
-        print(f"Error connecting to the database:\n {e}")
-
-    return conn
-
-
-def create_table(conn, create_table_sql):
-    cursor = None
-    try:
-        cursor = conn.cursor()
-        cursor.execute(create_table_sql)
-    except Error as e:
-        print(f"Error creating table:\n {e}")
-    finally:
-        if cursor:
-            cursor.close()
-
-
-def create_db_tables():
-    shelley_qa_table = """ CREATE TABLE IF NOT EXISTS shelley_qa (
+shelley_qa_table = """ CREATE TABLE IF NOT EXISTS shelley_qa (
                                         identifier text NOT NULL PRIMARY KEY,
                                         env text NOT NULL,
                                         tag_no1 text NOT NULL,
@@ -90,7 +66,7 @@ def create_db_tables():
                                         mary_sync_speed_sps integer
                                     ); """
 
-    testnet_logs_table = """ CREATE TABLE IF NOT EXISTS testnet_logs (
+testnet_logs_table = """ CREATE TABLE IF NOT EXISTS testnet_logs (
                                         identifier text NOT NULL,
                                         timestamp text,
                                         slot_no integer,
@@ -98,13 +74,13 @@ def create_db_tables():
                                         cpu_percent text
                                     ); """
 
-    testnet_epoch_duration_table = """ CREATE TABLE IF NOT EXISTS testnet_epoch_duration (
+testnet_epoch_duration_table = """ CREATE TABLE IF NOT EXISTS testnet_epoch_duration (
                                         identifier text NOT NULL,
                                         epoch_no integer,
                                         sync_duration_secs integer
                                     ); """
 
-    testnet_table = """ CREATE TABLE IF NOT EXISTS testnet (
+testnet_table = """ CREATE TABLE IF NOT EXISTS testnet (
                                         identifier text NOT NULL PRIMARY KEY,
                                         env text NOT NULL,
                                         tag_no1 text NOT NULL,
@@ -166,7 +142,7 @@ def create_db_tables():
                                         mary_sync_speed_sps integer
                                     ); """
 
-    shelley_qa_logs_table = """ CREATE TABLE IF NOT EXISTS shelley_qa_logs (
+shelley_qa_logs_table = """ CREATE TABLE IF NOT EXISTS shelley_qa_logs (
                                         identifier text NOT NULL,
                                         timestamp text,
                                         slot_no integer,
@@ -174,13 +150,13 @@ def create_db_tables():
                                         cpu_percent text
                                     ); """
 
-    shelley_qa_epoch_duration_table = """ CREATE TABLE IF NOT EXISTS shelley_qa_epoch_duration (
+shelley_qa_epoch_duration_table = """ CREATE TABLE IF NOT EXISTS shelley_qa_epoch_duration (
                                         identifier text NOT NULL,
                                         epoch_no integer,
                                         sync_duration_secs integer
                                     ); """
 
-    staging_table = """ CREATE TABLE IF NOT EXISTS staging (
+staging_table = """ CREATE TABLE IF NOT EXISTS staging (
                                         identifier text NOT NULL PRIMARY KEY,
                                         env text NOT NULL,
                                         tag_no1 text NOT NULL,
@@ -242,7 +218,7 @@ def create_db_tables():
                                         mary_sync_speed_sps integer
                                     ); """
 
-    staging_logs_table = """ CREATE TABLE IF NOT EXISTS staging_logs (
+staging_logs_table = """ CREATE TABLE IF NOT EXISTS staging_logs (
                                         identifier text NOT NULL,
                                         timestamp text,
                                         slot_no integer,
@@ -250,13 +226,13 @@ def create_db_tables():
                                         cpu_percent text
                                     ); """
 
-    staging_epoch_duration_table = """ CREATE TABLE IF NOT EXISTS staging_epoch_duration (
+staging_epoch_duration_table = """ CREATE TABLE IF NOT EXISTS staging_epoch_duration (
                                         identifier text NOT NULL,
                                         epoch_no integer,
                                         sync_duration_secs integer
                                     ); """
 
-    mainnet_table = """ CREATE TABLE IF NOT EXISTS mainnet (
+mainnet_table = """ CREATE TABLE IF NOT EXISTS mainnet (
                                         identifier text NOT NULL PRIMARY KEY,
                                         env text NOT NULL,
                                         tag_no1 text NOT NULL,
@@ -318,7 +294,7 @@ def create_db_tables():
                                         mary_sync_speed_sps integer
                                     ); """
 
-    mainnet_logs_table = """ CREATE TABLE IF NOT EXISTS mainnet_logs (
+mainnet_logs_table = """ CREATE TABLE IF NOT EXISTS mainnet_logs (
                                         identifier text NOT NULL,
                                         timestamp text,
                                         slot_no integer,
@@ -326,16 +302,23 @@ def create_db_tables():
                                         cpu_percent text
                                     ); """
 
-    mainnet_epoch_duration_table = """ CREATE TABLE IF NOT EXISTS mainnet_epoch_duration (
+mainnet_epoch_duration_table = """ CREATE TABLE IF NOT EXISTS mainnet_epoch_duration (
                                         identifier text NOT NULL,
                                         epoch_no integer,
                                         sync_duration_secs integer
                                     ); """
 
-    # create a database connection
-    conn = create_connection(DATABASE_NAME)
+mainnet_tx_count_table = """ CREATE TABLE IF NOT EXISTS mainnet_tx_count (
+                                        epoch_no integer NOT NULL,
+                                        tx_count integer NOT NULL
+                                    ); """
 
-    create_tables_list = [
+
+def create_db_tables():
+    current_directory = Path.cwd()
+    database_path = Path(current_directory) / DATABASE_NAME
+
+    tables_list = [
         shelley_qa_table,
         shelley_qa_logs_table,
         shelley_qa_epoch_duration_table,
@@ -348,16 +331,11 @@ def create_db_tables():
         mainnet_table,
         mainnet_logs_table,
         mainnet_epoch_duration_table,
+        mainnet_tx_count_table
     ]
 
-    # create tables
-    if conn is not None:
-        for table in create_tables_list:
-            create_table(conn, table)
-    else:
-        print("Error! cannot create the database connection.")
-
-    conn.close()
+    for table in tables_list:
+        create_table(database_path, table)
 
 
 if __name__ == "__main__":

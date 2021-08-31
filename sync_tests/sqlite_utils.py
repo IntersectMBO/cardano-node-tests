@@ -194,6 +194,36 @@ def update_record(database_path, env, column_name, old_value, new_value):
             conn.close()
 
 
+def drop_table(database_path, table_name):
+    conn = create_connection(database_path)
+    sql_query = f"DROP TABLE {table_name};"
+    try:
+        cur = conn.cursor()
+        cur.execute(sql_query)
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print(f"!!! ERROR: Failed to drop {table_name} table:\n", error)
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def create_table(database_path, table_sql_query):
+    conn = create_connection(database_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(table_sql_query)
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print(f"!!! ERROR: Failed to create table:\n", error)
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 # Export the tables into csvs
 # envs_list = ["shelley_qa", "testnet", "staging", "mainnet"]
 # for env in envs_list:

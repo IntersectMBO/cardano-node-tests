@@ -7,7 +7,8 @@ from pathlib import Path
 import argparse
 
 from sqlite_utils import get_column_names_from_table, add_column_to_table, get_last_row_no, \
-    add_test_values_into_db, export_db_table_to_csv
+    add_test_values_into_db, export_db_table_to_csv, drop_table
+from sync_tests.node_create_db import create_table, mainnet_tx_count_table
 
 DATABASE_NAME = r"node_sync_tests_results.db"
 RESULTS_FILE_NAME = r"sync_results.json"
@@ -126,6 +127,33 @@ def main():
     export_db_table_to_csv(database_path, env + '_epoch_duration')
 
 
+def update_mainnet_tx_count_per_epoch():
+    from sync_tests.node_sync_test import get_tx_count_per_epoch
+    current_directory = Path.cwd()
+    database_path = Path(current_directory) / DATABASE_NAME
+    table_name = "mainnet_tx_count"
+    drop_table(database_path, table_name)
+    create_table(database_path, mainnet_tx_count_table)
+
+    tx_count_dict = {}
+    for epoch_no in range(286):
+        tx_count = get_tx_count_per_epoch("mainnet", epoch_no)
+        tx_count_dict["epoch_no"] = epoch_no
+        tx_count_dict["tx_count"] = tx_count
+        print(f"epoch: {epoch_no}: {tx_count}")
+
+        col_list = list(tx_count_dict.keys())
+        col_values = list(tx_count_dict.values())
+
+        if not add_test_values_into_db(database_path, table_name, col_list, col_values):
+            print(f"col_list  : {col_list}")
+            print(f"col_values: {col_values}")
+            exit(1)
+
+    print(f"  ==== Exporting the {table_name} table as CSV")
+    export_db_table_to_csv(database_path, table_name)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Add sync test values into database\n\n")
 
@@ -135,3 +163,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main()
+    # update_mainnet_tx_count_per_epoch()
