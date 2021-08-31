@@ -173,7 +173,8 @@ class TestPlutus:
         temp_template: str,
         cluster_obj: clusterlib.ClusterLib,
         dst_addr: clusterlib.AddressRecord,
-        tx_output_fund: clusterlib.TxRawOutput,
+        script_utxos: List[clusterlib.UTXOData],
+        collateral_utxos: List[clusterlib.UTXOData],
         plutus_op: PlutusOp,
         amount: int,
         tokens: Optional[List[Token]] = None,
@@ -181,23 +182,21 @@ class TestPlutus:
         script_valid: bool = True,
     ) -> str:
         """Spend the locked UTxO."""
+        # pylint: disable=too-many-arguments
         assert plutus_op.execution_units, "Execution units not provided"
         plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
 
         spent_tokens = tokens or ()
 
-        script_address = tx_output_fund.txouts[0].address  # the first txout is script
+        script_address = script_utxos[0].address
         fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-        collateral_amount = tx_output_fund.txouts[1].amount  # the second txout is collateral
+        collateral_utxo = collateral_utxos[0]
 
         script_init_balance = cluster_obj.get_address_balance(script_address)
         dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
 
         # spend the "locked" UTxO
 
-        txid = cluster_obj.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
-        collateral_utxo = cluster_obj.get_utxo(txin=f"{txid}#1")[0]
         plutus_txins = [
             clusterlib.PlutusTxIn(
                 txins=script_utxos,
@@ -239,7 +238,7 @@ class TestPlutus:
 
             assert (
                 cluster_obj.get_address_balance(dst_addr.address)
-                == dst_init_balance - collateral_amount
+                == dst_init_balance - collateral_utxo.amount
             ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
             assert (
@@ -379,7 +378,8 @@ class TestPlutus:
         cluster_obj: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         dst_addr: clusterlib.AddressRecord,
-        tx_output_fund: clusterlib.TxRawOutput,
+        script_utxos: List[clusterlib.UTXOData],
+        collateral_utxos: List[clusterlib.UTXOData],
         plutus_op: PlutusOp,
         amount: int,
         tokens: Optional[List[Token]] = None,
@@ -391,9 +391,8 @@ class TestPlutus:
         Uses `cardano-cli transaction build` command for building the transactions.
         """
         # pylint: disable=too-many-arguments
-        script_address = tx_output_fund.txouts[0].address  # the first txout is script
-        collateral_amount = tx_output_fund.txouts[1].amount  # the second txout is collateral
-
+        script_address = script_utxos[0].address
+        collateral_utxo = collateral_utxos[0]
         spent_tokens = tokens or ()
 
         script_init_balance = cluster_obj.get_address_balance(script_address)
@@ -401,9 +400,6 @@ class TestPlutus:
 
         # spend the "locked" UTxO
 
-        txid = cluster_obj.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
-        collateral_utxo = cluster_obj.get_utxo(txin=f"{txid}#2")[0]
         plutus_txins = [
             clusterlib.PlutusTxIn(
                 txins=script_utxos,
@@ -455,7 +451,7 @@ class TestPlutus:
 
             assert (
                 cluster_obj.get_address_balance(dst_addr.address)
-                == dst_init_balance - collateral_amount
+                == dst_init_balance - collateral_utxo.amount
             ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
             assert (
@@ -679,11 +675,15 @@ class TestPlutus:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_suceeds[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
         )
@@ -754,11 +754,15 @@ class TestPlutus:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         err = self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_guessing_game[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=expect_failure,
@@ -801,11 +805,15 @@ class TestPlutus:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         err = self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_fails[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=True,
@@ -846,11 +854,15 @@ class TestPlutus:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_fails[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             script_valid=False,
@@ -1027,11 +1039,15 @@ class TestPlutus:
             amount=50_000_000,
             tokens=tokens_rec,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_suceeds[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             tokens=tokens_rec,
@@ -1083,17 +1099,133 @@ class TestPlutus:
             amount=50_000_000,
             tokens_collateral=tokens_rec,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             self._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
                 dst_addr=payment_addrs_lock_always_suceeds[1],
-                tx_output_fund=tx_output_fund,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=50_000_000,
             )
         assert "CollateralContainsNonADA" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_same_collateral_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test spending the locked UTxO while using the same UTxO as collateral.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * try to spend the locked UTxO while using the same UTxO as collateral
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        tx_output_fund = self._fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+            amount=50_000_000,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=payment_addrs_lock_always_suceeds[1],
+                script_utxos=script_utxos,
+                collateral_utxos=script_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "InsufficientCollateral" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_no_datum_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test using UTxO without datum hash in place of locked UTxO.
+
+        * create a Tx ouput without a datum hash
+        * try to spend the UTxO like it was locked Plutus UTxO
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        payment_addr = payment_addrs_lock_always_suceeds[0]
+        dst_addr = payment_addrs_lock_always_suceeds[1]
+
+        plutusrequiredtime, plutusrequiredspace = 700_000_000, 10_000_000
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(plutusrequiredtime, plutusrequiredspace),
+        )
+
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        collateral_fraction = cluster.get_protocol_params()["collateralPercentage"] / 100
+        collateral_amount = int(fee_redeem * collateral_fraction)
+
+        txouts = [
+            clusterlib.TxOut(address=payment_addr.address, amount=50_000_000 + fee_redeem),
+            clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+        tx_output_fund = cluster.send_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            join_txouts=False,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1133,12 +1265,16 @@ class TestPlutus:
             dst_addr=payment_addrs_lock_always_suceeds[3],
             plutus_op=plutus_op,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_suceeds[2],
             dst_addr=payment_addrs_lock_always_suceeds[3],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
         )
@@ -1207,12 +1343,16 @@ class TestPlutus:
             dst_addr=payment_addrs_lock_guessing_game[3],
             plutus_op=plutus_op,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         err = self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_guessing_game[2],
             dst_addr=payment_addrs_lock_guessing_game[3],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=expect_failure,
@@ -1254,12 +1394,16 @@ class TestPlutus:
             dst_addr=payment_addrs_lock_always_fails[1],
             plutus_op=plutus_op,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         err = self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_fails[0],
             dst_addr=payment_addrs_lock_always_fails[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=True,
@@ -1300,12 +1444,16 @@ class TestPlutus:
             dst_addr=payment_addrs_lock_always_fails[1],
             plutus_op=plutus_op,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_fails[0],
             dst_addr=payment_addrs_lock_always_fails[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             script_valid=False,
@@ -1473,12 +1621,16 @@ class TestPlutus:
             plutus_op=plutus_op,
             tokens=tokens_rec,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_suceeds[0],
             dst_addr=payment_addrs_lock_always_suceeds[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             tokens=tokens_rec,
@@ -1530,6 +1682,9 @@ class TestPlutus:
             plutus_op=plutus_op,
             tokens_collateral=tokens_rec,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             self._build_spend_locked_txin(
@@ -1537,8 +1692,123 @@ class TestPlutus:
                 cluster_obj=cluster,
                 payment_addr=payment_addrs_lock_always_suceeds[0],
                 dst_addr=payment_addrs_lock_always_suceeds[1],
-                tx_output_fund=tx_output_fund,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=50_000_000,
             )
         assert "CollateralContainsNonADA" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_build_same_collateral_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test spending the locked UTxO while using the same UTxO as collateral.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * try to spend the locked UTxO while using the same UTxO as collateral
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+        )
+
+        tx_output_fund = self._build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs_lock_always_suceeds[0],
+                dst_addr=payment_addrs_lock_always_suceeds[1],
+                script_utxos=script_utxos,
+                collateral_utxos=script_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "ScriptsNotPaidUTxO" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_build_no_datum_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test using UTxO without datum hash in place of locked UTxO.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx ouput without a datum hash
+        * try to spend the UTxO like it was locked Plutus UTxO
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        payment_addr = payment_addrs_lock_always_suceeds[0]
+        dst_addr = payment_addrs_lock_always_suceeds[1]
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+        )
+
+        plutusrequiredtime, plutusrequiredspace = 700_000_000, 10_000_000
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        collateral_fraction = cluster.get_protocol_params()["collateralPercentage"] / 100
+        collateral_amount = int(fee_redeem * collateral_fraction)
+
+        txouts = [
+            clusterlib.TxOut(address=payment_addr.address, amount=50_000_000 + fee_redeem),
+            clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+        tx_output_fund = cluster.send_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            join_txouts=False,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addr,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "RedeemerNotNeeded" in str(excinfo.value)
