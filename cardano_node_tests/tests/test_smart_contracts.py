@@ -1118,6 +1118,55 @@ class TestPlutus:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    def test_same_collateral_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test spending the locked UTxO while using the same UTxO as collateral.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * try to spend the locked UTxO while using the same UTxO as collateral
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        tx_output_fund = self._fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+            amount=50_000_000,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=payment_addrs_lock_always_suceeds[1],
+                script_utxos=script_utxos,
+                collateral_utxos=script_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "InsufficientCollateral" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
     def test_build_txin_locking(
         self,
         cluster_lock_always_suceeds: clusterlib.ClusterLib,
@@ -1586,3 +1635,53 @@ class TestPlutus:
                 amount=50_000_000,
             )
         assert "CollateralContainsNonADA" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_build_same_collateral_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test spending the locked UTxO while using the same UTxO as collateral.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * try to spend the locked UTxO while using the same UTxO as collateral
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+        )
+
+        tx_output_fund = self._build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs_lock_always_suceeds[0],
+                dst_addr=payment_addrs_lock_always_suceeds[1],
+                script_utxos=script_utxos,
+                collateral_utxos=script_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "ScriptsNotPaidUTxO" in str(excinfo.value)
