@@ -1167,6 +1167,69 @@ class TestPlutus:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    def test_no_datum_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test using UTxO without datum hash in place of locked UTxO.
+
+        * create a Tx ouput without a datum hash
+        * try to spend the UTxO like it was locked Plutus UTxO
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        payment_addr = payment_addrs_lock_always_suceeds[0]
+        dst_addr = payment_addrs_lock_always_suceeds[1]
+
+        plutusrequiredtime, plutusrequiredspace = 700_000_000, 10_000_000
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(plutusrequiredtime, plutusrequiredspace),
+        )
+
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        collateral_fraction = cluster.get_protocol_params()["collateralPercentage"] / 100
+        collateral_amount = int(fee_redeem * collateral_fraction)
+
+        txouts = [
+            clusterlib.TxOut(address=payment_addr.address, amount=50_000_000 + fee_redeem),
+            clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+        tx_output_fund = cluster.send_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            join_txouts=False,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
     def test_build_txin_locking(
         self,
         cluster_lock_always_suceeds: clusterlib.ClusterLib,
@@ -1685,3 +1748,67 @@ class TestPlutus:
                 amount=50_000_000,
             )
         assert "ScriptsNotPaidUTxO" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_build_no_datum_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test using UTxO without datum hash in place of locked UTxO.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx ouput without a datum hash
+        * try to spend the UTxO like it was locked Plutus UTxO
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        payment_addr = payment_addrs_lock_always_suceeds[0]
+        dst_addr = payment_addrs_lock_always_suceeds[1]
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+        )
+
+        plutusrequiredtime, plutusrequiredspace = 700_000_000, 10_000_000
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        collateral_fraction = cluster.get_protocol_params()["collateralPercentage"] / 100
+        collateral_amount = int(fee_redeem * collateral_fraction)
+
+        txouts = [
+            clusterlib.TxOut(address=payment_addr.address, amount=50_000_000 + fee_redeem),
+            clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+        tx_output_fund = cluster.send_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            join_txouts=False,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addr,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "RedeemerNotNeeded" in str(excinfo.value)
