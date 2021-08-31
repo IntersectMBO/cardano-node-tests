@@ -173,7 +173,8 @@ class TestPlutus:
         temp_template: str,
         cluster_obj: clusterlib.ClusterLib,
         dst_addr: clusterlib.AddressRecord,
-        tx_output_fund: clusterlib.TxRawOutput,
+        script_utxos: List[clusterlib.UTXOData],
+        collateral_utxos: List[clusterlib.UTXOData],
         plutus_op: PlutusOp,
         amount: int,
         tokens: Optional[List[Token]] = None,
@@ -181,23 +182,21 @@ class TestPlutus:
         script_valid: bool = True,
     ) -> str:
         """Spend the locked UTxO."""
+        # pylint: disable=too-many-arguments
         assert plutus_op.execution_units, "Execution units not provided"
         plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
 
         spent_tokens = tokens or ()
 
-        script_address = tx_output_fund.txouts[0].address  # the first txout is script
+        script_address = script_utxos[0].address
         fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-        collateral_amount = tx_output_fund.txouts[1].amount  # the second txout is collateral
+        collateral_utxo = collateral_utxos[0]
 
         script_init_balance = cluster_obj.get_address_balance(script_address)
         dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
 
         # spend the "locked" UTxO
 
-        txid = cluster_obj.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
-        collateral_utxo = cluster_obj.get_utxo(txin=f"{txid}#1")[0]
         plutus_txins = [
             clusterlib.PlutusTxIn(
                 txins=script_utxos,
@@ -239,7 +238,7 @@ class TestPlutus:
 
             assert (
                 cluster_obj.get_address_balance(dst_addr.address)
-                == dst_init_balance - collateral_amount
+                == dst_init_balance - collateral_utxo.amount
             ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
             assert (
@@ -379,7 +378,8 @@ class TestPlutus:
         cluster_obj: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         dst_addr: clusterlib.AddressRecord,
-        tx_output_fund: clusterlib.TxRawOutput,
+        script_utxos: List[clusterlib.UTXOData],
+        collateral_utxos: List[clusterlib.UTXOData],
         plutus_op: PlutusOp,
         amount: int,
         tokens: Optional[List[Token]] = None,
@@ -391,9 +391,8 @@ class TestPlutus:
         Uses `cardano-cli transaction build` command for building the transactions.
         """
         # pylint: disable=too-many-arguments
-        script_address = tx_output_fund.txouts[0].address  # the first txout is script
-        collateral_amount = tx_output_fund.txouts[1].amount  # the second txout is collateral
-
+        script_address = script_utxos[0].address
+        collateral_utxo = collateral_utxos[0]
         spent_tokens = tokens or ()
 
         script_init_balance = cluster_obj.get_address_balance(script_address)
@@ -401,9 +400,6 @@ class TestPlutus:
 
         # spend the "locked" UTxO
 
-        txid = cluster_obj.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
-        collateral_utxo = cluster_obj.get_utxo(txin=f"{txid}#2")[0]
         plutus_txins = [
             clusterlib.PlutusTxIn(
                 txins=script_utxos,
@@ -455,7 +451,7 @@ class TestPlutus:
 
             assert (
                 cluster_obj.get_address_balance(dst_addr.address)
-                == dst_init_balance - collateral_amount
+                == dst_init_balance - collateral_utxo.amount
             ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
             assert (
@@ -679,11 +675,15 @@ class TestPlutus:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_suceeds[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
         )
@@ -754,11 +754,15 @@ class TestPlutus:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         err = self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_guessing_game[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=expect_failure,
@@ -801,11 +805,15 @@ class TestPlutus:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         err = self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_fails[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=True,
@@ -846,11 +854,15 @@ class TestPlutus:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_fails[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             script_valid=False,
@@ -1027,11 +1039,15 @@ class TestPlutus:
             amount=50_000_000,
             tokens=tokens_rec,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         self._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_suceeds[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             tokens=tokens_rec,
@@ -1083,13 +1099,17 @@ class TestPlutus:
             amount=50_000_000,
             tokens_collateral=tokens_rec,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             self._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
                 dst_addr=payment_addrs_lock_always_suceeds[1],
-                tx_output_fund=tx_output_fund,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=50_000_000,
             )
@@ -1133,12 +1153,16 @@ class TestPlutus:
             dst_addr=payment_addrs_lock_always_suceeds[3],
             plutus_op=plutus_op,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_suceeds[2],
             dst_addr=payment_addrs_lock_always_suceeds[3],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
         )
@@ -1207,12 +1231,16 @@ class TestPlutus:
             dst_addr=payment_addrs_lock_guessing_game[3],
             plutus_op=plutus_op,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         err = self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_guessing_game[2],
             dst_addr=payment_addrs_lock_guessing_game[3],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=expect_failure,
@@ -1254,12 +1282,16 @@ class TestPlutus:
             dst_addr=payment_addrs_lock_always_fails[1],
             plutus_op=plutus_op,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         err = self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_fails[0],
             dst_addr=payment_addrs_lock_always_fails[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             expect_failure=True,
@@ -1300,12 +1332,16 @@ class TestPlutus:
             dst_addr=payment_addrs_lock_always_fails[1],
             plutus_op=plutus_op,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_fails[0],
             dst_addr=payment_addrs_lock_always_fails[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             script_valid=False,
@@ -1473,12 +1509,16 @@ class TestPlutus:
             plutus_op=plutus_op,
             tokens=tokens_rec,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_suceeds[0],
             dst_addr=payment_addrs_lock_always_suceeds[1],
-            tx_output_fund=tx_output_fund,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
             tokens=tokens_rec,
@@ -1530,6 +1570,9 @@ class TestPlutus:
             plutus_op=plutus_op,
             tokens_collateral=tokens_rec,
         )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             self._build_spend_locked_txin(
@@ -1537,7 +1580,8 @@ class TestPlutus:
                 cluster_obj=cluster,
                 payment_addr=payment_addrs_lock_always_suceeds[0],
                 dst_addr=payment_addrs_lock_always_suceeds[1],
-                tx_output_fund=tx_output_fund,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=50_000_000,
             )
