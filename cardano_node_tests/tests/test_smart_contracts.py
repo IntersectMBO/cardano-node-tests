@@ -190,7 +190,6 @@ class TestPlutus:
 
         script_address = script_utxos[0].address
         fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-        collateral_utxo = collateral_utxos[0]
 
         script_init_balance = cluster_obj.get_address_balance(script_address)
         dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
@@ -200,7 +199,7 @@ class TestPlutus:
         plutus_txins = [
             clusterlib.PlutusTxIn(
                 txins=script_utxos,
-                collateral=collateral_utxo,
+                collaterals=collateral_utxos,
                 script_file=plutus_op.script_file,
                 execution_units=(plutusrequiredtime, plutusrequiredspace),
                 datum_file=plutus_op.datum_file,
@@ -234,11 +233,11 @@ class TestPlutus:
         )
 
         if not script_valid:
-            cluster_obj.submit_tx(tx_file=tx_signed, txins=[collateral_utxo])
+            cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
 
             assert (
                 cluster_obj.get_address_balance(dst_addr.address)
-                == dst_init_balance - collateral_utxo.amount
+                == dst_init_balance - collateral_utxos[0].amount
             ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
             assert (
@@ -392,7 +391,6 @@ class TestPlutus:
         """
         # pylint: disable=too-many-arguments
         script_address = script_utxos[0].address
-        collateral_utxo = collateral_utxos[0]
         spent_tokens = tokens or ()
 
         script_init_balance = cluster_obj.get_address_balance(script_address)
@@ -403,7 +401,7 @@ class TestPlutus:
         plutus_txins = [
             clusterlib.PlutusTxIn(
                 txins=script_utxos,
-                collateral=collateral_utxo,
+                collaterals=collateral_utxos,
                 script_file=plutus_op.script_file,
                 datum_file=plutus_op.datum_file,
                 redeemer_file=plutus_op.redeemer_file,
@@ -447,11 +445,11 @@ class TestPlutus:
         )
 
         if not script_valid:
-            cluster_obj.submit_tx(tx_file=tx_signed, txins=[collateral_utxo])
+            cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
 
             assert (
                 cluster_obj.get_address_balance(dst_addr.address)
-                == dst_init_balance - collateral_utxo.amount
+                == dst_init_balance - collateral_utxos[0].amount
             ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
             assert (
@@ -507,7 +505,7 @@ class TestPlutus:
             addrs = clusterlib_utils.create_payment_addr_records(
                 *[
                     f"plutus_payment_lock_allsucceeds_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(4)
+                    for i in range(6)
                 ],
                 cluster_obj=cluster,
             )
@@ -517,6 +515,7 @@ class TestPlutus:
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             addrs[2],
+            addrs[4],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
             amount=20_000_000_000,
@@ -948,7 +947,7 @@ class TestPlutus:
         plutus_mint_data = [
             clusterlib.PlutusMint(
                 txins=mint_utxos,
-                collateral=collateral_utxo,
+                collaterals=[collateral_utxo],
                 script_file=self.MINTING_PLUTUS,
                 execution_units=(plutusrequiredtime, plutusrequiredspace),
                 redeemer_file=redeemer_file,
@@ -1534,7 +1533,7 @@ class TestPlutus:
         plutus_mint_data = [
             clusterlib.PlutusMint(
                 txins=mint_utxos,
-                collateral=collateral_utxo,
+                collaterals=[collateral_utxo],
                 script_file=self.MINTING_PLUTUS,
                 redeemer_file=redeemer_file,
             )
