@@ -78,6 +78,7 @@ class TestPlutus:
         amount: int,
         tokens: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
         tokens_collateral: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
+        collateral_fraction_offset: float = 1.0,
     ) -> clusterlib.TxRawOutput:
         """Fund a plutus script and create the locked UTxO and collateral UTxO."""
         assert plutus_op.execution_units, "Execution units not provided"
@@ -92,7 +93,7 @@ class TestPlutus:
 
         fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
         collateral_fraction = cluster_obj.get_protocol_params()["collateralPercentage"] / 100
-        collateral_amount = int(fee_redeem * collateral_fraction)
+        collateral_amount = int(fee_redeem * collateral_fraction * collateral_fraction_offset)
 
         script_init_balance = cluster_obj.get_address_balance(script_address)
 
@@ -1337,6 +1338,58 @@ class TestPlutus:
                 plutus_op=plutus_op,
                 amount=50_000_000,
             )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_collateral_percent(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Try to spend locked UTxO while collateral is less than required by `collateralPercentage`.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * create a collateral UTxO with amount of ADA less than required by `collateralPercentage`
+        * try to spend the UTxO
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = helpers.get_func_name()
+
+        plutus_op = PlutusOp(
+            script_file=self.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=self.PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=self.PLUTUS_DIR / "typed-42.redeemer",
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        tx_output_fund = self._fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs_lock_always_suceeds[0],
+            dst_addr=payment_addrs_lock_always_suceeds[1],
+            plutus_op=plutus_op,
+            amount=50_000_000,
+            collateral_fraction_offset=0.9,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=payment_addrs_lock_always_suceeds[1],
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+        assert "InsufficientCollateral" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
