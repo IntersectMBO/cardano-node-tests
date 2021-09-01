@@ -1,6 +1,7 @@
 """Functionality for interacting with db-sync."""
 import decimal
 import functools
+import itertools
 import logging
 import time
 from typing import Any
@@ -1059,9 +1060,10 @@ def check_tx(
         tx_withdrawals == db_withdrawals
     ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
 
-    tx_collaterals = {
-        r.collateral for r in (*tx_raw_output.plutus_txins, *tx_raw_output.plutus_mint)
-    }
+    tx_collaterals_nested = [
+        r.collaterals for r in (*tx_raw_output.plutus_txins, *tx_raw_output.plutus_mint)
+    ]
+    tx_collaterals = set(itertools.chain.from_iterable(tx_collaterals_nested))
     db_collaterals = set(response.collaterals)
     assert (
         tx_collaterals == db_collaterals
