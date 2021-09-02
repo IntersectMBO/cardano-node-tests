@@ -730,6 +730,7 @@ def _create_register_pool_tx_delegate_stake_tx(
 
 @pytest.mark.order(2)
 @pytest.mark.testnets
+@pytest.mark.long
 class TestStakePool:
     """General tests for stake pools."""
 
