@@ -934,6 +934,7 @@ def main():
     print(f"Write the test values to the {current_directory / RESULTS_FILE_NAME} file")
     with open(RESULTS_FILE_NAME, 'w') as results_file:
         json.dump(test_values_dict, results_file, indent=2)
+    print(f"test_values_dict: {test_values_dict}\n")
 
 
 if __name__ == "__main__":

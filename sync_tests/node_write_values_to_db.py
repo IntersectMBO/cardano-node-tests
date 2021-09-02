@@ -25,6 +25,7 @@ def main():
         sync_test_results_dict = json.load(json_file)
 
     print("Print all test results (key/values)")
+    print(f"sync_test_results_dict: {sync_test_results_dict}")
     for key in sync_test_results_dict:
         print(f"{key}: {sync_test_results_dict[key]}")
 
