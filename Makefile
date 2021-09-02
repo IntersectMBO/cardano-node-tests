@@ -14,6 +14,9 @@ endif
 ifeq ($(TESTNETS_THREADS),)
 	TESTNETS_THREADS := 20
 endif
+ifeq ($(TESTNETS_MARKEXPR),)
+	TESTNETS_MARKEXPR := testnets
+endif
 
 .dirs:
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(ALLURE_DIR)
@@ -39,10 +42,10 @@ testnets: .dirs
 # First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.
 ifndef PYTEST_ARGS
 	rm -f $(ALLURE_DIR)/{*-attachment.txt,*-result.json,*-container.json}
-	pytest -s cardano_node_tests -m testnets --skipall --alluredir=$(ALLURE_DIR) >/dev/null
+	pytest -s cardano_node_tests -m "$(TESTNETS_MARKEXPR)" --skipall --alluredir=$(ALLURE_DIR) >/dev/null
 endif
 # run tests for real and produce Allure results
-	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) -n $(TESTNETS_THREADS) -m "testnets" --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
+	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) -n $(TESTNETS_THREADS) -m "$(TESTNETS_MARKEXPR)" --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
 
 # run linters
 lint:

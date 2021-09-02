@@ -432,6 +432,7 @@ class TestDelegateAddr:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(2)
     @pytest.mark.dbsync
+    @pytest.mark.long
     def test_deregister(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1033,6 +1034,7 @@ class TestRewards:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @pytest.mark.long
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
         reason="supposed to run on testnet",
