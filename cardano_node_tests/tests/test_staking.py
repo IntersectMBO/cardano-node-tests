@@ -1029,12 +1029,12 @@ class TestNegative:
 
 
 @pytest.mark.order(1)
+@pytest.mark.long
 class TestRewards:
     """Tests for checking expected rewards."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @pytest.mark.long
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
         reason="supposed to run on testnet",
