@@ -21,6 +21,7 @@ from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import slots_offset
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
@@ -40,6 +41,9 @@ class ClusterEnv(NamedTuple):
 
 class Testnets:
     shelley_qa = "shelley_qa"
+    testnet = "testnet"
+    staging = "staging"
+    mainnet = "mainnet"
 
 
 class ClusterType:
@@ -181,7 +185,12 @@ class LocalCluster(ClusterType):
 class TestnetCluster(ClusterType):
     """Testnet cluster type (full cardano mode)."""
 
-    TESTNETS = {1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"}}
+    TESTNETS = {
+        1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"},
+        1563999616: {"type": Testnets.testnet, "shelley_start": "2020-07-28T20:20:16Z"},
+        1506450213: {"type": Testnets.staging, "shelley_start": "2020-08-01T18:23:33Z"},
+        1506203091: {"type": Testnets.mainnet, "shelley_start": "2020-07-29T21:44:51Z"},
+    }
 
     def __init__(self) -> None:
         super().__init__()
@@ -214,31 +223,23 @@ class TestnetCluster(ClusterType):
         if self._slots_offset != -1:
             return self._slots_offset
 
-        genesis_byron_json = state_dir / "genesis-byron.json"
-        with open(genesis_byron_json) as in_json:
-            genesis_byron = json.load(in_json)
-        genesis_shelley_json = state_dir / "genesis-shelley.json"
-        with open(genesis_shelley_json) as in_json:
-            genesis_shelley = json.load(in_json)
+        genesis_byron = state_dir / "genesis-byron.json"
+        genesis_shelley = state_dir / "genesis-shelley.json"
 
-        start_timestamp: int = genesis_byron["startTime"]
+        with open(genesis_byron) as in_json:
+            byron_dict = json.load(in_json)
+        start_timestamp: int = byron_dict["startTime"]
 
         shelley_start: str = self.TESTNETS.get(start_timestamp, {}).get("shelley_start", "")
         if not shelley_start:
             self._slots_offset = 0
             return 0
 
-        testnet_timestamp = _datetime2timestamp(shelley_start)
-        offset_sec = testnet_timestamp - start_timestamp
-
-        slot_duration_byron_msec = int(genesis_byron["blockVersionData"]["slotDuration"])
-        slot_duration_byron = float(slot_duration_byron_msec / 1000)
-        slot_duration_shelley = float(genesis_shelley["slotLength"])
-
-        # assume that epoch length is the same for byron and shelley epochs
-        slots_in_byron = int(offset_sec / slot_duration_byron)
-        slots_in_shelley = int(offset_sec / slot_duration_shelley)
-        offset = slots_in_shelley - slots_in_byron
+        offset = slots_offset.get_slots_offset(
+            genesis_byron=genesis_byron,
+            genesis_shelley=genesis_shelley,
+            shelley_start=shelley_start,
+        )
 
         self._slots_offset = offset
         return offset
