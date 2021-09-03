@@ -1305,7 +1305,7 @@ class TestPlutus:
             tx_files_collaterals = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
             tx_output_collaterals = cluster.send_tx(
                 src_address=payment_addr.address,
-                tx_name="f{temp_template}_collaterals",
+                tx_name=f"{temp_template}_collaterals",
                 txouts=txouts_collaterals,
                 tx_files=tx_files_collaterals,
                 join_txouts=False,
