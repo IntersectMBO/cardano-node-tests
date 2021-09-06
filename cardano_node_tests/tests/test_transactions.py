@@ -373,12 +373,13 @@ class TestBasic:
         txid_body = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
         txid_signed = cluster.get_txid(tx_file=tx_raw_output.out_file.with_suffix(".signed"))
         assert txid_body == txid_signed
-
-        utxo_src = cluster.get_utxo(address=src_address)
-        utxo_dst = cluster.get_utxo(address=dst_address)
         assert len(txid_body) == 64
-        assert txid_body in (u.utxo_hash for u in utxo_src)
-        assert txid_body in (u.utxo_hash for u in utxo_dst)
+
+        utxo_src = cluster.get_utxo(txin=f"{txid_body}#1")[0]  # change UTxO
+        assert txid_body in utxo_src.utxo_hash
+
+        utxo_dst = cluster.get_utxo(txin=f"{txid_body}#0")[0]
+        assert txid_body in utxo_dst.utxo_hash
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
