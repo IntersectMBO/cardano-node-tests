@@ -57,7 +57,9 @@ class ClusterType:
         self.type = "unknown"
         self.cluster_scripts = cluster_scripts.ScriptsTypes()
 
-    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+    def get_cluster_obj(
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+    ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
@@ -115,15 +117,16 @@ class LocalCluster(ClusterType):
 
         return offset
 
-    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+    def get_cluster_obj(
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+    ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
-        slots_offset = self._get_slots_offset(cluster_env.state_dir)
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
-            protocol=clusterlib.Protocols.CARDANO,
-            tx_era=cluster_env.tx_era,
-            slots_offset=slots_offset,
+            protocol=protocol or clusterlib.Protocols.CARDANO,
+            tx_era=tx_era or cluster_env.tx_era,
+            slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         cluster_obj._min_change_value = 2000_000  # TODO: hardcoded `minUTxOValue`
@@ -243,15 +246,16 @@ class TestnetCluster(ClusterType):
         self._slots_offset = offset
         return offset
 
-    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+    def get_cluster_obj(
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+    ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
-        slots_offset = self._get_slots_offset(cluster_env.state_dir)
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
-            protocol=clusterlib.Protocols.CARDANO,
-            tx_era=cluster_env.tx_era,
-            slots_offset=slots_offset,
+            protocol=protocol or clusterlib.Protocols.CARDANO,
+            tx_era=tx_era or cluster_env.tx_era,
+            slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         cluster_obj._min_change_value = 2000_000  # TODO: hardcoded `minUTxOValue`
