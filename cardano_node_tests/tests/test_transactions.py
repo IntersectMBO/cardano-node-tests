@@ -28,6 +28,7 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -1474,6 +1475,19 @@ class TestNegative:
     # pylint: disable=too-many-public-methods
 
     @pytest.fixture
+    def cluster_wrong_tx_era(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ) -> clusterlib.ClusterLib:
+        # pylint: disable=unused-argument
+        # the `cluster` argument (representing the `cluster` fixture) needs to be present
+        # in order to have an actual cluster instance assigned at the time this fixture
+        # is executed
+        return cluster_nodes.get_cluster_type().get_cluster_obj(
+            tx_era=VERSIONS.MAP[VERSIONS.cluster_era + 1]
+        )
+
+    @pytest.fixture
     def pool_users(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1738,7 +1752,7 @@ class TestNegative:
 
         # use wrong signing key
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[1].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1500_000)]
 
         # it should NOT be possible to submit a transaction with wrong signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1749,6 +1763,36 @@ class TestNegative:
                 tx_files=tx_files,
             )
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era == VERSIONS.LAST_KNOWN_ERA,
+        reason=f"doesn't run with the latest cluster era ({VERSIONS.cluster_era_name})",
+    )
+    def test_wrong_tx_era(
+        self,
+        cluster_wrong_tx_era: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Try to send a transaction using TX era > network (cluster) era.
+
+        Expect failure.
+        """
+        cluster = cluster_wrong_tx_era
+        temp_template = helpers.get_func_name()
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1500_000)]
+
+        # it should NOT be possible to submit a transaction when TX era > network era
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(
+                src_address=pool_users[0].payment.address,
+                tx_name=temp_template,
+                txouts=destinations,
+                tx_files=tx_files,
+            )
+        assert "The era of the node and the tx do not match" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(

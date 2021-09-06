@@ -930,24 +930,20 @@ class _ClusterGetter:
                             os.remove(sf)
 
                     # create status file for each in-use resource
-                    _ = [
+                    for r in use_resources:
                         open(
                             self.cm.instance_dir
                             / f"{RESOURCE_IN_USE_GLOB}_{r}_{self.cm.worker_id}",
                             "a",
                         ).close()
-                        for r in use_resources
-                    ]
 
                     # create status file for each locked resource
-                    _ = [
+                    for r in lock_resources:
                         open(
                             self.cm.instance_dir
                             / f"{RESOURCE_LOCKED_GLOB}_{r}_{self.cm.worker_id}",
                             "a",
                         ).close()
-                        for r in lock_resources
-                    ]
 
                     # cleanup = cluster restart after test (group of tests) is finished
                     if cleanup:
