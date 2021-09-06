@@ -32,7 +32,6 @@ ADDRS_DATA = "addrs_data.pickle"
 class ClusterEnv(NamedTuple):
     socket_path: Path
     state_dir: Path
-    repo_dir: Path
     work_dir: Path
     instance_num: int
     cluster_era: str
@@ -327,13 +326,11 @@ def get_cluster_env() -> ClusterEnv:
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
     state_dir = socket_path.parent
     work_dir = state_dir.parent
-    repo_dir = Path(os.environ.get("CARDANO_NODE_REPO_PATH") or work_dir)
     instance_num = int(state_dir.name.replace("state-cluster", "") or 0)
 
     cluster_env = ClusterEnv(
         socket_path=socket_path,
         state_dir=state_dir,
-        repo_dir=repo_dir,
         work_dir=work_dir,
         instance_num=instance_num,
         cluster_era=configuration.CLUSTER_ERA,
