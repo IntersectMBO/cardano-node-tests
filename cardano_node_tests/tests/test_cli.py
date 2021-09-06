@@ -7,6 +7,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
@@ -43,8 +44,8 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.skipif(
-        bool(configuration.TX_ERA),
-        reason="different TX eras doesn't affect this test, pointless to run",
+        configuration.CLUSTER_ERA != configuration.TX_ERA,
+        reason="different TX eras doesn't affect this test",
     )
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check the default protocol mode - command works even without specifying protocol mode."""
@@ -62,8 +63,8 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        bool(configuration.TX_ERA),
-        reason="different TX eras doesn't affect this test, pointless to run",
+        configuration.CLUSTER_ERA != configuration.TX_ERA,
+        reason="different TX eras doesn't affect this test",
     )
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on local cluster."""
@@ -77,6 +78,20 @@ class TestCLI:
                 *cluster.magic_args,
             ]
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        configuration.CLUSTER_ERA != configuration.TX_ERA,
+        reason="different TX eras doesn't affect this test",
+    )
+    @pytest.mark.skipif(
+        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
+        reason="supposed to run on testnet",
+    )
+    def test_testnet_whole_utxo(self, cluster: clusterlib.ClusterLib):
+        """Check that it is possible to return the whole UTxO on testnets."""
+        magic_args = " ".join(cluster.magic_args)
+        helpers.run_in_bash(f"cardano-cli query utxo --whole-utxo {magic_args} > /dev/null")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
