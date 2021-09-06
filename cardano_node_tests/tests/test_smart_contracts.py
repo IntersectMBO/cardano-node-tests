@@ -1911,7 +1911,7 @@ class TestPlutus:
                 plutus_op=plutus_op,
                 amount=50_000_000,
             )
-        assert "ScriptsNotPaidUTxO" in str(excinfo.value)
+        assert "Expected key witnessed collateral" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
