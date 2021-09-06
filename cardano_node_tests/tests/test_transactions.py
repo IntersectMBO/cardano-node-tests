@@ -2166,7 +2166,7 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
         if use_build_cmd:
-            expected_msg = "The transaction does not balance in its use of ada"
+            expected_msg = "The following tx input(s) were not present in the UTxO"
         else:
             expected_msg = "BadInputsUTxO"
         assert expected_msg in err
@@ -2208,7 +2208,7 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
         if use_build_cmd:
-            expected_msg = "The transaction does not balance in its use of ada"
+            expected_msg = "The following tx input(s) were not present in the UTxO"
         else:
             expected_msg = "BadInputsUTxO"
         assert expected_msg in err
