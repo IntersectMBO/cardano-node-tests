@@ -8,8 +8,8 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
@@ -44,7 +44,7 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.skipif(
-        configuration.CLUSTER_ERA != configuration.TX_ERA,
+        VERSIONS.cluster_era != VERSIONS.transaction_era,
         reason="different TX eras doesn't affect this test",
     )
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
@@ -63,7 +63,7 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        configuration.CLUSTER_ERA != configuration.TX_ERA,
+        VERSIONS.cluster_era != VERSIONS.transaction_era,
         reason="different TX eras doesn't affect this test",
     )
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
@@ -81,7 +81,7 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        configuration.CLUSTER_ERA != configuration.TX_ERA,
+        VERSIONS.cluster_era != VERSIONS.transaction_era,
         reason="different TX eras doesn't affect this test",
     )
     @pytest.mark.skipif(
