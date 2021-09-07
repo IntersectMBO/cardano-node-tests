@@ -651,7 +651,11 @@ cardano_cli_log transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-sleep 5
+# give it some time before restaring the nodes so the update proposal Tx is likely to get through
+echo "Waiting 15 sec before restarting the nodes"
+sleep 15
+ALONZO_WAIT_SEC="$((WAIT_SEC - 15))"
+
 for conf in "$STATE_CLUSTER"/config-*.json; do
   jq -r '."LastKnownBlockVersion-Major" = 5' < "$conf" > "${conf}_jq"
   cat "${conf}_jq" > "$conf"
@@ -659,8 +663,8 @@ for conf in "$STATE_CLUSTER"/config-*.json; do
 done
 supervisorctl restart nodes:
 
-echo "Waiting $WAIT_SEC sec for Alonzo era to start"
-sleep "$WAIT_SEC"
+echo "Waiting $ALONZO_WAIT_SEC sec for Alonzo era to start"
+sleep "$ALONZO_WAIT_SEC"
 
 
 #
