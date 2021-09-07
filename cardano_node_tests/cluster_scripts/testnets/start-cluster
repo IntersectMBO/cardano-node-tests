@@ -222,6 +222,12 @@ done
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
+echo "Waiting until replay is finished"
+sleep 10
+while tail -n 10 "$STATE_CLUSTER/relay1.stdout" | grep -q "replay progress"; do
+  sleep 10
+done
+
 echo "waiting for node to start" >> "$STATE_CLUSTER/start-cluster.log"
 for _ in {1..5}; do
   if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
