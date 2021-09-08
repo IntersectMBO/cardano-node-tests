@@ -1992,3 +1992,6 @@ class TestBuildMinting:
 
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
