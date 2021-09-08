@@ -173,7 +173,7 @@ def payment_addrs_lock_always_fails(
 
         addrs = clusterlib_utils.create_payment_addr_records(
             *[
-                f"plutus_payment_lock_allfailss_ci{cluster_manager.cluster_instance_num}_{i}"
+                f"plutus_payment_lock_allfails_ci{cluster_manager.cluster_instance_num}_{i}"
                 for i in range(2)
             ],
             cluster_obj=cluster,
@@ -1403,7 +1403,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_build_txin_locking(
+    def test_txin_locking(
         self,
         cluster_lock_always_suceeds: clusterlib.ClusterLib,
         payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
@@ -1464,7 +1464,7 @@ class TestBuildLocking:
             "guessing_game_43_43",  # wrong datum and redeemer
         ),
     )
-    def test_build_guessing_game(
+    def test_guessing_game(
         self,
         cluster_lock_guessing_game: clusterlib.ClusterLib,
         payment_addrs_lock_guessing_game: List[clusterlib.AddressRecord],
@@ -1535,7 +1535,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    def test_build_always_fails(
+    def test_always_fails(
         self,
         cluster_lock_always_fails: clusterlib.ClusterLib,
         payment_addrs_lock_always_fails: List[clusterlib.AddressRecord],
@@ -1585,7 +1585,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    def test_build_script_invalid(
+    def test_script_invalid(
         self,
         cluster_lock_always_fails: clusterlib.ClusterLib,
         payment_addrs_lock_always_fails: List[clusterlib.AddressRecord],
@@ -1635,7 +1635,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_build_txin_token_locking(
+    def test_txin_token_locking(
         self,
         cluster_lock_always_suceeds: clusterlib.ClusterLib,
         payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
@@ -1697,7 +1697,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_build_collateral_w_tokens(
+    def test_collateral_w_tokens(
         self,
         cluster_lock_always_suceeds: clusterlib.ClusterLib,
         payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
@@ -1760,7 +1760,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_build_same_collateral_txin(
+    def test_same_collateral_txin(
         self,
         cluster_lock_always_suceeds: clusterlib.ClusterLib,
         payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
@@ -1810,7 +1810,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_build_no_datum_txin(
+    def test_no_datum_txin(
         self,
         cluster_lock_always_suceeds: clusterlib.ClusterLib,
         payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
@@ -1882,7 +1882,7 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_build_minting(
+    def test_minting(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting a token with a plutus script.
