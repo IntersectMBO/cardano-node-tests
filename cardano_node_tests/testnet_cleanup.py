@@ -7,6 +7,7 @@
 """
 import argparse
 import concurrent.futures
+import functools
 import logging
 import random
 import time
@@ -88,22 +89,37 @@ def deregister_stake_addr(
 def return_funds_to_faucet(
     cluster_obj: clusterlib.ClusterLib,
     src_addr: clusterlib.AddressRecord,
-    faucet_addr: str,
+    faucet_address: str,
     tx_name: str,
 ) -> None:
-    """Send funds from `src_addr` to `faucet_addr`."""
+    """Send funds from `src_addr` to `faucet_address`."""
     tx_name = f"rf_{tx_name}_return_funds"
     # the amount of "-1" means all available funds.
-    fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=-1)]
+    fund_dst = [clusterlib.TxOut(address=faucet_address, amount=-1)]
     fund_tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+
+    txins = cluster_obj.get_utxo(address=src_addr.address, coins=[clusterlib.DEFAULT_COIN])
+    utxos_balance = functools.reduce(lambda x, y: x + y.amount, txins, 0)
+
+    # skip if there no (or too little) Lovelace
+    if utxos_balance < 1000_000:
+        return
+
+    # if the balance is too low, add a faucet UTxO so there's enough funds for fee
+    # and the total amount is higher than min ADA value
+    if utxos_balance < 3000_000:
+        faucet_utxos = cluster_obj.get_utxo(address=faucet_address, coins=[clusterlib.DEFAULT_COIN])
+        futxo = random.choice(faucet_utxos)
+        txins.append(futxo)
 
     LOGGER.info(f"Returning funds from '{src_addr.address}'")
     # try to return funds; don't mind if there's not enough funds for fees etc.
     try:
-        cluster_obj.send_funds(
+        cluster_obj.send_tx(
             src_address=src_addr.address,
-            destinations=fund_dst,
             tx_name=tx_name,
+            txins=txins,
+            txouts=fund_dst,
             tx_files=fund_tx_files,
             verify_tx=False,
         )
@@ -160,7 +176,7 @@ def group_files(file_paths: Generator[Path, None, None]) -> List[List[Path]]:
     return path_groups
 
 
-def cleanup(
+def cleanup(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib,
     location: FileType,
 ) -> None:
@@ -190,15 +206,20 @@ def cleanup(
 
                 pool_user = clusterlib.PoolUser(payment=payment, stake=stake)
 
+                stake_addr_info = cluster_obj.get_stake_addr_info(pool_user.stake.address)
+                if not stake_addr_info:
+                    continue
+
+                if stake_addr_info.reward_account_balance:
+                    withdraw_reward(
+                        cluster_obj=cluster_obj,
+                        stake_addr_record=stake,
+                        dst_addr_record=payment,
+                        name_template=f_name,
+                    )
+
                 deregister_stake_addr(
                     cluster_obj=cluster_obj, pool_user=pool_user, name_template=f_name
-                )
-
-                withdraw_reward(
-                    cluster_obj=cluster_obj,
-                    stake_addr_record=stake,
-                    dst_addr_record=payment,
-                    name_template=f_name,
                 )
             else:
                 try:
@@ -209,7 +230,7 @@ def cleanup(
                 return_funds_to_faucet(
                     cluster_obj=cluster_obj,
                     src_addr=payment,
-                    faucet_addr=faucet_payment.address,
+                    faucet_address=faucet_payment.address,
                     tx_name=f_name,
                 )
 
