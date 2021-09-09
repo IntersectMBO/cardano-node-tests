@@ -1486,19 +1486,15 @@ class TestStakePool:
 
         # update the pool metadata by resubmitting the pool registration certificate
         if use_build_cmd:
-            # BUG: https://github.com/input-output-hk/cardano-node/issues/3040
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                _register_stake_pool_w_build(
-                    cluster_obj=cluster,
-                    pool_data=pool_data_updated,
-                    pool_owners=pool_owners,
-                    vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
-                    cold_key_pair=pool_creation_out.cold_key_pair,
-                    tx_name=temp_template,
-                    deposit=0,  # no additional deposit, the pool is already registered
-                )
-            assert "ValueNotConservedUTxO" in str(excinfo)
-            pytest.xfail("Affected by cardano-node bug #3040")
+            _register_stake_pool_w_build(
+                cluster_obj=cluster,
+                pool_data=pool_data_updated,
+                pool_owners=pool_owners,
+                vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
+                cold_key_pair=pool_creation_out.cold_key_pair,
+                tx_name=temp_template,
+                deposit=0,  # no additional deposit, the pool is already registered
+            )
         else:
             cluster.register_stake_pool(
                 pool_data=pool_data_updated,
@@ -1615,19 +1611,15 @@ class TestStakePool:
 
         # update the pool parameters by resubmitting the pool registration certificate
         if use_build_cmd:
-            # BUG: https://github.com/input-output-hk/cardano-node/issues/3040
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                _register_stake_pool_w_build(
-                    cluster_obj=cluster,
-                    pool_data=pool_data_updated,
-                    pool_owners=pool_owners,
-                    vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
-                    cold_key_pair=pool_creation_out.cold_key_pair,
-                    tx_name=temp_template,
-                    deposit=0,  # no additional deposit, the pool is already registered
-                )
-            assert "ValueNotConservedUTxO" in str(excinfo)
-            pytest.xfail("Affected by cardano-node bug #3040")
+            _register_stake_pool_w_build(
+                cluster_obj=cluster,
+                pool_data=pool_data_updated,
+                pool_owners=pool_owners,
+                vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
+                cold_key_pair=pool_creation_out.cold_key_pair,
+                tx_name=temp_template,
+                deposit=0,  # no additional deposit, the pool is already registered
+            )
         else:
             cluster.register_stake_pool(
                 pool_data=pool_data_updated,
