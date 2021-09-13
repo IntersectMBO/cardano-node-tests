@@ -1631,14 +1631,10 @@ class TestTransfer:
             clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token),
         ]
 
-        # TODO: calculate-min-value not supported in Alonzo
-        if VERSIONS.cluster_era == VERSIONS.ALONZO:
-            amount_lovelace = 1500_000
-        else:
-            min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
-            assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
-            assert min_value.value, "No Lovelace required for `min-ada-value`"
-            amount_lovelace = min_value.value
+        min_value = cluster.calculate_min_req_utxo(txouts=ma_destinations)
+        assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value.value, "No Lovelace required for `min-ada-value`"
+        amount_lovelace = min_value.value
 
         destinations = [
             *ma_destinations,
@@ -1740,32 +1736,35 @@ class TestTransfer:
         src_init_balance_tokens = []
         dst_init_balance_tokens1 = []
         dst_init_balance_tokens2 = []
-        ma_destinations = []
+        ma_destinations_address1 = []
+        ma_destinations_address2 = []
         for t in new_tokens:
             src_init_balance_tokens.append(cluster.get_address_balance(src_address, coin=t.token))
             dst_init_balance_tokens1.append(cluster.get_address_balance(dst_address1, coin=t.token))
             dst_init_balance_tokens2.append(cluster.get_address_balance(dst_address2, coin=t.token))
 
-            ma_destinations.append(
+            ma_destinations_address1.append(
                 clusterlib.TxOut(address=dst_address1, amount=amount, coin=t.token)
             )
-            ma_destinations.append(
+            ma_destinations_address2.append(
                 clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token)
             )
 
-        # TODO: calculate-min-value not supported in Alonzo
-        if VERSIONS.cluster_era == VERSIONS.ALONZO:
-            amount_lovelace = 3500_000
-        else:
-            min_value = cluster.calculate_min_value(multi_assets=ma_destinations)
-            assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
-            assert min_value.value, "No Lovelace required for `min-ada-value`"
-            amount_lovelace = min_value.value
+        min_value_address1 = cluster.calculate_min_req_utxo(txouts=ma_destinations_address1)
+        assert min_value_address1.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value_address1.value, "No Lovelace required for `min-ada-value`"
+        amount_lovelace_address1 = min_value_address1.value
+
+        min_value_address2 = cluster.calculate_min_req_utxo(txouts=ma_destinations_address2)
+        assert min_value_address2.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value_address2.value, "No Lovelace required for `min-ada-value`"
+        amount_lovelace_address2 = min_value_address2.value
 
         destinations = [
-            *ma_destinations,
-            clusterlib.TxOut(address=dst_address1, amount=amount_lovelace),
-            clusterlib.TxOut(address=dst_address2, amount=amount_lovelace),
+            *ma_destinations_address1,
+            clusterlib.TxOut(address=dst_address1, amount=amount_lovelace_address1),
+            *ma_destinations_address2,
+            clusterlib.TxOut(address=dst_address2, amount=amount_lovelace_address2),
         ]
 
         tx_files = clusterlib.TxFiles(
@@ -1774,7 +1773,11 @@ class TestTransfer:
 
         if use_build_cmd:
             # TODO: add ADA txout for change address
-            destinations.append(clusterlib.TxOut(address=src_address, amount=amount_lovelace))
+            destinations.append(
+                clusterlib.TxOut(
+                    address=src_address, amount=amount_lovelace_address1 + amount_lovelace_address2
+                )
+            )
 
             tx_raw_output = cluster.build_tx(
                 src_address=src_address,
@@ -1799,7 +1802,8 @@ class TestTransfer:
 
         # TODO: fee is not known when using `transaction build` command
         assert (
-            cluster.get_address_balance(src_address) < src_init_balance - amount_lovelace * 2
+            cluster.get_address_balance(src_address)
+            < src_init_balance - amount_lovelace_address1 - amount_lovelace_address2
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         for idx, token in enumerate(new_tokens):
