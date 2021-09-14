@@ -1869,7 +1869,7 @@ class TestBuildLocking:
                 plutus_op=plutus_op,
                 amount=50_000_000,
             )
-        assert "RedeemerNotNeeded" in str(excinfo.value)
+        assert "not a Plutus script witnessed tx input" in str(excinfo.value)
 
 
 @pytest.mark.skipif(
