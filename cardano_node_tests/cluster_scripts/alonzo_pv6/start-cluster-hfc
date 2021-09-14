@@ -1,0 +1,781 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(readlink -m "${0%/*}")"
+SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+STATE_CLUSTER="${SOCKET_PATH%/*}"
+
+NUM_BFT_NODES=1
+NUM_POOLS=3
+NETWORK_MAGIC=42
+BYRON_SECURITY_PARAM=100
+POOL_PLEDGE=1000000000000
+INIT_SUPPLY=45000000000000000
+
+if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
+  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster-hfc\` first!" >&2
+  exit 1
+fi
+
+cardano_cli_log() {
+  echo cardano-cli "$@" >> "$STATE_CLUSTER/start_cluster_cmds.log"
+  cardano-cli "$@"
+}
+
+if [ -e "$SCRIPT_DIR/shell_env" ]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$SCRIPT_DIR/shell_env"
+fi
+
+rm -rf "$STATE_CLUSTER"
+mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync}
+cd "$STATE_CLUSTER/.."
+
+cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
+cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/genesis.spec.json" "$STATE_CLUSTER/shelley/genesis.spec.json"
+
+# enable db-sync service
+if [ -n "${DBSYNC_REPO:-""}" ]; then
+  [ -e "$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended" ] || \
+    { echo "The \`$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended\` not found, line $LINENO" >&2; exit 1; }  # assert
+
+  # create clean database
+  "$SCRIPT_DIR/postgres-setup.sh"
+
+  state_cluster_name="${STATE_CLUSTER##*/}"
+  cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
+
+[program:dbsync]
+command=$SCRIPT_DIR/run_dbsync.sh
+stderr_logfile=./$state_cluster_name/dbsync.stderr
+stdout_logfile=./$state_cluster_name/dbsync.stdout
+autostart=false
+EoF
+fi
+
+FUNDS_PER_GENESIS_ADDRESS="$((INIT_SUPPLY / NUM_BFT_NODES))"
+FUNDS_PER_BYRON_ADDRESS="$((FUNDS_PER_GENESIS_ADDRESS * 8 / 10))"
+
+START_TIME_SHELLEY=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="5 seconds")
+START_TIME=$(date +%s --date="$START_TIME_SHELLEY")
+echo "$START_TIME" > "$STATE_CLUSTER/cluster_start_time"
+
+cardano_cli_log byron genesis genesis \
+  --protocol-magic "$NETWORK_MAGIC" \
+  --k "$BYRON_SECURITY_PARAM" \
+  --n-poor-addresses 0 \
+  --n-delegate-addresses "$NUM_BFT_NODES" \
+  --total-balance "$INIT_SUPPLY" \
+  --delegate-share 1 \
+  --avvm-entry-count 0 \
+  --avvm-entry-balance 0 \
+  --protocol-parameters-file "$STATE_CLUSTER/byron-params.json" \
+  --genesis-output-dir "$STATE_CLUSTER/byron" \
+  --start-time "$START_TIME"
+
+mv "$STATE_CLUSTER/byron-params.json" "$STATE_CLUSTER/byron/params.json"
+
+cardano_cli_log genesis create \
+  --genesis-dir "$STATE_CLUSTER/shelley" \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --gen-genesis-keys "$NUM_BFT_NODES" \
+  --start-time "$START_TIME_SHELLEY" \
+  --gen-utxo-keys 1
+
+jq -r '
+  .maxValueSize = 5000 |
+  .collateralPercentage = 150 |
+  .maxCollateralInputs = 3 |
+  .executionPrices.prSteps = 0.0000721 |
+  .executionPrices.prMem = 0.0577 |
+  .lovelacePerUTxOWord = 34482 |
+  .maxBlockExUnits.exUnitsMem = 50000000 |
+  .maxBlockExUnits.exUnitsSteps = 40000000000 |
+  .maxTxExUnits.exUnitsMem = 10000000 |
+  .maxTxExUnits.exUnitsSteps = 10000000000' \
+  < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
+cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
+rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
+
+BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
+  "$STATE_CLUSTER/byron/genesis.json")"
+SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+  "$STATE_CLUSTER/shelley/genesis.json")"
+ALONZO_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+  "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
+for conf in "$SCRIPT_DIR"/config-*.json; do
+  fname="${conf##*/}"
+  jq \
+    --arg byron_hash "$BYRON_GENESIS_HASH" \
+    --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+    --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+    '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
+    "$conf" > "$STATE_CLUSTER/$fname"
+done
+
+for i in $(seq 1 $NUM_BFT_NODES); do
+  mkdir -p "$STATE_CLUSTER/nodes/node-bft$i"
+  ln -s "../../shelley/delegate-keys/delegate$i.vrf.skey" "$STATE_CLUSTER/nodes/node-bft$i/vrf.skey"
+  ln -s "../../shelley/delegate-keys/delegate$i.vrf.vkey" "$STATE_CLUSTER/nodes/node-bft$i/vrf.vkey"
+
+  cardano_cli_log node key-gen-KES \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-bft$i/kes.vkey" \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-bft$i/kes.skey"
+
+  cardano_cli_log node issue-op-cert \
+    --kes-period 0 \
+    --cold-signing-key-file "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
+    --kes-verification-key-file "$STATE_CLUSTER/nodes/node-bft$i/kes.vkey" \
+    --operational-certificate-issue-counter-file \
+      "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.counter" \
+    --out-file "$STATE_CLUSTER/nodes/node-bft$i/op.cert"
+
+  INDEX="$(printf "%03d" $((i - 1)))"
+
+  cardano_cli_log byron key keygen \
+    --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key"
+
+  cardano_cli_log signing-key-address \
+    --byron-formats \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key" > "$STATE_CLUSTER/byron/address-$INDEX"
+
+  # write Genesis addresses to files
+  cardano_cli_log signing-key-address \
+    --byron-formats  \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --secret "$STATE_CLUSTER/byron/genesis-keys.$INDEX.key" \
+      > "$STATE_CLUSTER/byron/genesis-address-$INDEX"
+
+  ln -s "../../byron/delegate-keys.$INDEX.key" "$STATE_CLUSTER/nodes/node-bft$i/byron-deleg.key"
+  ln -s "../../byron/delegation-cert.$INDEX.json" "$STATE_CLUSTER/nodes/node-bft$i/byron-deleg.json"
+
+  # create Byron address that moves funds out of the genesis UTxO into a regular address
+  cardano_cli_log byron transaction issue-genesis-utxo-expenditure \
+    --genesis-json "$STATE_CLUSTER/byron/genesis.json" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --byron-formats \
+    --tx "$STATE_CLUSTER/byron/tx$i.tx" \
+    --wallet-key "$STATE_CLUSTER/nodes/node-bft$i/byron-deleg.key" \
+    --rich-addr-from "$(head -n 1 "$STATE_CLUSTER/byron/genesis-address-$INDEX")" \
+    --txout "(\"$(head -n 1 "$STATE_CLUSTER/byron/address-$INDEX")\", $FUNDS_PER_BYRON_ADDRESS)"
+
+  # convert to Shelley addresses and keys
+  cardano_cli_log key convert-byron-key \
+    --byron-signing-key-file "$STATE_CLUSTER/byron/payment-keys.$INDEX.key" \
+    --out-file "$STATE_CLUSTER/byron/payment-keys.$INDEX-converted.skey" \
+    --byron-payment-key-type
+
+  cardano_cli_log key verification-key \
+    --signing-key-file "$STATE_CLUSTER/byron/payment-keys.$INDEX-converted.skey" \
+    --verification-key-file "$STATE_CLUSTER/byron/payment-keys.$INDEX-converted.vkey"
+
+  cardano_cli_log address build \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --payment-verification-key-file "$STATE_CLUSTER/byron/payment-keys.$INDEX-converted.vkey" \
+    > "$STATE_CLUSTER/byron/address-$INDEX-converted"
+
+  BFT_PORT=$(("30000" + i))
+  echo "$BFT_PORT" > "$STATE_CLUSTER/nodes/node-bft$i/port"
+done
+
+for i in $(seq 1 $NUM_POOLS); do
+  mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
+  echo "Generating Pool $i Secrets"
+  cardano_cli_log address key-gen \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey"
+  cardano_cli_log stake-address key-gen \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
+  # payment addresses
+  cardano_cli_log address build \
+    --payment-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey" \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner.addr"
+  # stake addresses
+  cardano_cli_log stake-address build \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
+  # stake addresses registration certs
+  cardano_cli_log stake-address registration-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
+
+  # stake reward keys
+  cardano_cli_log stake-address key-gen \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey"
+  # stake reward addresses registration certs
+  cardano_cli_log stake-address registration-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
+  cardano_cli_log node key-gen \
+    --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+    --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
+    --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter"
+  cardano_cli_log node key-gen-KES \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.vkey" \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.skey"
+  cardano_cli_log node key-gen-VRF \
+    --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
+    --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.skey"
+
+  # stake address delegation certs
+  cardano_cli_log stake-address delegation-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
+
+  cardano_cli_log node issue-op-cert \
+    --kes-period 0 \
+    --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
+    --kes-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.vkey" \
+    --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/op.cert"
+
+  POOL_NAME="TestPool$i"
+  POOL_DESC="Test Pool $i"
+  POOL_TICKER="TEST$i"
+
+  cat > "$STATE_CLUSTER/webserver/pool$i.html" <<EoF
+<!DOCTYPE html>
+<html>
+<head>
+<title>$POOL_NAME</title>
+</head>
+<body>
+name: <strong>$POOL_NAME</strong><br>
+description: <strong>$POOL_DESC</strong><br>
+ticker: <strong>$POOL_TICKER</strong><br>
+</body>
+</html>
+EoF
+
+  echo "Generating Pool $i Metadata"
+  jq -n \
+    --arg name "$POOL_NAME" \
+    --arg description "$POOL_DESC" \
+    --arg ticker "$POOL_TICKER" \
+    --arg homepage "http://localhost:30000/pool$i.html" \
+    '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
+    > "$STATE_CLUSTER/webserver/pool$i.json"
+
+  METADATA_URL="http://localhost:30000/pool$i.json"
+  METADATA_HASH=$(cardano_cli_log stake-pool metadata-hash --pool-metadata-file \
+    "$STATE_CLUSTER/webserver/pool$i.json")
+  POOL_PORT=$(("30000" + "$NUM_BFT_NODES" + i))
+  echo "$POOL_PORT" > "$STATE_CLUSTER/nodes/node-pool$i/port"
+  echo $POOL_PLEDGE > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
+
+  cardano_cli_log stake-pool registration-certificate \
+    --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+    --vrf-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
+    --pool-pledge "$POOL_PLEDGE" \
+    --pool-margin 0.35 \
+    --pool-cost 600 \
+    --pool-reward-account-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+    --pool-owner-stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --metadata-url "$METADATA_URL" \
+    --metadata-hash "$METADATA_HASH" \
+    --pool-relay-port "$POOL_PORT" \
+    --pool-relay-ipv4 "127.0.0.1" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/register.cert"
+done
+
+mv "$STATE_CLUSTER/shelley/utxo-keys/utxo1.vkey" "$STATE_CLUSTER/shelley/genesis-utxo.vkey"
+mv "$STATE_CLUSTER/shelley/utxo-keys/utxo1.skey" "$STATE_CLUSTER/shelley/genesis-utxo.skey"
+rmdir "$STATE_CLUSTER/shelley/utxo-keys"
+
+# create scripts for cluster starting / stopping
+printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
+printf "#!/bin/sh\n\nsupervisorctl stop all" > "$STATE_CLUSTER/supervisorctl_stop"
+printf "#!/bin/sh\n\nsupervisorctl restart nodes:" > "$STATE_CLUSTER/supervisorctl_restart_nodes"
+printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
+  > "$STATE_CLUSTER/supervisord_start"
+chmod u+x "$STATE_CLUSTER"/{supervisorctl_*,supervisord_start}
+
+supervisord --config "$STATE_CLUSTER/supervisor.conf"
+
+for _ in {1..5}; do
+  if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
+    break
+  fi
+  echo "Waiting 5 seconds for bft node to start"
+  sleep 5
+done
+[ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the bft node, line $LINENO" >&2; exit 1; }  # assert
+
+echo "Moving funds out of Byron genesis"
+for i in $(seq 1 $NUM_BFT_NODES); do
+  cardano_cli_log byron transaction submit-tx \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --tx "$STATE_CLUSTER/byron/tx$i.tx"
+done
+
+# length of Byron era is hardcoded to 200 sec (+2 sec buffer)
+echo "Waiting 202 sec for Shelley era to start"
+sleep 202
+
+
+#
+# In Shelley era
+#
+
+
+ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
+[ "$ERA" = "Shelley" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+
+# start db-sync
+if [ -n "${DBSYNC_REPO:-""}" ]; then
+  echo "Starting db-sync"
+  supervisorctl start dbsync
+fi
+
+echo "Submitting update proposal to transfer to Allegra, transfering funds to pool owners, registering pools and delegations"
+
+ALLEGRA_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-allegra.proposal"
+
+GENESIS_VERIFICATION=()
+for i in $(seq 1 $NUM_BFT_NODES); do
+  GENESIS_VERIFICATION+=( \
+    "--genesis-verification-key-file" "$STATE_CLUSTER/shelley/genesis-keys/genesis$i.vkey" \
+  )
+done
+
+cardano_cli_log governance create-update-proposal \
+  --out-file "$ALLEGRA_HF_PROPOSAL" \
+  --epoch 1 \
+  "${GENESIS_VERIFICATION[@]}" \
+  --protocol-major-version 3 \
+  --protocol-minor-version 0
+
+# Tranfer funds, register pools and delegations, submit update proposal, all in one big transaction:
+
+cardano_cli_log query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --out-file "$STATE_CLUSTER/pparams.json"
+
+TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-000-converted)"
+DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' \
+  < "$STATE_CLUSTER/shelley/genesis.json")"
+NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
+FEE_BUFFER=100000000
+STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE_BUFFER))"
+
+TXINS=()
+TXIN_COUNT=0
+TXIN_AMOUNT=0
+while read -r txhash txix amount _; do
+  TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+  TXIN_COUNT="$((TXIN_COUNT + 1))"
+  TXINS+=("--tx-in" "${txhash}#${txix}")
+  if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+    break
+  fi
+done <<< "$(cardano_cli_log query utxo --testnet-magic \
+            "$NETWORK_MAGIC" \
+            --address "$TXIN_ADDR" |
+            grep -E "lovelace$|[0-9]$")"
+
+TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+
+POOL_ARGS=()
+for i in $(seq 1 $NUM_POOLS); do
+  POOL_ARGS+=( \
+    "--tx-out" "$(<"$STATE_CLUSTER/nodes/node-pool$i/owner.addr")+$POOL_PLEDGE" \
+    "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/register.cert" \
+    "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert" \
+  )
+done
+
+cardano_cli_log transaction build-raw \
+  --shelley-era \
+  --ttl    "$TTL" \
+  --fee    0 \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+0" \
+  "${POOL_ARGS[@]}" \
+  --update-proposal-file "$ALLEGRA_HF_PROPOSAL" \
+  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody"
+
+FEE="$(cardano_cli_log transaction calculate-min-fee \
+        --testnet-magic "$NETWORK_MAGIC" \
+        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+        --tx-in-count 1 \
+        --tx-out-count 3 \
+        --witness-count 9 \
+        --byron-witness-count 0 \
+        --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody" |
+        cut -d' ' -f1)"
+
+TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
+
+cardano_cli_log transaction build-raw \
+  --shelley-era \
+  --ttl    "$TTL" \
+  --fee    "$FEE" \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  "${POOL_ARGS[@]}" \
+  --update-proposal-file "$ALLEGRA_HF_PROPOSAL" \
+  --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
+
+POOL_SIGNING=()
+for i in $(seq 1 $NUM_POOLS); do
+  POOL_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
+  )
+done
+BFT_SIGNING=()
+for i in $(seq 1 $NUM_BFT_NODES); do
+  BFT_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/shelley/genesis-keys/genesis$i.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
+  )
+done
+
+cardano_cli_log transaction sign \
+  "${POOL_SIGNING[@]}" \
+  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+  "${BFT_SIGNING[@]}" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
+  --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
+
+cardano_cli_log transaction submit \
+  --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
+  --testnet-magic "$NETWORK_MAGIC"
+
+EPOCH_SEC="$(jq '.epochLength * .slotLength' < "$STATE_CLUSTER/shelley/genesis.json")"
+WAIT_SEC="$((EPOCH_SEC + 2))"
+
+echo "Waiting $WAIT_SEC sec for Allegra era to start"
+sleep "$WAIT_SEC"
+
+
+#
+# In Allegra era
+#
+
+
+ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
+[ "$ERA" = "Allegra" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+
+echo "Submitting update proposal to transfer to Mary, set d = 0"
+
+MARY_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-mary.proposal"
+
+cardano_cli_log governance create-update-proposal \
+  --out-file "$MARY_HF_PROPOSAL" \
+  --epoch 2 \
+  "${GENESIS_VERIFICATION[@]}" \
+  --decentralization-parameter 0 \
+  --protocol-major-version 4 \
+  --protocol-minor-version 0
+
+cardano_cli_log query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --out-file "$STATE_CLUSTER/pparams.json"
+
+FEE_BUFFER=100000000
+STOP_TXIN_AMOUNT=$FEE_BUFFER
+
+TXINS=()
+TXIN_COUNT=0
+TXIN_AMOUNT=0
+while read -r txhash txix amount _; do
+  TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+  TXIN_COUNT="$((TXIN_COUNT + 1))"
+  TXINS+=("--tx-in" "${txhash}#${txix}")
+  if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+    break
+  fi
+done <<< "$(cardano_cli_log query utxo --testnet-magic \
+            "$NETWORK_MAGIC" \
+            --address "$TXIN_ADDR" |
+            grep -E "lovelace$|[0-9]$")"
+
+TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+
+cardano_cli_log transaction build-raw \
+  --allegra-era \
+  --ttl    "$TTL" \
+  --fee    0 \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+0" \
+  --update-proposal-file "$MARY_HF_PROPOSAL" \
+  --out-file "$STATE_CLUSTER/shelley/update-proposal-mary-fee-tx.txbody"
+
+FEE="$(cardano_cli_log transaction calculate-min-fee \
+        --testnet-magic "$NETWORK_MAGIC" \
+        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+        --tx-in-count 1 \
+        --tx-out-count 1 \
+        --witness-count 5 \
+        --byron-witness-count 0 \
+        --tx-body-file "$STATE_CLUSTER/shelley/update-proposal-mary-fee-tx.txbody" |
+        cut -d' ' -f1)"
+
+TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
+
+cardano_cli_log transaction build-raw \
+  --allegra-era \
+  --ttl    "$TTL" \
+  --fee    "$FEE" \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  --update-proposal-file "$MARY_HF_PROPOSAL" \
+  --out-file         "$STATE_CLUSTER/shelley/update-proposal-mary-tx.txbody"
+
+DELEGATE_SIGNING=()
+for i in $(seq 1 $NUM_BFT_NODES); do
+  DELEGATE_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
+  )
+done
+cardano_cli_log transaction sign \
+  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+  "${DELEGATE_SIGNING[@]}" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "$STATE_CLUSTER/shelley/update-proposal-mary-tx.txbody" \
+  --out-file         "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx"
+
+cardano_cli_log transaction submit \
+  --tx-file "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx" \
+  --testnet-magic "$NETWORK_MAGIC"
+
+echo "Waiting $WAIT_SEC sec for Mary era to start"
+sleep "$WAIT_SEC"
+
+
+#
+# In Mary era
+#
+
+
+ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
+[ "$ERA" = "Mary" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+
+echo "Submitting update proposal to transfer to Alonzo"
+
+ALONZO_UPDATE_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-alonzo.proposal"
+
+cardano_cli_log governance create-update-proposal \
+  --out-file "$ALONZO_UPDATE_PROPOSAL" \
+  --epoch 3 \
+  "${GENESIS_VERIFICATION[@]}" \
+  --protocol-major-version 5 \
+  --protocol-minor-version 0
+
+cardano_cli_log query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --out-file "$STATE_CLUSTER/pparams.json"
+
+FEE_BUFFER=100000000
+STOP_TXIN_AMOUNT=$FEE_BUFFER
+
+TXINS=()
+TXIN_COUNT=0
+TXIN_AMOUNT=0
+while read -r txhash txix amount _; do
+  TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+  TXIN_COUNT="$((TXIN_COUNT + 1))"
+  TXINS+=("--tx-in" "${txhash}#${txix}")
+  if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+    break
+  fi
+done <<< "$(cardano_cli_log query utxo --testnet-magic \
+            "$NETWORK_MAGIC" \
+            --address "$TXIN_ADDR" |
+            grep -E "lovelace$|[0-9]$")"
+
+TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+
+cardano_cli_log transaction build-raw \
+  --mary-era \
+  --ttl    "$TTL" \
+  --fee    0 \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+0" \
+  --update-proposal-file "$ALONZO_UPDATE_PROPOSAL" \
+  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-fee-tx.txbody"
+
+FEE="$(cardano_cli_log transaction calculate-min-fee \
+        --testnet-magic "$NETWORK_MAGIC" \
+        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+        --tx-in-count 1 \
+        --tx-out-count 1 \
+        --witness-count 5 \
+        --byron-witness-count 0 \
+        --tx-body-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-fee-tx.txbody" |
+        cut -d' ' -f1)"
+
+TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
+
+cardano_cli_log transaction build-raw \
+  --mary-era \
+  --ttl    "$TTL" \
+  --fee    "$FEE" \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  --update-proposal-file "$ALONZO_UPDATE_PROPOSAL" \
+  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.txbody"
+
+DELEGATE_SIGNING=()
+for i in $(seq 1 $NUM_BFT_NODES); do
+  DELEGATE_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
+  )
+done
+cardano_cli_log transaction sign \
+  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+  "${DELEGATE_SIGNING[@]}" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.txbody" \
+  --out-file         "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.tx"
+
+cardano_cli_log transaction submit \
+  --tx-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.tx" \
+  --testnet-magic "$NETWORK_MAGIC"
+
+# give it some time before restaring the nodes so the update proposal Tx is likely to get through
+echo "Waiting 15 sec before restarting the nodes"
+sleep 15
+ALONZO_WAIT_SEC="$((WAIT_SEC - 15))"
+
+for conf in "$STATE_CLUSTER"/config-*.json; do
+  jq -r '."LastKnownBlockVersion-Major" = 5' < "$conf" > "${conf}_jq"
+  cat "${conf}_jq" > "$conf"
+  rm -f "${conf}_jq"
+done
+supervisorctl restart nodes:
+
+echo "Waiting $ALONZO_WAIT_SEC sec for Alonzo era to start"
+sleep "$ALONZO_WAIT_SEC"
+
+
+#
+# In Alonzo era
+#
+
+
+ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
+[ "$ERA" = "Alonzo" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+
+echo "Submitting update proposal to update to PV6"
+
+ALONZO_UPDATE_PROPOSAL_PV6="$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6.proposal"
+
+cardano_cli_log governance create-update-proposal \
+  --out-file "$ALONZO_UPDATE_PROPOSAL_PV6" \
+  --epoch 4 \
+  "${GENESIS_VERIFICATION[@]}" \
+  --protocol-major-version 6 \
+  --protocol-minor-version 0
+
+cardano_cli_log query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --out-file "$STATE_CLUSTER/pparams.json"
+
+FEE_BUFFER=100000000
+STOP_TXIN_AMOUNT=$FEE_BUFFER
+
+TXINS=()
+TXIN_COUNT=0
+TXIN_AMOUNT=0
+while read -r txhash txix amount _; do
+  TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+  TXIN_COUNT="$((TXIN_COUNT + 1))"
+  TXINS+=("--tx-in" "${txhash}#${txix}")
+  if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+    break
+  fi
+done <<< "$(cardano_cli_log query utxo --testnet-magic \
+            "$NETWORK_MAGIC" \
+            --address "$TXIN_ADDR" |
+            grep -E "lovelace \+ TxOutDatumHashNone$")"
+
+TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+
+cardano_cli_log transaction build-raw \
+  --alonzo-era \
+  --ttl    "$TTL" \
+  --fee    0 \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+0" \
+  --update-proposal-file "$ALONZO_UPDATE_PROPOSAL_PV6" \
+  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-fee-tx.txbody"
+
+FEE="$(cardano_cli_log transaction calculate-min-fee \
+        --testnet-magic "$NETWORK_MAGIC" \
+        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+        --tx-in-count 1 \
+        --tx-out-count 1 \
+        --witness-count 5 \
+        --byron-witness-count 0 \
+        --tx-body-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-fee-tx.txbody" |
+        cut -d' ' -f1)"
+
+TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
+
+cardano_cli_log transaction build-raw \
+  --alonzo-era \
+  --ttl    "$TTL" \
+  --fee    "$FEE" \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  --update-proposal-file "$ALONZO_UPDATE_PROPOSAL_PV6" \
+  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-tx.txbody"
+
+DELEGATE_SIGNING=()
+for i in $(seq 1 $NUM_BFT_NODES); do
+  DELEGATE_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
+  )
+done
+cardano_cli_log transaction sign \
+  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+  "${DELEGATE_SIGNING[@]}" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-tx.txbody" \
+  --out-file         "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-tx.tx"
+
+cardano_cli_log transaction submit \
+  --tx-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-tx.tx" \
+  --testnet-magic "$NETWORK_MAGIC"
+
+# give it some time before restaring the nodes so the update proposal Tx is likely to get through
+echo "Waiting 15 sec before restarting the nodes"
+sleep 15
+supervisorctl restart nodes:
+
+echo "Waiting $ALONZO_WAIT_SEC sec for Alonzo era with PV6 to start"
+sleep "$ALONZO_WAIT_SEC"
+
+
+#
+# In Alonzo era with PV6
+#
+
+cardano_cli_log query protocol-parameters \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --out-file "$STATE_CLUSTER/pparams.json"
+
+PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")"
+
+[ "$PROTOCOL_VERSION" = 6 ] ||  { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
+
+echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster-hfc\` to stop"
