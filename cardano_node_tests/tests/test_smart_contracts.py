@@ -204,7 +204,7 @@ def payment_addrs(
             return fixture_cache.value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"plutus_payment_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(4)],
+            *[f"plutus_payment_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(8)],
             cluster_obj=cluster,
         )
         fixture_cache.value = addrs
@@ -213,6 +213,8 @@ def payment_addrs(
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         addrs[2],
+        addrs[4],
+        addrs[6],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
         amount=10_000_000_000,
@@ -1358,7 +1360,7 @@ class TestMinting:
         ]
 
         policyid = cluster.get_policyid(MINTING_PLUTUS)
-        token = f"{policyid}.qacoin"
+        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
@@ -1410,8 +1412,8 @@ class TestMinting:
         """
         # pylint: disable=too-many-locals
         temp_template = helpers.get_func_name()
-        payment_addr = payment_addrs[0]
-        issuer_addr = payment_addrs[1]
+        payment_addr = payment_addrs[2]
+        issuer_addr = payment_addrs[3]
 
         lovelace_amount = 5000_000
         token_amount = 5
@@ -1477,6 +1479,7 @@ class TestMinting:
             # POSIX timestamp 300 sec in the future
             redeemer_value = int(datetime.datetime.now().timestamp() * 1000) + 300000
         else:
+            # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
             redeemer_value = 1000000000000
 
         plutus_mint_data = [
@@ -1490,7 +1493,7 @@ class TestMinting:
         ]
 
         policyid = cluster.get_policyid(TIME_RANGE_PLUTUS)
-        token = f"{policyid}.qacoin"
+        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
@@ -2032,8 +2035,8 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         temp_template = helpers.get_func_name()
-        payment_addr = payment_addrs[2]
-        issuer_addr = payment_addrs[3]
+        payment_addr = payment_addrs[4]
+        issuer_addr = payment_addrs[5]
 
         lovelace_amount = 5000_000
         script_fund = 1000_000_000
@@ -2096,7 +2099,7 @@ class TestBuildMinting:
         ]
 
         policyid = cluster.get_policyid(MINTING_PLUTUS)
-        token = f"{policyid}.qacoin"
+        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
@@ -2150,8 +2153,8 @@ class TestBuildMinting:
         """
         # pylint: disable=too-many-locals
         temp_template = helpers.get_func_name()
-        payment_addr = payment_addrs[2]
-        issuer_addr = payment_addrs[3]
+        payment_addr = payment_addrs[6]
+        issuer_addr = payment_addrs[7]
 
         lovelace_amount = 5000_000
         script_fund = 1000_000_000
@@ -2210,6 +2213,7 @@ class TestBuildMinting:
             # POSIX timestamp 300 sec in the future
             redeemer_value = int(datetime.datetime.now().timestamp() * 1000) + 300000
         else:
+            # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
             redeemer_value = 1000000000000
 
         plutus_mint_data = [
@@ -2222,7 +2226,7 @@ class TestBuildMinting:
         ]
 
         policyid = cluster.get_policyid(TIME_RANGE_PLUTUS)
-        token = f"{policyid}.qacoin"
+        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
