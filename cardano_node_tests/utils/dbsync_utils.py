@@ -778,7 +778,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.ma_tx_mint_quantity or 0),
-                address=str(query_row.tx_out_addr),
+                address="",  # this is available only for MA outputs
                 coin=coin,
             )
             mint_utxo_out.append(mint_rec)
@@ -971,16 +971,22 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
 
 
 def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> List[clusterlib.TxOut]:
-    """Calculate minting amount sum for records with same address and token."""
+    """Calculate minting amount sum for records with the same token.
+
+    Remove address information - minting tokens doesn't include address, only amount and asset ID,
+    i.e. address information is not available in `ma_tx_mint` table.
+    MA output is handled in Tx output checks.
+    """
     mint_txouts: Dict[str, clusterlib.TxOut] = {}
 
     for mt in txouts:
-        mt_id = f"{mt.address}_{mt.coin}"
-        if mt_id in mint_txouts:
-            mt_stored = mint_txouts[mt_id]
-            mint_txouts[mt_id] = mt_stored._replace(amount=mt_stored.amount + mt.amount)
+        if mt.coin in mint_txouts:
+            mt_stored = mint_txouts[mt.coin]
+            mint_txouts[mt.coin] = mt_stored._replace(
+                address="", amount=mt_stored.amount + mt.amount
+            )
         else:
-            mint_txouts[mt_id] = mt
+            mint_txouts[mt.coin] = mt._replace(address="")
 
     return list(mint_txouts.values())
 
