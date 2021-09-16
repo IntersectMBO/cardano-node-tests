@@ -4,6 +4,7 @@ import logging
 import time
 from pathlib import Path
 from typing import Any
+from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
@@ -836,14 +837,22 @@ def load_tx_view(tx_view: str) -> dict:
     return tx_loaded
 
 
-def _load_coins_data(coins_data: Union[dict, int]) -> List[Tuple[int, str]]:
+def _load_mint_data(mint_data: Dict[str, int]) -> List[Tuple[int, str]]:
+    loaded_data = []
+    for token, amount in mint_data.items():
+        loaded_data.append((amount, token))
+
+    return loaded_data
+
+
+def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
     # `coins_data` for Mary+ Tx era has Lovelace amount and policies info,
     # for older Tx eras it's just Lovelace amount
     try:
         amount_lovelace = coins_data.get("lovelace")  # type: ignore
-        policies_data = coins_data.get("policies") or {}  # type: ignore
+        policies_data: dict = coins_data  # type: ignore
     except AttributeError:
-        amount_lovelace = coins_data
+        amount_lovelace = int(coins_data.split(" ")[0] or 0)  # type: ignore
         policies_data = {}
 
     loaded_data = []
@@ -852,7 +861,9 @@ def _load_coins_data(coins_data: Union[dict, int]) -> List[Tuple[int, str]]:
         loaded_data.append((amount_lovelace, "lovelace"))
 
     for policyid, policy_rec in policies_data.items():
-        for asset_name_hex, amount in policy_rec.items():
+        if policyid == "lovelace":
+            continue
+        for asset_name_hex, amount in policy_rec:
             asset_name = bytes.fromhex(asset_name_hex).decode()
             token = f"{policyid}.{asset_name}" if asset_name else policyid
             loaded_data.append((amount, token))
@@ -864,6 +875,7 @@ def check_tx_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
 ) -> dict:
     """Check output of the `transaction view` command."""
+    # pylint: disable=too-many-branches
     tx_view = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
     tx_loaded: dict = load_tx_view(tx_view=tx_view)
 
@@ -878,36 +890,41 @@ def check_tx_view(  # noqa: C901
     tx_loaded_outputs = tx_loaded.get("outputs") or []
     loaded_txouts: Set[Tuple[str, int, str]] = set()
     for txout in tx_loaded_outputs:
-        address = txout["address"]["Bech32"]
+        address = txout["address"]
         for amount in _load_coins_data(txout["amount"]):
             loaded_txouts.add((address, amount[0], amount[1]))
 
     tx_raw_txouts = {(r.address, r.amount, r.coin) for r in tx_raw_output.txouts}
 
-    if tx_raw_txouts != loaded_txouts:
-        raise AssertionError(f"txouts: {tx_raw_txouts} != {loaded_txouts}")
+    if not tx_raw_txouts.issubset(loaded_txouts):
+        raise AssertionError(f"txouts: {tx_raw_txouts} not in {loaded_txouts}")
 
     # check fee
-    if tx_raw_output.fee != tx_loaded.get("fee"):
-        raise AssertionError(f"fee: {tx_raw_output.fee} != {tx_loaded.get('fee')}")
+    fee = int(tx_loaded.get("fee", "").split(" ")[0] or 0)
+    if (
+        tx_raw_output.fee != -1 and tx_raw_output.fee != fee
+    ):  # for `transaction build` the `tx_raw_output.fee` is -1
+        raise AssertionError(f"fee: {tx_raw_output.fee} != {fee}")
 
     # check validity intervals
-    loaded_invalid_before = tx_loaded.get("validity interval", {}).get("invalid before")
+    validity_range = tx_loaded.get("validity range") or {}
+
+    loaded_invalid_before = validity_range.get("lower bound")
     if tx_raw_output.invalid_before != loaded_invalid_before:
         raise AssertionError(
             f"invalid before: {tx_raw_output.invalid_before} != {loaded_invalid_before}"
         )
 
-    loaded_invalid_hereafter = tx_loaded.get("validity interval", {}).get(
-        "invalid hereafter"
-    ) or tx_loaded.get("time to live")
+    loaded_invalid_hereafter = validity_range.get("upper bound") or validity_range.get(
+        "time to live"
+    )
     if tx_raw_output.invalid_hereafter != loaded_invalid_hereafter:
         raise AssertionError(
-            f"invalid before: {tx_raw_output.invalid_hereafter} != {loaded_invalid_hereafter}"
+            f"invalid hereafter: {tx_raw_output.invalid_hereafter} != {loaded_invalid_hereafter}"
         )
 
     # check minting and burning
-    loaded_mint = set(_load_coins_data(tx_loaded.get("mint") or {}))
+    loaded_mint = set(_load_mint_data(tx_loaded.get("mint") or {}))
     tx_raw_mint = {(r.amount, r.coin) for r in tx_raw_output.mint}
 
     if tx_raw_mint != loaded_mint:
@@ -918,7 +935,9 @@ def check_tx_view(  # noqa: C901
     loaded_withdrawals = set()
     if tx_loaded_withdrawals:
         for withdrawal in tx_loaded_withdrawals:
-            loaded_withdrawals.add((withdrawal[0]["credential"]["key hash"], withdrawal[1]))
+            withdrawal_key = withdrawal["credential"]["key hash"]
+            withdrawal_amount = int(withdrawal["amount"].split(" ")[0] or 0)
+            loaded_withdrawals.add((withdrawal_key, withdrawal_amount))
 
     tx_raw_withdrawals = {
         (helpers.decode_bech32(r.address)[2:], r.amount) for r in tx_raw_output.withdrawals
@@ -929,7 +948,7 @@ def check_tx_view(  # noqa: C901
 
     # check certificates
     tx_raw_len_certs = len(set(tx_raw_output.tx_files.certificate_files))
-    loaded_len_certs = len(set(tx_loaded["certificates"]))
+    loaded_len_certs = len(set(tx_loaded.get("certificates") or ()))
 
     if tx_raw_len_certs != loaded_len_certs:
         raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")

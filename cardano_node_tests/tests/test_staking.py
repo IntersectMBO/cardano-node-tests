@@ -1349,12 +1349,7 @@ class TestRewards:
             )
 
         # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=withdraw_out)
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=withdraw_out)
 
         tx_db_record = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
