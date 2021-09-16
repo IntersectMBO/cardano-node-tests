@@ -1473,11 +1473,13 @@ class TestMinting:
         )
 
         slot_step2 = cluster.get_slot_no()
+        slots_offset = 1000
+        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
         if protocol_version > 5:
-            # POSIX timestamp 300 sec in the future
-            redeemer_value = int(datetime.datetime.now().timestamp() * 1000) + 300000
+            # POSIX timestamp + offset
+            redeemer_value = int(datetime.datetime.now().timestamp() * 1000) + timestamp_offset_ms
         else:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
             redeemer_value = 1000000000000
@@ -1509,8 +1511,8 @@ class TestMinting:
             tx_files=tx_files_step2,
             fee=fee_step2,
             plutus_mint=plutus_mint_data,
-            invalid_before=slot_step2 - 1000,
-            invalid_hereafter=slot_step2 + 1000,
+            invalid_before=slot_step2 - slots_offset,
+            invalid_hereafter=slot_step2 + slots_offset,
             mint=mint,
         )
         tx_signed_step2 = cluster.sign_tx(
@@ -2207,11 +2209,13 @@ class TestBuildMinting:
         )
 
         slot_step2 = cluster.get_slot_no()
+        slots_offset = 1000
+        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
         if protocol_version > 5:
-            # POSIX timestamp 300 sec in the future
-            redeemer_value = int(datetime.datetime.now().timestamp() * 1000) + 300000
+            # POSIX timestamp + offset
+            redeemer_value = int(datetime.datetime.now().timestamp() * 1000) + timestamp_offset_ms
         else:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
             redeemer_value = 1000000000000
@@ -2242,8 +2246,8 @@ class TestBuildMinting:
             txouts=txouts_step2,
             tx_files=tx_files_step2,
             plutus_mint=plutus_mint_data,
-            invalid_before=slot_step2 - 1000,
-            invalid_hereafter=slot_step2 + 1000,
+            invalid_before=slot_step2 - slots_offset,
+            invalid_hereafter=slot_step2 + slots_offset,
             mint=mint,
         )
         tx_signed_step2 = cluster.sign_tx(
