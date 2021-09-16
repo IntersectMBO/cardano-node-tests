@@ -150,17 +150,19 @@ def _stop_all_cluster_instances(
     # stop all cluster instances
     with helpers.ignore_interrupt():
         cluster_manager_obj.stop_all_clusters()
-    # save environment info for Allure
-    helpers.save_env_for_allure(pytest_config)
+
     # save artifacts
     cluster_nodes.save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
 @pytest.fixture(scope="session")
-def cluster_cleanup(
+def cluster_chores(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
 ) -> Generator[None, None, None]:
     pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
+
+    # save environment info for Allure
+    helpers.save_env_for_allure(request.config)
 
     if not worker_id or worker_id == "master":
         # if cluster was started outside of test framework, do nothing
@@ -207,7 +209,7 @@ def cluster_cleanup(
 
 
 @pytest.fixture(scope="session", autouse=True)
-def session_autouse(change_dir: Any, close_dbconn: Any, cluster_cleanup: Any) -> None:
+def session_autouse(change_dir: Any, close_dbconn: Any, cluster_chores: Any) -> None:
     """Autouse session fixtures that are required for session setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
     pass
