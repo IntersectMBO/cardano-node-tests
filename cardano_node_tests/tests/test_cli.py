@@ -94,6 +94,7 @@ class TestCLI:
         helpers.run_in_bash(f"cardano-cli query utxo --whole-utxo {magic_args} > /dev/null")
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skip("transaction view is broken by #2613")
     @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
