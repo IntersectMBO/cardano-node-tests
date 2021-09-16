@@ -1008,12 +1008,7 @@ class TestTimeLocking:
         )
 
         # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)

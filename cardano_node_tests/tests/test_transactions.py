@@ -285,12 +285,7 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -2988,16 +2983,8 @@ class TestMetadata:
         }, "Metadata in TX body doesn't match original metadata"
 
         # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            tx_view = clusterlib_utils.check_tx_view(
-                cluster_obj=cluster, tx_raw_output=tx_raw_output
-            )
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
-        else:
-            assert ' = fromList [(1,S "foo")' in tx_view["auxiliary data"]
+        tx_view = clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        assert json_body_metadata == tx_view["metadata"]
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -3060,14 +3047,8 @@ class TestMetadata:
         }, "Metadata in TX body doesn't match original metadata"
 
         # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            tx_view = clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
-        else:
-            assert ' = fromList [(1,S "foo")' in tx_view["auxiliary data"]
+        tx_view = clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
+        assert json_body_metadata == tx_view["metadata"]
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)

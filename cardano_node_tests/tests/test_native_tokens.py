@@ -281,13 +281,8 @@ class TestMinting:
             ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -481,13 +476,8 @@ class TestMinting:
         ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -758,13 +748,8 @@ class TestMinting:
         ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
-        # TODO: Alonzo workaround
-        try:
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
-            clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
-        except clusterlib.CLIError as err:
-            if "friendlyTxBody: Alonzo not implemented yet" not in str(err):
-                raise
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
