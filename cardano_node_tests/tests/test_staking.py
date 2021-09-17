@@ -117,10 +117,17 @@ def cluster_and_pool(
     single fixture.
     """
     if cluster_nodes.ClusterType.TESTNET_NOPOOLS:
-        cluster_obj = cluster_manager.get()
+        cluster_obj: clusterlib.ClusterLib = cluster_manager.get()
         stake_dist = cluster_obj.get_stake_distribution()
-        # TODO: make sure the pool is not private
-        pool_id = max(stake_dist, key=lambda key: stake_dist[key])
+
+        # select a pool with high stake distribution and reasonable margin
+        s_pool_ids = sorted(stake_dist, key=lambda key: stake_dist[key])
+        for pool_id in s_pool_ids:
+            pool_params = cluster_obj.get_pool_params(pool_id)
+            if pool_params.pool_params["margin"] <= 0.5 and not pool_params.retiring:
+                break
+        else:
+            pytest.skip("Cannot find any usable pool.")
     else:
         cluster_obj = cluster_manager.get(use_resources=[cluster_management.Resources.POOL1])
         pool_id = _get_pool_id(
