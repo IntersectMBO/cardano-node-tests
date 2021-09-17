@@ -863,8 +863,15 @@ def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
     for policyid, policy_rec in policies_data.items():
         if policyid == "lovelace":
             continue
-        for asset_name_hex, amount in policy_rec:
-            asset_name = bytes.fromhex(asset_name_hex).decode()
+        for asset_name_hex, amount in policy_rec.items():
+            # TODO: cleanup once `transaction view` output is more stable
+            # the output keeps changing between hex-encoded and latin1
+            try:
+                asset_name = bytes.fromhex(asset_name_hex).decode()
+            except ValueError as err:
+                if "non-hexadecimal number found" not in str(err):
+                    raise
+                asset_name = asset_name_hex
             token = f"{policyid}.{asset_name}" if asset_name else policyid
             loaded_data.append((amount, token))
 
