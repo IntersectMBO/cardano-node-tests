@@ -497,10 +497,9 @@ def _create_register_pool(
         request.addfinalizer(_deregister)
 
     # check that the balance for source address was correctly updated
-    # TODO: fee is not known when using `transaction build` command
     assert (
         cluster_obj.get_address_balance(src_address)
-        < src_init_balance - cluster_obj.get_pool_deposit()
+        == src_init_balance - cluster_obj.get_pool_deposit() - pool_creation_out.tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that pool was correctly setup
@@ -609,12 +608,12 @@ def _create_register_pool_delegate_stake_tx(
         request.addfinalizer(_deregister)
 
     # check that the balance for source address was correctly updated
-    # TODO: fee is not known when using `transaction build` command
     assert (
         cluster_obj.get_address_balance(src_address)
-        < src_init_balance
+        == src_init_balance
         - len(pool_owners) * cluster_obj.get_address_deposit()
         - cluster_obj.get_pool_deposit()
+        - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that pool and staking were correctly setup
@@ -712,10 +711,11 @@ def _create_register_pool_tx_delegate_stake_tx(
         )
 
     # check that the balance for source address was correctly updated
-    # TODO: fee is not known when using `transaction build` command
     assert (
         cluster_obj.get_address_balance(src_address)
-        < src_init_balance - len(pool_owners) * cluster_obj.get_address_deposit()
+        == src_init_balance
+        - len(pool_owners) * cluster_obj.get_address_deposit()
+        - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that staking was correctly setup
@@ -1050,7 +1050,7 @@ class TestStakePool:
         )
         depoch = cluster.get_epoch() + 1
         if use_build_cmd:
-            _deregister_stake_pool_w_build(
+            __, tx_raw_output = _deregister_stake_pool_w_build(
                 cluster_obj=cluster,
                 pool_owners=pool_owners,
                 cold_key_pair=pool_creation_out.cold_key_pair,
@@ -1059,7 +1059,7 @@ class TestStakePool:
                 tx_name=temp_template,
             )
         else:
-            cluster.deregister_stake_pool(
+            __, tx_raw_output = cluster.deregister_stake_pool(
                 pool_owners=pool_owners,
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 epoch=depoch,
@@ -1079,8 +1079,10 @@ class TestStakePool:
         )
 
         # check that the balance for source address was correctly updated
-        # TODO: fee is not known when using `transaction build` command
-        assert cluster.get_address_balance(pool_owner.payment.address) < src_register_balance
+        assert (
+            cluster.get_address_balance(pool_owner.payment.address)
+            == src_register_balance - tx_raw_output.fee
+        )
 
         # check that the stake addresses are no longer delegated
         for owner_rec in pool_owners:

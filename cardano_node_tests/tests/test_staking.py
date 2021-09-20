@@ -97,10 +97,13 @@ def withdraw_reward_w_build(
         raise AssertionError("Not all rewards were transferred.")
 
     # check that rewards were transferred
-    # TODO: fee is not known when using `transaction build` command, assume withdrawal amount
-    # is greater than fee
     src_reward_balance = cluster_obj.get_address_balance(dst_address)
-    if src_reward_balance < src_init_balance:
+    if (
+        src_reward_balance
+        != src_init_balance
+        - tx_raw_withdrawal_output.fee
+        + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
+    ):
         raise AssertionError(f"Incorrect balance for destination address `{dst_address}`.")
 
     return tx_raw_withdrawal_output
@@ -301,10 +304,9 @@ def _delegate_stake_add(
         )
 
     # check that the balance for source address was correctly updated
-    # TODO: fee is not known when using `transaction build` command
     assert (
         cluster_obj.get_address_balance(src_address)
-        < src_init_balance - cluster_obj.get_address_deposit()
+        == src_init_balance - cluster_obj.get_address_deposit() - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that the stake address was delegated
@@ -633,9 +635,9 @@ class TestDelegateAddr:
 
         # check that the balance for source address was correctly updated and that key deposit
         # was not needed
-        # TODO: fee is not known when using `transaction build` command
         assert (
-            cluster.get_address_balance(user_payment.address) < src_init_balance
+            cluster.get_address_balance(user_payment.address)
+            == src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -757,11 +759,9 @@ class TestDelegateAddr:
 
         # check that the balance for source address was correctly updated and that the key
         # deposit was returned
-        # TODO: fee is not known when using `transaction build` command
-        expected_high_fee = 250000
         assert (
             cluster.get_address_balance(user_payment.address)
-            >= src_registered_balance - expected_high_fee + cluster.get_address_deposit()
+            == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_address_deposit()
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
         clusterlib_utils.wait_for_stake_distribution(cluster)
