@@ -8,7 +8,7 @@ import argparse
 
 from sqlite_utils import get_column_names_from_table, add_column_to_table, get_last_row_no, \
     add_test_values_into_db, export_db_table_to_csv, drop_table
-from sync_tests.node_create_db import create_table, mainnet_tx_count_table
+from node_create_db import create_table, mainnet_tx_count_table
 
 DATABASE_NAME = r"node_sync_tests_results.db"
 RESULTS_FILE_NAME = r"sync_results.json"
