@@ -494,8 +494,8 @@ def _build_fund_script(
     tx_output = cluster_obj.build_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step1",
-        txouts=txouts,
         tx_files=tx_files,
+        txouts=txouts,
         fee_buffer=2_000_000,
     )
     tx_signed = cluster_obj.sign_tx(
@@ -577,8 +577,9 @@ def _build_spend_locked_txin(
             tx_output = cluster_obj.build_tx(
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_step2",
-                txouts=txouts,
                 tx_files=tx_files,
+                txouts=txouts,
+                change_address=script_address,
                 plutus_txins=plutus_txins,
             )
         return str(excinfo.value)
@@ -586,8 +587,9 @@ def _build_spend_locked_txin(
     tx_output = cluster_obj.build_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step2",
-        txouts=txouts,
         tx_files=tx_files,
+        txouts=txouts,
+        change_address=script_address,
         plutus_txins=plutus_txins,
         script_valid=script_valid,
     )
@@ -617,9 +619,9 @@ def _build_spend_locked_txin(
         cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance + amount
     ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-    # TODO: fee is not known when using `transaction build` command
     assert (
-        cluster_obj.get_address_balance(script_address) < script_init_balance - amount
+        cluster_obj.get_address_balance(script_address)
+        == script_init_balance - amount - tx_output.fee
     ), f"Incorrect balance for script address `{script_address}`"
 
     for token in spent_tokens:
@@ -2066,8 +2068,8 @@ class TestBuildMinting:
         tx_output_step1 = cluster.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step1",
-            txouts=txouts_step1,
             tx_files=tx_files_step1,
+            txouts=txouts_step1,
             fee_buffer=2_000_000,
             # don't join 'change' and 'collateral' txouts, we need separate UTxOs
             join_txouts=False,
@@ -2114,8 +2116,8 @@ class TestBuildMinting:
         tx_output_step2 = cluster.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
-            txouts=txouts_step2,
             tx_files=tx_files_step2,
+            txouts=txouts_step2,
             plutus_mint=plutus_mint_data,
             mint=mint,
         )
@@ -2182,8 +2184,8 @@ class TestBuildMinting:
         tx_output_step1 = cluster.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step1",
-            txouts=txouts_step1,
             tx_files=tx_files_step1,
+            txouts=txouts_step1,
             fee_buffer=2_000_000,
             # don't join 'change' and 'collateral' txouts, we need separate UTxOs
             join_txouts=False,
@@ -2243,8 +2245,8 @@ class TestBuildMinting:
         tx_output_step2 = cluster.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
-            txouts=txouts_step2,
             tx_files=tx_files_step2,
+            txouts=txouts_step2,
             plutus_mint=plutus_mint_data,
             invalid_before=slot_step2 - slots_offset,
             invalid_hereafter=slot_step2 + slots_offset,
