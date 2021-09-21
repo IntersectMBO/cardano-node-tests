@@ -11,4 +11,5 @@ steps:
       system: x86_64-linux
       queue: benchmark
     artifact_paths:
-      - 'logfile.log', 'sync_results.json'
+      - 'logfile.log'
+      - 'sync_results.json'
