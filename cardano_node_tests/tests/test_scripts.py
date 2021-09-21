@@ -127,9 +127,9 @@ def multisig_tx(
     cluster_obj.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
     # check final balances
-    # TODO: fee is not known when using `transaction build` command
     assert (
-        cluster_obj.get_address_balance(src_address) < src_init_balance - amount
+        cluster_obj.get_address_balance(src_address)
+        == src_init_balance - amount - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     assert (
@@ -503,9 +503,9 @@ class TestBasic:
             )
 
         # check final balances
-        # TODO: fee is not known when using `transaction build` command
         assert (
-            cluster.get_address_balance(src_address) < src_init_balance - amount
+            cluster.get_address_balance(src_address)
+            == src_init_balance - amount - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
@@ -601,9 +601,9 @@ class TestBasic:
             )
 
         # check final balances
-        # TODO: fee is not known when using `transaction build` command
         assert (
-            cluster.get_address_balance(script_address) < src_init_balance - amount
+            cluster.get_address_balance(script_address)
+            == src_init_balance - amount - tx_out_from.fee
         ), f"Incorrect balance for script address `{script_address}`"
 
         assert (

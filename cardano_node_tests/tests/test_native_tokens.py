@@ -272,13 +272,11 @@ class TestMinting:
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
-        # TODO: fee is not known when using `transaction build` command
-        if not use_build_cmd:
-            assert helpers.is_in_interval(
-                tx_out_mint.fee, expected_fee, frac=0.15
-            ) and helpers.is_in_interval(
-                tx_out_burn.fee, expected_fee, frac=0.15
-            ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
         clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
@@ -942,11 +940,9 @@ class TestMinting:
         )
 
         # check expected fee
-        # TODO: fee is not known when using `transaction build` command
-        if not use_build_cmd:
-            assert helpers.is_in_interval(
-                tx_out_mint.fee, expected_fee, frac=0.15
-            ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn1)
@@ -1130,13 +1126,11 @@ class TestPolicies:
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
-        # TODO: fee is not known when using `transaction build` command
-        if not use_build_cmd:
-            assert helpers.is_in_interval(
-                tx_out_mint.fee, expected_fee, frac=0.15
-            ) and helpers.is_in_interval(
-                tx_out_burn.fee, expected_fee, frac=0.15
-            ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -1233,13 +1227,11 @@ class TestPolicies:
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
-        # TODO: fee is not known when using `transaction build` command
-        if not use_build_cmd:
-            assert helpers.is_in_interval(
-                tx_out_mint.fee, expected_fee, frac=0.15
-            ) and helpers.is_in_interval(
-                tx_out_burn.fee, expected_fee, frac=0.15
-            ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(
+            tx_out_mint.fee, expected_fee, frac=0.15
+        ) and helpers.is_in_interval(
+            tx_out_burn.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -1658,9 +1650,9 @@ class TestTransfer:
             == src_init_balance_token - amount
         ), f"Incorrect token balance for source address `{src_address}`"
 
-        # TODO: fee is not known when using `transaction build` command
         assert (
-            cluster.get_address_balance(src_address) < src_init_balance - amount_lovelace
+            cluster.get_address_balance(src_address)
+            == src_init_balance - amount_lovelace - tx_raw_output.fee
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         assert (
@@ -1785,10 +1777,12 @@ class TestTransfer:
                 tx_files=tx_files,
             )
 
-        # TODO: fee is not known when using `transaction build` command
         assert (
             cluster.get_address_balance(src_address)
-            < src_init_balance - amount_lovelace_address1 - amount_lovelace_address2
+            == src_init_balance
+            - amount_lovelace_address1
+            - amount_lovelace_address2
+            - tx_raw_output.fee
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         for idx, token in enumerate(new_tokens):

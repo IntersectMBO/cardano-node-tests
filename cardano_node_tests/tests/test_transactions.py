@@ -233,9 +233,8 @@ class TestBasic:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        # TODO: fee is not known when using `transaction build` command
         assert (
-            cluster.get_address_balance(src_address) < src_init_balance - amount
+            cluster.get_address_balance(src_address) == src_init_balance - amount - tx_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
@@ -841,9 +840,12 @@ class TestMultiInOut:
             from_final_balance == 0
         ), f"The output addresses should have no balance, they have {from_final_balance}"
 
-        # TODO: fee is not known when using `transaction build` command
-        assert src_final_balance < src_init_balance + from_init_total_balance - amount * len(
-            dst_addresses
+        assert (
+            src_final_balance
+            == src_init_balance
+            + from_init_total_balance
+            - tx_raw_output.fee
+            - amount * len(dst_addresses)
         ), f"Incorrect balance for source address `{src_address}`"
 
         for addr in dst_addresses:
