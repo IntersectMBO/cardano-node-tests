@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sync_tests.sqlite_utils import create_table
+from sqlite_utils import create_table
 
 DATABASE_NAME = r"./node_sync_tests_results.db"
 
