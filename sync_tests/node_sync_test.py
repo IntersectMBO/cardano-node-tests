@@ -112,6 +112,7 @@ def get_epoch_start_datetime(env, epoch_no):
         print(f"status_code: {status_code}")
         print(f"response: {res.text}")
         print(f"!!! ERROR: status_code =! 200 when getting start time for epoch {epoch_no} on {env}")
+        print(f"     - The Explorer might be down - {url}")
         exit(1)
 
 
