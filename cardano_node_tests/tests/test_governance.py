@@ -598,7 +598,7 @@ class TestMIRCerts:
         * submit a TX with the MIR certificate
         * check that the expected amount was added to the stake address reward account
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{fund_src}"
         cluster = cluster_pots
         amount = 50_000_000
 
@@ -678,7 +678,7 @@ class TestMIRCerts:
         * submit a TX with the MIR certificate
         * check that the expected amount was added to the stake address reward account
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{fund_src}"
         cluster = cluster_pots
         amount = 50_000_000
 
@@ -760,7 +760,7 @@ class TestMIRCerts:
         * submit a TX with the MIR certificate
         * check that submitting the transaction fails with an expected error
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{fund_src}"
         cluster = cluster_pots
         amount = 30_000_000_000_000_000
 
@@ -811,7 +811,7 @@ class TestMIRCerts:
         * submit a TX with the MIR certificate
         * check that the amount was NOT added to the stake address reward account
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{helpers.get_func_name()}_{fund_src}"
         cluster = cluster_pots
         pool_user = pool_users[0]
 
