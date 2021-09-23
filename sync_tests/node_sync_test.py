@@ -215,6 +215,8 @@ def get_hydra_build_download_url(eval_url, os_type):
 def check_string_format(input_string):
     if len(input_string) == 40:
         return "commit_sha_format"
+    elif len(input_string) == 7:
+        return "eval_url"
     else:
         return "tag_format"
 
@@ -229,10 +231,17 @@ def get_and_extract_node_files(tag_no):
         commit_sha = git_get_commit_sha_for_tag_no(tag_no)
     elif check_string_format(tag_no) == "commit_sha_format":
         commit_sha = tag_no
+    elif check_string_format(tag_no) == "eval_url":
+        commit_sha = None
     else:
         print(f" !!! ERROR: invalid format for tag_no - {tag_no}; Expected tag_no or commit_sha.")
         commit_sha = None
-    eval_url = git_get_hydra_eval_link_for_commit_sha(commit_sha)
+
+    if check_string_format(tag_no) == "eval_url":
+        eval_no = tag_no
+        eval_url = "https://hydra.iohk.io/eval/" + eval_no
+    else:
+        eval_url = git_get_hydra_eval_link_for_commit_sha(commit_sha)
 
     print(f"commit_sha  : {commit_sha}")
     print(f"eval_url    : {eval_url}")
