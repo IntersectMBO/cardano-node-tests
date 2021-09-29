@@ -8,6 +8,7 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -118,7 +119,7 @@ class TestAddressInfo:
             address = "addr_test1vzp4kj0rmnl5q5046e2yy697fndej56tm35jekemj6ew2gczp74wk"
         else:
             payment_rec = cluster.gen_payment_addr_and_keys(
-                name=helpers.get_func_name(),
+                name=clusterlib_utils.get_temp_template(cluster),
             )
             address = payment_rec.address
 
@@ -139,7 +140,7 @@ class TestAddressInfo:
             address = "stake_test1uz5mstpskyhpcvaw2enlfk8fa5k335cpd0lfz6chd5c2xpck3nld4"
         else:
             stake_rec = cluster.gen_stake_addr_and_keys(
-                name=helpers.get_func_name(),
+                name=clusterlib_utils.get_temp_template(cluster),
             )
             address = stake_rec.address
 
@@ -155,7 +156,7 @@ class TestAddressInfo:
     @allure.link(helpers.get_vcs_link())
     def test_address_info_script(self, cluster: clusterlib.ClusterLib):
         """Check script address info."""
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         # create payment address
         payment_rec = cluster.gen_payment_addr_and_keys(

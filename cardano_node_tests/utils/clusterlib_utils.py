@@ -1,3 +1,4 @@
+import inspect
 import itertools
 import json
 import logging
@@ -38,6 +39,14 @@ class TokenRecord(NamedTuple):
 class TxMetadata(NamedTuple):
     metadata: dict
     aux_data: list
+
+
+def get_temp_template(cluster_obj: clusterlib.ClusterLib) -> str:
+    """Return test function name and assigned cluster instance."""
+    func_name = inspect.currentframe().f_back.f_code.co_name  # type: ignore
+    rand_str = clusterlib.get_rand_str(3)
+    temp_teplate = f"{func_name}_ci{cluster_obj.cluster_id}_{rand_str}"
+    return temp_teplate
 
 
 def register_stake_address(

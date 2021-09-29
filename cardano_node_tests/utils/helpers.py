@@ -173,12 +173,6 @@ def get_vcs_link() -> str:
     return url
 
 
-def get_func_name() -> str:
-    """Return calling function name."""
-    func_name = inspect.currentframe().f_back.f_code.co_name  # type: ignore
-    return func_name
-
-
 def get_id_for_mktemp(file_path: str) -> str:
     """Return an id for mktemp based on file path."""
     fpart = file_path[file_path.rfind("/") + 1 :].replace(".", "_")

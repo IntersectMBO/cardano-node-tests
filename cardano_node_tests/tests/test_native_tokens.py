@@ -68,8 +68,8 @@ def issuers_addrs_fresh(
 
         addrs = clusterlib_utils.create_payment_addr_records(
             *[
-                f"token_minting__build_ci{helpers.get_timestamped_rand_str()}"
-                f"{cluster_manager.cluster_instance_num}_{i}"
+                f"token_minting_fresh_ci{cluster_manager.cluster_instance_num}_"
+                f"{helpers.get_timestamped_rand_str()}_{i}"
                 for i in range(5)
             ],
             cluster_obj=cluster,
@@ -125,7 +125,7 @@ def simple_script_policyid(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-    temp_template = "test_native_tokens_simple"
+    temp_template = f"test_native_tokens_simple_ci{cluster_manager.cluster_instance_num}"
     issuer_addr = issuers_addrs[1]
 
     # create simple script
@@ -151,7 +151,7 @@ def multisig_script_policyid(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-    temp_template = "test_native_tokens_multisig"
+    temp_template = f"test_native_tokens_multisig_ci{cluster_manager.cluster_instance_num}"
     payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
     # create multisig script
@@ -206,7 +206,9 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = f"{helpers.get_func_name()}_{aname_type}_{use_build_cmd}"
+        temp_template = (
+            f"{clusterlib_utils.get_temp_template(cluster)}_{aname_type}_{use_build_cmd}"
+        )
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
@@ -310,7 +312,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = f"{helpers.get_func_name()}_{aname_type}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{aname_type}"
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         amount = 5
 
@@ -399,7 +401,7 @@ class TestMinting:
         num_of_scripts = 5
         expected_fee = 263621
 
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         amount = 5
         token_mint_addr = issuers_addrs[0]
         i_addrs = clusterlib_utils.create_payment_addr_records(
@@ -509,7 +511,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -603,7 +605,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 5
 
@@ -696,7 +698,7 @@ class TestMinting:
         * check fees in Lovelace
         """
         rand = clusterlib.get_rand_str(8)
-        temp_template = f"{helpers.get_func_name()}_{rand}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand}"
         amount = 5
         tokens_num, expected_fee = tokens_db
 
@@ -797,7 +799,7 @@ class TestMinting:
         * check fees in Lovelace
         """
         rand = clusterlib.get_rand_str(8)
-        temp_template = f"{helpers.get_func_name()}_{rand}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand}"
         amount = 5
         tokens_num, expected_fee = tokens_db
 
@@ -891,7 +893,7 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
         asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
         amount = 50
 
@@ -984,7 +986,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         asset_name = f"ěůřščžďťň{clusterlib.get_rand_str(4)}"
         amount = 5
 
@@ -1079,7 +1081,7 @@ class TestPolicies:
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1180,7 +1182,7 @@ class TestPolicies:
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1264,7 +1266,7 @@ class TestPolicies:
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test that it's NOT possible to mint tokens when the "before" slot is in the past."""
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1336,7 +1338,7 @@ class TestPolicies:
 
         The "before" slot is in the future and the given range is invalid.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1397,7 +1399,7 @@ class TestPolicies:
 
         The "after" slot is in the future and the given range is invalid.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1469,7 +1471,7 @@ class TestPolicies:
 
         The "after" slot is in the past.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1572,7 +1574,7 @@ class TestTransfer:
                 return fixture_cache.value  # type: ignore
 
             rand = clusterlib.get_rand_str(4)
-            temp_template = f"test_tx_new_token_{rand}"
+            temp_template = f"test_tx_new_token_ci{cluster_manager.cluster_instance_num}_{rand}"
             asset_name = f"couttscoin{rand}"
 
             new_tokens = clusterlib_utils.new_tokens(
@@ -1618,7 +1620,7 @@ class TestTransfer:
         * check expected token balances for both source and destination addresses
         * check fees in Lovelace
         """
-        temp_template = f"{helpers.get_func_name()}_{amount}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{amount}_{use_build_cmd}"
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -1717,7 +1719,7 @@ class TestTransfer:
         * check expected token balances for both source and destination addresses for each token
         * check fees in Lovelace
         """
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
         amount = 1000
         rand = clusterlib.get_rand_str(5)
 
@@ -1846,7 +1848,7 @@ class TestTransfer:
         use_build_cmd: bool,
     ):
         """Try to create an UTxO with just native tokens, no ADA. Expect failure."""
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
         amount = 10
 
         src_address = new_token.token_mint_addr.address
@@ -1946,7 +1948,7 @@ class TestNegative:
 
         The name can also contain characters that are not allowed. Expect failure.
         """
-        temp_template = "test_long_name"
+        temp_template = f"test_long_name_ci{cluster.cluster_id}"
 
         script, policyid = simple_script_policyid
         token = f"{policyid}.{asset_name}"
