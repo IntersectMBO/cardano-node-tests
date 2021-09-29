@@ -660,7 +660,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_SUCCEEDS_PLUTUS,
@@ -722,7 +722,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_guessing_game
-        temp_template = f"{helpers.get_func_name()}_{script}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{script}"
 
         if script.endswith("game_42_43"):
             datum_file = PLUTUS_DIR / "typed-42.datum"
@@ -790,7 +790,7 @@ class TestLocking:
           and the expected error was raised
         """
         cluster = cluster_lock_always_fails
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_FAILS_PLUTUS,
@@ -839,7 +839,7 @@ class TestLocking:
         * check that the amount was not transferred and collateral UTxO was spent
         """
         cluster = cluster_lock_always_fails
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_FAILS_PLUTUS,
@@ -887,7 +887,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         token_rand = clusterlib.get_rand_str(5)
         payment_addr = payment_addrs_lock_always_suceeds[0]
 
@@ -947,7 +947,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         token_rand = clusterlib.get_rand_str(5)
         payment_addr = payment_addrs_lock_always_suceeds[0]
 
@@ -1010,7 +1010,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_SUCCEEDS_PLUTUS,
@@ -1058,7 +1058,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         payment_addr = payment_addrs_lock_always_suceeds[0]
         dst_addr = payment_addrs_lock_always_suceeds[1]
@@ -1132,7 +1132,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         max_collateral_ins = cluster.get_protocol_params()["maxCollateralInputs"]
         collateral_utxos = []
@@ -1232,7 +1232,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_SUCCEEDS_PLUTUS,
@@ -1289,7 +1289,7 @@ class TestMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -1413,7 +1413,7 @@ class TestMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         payment_addr = payment_addrs[2]
         issuer_addr = payment_addrs[3]
 
@@ -1566,7 +1566,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_SUCCEEDS_PLUTUS,
@@ -1627,7 +1627,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_guessing_game
-        temp_template = f"{helpers.get_func_name()}_{script}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{script}"
 
         if script.endswith("game_42_43"):
             datum_file = PLUTUS_DIR / "typed-42.datum"
@@ -1695,7 +1695,7 @@ class TestBuildLocking:
         * check that the expected error was raised
         """
         cluster = cluster_lock_always_fails
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_FAILS_PLUTUS,
@@ -1745,7 +1745,7 @@ class TestBuildLocking:
         * check that the amount was not transferred and collateral UTxO was spent
         """
         cluster = cluster_lock_always_fails
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_FAILS_PLUTUS,
@@ -1794,7 +1794,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         token_rand = clusterlib.get_rand_str(5)
         payment_addr = payment_addrs_lock_always_suceeds[0]
 
@@ -1855,7 +1855,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         token_rand = clusterlib.get_rand_str(5)
         payment_addr = payment_addrs_lock_always_suceeds[0]
 
@@ -1919,7 +1919,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         plutus_op = PlutusOp(
             script_file=ALWAYS_SUCCEEDS_PLUTUS,
@@ -1968,7 +1968,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         payment_addr = payment_addrs_lock_always_suceeds[0]
         dst_addr = payment_addrs_lock_always_suceeds[1]
@@ -2038,7 +2038,7 @@ class TestBuildMinting:
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         payment_addr = payment_addrs[4]
         issuer_addr = payment_addrs[5]
 
@@ -2156,7 +2156,7 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         payment_addr = payment_addrs[6]
         issuer_addr = payment_addrs[7]
 
