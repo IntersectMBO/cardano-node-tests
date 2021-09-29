@@ -160,7 +160,7 @@ class TestBasic:
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
         """
-        temp_template = f"{helpers.get_func_name()}_{amount}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{amount}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -207,7 +207,7 @@ class TestBasic:
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         amount = 1500_000
 
         src_address = payment_addrs[0].address
@@ -256,7 +256,7 @@ class TestBasic:
         * check that balance for source address is 0 Lovelace
         * check output of the `transaction view` command
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         src_address = payment_addrs[1].address
         dst_address = payment_addrs[0].address
@@ -311,7 +311,7 @@ class TestBasic:
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         amount = 2000_000
 
         src_address = payment_addrs[0].address
@@ -357,7 +357,7 @@ class TestBasic:
         * check that txid has expected lenght
         * check that the txid is listed in UTxO hashes for both source and destination addresses
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -396,7 +396,7 @@ class TestBasic:
         Check that it is possible to use unneded signing key in addition to the necessary
         signing keys for signing the transaction.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         amount = 2000_000
 
         src_address = payment_addrs[0].address
@@ -438,7 +438,7 @@ class TestBasic:
 
         Check that it is possible to specify the same signing key twice.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         amount = 2000_000
 
         src_address = payment_addrs[0].address
@@ -482,7 +482,7 @@ class TestBasic:
         * check that no UTxOs are created by the transaction
         * check that there are no funds left on source address
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         src_record = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_0", cluster_obj=cluster
@@ -515,7 +515,7 @@ class TestBasic:
         temp_dir: Path,
     ):
         """Build a transaction with a missing `--tx-out` parameter."""
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -553,7 +553,7 @@ class TestBasic:
         temp_dir: Path,
     ):
         """Submit a transaction with a missing `--ttl` (`--invalid-hereafter`) parameter."""
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         src_address = payment_addrs[0].address
 
         init_balance = cluster.get_address_balance(src_address)
@@ -608,7 +608,7 @@ class TestBasic:
         temp_dir: Path,
     ):
         """Try to build a transaction with multiple identical txins."""
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         src_address = payment_addrs[0].address
 
         init_balance = cluster.get_address_balance(src_address)
@@ -668,7 +668,7 @@ class TestBasic:
 
         Uses `cardano-cli transaction build` command for building the transactions.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -868,7 +868,7 @@ class TestMultiInOut:
         * send funds from 1 source address to 1 destination address in 10 separate transactions
         * check expected balances for both source and destination addresses
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         no_of_transactions = 10
 
         src_address = payment_addrs[0].address
@@ -942,7 +942,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{helpers.get_func_name()}_{amount}_{use_build_cmd}",
+            tx_name=f"{clusterlib_utils.get_temp_template(cluster)}_{amount}_{use_build_cmd}",
             from_num=1,
             to_num=10,
             amount=amount,
@@ -980,7 +980,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{helpers.get_func_name()}_{amount}_{use_build_cmd}",
+            tx_name=f"{clusterlib_utils.get_temp_template(cluster)}_{amount}_{use_build_cmd}",
             from_num=10,
             to_num=1,
             amount=amount,
@@ -1018,7 +1018,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{helpers.get_func_name()}_{amount}_{use_build_cmd}",
+            tx_name=f"{clusterlib_utils.get_temp_template(cluster)}_{amount}_{use_build_cmd}",
             from_num=10,
             to_num=10,
             amount=amount,
@@ -1056,7 +1056,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{helpers.get_func_name()}_{amount}_{use_build_cmd}",
+            tx_name=f"{clusterlib_utils.get_temp_template(cluster)}_{amount}_{use_build_cmd}",
             from_num=50,
             to_num=100,
             amount=amount,
@@ -1135,7 +1135,7 @@ class TestManyUTXOs:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
-            temp_template = helpers.get_func_name()
+            temp_template = clusterlib_utils.get_temp_template(cluster)
 
             LOGGER.info("Generating lot of UTxO addresses, it will take a while.")
             start = time.time()
@@ -1193,7 +1193,7 @@ class TestManyUTXOs:
           to destination address
         * check expected balances for both source and destination addresses
         """
-        temp_template = f"{helpers.get_func_name()}_{amount}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{amount}"
         big_funds_idx = -190
 
         src_address = many_utxos[0].address
@@ -1313,7 +1313,7 @@ class TestNotBalanced:
 
         Check that it is not possible to built such transaction.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -1370,7 +1370,7 @@ class TestNotBalanced:
 
         Check that it is not possible to built such transaction.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -1425,7 +1425,7 @@ class TestNotBalanced:
         # make sure the change amount is valid
         hypothesis.assume(0 <= transferred_amount <= src_addr_highest_utxo.amount)
 
-        tx_name = f"test_wrong_balance_{helpers.get_timestamped_rand_str()}"
+        tx_name = f"test_wrong_balance_ci{cluster.cluster_id}"
         out_file_tx = temp_dir / f"{tx_name}_tx.body"
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.calculate_tx_ttl()
@@ -1642,7 +1642,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
@@ -1689,7 +1689,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         amount = 2000_000
 
         src_address = pool_users[0].payment.address
@@ -1748,7 +1748,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         # use wrong signing key
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[1].payment.skey_file])
@@ -1779,7 +1779,7 @@ class TestNegative:
         Expect failure.
         """
         cluster = cluster_wrong_tx_era
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1500_000)]
@@ -2199,7 +2199,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_ix=5)
@@ -2240,7 +2240,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         new_hash = f"{utxo.utxo_hash[:-4]}fd42"
@@ -2271,7 +2271,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = "test_invalid_lenght_utxo_hash"
+        temp_template = f"test_invalid_lenght_utxo_hash_ci{cluster.cluster_id}"
 
         utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
@@ -2303,7 +2303,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = "test_build_invalid_lenght_utxo_hash"
+        temp_template = f"test_build_invalid_lenght_utxo_hash_ci{cluster.cluster_id}"
 
         utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
@@ -2331,7 +2331,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -2372,7 +2372,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -2410,7 +2410,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -2454,7 +2454,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -2500,7 +2500,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -2545,7 +2545,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -2776,7 +2776,7 @@ class TestMetadata:
         * check that the metadata in TX body matches the original metadata
         * (optional) check transactions in db-sync
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
@@ -2822,7 +2822,7 @@ class TestMetadata:
         * check that the metadata in TX body matches the original metadata
         * (optional) check transactions in db-sync
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
@@ -2869,7 +2869,7 @@ class TestMetadata:
 
         Check that the metadata in TX body matches the original metadata.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
@@ -2912,7 +2912,7 @@ class TestMetadata:
 
         Check that the metadata in TX body matches the original metadata.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
@@ -2959,7 +2959,7 @@ class TestMetadata:
 
         Check that the metadata in TX body matches the original metadata.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
@@ -3022,7 +3022,7 @@ class TestMetadata:
 
         Check that the metadata in TX body matches the original metadata.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
@@ -3086,7 +3086,7 @@ class TestMetadata:
         * check that the metadata in TX body matches the original metadata
         * check that in case of duplicate keys the first occurrence is used
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         metadata_json_files = list(DATA_DIR.glob(self.METADATA_DUPLICATES))
 
@@ -3138,7 +3138,7 @@ class TestMetadata:
         * check that there are no funds left on source address
         * check that the metadata in TX body matches the original metadata
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         src_record = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_0", cluster_obj=cluster

@@ -349,7 +349,7 @@ class TestDelegateAddr:
         * check that the stake address was delegated
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=0, stop=-10, force_epoch=False
@@ -408,7 +408,7 @@ class TestDelegateAddr:
         """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=0, stop=-10, force_epoch=False
@@ -455,7 +455,7 @@ class TestDelegateAddr:
         * check that the stake address is no longer delegated
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=0, stop=-10, force_epoch=False
@@ -588,7 +588,7 @@ class TestDelegateAddr:
         * check that the balance for source address was correctly updated and that key deposit
           was not needed
         """
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -677,7 +677,7 @@ class TestDelegateAddr:
         * check that the stake address was NOT delegated
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -792,7 +792,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         # create stake address registration cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -812,7 +812,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         # create stake address delegation cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -834,7 +834,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -868,7 +868,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -934,7 +934,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -997,7 +997,7 @@ class TestNegative:
         use_build_cmd: bool,
     ):
         """Deregister not registered stake address."""
-        temp_template = f"{helpers.get_func_name()}_{use_build_cmd}"
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -1058,7 +1058,7 @@ class TestRewards:
         * withdraw rewards to payment address
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         # check pool rewards only when own pool is available
         check_pool_rewards = (
             cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET
@@ -1137,7 +1137,7 @@ class TestRewards:
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
@@ -1424,7 +1424,7 @@ class TestRewards:
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
 
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
@@ -1703,7 +1703,7 @@ class TestRewards:
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         # submit registration certificate and delegate to pool
         pool_id = _get_pool_id(
@@ -1814,7 +1814,7 @@ class TestRewards:
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         pool_id = _get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -1952,7 +1952,7 @@ class TestRewards:
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         pool_id = _get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -2109,7 +2109,7 @@ class TestRewards:
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         pool_id = _get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -2277,7 +2277,7 @@ class TestRewards:
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         # submit registration certificate and delegate to pool
         pool_id = _get_pool_id(
@@ -2454,7 +2454,7 @@ class TestRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
         for i in range(5):
@@ -2652,7 +2652,7 @@ class TestRewards:
         """
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
-        temp_template = helpers.get_func_name()
+        temp_template = clusterlib_utils.get_temp_template(cluster)
 
         pool1_rec = cluster_manager.cache.addrs_data["node-pool1"]
         pool1_reward = clusterlib.PoolUser(payment=pool1_rec["payment"], stake=pool1_rec["reward"])
