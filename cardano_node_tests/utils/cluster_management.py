@@ -593,6 +593,7 @@ class _ClusterGetter:
         cluster_obj = self.cm.cache.cluster_obj
         if not cluster_obj:
             cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
+            cluster_obj.cluster_id = instance_num
 
         # setup faucet addresses
         if not (state_dir / cluster_nodes.ADDRS_DATA).exists():
@@ -600,8 +601,9 @@ class _ClusterGetter:
             tmp_path.mkdir(exist_ok=True, parents=True)
             cluster_nodes.setup_test_addrs(cluster_obj, tmp_path)
 
-        # check if it is necessary to reload data
+        # reload data if necessary
         self._reload_cluster_obj(state_dir=state_dir)
+        cluster_obj.cluster_id = instance_num
 
         return cluster_obj
 
@@ -981,6 +983,8 @@ class _ClusterGetter:
                 cluster_obj = self.cm.cache.cluster_obj
                 if not cluster_obj:
                     cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
+
+                cluster_obj.cluster_id = instance_num
 
                 # `cluster_obj` is ready, we can start the test
                 break
