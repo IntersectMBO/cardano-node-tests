@@ -32,6 +32,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -1737,6 +1738,64 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx_bare(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_wrong_network_magic(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Try to submit a TX with wrong network magic.
+
+        Expect failure.
+        """
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+        amount = 2000_000
+
+        src_address = pool_users[0].payment.address
+        dst_address = pool_users[1].payment.address
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        # build and sign a transaction
+        fee = cluster.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+        )
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+        )
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        # it should NOT be possible to submit a transaction with incorrect network magic
+        expected_errors = [
+            ("bft1.stdout", "HandshakeError"),
+        ]
+        with logfiles.expect_errors(expected_errors):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.cli(
+                    [
+                        "transaction",
+                        "submit",
+                        "--testnet-magic",
+                        str(cluster.network_magic + 100),
+                        "--tx-file",
+                        str(out_file_signed),
+                        f"--{cluster.protocol}-mode",
+                    ]
+                )
+        assert "HandshakeError" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_wrong_signing_key(
