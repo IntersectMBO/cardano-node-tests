@@ -128,7 +128,7 @@ def main():
     export_db_table_to_csv(database_path, env + '_epoch_duration')
 
 
-def update_mainnet_tx_count_per_epoch():
+def update_mainnet_tx_count_per_epoch(actual_epoch_no):
     from sync_tests.node_sync_test import get_tx_count_per_epoch
     current_directory = Path.cwd()
     database_path = Path(current_directory) / DATABASE_NAME
@@ -137,7 +137,7 @@ def update_mainnet_tx_count_per_epoch():
     create_table(database_path, mainnet_tx_count_table)
 
     tx_count_dict = {}
-    for epoch_no in range(286):
+    for epoch_no in range(actual_epoch_no):
         tx_count = get_tx_count_per_epoch("mainnet", epoch_no)
         tx_count_dict["epoch_no"] = epoch_no
         tx_count_dict["tx_count"] = tx_count
@@ -164,4 +164,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main()
-    # update_mainnet_tx_count_per_epoch()
+    # update_mainnet_tx_count_per_epoch(293)
