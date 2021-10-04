@@ -1,3 +1,4 @@
+# pylint: disable=abstract-class-instantiated
 import distutils.spawn
 import logging
 import os
