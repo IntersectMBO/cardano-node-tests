@@ -1,4 +1,5 @@
 """Tests for KES period."""
+# pylint: disable=abstract-class-instantiated
 import json
 import logging
 import os

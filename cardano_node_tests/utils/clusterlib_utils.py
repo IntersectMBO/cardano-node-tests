@@ -1,3 +1,4 @@
+# pylint: disable=abstract-class-instantiated
 import inspect
 import itertools
 import json
