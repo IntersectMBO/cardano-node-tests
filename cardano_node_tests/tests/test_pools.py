@@ -6,6 +6,7 @@
 * pool metadata
 * pool reregistration
 """
+# pylint: disable=abstract-class-instantiated
 import json
 import logging
 from pathlib import Path
