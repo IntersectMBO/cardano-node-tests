@@ -1,5 +1,6 @@
 """Tests for smart contracts."""
 import datetime
+import distutils.spawn
 import itertools
 import logging
 from pathlib import Path
@@ -28,6 +29,7 @@ ALWAYS_FAILS_PLUTUS = PLUTUS_DIR / "always-fails.plutus"
 GUESSING_GAME_PLUTUS = PLUTUS_DIR / "custom-guess-42-datum-42.plutus"
 MINTING_PLUTUS = PLUTUS_DIR / "anyone-can-mint.plutus"
 TIME_RANGE_PLUTUS = PLUTUS_DIR / "time_range.plutus"
+CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "context-equivalence-test.plutus"
 
 
 class PlutusOp(NamedTuple):
@@ -151,6 +153,49 @@ def payment_addrs_lock_guessing_game(
 
 
 @pytest.fixture
+def cluster_lock_context_eq(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    """Make sure just one guessing game plutus test run at a time.
+
+    Plutus script always has the same address. When one script is used in multiple
+    tests that are running in parallel, the blanaces etc. don't add up.
+    """
+    return cluster_manager.get(lock_resources=["context_eq_script"])
+
+
+@pytest.fixture
+def pool_users_lock_context_eq(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_lock_context_eq: clusterlib.ClusterLib,
+) -> List[clusterlib.PoolUser]:
+    """Create new pool users while using the `cluster_lock_context_eq` fixture."""
+    cluster = cluster_lock_context_eq
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+        created_users = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster,
+            name_template="plutus_payment_lock_context_eq_ci"
+            f"{cluster_manager.cluster_instance_num}",
+            no_of_addr=4,
+        )
+        fixture_cache.value = created_users
+
+    # fund source address
+    clusterlib_utils.fund_from_faucet(
+        created_users[0],
+        created_users[2],
+        cluster_obj=cluster,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        amount=20_000_000_000,
+    )
+
+    return created_users
+
+
+@pytest.fixture
 def cluster_lock_always_fails(
     cluster_manager: cluster_management.ClusterManager,
 ) -> clusterlib.ClusterLib:
@@ -230,6 +275,7 @@ def _fund_script(
     dst_addr: clusterlib.AddressRecord,
     plutus_op: PlutusOp,
     amount: int,
+    deposit_amount: int = 0,
     tokens: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
     tokens_collateral: Optional[List[Token]] = None,  # tokens must already be in `payment_addr`
     collateral_fraction_offset: float = 1.0,
@@ -258,7 +304,11 @@ def _fund_script(
     )
     datum_hash = cluster_obj.get_hash_script_data(script_data_file=plutus_op.datum_file)
     txouts = [
-        clusterlib.TxOut(address=script_address, amount=amount + fee_redeem, datum_hash=datum_hash),
+        clusterlib.TxOut(
+            address=script_address,
+            amount=amount + fee_redeem + deposit_amount,
+            datum_hash=datum_hash,
+        ),
         # for collateral
         clusterlib.TxOut(address=dst_addr.address, amount=collateral_amount),
     ]
@@ -307,7 +357,7 @@ def _fund_script(
 
     script_balance = cluster_obj.get_address_balance(script_address)
     assert (
-        script_balance == script_init_balance + amount + fee_redeem
+        script_balance == script_init_balance + amount + fee_redeem + deposit_amount
     ), f"Incorrect balance for script address `{script_address}`"
 
     for token in stokens:
@@ -333,15 +383,21 @@ def _spend_locked_txin(
     collateral_utxos: List[clusterlib.UTXOData],
     plutus_op: PlutusOp,
     amount: int,
+    deposit_amount: int = 0,
+    tx_files: Optional[clusterlib.TxFiles] = None,
+    invalid_hereafter: Optional[int] = None,
+    invalid_before: Optional[int] = None,
     tokens: Optional[List[Token]] = None,
     expect_failure: bool = False,
     script_valid: bool = True,
-) -> str:
+    submit_tx: bool = True,
+) -> Tuple[str, clusterlib.TxRawOutput]:
     """Spend the locked UTxO."""
     # pylint: disable=too-many-arguments
     assert plutus_op.execution_units, "Execution units not provided"
     plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
 
+    tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
 
     script_address = script_utxos[0].address
@@ -362,8 +418,8 @@ def _spend_locked_txin(
             redeemer_file=plutus_op.redeemer_file,
         )
     ]
-    tx_files = clusterlib.TxFiles(
-        signing_key_files=[dst_addr.skey_file],
+    tx_files = tx_files._replace(
+        signing_key_files=list({*tx_files.signing_key_files, dst_addr.skey_file}),
     )
     txouts = [
         clusterlib.TxOut(address=dst_addr.address, amount=amount),
@@ -380,6 +436,8 @@ def _spend_locked_txin(
         tx_files=tx_files,
         fee=fee_redeem,
         plutus_txins=plutus_txins,
+        invalid_hereafter=invalid_hereafter,
+        invalid_before=invalid_before,
         script_valid=script_valid,
     )
     tx_signed = cluster_obj.sign_tx(
@@ -387,6 +445,9 @@ def _spend_locked_txin(
         signing_key_files=tx_files.signing_key_files,
         tx_name=f"{temp_template}_step2",
     )
+
+    if not submit_tx:
+        return "", tx_raw_output
 
     if not script_valid:
         cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
@@ -400,7 +461,7 @@ def _spend_locked_txin(
             cluster_obj.get_address_balance(script_address) == script_init_balance
         ), f"Incorrect balance for script address `{script_address}`"
 
-        return ""
+        return "", tx_raw_output
 
     if expect_failure:
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -414,7 +475,7 @@ def _spend_locked_txin(
             cluster_obj.get_address_balance(script_address) == script_init_balance
         ), f"Incorrect balance for script address `{script_address}`"
 
-        return err
+        return err, tx_raw_output
 
     cluster_obj.submit_tx(tx_file=tx_signed, txins=[t.txins[0] for t in tx_raw_output.plutus_txins])
 
@@ -423,7 +484,8 @@ def _spend_locked_txin(
     ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
     assert (
-        cluster_obj.get_address_balance(script_address) == script_init_balance - amount - fee_redeem
+        cluster_obj.get_address_balance(script_address)
+        == script_init_balance - amount - fee_redeem - deposit_amount
     ), f"Incorrect balance for script address `{script_address}`"
 
     for token in spent_tokens:
@@ -433,7 +495,7 @@ def _spend_locked_txin(
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
-    return ""
+    return "", tx_raw_output
 
 
 def _build_fund_script(
@@ -534,16 +596,22 @@ def _build_spend_locked_txin(
     collateral_utxos: List[clusterlib.UTXOData],
     plutus_op: PlutusOp,
     amount: int,
+    deposit_amount: int = 0,
+    tx_files: Optional[clusterlib.TxFiles] = None,
+    invalid_hereafter: Optional[int] = None,
+    invalid_before: Optional[int] = None,
     tokens: Optional[List[Token]] = None,
     expect_failure: bool = False,
     script_valid: bool = True,
-) -> str:
+    submit_tx: bool = True,
+) -> Tuple[str, Optional[clusterlib.TxRawOutput]]:
     """Spend the locked UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
     # pylint: disable=too-many-arguments
     script_address = script_utxos[0].address
+    tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
 
     script_init_balance = cluster_obj.get_address_balance(script_address)
@@ -560,8 +628,8 @@ def _build_spend_locked_txin(
             redeemer_file=plutus_op.redeemer_file,
         )
     ]
-    tx_files = clusterlib.TxFiles(
-        signing_key_files=[dst_addr.skey_file],
+    tx_files = tx_files._replace(
+        signing_key_files=list({*tx_files.signing_key_files, dst_addr.skey_file}),
     )
     txouts = [
         clusterlib.TxOut(address=dst_addr.address, amount=amount),
@@ -582,7 +650,7 @@ def _build_spend_locked_txin(
                 change_address=script_address,
                 plutus_txins=plutus_txins,
             )
-        return str(excinfo.value)
+        return str(excinfo.value), None
 
     tx_output = cluster_obj.build_tx(
         src_address=payment_addr.address,
@@ -591,6 +659,9 @@ def _build_spend_locked_txin(
         txouts=txouts,
         change_address=script_address,
         plutus_txins=plutus_txins,
+        invalid_hereafter=invalid_hereafter,
+        invalid_before=invalid_before,
+        deposit=deposit_amount,
         script_valid=script_valid,
     )
     tx_signed = cluster_obj.sign_tx(
@@ -598,6 +669,9 @@ def _build_spend_locked_txin(
         signing_key_files=tx_files.signing_key_files,
         tx_name=f"{temp_template}_step2",
     )
+
+    if not submit_tx:
+        return "", tx_output
 
     if not script_valid:
         cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
@@ -611,7 +685,7 @@ def _build_spend_locked_txin(
             cluster_obj.get_address_balance(script_address) == script_init_balance
         ), f"Incorrect balance for script address `{script_address}`"
 
-        return ""
+        return "", tx_output
 
     cluster_obj.submit_tx(tx_file=tx_signed, txins=[t.txins[0] for t in tx_output.plutus_txins])
 
@@ -621,7 +695,7 @@ def _build_spend_locked_txin(
 
     assert (
         cluster_obj.get_address_balance(script_address)
-        == script_init_balance - amount - tx_output.fee
+        == script_init_balance - amount - tx_output.fee - deposit_amount
     ), f"Incorrect balance for script address `{script_address}`"
 
     for token in spent_tokens:
@@ -631,7 +705,36 @@ def _build_spend_locked_txin(
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
-    return ""
+    return "", tx_output
+
+
+def _create_script_context(
+    cluster_obj: clusterlib.ClusterLib, redeemer_file: Path, tx_file: Optional[Path] = None
+) -> None:
+    """Run the `create-script-context` command (available in plutus-examples)."""
+    if tx_file:
+        redeemer_out = Path("script-context.redeemer")
+        cmd_args = [
+            "create-script-context",
+            "--generate-tx",
+            str(tx_file),
+            f"--{cluster_obj.protocol}-mode",
+            *cluster_obj.magic_args,
+        ]
+    else:
+        redeemer_dir = Path("example/work")
+        redeemer_dir.mkdir(parents=True, exist_ok=True)
+        redeemer_out = redeemer_dir / "script-context.redeemer"
+        cmd_args = ["create-script-context", "--generate"]
+
+    try:
+        redeemer_out.unlink()
+    except FileNotFoundError:
+        pass
+
+    helpers.run_command(cmd_args)
+    assert redeemer_out.exists()
+    redeemer_out.rename(redeemer_file)
 
 
 @pytest.mark.skipif(
@@ -688,6 +791,108 @@ class TestLocking:
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=50_000_000,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        not distutils.spawn.find_executable("create-script-context"),
+        reason="cannot find `create-script-context` on the PATH",
+    )
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_context_equivalance(
+        self,
+        cluster_lock_context_eq: clusterlib.ClusterLib,
+        pool_users_lock_context_eq: List[clusterlib.PoolUser],
+    ):
+        """Test context equivalence while spending a locked UTxO.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * generate a dummy redeemer and a dummy Tx
+        * derive the correct redeemer from the dummy Tx
+        * spend the locked UTxO using the derived redeemer
+        * check that the expected amount was spent
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_context_eq
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+        amount = 10_000_000
+        deposit_amount = cluster.get_address_deposit()
+
+        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
+        redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+
+        plutus_op_dummy = PlutusOp(
+            script_file=CONTEXT_EQUIVALENCE_PLUTUS,
+            datum_file=PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=redeemer_file_dummy,
+            execution_units=(1000_000_000, 10_000_000),
+        )
+        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
+
+        # generate a dummy redeemer in order to create a txbody from which
+        # we can generate a tx and then derive the correct redeemer
+        _create_script_context(cluster_obj=cluster, redeemer_file=redeemer_file_dummy)
+
+        tx_output_fund = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=pool_users_lock_context_eq[0].payment,
+            dst_addr=pool_users_lock_context_eq[1].payment,
+            plutus_op=plutus_op_dummy,
+            amount=amount,
+            deposit_amount=deposit_amount,
+        )
+
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        invalid_hereafter = cluster.get_slot_no() + 1000
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=pool_users_lock_context_eq[0].stake.vkey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
+
+        __, tx_output_dummy = _spend_locked_txin(
+            temp_template=f"{temp_template}_dummy",
+            cluster_obj=cluster,
+            dst_addr=pool_users_lock_context_eq[1].payment,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op_dummy,
+            amount=amount,
+            deposit_amount=deposit_amount,
+            tx_files=tx_files,
+            invalid_before=1,
+            invalid_hereafter=invalid_hereafter,
+            script_valid=False,
+            submit_tx=False,
+        )
+        assert tx_output_dummy
+
+        # generate the "real" redeemer
+        tx_file_dummy = Path(f"{tx_output_dummy.out_file.with_suffix('')}.signed")
+        _create_script_context(
+            cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
+        )
+
+        _spend_locked_txin(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            dst_addr=pool_users_lock_context_eq[1].payment,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op,
+            amount=amount,
+            deposit_amount=deposit_amount,
+            tx_files=tx_files,
+            invalid_before=1,
+            invalid_hereafter=invalid_hereafter,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -759,7 +964,7 @@ class TestLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        err = _spend_locked_txin(
+        err, __ = _spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_guessing_game[1],
@@ -810,7 +1015,7 @@ class TestLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        err = _spend_locked_txin(
+        err, __ = _spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs_lock_always_fails[1],
@@ -1596,6 +1801,109 @@ class TestBuildLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        not distutils.spawn.find_executable("create-script-context"),
+        reason="cannot find `create-script-context` on the PATH",
+    )
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_context_equivalance(
+        self,
+        cluster_lock_context_eq: clusterlib.ClusterLib,
+        pool_users_lock_context_eq: List[clusterlib.PoolUser],
+    ):
+        """Test context equivalence while spending a locked UTxO.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx ouput with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * generate a dummy redeemer and a dummy Tx
+        * derive the correct redeemer from the dummy Tx
+        * spend the locked UTxO using the derived redeemer
+        * check that the expected amount was spent
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_context_eq
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+        amount = 10_000_000
+        deposit_amount = cluster.get_address_deposit()
+
+        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
+        redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+
+        plutus_op_dummy = PlutusOp(
+            script_file=CONTEXT_EQUIVALENCE_PLUTUS,
+            datum_file=PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=redeemer_file_dummy,
+        )
+        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
+
+        # generate a dummy redeemer in order to create a txbody from which
+        # we can generate a tx and then derive the correct redeemer
+        _create_script_context(cluster_obj=cluster, redeemer_file=redeemer_file_dummy)
+
+        tx_output_fund = _build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=pool_users_lock_context_eq[2].payment,
+            dst_addr=pool_users_lock_context_eq[3].payment,
+            plutus_op=plutus_op_dummy,
+        )
+
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
+        invalid_hereafter = cluster.get_slot_no() + 1000
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr2",
+            stake_vkey_file=pool_users_lock_context_eq[2].stake.vkey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
+
+        __, tx_output_dummy = _build_spend_locked_txin(
+            temp_template=f"{temp_template}_dummy",
+            cluster_obj=cluster,
+            payment_addr=pool_users_lock_context_eq[2].payment,
+            dst_addr=pool_users_lock_context_eq[3].payment,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op_dummy,
+            amount=amount,
+            deposit_amount=deposit_amount,
+            tx_files=tx_files,
+            invalid_before=1,
+            invalid_hereafter=invalid_hereafter,
+            script_valid=False,
+            submit_tx=False,
+        )
+        assert tx_output_dummy
+
+        # generate the "real" redeemer
+        tx_file_dummy = Path(f"{tx_output_dummy.out_file.with_suffix('')}.signed")
+        _create_script_context(
+            cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
+        )
+
+        _build_spend_locked_txin(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=pool_users_lock_context_eq[2].payment,
+            dst_addr=pool_users_lock_context_eq[3].payment,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op,
+            amount=amount,
+            deposit_amount=deposit_amount,
+            tx_files=tx_files,
+            invalid_before=1,
+            invalid_hereafter=invalid_hereafter,
+        )
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.parametrize(
@@ -1662,7 +1970,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        err = _build_spend_locked_txin(
+        err, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_guessing_game[2],
@@ -1713,7 +2021,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        err = _build_spend_locked_txin(
+        err, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_fails[0],
