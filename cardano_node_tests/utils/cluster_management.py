@@ -325,6 +325,14 @@ class ClusterManager:
 
             # search for errors in cluster logfiles
             errors = logfiles.search_cluster_artifacts()
+
+            # There's only one test running on a worker at a time. Deleting the
+            # coresponding rules file right after a test is finished is
+            # therefore safe. The effect is that the rules apply only from the
+            # time they were added (by `logfiles.add_ignore_rule`) until the
+            # end of the test.
+            logfiles.del_rules_file(rules_file_id=self.worker_id)
+
             if errors:
                 logfiles.report_artifacts_errors(errors)
 
