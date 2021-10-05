@@ -71,28 +71,62 @@ def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> Li
     return logfile_records
 
 
-def add_ignore_rule(files_glob: str, regex: str) -> None:
+def add_ignore_rule(files_glob: str, regex: str, rules_file_id: str) -> None:
     """Add ignore rule for expected errors."""
-    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/ignore_rules.lock"):
-        state_dir = cluster_nodes.get_cluster_env().state_dir
-        rules_file = state_dir / ERRORS_RULES_FILE_NAME
+    state_dir = cluster_nodes.get_cluster_env().state_dir
+    rules_file = state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
+    basetemp = helpers.get_basetemp()
+
+    with helpers.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
         with open(rules_file, "a") as infile:
             infile.write(f"{files_glob};;{regex}\n")
 
 
+def del_rules_file(rules_file_id: str) -> None:
+    """Delete rules file identified by `rules_file_id`."""
+    state_dir = cluster_nodes.get_cluster_env().state_dir
+    rules_file = state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
+    basetemp = helpers.get_basetemp()
+
+    with helpers.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
+        try:
+            rules_file.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def get_ignore_rules() -> List[Tuple[str, str]]:
+    """Get rules (file glob and regex) for ignored errors."""
+    rules: List[Tuple[str, str]] = []
+    state_dir = cluster_nodes.get_cluster_env().state_dir
+    basetemp = helpers.get_basetemp()
+
+    with helpers.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
+        for rules_file in state_dir.glob(f"{ERRORS_RULES_FILE_NAME}_*"):
+            with open(rules_file) as infile:
+                for line in infile:
+                    if ";;" not in line:
+                        continue
+                    files_glob, regex = line.split(";;")
+                    rules.append((files_glob, regex.rstrip("\n")))
+
+    return rules
+
+
 @contextlib.contextmanager
-def expect_errors(regex_pairs: List[Tuple[str, str]]) -> Iterator[None]:
-    """Make sure expected errors are present in logs.
+def expect_errors(regex_pairs: List[Tuple[str, str]], rules_file_id: str) -> Iterator[None]:
+    """Make sure the expected errors are present in logs.
 
     Args:
-        regex_pairs: [(glob, regex)] - list of regexes that need to be present in files
-            described by the glob
+        regex_pairs: [(glob, regex)] - A list of regexes that need to be present in files
+            described by the glob.
+        rules_file_id: The id of a rules file the expected error will be added to.
     """
     state_dir = cluster_nodes.get_cluster_env().state_dir
 
     glob_list = []
     for files_glob, regex in regex_pairs:
-        add_ignore_rule(files_glob, regex)  # don't report errors that are expected
+        add_ignore_rule(files_glob=files_glob, regex=regex, rules_file_id=rules_file_id)
         glob_list.append(files_glob)
     # resolve the globs
     _expanded_paths = [list(state_dir.glob(glob_item)) for glob_item in glob_list]
@@ -137,40 +171,20 @@ def _get_seek(fpath: Path) -> int:
         return int(infile.readline().strip())
 
 
-def get_ignore_rules(rules_file: Path) -> List[Tuple[str, str]]:
-    """Get rules (file glob and regex) for ignored errors."""
-    rules: List[Tuple[str, str]] = []
-
-    if not rules_file.exists():
-        return rules
-
-    with open(rules_file) as infile:
-        for line in infile:
-            if ";;" not in line:
-                continue
-            files_glob, regex = line.split(";;")
-            rules.append((files_glob, regex.rstrip("\n")))
-
-    return rules
-
-
 def get_ignore_regex(ignore_rules: List[Tuple[str, str]], regexes: List[str], logfile: Path) -> str:
     """Combine together regex for the given log file using file specific and global ignore rules."""
-    regex_list = regexes[:]
+    regex_set = set(regexes)
     for record in ignore_rules:
         files_glob, regex = record
         if fnmatch.filter([logfile.name], files_glob):
-            regex_list.append(regex)
-    return "|".join(regex_list)
+            regex_set.add(regex)
+    return "|".join(regex_set)
 
 
 def search_cluster_artifacts() -> List[Tuple[Path, str]]:
     """Search cluster artifacts for errors."""
     state_dir = cluster_nodes.get_cluster_env().state_dir
-    rules_file = state_dir / ERRORS_RULES_FILE_NAME
-
-    with helpers.FileLockIfXdist(f"{helpers.get_basetemp()}/ignore_rules.lock"):
-        ignore_rules = get_ignore_rules(rules_file)
+    ignore_rules = get_ignore_rules()
 
     errors = []
     for logfile in state_dir.glob("*.std*"):
