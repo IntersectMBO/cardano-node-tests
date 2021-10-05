@@ -1744,6 +1744,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
+        worker_id: str,
     ):
         """Try to submit a TX with wrong network magic.
 
@@ -1779,22 +1780,23 @@ class TestNegative:
         )
 
         # it should NOT be possible to submit a transaction with incorrect network magic
-        expected_errors = [
-            ("bft1.stdout", "HandshakeError"),
-        ]
-        with logfiles.expect_errors(expected_errors):
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.cli(
-                    [
-                        "transaction",
-                        "submit",
-                        "--testnet-magic",
-                        str(cluster.network_magic + 100),
-                        "--tx-file",
-                        str(out_file_signed),
-                        f"--{cluster.protocol}-mode",
-                    ]
-                )
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="HandshakeError",
+            rules_file_id=worker_id,
+        )
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "submit",
+                    "--testnet-magic",
+                    str(cluster.network_magic + 100),
+                    "--tx-file",
+                    str(out_file_signed),
+                    f"--{cluster.protocol}-mode",
+                ]
+            )
         assert "HandshakeError" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
