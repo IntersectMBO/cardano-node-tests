@@ -90,10 +90,10 @@ class LocalCluster(ClusterType):
         # unlike in `TestnetCluster`, don't cache slots offset value, we might
         # test different configurations of slot length etc.
         genesis_byron_json = state_dir / "byron" / "genesis.json"
-        with open(genesis_byron_json) as in_json:
+        with open(genesis_byron_json, encoding="utf-8") as in_json:
             genesis_byron = json.load(in_json)
         genesis_shelley_json = state_dir / "shelley" / "genesis.json"
-        with open(genesis_shelley_json) as in_json:
+        with open(genesis_shelley_json, encoding="utf-8") as in_json:
             genesis_shelley = json.load(in_json)
 
         slot_duration_byron_msec = int(genesis_byron["blockVersionData"]["slotDuration"])
@@ -211,7 +211,7 @@ class TestnetCluster(ClusterType):
 
         cluster_env = get_cluster_env()
         genesis_byron_json = cluster_env.state_dir / "genesis-byron.json"
-        with open(genesis_byron_json) as in_json:
+        with open(genesis_byron_json, encoding="utf-8") as in_json:
             genesis_byron = json.load(in_json)
 
         start_timestamp: int = genesis_byron["startTime"]
@@ -228,7 +228,7 @@ class TestnetCluster(ClusterType):
         genesis_byron = state_dir / "genesis-byron.json"
         genesis_shelley = state_dir / "genesis-shelley.json"
 
-        with open(genesis_byron) as in_json:
+        with open(genesis_byron, encoding="utf-8") as in_json:
             byron_dict = json.load(in_json)
         start_timestamp: int = byron_dict["startTime"]
 
@@ -454,7 +454,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 
     pools_data = load_pools_data(cluster_obj)
     data_file = Path(cluster_env.state_dir) / ADDRS_DATA
-    with open(data_file, "wb") as out_data:
+    with open(data_file, "wb", encoding="utf-8") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
 
     return data_file
@@ -463,7 +463,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 def load_addrs_data() -> dict:
     """Load data about addresses and their keys for usage in tests."""
     data_file = Path(get_cluster_env().state_dir) / ADDRS_DATA
-    with open(data_file, "rb") as in_data:
+    with open(data_file, "rb", encoding="utf-8") as in_data:
         return pickle.load(in_data)  # type: ignore
 
 

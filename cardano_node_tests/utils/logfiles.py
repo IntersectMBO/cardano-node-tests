@@ -78,7 +78,7 @@ def add_ignore_rule(files_glob: str, regex: str, rules_file_id: str) -> None:
     basetemp = helpers.get_basetemp()
 
     with helpers.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
-        with open(rules_file, "a") as infile:
+        with open(rules_file, "a", encoding="utf-8") as infile:
             infile.write(f"{files_glob};;{regex}\n")
 
 
@@ -103,7 +103,7 @@ def get_ignore_rules() -> List[Tuple[str, str]]:
 
     with helpers.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
         for rules_file in state_dir.glob(f"{ERRORS_RULES_FILE_NAME}_*"):
-            with open(rules_file) as infile:
+            with open(rules_file, encoding="utf-8") as infile:
                 for line in infile:
                     if ";;" not in line:
                         continue
@@ -154,7 +154,7 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], rules_file_id: str) -> Ite
             for logfile_rec in get_rotated_logs(
                 logfile=Path(logfile), seek=seek, timestamp=timestamp
             ):
-                with open(logfile_rec.logfile) as infile:
+                with open(logfile_rec.logfile, encoding="utf-8") as infile:
                     infile.seek(seek)
                     for line in infile:
                         if regex_comp.search(line):
@@ -167,7 +167,7 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], rules_file_id: str) -> Ite
 
 
 def _get_seek(fpath: Path) -> int:
-    with open(fpath) as infile:
+    with open(fpath, encoding="utf-8") as infile:
         return int(infile.readline().strip())
 
 
@@ -207,11 +207,11 @@ def search_cluster_artifacts() -> List[Tuple[Path, str]]:
         errors_ignored_re = re.compile(errors_ignored)
 
         # record offset for the "live" log file
-        with open(offset_file, "w") as outfile:
+        with open(offset_file, "w", encoding="utf-8") as outfile:
             outfile.write(str(helpers.get_eof_offset(logfile)))
 
         for logfile_rec in get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp):
-            with open(logfile_rec.logfile) as infile:
+            with open(logfile_rec.logfile, encoding="utf-8") as infile:
                 infile.seek(seek)
                 for line in infile:
                     if ERRORS_RE.search(line) and not (
