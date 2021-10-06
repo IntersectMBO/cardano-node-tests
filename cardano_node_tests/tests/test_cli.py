@@ -102,7 +102,7 @@ class TestCLI:
         tx = cluster.view_tx(tx_file=self.TX_FILE)
         assert tx_body == tx
 
-        with open(self.TX_OUT) as infile:
+        with open(self.TX_OUT, encoding="utf-8") as infile:
             tx_view_out = infile.read()
         assert tx == tx_view_out.strip()
 
