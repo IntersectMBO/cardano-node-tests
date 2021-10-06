@@ -618,7 +618,7 @@ def new_tokens(
     keyhash = cluster_obj.get_payment_vkey_hash(issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = Path(f"{temp_template}.script")
-    with open(f"{temp_template}.script", "w") as out_json:
+    with open(f"{temp_template}.script", "w", encoding="utf-8") as out_json:
         json.dump(script_content, out_json)
 
     policyid = cluster_obj.get_policyid(script)
@@ -707,7 +707,7 @@ def save_ledger_state(
     """
     json_file = Path(destination_dir) / f"{state_name}_ledger_state.json"
     ledger_state = ledger_state or get_ledger_state(cluster_obj)
-    with open(json_file, "w") as fp_out:
+    with open(json_file, "w", encoding="utf-8") as fp_out:
         json.dump(ledger_state, fp_out, indent=4)
     return json_file
 
@@ -792,7 +792,7 @@ def get_amount(
 
 def load_body_metadata(tx_body_file: Path) -> Any:
     """Load metadata from file containing transaction body."""
-    with open(tx_body_file) as body_fp:
+    with open(tx_body_file, encoding="utf-8") as body_fp:
         tx_body_json = json.load(body_fp)
 
     cbor_body = bytes.fromhex(tx_body_json["cborHex"])
@@ -918,6 +918,7 @@ def check_tx_view(  # noqa: C901
 
     # check fee
     fee = int(tx_loaded.get("fee", "").split(" ")[0] or 0)
+    # pylint: disable=consider-using-in
     if (
         tx_raw_output.fee != -1 and tx_raw_output.fee != fee
     ):  # for `transaction build` the `tx_raw_output.fee` can be -1

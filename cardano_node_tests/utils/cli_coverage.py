@@ -20,7 +20,7 @@ def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config)
         return None
 
     json_file = Path(cli_coverage_dir) / f"cli_coverage_{helpers.get_timestamped_rand_str()}.json"
-    with open(json_file, "w") as out_json:
+    with open(json_file, "w", encoding="utf-8") as out_json:
         json.dump(cluster_obj.cli_coverage, out_json, indent=4)
     LOGGER.info(f"Coverage file saved to '{cli_coverage_dir}'.")
     return json_file

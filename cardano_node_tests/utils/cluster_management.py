@@ -97,6 +97,10 @@ def _get_fixture_hash() -> int:
     return hash_num
 
 
+def _touch(file: Path) -> None:
+    open(file, "a", encoding="utf-8").close()
+
+
 @dataclasses.dataclass
 class ClusterManagerCache:
     """Cache for a single cluster instance."""
@@ -188,7 +192,7 @@ class ClusterManager:
                 # the path is relative to LAUNCH_PATH (current path can differ)
                 run_log = helpers.LAUNCH_PATH / run_log
             # create the log file if it doesn't exist
-            open(run_log, "a").close()
+            _touch(run_log)
         else:
             run_log = self.lock_dir / RUN_LOG_FILE
 
@@ -199,7 +203,7 @@ class ClusterManager:
         if not self.manager_log.is_file():
             return
         with helpers.FileLockIfXdist(self.log_lock):
-            with open(self.manager_log, "a") as logfile:
+            with open(self.manager_log, "a", encoding="utf-8") as logfile:
                 logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
 
     def _create_startup_files_dir(self, instance_num: int) -> Path:
@@ -259,14 +263,14 @@ class ClusterManager:
                 pytest_config=self.pytest_config,
             )
             cluster_nodes.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=True)
-            open(instance_dir / CLUSTER_STOPPED_FILE, "a").close()
+            _touch(instance_dir / CLUSTER_STOPPED_FILE)
             self._log(f"stopped cluster instance {instance_num}")
 
     def set_needs_restart(self) -> None:
         """Indicate that the cluster needs restart."""
         with helpers.FileLockIfXdist(self.cluster_lock):
             self._log(f"c{self.cluster_instance_num}: called `set_needs_restart`")
-            open(self.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}", "a").close()
+            _touch(self.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}")
 
     @contextlib.contextmanager
     def restart_on_failure(self) -> Iterator[None]:
@@ -385,7 +389,7 @@ class _ClusterGetter:
                     "Ignoring requested cluster restart as 'DEV_CLUSTER_RUNNING' is set."
                 )
             else:
-                open(cluster_running_file, "a").close()
+                _touch(cluster_running_file)
             return True
 
         # fail if cluster restart is forbidden and it was already started
@@ -453,7 +457,7 @@ class _ClusterGetter:
             )
             if not helpers.IS_XDIST:
                 pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
-            open(self.cm.instance_dir / CLUSTER_DEAD_FILE, "a").close()
+            _touch(self.cm.instance_dir / CLUSTER_DEAD_FILE)
             return False
 
         # setup faucet addresses
@@ -462,7 +466,7 @@ class _ClusterGetter:
 
         # create file that indicates that the cluster is running
         if not cluster_running_file.exists():
-            open(cluster_running_file, "a").close()
+            _touch(cluster_running_file)
 
         return True
 
@@ -488,7 +492,7 @@ class _ClusterGetter:
             self.cm._log(
                 f"c{instance_num}: in `_on_marked_test_stop`, " "creating 'restart needed' file"
             )
-            open(instance_dir / f"{RESTART_NEEDED_GLOB}_{self.cm.worker_id}", "a").close()
+            _touch(instance_dir / f"{RESTART_NEEDED_GLOB}_{self.cm.worker_id}")
 
         # remove file that indicates that tests with the mark are running
         marked_running = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
@@ -810,10 +814,7 @@ class _ClusterGetter:
                             instance_dir / f"{TEST_MARK_STARTING_GLOB}_{mark}_{self.cm.worker_id}"
                         )
                         if not mark_starting_file.exists():
-                            open(
-                                mark_starting_file,
-                                "a",
-                            ).close()
+                            _touch(mark_starting_file)
                         if started_tests:
                             self.cm._log(
                                 f"c{instance_num}: unmarked tests running, wants to start '{mark}'"
@@ -900,7 +901,7 @@ class _ClusterGetter:
                             instance_dir / f"{RESTART_IN_PROGRESS_GLOB}_{self.cm.worker_id}"
                         )
                         if not restart_in_progress_file.exists():
-                            open(restart_in_progress_file, "a").close()
+                            _touch(restart_in_progress_file)
 
                     # we've found suitable cluster instance
                     selected_instance = instance_num
@@ -930,48 +931,42 @@ class _ClusterGetter:
                     # this test is a singleton
                     if singleton:
                         self.cm._log(f"c{instance_num}: starting singleton")
-                        open(self.cm.instance_dir / TEST_SINGLETON_FILE, "a").close()
+                        _touch(self.cm.instance_dir / TEST_SINGLETON_FILE)
 
                     # this test is a first marked test
                     if initial_marked_test:
                         self.cm._log(f"c{instance_num}: starting '{mark}' tests")
-                        open(self.cm.instance_dir / f"{TEST_CURR_MARK_GLOB}_{mark}", "a").close()
+                        _touch(self.cm.instance_dir / f"{TEST_CURR_MARK_GLOB}_{mark}")
                         for sf in marked_starting:
                             os.remove(sf)
 
                     # create status file for each in-use resource
                     for r in use_resources:
-                        open(
-                            self.cm.instance_dir
-                            / f"{RESOURCE_IN_USE_GLOB}_{r}_{self.cm.worker_id}",
-                            "a",
-                        ).close()
+                        _touch(
+                            self.cm.instance_dir / f"{RESOURCE_IN_USE_GLOB}_{r}_{self.cm.worker_id}"
+                        )
 
                     # create status file for each locked resource
                     for r in lock_resources:
-                        open(
-                            self.cm.instance_dir
-                            / f"{RESOURCE_LOCKED_GLOB}_{r}_{self.cm.worker_id}",
-                            "a",
-                        ).close()
+                        _touch(
+                            self.cm.instance_dir / f"{RESOURCE_LOCKED_GLOB}_{r}_{self.cm.worker_id}"
+                        )
 
                     # cleanup = cluster restart after test (group of tests) is finished
                     if cleanup:
                         # cleanup after group of test that are marked with a marker
                         if mark:
                             self.cm._log(f"c{instance_num}: cleanup and mark")
-                            open(
+                            _touch(
                                 self.cm.instance_dir
-                                / f"{RESTART_AFTER_MARK_GLOB}_{self.cm.worker_id}",
-                                "a",
-                            ).close()
+                                / f"{RESTART_AFTER_MARK_GLOB}_{self.cm.worker_id}"
+                            )
                         # cleanup after single test (e.g. singleton)
                         else:
                             self.cm._log(f"c{instance_num}: cleanup and not mark")
-                            open(
-                                self.cm.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.cm.worker_id}",
-                                "a",
-                            ).close()
+                            _touch(
+                                self.cm.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.cm.worker_id}"
+                            )
 
                     break
                 else:
@@ -982,7 +977,7 @@ class _ClusterGetter:
                     self.cm.instance_dir / f"{TEST_RUNNING_GLOB}_{self.cm.worker_id}"
                 )
                 self.cm._log(f"c{self.cm.cluster_instance_num}: creating {test_running_file}")
-                open(test_running_file, "a").close()
+                _touch(test_running_file)
 
                 # check if it is necessary to reload data
                 state_dir = cluster_nodes.get_cluster_env().state_dir
