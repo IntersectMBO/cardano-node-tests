@@ -150,7 +150,7 @@ def get_available_commands(cli_args: UnpackableSequence, ignore_skips: bool = Fa
 def get_log_coverage(log_file: Path) -> dict:
     """Get coverage info from log file containing CLI commands."""
     coverage_dict: dict = {}
-    with open(log_file) as infile:
+    with open(log_file, encoding="utf-8") as infile:
         for line in infile:
             if not line.startswith("cardano-cli"):
                 continue
@@ -164,7 +164,7 @@ def get_coverage(coverage_files: List[Path], available_commands: dict) -> dict:
     coverage_dict = copy.deepcopy(available_commands)
     for in_coverage in coverage_files:
         if in_coverage.suffix == ".json":
-            with open(in_coverage) as infile:
+            with open(in_coverage, encoding="utf-8") as infile:
                 coverage = json.load(infile)
         else:
             coverage = get_log_coverage(in_coverage)
