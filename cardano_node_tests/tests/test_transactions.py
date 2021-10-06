@@ -2849,7 +2849,7 @@ class TestMetadata:
         # dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
-        with open(self.JSON_METADATA_FILE) as metadata_fp:
+        with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
         assert (
@@ -2903,7 +2903,7 @@ class TestMetadata:
         # dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
-        with open(self.JSON_METADATA_FILE) as metadata_fp:
+        with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
         assert (
@@ -3033,7 +3033,7 @@ class TestMetadata:
         # dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
-        with open(self.JSON_METADATA_FILE) as metadata_fp_json:
+        with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp_json:
             json_file_metadata = json.load(metadata_fp_json)
 
         with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp_cbor:
@@ -3097,7 +3097,7 @@ class TestMetadata:
         # dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
-        with open(self.JSON_METADATA_FILE) as metadata_fp_json:
+        with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp_json:
             json_file_metadata = json.load(metadata_fp_json)
 
         with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp_cbor:
@@ -3149,9 +3149,9 @@ class TestMetadata:
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         # merge the input JSON files and alter the result so it matches the expected metadata
-        with open(metadata_json_files[0]) as metadata_fp:
+        with open(metadata_json_files[0], encoding="utf-8") as metadata_fp:
             json_file_metadata1 = json.load(metadata_fp)
-        with open(metadata_json_files[1]) as metadata_fp:
+        with open(metadata_json_files[1], encoding="utf-8") as metadata_fp:
             json_file_metadata2 = json.load(metadata_fp)
         json_file_metadata = {**json_file_metadata2, **json_file_metadata1}
         json_file_metadata["5"] = "baz1"
@@ -3211,7 +3211,7 @@ class TestMetadata:
         # dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
-        with open(self.JSON_METADATA_FILE) as metadata_fp:
+        with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
         assert (

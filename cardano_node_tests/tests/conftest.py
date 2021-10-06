@@ -189,7 +189,7 @@ def cluster_chores(
     lock_dir = pytest_tmp_dir = pytest_tmp_dir.parent
 
     # pylint: disable=consider-using-with
-    open(lock_dir / f".started_session_{worker_id}", "a").close()
+    open(lock_dir / f".started_session_{worker_id}", "a", encoding="utf-8").close()
 
     yield
 
