@@ -138,7 +138,7 @@ class LocalScripts(ScriptsTypes):
                 shutil.copy(infile, dest_file)
                 continue
 
-            with open(infile) as in_fp:
+            with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
             new_content = content.replace("/state-cluster", f"/state-cluster{instance_num}")
@@ -153,7 +153,7 @@ class LocalScripts(ScriptsTypes):
                 # reconfigure metrics ports in config-*.json
                 new_content = new_content.replace("3030", str(instance_ports.ekg_bft1 // 10))
 
-            with open(dest_file, "w") as out_fp:
+            with open(dest_file, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
 
             # make files without extension executable
@@ -269,7 +269,7 @@ class TestnetScripts(ScriptsTypes):
                 shutil.copy(infile, dest_file)
                 continue
 
-            with open(infile) as in_fp:
+            with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
             new_content = content.replace("/state-cluster", f"/state-cluster{instance_num}")
@@ -282,7 +282,7 @@ class TestnetScripts(ScriptsTypes):
                 "supervisorctl ", f"supervisorctl -s http://127.0.0.1:{instance_ports.supervisor} "
             )
 
-            with open(dest_file, "w") as out_fp:
+            with open(dest_file, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
 
             # make files without extension executable

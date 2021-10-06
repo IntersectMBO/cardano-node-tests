@@ -132,7 +132,7 @@ def simple_script_policyid(
     keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = Path(f"{temp_template}.script")
-    with open(script, "w") as out_json:
+    with open(script, "w", encoding="utf-8") as out_json:
         json.dump(script_content, out_json)
 
     policyid = cluster.get_policyid(script)
@@ -323,7 +323,7 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(script, "w") as out_json:
+        with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
@@ -408,7 +408,7 @@ class TestMinting:
             keyhash = cluster.get_payment_vkey_hash(i_addrs[i].vkey_file)
             script_content = {"keyHash": keyhash, "type": "sig"}
             script = Path(f"{temp_template}_{i}.script")
-            with open(script, "w") as out_json:
+            with open(script, "w", encoding="utf-8") as out_json:
                 json.dump(script_content, out_json)
 
             asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
@@ -509,7 +509,7 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(script, "w") as out_json:
+        with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
@@ -604,7 +604,7 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(script, "w") as out_json:
+        with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
@@ -978,7 +978,7 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(script, "w") as out_json:
+        with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)

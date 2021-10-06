@@ -13,9 +13,9 @@ def _datetime2timestamp(datetime_str: str) -> int:
 
 def get_slots_offset(genesis_byron: Path, genesis_shelley: Path, shelley_start: str) -> int:
     """Get offset of slots from Byron configuration vs current era configuration."""
-    with open(genesis_byron) as in_json:
+    with open(genesis_byron, encoding="utf-8") as in_json:
         byron_dict = json.load(in_json)
-    with open(genesis_shelley) as in_json:
+    with open(genesis_shelley, encoding="utf-8") as in_json:
         shelley_dict = json.load(in_json)
 
     start_timestamp: int = byron_dict["startTime"]
