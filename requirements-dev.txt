@@ -1,9 +1,11 @@
 -e .
 
 # linting
-mypy==0.812
+mypy
 pre-commit
-pylint==2.9.0
+pylint
+types-PyYAML
+types-requests
 
 # documentation
 Sphinx==3.2.1
