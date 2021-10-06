@@ -844,6 +844,13 @@ def main():
     print(f"start_sync_time1          : {start_sync_time1}")
     print(f"end_sync_time1            : {end_sync_time1}")
 
+    # we are interested in the node logs only for the main sync - using tag_no1
+    test_values_dict = OrderedDict()
+    print(" === Parse the node logs and get the relevant data")
+    logs_details_dict = get_data_from_logs(NODE_LOG_FILE)
+    test_values_dict["log_values"] = json.dumps(logs_details_dict)
+
+    print(f"   ======================= Start node using tag_no2: {tag_no2} ====================")
     (cardano_cli_version2, cardano_cli_git_rev2, shelley_sync_time_seconds2, total_chunks2,
      latest_block_no2, latest_slot_no2, start_sync_time2, end_sync_time2, start_sync_time3,
      sync_time_after_restart_seconds, cli_version2, cli_git_rev2, last_slot_no2, latest_chunk_no2,
@@ -878,11 +885,6 @@ def main():
         end_sync_time2 = get_current_date_time()
 
     chain_size = get_directory_size(Path(ROOT_TEST_PATH) / "db")
-
-    test_values_dict = OrderedDict()
-    print(" === Parse the node logs and get the relevant data")
-    logs_details_dict = get_data_from_logs(NODE_LOG_FILE)
-    test_values_dict["log_values"] = json.dumps(logs_details_dict)
 
     # Add the test values into the local copy of the database (to be pushed into sync tests repo)
     print("Node sync test ended; Creating the `test_values_dict` dict with the test values")
