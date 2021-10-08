@@ -454,7 +454,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 
     pools_data = load_pools_data(cluster_obj)
     data_file = Path(cluster_env.state_dir) / ADDRS_DATA
-    with open(data_file, "wb", encoding="utf-8") as out_data:
+    with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
 
     return data_file
@@ -463,7 +463,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 def load_addrs_data() -> dict:
     """Load data about addresses and their keys for usage in tests."""
     data_file = Path(get_cluster_env().state_dir) / ADDRS_DATA
-    with open(data_file, "rb", encoding="utf-8") as in_data:
+    with open(data_file, "rb") as in_data:
         return pickle.load(in_data)  # type: ignore
 
 
