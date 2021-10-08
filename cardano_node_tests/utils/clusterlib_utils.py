@@ -76,9 +76,9 @@ def register_stake_address(
     return tx_raw_output
 
 
-def deregister_stake_addr(
+def deregister_stake_address(
     cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
-) -> clusterlib.TxRawOutput:
+) -> Tuple[clusterlib.TxRawOutput, clusterlib.TxRawOutput]:
     """Deregister stake address."""
     # files for deregistering stake address
     stake_addr_dereg_cert = cluster_obj.gen_stake_addr_deregistration_cert(
@@ -90,18 +90,19 @@ def deregister_stake_addr(
     )
 
     # withdraw rewards to payment address
-    cluster_obj.withdraw_reward(
+    tx_raw_output_withdrawal = cluster_obj.withdraw_reward(
         stake_addr_record=pool_user.stake,
         dst_addr_record=pool_user.payment,
         tx_name=name_template,
     )
 
-    tx_raw_output = cluster_obj.send_tx(
+    # deregister the stake address
+    tx_raw_output_dereg = cluster_obj.send_tx(
         src_address=pool_user.payment.address,
         tx_name=f"{name_template}_dereg_stake_addr",
         tx_files=tx_files_deregister,
     )
-    return tx_raw_output
+    return tx_raw_output_withdrawal, tx_raw_output_dereg
 
 
 def fund_from_genesis(
