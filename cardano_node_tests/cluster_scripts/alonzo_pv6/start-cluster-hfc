@@ -706,7 +706,7 @@ while read -r txhash txix amount _; do
 done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$TXIN_ADDR" |
-            grep -E "lovelace \+ TxOutDatumHashNone$")"
+            grep -E "lovelace \+ TxOutDatumNone$")"
 
 TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
 
