@@ -274,7 +274,7 @@ class TestMIRCerts:
             created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster_pots,
                 name_template=f"test_mir_certs_ci{cluster_manager.cluster_instance_num}",
-                no_of_addr=2,
+                no_of_addr=4,
             )
             fixture_cache.value = created_users
 
@@ -808,17 +808,21 @@ class TestMIRCerts:
         """Send funds from the reserves or treasury pot to unregistered stake address.
 
         * generate an MIR certificate
+        * register a stake address
+        * if transfering funds from treasury, deregister the stake address at this point
         * submit a TX with the MIR certificate
+        * if transfering funds from reserves, deregister the stake address at this point
         * check that the amount was NOT added to the stake address reward account
         """
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
-        pool_user = pool_users[0]
 
         if fund_src == self.TREASURY:
             amount = 1_500_000_000_000
+            pool_user = pool_users[2]
         else:
             amount = 50_000_000_000_000
+            pool_user = pool_users[3]
 
         init_balance = cluster.get_address_balance(pool_user.payment.address)
 
@@ -836,6 +840,17 @@ class TestMIRCerts:
             ],
         )
 
+        # register the stake address
+        tx_raw_out_reg = clusterlib_utils.register_stake_address(
+            cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
+        )
+
+        # deregister the stake address before submitting the Tx with MIR cert
+        if fund_src == self.TREASURY:
+            tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
+                cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
+            )
+
         # send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
@@ -848,9 +863,19 @@ class TestMIRCerts:
 
         tx_epoch = cluster.get_epoch()
 
+        # deregister the stake address after submitting the Tx with MIR cert
+        if fund_src != self.TREASURY:
+            tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
+                cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
+            )
+
         assert (
             cluster.get_address_balance(pool_user.payment.address)
-            == init_balance - tx_raw_output.fee
+            == init_balance
+            - tx_raw_output.fee
+            - tx_raw_out_reg.fee
+            - tx_raw_out_withdrawal.fee
+            - tx_raw_out_dereg.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -866,6 +891,7 @@ class TestMIRCerts:
                     f"({tx_db_record.reserve[0].amount} != {amount})"
                 )
 
+        # wait for next epoch and check the reward
         cluster.wait_for_new_epoch()
 
         assert not cluster.get_stake_addr_info(
