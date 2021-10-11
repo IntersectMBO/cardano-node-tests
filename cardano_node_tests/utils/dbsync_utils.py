@@ -22,9 +22,6 @@ from cardano_node_tests.utils import dbsync_conn
 LOGGER = logging.getLogger(__name__)
 
 
-DBSYNC_DB = "dbsync"
-
-
 class MetadataRecord(NamedTuple):
     key: int
     json: Any
@@ -272,6 +269,33 @@ class OrphanedRewardDBRow(NamedTuple):
     amount: decimal.Decimal
     epoch_no: int
     pool_id: str
+
+
+class SchemaVersionStages(NamedTuple):
+    one: int
+    two: int
+    three: int
+
+
+class SchemaVersion:
+    """Query and cache db-sync schema version."""
+
+    _stages: Optional[SchemaVersionStages] = None
+
+    @classmethod
+    def stages(cls) -> SchemaVersionStages:
+        if cls._stages is not None:
+            return cls._stages
+
+        with dbsync_conn.DBSync.conn().cursor() as cur:
+            cur.execute(
+                "SELECT stage_one, stage_two, stage_three "
+                "FROM schema_version ORDER BY id DESC LIMIT 1;"
+            )
+
+            cls._stages = SchemaVersionStages(*cur.fetchone())
+
+        return cls._stages
 
 
 def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
