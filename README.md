@@ -9,8 +9,9 @@ Installation
 ------------
 
 ```sh
-# create and activate virtual env
+# create a virtual env (make sure you are not in nix shell)
 $ python3 -m venv .env
+# activate the virtual env
 $ . .env/bin/activate
 # install this package together with dev requirements
 $ make install
@@ -39,9 +40,11 @@ $ cd /path/to/cardano-node-tests
 $ . .env/bin/activate
 ```
 
-Running tests:
+Running tests on local cluster (local cluster instances will be started automatically during test run setup):
 
 ```sh
+# set env variables
+$ export CARDANO_NODE_SOCKET_PATH=/path/to/cardano-node/state-cluster0/bft1.socket
 # run tests
 $ make tests
 ```
@@ -49,6 +52,8 @@ $ make tests
 Running tests on one of the testnets:
 
 ```sh
+# set env variables
+$ export CARDANO_NODE_SOCKET_PATH=/path/to/cardano-node/state-cluster0/relay1.socket
 # run tests
 $ BOOTSTRAP_DIR=/path/to/bootstrap/dir make testnets
 ```
@@ -79,28 +84,31 @@ Variables for `make tests` and `make testnets`
 * `TX_ERA` - era for transactions - can be used for creating Shelley-era (Allegra-era, ...) transactions
 * `NOPOOLS` - when running tests on testnet, a cluster with no staking pools will be created
 * `BOOTSTRAP_DIR` - path to a bootstrap dir for given testnet (genesis files, config files, faucet data)
+* `SCRIPTS_DIRNAME` - path to a dir with local cluster start / stop scripts and configuration files
 
 E.g.
 ```sh
-$ SCHEDULING_LOG=testrun_20201208_1.log TEST_THREADS=3 CLUSTER_ERA=mary TX_ERA=shelley PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
+$ SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=mary SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/alonzo_pv6/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
 ```
 
 
 Tests development
 -----------------
 
-When running tests, the framework start and stop cluster instances as needed. That is not ideal for tests development, as starting a cluster instance takes several epochs (to get from Byron to Mary). To keep cardano cluster running in-between test runs, one needs to start it in "development mode".
+When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for tests development, as starting a cluster instance takes several epochs (to get from Byron to Alonzo). To keep cardano cluster running in-between test runs, one needs to start it in "development mode".
 
 ```sh
 # activate virtual env
 $ . .env/bin/activate
 # prepare cluster scripts
-$ prepare-cluster-scripts -d scripts/destination/dir -s cardano_node_tests/cluster_scripts/mary/
+$ prepare-cluster-scripts -d scripts/destination/dir -s cardano_node_tests/cluster_scripts/alonzo/
 # set env variables
 $ export CARDANO_NODE_SOCKET_PATH=/path/to/cardano-node/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
 # start the cluster instance in development mode
 $ scripts/destination/dir/start-cluster-hfc
 ```
+
+After starting the cluster, keys and configuration files are available in the `/path/to/cardano-node/state-cluster0` directory. The pools-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, payment address with initial funds and related keys in the `byron` subdirectory. Local faucet address and related key files are stored in the `addrs_data` subdirectory.
 
 
 Test coverage of cardano-cli commands
