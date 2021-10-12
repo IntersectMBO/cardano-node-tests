@@ -31,6 +31,7 @@ ERRORS_IGNORED = [
     "failedScripts",
     "db-sync-node:.* AsyncCancelled",
     "closed when reading data, waiting on next header",
+    "db-sync-node:.* validateEpochRewardsBefore",  # TODO: remove once rewards are fixed in db-sync
 ]
 if configuration.CLUSTER_ERA == "alonzo":
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
