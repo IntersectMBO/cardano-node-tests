@@ -2012,6 +2012,110 @@ class TestBuildLocking:
             )
         assert "RedeemerNotNeeded" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_collateral_is_txin(
+        self,
+        cluster_lock_always_suceeds: clusterlib.ClusterLib,
+        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+    ):
+        """Test spending the locked UTxO while using single UTxO for both collateral and Tx input.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Tests bug https://github.com/input-output-hk/cardano-db-sync/issues/750
+
+        * create a Tx ouput with a datum hash at the script address and a collateral UTxO
+        * check that the expected amount was locked at the script address
+        * spend the locked UTxO while using the collateral UTxO both as collateral and as
+          normal Tx input
+        * check that the expected amount was spent
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_lock_always_suceeds
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+
+        payment_addr = payment_addrs_lock_always_suceeds[2]
+        dst_addr = payment_addrs_lock_always_suceeds[3]
+
+        amount = 50_000_000
+
+        # Step 1: fund the script address
+
+        plutus_op = PlutusOp(
+            script_file=ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=PLUTUS_DIR / "typed-42.datum",
+            redeemer_file=PLUTUS_DIR / "typed-42.redeemer",
+        )
+
+        tx_output_step1 = _build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addr,
+            dst_addr=dst_addr,
+            plutus_op=plutus_op,
+        )
+
+        # Step 2: spend the "locked" UTxO
+
+        txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid_step1}#2")
+        script_address = script_utxos[0].address
+
+        script_step1_balance = cluster.get_address_balance(script_address)
+        dst_step1_balance = cluster.get_address_balance(dst_addr.address)
+
+        plutus_txins = [
+            clusterlib.PlutusTxIn(
+                txins=script_utxos,
+                collaterals=collateral_utxos,
+                script_file=plutus_op.script_file,
+                datum_file=plutus_op.datum_file,
+                redeemer_file=plutus_op.redeemer_file,
+            )
+        ]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[dst_addr.skey_file],
+        )
+        txouts = [
+            clusterlib.TxOut(address=dst_addr.address, amount=amount),
+        ]
+
+        tx_output_step2 = cluster.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files,
+            # `collateral_utxos` is used both as collateral and as normal Tx input
+            txins=collateral_utxos,
+            txouts=txouts,
+            change_address=script_address,
+            plutus_txins=plutus_txins,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output_step2.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        cluster.submit_tx(
+            tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_step2.plutus_txins]
+        )
+
+        assert (
+            cluster.get_address_balance(dst_addr.address)
+            == dst_step1_balance + amount - collateral_utxos[0].amount
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        assert (
+            cluster.get_address_balance(script_address)
+            == script_step1_balance - amount - tx_output_step2.fee + collateral_utxos[0].amount
+        ), f"Incorrect balance for script address `{script_address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
+
 
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALONZO,
