@@ -1785,6 +1785,11 @@ class TestNegative:
             regex="HandshakeError",
             rules_file_id=worker_id,
         )
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="NodeToClientVersionData",
+            rules_file_id=worker_id,
+        )
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
                 [
