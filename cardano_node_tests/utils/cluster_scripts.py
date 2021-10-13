@@ -193,7 +193,7 @@ class LocalScripts(ScriptsTypes):
 class TestnetScripts(ScriptsTypes):
     """Testnet cluster scripts (full cardano mode)."""
 
-    TESTNET_GLOBS = ("config*.json", "genesis-*.json", "topology-*.json")
+    TESTNET_GLOBS = ("config*.json", "genesis-*.json", "topology-*.json", "dbsync-config.*")
     BOOTSTRAP_CONF = "testnet_conf"
 
     def __init__(self) -> None:
