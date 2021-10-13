@@ -50,6 +50,28 @@ jq --arg ekg "$RELAY1_EKG" --arg prometheus "$RELAY1_PROMETHEUS" \
   "$TESTNET_CONF_DIR"/config-*.json > "$STATE_CLUSTER/config-relay1.json"
 chmod u+w "$STATE_CLUSTER"/config-*.json
 
+# enable db-sync service
+if [ -n "${DBSYNC_REPO:-""}" ]; then
+  [ -e "$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended" ] || \
+    { echo "The \`$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended\` not found, line $LINENO" >&2; exit 1; }  # assert
+
+  # copy db-sync config file
+  cp "$TESTNET_CONF_DIR/dbsync-config.yaml" "$STATE_CLUSTER/dbsync-config.yaml"
+
+  # copy db-sync state
+  cp -r "$TESTNET_DIR/db-sync" "$STATE_CLUSTER/db-sync"
+
+  state_cluster_name="${STATE_CLUSTER##*/}"
+  cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
+
+[program:dbsync]
+command=$SCRIPT_DIR/run_dbsync.sh
+stderr_logfile=./$state_cluster_name/dbsync.stderr
+stdout_logfile=./$state_cluster_name/dbsync.stdout
+autostart=false
+EoF
+fi
+
 # create scripts for cluster starting / stopping
 printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
 printf "#!/bin/sh\n\nsupervisorctl stop all" > "$STATE_CLUSTER/supervisorctl_stop"
@@ -58,17 +80,17 @@ printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
 chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_start}
 
 # copy db
-cp -r "$TESTNET_DIR/node1-db" "$STATE_CLUSTER/db-relay1"
+cp -r "$TESTNET_DIR/relay1-db" "$STATE_CLUSTER/db-relay1"
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
 echo "Waiting until replay is finished"
 sleep 10
-while tail -n 10 "$STATE_CLUSTER/relay1.stdout" | grep -q "replay progress"; do
+while tail -n 10 "$STATE_CLUSTER/relay1.stdout" | grep -E -q "replay progress|IPSubscriptionTarget"; do
   sleep 10
 done
 
-for _ in {1..5}; do
+for _ in {1..10}; do
   if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
     break
   fi
@@ -79,7 +101,7 @@ done
 
 echo "Waiting to make sure the chain is synced"
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
-while :; do
+for _ in {1..600}; do
   start_slot="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot')"
   sleep 30
   end_slot="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot')"
@@ -88,5 +110,22 @@ while :; do
   fi
   sleep 5
 done
+
+if [ -n "${DBSYNC_REPO:-""}" ]; then
+  echo "Starting db-sync"
+  supervisorctl start dbsync
+  sleep 10
+
+  echo "Waiting to make sure db-sync is synced"
+  for _ in {1..600}; do
+    node_block="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.block')"
+    sleep 5
+    dbsync_block="$("$SCRIPT_DIR/dbsync_block_no.sh")"
+    if [ "$node_block" -le "$dbsync_block" ]; then
+      break
+    fi
+    sleep 60
+  done
+fi
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
