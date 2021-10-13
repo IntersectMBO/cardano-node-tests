@@ -217,7 +217,7 @@ chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_start}
 
 # copy db
 for n in db-pool1 db-pool2 db-relay1; do
-  cp -r "$TESTNET_DIR/node1-db" "$STATE_CLUSTER/$n"
+  cp -r "$TESTNET_DIR/relay1-db" "$STATE_CLUSTER/$n"
 done
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
