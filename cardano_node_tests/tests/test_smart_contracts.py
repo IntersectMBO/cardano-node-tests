@@ -2108,9 +2108,10 @@ class TestBuildLocking:
             == dst_step1_balance + amount - collateral_utxos[0].amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
+        # TODO: fee is not known when using `transaction build` command
         assert (
             cluster.get_address_balance(script_address)
-            == script_step1_balance - amount - tx_output_step2.fee + collateral_utxos[0].amount
+            < script_step1_balance - amount + collateral_utxos[0].amount
         ), f"Incorrect balance for script address `{script_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
