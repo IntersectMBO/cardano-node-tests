@@ -8,13 +8,10 @@ Integration tests for cardano-node.
 Installation
 ------------
 
+Create a python virtual env and install this package together with dev requirements:
+
 ```sh
-# create a virtual env (make sure you are not in nix shell)
-$ python3 -m venv .env
-# activate the virtual env
-$ . .env/bin/activate
-# install this package together with dev requirements
-$ make install
+$ ./setup_venv.sh
 ```
 
 Requires Python 3.8 or newer.
