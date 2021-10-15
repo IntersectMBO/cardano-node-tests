@@ -23,7 +23,7 @@ Preparing env:
 
 ```sh
 # cd to cardano-node repo
-$ cd /path/to/cardano-node
+$ cd <your path to cardano-node repo>
 # update and checkout the desired commit/tag
 $ git checkout master
 $ git pull origin master
@@ -32,7 +32,7 @@ $ git checkout tags/<tag>
 # launch devops shell
 $ nix-shell -A devops
 # cd to tests repo
-$ cd /path/to/cardano-node-tests
+$ cd <your path to cardano-node-test repo>
 # activate virtual env
 $ . .env/bin/activate
 ```
@@ -41,7 +41,7 @@ Running tests on local cluster (local cluster instances will be started automati
 
 ```sh
 # set env variables
-$ export CARDANO_NODE_SOCKET_PATH=/path/to/cardano-node/state-cluster0/bft1.socket
+$ export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket
 # run tests
 $ make tests
 ```
@@ -50,9 +50,9 @@ Running tests on one of the testnets:
 
 ```sh
 # set env variables
-$ export CARDANO_NODE_SOCKET_PATH=/path/to/cardano-node/state-cluster0/relay1.socket
+$ export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/relay1.socket
 # run tests
-$ BOOTSTRAP_DIR=/path/to/bootstrap/dir make testnets
+$ BOOTSTRAP_DIR=<your path to bootstrap dir> make testnets
 ```
 
 Running individual tests:
@@ -98,14 +98,14 @@ When running tests, the testing framework starts and stops cluster instances as 
 # activate virtual env
 $ . .env/bin/activate
 # prepare cluster scripts
-$ prepare-cluster-scripts -d scripts/destination/dir -s cardano_node_tests/cluster_scripts/alonzo/
+$ prepare-cluster-scripts -d <destination dir>/alonzo -s cardano_node_tests/cluster_scripts/alonzo/
 # set env variables
-$ export CARDANO_NODE_SOCKET_PATH=/path/to/cardano-node/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
+$ export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
 # start the cluster instance in development mode
-$ scripts/destination/dir/start-cluster-hfc
+$ <destination dir>/alonzo/start-cluster-hfc
 ```
 
-After starting the cluster, keys and configuration files are available in the `/path/to/cardano-node/state-cluster0` directory. The pools-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, payment address with initial funds and related keys in the `byron` subdirectory. Local faucet address and related key files are stored in the `addrs_data` subdirectory.
+After starting the cluster, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pools-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, payment address with initial funds and related keys in the `byron` subdirectory. Local faucet address and related key files are stored in the `addrs_data` subdirectory.
 
 
 Test coverage of cardano-cli commands
