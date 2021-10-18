@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(readlink -m "${0%/*}")"
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
+STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 
 NUM_BFT_NODES=1
 NUM_POOLS=3
@@ -47,13 +48,12 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
   # create clean database
   "$SCRIPT_DIR/postgres-setup.sh"
 
-  state_cluster_name="${STATE_CLUSTER##*/}"
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:dbsync]
 command=$SCRIPT_DIR/run_dbsync.sh
-stderr_logfile=./$state_cluster_name/dbsync.stderr
-stdout_logfile=./$state_cluster_name/dbsync.stdout
+stderr_logfile=./$STATE_CLUSTER_NAME/dbsync.stderr
+stdout_logfile=./$STATE_CLUSTER_NAME/dbsync.stdout
 autostart=false
 EoF
 fi
@@ -305,7 +305,7 @@ rmdir "$STATE_CLUSTER/shelley/utxo-keys"
 printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
 printf "#!/bin/sh\n\nsupervisorctl stop all" > "$STATE_CLUSTER/supervisorctl_stop"
 printf "#!/bin/sh\n\nsupervisorctl restart nodes:" > "$STATE_CLUSTER/supervisorctl_restart_nodes"
-printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
+printf "#!/bin/sh\n\nsupervisord --config ./%s/supervisor.conf" "$STATE_CLUSTER_NAME" \
   > "$STATE_CLUSTER/supervisord_start"
 chmod u+x "$STATE_CLUSTER"/{supervisorctl_*,supervisord_start}
 
