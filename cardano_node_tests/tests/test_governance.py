@@ -798,22 +798,28 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    @pytest.mark.parametrize("addr_history", ("addr_known", "addr_unknown"))
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
-    def test_pay_unregistered_stake_addr_from(
+    def test_pay_unregistered_stake_addr_from(  # noqa: C901
         self,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         fund_src: str,
+        addr_history: str,
     ):
         """Send funds from the reserves or treasury pot to unregistered stake address.
 
         * generate an MIR certificate
-        * register a stake address
-        * if transfering funds from treasury, deregister the stake address at this point
+        * if a stake address should be known on blockchain:
+            - register the stake address
+            - if transfering funds from treasury, deregister the stake address
+              BEFORE submitting the TX
         * submit a TX with the MIR certificate
-        * if transfering funds from reserves, deregister the stake address at this point
+        * if a stake address should be known on blockchain and if transfering funds from reserves,
+          deregister the stake address AFTER submitting the TX
         * check that the amount was NOT added to the stake address reward account
         """
+        # pylint: disable=too-many-branches
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
 
@@ -840,16 +846,17 @@ class TestMIRCerts:
             ],
         )
 
-        # register the stake address
-        tx_raw_out_reg = clusterlib_utils.register_stake_address(
-            cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
-        )
-
-        # deregister the stake address before submitting the Tx with MIR cert
-        if fund_src == self.TREASURY:
-            tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
+        # register the stake address, if it is supposed to be known on blockchain
+        if addr_history == "addr_known":
+            tx_raw_out_reg = clusterlib_utils.register_stake_address(
                 cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
             )
+
+            # deregister the stake address before submitting the Tx with MIR cert
+            if fund_src == self.TREASURY:
+                tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
+                    cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
+                )
 
         # send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
@@ -864,18 +871,18 @@ class TestMIRCerts:
         tx_epoch = cluster.get_epoch()
 
         # deregister the stake address after submitting the Tx with MIR cert
-        if fund_src != self.TREASURY:
+        if addr_history == "addr_known" and fund_src != self.TREASURY:
             tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
                 cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
             )
 
+        reg_dereg_fees = 0
+        if addr_history == "addr_known":
+            reg_dereg_fees = tx_raw_out_reg.fee + tx_raw_out_withdrawal.fee + tx_raw_out_dereg.fee
+
         assert (
             cluster.get_address_balance(pool_user.payment.address)
-            == init_balance
-            - tx_raw_output.fee
-            - tx_raw_out_reg.fee
-            - tx_raw_out_withdrawal.fee
-            - tx_raw_out_dereg.fee
+            == init_balance - tx_raw_output.fee - reg_dereg_fees
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
