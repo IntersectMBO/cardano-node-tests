@@ -820,8 +820,18 @@ class TestLocking:
         amount = 10_000_000
         deposit_amount = cluster.get_address_deposit()
 
-        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=pool_users_lock_context_eq[0].stake.vkey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
+
+        # generate a dummy redeemer in order to create a txbody from which
+        # we can generate a tx and then derive the correct redeemer
         redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+        _create_script_context(cluster_obj=cluster, redeemer_file=redeemer_file_dummy)
 
         plutus_op_dummy = PlutusOp(
             script_file=CONTEXT_EQUIVALENCE_PLUTUS,
@@ -829,12 +839,8 @@ class TestLocking:
             redeemer_file=redeemer_file_dummy,
             execution_units=(1000_000_000, 10_000_000),
         )
-        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
-        # generate a dummy redeemer in order to create a txbody from which
-        # we can generate a tx and then derive the correct redeemer
-        _create_script_context(cluster_obj=cluster, redeemer_file=redeemer_file_dummy)
-
+        # fund the script address
         tx_output_fund = _fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -849,14 +855,6 @@ class TestLocking:
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
         invalid_hereafter = cluster.get_slot_no() + 1000
-
-        # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=pool_users_lock_context_eq[0].stake.vkey_file,
-        )
-
-        tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
 
         __, tx_output_dummy = _spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
@@ -876,10 +874,13 @@ class TestLocking:
         assert tx_output_dummy
 
         # generate the "real" redeemer
+        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
         tx_file_dummy = Path(f"{tx_output_dummy.out_file.with_suffix('')}.signed")
         _create_script_context(
             cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
         )
+
+        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
         _spend_locked_txin(
             temp_template=temp_template,
@@ -1829,20 +1830,26 @@ class TestBuildLocking:
         amount = 10_000_000
         deposit_amount = cluster.get_address_deposit()
 
-        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr2",
+            stake_vkey_file=pool_users_lock_context_eq[2].stake.vkey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
+
+        # generate a dummy redeemer in order to create a txbody from which
+        # we can generate a tx and then derive the correct redeemer
         redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+        _create_script_context(cluster_obj=cluster, redeemer_file=redeemer_file_dummy)
 
         plutus_op_dummy = PlutusOp(
             script_file=CONTEXT_EQUIVALENCE_PLUTUS,
             datum_file=PLUTUS_DIR / "typed-42.datum",
             redeemer_file=redeemer_file_dummy,
         )
-        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
-        # generate a dummy redeemer in order to create a txbody from which
-        # we can generate a tx and then derive the correct redeemer
-        _create_script_context(cluster_obj=cluster, redeemer_file=redeemer_file_dummy)
-
+        # fund the script address
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -1855,14 +1862,6 @@ class TestBuildLocking:
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         invalid_hereafter = cluster.get_slot_no() + 1000
-
-        # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr2",
-            stake_vkey_file=pool_users_lock_context_eq[2].stake.vkey_file,
-        )
-
-        tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
 
         __, tx_output_dummy = _build_spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
@@ -1883,10 +1882,13 @@ class TestBuildLocking:
         assert tx_output_dummy
 
         # generate the "real" redeemer
+        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
         tx_file_dummy = Path(f"{tx_output_dummy.out_file.with_suffix('')}.signed")
         _create_script_context(
             cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
         )
+
+        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
         _build_spend_locked_txin(
             temp_template=temp_template,
