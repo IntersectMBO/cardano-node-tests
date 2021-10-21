@@ -39,7 +39,7 @@ Create directory for storing cardano components repos:
 mkdir Projects
 cd Projects
 ```
-Clone proper cardano projects:
+Clone Cardano projects:
 
 **cardano-node**:
 
@@ -53,8 +53,7 @@ Clone proper cardano projects:
 
 `git clone git@github.com:input-output-hk/cardano-node-tests.git`
 
-Checkout version of `db-sync` that you want to test.
-`cardano-node-tests` requires `db-sync` executable so we need to build db-sync.
+Checkout the version of `db-sync` that you want to use. `cardano-node-tests` requires `db-sync` executable so we need to build db-sync.
 
 ```sh
 cd cardano-db-sync
@@ -67,18 +66,14 @@ Go to `cardano-node-tests`, start virtaul environment and install all dependenci
 
 ```sh
 cd ../cardano-node-tests
-
-python3 -m venv .env
-. .env/bin/activate
-make install
-
+./setup_venv.sh
 < it may take a while >
 ```
 
-At this point it might be beneficial to also instal `ipython` that will help us later with debugging:
+At this point it might be beneficial to also install `ipython` that will help us later with debugging:
 
 ```sh
-pip install ipython
+sudo apt install python3-pip
 ```
 
 
@@ -103,7 +98,7 @@ cd ../cardano-node-tests
 . .env/bin/activate
 ```
 
-### All the remaining steps in sections below should be performed from `cardano-node-tests` directory.
+### All the remaining steps from the sections below should be performed from `cardano-node-tests` directory.
 
 </br>
 
@@ -171,7 +166,7 @@ own pool there.
 
 - `testnets` - prepare files so cluster will run on real network and will also have stake pool configured there. Tests that require pool presence will be run there.
 
-<em>Procedure for setting up cluster on real network will be described in separate document and link will be added here later.</em>
+<em>The procedure for setting up cluster on real network will be described in a separate document and link will be added here later.</em>
 
 </br>
 
@@ -192,9 +187,9 @@ Those files will be used by script that will start our local cluster.
 
 ## <a name="adjustmen"></a> Adjusting some parameters like decentralization, adding new update proposals and etc.
 
-<em>This is optional step and you can skip it </em>
+<em>This is an optional step and you can skip it </em>
 
-As it was mentioned after running preparation script a new directory with template files and scripts will be created:
+As it was mentioned, after running the preparation script, a new directory with template files and scripts will be created:
 `cardano-node-tests/scripts/destination/dir`
 
 You can find there a `start-cluster-hfc` script that contains all the code that starts cluster.
@@ -214,7 +209,7 @@ cardano_cli_log governance create-update-proposal \
   --protocol-minor-version 0
 ```
 
-If you would like to adjust some alonzo specific parameters like `maxCollateralInputs` procedure
+If you would like to adjust some Alonzo specific parameters like `maxCollateralInputs`, the  procedure
 would be the same - use search option in your editor, find proper place and edit it accordingly to your needs:
 
 ```sh
@@ -234,7 +229,7 @@ jq -r '
 
 </br>
 
-## <a name="start_cluster"></a> Start local cluster:
+## <a name="start_cluster"></a> Start the local cluster:
 
 The last step is to export **CARDANO_NODE_SOCKET_PATH**, **DBSYNC_REPO** and **DEV_CLUSTER_RUNNING** environment variables
 
@@ -250,7 +245,7 @@ Finally we can start our local cluster with:
 
 `scripts/destination/dir/start-cluster-hfc`
 
-Local cluser will start 3 pools and 1 BFT node.
+The local cluser will start 3 stake pools and 1 BFT node.
 
 ### OUTPUT example:
 
@@ -538,23 +533,20 @@ you can see what cardano-cli commands are executed.
 
 pools:
 
-N=1,2,3
+    N=1,2,3
 
-`cardano-node/state-cluster0/pool<N>.stdout`
-
-`cardano-node/state-cluster0/pool<N>.stderr`
+- `cardano-node/state-cluster0/pool<N>.stdout`
+- `cardano-node/state-cluster0/pool<N>.stderr`
 
 BFT node:
 
-`cardano-node/state-cluster0/bft1.stdout`
-
-`cardano-node/state-cluster0/bft1.stderr`
+- `cardano-node/state-cluster0/bft1.stdout`
+- `cardano-node/state-cluster0/bft1.stderr`
 
 db-sync:
 
-`cardano-node/state-cluster0/dbsync.stdout`
-
-`cardano-node/state-cluster0/dbsync.stderr`
+- `cardano-node/state-cluster0/dbsync.stdout`
+- `cardano-node/state-cluster0/dbsync.stderr`
 
 </br>
 
