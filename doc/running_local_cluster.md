@@ -567,7 +567,7 @@ Use `\dt` for listing all tables:
 ```sql
 dbsync0=# \dt
                     List of relations
- Schema |            Name             | Type  |  Owner   
+ Schema |            Name             | Type  |  Owner
 --------+-----------------------------+-------+----------
  public | ada_pots                    | table | postgres
  public | admin_user                  | table | postgres
@@ -584,7 +584,7 @@ Use `\d table_name` for checking table details:
 ```sql
 dbsync0=# \d collateral_tx_in
                                Table "public.collateral_tx_in"
-    Column    |  Type   | Collation | Nullable |                   Default                    
+    Column    |  Type   | Collation | Nullable |                   Default
 --------------+---------+-----------+----------+----------------------------------------------
  id           | bigint  |           | not null | nextval('collateral_tx_in_id_seq'::regclass)
  tx_in_id     | bigint  |           | not null |

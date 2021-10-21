@@ -416,39 +416,6 @@ We can see that currently there are some issues:
 [db-sync-node:Info:784][2021-10-08 12:45:33.21 UTC] Starting epoch 58
 [db-sync-node:Info:784] [2021-10-08 12:45:33.21 UTC] Handling 3 stakes for epoch 58 slot 58011, hash f8175c985699105a67afdc7dae17b325fd1cafd3794500e95722fafecc375ce5
 [db-sync-node:Warning:784][0m [2021-10-08 12:45:33.21 UTC] validateEpochRewards: rewards spendable in epoch 58 expected total of 1065.150011 ADA but got 501065.150011 ADA
-[db-sync-node:Info:6][2021-10-08 12:45:33.56 UTC] Schema migration files validated
-[db-sync-node:Info:6][2021-10-08 12:45:33.56 UTC] Running database migrations
-[db-sync-node:Info:6][2021-10-08 12:45:33.87 UTC] Using byron genesis file from: "./state-cluster0/byron/genesis.json"
-[db-sync-node:Info:6][2021-10-08 12:45:33.87 UTC] Using shelley genesis file from: "./state-cluster0/shelley/genesis.json"
-[db-sync-node:Info:6][2021-10-08 12:45:33.87 UTC] Using alonzo genesis file from: "./state-cluster0/shelley/genesis.alonzo.json"
-[db-sync-node:Info:6][2021-10-08 12:45:33.88 UTC] NetworkMagic: 42
-[db-sync-node:Info:6][2021-10-08 12:45:33.88 UTC] Initial genesis distribution present and correct
-[db-sync-node:Info:6][2021-10-08 12:45:33.88 UTC] Total genesis supply of Ada: 45000000000.000000
-[db-sync-node:Info:6][2021-10-08 12:45:33.88 UTC] Validating Genesis distribution
-[db-sync-node:Info:6][2021-10-08 12:45:35.35 UTC] Schema migration files validated
-[db-sync-node:Info:6][2021-10-08 12:45:35.35 UTC] Running database migrations
-[db-sync-node:Info:6][2021-10-08 12:45:35.66 UTC] Using byron genesis file from: "./state-cluster0/byron/genesis.json"
-[db-sync-node:Info:6][2021-10-08 12:45:35.66 UTC] Using shelley genesis file from: "./state-cluster0/shelley/genesis.json"
-[db-sync-node:Info:6][2021-10-08 12:45:35.66 UTC] Using alonzo genesis file from: "./state-cluster0/shelley/genesis.alonzo.json"
-[db-sync-node:Info:6][2021-10-08 12:45:35.67 UTC] NetworkMagic: 42
-[db-sync-node:Info:6][2021-10-08 12:45:35.67 UTC] Initial genesis distribution present and correct
-[db-sync-node:Info:6][2021-10-08 12:45:35.67 UTC] Total genesis supply of Ada: 45000000000.000000
-[db-sync-node:Info:6][2021-10-08 12:45:35.67 UTC] Validating Genesis distribution
-[db-sync-node:Info:6][2021-10-08 12:45:38.14 UTC] Schema migration files validated
-< keeps repeating >
-```
-
-### Error.log :
-
-```sh
-Error: Shelley.validateGenesisDistribution: Expected initial block to have 1 but got 2
-Error: Shelley.validateGenesisDistribution: Expected initial block to have 1 but got 2
-Error: Shelley.validateGenesisDistribution: Expected initial block to have 1 but got 2
-Error: Shelley.validateGenesisDistribution: Expected initial block to have 1 but got 2
-Error: Shelley.validateGenesisDistribution: Expected initial block to have 1 but got 2
-Error: Shelley.validateGenesisDistribution: Expected initial block to have 1 but got 2
-Error: Shelley.validateGenesisDistribution: Expected initial block to have 1 but got 2
-< keeps repeating >
 ```
 
 ```sql
