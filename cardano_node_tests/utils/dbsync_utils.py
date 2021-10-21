@@ -80,6 +80,12 @@ class PoolDataRecord(NamedTuple):
     retiring_epoch: int
 
 
+class ScriptRecord(NamedTuple):
+    hash: str
+    type: str
+    serialised_size: int
+
+
 class TxRecord(NamedTuple):
     tx_id: int
     tx_hash: str
@@ -95,6 +101,7 @@ class TxRecord(NamedTuple):
     txouts: List[clusterlib.UTXOData]
     mint: List[clusterlib.UTXOData]
     collaterals: List[clusterlib.UTXOData]
+    scripts: List[ScriptRecord]
     metadata: List[MetadataRecord]
     reserve: List[ADAStashRecord]
     treasury: List[ADAStashRecord]
@@ -161,6 +168,7 @@ class TxDBRow(NamedTuple):
     stake_deleg_count: int
     withdrawal_count: int
     collateral_count: int
+    script_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -241,6 +249,14 @@ class CollateralTxInDBRow(NamedTuple):
     tx_hash: memoryview
 
 
+class ScriptDBRow(NamedTuple):
+    id: int
+    tx_id: int
+    hash: memoryview
+    type: str
+    serialised_size: Optional[int]
+
+
 class ADAPotsDBRow(NamedTuple):
     id: int
     slot_no: int
@@ -317,6 +333,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
             " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
             " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
+            " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -340,6 +357,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
             " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
             " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
+            " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
             " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, join_ma_mint.policy, join_ma_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -423,6 +441,22 @@ def query_collateral_tx_ins(txhash: str) -> Generator[CollateralTxInDBRow, None,
             yield CollateralTxInDBRow(*result)
 
 
+def query_plutus_scripts(txhash: str) -> Generator[ScriptDBRow, None, None]:
+    """Query transaction plutus scripts in db-sync."""
+    with dbsync_conn.DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " script.id, script.tx_id, script.hash, script.type, script.serialised_size "
+            "FROM script "
+            "LEFT JOIN tx ON tx.id = script.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield ScriptDBRow(*result)
+
+
 def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
     """Query transaction metadata in db-sync."""
     with dbsync_conn.DBSync.conn().cursor() as cur:
@@ -462,8 +496,8 @@ def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     with dbsync_conn.DBSync.conn().cursor() as cur:
         cur.execute(
             "SELECT"
-            " treasury.id, stake_address.view, treasury.cert_index, "
-            "treasury.amount, treasury.tx_id "
+            " treasury.id, stake_address.view, treasury.cert_index,"
+            " treasury.amount, treasury.tx_id "
             "FROM treasury "
             "INNER JOIN stake_address ON treasury.addr_id = stake_address.id "
             "INNER JOIN tx ON tx.id = treasury.tx_id "
@@ -916,7 +950,7 @@ def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
     return txins
 
 
-def get_tx_record(txhash: str) -> TxRecord:
+def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     """Get transaction data from db-sync.
 
     Compile data from multiple SQL queries to get as much information about the TX as possible.
@@ -993,6 +1027,17 @@ def get_tx_record(txhash: str) -> TxRecord:
             for r in query_collateral_tx_ins(txhash=txhash)
         ]
 
+    scripts = []
+    if txdata.last_row.script_count:
+        scripts = [
+            ScriptRecord(
+                hash=r.hash.hex(),
+                type=str(r.type),
+                serialised_size=int(r.serialised_size) if r.serialised_size else 0,
+            )
+            for r in query_plutus_scripts(txhash=txhash)
+        ]
+
     record = TxRecord(
         tx_id=int(txdata.last_row.tx_id),
         tx_hash=txdata.last_row.tx_hash.hex(),
@@ -1012,6 +1057,7 @@ def get_tx_record(txhash: str) -> TxRecord:
         txouts=[*txdata.utxo_out, *txdata.ma_utxo_out],
         mint=txdata.mint_utxo_out,
         collaterals=collaterals,
+        scripts=scripts,
         metadata=metadata,
         reserve=reserve,
         treasury=treasury,
@@ -1151,5 +1197,17 @@ def check_tx(
     assert (
         tx_collaterals == db_collaterals
     ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
+
+    tx_plutus_scripts = {
+        r.script_file for r in (*tx_raw_output.plutus_txins, *tx_raw_output.plutus_mint)
+    }
+    db_plutus_scripts = {r for r in response.scripts if r.type == "plutus"}
+    len_tx_plutus, len_db_plutus = len(tx_plutus_scripts), len(db_plutus_scripts)
+    assert (
+        len_tx_plutus == len_db_plutus
+    ), f"Num of plutus scripts don't match ({len_tx_plutus} != {len_db_plutus})"
+    assert all(
+        r.serialised_size > 0 for r in db_plutus_scripts
+    ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
 
     return response
