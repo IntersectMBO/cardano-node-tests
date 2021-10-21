@@ -5,6 +5,8 @@ README for cardano-node-tests
 
 Integration tests for cardano-node.
 
+For more details check the [doc](https://github.com/input-output-hk/cardano-node-tests/tree/master/doc) folder
+
 Installation
 ------------
 
