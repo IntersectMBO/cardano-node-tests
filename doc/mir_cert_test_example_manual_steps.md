@@ -2,10 +2,10 @@
 
 Some node network operations require access to genesis keys and this in other hand requires proper access to
 machines where those nodes are running. This is more of a `dev-ops` thing and in order
-to test things much faster and safier (in worst case test can only break your local cluster which you can easily respin) `local-cluster` is perfect fot investigating such cases.
+to test things much faster and safer (in worst case test can only break your local cluster which you can easily respin) `local-cluster` is perfect fot investigating such cases.
 
 
- Below there is an example of such case for running manual test for checking MIR certificate transfer to stake address that was registered and then deregistered before submission of MIR cert transaction. This is a practical example of interacting with `local cluster` - `cardano-node` and `db-sync` which also presents how easily you can use `local cluster` for examining cardano fautures.
+Below is an example of such case for running manual test for checking MIR certificate transfer to stake address that was registered and then deregistered before submission of MIR cert transaction. This is a practical example of interacting with `local cluster` - `cardano-node` and `db-sync` which also presents how easily you can use `local cluster` for examining cardano fautures.
 
 This assumes that you have a running local cluster.
 Instructions on how to start a local cluster can be found here:
