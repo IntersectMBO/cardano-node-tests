@@ -147,6 +147,27 @@ class TestBasic:
         )
         return addrs
 
+    @pytest.fixture
+    def payment_addrs_no_change(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create 2 new payment addresses for `test_build_no_change`."""
+        addrs = clusterlib_utils.create_payment_addr_records(
+            f"addr_no_change_ci{cluster_manager.cluster_instance_num}_0",
+            f"addr_no_change_ci{cluster_manager.cluster_instance_num}_1",
+            cluster_obj=cluster,
+        )
+
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+        return addrs
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.parametrize("amount", (1500_000, 2000_000, 10_000_000))
@@ -236,6 +257,78 @@ class TestBasic:
 
         assert (
             cluster.get_address_balance(src_address) == src_init_balance - amount - tx_output.fee
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    )
+    @pytest.mark.dbsync
+    def test_build_no_change(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs_no_change: List[clusterlib.AddressRecord],
+    ):
+        """Send funds to payment address and balance the outputs so that there is no change.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Tests bug https://github.com/input-output-hk/cardano-node/issues/3041
+
+        * try to build a Tx that sends all available funds, and extract fee amount
+          from the error message
+        * send all available funds minus fee from source address to destination address
+        * check that no change UTxO was created
+        """
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+
+        src_addr = payment_addrs_no_change[0]
+        src_address = src_addr.address
+        dst_address = payment_addrs_no_change[1].address
+
+        src_init_balance = cluster.get_address_balance(src_address)
+        dst_init_balance = cluster.get_address_balance(dst_address)
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+        txouts_init = [clusterlib.TxOut(address=dst_address, amount=src_init_balance)]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                txouts=txouts_init,
+            )
+        fee_match = re.search(r"negative: Lovelace \(-([0-9]*)\) lovelace", str(excinfo.value))
+        assert fee_match
+
+        fee = int(fee_match.group(1))
+        amount = src_init_balance - fee
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        tx_output = cluster.build_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            txouts=txouts,
+            change_address=src_address,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        assert (
+            cluster.get_address_balance(src_address) == 0
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
