@@ -1198,16 +1198,12 @@ def check_tx(
         tx_collaterals == db_collaterals
     ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
 
-    tx_plutus_scripts = {
-        r.script_file for r in (*tx_raw_output.plutus_txins, *tx_raw_output.plutus_mint)
-    }
     db_plutus_scripts = {r for r in response.scripts if r.type == "plutus"}
-    len_tx_plutus, len_db_plutus = len(tx_plutus_scripts), len(db_plutus_scripts)
-    assert (
-        len_tx_plutus == len_db_plutus
-    ), f"Num of plutus scripts don't match ({len_tx_plutus} != {len_db_plutus})"
-    assert all(
-        r.serialised_size > 0 for r in db_plutus_scripts
-    ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
+    # a script is added to `script` table only the first time it is seen, so the record
+    # can be empty for the current transaction
+    if db_plutus_scripts:
+        assert all(
+            r.serialised_size > 0 for r in db_plutus_scripts
+        ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
 
     return response
