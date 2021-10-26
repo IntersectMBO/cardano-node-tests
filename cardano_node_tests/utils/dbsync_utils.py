@@ -12,6 +12,7 @@ from typing import NamedTuple
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from typing import Union
 
 from cardano_clusterlib import clusterlib
 
@@ -86,6 +87,14 @@ class ScriptRecord(NamedTuple):
     serialised_size: int
 
 
+class RedeemerRecord(NamedTuple):
+    unit_mem: int
+    unit_steps: int
+    fee: int
+    purpose: str
+    script_hash: str
+
+
 class TxRecord(NamedTuple):
     tx_id: int
     tx_hash: str
@@ -102,6 +111,7 @@ class TxRecord(NamedTuple):
     mint: List[clusterlib.UTXOData]
     collaterals: List[clusterlib.UTXOData]
     scripts: List[ScriptRecord]
+    redeemers: List[RedeemerRecord]
     metadata: List[MetadataRecord]
     reserve: List[ADAStashRecord]
     treasury: List[ADAStashRecord]
@@ -169,6 +179,7 @@ class TxDBRow(NamedTuple):
     withdrawal_count: int
     collateral_count: int
     script_count: int
+    redeemer_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -257,6 +268,16 @@ class ScriptDBRow(NamedTuple):
     serialised_size: Optional[int]
 
 
+class RedeemerDBRow(NamedTuple):
+    id: int
+    tx_id: int
+    unit_mem: int
+    unit_steps: int
+    fee: int
+    purpose: str
+    script_hash: memoryview
+
+
 class ADAPotsDBRow(NamedTuple):
     id: int
     slot_no: int
@@ -334,6 +355,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
             " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
             " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
+            " (SELECT COUNT(id) FROM redeemer WHERE tx_id=tx.id) AS redeemer_count,"
             " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -358,6 +380,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
             " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
             " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
+            " (SELECT COUNT(id) FROM redeemer WHERE tx_id=tx.id) AS redeemer_count,"
             " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity,"
             " ma_tx_mint.id, join_ma_mint.policy, join_ma_mint.name, ma_tx_mint.quantity "
             "FROM tx "
@@ -455,6 +478,23 @@ def query_plutus_scripts(txhash: str) -> Generator[ScriptDBRow, None, None]:
 
         while (result := cur.fetchone()) is not None:
             yield ScriptDBRow(*result)
+
+
+def query_redeemers(txhash: str) -> Generator[RedeemerDBRow, None, None]:
+    """Query transaction redeemers in db-sync."""
+    with dbsync_conn.DBSync.conn().cursor() as cur:
+        cur.execute(
+            "SELECT"
+            " redeemer.id, redeemer.tx_id, redeemer.unit_mem, redeemer.unit_steps, redeemer.fee,"
+            " redeemer.purpose, redeemer.script_hash "
+            "FROM redeemer "
+            "LEFT JOIN tx ON tx.id = redeemer.tx_id "
+            "WHERE tx.hash = %s;",
+            (rf"\x{txhash}",),
+        )
+
+        while (result := cur.fetchone()) is not None:
+            yield RedeemerDBRow(*result)
 
 
 def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
@@ -1038,6 +1078,19 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
             for r in query_plutus_scripts(txhash=txhash)
         ]
 
+    redeemers = []
+    if txdata.last_row.redeemer_count:
+        redeemers = [
+            RedeemerRecord(
+                unit_mem=int(r.unit_mem),
+                unit_steps=int(r.unit_steps),
+                fee=int(r.fee),
+                purpose=str(r.purpose),
+                script_hash=r.script_hash.hex(),
+            )
+            for r in query_redeemers(txhash=txhash)
+        ]
+
     record = TxRecord(
         tx_id=int(txdata.last_row.tx_id),
         tx_hash=txdata.last_row.tx_hash.hex(),
@@ -1058,6 +1111,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
         mint=txdata.mint_utxo_out,
         collaterals=collaterals,
         scripts=scripts,
+        redeemers=redeemers,
         metadata=metadata,
         reserve=reserve,
         treasury=treasury,
@@ -1112,6 +1166,69 @@ def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> List[clusterlib.TxOut
             mint_txouts[mt.coin] = mt._replace(address="")
 
     return list(mint_txouts.values())
+
+
+def _tx_scripts_hashes(
+    cluster_obj: clusterlib.ClusterLib,
+    records: Union[clusterlib.OptionalPlutusTxIns, clusterlib.OptionalPlutusMintData],
+) -> Dict[str, Union[clusterlib.OptionalPlutusTxIns, clusterlib.OptionalPlutusMintData]]:
+    """Create a hash table of Tx Plutus data indexed by script hash."""
+    hashes_db: dict = {}
+
+    for r in records:
+        shash = cluster_obj.get_policyid(script_file=r.script_file)
+        if shash not in hashes_db:
+            hashes_db[shash] = []
+        hashes_db[shash].append(r)
+
+    return hashes_db
+
+
+def _db_redeemer_hashes(
+    records: List[RedeemerRecord],
+) -> Dict[str, List[RedeemerRecord]]:
+    """Create a hash table of redeemers indexed by script hash."""
+    hashes_db: dict = {}
+
+    for r in records:
+        shash = r.script_hash
+        if shash not in hashes_db:
+            hashes_db[shash] = []
+        hashes_db[shash].append(r)
+
+    return hashes_db
+
+
+def _compare_redeemers(
+    tx_data: Dict[str, Union[clusterlib.OptionalPlutusTxIns, clusterlib.OptionalPlutusMintData]],
+    db_data: Dict[str, List[RedeemerRecord]],
+    purpose: str,
+) -> None:
+    """Compare redeemers data available in Tx data with data in db-sync."""
+    for script_hash, tx_recs in tx_data.items():
+        db_redeemer_recs = db_data.get(script_hash)
+        assert db_redeemer_recs, f"No redeemer info in db-sync for script hash `{script_hash}`"
+
+        len_tx_recs, len_db_redeemer_recs = len(tx_recs), len(db_redeemer_recs)
+        assert (
+            len_tx_recs == len_db_redeemer_recs
+        ), f"Number of TX redeemers doesn't match ({len_tx_recs} != {db_redeemer_recs})"
+
+        for tx_rec in tx_recs:
+            if not tx_rec.execution_units:
+                continue
+
+            tx_unit_steps = tx_rec.execution_units[0]
+            tx_unit_mem = tx_rec.execution_units[1]
+            for db_redeemer in db_redeemer_recs:
+                if db_redeemer.purpose != purpose:
+                    continue
+                if tx_unit_steps == db_redeemer.unit_steps and tx_unit_mem == db_redeemer.unit_mem:
+                    break
+            else:
+                raise AssertionError(
+                    f"Couldn't find matching redeemer info in db-sync for\n{tx_rec}"
+                )
 
 
 def check_tx(
@@ -1205,5 +1322,19 @@ def check_tx(
         assert all(
             r.serialised_size > 0 for r in db_plutus_scripts
         ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
+
+    # compare redeemers data
+    tx_plutus_in_hashes = _tx_scripts_hashes(
+        cluster_obj=cluster_obj, records=tx_raw_output.plutus_txins
+    )
+    tx_plutus_mint_hashes = _tx_scripts_hashes(
+        cluster_obj=cluster_obj, records=tx_raw_output.plutus_mint
+    )
+    db_redeemer_hashes = _db_redeemer_hashes(records=response.redeemers)
+    _compare_redeemers(tx_data=tx_plutus_in_hashes, db_data=db_redeemer_hashes, purpose="spend")
+    _compare_redeemers(tx_data=tx_plutus_mint_hashes, db_data=db_redeemer_hashes, purpose="mint")
+
+    redeemer_fees = functools.reduce(lambda x, y: x + y.fee, response.redeemers, 0)
+    assert tx_raw_output.fee > redeemer_fees, "Combined redeemer fees are >= than total TX fee"
 
     return response
