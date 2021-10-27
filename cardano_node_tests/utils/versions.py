@@ -14,7 +14,7 @@ class Versions:
     MARY = 4
     ALONZO = 5
 
-    DEFAULT_CLUSTER_ERA = 4
+    DEFAULT_CLUSTER_ERA = 5
     DEFAULT_TX_ERA = 4
     LAST_KNOWN_ERA = 5
 

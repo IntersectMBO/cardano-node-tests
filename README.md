@@ -87,7 +87,7 @@ Variables for `make tests` and `make testnets`
 
 E.g.
 ```sh
-$ SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=mary SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/alonzo_pv6/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
+$ SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=mary SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/alonzo/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
 ```
 
 
