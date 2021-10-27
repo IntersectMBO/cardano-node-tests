@@ -4,6 +4,7 @@
 * MIR certificates
 """
 import logging
+import time
 from pathlib import Path
 from typing import List
 
@@ -38,6 +39,22 @@ def temp_dir(create_temp_dir: Path):
 
 # use the "temp_dir" fixture for all tests automatically
 pytestmark = pytest.mark.usefixtures("temp_dir")
+
+
+def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> List[dbsync_utils.ADAPotsDBRow]:
+    for r in range(4):
+        if r > 0:
+            LOGGER.warning(f"Repeating the `ada_pots` SQL query for the {r} time.")
+            time.sleep(2 + r * r)
+        pots_records = list(dbsync_utils.query_ada_pots(epoch_from=epoch_from))
+        if len(pots_records) == expected_len:
+            break
+    else:
+        raise AssertionError(
+            f"Got {len(pots_records)} record(s) instead of expected {expected_len}"
+        )
+
+    return pots_records
 
 
 @pytest.mark.order(3)
@@ -370,7 +387,7 @@ class TestMIRCerts:
 
             cluster.wait_for_new_epoch()
 
-            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
             # normally `treasury[-1]` > `treasury[-2]`
             assert (pots_records[-1].treasury - pots_records[-2].treasury) > amount
             # normally `reserves[-1]` < `reserves[-2]`
@@ -439,7 +456,7 @@ class TestMIRCerts:
 
             cluster.wait_for_new_epoch()
 
-            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
             # normally `treasury[-1]` > `treasury[-2]`
             assert (pots_records[-1].treasury - pots_records[-2].treasury) > amount
             # normally `reserves[-1]` < `reserves[-2]`
@@ -508,7 +525,7 @@ class TestMIRCerts:
 
             cluster.wait_for_new_epoch()
 
-            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
             # normally `treasury[-1]` > `treasury[-2]`
             assert pots_records[-1].treasury < pots_records[-2].treasury
             # normally `reserves[-1]` < `reserves[-2]`
@@ -577,7 +594,7 @@ class TestMIRCerts:
 
             cluster.wait_for_new_epoch()
 
-            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
             # normally `treasury[-1]` > `treasury[-2]`
             assert pots_records[-1].treasury < pots_records[-2].treasury
             # normally `reserves[-1]` < `reserves[-2]`
@@ -909,7 +926,8 @@ class TestMIRCerts:
 
         if tx_db_record:
             # check that the amount was not transferred out of the pot
-            pots_records = list(dbsync_utils.query_ada_pots(epoch_from=tx_epoch))
+            pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
+
             if fund_src == self.TREASURY:
                 # normally `treasury[-1]` > `treasury[-2]`
                 assert abs(pots_records[-1].treasury - pots_records[-2].treasury) < amount
