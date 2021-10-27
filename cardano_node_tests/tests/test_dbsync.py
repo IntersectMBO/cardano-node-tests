@@ -41,15 +41,19 @@ class TestDBSync:
         "admin_user",
         "block",
         "collateral_tx_in",
+        "cost_model",
+        "datum",
         "delegation",
+        "delisted_pool",
         "epoch",
         "epoch_param",
+        "epoch_reward_total_received",
         "epoch_stake",
         "epoch_sync_time",
         "ma_tx_mint",
         "ma_tx_out",
         "meta",
-        "orphaned_reward",
+        "multi_asset",
         "param_proposal",
         "pool_hash",
         "pool_metadata_ref",
@@ -60,10 +64,12 @@ class TestDBSync:
         "pool_retire",
         "pool_update",
         "pot_transfer",
+        "redeemer",
         "reserve",
         "reserved_pool_ticker",
         "reward",
         "schema_version",
+        "script",
         "slot_leader",
         "stake_address",
         "stake_deregistration",
@@ -78,8 +84,8 @@ class TestDBSync:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.dbsync < version.parse("10.0.0"),
-        reason="needs db-sync version >= 10.0.0",
+        VERSIONS.dbsync < version.parse("12.0.0"),
+        reason="needs db-sync version >= 12.0.0",
     )
     def test_table_names(self, cluster):
         """Check that all the expected tables are present in db-sync."""
