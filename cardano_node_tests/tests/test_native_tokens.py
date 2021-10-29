@@ -1910,6 +1910,7 @@ class TestNegative:
 
         return out_file_signed
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
         asset_name=st.text(
             alphabet=st.characters(
