@@ -857,8 +857,8 @@ def get_pool_data(pool_id_bech32: str) -> Optional[PoolDataRecord]:
         margin=float(pool.margin),
         fixed_cost=int(pool.fixed_cost),
         registered_tx_id=pool.registered_tx_id,
-        metadata_url=pool.metadata_url,
-        metadata_hash=pool.metadata_hash.hex(),
+        metadata_url=str(pool.metadata_url or ""),
+        metadata_hash=pool.metadata_hash.hex() if pool.metadata_hash else "",
         owners=list(known_owners),
         relays=[*single_host_names, *single_host_addresses],
         retire_cert_index=pool.retire_cert_index,
@@ -883,7 +883,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
         if tx_id == -1:
             tx_id = query_row.tx_id
         if tx_id != query_row.tx_id:
-            raise AssertionError("Transaction ID differs from the expected ID.")
+            raise AssertionError("Transaction ID differs from the expected ID")
 
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:
@@ -1338,3 +1338,107 @@ def check_tx(
     assert tx_raw_output.fee > redeemer_fees, "Combined redeemer fees are >= than total TX fee"
 
     return response
+
+
+def check_pool_deregistration(pool_id: str, retiring_epoch: int) -> Optional[PoolDataRecord]:
+    """Check pool retirement in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    db_pool_data = get_pool_data(pool_id)
+    assert db_pool_data, f"No data returned from db-sync for pool {pool_id}"
+
+    if db_pool_data.retire_announced_tx_id and db_pool_data.retiring_epoch:
+        assert (
+            retiring_epoch == db_pool_data.retiring_epoch
+        ), f"Mismatch in epoch values: {retiring_epoch} VS {db_pool_data.retiring_epoch}"
+    else:
+        raise AssertionError(f"Stake pool `{pool_id}` not retired")
+
+    return db_pool_data
+
+
+def check_pool_data(ledger_pool_data: dict, pool_id: str) -> Optional[PoolDataRecord]:  # noqa: C901
+    """Check comparison for pool data between ledger and db-sync."""
+    # pylint: disable=too-many-branches
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    db_pool_data = get_pool_data(pool_id)
+    assert db_pool_data, f"No data returned from db-sync for pool {pool_id}"
+
+    errors_list = []
+
+    if ledger_pool_data["publicKey"] != db_pool_data.hash:
+        errors_list.append(
+            "'publicKey' value is different than expected; "
+            f"Expected: {ledger_pool_data['publicKey']} vs Returned: {db_pool_data.hash}"
+        )
+
+    if ledger_pool_data["cost"] != db_pool_data.fixed_cost:
+        errors_list.append(
+            "'cost' value is different than expected; "
+            f"Expected: {ledger_pool_data['cost']} vs Returned: {db_pool_data.fixed_cost}"
+        )
+
+    metadata = ledger_pool_data.get("metadata") or {}
+
+    metadata_hash = metadata.get("hash") or ""
+    if metadata_hash != db_pool_data.metadata_hash:
+        errors_list.append(
+            "'metadata hash' value is different than expected; "
+            f"Expected: {metadata_hash} vs "
+            f"Returned: {db_pool_data.metadata_hash}"
+        )
+
+    metadata_url = metadata.get("url") or ""
+    if metadata_url != db_pool_data.metadata_url:
+        errors_list.append(
+            "'metadata url' value is different than expected; "
+            f"Expected: {metadata_url} vs "
+            f"Returned: {db_pool_data.metadata_url}"
+        )
+
+    if sorted(ledger_pool_data["owners"]) != sorted(db_pool_data.owners):
+        errors_list.append(
+            "'owners' value is different than expected; "
+            f"Expected: {ledger_pool_data['owners']} vs Returned: {db_pool_data.owners}"
+        )
+
+    if ledger_pool_data["vrf"] != db_pool_data.vrf_key_hash:
+        errors_list.append(
+            "'vrf' value is different than expected; "
+            f"Expected: {ledger_pool_data['vrf']} vs Returned: {db_pool_data.vrf_key_hash}"
+        )
+
+    if ledger_pool_data["pledge"] != db_pool_data.pledge:
+        errors_list.append(
+            "'pledge' value is different than expected; "
+            f"Expected: {ledger_pool_data['pledge']} vs Returned: {db_pool_data.pledge}"
+        )
+
+    if ledger_pool_data["margin"] != db_pool_data.margin:
+        errors_list.append(
+            "'margin' value is different than expected; "
+            f"Expected: {ledger_pool_data['margin']} vs Returned: {db_pool_data.margin}"
+        )
+
+    ledger_reward_address = ledger_pool_data["rewardAccount"]["credential"]["key hash"]
+    if ledger_reward_address != db_pool_data.reward_addr:
+        errors_list.append(
+            "'reward address' value is different than expected; "
+            f"Expected: {ledger_reward_address} vs Returned: {db_pool_data.reward_addr}"
+        )
+
+    if ledger_pool_data["relays"]:
+        if ledger_pool_data["relays"] != db_pool_data.relays:
+            errors_list.append(
+                "'relays' value is different than expected; "
+                f"Expected: {ledger_pool_data['relays']} vs Returned: {db_pool_data.relays}"
+            )
+
+    if errors_list:
+        errors_str = "\n\n".join(errors_list)
+        raise AssertionError(f"{errors_str}\n\nStake Pool Details: \n{ledger_pool_data}")
+
+    return db_pool_data
