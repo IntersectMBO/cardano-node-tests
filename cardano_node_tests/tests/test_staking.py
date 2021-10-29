@@ -2743,7 +2743,7 @@ class TestRewards:
         # check reward amount once the reward address change for pool2 is completed
         pool1_amount_prev = 0
         pool2_amount_prev = 0
-        for __ in range(3):
+        for __ in range(4):
             pool1_amount = cluster.get_stake_addr_info(
                 pool1_reward.stake.address
             ).reward_account_balance
@@ -2761,11 +2761,11 @@ class TestRewards:
                 # check that the reward address for pool1 is now receiving rewards
                 # for both pools by comparing reward amount received in last epoch
                 # with reward amount previously received by both pools together
-                if pool1_epoch_amount >= combined_reward_per_epoch * 0.75:
+                if pool1_epoch_amount >= combined_reward_per_epoch * 0.65:
                     break
 
             pool1_amount_prev = pool1_amount
             pool2_amount_prev = pool2_amount
             cluster.wait_for_new_epoch()
         else:
-            raise AssertionError("New reward was not received by pool reward address")
+            raise AssertionError("Expected reward was not received by the pool reward address")
