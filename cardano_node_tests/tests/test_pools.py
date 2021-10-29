@@ -25,7 +25,6 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -91,129 +90,12 @@ def cluster_mincost(
     )
 
 
-def _check_pool_deregistration_in_db(
-    pool_id: str, retiring_epoch: int
-) -> Optional[dbsync_utils.PoolDataRecord]:
-    """Check pool retirement in db-sync."""
-    if not configuration.HAS_DBSYNC:
-        return None
-
-    db_pool_data = dbsync_utils.get_pool_data(pool_id)
-    if not db_pool_data:
-        raise AssertionError(f"No data returned from db-sync for pool {pool_id}.")
-
-    if db_pool_data.retire_announced_tx_id and db_pool_data.retiring_epoch:
-        assert (
-            retiring_epoch == db_pool_data.retiring_epoch
-        ), f"Mismatch in epoch values: {retiring_epoch} VS {db_pool_data.retiring_epoch}"
-    else:
-        raise AssertionError(f"Stake pool `{pool_id}` not retired.")
-
-    return db_pool_data
-
-
-def _check_pool_data_in_db(  # noqa: C901
-    ledger_pool_data: dict, pool_id: str
-) -> Optional[dbsync_utils.PoolDataRecord]:
-    """Check comparison for pool data between ledger and db-sync."""
-    # pylint: disable=too-many-branches
-    if not configuration.HAS_DBSYNC:
-        return None
-
-    db_pool_data = dbsync_utils.get_pool_data(pool_id)
-    if not db_pool_data:
-        raise AssertionError(f"No data returned from db-sync for pool {pool_id}.")
-
-    errors_list = []
-
-    if ledger_pool_data["publicKey"] != db_pool_data.hash:
-        errors_list.append(
-            "'publicKey' value is different than expected; "
-            f"Expected: {ledger_pool_data['publicKey']} vs Returned: {db_pool_data.hash}"
-        )
-
-    if ledger_pool_data["cost"] != db_pool_data.fixed_cost:
-        errors_list.append(
-            "'cost' value is different than expected; "
-            f"Expected: {ledger_pool_data['cost']} vs Returned: {db_pool_data.fixed_cost}"
-        )
-
-    metadata = ledger_pool_data.get("metadata") or {}
-
-    if metadata["hash"] and metadata["url"]:
-        metadata_hash = metadata["hash"]
-        if metadata_hash != db_pool_data.metadata_hash:
-            errors_list.append(
-                "'metadata hash' value is different than expected; "
-                f"Expected: {metadata_hash} vs "
-                f"Returned: {db_pool_data.metadata_hash}"
-            )
-
-        metadata_url = metadata["url"]
-        if metadata_url != db_pool_data.metadata_url:
-            errors_list.append(
-                "'metadata url' value is different than expected; "
-                f"Expected: {metadata_url} vs "
-                f"Returned: {db_pool_data.metadata_url}"
-            )
-
-    elif ledger_pool_data["metadata"] is not None:
-        errors_list.append(
-            "'metadata' value is different than expected; "
-            f"Expected: None vs Returned: {ledger_pool_data['metadata']}"
-        )
-
-    if sorted(ledger_pool_data["owners"]) != sorted(db_pool_data.owners):
-        errors_list.append(
-            "'owners' value is different than expected; "
-            f"Expected: {ledger_pool_data['owners']} vs Returned: {db_pool_data.owners}"
-        )
-
-    if ledger_pool_data["vrf"] != db_pool_data.vrf_key_hash:
-        errors_list.append(
-            "'vrf' value is different than expected; "
-            f"Expected: {ledger_pool_data['vrf']} vs Returned: {db_pool_data.vrf_key_hash}"
-        )
-
-    if ledger_pool_data["pledge"] != db_pool_data.pledge:
-        errors_list.append(
-            "'pledge' value is different than expected; "
-            f"Expected: {ledger_pool_data['pledge']} vs Returned: {db_pool_data.pledge}"
-        )
-
-    if ledger_pool_data["margin"] != db_pool_data.margin:
-        errors_list.append(
-            "'margin' value is different than expected; "
-            f"Expected: {ledger_pool_data['margin']} vs Returned: {db_pool_data.margin}"
-        )
-
-    ledger_reward_address = ledger_pool_data["rewardAccount"]["credential"]["key hash"]
-    if ledger_reward_address != db_pool_data.reward_addr:
-        errors_list.append(
-            "'reward address' value is different than expected; "
-            f"Expected: {ledger_reward_address} vs Returned: {db_pool_data.reward_addr}"
-        )
-
-    if ledger_pool_data["relays"]:
-        if ledger_pool_data["relays"] != db_pool_data.relays:
-            errors_list.append(
-                "'relays' value is different than expected; "
-                f"Expected: {ledger_pool_data['relays']} vs Returned: {db_pool_data.relays}"
-            )
-
-    if errors_list:
-        errors_str = "\n\n".join(errors_list)
-        raise AssertionError(f"{errors_str}\n\nStake Pool Details: \n{ledger_pool_data}")
-
-    return db_pool_data
-
-
 def _check_pool(
     cluster_obj: clusterlib.ClusterLib,
     stake_pool_id: str,
     pool_data: clusterlib.PoolData,
 ):
-    """Check and return ledger state of the pool."""
+    """Check and return ledger state of the pool, and optionaly also db-sync records."""
     pool_params: dict = cluster_obj.get_pool_params(stake_pool_id).pool_params
 
     assert pool_params, (
@@ -224,6 +106,9 @@ def _check_pool(
     assert not clusterlib_utils.check_pool_data(
         pool_params=pool_params, pool_creation_data=pool_data
     )
+
+    # check pool data in db-sync if available
+    dbsync_utils.check_pool_data(ledger_pool_data=pool_params, pool_id=stake_pool_id)
 
 
 def _check_staking(
@@ -321,6 +206,8 @@ def _register_stake_pool_w_build(
     )
     cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
 
+    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
+
     return pool_reg_cert_file, tx_raw_output
 
 
@@ -376,6 +263,8 @@ def _create_stake_pool_w_build(
         tx_name=tx_name,
         destination_dir=destination_dir,
     )
+
+    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     return clusterlib.PoolCreationOutput(
         stake_pool_id=cluster_obj.get_stake_pool_id(node_cold.vkey_file),
@@ -450,6 +339,8 @@ def _deregister_stake_pool_w_build(
     )
     cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
 
+    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
+
     return pool_dereg_cert_file, tx_raw_output
 
 
@@ -480,6 +371,9 @@ def _create_register_pool(
     else:
         pool_creation_out = cluster_obj.create_stake_pool(
             pool_data=pool_data, pool_owners=pool_owners, tx_name=temp_template
+        )
+        dbsync_utils.check_tx(
+            cluster_obj=cluster_obj, tx_raw_output=pool_creation_out.tx_raw_output
         )
 
     # deregister stake pool
@@ -626,6 +520,8 @@ def _create_register_pool_delegate_stake_tx(
         stake_pool_id=stake_pool_id,
     )
 
+    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
+
     return clusterlib.PoolCreationOutput(
         stake_pool_id=stake_pool_id,
         vrf_key_pair=node_vrf,
@@ -726,12 +622,15 @@ def _create_register_pool_tx_delegate_stake_tx(
         stake_pool_id=pool_creation_out.stake_pool_id,
     )
 
+    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
+
     return pool_creation_out
 
 
 @pytest.mark.order(2)
 @pytest.mark.testnets
 @pytest.mark.long
+@pytest.mark.dbsync
 class TestStakePool:
     """General tests for stake pools."""
 
@@ -970,7 +869,6 @@ class TestStakePool:
         ),
         ids=("build_raw", "build"),
     )
-    @pytest.mark.dbsync
     def test_deregister_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1032,14 +930,6 @@ class TestStakePool:
             use_build_cmd=use_build_cmd,
         )
 
-        # check in db-sync that the pool was registered
-        pool_id = pool_creation_out.stake_pool_id
-
-        _check_pool_data_in_db(
-            ledger_pool_data=cluster.get_pool_params(pool_id).pool_params,
-            pool_id=pool_id,
-        )
-
         pool_owner = pool_owners[0]
         src_register_balance = cluster.get_address_balance(pool_owner.payment.address)
 
@@ -1069,6 +959,7 @@ class TestStakePool:
                 pool_name=pool_data.pool_name,
                 tx_name=temp_template,
             )
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         assert cluster.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
 
         # check that the pool was deregistered
@@ -1076,10 +967,6 @@ class TestStakePool:
         assert not (
             cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
-
-        _check_pool_deregistration_in_db(
-            pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
-        )
 
         # check that the balance for source address was correctly updated
         assert (
@@ -1098,6 +985,10 @@ class TestStakePool:
         assert (
             cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
             == src_register_reward + cluster.get_pool_deposit()
+        )
+
+        dbsync_utils.check_pool_deregistration(
+            pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1182,6 +1073,10 @@ class TestStakePool:
             cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
+        dbsync_utils.check_pool_deregistration(
+            pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
+        )
+
         # check that the stake addresses are no longer delegated
         for owner_rec in pool_owners:
             stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
@@ -1248,6 +1143,8 @@ class TestStakePool:
             cluster_obj=cluster,
             stake_pool_id=pool_creation_out.stake_pool_id,
         )
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
     def test_cancel_stake_pool_deregistration(
@@ -1384,6 +1281,8 @@ class TestStakePool:
             stake_pool_id=pool_creation_out.stake_pool_id,
         )
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "use_build_cmd",
@@ -1496,7 +1395,7 @@ class TestStakePool:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
         else:
-            cluster.register_stake_pool(
+            __, tx_raw_output = cluster.register_stake_pool(
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
@@ -1504,6 +1403,7 @@ class TestStakePool:
                 tx_name=temp_template,
                 deposit=0,  # no additional deposit, the pool is already registered
             )
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # check that pool is going to be updated with correct data
         future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
@@ -1621,7 +1521,7 @@ class TestStakePool:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
         else:
-            cluster.register_stake_pool(
+            __, tx_raw_output = cluster.register_stake_pool(
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
@@ -1629,6 +1529,7 @@ class TestStakePool:
                 tx_name=temp_template,
                 deposit=0,  # no additional deposit, the pool is already registered
             )
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # check that pool is going to be updated with correct data
         future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
@@ -1778,6 +1679,8 @@ class TestStakePool:
             pool_data=pool_data,
         )
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
     @allure.link(helpers.get_vcs_link())
     def test_pool_registration_deregistration(
         self,
@@ -1872,6 +1775,8 @@ class TestStakePool:
             == src_init_reward
         )
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
 
 @pytest.mark.order(2)
 class TestPoolCost:
@@ -1953,6 +1858,7 @@ class TestPoolCost:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("pool_cost", [500, 9999999])
+    @pytest.mark.dbsync
     def test_stake_pool_cost(
         self,
         cluster_manager: cluster_management.ClusterManager,
