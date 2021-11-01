@@ -15,7 +15,7 @@ export PGPORT="${PGPORT:-5432}"
 export PGUSER="${PGUSER:-postgres}"
 
 echo "Deleting db $DATABASE_NAME"
-psql -d "$DATABASE_NAME" -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();" > /dev/null
+psql -d "$DATABASE_NAME" -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();" > /dev/null 2>&1 || :
 dropdb --if-exists "$DATABASE_NAME" > /dev/null
 echo "Setting up db $DATABASE_NAME"
 createdb -T template0 --owner="$PGUSER" --encoding=UTF8 "$DATABASE_NAME"
