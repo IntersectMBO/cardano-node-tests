@@ -1,4 +1,5 @@
 """Functionality for interacting with db-sync."""
+import contextlib
 import decimal
 import functools
 import itertools
@@ -7,13 +8,16 @@ import time
 from typing import Any
 from typing import Dict
 from typing import Generator
+from typing import Iterator
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Sequence
 from typing import Set
 from typing import Tuple
 from typing import Union
 
+import psycopg2
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import clusterlib_utils
@@ -314,6 +318,27 @@ class SchemaVersionStages(NamedTuple):
     three: int
 
 
+@contextlib.contextmanager
+def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cursor]:
+    # pylint: disable=redefined-builtin
+    try:
+        cur = dbsync_conn.DBSync.conn().cursor()
+
+        try:
+            cur.execute(query, vars)
+            conn_alive = True
+        except psycopg2.Error:
+            conn_alive = False
+
+        if not conn_alive:
+            cur = dbsync_conn.DBSync.reconn().cursor()
+            cur.execute(query, vars)
+
+        yield cur
+    finally:
+        cur.close()
+
+
 class SchemaVersion:
     """Query and cache db-sync schema version."""
 
@@ -324,12 +349,12 @@ class SchemaVersion:
         if cls._stages is not None:
             return cls._stages
 
-        with dbsync_conn.DBSync.conn().cursor() as cur:
-            cur.execute(
-                "SELECT stage_one, stage_two, stage_three "
-                "FROM schema_version ORDER BY id DESC LIMIT 1;"
-            )
+        query = (
+            "SELECT stage_one, stage_two, stage_three "
+            "FROM schema_version ORDER BY id DESC LIMIT 1;"
+        )
 
+        with execute(query=query) as cur:
             cls._stages = SchemaVersionStages(*cur.fetchone())
 
         return cls._stages
@@ -392,12 +417,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
             "WHERE tx.hash = %s;"
         )
 
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            query,
-            (rf"\x{txhash}",),
-        )
-
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield TxDBRow(*result)
 
@@ -434,204 +454,188 @@ def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
             "WHERE tx.hash = %s;"
         )
 
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            query,
-            (rf"\x{txhash}",),
-        )
-
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield TxInDBRow(*result)
 
 
 def query_collateral_tx_ins(txhash: str) -> Generator[CollateralTxInDBRow, None, None]:
     """Query transaction collateral txins in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
-            " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash "
-            "FROM collateral_tx_in "
-            "LEFT JOIN tx_out "
-            "ON (tx_out.tx_id = collateral_tx_in.tx_out_id AND"
-            "    tx_out.index = collateral_tx_in.tx_out_index) "
-            "LEFT JOIN tx ON tx.id = collateral_tx_in.tx_in_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
+        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash "
+        "FROM collateral_tx_in "
+        "LEFT JOIN tx_out "
+        "ON (tx_out.tx_id = collateral_tx_in.tx_out_id AND"
+        "    tx_out.index = collateral_tx_in.tx_out_index) "
+        "LEFT JOIN tx ON tx.id = collateral_tx_in.tx_in_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield CollateralTxInDBRow(*result)
 
 
 def query_plutus_scripts(txhash: str) -> Generator[ScriptDBRow, None, None]:
     """Query transaction plutus scripts in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " script.id, script.tx_id, script.hash, script.type, script.serialised_size "
-            "FROM script "
-            "LEFT JOIN tx ON tx.id = script.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " script.id, script.tx_id, script.hash, script.type, script.serialised_size "
+        "FROM script "
+        "LEFT JOIN tx ON tx.id = script.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield ScriptDBRow(*result)
 
 
 def query_redeemers(txhash: str) -> Generator[RedeemerDBRow, None, None]:
     """Query transaction redeemers in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " redeemer.id, redeemer.tx_id, redeemer.unit_mem, redeemer.unit_steps, redeemer.fee,"
-            " redeemer.purpose, redeemer.script_hash "
-            "FROM redeemer "
-            "LEFT JOIN tx ON tx.id = redeemer.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " redeemer.id, redeemer.tx_id, redeemer.unit_mem, redeemer.unit_steps, redeemer.fee,"
+        " redeemer.purpose, redeemer.script_hash "
+        "FROM redeemer "
+        "LEFT JOIN tx ON tx.id = redeemer.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield RedeemerDBRow(*result)
 
 
 def query_tx_metadata(txhash: str) -> Generator[MetadataDBRow, None, None]:
     """Query transaction metadata in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " tx_metadata.id, tx_metadata.key, tx_metadata.json, tx_metadata.bytes,"
-            " tx_metadata.tx_id "
-            "FROM tx_metadata "
-            "INNER JOIN tx ON tx.id = tx_metadata.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " tx_metadata.id, tx_metadata.key, tx_metadata.json, tx_metadata.bytes,"
+        " tx_metadata.tx_id "
+        "FROM tx_metadata "
+        "INNER JOIN tx ON tx.id = tx_metadata.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield MetadataDBRow(*result)
 
 
 def query_tx_reserve(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction reserve record in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " reserve.id, stake_address.view, reserve.cert_index, reserve.amount, reserve.tx_id "
-            "FROM reserve "
-            "INNER JOIN stake_address ON reserve.addr_id = stake_address.id "
-            "INNER JOIN tx ON tx.id = reserve.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " reserve.id, stake_address.view, reserve.cert_index, reserve.amount, reserve.tx_id "
+        "FROM reserve "
+        "INNER JOIN stake_address ON reserve.addr_id = stake_address.id "
+        "INNER JOIN tx ON tx.id = reserve.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield ADAStashDBRow(*result)
 
 
 def query_tx_treasury(txhash: str) -> Generator[ADAStashDBRow, None, None]:
     """Query transaction treasury record in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " treasury.id, stake_address.view, treasury.cert_index,"
-            " treasury.amount, treasury.tx_id "
-            "FROM treasury "
-            "INNER JOIN stake_address ON treasury.addr_id = stake_address.id "
-            "INNER JOIN tx ON tx.id = treasury.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " treasury.id, stake_address.view, treasury.cert_index,"
+        " treasury.amount, treasury.tx_id "
+        "FROM treasury "
+        "INNER JOIN stake_address ON treasury.addr_id = stake_address.id "
+        "INNER JOIN tx ON tx.id = treasury.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield ADAStashDBRow(*result)
 
 
 def query_tx_pot_transfers(txhash: str) -> Generator[PotTransferDBRow, None, None]:
     """Query transaction MIR certificate records in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " pot_transfer.id, pot_transfer.cert_index, pot_transfer.treasury,"
-            " pot_transfer.reserves, pot_transfer.tx_id "
-            "FROM pot_transfer "
-            "INNER JOIN tx ON tx.id = pot_transfer.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " pot_transfer.id, pot_transfer.cert_index, pot_transfer.treasury,"
+        " pot_transfer.reserves, pot_transfer.tx_id "
+        "FROM pot_transfer "
+        "INNER JOIN tx ON tx.id = pot_transfer.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield PotTransferDBRow(*result)
 
 
 def query_tx_stake_reg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
     """Query stake registration record in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " stake_registration.addr_id, stake_address.view, stake_registration.tx_id "
-            "FROM stake_registration "
-            "INNER JOIN stake_address ON stake_registration.addr_id = stake_address.id "
-            "INNER JOIN tx ON tx.id = stake_registration.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " stake_registration.addr_id, stake_address.view, stake_registration.tx_id "
+        "FROM stake_registration "
+        "INNER JOIN stake_address ON stake_registration.addr_id = stake_address.id "
+        "INNER JOIN tx ON tx.id = stake_registration.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield StakeAddrDBRow(*result)
 
 
 def query_tx_stake_dereg(txhash: str) -> Generator[StakeAddrDBRow, None, None]:
     """Query stake deregistration record in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " stake_deregistration.addr_id, stake_address.view, stake_deregistration.tx_id "
-            "FROM stake_deregistration "
-            "INNER JOIN stake_address ON stake_deregistration.addr_id = stake_address.id "
-            "INNER JOIN tx ON tx.id = stake_deregistration.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " stake_deregistration.addr_id, stake_address.view, stake_deregistration.tx_id "
+        "FROM stake_deregistration "
+        "INNER JOIN stake_address ON stake_deregistration.addr_id = stake_address.id "
+        "INNER JOIN tx ON tx.id = stake_deregistration.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield StakeAddrDBRow(*result)
 
 
 def query_tx_stake_deleg(txhash: str) -> Generator[StakeDelegDBRow, None, None]:
     """Query stake registration record in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " tx.id, delegation.active_epoch_no, pool_hash.view AS pool_view,"
-            " stake_address.view AS address_view "
-            "FROM delegation "
-            "INNER JOIN stake_address ON delegation.addr_id = stake_address.id "
-            "INNER JOIN tx ON tx.id = delegation.tx_id "
-            "INNER JOIN pool_hash ON pool_hash.id = delegation.pool_hash_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " tx.id, delegation.active_epoch_no, pool_hash.view AS pool_view,"
+        " stake_address.view AS address_view "
+        "FROM delegation "
+        "INNER JOIN stake_address ON delegation.addr_id = stake_address.id "
+        "INNER JOIN tx ON tx.id = delegation.tx_id "
+        "INNER JOIN pool_hash ON pool_hash.id = delegation.pool_hash_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield StakeDelegDBRow(*result)
 
 
 def query_tx_withdrawal(txhash: str) -> Generator[WithdrawalDBRow, None, None]:
     """Query reward withdrawal record in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " tx.id, stake_address.view, amount "
-            "FROM withdrawal "
-            "INNER JOIN stake_address ON withdrawal.addr_id = stake_address.id "
-            "INNER JOIN tx ON tx.id = withdrawal.tx_id "
-            "WHERE tx.hash = %s;",
-            (rf"\x{txhash}",),
-        )
+    query = (
+        "SELECT"
+        " tx.id, stake_address.view, amount "
+        "FROM withdrawal "
+        "INNER JOIN stake_address ON withdrawal.addr_id = stake_address.id "
+        "INNER JOIN tx ON tx.id = withdrawal.tx_id "
+        "WHERE tx.hash = %s;"
+    )
 
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield WithdrawalDBRow(*result)
 
@@ -640,15 +644,14 @@ def query_ada_pots(
     epoch_from: int = 0, epoch_to: int = 99999999
 ) -> Generator[ADAPotsDBRow, None, None]:
     """Query ADA pots record in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " id, slot_no, epoch_no, treasury, reserves, rewards, utxo, deposits, fees, block_id "
-            "FROM ada_pots "
-            "WHERE epoch_no BETWEEN %s AND %s;",
-            (epoch_from, epoch_to),
-        )
+    query = (
+        "SELECT"
+        " id, slot_no, epoch_no, treasury, reserves, rewards, utxo, deposits, fees, block_id "
+        "FROM ada_pots "
+        "WHERE epoch_no BETWEEN %s AND %s;"
+    )
 
+    with execute(query=query, vars=(epoch_from, epoch_to)) as cur:
         while (result := cur.fetchone()) is not None:
             yield ADAPotsDBRow(*result)
 
@@ -657,18 +660,17 @@ def query_address_reward(
     address: str, epoch_from: int = 0, epoch_to: int = 99999999
 ) -> Generator[RewardDBRow, None, None]:
     """Query reward records for stake address in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " stake_address.view, reward.type, reward.amount, reward.earned_epoch,"
-            " reward.spendable_epoch, pool_hash.view AS pool_view "
-            "FROM reward "
-            "INNER JOIN stake_address ON reward.addr_id = stake_address.id "
-            "INNER JOIN pool_hash ON pool_hash.id = reward.pool_id "
-            "WHERE (stake_address.view = %s) AND (reward.spendable_epoch BETWEEN %s AND %s);",
-            (address, epoch_from, epoch_to),
-        )
+    query = (
+        "SELECT"
+        " stake_address.view, reward.type, reward.amount, reward.earned_epoch,"
+        " reward.spendable_epoch, pool_hash.view AS pool_view "
+        "FROM reward "
+        "INNER JOIN stake_address ON reward.addr_id = stake_address.id "
+        "INNER JOIN pool_hash ON pool_hash.id = reward.pool_id "
+        "WHERE (stake_address.view = %s) AND (reward.spendable_epoch BETWEEN %s AND %s);"
+    )
 
+    with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
         while (result := cur.fetchone()) is not None:
             yield RewardDBRow(*result)
 
@@ -677,61 +679,60 @@ def query_address_orphaned_reward(
     address: str, epoch_from: int = 0, epoch_to: int = 99999999
 ) -> Generator[OrphanedRewardDBRow, None, None]:
     """Query orphaned reward records for stake address in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT"
-            " stake_address.view, orphaned_reward.type, orphaned_reward.amount,"
-            " orphaned_reward.epoch_no, pool_hash.view AS pool_view "
-            "FROM orphaned_reward "
-            "INNER JOIN stake_address ON orphaned_reward.addr_id = stake_address.id "
-            "INNER JOIN pool_hash ON pool_hash.id = orphaned_reward.pool_id "
-            "WHERE (stake_address.view = %s) AND (orphaned_reward.epoch_no BETWEEN %s AND %s);",
-            (address, epoch_from, epoch_to),
-        )
+    query = (
+        "SELECT"
+        " stake_address.view, orphaned_reward.type, orphaned_reward.amount,"
+        " orphaned_reward.epoch_no, pool_hash.view AS pool_view "
+        "FROM orphaned_reward "
+        "INNER JOIN stake_address ON orphaned_reward.addr_id = stake_address.id "
+        "INNER JOIN pool_hash ON pool_hash.id = orphaned_reward.pool_id "
+        "WHERE (stake_address.view = %s) AND (orphaned_reward.epoch_no BETWEEN %s AND %s);"
+    )
 
+    with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
         while (result := cur.fetchone()) is not None:
             yield OrphanedRewardDBRow(*result)
 
 
 def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]:
     """Query pool data record in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT DISTINCT"
-            " pool_hash.id, pool_hash.hash_raw, pool_hash.view,"
-            " pool_update.cert_index, pool_update.vrf_key_hash, pool_update.pledge,"
-            " pool_update.reward_addr, pool_update.active_epoch_no, pool_update.meta_id,"
-            " pool_update.margin, pool_update.fixed_cost, pool_update.registered_tx_id,"
-            " pool_metadata_ref.url as metadata_url,pool_metadata_ref.hash AS metadata_hash,"
-            " pool_owner.addr_id AS owner_stake_address_id,"
-            " stake_address.hash_raw AS owner,"
-            " pool_relay.ipv4, pool_relay.ipv6, pool_relay.dns_name, pool_relay.port,"
-            " pool_retire.cert_index AS retire_cert_index,"
-            " pool_retire.announced_tx_id AS retire_announced_tx_id, pool_retire.retiring_epoch "
-            "FROM pool_hash "
-            "INNER JOIN pool_update ON pool_hash.id=pool_update.hash_id "
-            "FULL JOIN pool_metadata_ref ON pool_update.meta_id=pool_metadata_ref.id "
-            "INNER JOIN pool_owner ON pool_hash.id=pool_owner.pool_hash_id "
-            "FULL JOIN pool_relay ON pool_update.id=pool_relay.update_id "
-            "FULL JOIN pool_retire ON pool_hash.id=pool_retire.hash_id "
-            "INNER JOIN stake_address ON pool_owner.addr_id=stake_address.id "
-            "WHERE pool_hash.view = %s ORDER BY registered_tx_id;",
-            [pool_id_bech32],
-        )
+    query = (
+        "SELECT DISTINCT"
+        " pool_hash.id, pool_hash.hash_raw, pool_hash.view,"
+        " pool_update.cert_index, pool_update.vrf_key_hash, pool_update.pledge,"
+        " pool_update.reward_addr, pool_update.active_epoch_no, pool_update.meta_id,"
+        " pool_update.margin, pool_update.fixed_cost, pool_update.registered_tx_id,"
+        " pool_metadata_ref.url as metadata_url,pool_metadata_ref.hash AS metadata_hash,"
+        " pool_owner.addr_id AS owner_stake_address_id,"
+        " stake_address.hash_raw AS owner,"
+        " pool_relay.ipv4, pool_relay.ipv6, pool_relay.dns_name, pool_relay.port,"
+        " pool_retire.cert_index AS retire_cert_index,"
+        " pool_retire.announced_tx_id AS retire_announced_tx_id, pool_retire.retiring_epoch "
+        "FROM pool_hash "
+        "INNER JOIN pool_update ON pool_hash.id=pool_update.hash_id "
+        "FULL JOIN pool_metadata_ref ON pool_update.meta_id=pool_metadata_ref.id "
+        "INNER JOIN pool_owner ON pool_hash.id=pool_owner.pool_hash_id "
+        "FULL JOIN pool_relay ON pool_update.id=pool_relay.update_id "
+        "FULL JOIN pool_retire ON pool_hash.id=pool_retire.hash_id "
+        "INNER JOIN stake_address ON pool_owner.addr_id=stake_address.id "
+        "WHERE pool_hash.view = %s ORDER BY registered_tx_id;"
+    )
 
+    with execute(query=query, vars=(pool_id_bech32,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield PoolDataDBRow(*result)
 
 
 def query_table_names() -> List[str]:
     """Query table names in db-sync."""
-    with dbsync_conn.DBSync.conn().cursor() as cur:
-        cur.execute(
-            "SELECT tablename "
-            "FROM pg_catalog.pg_tables "
-            "WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema' "
-            "ORDER BY tablename ASC;"
-        )
+    query = (
+        "SELECT tablename "
+        "FROM pg_catalog.pg_tables "
+        "WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema' "
+        "ORDER BY tablename ASC;"
+    )
+
+    with execute(query=query) as cur:
         results: List[Tuple[str]] = cur.fetchall()
         table_names = [r[0] for r in results]
         return table_names
