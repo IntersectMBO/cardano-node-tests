@@ -191,6 +191,57 @@ def pool_users_disposable(
     return pool_users
 
 
+def _db_check_delegation(
+    pool_user: clusterlib.PoolUser,
+    db_record: Optional[dbsync_utils.TxRecord],
+    deleg_epoch: int,
+    pool_id: str,
+):
+    """Check delegation in db-sync."""
+    if not db_record:
+        return
+
+    assert pool_user.stake.address in db_record.stake_registration
+    assert pool_user.stake.address == db_record.stake_delegation[0].address
+    assert db_record.stake_delegation[0].active_epoch_no == deleg_epoch + 2
+    assert pool_id == db_record.stake_delegation[0].pool_id
+
+
+def _add_spendable(rewards: List[dbsync_utils.RewardEpochRecord]) -> Dict[int, int]:
+    recs: Dict[int, int] = {}
+    for r in rewards:
+        epoch = r.spendable_epoch
+        amount = r.amount
+        if epoch in recs:
+            recs[epoch] += amount
+        else:
+            recs[epoch] = amount
+
+    return recs
+
+
+def _db_check_rewards(
+    stake_address: str,
+    rewards: List[Tuple[int, int, int]],
+    pool_id: str,
+):
+    """Check rewards in db-sync."""
+    epoch_from = 0
+    for r in rewards:
+        if r[2]:
+            epoch_from = r[0]
+            break
+
+    reward_db_record = dbsync_utils.check_address_reward(
+        address=stake_address, epoch_from=epoch_from, epoch_to=rewards[-1][0]
+    )
+    assert reward_db_record
+    assert reward_db_record.pool_id == pool_id
+    user_rewards_dict = {r[0]: r[2] for r in rewards if r[2]}
+    user_db_rewards_dict = _add_spendable(reward_db_record.rewards)
+    assert user_rewards_dict == user_db_rewards_dict
+
+
 def _get_key_hashes(rec: dict) -> List[str]:
     """Get key hashes in ledger state snapshot record."""
     return [r[0]["key hash"] for r in rec]
@@ -370,13 +421,12 @@ class TestDelegateAddr:
         tx_db_record = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
         )
-        if tx_db_record:
-            assert delegation_out.pool_user.stake.address in tx_db_record.stake_registration
-            assert (
-                delegation_out.pool_user.stake.address == tx_db_record.stake_delegation[0].address
-            )
-            assert tx_db_record.stake_delegation[0].active_epoch_no == init_epoch + 2
-            assert delegation_out.pool_id == tx_db_record.stake_delegation[0].pool_id
+        _db_check_delegation(
+            pool_user=delegation_out.pool_user,
+            db_record=tx_db_record,
+            deleg_epoch=init_epoch,
+            pool_id=delegation_out.pool_id,
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -430,13 +480,12 @@ class TestDelegateAddr:
         tx_db_record = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
         )
-        if tx_db_record:
-            assert delegation_out.pool_user.stake.address in tx_db_record.stake_registration
-            assert (
-                delegation_out.pool_user.stake.address == tx_db_record.stake_delegation[0].address
-            )
-            assert tx_db_record.stake_delegation[0].active_epoch_no == init_epoch + 2
-            assert delegation_out.pool_id == tx_db_record.stake_delegation[0].pool_id
+        _db_check_delegation(
+            pool_user=delegation_out.pool_user,
+            db_record=tx_db_record,
+            deleg_epoch=init_epoch,
+            pool_id=delegation_out.pool_id,
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(2)
@@ -475,11 +524,12 @@ class TestDelegateAddr:
         tx_db_deleg = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
         )
-        if tx_db_deleg:
-            assert delegation_out.pool_user.stake.address in tx_db_deleg.stake_registration
-            assert delegation_out.pool_user.stake.address == tx_db_deleg.stake_delegation[0].address
-            assert tx_db_deleg.stake_delegation[0].active_epoch_no == init_epoch + 2
-            assert delegation_out.pool_id == tx_db_deleg.stake_delegation[0].pool_id
+        _db_check_delegation(
+            pool_user=delegation_out.pool_user,
+            db_record=tx_db_deleg,
+            deleg_epoch=init_epoch,
+            pool_id=delegation_out.pool_id,
+        )
 
         clusterlib_utils.wait_for_stake_distribution(cluster)
 
@@ -1362,38 +1412,27 @@ class TestRewards:
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
         )
         if tx_db_record:
-            assert delegation_out.pool_user.stake.address in tx_db_record.stake_registration
-            assert (
-                delegation_out.pool_user.stake.address == tx_db_record.stake_delegation[0].address
+            _db_check_delegation(
+                pool_user=delegation_out.pool_user,
+                db_record=tx_db_record,
+                deleg_epoch=init_epoch,
+                pool_id=delegation_out.pool_id,
             )
-            assert tx_db_record.stake_delegation[0].active_epoch_no == init_epoch + 2
-            assert delegation_out.pool_id == tx_db_record.stake_delegation[0].pool_id
 
-            pool_user_db_record = dbsync_utils.check_address_reward(
-                address=delegation_out.pool_user.stake.address, epoch_to=user_rewards[-1][0]
+            _db_check_rewards(
+                stake_address=delegation_out.pool_user.stake.address,
+                rewards=user_rewards,
+                pool_id=pool_id,
             )
-            assert pool_user_db_record
-            assert pool_user_db_record.pool_id == pool_id
-            user_rewards_dict = {r[0]: r[2] for r in user_rewards if r[2]}
-            user_db_rewards_dict = {
-                r.spendable_epoch: r.amount for r in pool_user_db_record.rewards
-            }
-            assert user_rewards_dict == user_db_rewards_dict
 
-            owner_rewards_db_record = dbsync_utils.check_address_reward(
-                address=pool_reward.stake.address,
-                epoch_from=owner_rewards[1][0],
-                epoch_to=owner_rewards[-1][0],
+            _db_check_rewards(
+                stake_address=pool_reward.stake.address,
+                rewards=owner_rewards,
+                pool_id=pool_id,
             )
-            assert owner_rewards_db_record
-            assert owner_rewards_db_record.pool_id == pool_id
-            owner_rewards_dict = {r[0]: r[2] for r in owner_rewards if r[2]}
-            owner_db_rewards_dict = {
-                r.spendable_epoch: r.amount for r in owner_rewards_db_record.rewards
-            }
-            assert owner_rewards_dict == owner_db_rewards_dict
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_reward_addr_delegation(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1416,6 +1455,7 @@ class TestRewards:
           the pool owner's stake address is deregistered
         """
         # pylint: disable=too-many-statements,too-many-locals
+        __: Any  # mypy workaround
         pool_name = "node-pool2"
         cluster = cluster_lock_pool2
 
@@ -1464,7 +1504,7 @@ class TestRewards:
         init_epoch = cluster.get_epoch()
 
         # update the pool parameters by resubmitting the pool registration certificate
-        cluster.register_stake_pool(
+        __, tx_raw_output = cluster.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=[pool_owner],
             vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
@@ -1675,6 +1715,17 @@ class TestRewards:
                     break
             else:
                 raise AssertionError("Haven't received any reward for delegated reward address")
+
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            pool_params: dict = cluster.get_pool_params(pool_id).pool_params
+            dbsync_utils.check_pool_data(ledger_pool_data=pool_params, pool_id=pool_id)
+
+            _db_check_rewards(
+                stake_address=pool_reward.stake.address,
+                rewards=owner_rewards,
+                pool_id=pool_id,
+            )
 
     @allure.link(helpers.get_vcs_link())
     def test_decreasing_reward_transfered_funds(
