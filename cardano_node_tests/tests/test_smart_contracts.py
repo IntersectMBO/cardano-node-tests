@@ -1102,7 +1102,7 @@ class TestLocking:
         )
 
         tokens = clusterlib_utils.new_tokens(
-            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
             token_mint_addr=payment_addr,
@@ -1162,7 +1162,7 @@ class TestLocking:
         )
 
         tokens = clusterlib_utils.new_tokens(
-            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
             token_mint_addr=payment_addr,
@@ -1565,7 +1565,8 @@ class TestMinting:
         ]
 
         policyid = cluster.get_policyid(MINTING_PLUTUS)
-        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
@@ -1700,7 +1701,8 @@ class TestMinting:
         ]
 
         policyid = cluster.get_policyid(TIME_RANGE_PLUTUS)
-        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
@@ -1823,7 +1825,8 @@ class TestMinting:
         )
 
         policyid = cluster.get_policyid(MINTING_CONTEXT_EQUIVALENCE_PLUTUS)
-        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
@@ -2281,7 +2284,7 @@ class TestBuildLocking:
         )
 
         tokens = clusterlib_utils.new_tokens(
-            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
             token_mint_addr=payment_addr,
@@ -2342,7 +2345,7 @@ class TestBuildLocking:
         )
 
         tokens = clusterlib_utils.new_tokens(
-            *[f"couttscoin{token_rand}{i}" for i in range(5)],
+            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
             token_mint_addr=payment_addr,
@@ -2683,7 +2686,8 @@ class TestBuildMinting:
         ]
 
         policyid = cluster.get_policyid(MINTING_PLUTUS)
-        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
@@ -2812,7 +2816,8 @@ class TestBuildMinting:
         ]
 
         policyid = cluster.get_policyid(TIME_RANGE_PLUTUS)
-        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
@@ -2926,7 +2931,8 @@ class TestBuildMinting:
         )
 
         policyid = cluster.get_policyid(MINTING_CONTEXT_EQUIVALENCE_PLUTUS)
-        token = f"{policyid}.qacoin{clusterlib.get_rand_str(4)}"
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
         tx_files_step2 = clusterlib.TxFiles(
