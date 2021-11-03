@@ -718,28 +718,20 @@ def _create_script_context(
 ) -> None:
     """Run the `create-script-context` command (available in plutus-examples)."""
     if tx_file:
-        redeemer_out = Path("script-context.redeemer")
         cmd_args = [
             "create-script-context",
             "--generate-tx",
             str(tx_file),
+            "--out-file",
+            str(redeemer_file),
             f"--{cluster_obj.protocol}-mode",
             *cluster_obj.magic_args,
         ]
     else:
-        redeemer_dir = Path("example/work")
-        redeemer_dir.mkdir(parents=True, exist_ok=True)
-        redeemer_out = redeemer_dir / "script-context.redeemer"
-        cmd_args = ["create-script-context", "--generate"]
-
-    try:
-        redeemer_out.unlink()
-    except FileNotFoundError:
-        pass
+        cmd_args = ["create-script-context", "--out-file", str(redeemer_file)]
 
     helpers.run_command(cmd_args)
-    assert redeemer_out.exists()
-    redeemer_out.rename(redeemer_file)
+    assert redeemer_file.exists()
 
 
 @pytest.mark.skipif(
