@@ -2358,12 +2358,8 @@ class TestRewards:
 
         # withdraw pool rewards to payment address
         # use `transaction build` if possible
-        # TODO: disabled until BUG https://github.com/input-output-hk/cardano-node/issues/3074
-        # is fixed
-        # pylint: disable=condition-evals-to-constant
         if (
-            False
-            and VERSIONS.transaction_era >= VERSIONS.ALONZO
+            VERSIONS.transaction_era >= VERSIONS.ALONZO
             and VERSIONS.transaction_era == VERSIONS.cluster_era
         ):
             withdraw_reward_w_build(
