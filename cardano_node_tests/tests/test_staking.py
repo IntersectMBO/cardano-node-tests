@@ -127,7 +127,11 @@ def cluster_and_pool(
         s_pool_ids = sorted(stake_dist, key=lambda key: stake_dist[key])
         for pool_id in s_pool_ids:
             pool_params = cluster_obj.get_pool_params(pool_id)
-            if pool_params.pool_params["margin"] <= 0.5 and not pool_params.retiring:
+            if (
+                pool_params.pool_params["margin"] <= 0.5
+                and pool_params.pool_params["pledge"] > 0
+                and not pool_params.retiring
+            ):
                 break
         else:
             pytest.skip("Cannot find any usable pool.")
