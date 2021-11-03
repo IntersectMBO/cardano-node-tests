@@ -900,11 +900,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
         # MA outputs
         if query_row.ma_tx_out_id and query_row.ma_tx_out_id not in seen_ma_tx_out_ids:
             seen_ma_tx_out_ids.add(query_row.ma_tx_out_id)
-            asset_name = (
-                bytearray.fromhex(query_row.ma_tx_out_name.hex()).decode()
-                if query_row.ma_tx_out_name
-                else None
-            )
+            asset_name = query_row.ma_tx_out_name.hex() if query_row.ma_tx_out_name else None
             policyid = query_row.ma_tx_out_policy.hex() if query_row.ma_tx_out_policy else ""
             coin = f"{policyid}.{asset_name}" if asset_name else policyid
             ma_rec = clusterlib.UTXOData(
@@ -919,11 +915,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
         # MA minting
         if query_row.ma_tx_mint_id and query_row.ma_tx_mint_id not in seen_ma_tx_mint_ids:
             seen_ma_tx_mint_ids.add(query_row.ma_tx_mint_id)
-            asset_name = (
-                bytearray.fromhex(query_row.ma_tx_mint_name.hex()).decode()
-                if query_row.ma_tx_mint_name
-                else None
-            )
+            asset_name = query_row.ma_tx_mint_name.hex() if query_row.ma_tx_mint_name else None
             policyid = query_row.ma_tx_mint_policy.hex() if query_row.ma_tx_mint_policy else ""
             coin = f"{policyid}.{asset_name}" if asset_name else policyid
             mint_rec = clusterlib.UTXOData(
@@ -971,11 +963,7 @@ def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
         # MA inputs
         if txins_row.ma_tx_out_id and txins_row.ma_tx_out_id not in seen_txins_ma_ids:
             seen_txins_ma_ids.add(txins_row.ma_tx_out_id)
-            asset_name = (
-                bytearray.fromhex(txins_row.ma_tx_out_name.hex()).decode()
-                if txins_row.ma_tx_out_name
-                else None
-            )
+            asset_name = txins_row.ma_tx_out_name.hex() if txins_row.ma_tx_out_name else None
             policyid = txins_row.ma_tx_out_policy.hex() if txins_row.ma_tx_out_policy else ""
             coin = f"{policyid}.{asset_name}" if asset_name else policyid
             txins.append(

@@ -209,7 +209,10 @@ class TestMinting:
         temp_template = (
             f"{clusterlib_utils.get_temp_template(cluster)}_{aname_type}_{use_build_cmd}"
         )
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
+        asset_name_dec = (
+            f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
+        )
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
 
         token_mint_addr = issuers_addrs_fresh[0]
@@ -306,7 +309,10 @@ class TestMinting:
         expected_fee = 188821
 
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{aname_type}"
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
+        asset_name_dec = (
+            f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
+        )
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -411,7 +417,8 @@ class TestMinting:
             with open(script, "w", encoding="utf-8") as out_json:
                 json.dump(script_content, out_json)
 
-            asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+            asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             policyid = cluster.get_policyid(script)
             aname_token = f"{policyid}.{asset_name}"
 
@@ -514,8 +521,8 @@ class TestMinting:
 
         policyid = cluster.get_policyid(script)
         asset_names = [
-            f"couttscoin{clusterlib.get_rand_str(4)}",
-            f"couttscoin{clusterlib.get_rand_str(4)}",
+            f"couttscoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex(),
+            f"couttscoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex(),
         ]
         tokens = [f"{policyid}.{an}" for an in asset_names]
 
@@ -594,7 +601,8 @@ class TestMinting:
         expected_fee = 188821
 
         temp_template = clusterlib_utils.get_temp_template(cluster)
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -695,7 +703,8 @@ class TestMinting:
 
         tokens_to_mint = []
         for tnum in range(tokens_num):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
@@ -792,7 +801,8 @@ class TestMinting:
 
         tokens_to_mint = []
         for tnum in range(tokens_num):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
@@ -877,7 +887,8 @@ class TestMinting:
         expected_fee = 201141
 
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 50
 
         payment_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
@@ -968,7 +979,8 @@ class TestMinting:
         expected_fee = 188821
 
         temp_template = clusterlib_utils.get_temp_template(cluster)
-        asset_name = f"ěůřščžďťň{clusterlib.get_rand_str(4)}"
+        asset_name_dec = f"ěůřščžďťň{clusterlib.get_rand_str(4)}"
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -1081,7 +1093,8 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
@@ -1182,7 +1195,8 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
@@ -1264,7 +1278,8 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
@@ -1336,7 +1351,8 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
@@ -1397,7 +1413,8 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
@@ -1469,7 +1486,8 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
@@ -1552,7 +1570,8 @@ class TestTransfer:
 
             rand = clusterlib.get_rand_str(4)
             temp_template = f"test_tx_new_token_ci{cluster_manager.cluster_instance_num}_{rand}"
-            asset_name = f"couttscoin{rand}"
+            asset_name_dec = f"couttscoin{rand}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
 
             new_tokens = clusterlib_utils.new_tokens(
                 asset_name,
@@ -1697,7 +1716,7 @@ class TestTransfer:
         rand = clusterlib.get_rand_str(5)
 
         new_tokens = clusterlib_utils.new_tokens(
-            *[f"couttscoin{rand}{i}" for i in range(5)],
+            *[f"couttscoin{rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{rand}",
             token_mint_addr=payment_addrs[0],
@@ -1935,7 +1954,8 @@ class TestNegative:
         temp_template = f"test_long_name_ci{cluster.cluster_id}"
 
         script, policyid = simple_script_policyid
-        token = f"{policyid}.{asset_name}"
+        asset_name_enc = asset_name.encode("utf-8").hex()
+        token = f"{policyid}.{asset_name_enc}"
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
         amount = 20_000_000
@@ -1955,8 +1975,4 @@ class TestNegative:
                 temp_template=f"{temp_template}_mint",
             )
         exc_val = str(excinfo.value)
-        assert (
-            "name exceeds 32 bytes" in exc_val
-            or "expecting letter or digit, white space" in exc_val
-            or "expecting alphanumeric asset name" in exc_val
-        )
+        assert "name exceeds 32 bytes" in exc_val or "expecting hexadecimal digit" in exc_val
