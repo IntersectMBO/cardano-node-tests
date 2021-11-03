@@ -3,6 +3,7 @@ import inspect
 import itertools
 import json
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -848,10 +849,21 @@ def load_tx_view(tx_view: str) -> dict:
     return tx_loaded
 
 
-def _load_mint_data(mint_data: Dict[str, int]) -> List[Tuple[int, str]]:
+def _load_assets(assets: Dict[str, Dict[str, int]]) -> List[Tuple[int, str]]:
     loaded_data = []
-    for token, amount in mint_data.items():
-        loaded_data.append((amount, token))
+
+    for policy_key, policy_rec in assets.items():
+        if policy_key == "lovelace":
+            continue
+        if "policy " in policy_key:
+            policy_key = policy_key.replace("policy ", "")
+        for asset_name, amount in policy_rec.items():
+            if "asset " in asset_name:
+                asset_name = re.search(r"asset ([0-9a-f]*)", asset_name).group(1)  # type: ignore
+            elif asset_name == "default asset":
+                asset_name = ""
+            token = f"{policy_key}.{asset_name}" if asset_name else policy_key
+            loaded_data.append((amount, token))
 
     return loaded_data
 
@@ -871,22 +883,9 @@ def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
     if amount_lovelace:
         loaded_data.append((amount_lovelace, "lovelace"))
 
-    for policyid, policy_rec in policies_data.items():
-        if policyid == "lovelace":
-            continue
-        for asset_name_hex, amount in policy_rec.items():
-            # TODO: cleanup once `transaction view` output is more stable
-            # the output keeps changing between hex-encoded and latin1
-            try:
-                asset_name = bytes.fromhex(asset_name_hex).decode()
-            except ValueError as err:
-                if "non-hexadecimal number found" not in str(err):
-                    raise
-                asset_name = asset_name_hex
-            token = f"{policyid}.{asset_name}" if asset_name else policyid
-            loaded_data.append((amount, token))
+    assets_data = _load_assets(assets=policies_data)
 
-    return loaded_data
+    return [*loaded_data, *assets_data]
 
 
 def check_tx_view(  # noqa: C901
@@ -943,7 +942,7 @@ def check_tx_view(  # noqa: C901
         )
 
     # check minting and burning
-    loaded_mint = set(_load_mint_data(tx_loaded.get("mint") or {}))
+    loaded_mint = set(_load_assets(assets=tx_loaded.get("mint") or {}))
     tx_raw_mint = {(r.amount, r.coin) for r in tx_raw_output.mint}
 
     if tx_raw_mint != loaded_mint:
