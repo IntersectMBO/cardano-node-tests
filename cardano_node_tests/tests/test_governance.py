@@ -16,6 +16,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import constants
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -42,12 +43,12 @@ def temp_dir(create_temp_dir: Path):
 pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
-def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> List[dbsync_utils.ADAPotsDBRow]:
+def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> List[dbsync_queries.ADAPotsDBRow]:
     for r in range(4):
         if r > 0:
             LOGGER.warning(f"Repeating the `ada_pots` SQL query for the {r} time.")
             time.sleep(2 + r * r)
-        pots_records = list(dbsync_utils.query_ada_pots(epoch_from=epoch_from))
+        pots_records = list(dbsync_queries.query_ada_pots(epoch_from=epoch_from))
         if len(pots_records) == expected_len:
             break
     else:
