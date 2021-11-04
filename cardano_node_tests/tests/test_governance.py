@@ -15,6 +15,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -395,10 +396,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_transfer_to_treasury(
         self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
@@ -533,10 +531,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_transfer_to_reserves(
         self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
     ):
@@ -676,10 +671,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_build_pay_stake_addr_from(
         self,

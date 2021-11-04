@@ -25,9 +25,9 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 DEREG_BUFFER_SEC = 30
@@ -642,7 +642,7 @@ class TestStakePool:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -722,7 +722,7 @@ class TestStakePool:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -798,7 +798,7 @@ class TestStakePool:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -863,7 +863,7 @@ class TestStakePool:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1291,7 +1291,7 @@ class TestStakePool:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1428,7 +1428,7 @@ class TestStakePool:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -2123,7 +2123,7 @@ class TestNegative:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),

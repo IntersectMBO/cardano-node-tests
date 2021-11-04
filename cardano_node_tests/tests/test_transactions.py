@@ -30,6 +30,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
@@ -212,10 +213,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_transfer_funds(
         self,
@@ -266,10 +264,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_no_change(
         self,
@@ -684,10 +679,6 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
     @pytest.mark.dbsync
     def test_multiple_same_txins(
         self,
@@ -742,10 +733,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_multiple_same_txins(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1011,7 +999,7 @@ class TestMultiInOut:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1049,7 +1037,7 @@ class TestMultiInOut:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1087,7 +1075,7 @@ class TestMultiInOut:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1125,7 +1113,7 @@ class TestMultiInOut:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1448,10 +1436,7 @@ class TestNotBalanced:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_not_enough_for_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1958,7 +1943,7 @@ class TestNegative:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1987,7 +1972,7 @@ class TestNegative:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -2026,10 +2011,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @helpers.hypothesis_settings()
     def test_build_send_funds_to_invalid_address(
@@ -2066,10 +2048,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @helpers.hypothesis_settings()
     def test_build_send_funds_to_invalid_length_address(
@@ -2108,10 +2087,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
@@ -2150,10 +2126,7 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @helpers.hypothesis_settings()
     def test_build_send_funds_from_invalid_address(
@@ -2190,10 +2163,7 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @helpers.hypothesis_settings()
     def test_build_send_funds_from_invalid_length_address(
@@ -2232,10 +2202,7 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
@@ -2258,10 +2225,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @helpers.hypothesis_settings()
     def test_build_send_funds_invalid_change_address(
@@ -2282,10 +2246,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
@@ -2308,10 +2269,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @helpers.hypothesis_settings()
     def test_build_send_funds_invalid_length_change_address(
@@ -2339,7 +2297,7 @@ class TestNegative:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -2380,7 +2338,7 @@ class TestNegative:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -2441,10 +2399,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
     @helpers.hypothesis_settings()
     def test_build_invalid_lenght_utxo_hash(
@@ -2594,10 +2549,7 @@ class TestNegative:
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_missing_tx_in(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2640,10 +2592,7 @@ class TestNegative:
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_missing_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2685,10 +2634,7 @@ class TestNegative:
         assert re.search(r"Missing:.* --change-address ADDRESS", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_multiple_change_addresses(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2794,10 +2740,7 @@ class TestMetadata:
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -2844,10 +2787,7 @@ class TestMetadata:
         assert "Failed reading: satisfy" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -2894,10 +2834,7 @@ class TestMetadata:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -2963,10 +2900,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -3054,10 +2988,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -3156,10 +3087,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    )
+    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
