@@ -16,6 +16,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -1915,6 +1916,7 @@ class TestMinting:
     VERSIONS.transaction_era < VERSIONS.ALONZO,
     reason="runs only with Alonzo+ TX",
 )
+@pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
 class TestBuildLocking:
     """Tests for txin locking using Plutus smart contracts and `transaction build`."""
 
@@ -2602,6 +2604,7 @@ class TestBuildLocking:
     VERSIONS.transaction_era < VERSIONS.ALONZO,
     reason="runs only with Alonzo+ TX",
 )
+@pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
 class TestBuildMinting:
     """Tests for minting using Plutus smart contracts and `transaction build`."""
 
