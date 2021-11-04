@@ -7,7 +7,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from packaging import version
 
-from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -90,4 +90,4 @@ class TestDBSync:
     def test_table_names(self, cluster):
         """Check that all the expected tables are present in db-sync."""
         # pylint: disable=unused-argument
-        assert self.DBSYNC_TABLES.issubset(dbsync_utils.query_table_names())
+        assert self.DBSYNC_TABLES.issubset(dbsync_queries.query_table_names())
