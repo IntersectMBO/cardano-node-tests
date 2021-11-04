@@ -22,6 +22,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -182,7 +183,7 @@ class TestMinting:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -865,7 +866,7 @@ class TestMinting:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1058,7 +1059,7 @@ class TestPolicies:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1158,7 +1159,7 @@ class TestPolicies:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1595,7 +1596,7 @@ class TestTransfer:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1691,7 +1692,7 @@ class TestTransfer:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
@@ -1832,7 +1833,7 @@ class TestTransfer:
             pytest.param(
                 True,
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
                 ),
             ),
         ),
