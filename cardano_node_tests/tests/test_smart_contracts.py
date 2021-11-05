@@ -32,8 +32,10 @@ MINTING_PLUTUS = PLUTUS_DIR / "anyone-can-mint.plutus"
 TIME_RANGE_PLUTUS = PLUTUS_DIR / "time_range.plutus"
 CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "context-equivalence-test.plutus"
 MINTING_CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "minting-context-equivalence-test.plutus"
+MINTING_WITNESS_REDEEMER_PLUTUS = PLUTUS_DIR / "witness-redeemer.plutus"
 
 SIGNING_KEY_GOLDEN = DATA_DIR / "golden_normal.skey"
+SIGNING_KEY_GOLDEN_EXTENDED = DATA_DIR / "golden_extended.skey"
 
 
 class PlutusOp(NamedTuple):
@@ -1604,6 +1606,266 @@ class TestMinting:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    @pytest.mark.parametrize(
+        "key",
+        (
+            "normal",
+            "extended",
+        ),
+    )
+    def test_witness_redeemer(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        key: str,
+    ):
+        """Test minting a token with a plutus script.
+
+        * fund the token issuer and create a UTxO for collateral
+        * check that the expected amount was transferred to token issuer's address
+        * mint the token using a plutus script with required signer
+        * check that the token was minted and collateral UTxO was not spent
+        * (optional) check transactions in db-sync
+        """
+        # pylint: disable=too-many-locals
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 5000_000
+        token_amount = 5
+        plutusrequiredtime = 700_000_000
+        plutusrequiredspace = 10_000_000
+        fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
+        collateral_amount = int(fee_step2 * 1.5)
+
+        if key == "normal":
+            redeemer_file = PLUTUS_DIR / "witness_golden_normal.datum"
+            signing_key_golden = SIGNING_KEY_GOLDEN
+        else:
+            redeemer_file = PLUTUS_DIR / "witness_golden_extended.datum"
+            signing_key_golden = SIGNING_KEY_GOLDEN_EXTENDED
+
+        issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
+
+        # Step 1: fund the token issuer
+
+        tx_files_step1 = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+        )
+        txouts_step1 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount + fee_step2),
+            # for collateral
+            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_amount),
+        ]
+        fee_step1 = cluster.calculate_tx_fee(
+            src_address=payment_addr.address,
+            txouts=txouts_step1,
+            tx_name=f"{temp_template}_step1",
+            tx_files=tx_files_step1,
+            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            witness_count_add=2,
+        )
+        tx_raw_output_step1 = cluster.build_raw_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step1",
+            txouts=txouts_step1,
+            tx_files=tx_files_step1,
+            fee=fee_step1,
+            # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+            join_txouts=False,
+        )
+        tx_signed_step1 = cluster.sign_tx(
+            tx_body_file=tx_raw_output_step1.out_file,
+            signing_key_files=tx_files_step1.signing_key_files,
+            tx_name=f"{temp_template}_step1",
+        )
+        cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_raw_output_step1.txins)
+
+        issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
+        assert (
+            issuer_step1_balance
+            == issuer_init_balance + lovelace_amount + fee_step2 + collateral_amount
+        ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+
+        # Step 2: mint the "qacoin"
+
+        txid_step1 = cluster.get_txid(tx_body_file=tx_raw_output_step1.out_file)
+        mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#0")
+        collateral_utxo = clusterlib.UTXOData(
+            utxo_hash=txid_step1, utxo_ix=1, amount=collateral_amount, address=issuer_addr.address
+        )
+        plutus_mint_data = [
+            clusterlib.PlutusMint(
+                txins=mint_utxos,
+                collaterals=[collateral_utxo],
+                script_file=MINTING_WITNESS_REDEEMER_PLUTUS,
+                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                redeemer_file=redeemer_file,
+            )
+        ]
+
+        policyid = cluster.get_policyid(MINTING_WITNESS_REDEEMER_PLUTUS)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
+        mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file, signing_key_golden],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint,
+        ]
+        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txouts=txouts_step2,
+            tx_files=tx_files_step2,
+            fee=fee_step2,
+            plutus_mint=plutus_mint_data,
+            required_signers=[signing_key_golden],
+            mint=mint,
+        )
+        tx_signed_step2 = cluster.sign_tx(
+            tx_body_file=tx_raw_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+        cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+
+        assert (
+            cluster.get_address_balance(issuer_addr.address)
+            == issuer_init_balance + collateral_amount + lovelace_amount
+        ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+
+        token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
+        assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_witness_redeemer_missing_signer(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test minting a token with a plutus script.
+
+        Expect failure.
+
+        * fund the token issuer and create a UTxO for collateral
+        * check that the expected amount was transferred to token issuer's address
+        * try to mint the token using a plutus script and a TX with signing key missing for
+          the required signer
+        * check that the token was minted and collateral UTxO was not spent
+        * (optional) check transactions in db-sync
+        """
+        # pylint: disable=too-many-locals
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 5000_000
+        token_amount = 5
+        plutusrequiredtime = 700_000_000
+        plutusrequiredspace = 10_000_000
+        fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
+        collateral_amount = int(fee_step2 * 1.5)
+
+        redeemer_file = PLUTUS_DIR / "witness_golden_normal.datum"
+
+        issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
+
+        # Step 1: fund the token issuer
+
+        tx_files_step1 = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+        )
+        txouts_step1 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount + fee_step2),
+            # for collateral
+            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_amount),
+        ]
+        fee_step1 = cluster.calculate_tx_fee(
+            src_address=payment_addr.address,
+            txouts=txouts_step1,
+            tx_name=f"{temp_template}_step1",
+            tx_files=tx_files_step1,
+            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            witness_count_add=2,
+        )
+        tx_raw_output_step1 = cluster.build_raw_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step1",
+            txouts=txouts_step1,
+            tx_files=tx_files_step1,
+            fee=fee_step1,
+            # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+            join_txouts=False,
+        )
+        tx_signed_step1 = cluster.sign_tx(
+            tx_body_file=tx_raw_output_step1.out_file,
+            signing_key_files=tx_files_step1.signing_key_files,
+            tx_name=f"{temp_template}_step1",
+        )
+        cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_raw_output_step1.txins)
+
+        issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
+        assert (
+            issuer_step1_balance
+            == issuer_init_balance + lovelace_amount + fee_step2 + collateral_amount
+        ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+
+        # Step 2: mint the "qacoin"
+
+        txid_step1 = cluster.get_txid(tx_body_file=tx_raw_output_step1.out_file)
+        mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#0")
+        collateral_utxo = clusterlib.UTXOData(
+            utxo_hash=txid_step1, utxo_ix=1, amount=collateral_amount, address=issuer_addr.address
+        )
+        plutus_mint_data = [
+            clusterlib.PlutusMint(
+                txins=mint_utxos,
+                collaterals=[collateral_utxo],
+                script_file=MINTING_WITNESS_REDEEMER_PLUTUS,
+                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                redeemer_file=redeemer_file,
+            )
+        ]
+
+        policyid = cluster.get_policyid(MINTING_WITNESS_REDEEMER_PLUTUS)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
+        mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint,
+        ]
+        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txouts=txouts_step2,
+            tx_files=tx_files_step2,
+            fee=fee_step2,
+            plutus_mint=plutus_mint_data,
+            required_signers=[SIGNING_KEY_GOLDEN],
+            mint=mint,
+        )
+        tx_signed_step2 = cluster.sign_tx(
+            tx_body_file=tx_raw_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        assert "MissingRequiredSigners" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
