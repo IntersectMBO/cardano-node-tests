@@ -33,7 +33,7 @@ TIME_RANGE_PLUTUS = PLUTUS_DIR / "time_range.plutus"
 CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "context-equivalence-test.plutus"
 MINTING_CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "minting-context-equivalence-test.plutus"
 
-SIGNING_KEY_GOLDEN = DATA_DIR / "signing_key_golden"
+SIGNING_KEY_GOLDEN = DATA_DIR / "golden_normal.skey"
 
 
 class PlutusOp(NamedTuple):
@@ -248,24 +248,18 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.AddressRecord]:
     """Create new payment address."""
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"plutus_payment_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(12)],
-            cluster_obj=cluster,
-        )
-        fixture_cache.value = addrs
+    addrs = clusterlib_utils.create_payment_addr_records(
+        *[
+            f"plutus_payment_ci{cluster_manager.cluster_instance_num}_"
+            f"{clusterlib.get_rand_str(4)}_{i}"
+            for i in range(3)
+        ],
+        cluster_obj=cluster,
+    )
 
     # fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
-        addrs[2],
-        addrs[4],
-        addrs[6],
-        addrs[8],
-        addrs[10],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
         amount=10_000_000_000,
@@ -1145,6 +1139,8 @@ class TestLocking:
     ):
         """Test spending the locked UTxO while collateral contains native tokens.
 
+        Expect failure.
+
         * create a collateral UTxO with native tokens
         * try to spend the locked UTxO
         * check that the expected error was raised
@@ -1207,6 +1203,8 @@ class TestLocking:
     ):
         """Test spending the locked UTxO while using the same UTxO as collateral.
 
+        Expect failure.
+
         * create a Tx ouput with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * try to spend the locked UTxO while using the same UTxO as collateral
@@ -1255,6 +1253,8 @@ class TestLocking:
         payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
     ):
         """Test using UTxO without datum hash in place of locked UTxO.
+
+        Expect failure.
 
         * create a Tx ouput without a datum hash
         * try to spend the UTxO like it was locked Plutus UTxO
@@ -1427,6 +1427,8 @@ class TestLocking:
         payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
     ):
         """Try to spend locked UTxO while collateral is less than required by `collateralPercentage`.
+
+        Expect failure.
 
         * create a Tx ouput with a datum hash at the script address
         * check that the expected amount was locked at the script address
@@ -1619,8 +1621,8 @@ class TestMinting:
         """
         # pylint: disable=too-many-locals
         temp_template = clusterlib_utils.get_temp_template(cluster)
-        payment_addr = payment_addrs[2]
-        issuer_addr = payment_addrs[3]
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
 
         lovelace_amount = 5000_000
         token_amount = 5
@@ -1763,8 +1765,8 @@ class TestMinting:
         """
         # pylint: disable=too-many-locals
         temp_template = clusterlib_utils.get_temp_template(cluster)
-        payment_addr = payment_addrs[8]
-        issuer_addr = payment_addrs[9]
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
 
         lovelace_amount = 5000_000
         token_amount = 5
@@ -2328,6 +2330,8 @@ class TestBuildLocking:
     ):
         """Test spending the locked UTxO while collateral contains native tokens.
 
+        Expect failure.
+
         Uses `cardano-cli transaction build` command for building the transactions.
 
         * create a collateral UTxO with native tokens
@@ -2391,6 +2395,8 @@ class TestBuildLocking:
     ):
         """Test spending the locked UTxO while using the same UTxO as collateral.
 
+        Expect failure.
+
         Uses `cardano-cli transaction build` command for building the transactions.
 
         * create a Tx ouput with a datum hash at the script address
@@ -2440,6 +2446,8 @@ class TestBuildLocking:
         payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
     ):
         """Test using UTxO without datum hash in place of locked UTxO.
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
@@ -2625,8 +2633,8 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         temp_template = clusterlib_utils.get_temp_template(cluster)
-        payment_addr = payment_addrs[4]
-        issuer_addr = payment_addrs[5]
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
 
         lovelace_amount = 5000_000
         script_fund = 1000_000_000
@@ -2744,8 +2752,8 @@ class TestBuildMinting:
         """
         # pylint: disable=too-many-locals
         temp_template = clusterlib_utils.get_temp_template(cluster)
-        payment_addr = payment_addrs[6]
-        issuer_addr = payment_addrs[7]
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
 
         lovelace_amount = 5000_000
         script_fund = 1000_000_000
@@ -2882,8 +2890,8 @@ class TestBuildMinting:
         """
         # pylint: disable=too-many-locals
         temp_template = clusterlib_utils.get_temp_template(cluster)
-        payment_addr = payment_addrs[10]
-        issuer_addr = payment_addrs[11]
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
 
         lovelace_amount = 5000_000
         script_fund = 1000_000_000
