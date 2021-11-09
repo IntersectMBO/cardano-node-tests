@@ -972,3 +972,24 @@ def check_tx_view(  # noqa: C901
         raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")
 
     return tx_loaded
+
+
+def create_script_context(
+    cluster_obj: clusterlib.ClusterLib, redeemer_file: Path, tx_file: Optional[Path] = None
+) -> None:
+    """Run the `create-script-context` command (available in plutus-examples)."""
+    if tx_file:
+        cmd_args = [
+            "create-script-context",
+            "--generate-tx",
+            str(tx_file),
+            "--out-file",
+            str(redeemer_file),
+            f"--{cluster_obj.protocol}-mode",
+            *cluster_obj.magic_args,
+        ]
+    else:
+        cmd_args = ["create-script-context", "--out-file", str(redeemer_file)]
+
+    helpers.run_command(cmd_args)
+    assert redeemer_file.exists()
