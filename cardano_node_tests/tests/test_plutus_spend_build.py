@@ -951,7 +951,6 @@ class TestBuildLocking:
         assert "Expected key witnessed collateral" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_no_datum_txin(
         self,
