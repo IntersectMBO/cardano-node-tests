@@ -91,3 +91,96 @@ class TestDBSync:
         """Check that all the expected tables are present in db-sync."""
         # pylint: disable=unused-argument
         assert self.DBSYNC_TABLES.issubset(dbsync_queries.query_table_names())
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(-1)
+    def test_blocks(self, cluster):  # noqa: C901
+        """Check expected values in the `block` table in db-sync."""
+        # pylint: disable=too-many-branches
+        block_no = cluster.get_block_no()
+
+        rec = None
+        prev_rec = None
+        errors = []
+        for rec in dbsync_queries.query_blocks():
+            if not prev_rec:
+                prev_rec = rec
+                continue
+
+            if rec.id <= prev_rec.id:
+                errors.append(
+                    "'id' value is different than expected; "
+                    f"Expected: {rec.id} > {prev_rec.id} vs Returned: {rec.id}"
+                )
+
+            if rec.id < 4:
+                prev_rec = rec
+                continue
+
+            if rec.epoch_no is None or rec.epoch_no < 0:
+                errors.append(
+                    "'epoch_no' value is different than expected; "
+                    f"Expected: positive int vs Returned: {rec.epoch_no}"
+                )
+
+            if rec.epoch_no < prev_rec.epoch_no:
+                errors.append(
+                    "'epoch_no' value is different than expected; "
+                    f"Expected: value >= {prev_rec.epoch_no} vs Returned: {rec.epoch_no}"
+                )
+
+            if rec.epoch_no > prev_rec.epoch_no + 1:
+                errors.append(
+                    "'epoch_no' value is different than expected; "
+                    f"Expected: {prev_rec.epoch_no} or {prev_rec.epoch_no + 1}"
+                    f" vs Returned: {rec.epoch_no}"
+                )
+
+            if rec.slot_no is None or rec.slot_no < 0:
+                errors.append(
+                    "'slot_no' value is different than expected; "
+                    f"Expected: positive int vs Returned: {rec.slot_no}"
+                )
+
+            if rec.slot_no < prev_rec.slot_no:
+                errors.append(
+                    "'slot_no' value is different than expected; "
+                    f"Expected: value >= {prev_rec.slot_no} vs Returned: {rec.slot_no}"
+                )
+
+            if rec.epoch_slot_no is None or rec.epoch_slot_no < 0:
+                errors.append(
+                    "'epoch_slot_no' value is different than expected; "
+                    f"Expected: positive int vs Returned: {rec.epoch_slot_no}"
+                )
+
+            if rec.epoch_slot_no < prev_rec.epoch_slot_no and rec.epoch_no == prev_rec.epoch_no:
+                errors.append(
+                    "'epoch_slot_no' value is different than expected; "
+                    f"Expected: value >= {prev_rec.epoch_slot_no} vs Returned: {rec.epoch_slot_no}"
+                )
+
+            if rec.block_no != prev_rec.block_no + 1:
+                errors.append(
+                    "'block_no' value is different than expected; "
+                    f"Expected: {prev_rec.block_no + 1} vs Returned: {rec.block_no}"
+                )
+
+            if rec.previous_id != prev_rec.id:
+                errors.append(
+                    "'previous_id' value is different than expected; "
+                    f"Expected: {prev_rec.id} vs Returned: {rec.previous_id}"
+                )
+
+            prev_rec = rec
+
+        if errors:
+            errors_str = "\n".join(errors)
+            raise AssertionError(errors_str)
+
+        # db-sync can be max 1 block behind or ahead
+        if rec and block_no not in (rec.block_no, rec.block_no - 1, rec.block_no + 1):
+            raise AssertionError(
+                "last `block_no` value is different than expected; "
+                f"{block_no} not in ({rec.block_no}, {rec.block_no - 1}, {rec.block_no + 1})"
+            )

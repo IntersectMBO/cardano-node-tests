@@ -189,6 +189,15 @@ class OrphanedRewardDBRow(NamedTuple):
     pool_id: str
 
 
+class BlockDBRow(NamedTuple):
+    id: int
+    epoch_no: Optional[int]
+    slot_no: Optional[int]
+    epoch_slot_no: Optional[int]
+    block_no: Optional[int]
+    previous_id: Optional[int]
+
+
 class SchemaVersionStages(NamedTuple):
     one: int
     two: int
@@ -598,6 +607,22 @@ def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]
     with execute(query=query, vars=(pool_id_bech32,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield PoolDataDBRow(*result)
+
+
+def query_blocks(
+    epoch_from: int = 0, epoch_to: int = 99999999
+) -> Generator[BlockDBRow, None, None]:
+    """Query block records in db-sync."""
+    query = (
+        "SELECT"
+        " id, epoch_no, slot_no, epoch_slot_no, block_no, previous_id "
+        "FROM block "
+        "WHERE (epoch_no BETWEEN %s AND %s);"
+    )
+
+    with execute(query=query, vars=(epoch_from, epoch_to)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield BlockDBRow(*result)
 
 
 def query_table_names() -> List[str]:
