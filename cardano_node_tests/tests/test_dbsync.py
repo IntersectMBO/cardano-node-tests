@@ -87,6 +87,7 @@ class TestDBSync:
         VERSIONS.dbsync < version.parse("12.0.0"),
         reason="needs db-sync version >= 12.0.0",
     )
+    @pytest.mark.testnets
     def test_table_names(self, cluster):
         """Check that all the expected tables are present in db-sync."""
         # pylint: disable=unused-argument
@@ -94,15 +95,22 @@ class TestDBSync:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(-1)
+    @pytest.mark.testnets
     def test_blocks(self, cluster):  # noqa: C901
         """Check expected values in the `block` table in db-sync."""
         # pylint: disable=too-many-branches
-        block_no = cluster.get_block_no()
+        tip = cluster.get_tip()
+        block_no = int(tip["block"])
+        epoch = int(tip["epoch"])
+
+        # check records for last 50 epochs
+        epoch_from = epoch - 50
+        epoch_from = epoch_from if epoch_from >= 0 else 0
 
         rec = None
         prev_rec = None
         errors = []
-        for rec in dbsync_queries.query_blocks():
+        for rec in dbsync_queries.query_blocks(epoch_from=epoch_from):
             if not prev_rec:
                 prev_rec = rec
                 continue
@@ -154,19 +162,19 @@ class TestDBSync:
                     f"Expected: positive int vs Returned: {rec.epoch_slot_no}"
                 )
 
-            if rec.epoch_slot_no < prev_rec.epoch_slot_no and rec.epoch_no == prev_rec.epoch_no:
+            if rec.epoch_slot_no <= prev_rec.epoch_slot_no and rec.epoch_no == prev_rec.epoch_no:
                 errors.append(
                     "'epoch_slot_no' value is different than expected; "
-                    f"Expected: value >= {prev_rec.epoch_slot_no} vs Returned: {rec.epoch_slot_no}"
+                    f"Expected: value > {prev_rec.epoch_slot_no} vs Returned: {rec.epoch_slot_no}"
                 )
 
-            if rec.block_no != prev_rec.block_no + 1:
+            if rec.block_no is None or rec.block_no != prev_rec.block_no + 1:
                 errors.append(
                     "'block_no' value is different than expected; "
                     f"Expected: {prev_rec.block_no + 1} vs Returned: {rec.block_no}"
                 )
 
-            if rec.previous_id != prev_rec.id:
+            if rec.previous_id is None or rec.previous_id != prev_rec.id:
                 errors.append(
                     "'previous_id' value is different than expected; "
                     f"Expected: {prev_rec.id} vs Returned: {rec.previous_id}"
