@@ -526,7 +526,8 @@ def query_ada_pots(
         "SELECT"
         " id, slot_no, epoch_no, treasury, reserves, rewards, utxo, deposits, fees, block_id "
         "FROM ada_pots "
-        "WHERE epoch_no BETWEEN %s AND %s;"
+        "WHERE epoch_no BETWEEN %s AND %s "
+        "ORDER BY id;"
     )
 
     with execute(query=query, vars=(epoch_from, epoch_to)) as cur:
@@ -545,7 +546,8 @@ def query_address_reward(
         "FROM reward "
         "INNER JOIN stake_address ON reward.addr_id = stake_address.id "
         "INNER JOIN pool_hash ON pool_hash.id = reward.pool_id "
-        "WHERE (stake_address.view = %s) AND (reward.spendable_epoch BETWEEN %s AND %s);"
+        "WHERE (stake_address.view = %s) AND (reward.spendable_epoch BETWEEN %s AND %s) "
+        "ORDER BY reward.id;"
     )
 
     with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
@@ -590,7 +592,8 @@ def query_blocks(
         "SELECT"
         " id, epoch_no, slot_no, epoch_slot_no, block_no, previous_id "
         "FROM block "
-        "WHERE (epoch_no BETWEEN %s AND %s);"
+        "WHERE (epoch_no BETWEEN %s AND %s) "
+        "ORDER BY id;"
     )
 
     with execute(query=query, vars=(epoch_from, epoch_to)) as cur:
