@@ -87,6 +87,7 @@ class TestDBSync:
         VERSIONS.dbsync < version.parse("12.0.0"),
         reason="needs db-sync version >= 12.0.0",
     )
+    @pytest.mark.testnets
     def test_table_names(self, cluster):
         """Check that all the expected tables are present in db-sync."""
         # pylint: disable=unused-argument
@@ -94,6 +95,7 @@ class TestDBSync:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(-1)
+    @pytest.mark.testnets
     def test_blocks(self, cluster):  # noqa: C901
         """Check expected values in the `block` table in db-sync."""
         # pylint: disable=too-many-branches
