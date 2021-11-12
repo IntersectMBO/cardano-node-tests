@@ -97,12 +97,18 @@ class TestDBSync:
     def test_blocks(self, cluster):  # noqa: C901
         """Check expected values in the `block` table in db-sync."""
         # pylint: disable=too-many-branches
-        block_no = cluster.get_block_no()
+        tip = cluster.get_tip()
+        block_no = int(tip["block"])
+        epoch = int(tip["epoch"])
+
+        # check records for last 50 epochs
+        epoch_from = epoch - 50
+        epoch_from = epoch_from if epoch_from >= 0 else 0
 
         rec = None
         prev_rec = None
         errors = []
-        for rec in dbsync_queries.query_blocks():
+        for rec in dbsync_queries.query_blocks(epoch_from=epoch_from):
             if not prev_rec:
                 prev_rec = rec
                 continue
