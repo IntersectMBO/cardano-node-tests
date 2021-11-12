@@ -182,35 +182,6 @@ def check_address_reward(
     return reward
 
 
-def get_address_orphaned_reward(
-    address: str, epoch_from: int = 0, epoch_to: int = 99999999
-) -> Optional[RewardRecord]:
-    """Get data about orphaned rewards for stake address from db-sync.
-
-    The `epoch_from` and `epoch_to` are epochs where the reward was earned, not epochs
-    where the reward can be spent.
-    """
-    rewards = []
-    for db_row in dbsync_queries.query_address_orphaned_reward(
-        address=address, epoch_from=epoch_from, epoch_to=epoch_to
-    ):
-        rewards.append(
-            RewardEpochRecord(
-                amount=int(db_row.amount),
-                earned_epoch=db_row.epoch_no,
-                spendable_epoch=-1,
-            )
-        )
-    if not rewards:
-        return None
-
-    reward_sum = functools.reduce(lambda x, y: x + y.amount, rewards, 0)
-    # pylint: disable=undefined-loop-variable
-    return RewardRecord(
-        address=db_row.address, pool_id=db_row.pool_id, rewards=rewards, reward_sum=reward_sum
-    )
-
-
 def get_pool_data(pool_id_bech32: str) -> Optional[PoolDataRecord]:
     """Get pool data from db-sync."""
     pools = list(dbsync_queries.query_pool_data(pool_id_bech32))
