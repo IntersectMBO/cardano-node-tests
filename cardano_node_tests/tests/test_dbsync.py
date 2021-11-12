@@ -154,19 +154,19 @@ class TestDBSync:
                     f"Expected: positive int vs Returned: {rec.epoch_slot_no}"
                 )
 
-            if rec.epoch_slot_no < prev_rec.epoch_slot_no and rec.epoch_no == prev_rec.epoch_no:
+            if rec.epoch_slot_no <= prev_rec.epoch_slot_no and rec.epoch_no == prev_rec.epoch_no:
                 errors.append(
                     "'epoch_slot_no' value is different than expected; "
-                    f"Expected: value >= {prev_rec.epoch_slot_no} vs Returned: {rec.epoch_slot_no}"
+                    f"Expected: value > {prev_rec.epoch_slot_no} vs Returned: {rec.epoch_slot_no}"
                 )
 
-            if rec.block_no != prev_rec.block_no + 1:
+            if rec.block_no is None or rec.block_no != prev_rec.block_no + 1:
                 errors.append(
                     "'block_no' value is different than expected; "
                     f"Expected: {prev_rec.block_no + 1} vs Returned: {rec.block_no}"
                 )
 
-            if rec.previous_id != prev_rec.id:
+            if rec.previous_id is None or rec.previous_id != prev_rec.id:
                 errors.append(
                     "'previous_id' value is different than expected; "
                     f"Expected: {prev_rec.id} vs Returned: {rec.previous_id}"
