@@ -181,14 +181,6 @@ class RewardDBRow(NamedTuple):
     pool_id: str
 
 
-class OrphanedRewardDBRow(NamedTuple):
-    address: str
-    type: str
-    amount: decimal.Decimal
-    epoch_no: int
-    pool_id: str
-
-
 class BlockDBRow(NamedTuple):
     id: int
     epoch_no: Optional[int]
@@ -559,25 +551,6 @@ def query_address_reward(
     with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
         while (result := cur.fetchone()) is not None:
             yield RewardDBRow(*result)
-
-
-def query_address_orphaned_reward(
-    address: str, epoch_from: int = 0, epoch_to: int = 99999999
-) -> Generator[OrphanedRewardDBRow, None, None]:
-    """Query orphaned reward records for stake address in db-sync."""
-    query = (
-        "SELECT"
-        " stake_address.view, orphaned_reward.type, orphaned_reward.amount,"
-        " orphaned_reward.epoch_no, pool_hash.view AS pool_view "
-        "FROM orphaned_reward "
-        "INNER JOIN stake_address ON orphaned_reward.addr_id = stake_address.id "
-        "INNER JOIN pool_hash ON pool_hash.id = orphaned_reward.pool_id "
-        "WHERE (stake_address.view = %s) AND (orphaned_reward.epoch_no BETWEEN %s AND %s);"
-    )
-
-    with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
-        while (result := cur.fetchone()) is not None:
-            yield OrphanedRewardDBRow(*result)
 
 
 def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]:
