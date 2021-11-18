@@ -1715,19 +1715,6 @@ class TestRewards:
                     abs_owner_reward < ep6_abs_owner_reward
                 ), "Received higher reward than expected"
 
-        # check that some reward was received just for the delegated reward amount
-        owner_reward = cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
-        ep6_owner_reward = owner_rewards[5][1]
-        if owner_reward == ep6_owner_reward:
-            LOGGER.info("Waiting up to 4 full epochs for first reward for delegated reward amount.")
-            for i in range(5):
-                if i > 0:
-                    cluster.wait_for_new_epoch(padding_seconds=10)
-                if cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance:
-                    break
-            else:
-                raise AssertionError("Haven't received any reward for delegated reward address")
-
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             pool_params: dict = cluster.get_pool_params(pool_id).pool_params
