@@ -405,6 +405,7 @@ class TestDelegateAddr:
 
         * register stake address and delegate it to pool
         * check that the stake address was delegated
+        * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
@@ -462,6 +463,7 @@ class TestDelegateAddr:
 
         * register stake address and delegate it to pool
         * check that the stake address was delegated
+        * (optional) check records in db-sync
         """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
@@ -509,6 +511,7 @@ class TestDelegateAddr:
         * withdraw rewards to payment address and deregister stake address
         * check that the key deposit was returned and rewards withdrawn
         * check that the stake address is no longer delegated
+        * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
         temp_template = clusterlib_utils.get_temp_template(cluster)
@@ -644,6 +647,7 @@ class TestDelegateAddr:
         * register and deregister stake address in single TX
         * check that the balance for source address was correctly updated and that key deposit
           was not needed
+        * (optional) check records in db-sync
         """
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
@@ -732,6 +736,7 @@ class TestDelegateAddr:
         * check that the balance for source address was correctly updated and that the key
           deposit was returned
         * check that the stake address was NOT delegated
+        * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
@@ -1186,6 +1191,7 @@ class TestRewards:
 
         * withdraw rewards to payment address
         * burn native tokens
+        * (optional) check records in db-sync
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
@@ -1458,6 +1464,7 @@ class TestRewards:
         * each epoch check received reward with reward in ledger state
         * check that reward address still receives rewards for its staked amount even after
           the pool owner's stake address is deregistered
+        * (optional) check records in db-sync
         """
         # pylint: disable=too-many-statements,too-many-locals
         __: Any  # mypy workaround
