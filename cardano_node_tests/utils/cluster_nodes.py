@@ -5,8 +5,6 @@ import logging
 import os
 import pickle
 import shutil
-from datetime import datetime
-from datetime import timezone
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -68,13 +66,6 @@ class ClusterType:
     ) -> Dict[str, Dict[str, Any]]:
         """Create addresses and their keys for usage in tests."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
-
-
-def _datetime2timestamp(datetime_str: str) -> int:
-    """Convert UTC datetime string to timestamp."""
-    converted_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-    timestamp = converted_time.replace(tzinfo=timezone.utc).timestamp()
-    return int(timestamp)
 
 
 class LocalCluster(ClusterType):
