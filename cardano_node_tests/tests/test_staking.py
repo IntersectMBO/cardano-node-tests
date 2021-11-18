@@ -225,11 +225,11 @@ def _add_spendable(rewards: List[dbsync_utils.RewardEpochRecord]) -> Dict[int, i
     return recs
 
 
-def _db_check_rewards(
+def _dbsync_check_rewards(
     stake_address: str,
     rewards: List[Tuple[int, int, int]],
     pool_id: str,
-):
+) -> dbsync_utils.RewardRecord:
     """Check rewards in db-sync."""
     epoch_from = 0
     for r in rewards:
@@ -245,6 +245,8 @@ def _db_check_rewards(
     user_rewards_dict = {r[0]: r[2] for r in rewards if r[2]}
     user_db_rewards_dict = _add_spendable(reward_db_record.rewards)
     assert user_rewards_dict == user_db_rewards_dict
+
+    return reward_db_record
 
 
 def _get_key_hashes(rec: dict) -> List[str]:
@@ -405,6 +407,7 @@ class TestDelegateAddr:
 
         * register stake address and delegate it to pool
         * check that the stake address was delegated
+        * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
@@ -462,6 +465,7 @@ class TestDelegateAddr:
 
         * register stake address and delegate it to pool
         * check that the stake address was delegated
+        * (optional) check records in db-sync
         """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
@@ -509,6 +513,7 @@ class TestDelegateAddr:
         * withdraw rewards to payment address and deregister stake address
         * check that the key deposit was returned and rewards withdrawn
         * check that the stake address is no longer delegated
+        * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
         temp_template = clusterlib_utils.get_temp_template(cluster)
@@ -644,6 +649,7 @@ class TestDelegateAddr:
         * register and deregister stake address in single TX
         * check that the balance for source address was correctly updated and that key deposit
           was not needed
+        * (optional) check records in db-sync
         """
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
@@ -732,6 +738,7 @@ class TestDelegateAddr:
         * check that the balance for source address was correctly updated and that the key
           deposit was returned
         * check that the stake address was NOT delegated
+        * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
@@ -1186,6 +1193,7 @@ class TestRewards:
 
         * withdraw rewards to payment address
         * burn native tokens
+        * (optional) check records in db-sync
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
@@ -1424,13 +1432,13 @@ class TestRewards:
                 pool_id=delegation_out.pool_id,
             )
 
-            _db_check_rewards(
+            _dbsync_check_rewards(
                 stake_address=delegation_out.pool_user.stake.address,
                 rewards=user_rewards,
                 pool_id=pool_id,
             )
 
-            _db_check_rewards(
+            _dbsync_check_rewards(
                 stake_address=pool_reward.stake.address,
                 rewards=owner_rewards,
                 pool_id=pool_id,
@@ -1458,6 +1466,7 @@ class TestRewards:
         * each epoch check received reward with reward in ledger state
         * check that reward address still receives rewards for its staked amount even after
           the pool owner's stake address is deregistered
+        * (optional) check records in db-sync
         """
         # pylint: disable=too-many-statements,too-many-locals
         __: Any  # mypy workaround
@@ -1708,29 +1717,31 @@ class TestRewards:
                     abs_owner_reward < ep6_abs_owner_reward
                 ), "Received higher reward than expected"
 
-        # check that some reward was received just for the delegated reward amount
-        owner_reward = cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance
-        ep6_owner_reward = owner_rewards[5][1]
-        if owner_reward == ep6_owner_reward:
-            LOGGER.info("Waiting up to 4 full epochs for first reward for delegated reward amount.")
-            for i in range(5):
-                if i > 0:
-                    cluster.wait_for_new_epoch(padding_seconds=10)
-                if cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance:
-                    break
-            else:
-                raise AssertionError("Haven't received any reward for delegated reward address")
-
+        # check records in db-sync
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             pool_params: dict = cluster.get_pool_params(pool_id).pool_params
             dbsync_utils.check_pool_data(ledger_pool_data=pool_params, pool_id=pool_id)
 
-            _db_check_rewards(
+            reward_db_record = _dbsync_check_rewards(
                 stake_address=pool_reward.stake.address,
                 rewards=owner_rewards,
                 pool_id=pool_id,
             )
+
+            prev_rec = None
+            two_types_seen = False
+            for rec in reward_db_record.rewards:
+                if prev_rec and prev_rec.spendable_epoch == rec.spendable_epoch:
+                    assert (
+                        prev_rec.type != rec.type
+                    ), "Multiple rewards of the same type received in single epoch"
+                    two_types_seen = True
+                prev_rec = rec
+
+            assert (
+                two_types_seen
+            ), "Haven't received rewards of different types ('leader' and 'member') in single epoch"
 
     @allure.link(helpers.get_vcs_link())
     def test_decreasing_reward_transfered_funds(
