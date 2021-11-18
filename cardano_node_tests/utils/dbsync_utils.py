@@ -47,6 +47,7 @@ class RewardEpochRecord(NamedTuple):
     amount: int
     earned_epoch: int
     spendable_epoch: int
+    type: str
 
 
 class RewardRecord(NamedTuple):
@@ -147,6 +148,7 @@ def get_address_reward(
                 amount=int(db_row.amount),
                 earned_epoch=db_row.earned_epoch,
                 spendable_epoch=db_row.spendable_epoch,
+                type=db_row.type,
             )
         )
     if not rewards:
