@@ -699,12 +699,15 @@ echo "Submitting update proposal to update to PV6"
 
 ALONZO_UPDATE_PROPOSAL_PV6="$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6.proposal"
 
+# protocol version + sundaeswap parameters update
 cardano_cli_log governance create-update-proposal \
   --out-file "$ALONZO_UPDATE_PROPOSAL_PV6" \
   --epoch 4 \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 6 \
-  --protocol-minor-version 0
+  --protocol-minor-version 0 \
+  --max-tx-execution-units "(10000000000,11250000)" \
+  --max-block-body-size 73728
 
 cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
