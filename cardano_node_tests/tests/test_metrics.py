@@ -135,7 +135,7 @@ class TestPrometheus:
         # pylint: disable=unused-argument
         prometheus_port = (
             cluster_nodes.get_cluster_type()
-            .cluster_scripts.get_instance_ports(cluster_nodes.get_cluster_env().instance_num)
+            .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())
             .prometheus_pool1
         )
 
@@ -162,7 +162,7 @@ class TestEKG:
         # pylint: disable=unused-argument
         ekg_port = (
             cluster_nodes.get_cluster_type()
-            .cluster_scripts.get_instance_ports(cluster_nodes.get_cluster_env().instance_num)
+            .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())
             .ekg_pool1
         )
 
