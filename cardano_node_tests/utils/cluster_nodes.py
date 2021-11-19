@@ -295,7 +295,7 @@ def get_cluster_type() -> ClusterType:
 
 def get_cardano_node_socket_path(instance_num: int) -> Path:
     """Return path to socket file in the given cluster instance."""
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).resolve()
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
     state_cluster_dirname = f"state-cluster{instance_num}"
     state_cluster = socket_path.parent.parent / state_cluster_dirname
     new_socket_path = state_cluster / socket_path.name
@@ -316,9 +316,16 @@ def set_cluster_env(instance_num: int) -> None:
         os.environ["PGUSER"] = "postgres"
 
 
+def get_instance_num() -> int:
+    """Get cardano cluster instance number."""
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
+    instance_num = int(socket_path.parent.name.replace("state-cluster", "") or 0)
+    return instance_num
+
+
 def get_cluster_env() -> ClusterEnv:
     """Get cardano cluster environment."""
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
     state_dir = socket_path.parent
     work_dir = state_dir.parent
     instance_num = int(state_dir.name.replace("state-cluster", "") or 0)

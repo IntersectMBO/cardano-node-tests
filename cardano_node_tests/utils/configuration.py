@@ -3,6 +3,12 @@ import os
 from pathlib import Path
 
 
+# resolve CARDANO_NODE_SOCKET_PATH
+os.environ["CARDANO_NODE_SOCKET_PATH"] = str(
+    Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
+)
+
+
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
 if CLUSTER_ERA not in ("", "mary", "alonzo"):
     raise RuntimeError(f"Invalid CLUSTER_ERA: {CLUSTER_ERA}")
