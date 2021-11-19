@@ -39,7 +39,7 @@ class DBSync:
 
     @classmethod
     def conn(cls) -> psycopg2.extensions.connection:
-        instance_num = cluster_nodes.get_cluster_env().instance_num
+        instance_num = cluster_nodes.get_instance_num()
         conn = cls.conn_cache.get(instance_num)
 
         if conn is None or conn.closed == 1:
@@ -49,7 +49,7 @@ class DBSync:
 
     @classmethod
     def reconn(cls) -> psycopg2.extensions.connection:
-        instance_num = cluster_nodes.get_cluster_env().instance_num
+        instance_num = cluster_nodes.get_instance_num()
         conn = cls.conn_cache.get(instance_num)
         cls._close(instance_num=instance_num, conn=conn)
         conn = cls._conn(instance_num=instance_num)
