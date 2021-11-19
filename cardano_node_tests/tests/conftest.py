@@ -136,7 +136,7 @@ def change_dir(tmp_path_factory: TempdirFactory) -> None:
 def close_dbconn() -> Generator[None, None, None]:
     """Close connection to db-sync database at the end of session."""
     yield
-    dbsync_conn.DBSync.close_all()
+    dbsync_conn.close_all()
 
 
 def _stop_all_cluster_instances(
