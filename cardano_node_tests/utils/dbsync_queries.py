@@ -200,7 +200,7 @@ class SchemaVersionStages(NamedTuple):
 def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
     try:
-        cur = dbsync_conn.DBSync.conn().cursor()
+        cur = dbsync_conn.conn().cursor()
 
         try:
             cur.execute(query, vars)
@@ -209,7 +209,7 @@ def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cur
             conn_alive = False
 
         if not conn_alive:
-            cur = dbsync_conn.DBSync.reconn().cursor()
+            cur = dbsync_conn.reconn().cursor()
             cur.execute(query, vars)
 
         yield cur
