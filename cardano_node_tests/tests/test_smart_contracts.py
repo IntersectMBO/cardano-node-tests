@@ -1709,7 +1709,7 @@ class TestMinting:
         ]
 
         policyid = cluster.get_policyid(MINTING_WITNESS_REDEEMER_PLUTUS)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}"
         token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
@@ -1837,7 +1837,7 @@ class TestMinting:
         ]
 
         policyid = cluster.get_policyid(MINTING_WITNESS_REDEEMER_PLUTUS)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}"
         token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
@@ -3379,7 +3379,7 @@ class TestBuildMinting:
         ]
 
         policyid = cluster.get_policyid(MINTING_PLUTUS)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}"
         token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
@@ -3499,7 +3499,7 @@ class TestBuildMinting:
         ]
 
         policyid = cluster.get_policyid(MINTING_PLUTUS)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}"
         token = f"{policyid}.{asset_name}"
         mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
 
