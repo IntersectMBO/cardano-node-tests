@@ -2,6 +2,7 @@
 , crossSystem ? null
 , config ? {}
 , sourcesOverride ? {}
+, ...
 }:
 
 let
