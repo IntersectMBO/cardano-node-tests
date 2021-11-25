@@ -32,6 +32,7 @@ ERRORS_IGNORED = [
     "db-sync-node:.* AsyncCancelled",
     "closed when reading data, waiting on next header",
     "db-sync-node:.* validateEpochRewardsBefore",  # TODO: remove once rewards are fixed in db-sync
+    r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
 ]
 if configuration.CLUSTER_ERA == "alonzo":
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
