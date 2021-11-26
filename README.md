@@ -77,6 +77,7 @@ Variables for `make tests` and `make testnets`
 
 * `SCHEDULING_LOG` - specifies path to file where log messages for tests and cluster instance scheduler are stored
 * `PYTEST_ARGS` - specifies additional arguments for pytest
+* `MARKEXPR` - specifies marker expression for pytest
 * `TEST_THREADS` - specifies number of pytest workers
 * `CLUSTERS_COUNT` - number of cluster instances that will be started
 * `CLUSTER_ERA` - cluster era for cardano node - used for selecting correct cluster start script
@@ -87,7 +88,7 @@ Variables for `make tests` and `make testnets`
 
 E.g.
 ```sh
-$ SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=mary SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/alonzo/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" make tests
+$ SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=mary SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/alonzo/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" make tests
 ```
 
 
