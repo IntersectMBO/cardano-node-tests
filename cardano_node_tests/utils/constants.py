@@ -1,6 +1,8 @@
 from cardano_node_tests.utils.versions import VERSIONS
 
 
+NETWORK_MAGIC_LOCAL = 42
+
 BUILD_USABLE = (
     VERSIONS.transaction_era >= VERSIONS.MARY and VERSIONS.transaction_era == VERSIONS.cluster_era
 )
