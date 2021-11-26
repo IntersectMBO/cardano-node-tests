@@ -48,11 +48,11 @@ class RewardEpochRecord(NamedTuple):
     earned_epoch: int
     spendable_epoch: int
     type: str
+    pool_id: str
 
 
 class RewardRecord(NamedTuple):
     address: str
-    pool_id: str
     rewards: List[RewardEpochRecord]
     reward_sum: int
 
@@ -149,6 +149,7 @@ def get_address_reward(
                 earned_epoch=db_row.earned_epoch,
                 spendable_epoch=db_row.spendable_epoch,
                 type=db_row.type,
+                pool_id=db_row.pool_id,
             )
         )
     if not rewards:
@@ -156,9 +157,7 @@ def get_address_reward(
 
     reward_sum = functools.reduce(lambda x, y: x + y.amount, rewards, 0)
     # pylint: disable=undefined-loop-variable
-    return RewardRecord(
-        address=db_row.address, pool_id=db_row.pool_id, rewards=rewards, reward_sum=reward_sum
-    )
+    return RewardRecord(address=db_row.address, rewards=rewards, reward_sum=reward_sum)
 
 
 def check_address_reward(
