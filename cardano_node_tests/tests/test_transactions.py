@@ -1879,6 +1879,9 @@ class TestNegative:
             )
         assert "HandshakeError" in str(excinfo.value)
 
+        # wait a bit so there's some time for error messages to appear in log file
+        time.sleep(1 if cluster.network_magic == constants.NETWORK_MAGIC_LOCAL else 5)
+
     @allure.link(helpers.get_vcs_link())
     def test_wrong_signing_key(
         self,
