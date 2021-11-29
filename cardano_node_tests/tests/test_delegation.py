@@ -698,14 +698,14 @@ class TestNegative:
         ),
         ids=("build_raw", "build"),
     )
-    def test_delegate_unregistered_addr(
+    def test_delegate_unknown_addr(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
         pool_users: List[clusterlib.PoolUser],
         pool_users_disposable: List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
-        """Try to delegate unregistered stake address.
+        """Try to delegate unknown stake address.
 
         Expect failure.
         """
@@ -722,17 +722,17 @@ class TestNegative:
             stake_pool_id=pool_id,
         )
 
-        # delegate unregistered stake address
+        # delegate unknown stake address
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_deleg_cert_file],
-            signing_key_files=[user_payment.skey_file],
+            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
                 tx_raw_output = cluster.build_tx(
                     src_address=user_payment.address,
-                    tx_name=f"{temp_template}_deleg_unreg",
+                    tx_name=f"{temp_template}_deleg_unknown",
                     tx_files=tx_files,
                     fee_buffer=2000_000,
                     witness_override=len(tx_files.signing_key_files) * 2,
@@ -740,13 +740,112 @@ class TestNegative:
                 tx_signed = cluster.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,
-                    tx_name=f"{temp_template}_deleg_unreg",
+                    tx_name=f"{temp_template}_deleg_unknown",
                 )
                 cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
             else:
                 cluster.send_tx(
                     src_address=user_payment.address,
-                    tx_name=f"{temp_template}_deleg_unreg",
+                    tx_name=f"{temp_template}_deleg_unknown",
+                    tx_files=tx_files,
+                )
+        assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
+                ),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
+    def test_delegate_deregistered_addr(
+        self,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
+        pool_users: List[clusterlib.PoolUser],
+        pool_users_disposable: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
+    ):
+        """Try to delegate deregistered stake address.
+
+        Expect failure.
+        """
+        cluster, pool_id = cluster_and_pool
+        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+
+        user_registered = pool_users_disposable[0]
+        user_payment = pool_users[0].payment
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+        )
+
+        # register stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_reg_cert_file],
+            signing_key_files=[user_payment.skey_file],
+        )
+        cluster.send_tx(
+            src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
+        )
+
+        # deregister stake address
+        stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=user_registered.stake.vkey_file,
+        )
+        tx_files_deregister = clusterlib.TxFiles(
+            certificate_files=[stake_addr_dereg_cert_file],
+            signing_key_files=[
+                user_payment.skey_file,
+                user_registered.stake.skey_file,
+            ],
+        )
+        cluster.send_tx(
+            src_address=user_payment.address,
+            tx_name=f"{temp_template}_dereg",
+            tx_files=tx_files_deregister,
+        )
+
+        # create stake address delegation cert
+        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=user_registered.stake.vkey_file,
+            stake_pool_id=pool_id,
+        )
+
+        # delegate deregistered stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_deleg_cert_file],
+            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            if use_build_cmd:
+                tx_raw_output = cluster.build_tx(
+                    src_address=user_payment.address,
+                    tx_name=f"{temp_template}_deleg_dereg",
+                    tx_files=tx_files,
+                    fee_buffer=2000_000,
+                    witness_override=len(tx_files.signing_key_files) * 2,
+                )
+                tx_signed = cluster.sign_tx(
+                    tx_body_file=tx_raw_output.out_file,
+                    signing_key_files=tx_files.signing_key_files,
+                    tx_name=f"{temp_template}_deleg_dereg",
+                )
+                cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+            else:
+                cluster.send_tx(
+                    src_address=user_payment.address,
+                    tx_name=f"{temp_template}_deleg_dereg",
                     tx_files=tx_files,
                 )
         assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
