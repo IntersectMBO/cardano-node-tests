@@ -110,7 +110,7 @@ def delegate_stake_addr(
 
         pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
 
-        # fund source address
+        # fund payment address
         clusterlib_utils.fund_from_faucet(
             pool_user.payment,
             cluster_obj=cluster_obj,
