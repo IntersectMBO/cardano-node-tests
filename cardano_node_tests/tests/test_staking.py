@@ -204,8 +204,8 @@ def _get_val_for_key_hash(key_hash: str, rec: list) -> Any:
     return None
 
 
-def _get_reward_for_key_hash(key_hash: str, rec: list) -> int:
-    """Get reward value for key hash in ledger state snapshot record."""
+def _get_reward_amount_for_key_hash(key_hash: str, rec: list) -> int:
+    """Get reward amount for key hash in ledger state snapshot record."""
     for r in rec:
         if r[0]["key hash"] != key_hash:
             continue
@@ -409,12 +409,12 @@ class TestRewards:
             prev_rs_record = rs_records.get(this_epoch - 1)
             user_reward_epoch = user_rewards[-1].reward_epoch
             if user_reward_epoch and prev_rs_record:
-                assert user_reward_epoch == _get_reward_for_key_hash(
+                assert user_reward_epoch == _get_reward_amount_for_key_hash(
                     user_stake_addr_dec, prev_rs_record
                 )
             owner_reward_epoch = owner_rewards[-1].reward_epoch
             if owner_reward_epoch and prev_rs_record:
-                assert owner_reward_epoch == _get_reward_for_key_hash(
+                assert owner_reward_epoch == _get_reward_amount_for_key_hash(
                     pool_reward_addr_dec, prev_rs_record
                 )
 
@@ -430,10 +430,25 @@ class TestRewards:
                 assert user_stake_addr_dec not in pstake_set
                 assert user_stake_addr_dec not in pstake_go
 
+                # make sure ledger state and actual stake correspond
+                assert (
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    == user_rewards[-1].stake_total
+                )
+
             if this_epoch == init_epoch + 2:
                 assert user_stake_addr_dec in pstake_mark
                 assert user_stake_addr_dec in pstake_set
                 assert user_stake_addr_dec not in pstake_go
+
+                assert (
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    == user_rewards[-1].stake_total
+                )
+                assert (
+                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    == user_rewards[-2].stake_total
+                )
 
             if this_epoch >= init_epoch + 2:
                 assert pool_stake_addr_dec in pstake_mark
@@ -445,9 +460,6 @@ class TestRewards:
                 assert user_stake_addr_dec in pstake_set
                 assert user_stake_addr_dec in pstake_go
 
-            # wait 4 epochs for first rewards
-            if this_epoch >= init_epoch + 4:
-                # make sure ledger state and actual stake correspond
                 assert (
                     _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == user_rewards[-1].stake_total
@@ -687,7 +699,7 @@ class TestRewards:
             prev_rs_record = rs_records.get(this_epoch - 1)
             owner_reward_epoch = owner_rewards[-1].reward_epoch
             if owner_reward_epoch and prev_rs_record:
-                assert owner_reward_epoch == _get_reward_for_key_hash(
+                assert owner_reward_epoch == _get_reward_amount_for_key_hash(
                     reward_addr_dec, prev_rs_record
                 )
 
@@ -2031,6 +2043,15 @@ class TestRewards:
             rs_record: list = ledger_state["possibleRewardUpdate"]["rs"]
             rs_records[this_epoch] = rs_record
 
+            # Make sure reward amount corresponds with ledger state.
+            # Reward is received on epoch boundary, so check reward with record for previous epoch.
+            prev_rs_record = rs_records.get(this_epoch - 1)
+            reward_epoch = rewards_db[-1].reward_epoch
+            if reward_epoch and prev_rs_record:
+                assert reward_epoch == _get_reward_amount_for_key_hash(
+                    stake_addr_dec, prev_rs_record
+                )
+
             pstake_mark = _get_key_hashes(es_snapshot["pstakeMark"]["stake"])
             pstake_set = _get_key_hashes(es_snapshot["pstakeSet"]["stake"])
             pstake_go = _get_key_hashes(es_snapshot["pstakeGo"]["stake"])
@@ -2040,27 +2061,31 @@ class TestRewards:
                 assert stake_addr_dec not in pstake_set
                 assert stake_addr_dec not in pstake_go
 
+                # make sure ledger state and actual stake correspond
+                assert (
+                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    == rewards_db[-1].stake_total
+                )
+
             if this_epoch == init_epoch + 2:
                 assert stake_addr_dec in pstake_mark
                 assert stake_addr_dec in pstake_set
                 assert stake_addr_dec not in pstake_go
+
+                assert (
+                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    == rewards_db[-1].stake_total
+                )
+                assert (
+                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    == rewards_db[-2].stake_total
+                )
 
             if this_epoch >= init_epoch + 3:
                 assert stake_addr_dec in pstake_mark
                 assert stake_addr_dec in pstake_set
                 assert stake_addr_dec in pstake_go
 
-            # wait 4 epochs for first rewards
-            if this_epoch >= init_epoch + 4:
-                # Make sure reward amount corresponds with ledger state.
-                # Reward is received on epoch boundary, so check reward with record
-                # for previous epoch.
-                prev_rs_record = rs_records.get(this_epoch - 1)
-                reward_epoch = rewards_db[-1].reward_epoch
-                if reward_epoch and prev_rs_record:
-                    assert reward_epoch == _get_reward_for_key_hash(stake_addr_dec, prev_rs_record)
-
-                # make sure ledger state and actual stake correspond
                 assert (
                     _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == rewards_db[-1].stake_total
