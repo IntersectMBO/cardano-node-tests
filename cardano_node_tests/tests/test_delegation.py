@@ -377,13 +377,13 @@ class TestDelegateAddr:
         )
 
         # create stake address deregistration cert
-        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+        stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # register and deregister stake address in single TX
         tx_files = clusterlib.TxFiles(
-            certificate_files=[stake_addr_reg_cert_file, stake_addr_dereg_cert],
+            certificate_files=[stake_addr_reg_cert_file, stake_addr_dereg_cert_file],
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
