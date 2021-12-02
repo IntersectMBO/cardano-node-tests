@@ -545,7 +545,7 @@ def query_address_reward(
         " reward.spendable_epoch, pool_hash.view AS pool_view "
         "FROM reward "
         "INNER JOIN stake_address ON reward.addr_id = stake_address.id "
-        "INNER JOIN pool_hash ON pool_hash.id = reward.pool_id "
+        "LEFT JOIN pool_hash ON pool_hash.id = reward.pool_id "
         "WHERE (stake_address.view = %s) AND (reward.spendable_epoch BETWEEN %s AND %s) "
         "ORDER BY reward.id;"
     )
