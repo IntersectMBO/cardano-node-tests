@@ -335,6 +335,141 @@ class TestDelegateAddr:
             assert delegation_out.pool_user.stake.address in tx_db_dereg.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(2)
+    @pytest.mark.dbsync
+    @pytest.mark.long
+    def test_undelegate(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
+    ):
+        """Undelegate stake address.
+
+        * submit registration certificate and delegate to pool
+        * wait for first reward
+        * undelegate stake address:
+
+           - withdraw rewards to payment address
+           - deregister stake address
+           - re-register stake address
+
+        * check that the key deposit was not returned
+        * check that rewards were withdrawn
+        * check that the stake address is still registered
+        * check that the stake address is no longer delegated
+        * (optional) check records in db-sync
+        """
+        cluster, pool_id = cluster_and_pool
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
+        )
+        init_epoch = cluster.get_epoch()
+
+        # submit registration certificate and delegate to pool
+        delegation_out = delegation.delegate_stake_addr(
+            cluster_obj=cluster,
+            addrs_data=cluster_manager.cache.addrs_data,
+            temp_template=temp_template,
+            pool_id=pool_id,
+        )
+
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
+        # check records in db-sync
+        tx_db_deleg = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
+        )
+        delegation.db_check_delegation(
+            pool_user=delegation_out.pool_user,
+            db_record=tx_db_deleg,
+            deleg_epoch=init_epoch,
+            pool_id=delegation_out.pool_id,
+        )
+
+        src_address = delegation_out.pool_user.payment.address
+
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        if not cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance:
+            pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
+
+        # make sure we have enough time to finish deregistration in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+        )
+
+        # files for deregistering / re-registering stake address
+        stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_undeleg_addr0",
+            stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
+        )
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_undeleg_addr0",
+            stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
+        )
+        tx_files_undeleg = clusterlib.TxFiles(
+            certificate_files=[stake_addr_dereg_cert_file, stake_addr_reg_cert_file],
+            signing_key_files=[
+                delegation_out.pool_user.payment.skey_file,
+                delegation_out.pool_user.stake.skey_file,
+            ],
+        )
+
+        src_payment_balance = cluster.get_address_balance(src_address)
+        reward_balance = cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance
+
+        # withdraw rewards to payment address; deregister and re-register stake address
+        tx_raw_undeleg = cluster.send_tx(
+            src_address=src_address,
+            tx_name=f"{temp_template}_undeleg_withdraw",
+            tx_files=tx_files_undeleg,
+            withdrawals=[
+                clusterlib.TxOut(address=delegation_out.pool_user.stake.address, amount=-1)
+            ],
+        )
+
+        # check that the key deposit was NOT returned and rewards were withdrawn
+        assert (
+            cluster.get_address_balance(src_address)
+            == src_payment_balance - tx_raw_undeleg.fee + reward_balance
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        # check that the stake address is no longer delegated
+        stake_addr_info = cluster.get_stake_addr_info(delegation_out.pool_user.stake.address)
+        assert stake_addr_info.address, f"Reward address is not registered: {stake_addr_info}"
+        assert (
+            not stake_addr_info.delegation
+        ), f"Stake address is still delegated: {stake_addr_info}"
+
+        cluster.wait_for_new_epoch(padding_seconds=10)
+        this_epoch = cluster.get_epoch()
+        assert cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance, "No reward was received next epoch after undelegation"
+
+        # check records in db-sync
+        tx_db_undeleg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_undeleg)
+        if tx_db_undeleg:
+            assert delegation_out.pool_user.stake.address in tx_db_undeleg.stake_deregistration
+            assert delegation_out.pool_user.stake.address in tx_db_undeleg.stake_registration
+
+            db_rewards = dbsync_utils.check_address_reward(
+                address=delegation_out.pool_user.stake.address, epoch_from=init_epoch
+            )
+            assert db_rewards
+            db_reward_epochs = sorted(r.spendable_epoch for r in db_rewards.rewards)
+            assert db_reward_epochs[0] == init_epoch + 4
+            assert db_reward_epochs[-1] == this_epoch
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "use_build_cmd",
         (
