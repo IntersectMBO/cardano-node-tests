@@ -149,7 +149,7 @@ def get_address_reward(
                 earned_epoch=db_row.earned_epoch,
                 spendable_epoch=db_row.spendable_epoch,
                 type=db_row.type,
-                pool_id=db_row.pool_id,
+                pool_id=db_row.pool_id or "",
             )
         )
     if not rewards:
@@ -173,8 +173,12 @@ def check_address_reward(
 
     errors = []
     for r in reward.rewards:
-        if r.spendable_epoch != r.earned_epoch + 2:
-            errors.append(f"{r.earned_epoch} != {r.spendable_epoch} + 2")
+        if r.type in ("member", "leader"):
+            if r.spendable_epoch != r.earned_epoch + 2:
+                errors.append(f"type == {r.type} and {r.spendable_epoch} != {r.earned_epoch} + 2")
+        # transfer from reserves or treasury
+        elif r.spendable_epoch != r.earned_epoch + 1:
+            errors.append(f"type == {r.type} and {r.spendable_epoch} != {r.earned_epoch} + 1")
 
     if errors:
         err_str = ", ".join(errors)
