@@ -853,7 +853,7 @@ def _load_assets(assets: Dict[str, Dict[str, int]]) -> List[Tuple[int, str]]:
     loaded_data = []
 
     for policy_key, policy_rec in assets.items():
-        if policy_key == "lovelace":
+        if policy_key == clusterlib.DEFAULT_COIN:
             continue
         if "policy " in policy_key:
             policy_key = policy_key.replace("policy ", "")
@@ -872,7 +872,7 @@ def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
     # `coins_data` for Mary+ Tx era has Lovelace amount and policies info,
     # for older Tx eras it's just Lovelace amount
     try:
-        amount_lovelace = coins_data.get("lovelace")  # type: ignore
+        amount_lovelace = coins_data.get(clusterlib.DEFAULT_COIN)  # type: ignore
         policies_data: dict = coins_data  # type: ignore
     except AttributeError:
         amount_lovelace = int(coins_data.split(" ")[0] or 0)  # type: ignore
@@ -881,7 +881,7 @@ def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
     loaded_data = []
 
     if amount_lovelace:
-        loaded_data.append((amount_lovelace, "lovelace"))
+        loaded_data.append((amount_lovelace, clusterlib.DEFAULT_COIN))
 
     assets_data = _load_assets(assets=policies_data)
 
