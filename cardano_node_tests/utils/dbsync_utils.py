@@ -149,7 +149,7 @@ def get_address_reward(
                 earned_epoch=db_row.earned_epoch,
                 spendable_epoch=db_row.spendable_epoch,
                 type=db_row.type,
-                pool_id=db_row.pool_id,
+                pool_id=db_row.pool_id or "",
             )
         )
     if not rewards:

@@ -180,7 +180,7 @@ def _dbsync_check_rewards(
     db_pool_ids_dict = {
         r.spendable_epoch: r.pool_id
         for r in reward_db_record.rewards
-        if pool_first_epoch <= r.spendable_epoch <= epoch_to
+        if r.pool_id and pool_first_epoch <= r.spendable_epoch <= epoch_to
     }
     assert pool_ids_dict == db_pool_ids_dict
 
