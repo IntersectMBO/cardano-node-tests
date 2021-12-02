@@ -533,9 +533,11 @@ def _tx_scripts_hashes(
 
     for r in records:
         shash = cluster_obj.get_policyid(script_file=r.script_file)
-        if shash not in hashes_db:
-            hashes_db[shash] = []
-        hashes_db[shash].append(r)
+        shash_rec = hashes_db.get(shash)
+        if shash_rec is None:
+            hashes_db[shash] = [r]
+            continue
+        shash_rec.append(r)
 
     return hashes_db
 
@@ -548,9 +550,11 @@ def _db_redeemer_hashes(
 
     for r in records:
         shash = r.script_hash
-        if shash not in hashes_db:
-            hashes_db[shash] = []
-        hashes_db[shash].append(r)
+        shash_rec = hashes_db.get(shash)
+        if shash_rec is None:
+            hashes_db[shash] = [r]
+            continue
+        shash_rec.append(r)
 
     return hashes_db
 
