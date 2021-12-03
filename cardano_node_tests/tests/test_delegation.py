@@ -255,8 +255,6 @@ class TestDelegateAddr:
             pool_id=delegation_out.pool_id,
         )
 
-        clusterlib_utils.wait_for_stake_distribution(cluster)
-
         src_address = delegation_out.pool_user.payment.address
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
@@ -674,8 +672,6 @@ class TestDelegateAddr:
             cluster.get_address_balance(user_payment.address)
             == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_address_deposit()
         ), f"Incorrect balance for source address `{user_payment.address}`"
-
-        clusterlib_utils.wait_for_stake_distribution(cluster)
 
         # check that the stake address was NOT delegated
         stake_addr_info = cluster.get_stake_addr_info(user_registered.stake.address)
