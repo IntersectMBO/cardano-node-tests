@@ -447,7 +447,7 @@ class TestDelegateAddr:
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
 
-        cluster.wait_for_new_epoch(padding_seconds=10)
+        cluster.wait_for_new_epoch(padding_seconds=20)
         this_epoch = cluster.get_epoch()
         assert cluster.get_stake_addr_info(
             delegation_out.pool_user.stake.address
@@ -465,7 +465,7 @@ class TestDelegateAddr:
             assert db_rewards
             db_reward_epochs = sorted(r.spendable_epoch for r in db_rewards.rewards)
             assert db_reward_epochs[0] == init_epoch + 4
-            assert db_reward_epochs[-1] == this_epoch
+            assert this_epoch in db_reward_epochs
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
