@@ -15,12 +15,15 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+
+# number of shelley epochs traversed during local cluster startup
+# NOTE: must be kept up-to-date
+NUM_OF_SHELLEY_EPOCHS = 5
 
 
 @pytest.fixture(scope="module")
@@ -51,6 +54,7 @@ def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> cl
 def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""
     pytest_globaltemp = helpers.get_pytest_globaltemp(tmp_path_factory)
+    max_kes_evolutions = 10
 
     # need to lock because this same fixture can run on several workers in parallel
     with helpers.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_short_kes.lock"):
@@ -68,8 +72,15 @@ def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         with open(startup_files.genesis_spec, encoding="utf-8") as fp_in:
             genesis_spec = json.load(fp_in)
 
-        genesis_spec["slotsPerKESPeriod"] = 700
-        genesis_spec["maxKESEvolutions"] = 5
+        # KES needs to be valid at least until the local cluster is fully started.
+        # We need to calculate how many slots there is from the start of Shelley epoch
+        # until the cluster is fully started.
+        epoch_length = genesis_spec["epochLength"]
+        cluster_start_time_slots = int(NUM_OF_SHELLEY_EPOCHS * epoch_length)
+        exact_kes_period_slots = int(cluster_start_time_slots / max_kes_evolutions)
+
+        genesis_spec["slotsPerKESPeriod"] = int(exact_kes_period_slots * 1.2)  # add buffer
+        genesis_spec["maxKESEvolutions"] = max_kes_evolutions
 
         with open(startup_files.genesis_spec, "w", encoding="utf-8") as fp_out:
             json.dump(genesis_spec, fp_out)
@@ -90,8 +101,8 @@ class TestKES:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(3)
     @pytest.mark.skipif(
-        bool(configuration.TX_ERA),
-        reason="different TX eras doesn't affect this test, pointless to run",
+        not (VERSIONS.cluster_era == VERSIONS.transaction_era == VERSIONS.LAST_KNOWN_ERA),
+        reason="meant to run only with the latest cluster era and the latest transaction era",
     )
     def test_expired_kes(
         self,
@@ -100,16 +111,12 @@ class TestKES:
     ):
         """Test expired KES."""
         cluster = cluster_kes
-
-        expire_timeout = int(
-            cluster.slots_per_kes_period * cluster.slot_length * cluster.max_kes_evolutions + 1
-        )
+        expire_timeout = 200
 
         expected_errors = [
             ("*.stdout", "TraceNoLedgerView"),
             ("*.stdout", "KESKeyAlreadyPoisoned"),
             ("*.stdout", "KESCouldNotEvolve"),
-            ("*.stdout", r"ExceededTimeLimit \(ChainSync"),
         ]
         with logfiles.expect_errors(expected_errors, rules_file_id=worker_id):
             LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
