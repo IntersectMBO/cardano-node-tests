@@ -95,7 +95,10 @@ class TestCLI:
         helpers.run_in_bash(f"cardano-cli query utxo --whole-utxo {magic_args} > /dev/null")
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skip("transaction view is broken by #2613")
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
+        reason="different TX eras doesn't affect this test",
+    )
     @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
