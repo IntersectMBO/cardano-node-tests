@@ -93,7 +93,6 @@ def delegate_stake_addr(
     pool_id: str = "",
     cold_vkey: Optional[Path] = None,
     amount: int = 100_000_000,
-    check_delegation: bool = True,
     use_build_cmd: bool = False,
 ) -> DelegationOut:
     """Submit registration certificate and delegate to pool."""
@@ -178,9 +177,8 @@ def delegate_stake_addr(
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that the stake address was delegated
-    if check_delegation:
-        stake_addr_info = cluster_obj.get_stake_addr_info(pool_user.stake.address)
-        assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
-        assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
+    stake_addr_info = cluster_obj.get_stake_addr_info(pool_user.stake.address)
+    assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
+    assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
     return DelegationOut(pool_user=pool_user, pool_id=pool_id, tx_raw_output=tx_raw_output)
