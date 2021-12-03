@@ -179,7 +179,6 @@ def delegate_stake_addr(
 
     # check that the stake address was delegated
     if check_delegation:
-        clusterlib_utils.wait_for_stake_distribution(cluster_obj)
         stake_addr_info = cluster_obj.get_stake_addr_info(pool_user.stake.address)
         assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
         assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
