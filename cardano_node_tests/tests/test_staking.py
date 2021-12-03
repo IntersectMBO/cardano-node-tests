@@ -261,6 +261,7 @@ class TestRewards:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-300, force_epoch=False
         )
+        init_epoch = cluster.get_epoch()
 
         if check_pool_rewards:
             pool_rec = cluster_manager.cache.addrs_data["node-pool1"]
@@ -276,6 +277,10 @@ class TestRewards:
             temp_template=temp_template,
             pool_id=pool_id,
         )
+
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
         for i in range(5):
@@ -993,6 +998,11 @@ class TestRewards:
 
         temp_template = clusterlib_utils.get_temp_template(cluster)
 
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
+        )
+        init_epoch = cluster.get_epoch()
+
         # submit registration certificate and delegate to pool
         pool_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -1004,7 +1014,18 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        # create destination address for rewards
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        if not cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance:
+            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
+
+        # create destination address for rewards withdrawal
         dst_addr_record = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_dst_addr", cluster_obj=cluster
         )[0]
@@ -1015,17 +1036,6 @@ class TestRewards:
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
-
-        LOGGER.info("Waiting up to 4 full epochs for first reward.")
-        for i in range(5):
-            if i > 0:
-                cluster.wait_for_new_epoch(padding_seconds=10)
-            if cluster.get_stake_addr_info(
-                delegation_out.pool_user.stake.address
-            ).reward_account_balance:
-                break
-        else:
-            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish the transfer in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -1108,6 +1118,11 @@ class TestRewards:
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
         )
 
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
+        )
+        init_epoch = cluster.get_epoch()
+
         # submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
             cluster_obj=cluster,
@@ -1116,15 +1131,15 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        LOGGER.info("Waiting up to 4 full epochs for first reward.")
-        for i in range(5):
-            if i > 0:
-                cluster.wait_for_new_epoch(padding_seconds=10)
-            if cluster.get_stake_addr_info(
-                delegation_out.pool_user.stake.address
-            ).reward_account_balance:
-                break
-        else:
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        if not cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish the pool update in one epoch
@@ -1246,6 +1261,11 @@ class TestRewards:
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
         )
 
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
+        )
+        init_epoch = cluster.get_epoch()
+
         # submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
             cluster_obj=cluster,
@@ -1254,15 +1274,15 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        LOGGER.info("Waiting up to 4 full epochs for first reward.")
-        for i in range(5):
-            if i > 0:
-                cluster.wait_for_new_epoch(padding_seconds=10)
-            if cluster.get_stake_addr_info(
-                delegation_out.pool_user.stake.address
-            ).reward_account_balance:
-                break
-        else:
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        if not cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to withdraw the pledge in one epoch
@@ -1403,6 +1423,11 @@ class TestRewards:
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
         )
 
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
+        )
+        init_epoch = cluster.get_epoch()
+
         # submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
             cluster_obj=cluster,
@@ -1411,15 +1436,15 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        LOGGER.info("Waiting up to 4 full epochs for first reward.")
-        for i in range(5):
-            if i > 0:
-                cluster.wait_for_new_epoch(padding_seconds=10)
-            if cluster.get_stake_addr_info(
-                delegation_out.pool_user.stake.address
-            ).reward_account_balance:
-                break
-        else:
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        if not cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish deregistration in one epoch
@@ -1567,10 +1592,16 @@ class TestRewards:
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
         temp_template = clusterlib_utils.get_temp_template(cluster)
 
-        # submit registration certificate and delegate to pool
         pool_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
         )
+
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
+        )
+        init_epoch = cluster.get_epoch()
+
+        # submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
@@ -1578,15 +1609,15 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        LOGGER.info("Waiting up to 4 full epochs for first reward.")
-        for i in range(5):
-            if i > 0:
-                cluster.wait_for_new_epoch(padding_seconds=10)
-            if cluster.get_stake_addr_info(
-                delegation_out.pool_user.stake.address
-            ).reward_account_balance:
-                break
-        else:
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        if not cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish deregistration in one epoch
