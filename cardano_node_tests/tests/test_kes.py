@@ -18,6 +18,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -324,7 +325,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        bool(configuration.TX_ERA),
+        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
         reason="different TX eras doesn't affect this test, pointless to run",
     )
     def test_no_kes_period_arg(

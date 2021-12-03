@@ -45,7 +45,7 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.skipif(
-        VERSIONS.cluster_era != VERSIONS.transaction_era,
+        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
         reason="different TX eras doesn't affect this test",
     )
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
@@ -64,7 +64,7 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.cluster_era != VERSIONS.transaction_era,
+        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
         reason="different TX eras doesn't affect this test",
     )
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
@@ -82,7 +82,7 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.cluster_era != VERSIONS.transaction_era,
+        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
         reason="different TX eras doesn't affect this test",
     )
     @pytest.mark.skipif(
