@@ -275,7 +275,6 @@ class TestRewards:
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             pool_id=pool_id,
-            check_delegation=False,
         )
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
@@ -357,7 +356,6 @@ class TestRewards:
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             pool_id=pool_id,
-            check_delegation=False,
         )
 
         native_tokens: List[clusterlib_utils.TokenRecord] = []
@@ -2111,7 +2109,6 @@ class TestRewards:
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             pool_id=pool1_id,
-            check_delegation=False,
         )
 
         # make sure we managed to finish registration in the expected epoch
