@@ -233,7 +233,7 @@ class TestDelegateAddr:
         temp_template = clusterlib_utils.get_temp_template(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-10, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -245,6 +245,10 @@ class TestDelegateAddr:
             pool_id=pool_id,
         )
 
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
         tx_db_deleg = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
         )
@@ -255,19 +259,13 @@ class TestDelegateAddr:
             pool_id=delegation_out.pool_id,
         )
 
-        clusterlib_utils.wait_for_stake_distribution(cluster)
-
         src_address = delegation_out.pool_user.payment.address
 
-        LOGGER.info("Waiting up to 4 full epochs for first reward.")
-        for i in range(5):
-            if i > 0:
-                cluster.wait_for_new_epoch(padding_seconds=10)
-            if cluster.get_stake_addr_info(
-                delegation_out.pool_user.stake.address
-            ).reward_account_balance:
-                break
-        else:
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        if not cluster.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish deregistration in one epoch
@@ -674,8 +672,6 @@ class TestDelegateAddr:
             cluster.get_address_balance(user_payment.address)
             == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_address_deposit()
         ), f"Incorrect balance for source address `{user_payment.address}`"
-
-        clusterlib_utils.wait_for_stake_distribution(cluster)
 
         # check that the stake address was NOT delegated
         stake_addr_info = cluster.get_stake_addr_info(user_registered.stake.address)
