@@ -15,7 +15,7 @@ class Versions:
     ALONZO = 5
 
     DEFAULT_CLUSTER_ERA = 5
-    DEFAULT_TX_ERA = 4
+    DEFAULT_TX_ERA = 5
     LAST_KNOWN_ERA = 5
 
     MAP = {1: "byron", 2: "shelley", 3: "allegra", 4: "mary", 5: "alonzo"}
