@@ -12,6 +12,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import model_ekg
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -120,7 +121,7 @@ def get_ekg_metrics(port: int) -> requests.Response:
 
 
 @pytest.mark.skipif(
-    bool(configuration.TX_ERA),
+    VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
     reason="different TX eras doesn't affect this test, pointless to run",
 )
 class TestPrometheus:
@@ -147,7 +148,7 @@ class TestPrometheus:
 
 
 @pytest.mark.skipif(
-    bool(configuration.TX_ERA),
+    VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
     reason="different TX eras doesn't affect this test, pointless to run",
 )
 class TestEKG:

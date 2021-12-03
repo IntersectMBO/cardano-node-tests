@@ -12,8 +12,8 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
 
 @pytest.mark.order(3)
 @pytest.mark.skipif(
-    bool(configuration.TX_ERA),
+    VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
     reason="different TX eras doesn't affect this test, pointless to run",
 )
 class TestBasic:
