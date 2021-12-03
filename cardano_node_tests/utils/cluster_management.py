@@ -490,7 +490,7 @@ class _ClusterGetter:
             for f in restart_after_mark_files:
                 os.remove(f)
             self.cm._log(
-                f"c{instance_num}: in `_on_marked_test_stop`, " "creating 'restart needed' file"
+                f"c{instance_num}: in `_on_marked_test_stop`, creating 'restart needed' file"
             )
             _touch(instance_dir / f"{RESTART_NEEDED_GLOB}_{self.cm.worker_id}")
 
@@ -512,16 +512,25 @@ class _ClusterGetter:
         self,
         marked_tests_status: MarkedTestsStatus,
         active_mark_name: str,
-        started_tests: list,
+        in_progress: bool,
         instance_num: int,
     ) -> None:
-        if started_tests or marked_tests_status.last_seen_mark != active_mark_name:
+        # When marked test is finished, we can't clear the mark right away. There might be
+        # a test with the same mark in the queue and it will be scheduled in a short while.
+        # We would need to repeat all the expensive setup if we already cleared the mark.
+        # Therefore we need to keeps track of marked tests and clear the mark and cluster
+        # instance only when no marked test was running for some time.
+
+        if in_progress:
+            # test with mark is currently running or starting
             marked_tests_status.no_marked_tests_iter = 0
         else:
+            # mark is set and no test is currently running,
+            # i.e. we are waiting for next marked test
             marked_tests_status.no_marked_tests_iter += 1
 
-        # check if there is a stale mark status file
-        if marked_tests_status.no_marked_tests_iter >= 10:
+        # clean the stale status file if we are waiting too long for the next marked test
+        if marked_tests_status.no_marked_tests_iter >= 20:
             self.cm._log(
                 f"c{instance_num}: no marked tests running for a while, "
                 "cleaning the mark status file"
@@ -541,7 +550,7 @@ class _ClusterGetter:
                 break
             res_used = list(instance_dir.glob(f"{RESOURCE_IN_USE_GLOB}_{res}_*"))
             if res_used:
-                self.cm._log(f"c{instance_num}: resource '{res}' in use, " "cannot lock and start")
+                self.cm._log(f"c{instance_num}: resource '{res}' in use, cannot lock and start")
                 break
         else:
             self.cm._log(
@@ -564,7 +573,7 @@ class _ClusterGetter:
 
         if not res_locked:
             self.cm._log(
-                f"c{instance_num}: none of the resources in '{resources}' locked, " "can start"
+                f"c{instance_num}: none of the resources in '{resources}' locked, can start"
             )
         return bool(res_locked)
 
@@ -740,6 +749,22 @@ class _ClusterGetter:
                     marked_starting = list(instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_*"))
                     marked_running = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
 
+                    # marked tests are already running, update status
+                    if marked_running:
+                        # get marked tests status
+                        marked_tests_status = self._get_marked_tests_status(
+                            cache=marked_tests_cache, instance_num=instance_num
+                        )
+
+                        # update marked tests status
+                        self._update_marked_tests(
+                            marked_tests_status=marked_tests_status,
+                            active_mark_name=marked_running[0].name,
+                            in_progress=bool(started_tests or marked_starting),
+                            instance_num=instance_num,
+                        )
+
+                    # test has mark
                     if mark:
                         marked_running_my = (
                             instance_dir / f"{TEST_CURR_MARK_GLOB}_{mark}"
@@ -822,30 +847,13 @@ class _ClusterGetter:
                             sleep_delay = 3
                             continue
 
-                    # get marked tests status
-                    marked_tests_status = self._get_marked_tests_status(
-                        cache=marked_tests_cache, instance_num=instance_num
-                    )
-
-                    # marked tests are already running
+                    # marked tests are already running, the test have the required mark
+                    # when it got this far
                     if marked_running:
-                        active_mark_file = marked_running[0].name
-
-                        # update marked tests status
-                        self._update_marked_tests(
-                            marked_tests_status=marked_tests_status,
-                            active_mark_name=active_mark_file,
-                            started_tests=started_tests,
-                            instance_num=instance_num,
-                        )
-
                         self.cm._log(
                             f"c{instance_num}: in marked tests branch, "
                             f"I have required mark '{mark}'"
                         )
-
-                    # reset counter of cycles with no marked test running
-                    marked_tests_status.no_marked_tests_iter = 0
 
                     # this test is a singleton - no other test can run while this one is running
                     if singleton and started_tests:
