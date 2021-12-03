@@ -29,10 +29,13 @@ ERRORS_IGNORED = [
     "Failed to start all required subscriptions",
     "TraceDidntAdoptBlock",
     "failedScripts",
-    "db-sync-node:.* AsyncCancelled",
     "closed when reading data, waiting on next header",
-    "db-sync-node:.* validateEpochRewardsBefore",  # TODO: remove once rewards are fixed in db-sync
     r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
+    "db-sync-node:.* AsyncCancelled",
+    # TODO: remove once rewards are fixed in db-sync
+    "db-sync-node:.* validateEpochRewardsBefore",
+    # can happen when single postgres instance is used for multiple db-sync services
+    "db-sync-node:.*could not serialize access",
 ]
 if configuration.CLUSTER_ERA == "alonzo":
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
