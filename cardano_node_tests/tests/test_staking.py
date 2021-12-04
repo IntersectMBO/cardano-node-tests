@@ -182,7 +182,8 @@ def _dbsync_check_rewards(
         for r in reward_db_record.rewards
         if r.pool_id and r.type == "member" and pool_first_epoch <= r.spendable_epoch <= epoch_to
     }
-    assert pool_ids_dict == db_pool_ids_dict
+    if db_pool_ids_dict:
+        assert pool_ids_dict == db_pool_ids_dict
 
     user_rewards_dict = {r.epoch_no: r.reward_epoch for r in rewards if r.reward_epoch}
     user_db_rewards_dict = _add_spendable(rewards=reward_db_record.rewards, max_epoch=epoch_to)
