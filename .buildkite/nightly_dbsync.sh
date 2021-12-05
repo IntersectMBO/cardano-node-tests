@@ -37,7 +37,7 @@ fi
 git rev-parse HEAD
 
 # build db-sync
-nix-build -A cardano-db-sync-extended -o db-sync-node-extended
+nix-build -A cardano-db-sync -o db-sync-node
 export DBSYNC_REPO="$PWD"
 
 pushd "$REPODIR"

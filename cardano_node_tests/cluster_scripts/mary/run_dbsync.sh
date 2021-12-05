@@ -13,4 +13,4 @@ export PGHOST="${PGHOST:-localhost}"
 export PGPORT="${PGPORT:-5432}"
 export PGUSER="${PGUSER:-postgres}"
 
-exec "$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended" --config "./$STATE_CLUSTER_NAME/dbsync-config.yaml" --socket-path "$CARDANO_NODE_SOCKET_PATH" --state-dir "./$STATE_CLUSTER_NAME/db-sync" --schema-dir "$DBSYNC_REPO/schema"
+exec "$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync" --config "./$STATE_CLUSTER_NAME/dbsync-config.yaml" --socket-path "$CARDANO_NODE_SOCKET_PATH" --state-dir "./$STATE_CLUSTER_NAME/db-sync" --schema-dir "$DBSYNC_REPO/schema"
