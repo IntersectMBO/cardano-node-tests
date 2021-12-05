@@ -52,8 +52,8 @@ chmod u+w "$STATE_CLUSTER"/config-*.json
 
 # enable db-sync service
 if [ -n "${DBSYNC_REPO:-""}" ]; then
-  [ -e "$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended" ] || \
-    { echo "The \`$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended\` not found, line $LINENO" >&2; exit 1; }  # assert
+  [ -e "$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync" ] || \
+    { echo "The \`$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync\` not found, line $LINENO" >&2; exit 1; }  # assert
 
   # copy db-sync config file
   cp "$TESTNET_CONF_DIR/dbsync-config.yaml" "$STATE_CLUSTER/dbsync-config.yaml"

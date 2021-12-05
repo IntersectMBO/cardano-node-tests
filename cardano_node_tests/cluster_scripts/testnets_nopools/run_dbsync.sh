@@ -18,4 +18,4 @@ export PGPASSFILE="$STATE_CLUSTER/pgpass"
 echo "${PGHOST}:${PGPORT}:${DATABASE_NAME}:${PGUSER}:secret" > "$PGPASSFILE"
 chmod 600 "$PGPASSFILE"
 
-exec "$DBSYNC_REPO/db-sync-node-extended/bin/cardano-db-sync-extended" --config "./$STATE_CLUSTER_NAME/dbsync-config.yaml" --socket-path "$CARDANO_NODE_SOCKET_PATH" --state-dir "./$STATE_CLUSTER_NAME/db-sync" --schema-dir "$DBSYNC_REPO/schema"
+exec "$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync" --config "./$STATE_CLUSTER_NAME/dbsync-config.yaml" --socket-path "$CARDANO_NODE_SOCKET_PATH" --state-dir "./$STATE_CLUSTER_NAME/db-sync" --schema-dir "$DBSYNC_REPO/schema"
