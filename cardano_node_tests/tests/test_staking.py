@@ -6,6 +6,7 @@ from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Tuple
+from typing import Union
 
 import allure
 import pytest
@@ -45,8 +46,9 @@ pytestmark = pytest.mark.usefixtures("temp_dir")
 class RewardRecord(NamedTuple):
     epoch_no: int
     reward_total: int
-    reward_epoch: int
-    pool_id: str
+    reward_per_epoch: int
+    member_pool_id: str = ""
+    leader_pool_ids: Union[List[str], tuple] = ()
     stake_total: int = 0
 
 
@@ -74,6 +76,15 @@ def cluster_use_pool1_2(
 @pytest.fixture
 def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(lock_resources=[cluster_management.Resources.POOL2])
+
+
+@pytest.fixture
+def cluster_lock_pool1_2(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    return cluster_manager.get(
+        lock_resources=[cluster_management.Resources.POOL1, cluster_management.Resources.POOL2]
+    )
 
 
 def withdraw_reward_w_build(
@@ -152,6 +163,88 @@ def _add_spendable(rewards: List[dbsync_utils.RewardEpochRecord], max_epoch: int
     return recs
 
 
+def _check_member_pool_ids(
+    rewards_by_idx: Dict[int, RewardRecord], reward_db_record: dbsync_utils.RewardRecord
+) -> None:
+    """Check that in each epoch member rewards were received from the expected pool."""
+    epoch_to = rewards_by_idx[max(rewards_by_idx)].epoch_no
+
+    # reward records obtained from TX
+    pool_ids_dict = {}
+    for r_tx in rewards_by_idx.values():
+        # rewards are received from pool to which the address was delegated 4 epochs ago
+        pool_epoch = r_tx.epoch_no - 4
+        rec_for_epoch_tx = rewards_by_idx.get(pool_epoch)
+        if (
+            r_tx.reward_total
+            and r_tx.member_pool_id
+            and rec_for_epoch_tx
+            and rec_for_epoch_tx.member_pool_id
+        ):
+            pool_ids_dict[r_tx.epoch_no] = rec_for_epoch_tx.member_pool_id
+
+    if not pool_ids_dict:
+        return
+
+    pool_first_epoch = min(pool_ids_dict)
+
+    # reward records obtained from db-sync
+    db_pool_ids_dict = {}
+    for r_db in reward_db_record.rewards:
+        if (
+            r_db.pool_id
+            and r_db.type == "member"
+            and pool_first_epoch <= r_db.spendable_epoch <= epoch_to
+        ):
+            db_pool_ids_dict[r_db.spendable_epoch] = r_db.pool_id
+
+    if db_pool_ids_dict:
+        assert pool_ids_dict == db_pool_ids_dict
+
+
+def _check_leader_pool_ids(
+    rewards_by_idx: Dict[int, RewardRecord], reward_db_record: dbsync_utils.RewardRecord
+) -> None:
+    """Check that in each epoch leader rewards were received from the expected pool."""
+    epoch_to = rewards_by_idx[max(rewards_by_idx)].epoch_no
+
+    # reward records obtained from TX
+    pool_ids_dict = {}
+    for r_tx in rewards_by_idx.values():
+        # rewards are received on address that was set as pool reward address 4 epochs ago
+        pool_epoch = r_tx.epoch_no - 4
+        rec_for_epoch_tx = rewards_by_idx.get(pool_epoch)
+        if (
+            r_tx.reward_total
+            and r_tx.leader_pool_ids
+            and rec_for_epoch_tx
+            and rec_for_epoch_tx.leader_pool_ids
+        ):
+            pool_ids_dict[r_tx.epoch_no] = set(rec_for_epoch_tx.leader_pool_ids)
+
+    if not pool_ids_dict:
+        return
+
+    pool_first_epoch = min(pool_ids_dict)
+
+    # reward records obtained from db-sync
+    db_pool_ids_dict: dict = {}
+    for r_db in reward_db_record.rewards:
+        if (
+            r_db.pool_id
+            and r_db.type == "leader"
+            and pool_first_epoch <= r_db.spendable_epoch <= epoch_to
+        ):
+            rec_for_epoch_db = db_pool_ids_dict.get(r_db.spendable_epoch)
+            if rec_for_epoch_db is None:
+                db_pool_ids_dict[r_db.spendable_epoch] = {r_db.pool_id}
+                continue
+            rec_for_epoch_db.add(r_db.pool_id)
+
+    if db_pool_ids_dict:
+        assert pool_ids_dict == db_pool_ids_dict
+
+
 def _dbsync_check_rewards(
     stake_address: str,
     rewards: List[RewardRecord],
@@ -166,26 +259,14 @@ def _dbsync_check_rewards(
     )
     assert reward_db_record
 
-    # check that in each epoch rewards were received from the expected pool
     rewards_by_idx = {r.epoch_no: r for r in rewards}
-    pool_ids_dict = {}
-    for r in rewards:
-        # rewards are received from pool to which the address was delegated 4 epochs ago
-        pool_epoch = r.epoch_no - 4
-        record_for_pool = rewards_by_idx.get(pool_epoch)
-        if r.reward_total and r.pool_id and record_for_pool and record_for_pool.pool_id:
-            pool_ids_dict[r.epoch_no] = record_for_pool.pool_id
-    pool_first_epoch = min(pool_ids_dict)
 
-    db_pool_ids_dict = {
-        r.spendable_epoch: r.pool_id
-        for r in reward_db_record.rewards
-        if r.pool_id and r.type == "member" and pool_first_epoch <= r.spendable_epoch <= epoch_to
-    }
-    if db_pool_ids_dict:
-        assert pool_ids_dict == db_pool_ids_dict
+    # check that in each epoch rewards were received from the expected pool
+    _check_member_pool_ids(rewards_by_idx=rewards_by_idx, reward_db_record=reward_db_record)
+    _check_leader_pool_ids(rewards_by_idx=rewards_by_idx, reward_db_record=reward_db_record)
 
-    user_rewards_dict = {r.epoch_no: r.reward_epoch for r in rewards if r.reward_epoch}
+    # compare reward amounts with db-sync
+    user_rewards_dict = {r.epoch_no: r.reward_per_epoch for r in rewards if r.reward_per_epoch}
     user_db_rewards_dict = _add_spendable(rewards=reward_db_record.rewards, max_epoch=epoch_to)
     assert user_rewards_dict == user_db_rewards_dict
 
@@ -379,7 +460,7 @@ class TestRewards:
         # make sure we managed to finish registration in the expected epoch
         assert (
             cluster.get_epoch() == init_epoch
-        ), "Registration took longer than expected and would affect other checks"
+        ), "Delegation took longer than expected and would affect other checks"
 
         user_stake_addr_dec = helpers.decode_bech32(delegation_out.pool_user.stake.address)[2:]
         user_payment_balance = cluster.get_address_balance(delegation_out.pool_user.payment.address)
@@ -388,8 +469,8 @@ class TestRewards:
             RewardRecord(
                 epoch_no=init_epoch,
                 reward_total=0,
-                reward_epoch=0,
-                pool_id=pool_id,
+                reward_per_epoch=0,
+                member_pool_id=pool_id,
                 stake_total=user_payment_balance,
             )
         ]
@@ -399,8 +480,8 @@ class TestRewards:
                 reward_total=cluster.get_stake_addr_info(
                     pool_reward.stake.address
                 ).reward_account_balance,
-                reward_epoch=0,
-                pool_id=pool_id,
+                reward_per_epoch=0,
+                leader_pool_ids=[pool_id],
             )
         ]
 
@@ -423,12 +504,12 @@ class TestRewards:
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             prev_rs_record = rs_records.get(this_epoch - 1)
-            user_reward_epoch = user_rewards[-1].reward_epoch
+            user_reward_epoch = user_rewards[-1].reward_per_epoch
             if user_reward_epoch and prev_rs_record:
                 assert user_reward_epoch == _get_reward_amount_for_key_hash(
                     user_stake_addr_dec, prev_rs_record
                 )
-            owner_reward_epoch = owner_rewards[-1].reward_epoch
+            owner_reward_epoch = owner_rewards[-1].reward_per_epoch
             if owner_reward_epoch and prev_rs_record:
                 assert owner_reward_epoch == _get_reward_amount_for_key_hash(
                     pool_reward_addr_dec, prev_rs_record
@@ -526,8 +607,8 @@ class TestRewards:
                 RewardRecord(
                     epoch_no=this_epoch,
                     reward_total=user_reward,
-                    reward_epoch=user_reward_epoch,
-                    pool_id=pool_id,
+                    reward_per_epoch=user_reward_epoch,
+                    member_pool_id=pool_id,
                     stake_total=user_payment_balance + user_reward,
                 )
             )
@@ -535,8 +616,8 @@ class TestRewards:
                 RewardRecord(
                     epoch_no=this_epoch,
                     reward_total=owner_reward,
-                    reward_epoch=owner_reward_epoch,
-                    pool_id=pool_id,
+                    reward_per_epoch=owner_reward_epoch,
+                    leader_pool_ids=[pool_id],
                 )
             )
 
@@ -656,7 +737,7 @@ class TestRewards:
         init_epoch = cluster.get_epoch()
 
         # rewards each epoch
-        rewards_db: List[RewardRecord] = []
+        reward_records: List[RewardRecord] = []
 
         # ledger state db
         rs_records: dict = {init_epoch: None}
@@ -677,7 +758,7 @@ class TestRewards:
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             prev_rs_record = rs_records.get(this_epoch - 1)
-            owner_reward_epoch = rewards_db[-1].reward_epoch
+            owner_reward_epoch = reward_records[-1].reward_per_epoch
             if owner_reward_epoch and prev_rs_record:
                 prev_recorded_reward = _get_reward_amount_for_key_hash(
                     reward_addr_dec, prev_rs_record
@@ -699,7 +780,7 @@ class TestRewards:
                 # make sure ledger state and actual stake correspond
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == rewards_db[-1].reward_total
+                    == reward_records[-1].reward_total
                 )
 
             if this_epoch == init_epoch + 2:
@@ -709,11 +790,11 @@ class TestRewards:
 
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == rewards_db[-1].reward_total
+                    == reward_records[-1].reward_total
                 )
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == rewards_db[-2].reward_total
+                    == reward_records[-2].reward_total
                 )
 
             if init_epoch + 3 <= this_epoch <= init_epoch + 5:
@@ -723,15 +804,15 @@ class TestRewards:
 
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == rewards_db[-1].reward_total
+                    == reward_records[-1].reward_total
                 )
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == rewards_db[-2].reward_total
+                    == reward_records[-2].reward_total
                 )
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == rewards_db[-3].reward_total
+                    == reward_records[-3].reward_total
                 )
 
             if this_epoch == init_epoch + 6:
@@ -741,11 +822,11 @@ class TestRewards:
 
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == rewards_db[-2].reward_total
+                    == reward_records[-2].reward_total
                 )
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == rewards_db[-3].reward_total
+                    == reward_records[-3].reward_total
                 )
 
             if this_epoch == init_epoch + 7:
@@ -755,7 +836,7 @@ class TestRewards:
 
                 assert (
                     _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == rewards_db[-3].reward_total
+                    == reward_records[-3].reward_total
                 )
 
             if this_epoch > init_epoch + 7:
@@ -829,16 +910,16 @@ class TestRewards:
             # make sure we managed to finish delegation in the expected epoch
             assert (
                 cluster.get_epoch() == init_epoch
-            ), "Deregistration took longer than expected and would affect other checks"
+            ), "Delegation took longer than expected and would affect other checks"
 
-            rewards_db.append(
+            reward_records.append(
                 RewardRecord(
                     epoch_no=init_epoch,
                     reward_total=cluster.get_stake_addr_info(
                         pool_reward.stake.address
                     ).reward_account_balance,
-                    reward_epoch=0,
-                    pool_id=pool_id,
+                    reward_per_epoch=0,
+                    leader_pool_ids=[pool_id],
                 )
             )
 
@@ -849,7 +930,7 @@ class TestRewards:
                     prev_epoch,
                     prev_owner_reward,
                     *__,
-                ) = rewards_db[-1]
+                ) = reward_records[-1]
 
                 # wait for new epoch
                 if cluster.get_epoch() == prev_epoch:
@@ -871,12 +952,12 @@ class TestRewards:
                     owner_reward_epoch = owner_reward
 
                 # store collected rewards info
-                rewards_db.append(
+                reward_records.append(
                     RewardRecord(
                         epoch_no=this_epoch,
                         reward_total=owner_reward,
-                        reward_epoch=owner_reward_epoch,
-                        pool_id=pool_id,
+                        reward_per_epoch=owner_reward_epoch,
+                        leader_pool_ids=[pool_id],
                     )
                 )
 
@@ -945,7 +1026,7 @@ class TestRewards:
         # check rewards in db-sync
         reward_db_record = _dbsync_check_rewards(
             stake_address=pool_reward.stake.address,
-            rewards=rewards_db,
+            rewards=reward_records,
         )
 
         # in db-sync check that there were rewards of multiple different types
@@ -1947,81 +2028,72 @@ class TestRewards:
             ).reward_account_balance, "New reward was not received by pool reward address"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.needs_dbsync
     @pytest.mark.skipif(
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="needs Allegra+ TX to run",
     )
-    def test_2_pools_same_reward_addr(
+    def test_2_pools_same_reward_addr(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool2: clusterlib.ClusterLib,
+        cluster_lock_pool1_2: clusterlib.ClusterLib,
     ):
         """Check that one reward address used for two pools receives rewards for both of them.
 
-        * get combined reward amount per epoch for pool1 and pool2
         * set pool2 reward address to the reward address of pool1 by resubmitting the pool
           registration certificate
-        * check that the original reward address for pool2 is NOT receiving rewards
-        * check that the reward address for pool1 is now receiving rewards for both pools
-          by comparing reward amount received in last epoch with reward amount previously received
-          by both pools together
+        * collect data for both pool1 and pool2 for several epochs and with the help of db-sync
+
+           - check that the original reward address for pool2 is NOT receiving rewards
+           - check that the reward address for pool1 is now receiving rewards for both pools
+
+        * check records in db-sync
+
+           - transaction inputs, outputs, withdrawals, etc.
+           - reward amounts received each epoch
+           - expected pool ids
         """
+        # pylint: disable=too-many-statements,too-many-branches,too-many-locals
         pool_name = "node-pool2"
-        cluster = cluster_lock_pool2
+        cluster = cluster_lock_pool1_2
         temp_template = clusterlib_utils.get_temp_template(cluster)
 
         pool1_rec = cluster_manager.cache.addrs_data["node-pool1"]
         pool1_reward = clusterlib.PoolUser(payment=pool1_rec["payment"], stake=pool1_rec["reward"])
+        pool1_node_cold = pool1_rec["cold_key_pair"]
+        pool1_id = cluster.get_stake_pool_id(pool1_node_cold.vkey_file)
 
         pool2_rec = cluster_manager.cache.addrs_data[pool_name]
         pool2_owner = clusterlib.PoolUser(payment=pool2_rec["payment"], stake=pool2_rec["stake"])
         pool2_reward = clusterlib.PoolUser(payment=pool2_rec["payment"], stake=pool2_rec["reward"])
+        pool2_node_cold = pool2_rec["cold_key_pair"]
+        pool2_id = cluster.get_stake_pool_id(pool2_node_cold.vkey_file)
 
         # load pool data
-        node_cold = pool2_rec["cold_key_pair"]
-        pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
         loaded_data = clusterlib_utils.load_registered_pool_data(
-            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool_id
+            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool2_id
         )
 
-        LOGGER.info("Waiting up to 4 full epochs for first reward.")
+        LOGGER.info("Waiting up to 4 full epochs for first rewards.")
         for i in range(5):
             if i > 0:
                 cluster.wait_for_new_epoch(padding_seconds=10)
-            if cluster.get_stake_addr_info(pool2_reward.stake.address).reward_account_balance:
-                break
-        else:
-            pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
-
-        # get combined reward amount per epoch for pool1 and pool2
-        pool1_amount_prev = 0
-        pool2_amount_prev = 0
-        combined_reward_per_epoch = 0
-        for __ in range(3):
             pool1_amount = cluster.get_stake_addr_info(
                 pool1_reward.stake.address
             ).reward_account_balance
             pool2_amount = cluster.get_stake_addr_info(
                 pool2_reward.stake.address
             ).reward_account_balance
-
-            # make sure both pools received reward in this epoch
-            if (
-                pool1_amount_prev
-                and pool2_amount_prev
-                and pool1_amount > pool1_amount_prev
-                and pool2_amount > pool2_amount_prev
-            ):
-                combined_reward_per_epoch = (pool1_amount - pool1_amount_prev) + (
-                    pool2_amount - pool2_amount_prev
-                )
+            if pool1_amount and pool2_amount:
                 break
+        else:
+            pytest.skip("Pools haven't received any rewards, cannot continue.")
 
-            pool1_amount_prev = pool1_amount
-            pool2_amount_prev = pool2_amount
-            cluster.wait_for_new_epoch()
-
-        assert combined_reward_per_epoch > 0, "Failed to get combined reward amount"
+        # make sure we have enough time to submit pool registration cert in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
+        )
+        init_epoch = cluster.get_epoch()
 
         # fund source address so the pledge is still met after TX fees are deducted
         clusterlib_utils.fund_from_faucet(
@@ -2049,9 +2121,9 @@ class TestRewards:
                 pool2_rec["cold_key_pair"].skey_file,
             ],
         )
-        cluster.send_tx(
+        tx_raw_update_pool = cluster.send_tx(
             src_address=pool2_owner.payment.address,
-            tx_name=f"{temp_template}_update_param",
+            tx_name=f"{temp_template}_update_pool2",
             tx_files=tx_files,
             deposit=0,  # no additional deposit, the pool is already registered
         )
@@ -2059,12 +2131,21 @@ class TestRewards:
         # pool configuration changed, restart needed
         cluster_manager.set_needs_restart()
 
-        cluster.wait_for_new_epoch(4)
+        assert (
+            cluster.get_epoch() == init_epoch
+        ), "Pool setup took longer than expected and would affect other checks"
+        this_epoch = init_epoch
 
-        # check reward amount once the reward address change for pool2 is completed
-        pool1_amount_prev = 0
-        pool2_amount_prev = 0
-        for __ in range(4):
+        # rewards each epoch
+        rewards_ledger_pool1: List[RewardRecord] = []
+        rewards_ledger_pool2: List[RewardRecord] = []
+
+        # check rewards
+        for ep in range(6):
+            if ep > 0:
+                cluster.wait_for_new_epoch(padding_seconds=10)
+                this_epoch = cluster.get_epoch()
+
             pool1_amount = cluster.get_stake_addr_info(
                 pool1_reward.stake.address
             ).reward_account_balance
@@ -2072,24 +2153,120 @@ class TestRewards:
                 pool2_reward.stake.address
             ).reward_account_balance
 
-            if pool1_amount_prev and pool2_amount_prev and pool1_amount > pool1_amount_prev:
-                pool1_epoch_amount = pool1_amount - pool1_amount_prev
-                pool2_epoch_amount = pool2_amount - pool2_amount_prev
+            reward_for_epoch_pool1 = 0
+            if rewards_ledger_pool1:
+                prev_record_pool1 = rewards_ledger_pool1[-1]
+                reward_for_epoch_pool1 = pool1_amount - prev_record_pool1.reward_total
 
+            reward_for_epoch_pool2 = 0
+            if rewards_ledger_pool2:
+                prev_record_pool2 = rewards_ledger_pool2[-1]
+                reward_for_epoch_pool2 = pool2_amount - prev_record_pool2.reward_total
+
+            leader_ids_pool1 = [pool1_id]
+            leader_ids_pool2 = [pool2_id]
+
+            # pool re-registration took affect in `init_epoch` + 1
+            if this_epoch >= init_epoch + 1:
+                leader_ids_pool1 = [pool1_id, pool2_id]
+                leader_ids_pool2 = []
+
+            # pool2 starts receiving leader rewards on pool1 address in `init_epoch` + 5
+            # (re-registration epoch + 4)
+            if this_epoch >= init_epoch + 5:
                 # check that the original reward address for pool2 is NOT receiving rewards
-                assert pool2_epoch_amount == 0, "Pool reward address received unexpected rewards"
+                assert (
+                    reward_for_epoch_pool2 == 0
+                ), "Original reward address of 'pool2' received unexpected rewards"
 
-                # check that the reward address for pool1 is now receiving rewards
-                # for both pools by comparing reward amount received in last epoch
-                # with reward amount previously received by both pools together
-                if pool1_epoch_amount >= combined_reward_per_epoch * 0.65:
-                    break
+            # rewards each epoch
+            rewards_ledger_pool1.append(
+                RewardRecord(
+                    epoch_no=this_epoch,
+                    reward_total=pool1_amount,
+                    reward_per_epoch=reward_for_epoch_pool1,
+                    leader_pool_ids=leader_ids_pool1,
+                )
+            )
 
-            pool1_amount_prev = pool1_amount
-            pool2_amount_prev = pool2_amount
-            cluster.wait_for_new_epoch()
-        else:
-            raise AssertionError("Expected reward was not received by the pool reward address")
+            rewards_ledger_pool2.append(
+                RewardRecord(
+                    epoch_no=this_epoch,
+                    reward_total=pool2_amount,
+                    reward_per_epoch=reward_for_epoch_pool2,
+                    leader_pool_ids=leader_ids_pool2,
+                )
+            )
+
+            ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+            clusterlib_utils.save_ledger_state(
+                cluster_obj=cluster,
+                state_name=f"{temp_template}_{this_epoch}",
+                ledger_state=ledger_state,
+            )
+
+        assert (
+            len(rewards_ledger_pool1[-1].leader_pool_ids) == 2
+        ), "Reward address of 'pool1' is not used as reward address for both 'pool1' and 'pool2'"
+        assert rewards_ledger_pool1[
+            -1
+        ].reward_per_epoch, (
+            f"Reward address didn't receive any reward in epoch {rewards_ledger_pool1[-1].epoch_no}"
+        )
+        assert (
+            rewards_ledger_pool2[-1].reward_per_epoch == 0
+        ), "Original reward address of 'pool2' received unexpected rewards"
+
+        # check TX records in db-sync
+        assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_update_pool)
+
+        # check pool records in db-sync
+        pool1_params: dict = cluster.get_pool_params(pool1_id).pool_params
+        dbsync_utils.check_pool_data(ledger_pool_data=pool1_params, pool_id=pool1_id)
+        pool2_params: dict = cluster.get_pool_params(pool2_id).pool_params
+        dbsync_utils.check_pool_data(ledger_pool_data=pool2_params, pool_id=pool2_id)
+
+        # check rewards in db-sync
+        rewards_db_pool1 = _dbsync_check_rewards(
+            stake_address=pool1_reward.stake.address,
+            rewards=rewards_ledger_pool1,
+        )
+        rewards_db_pool2 = _dbsync_check_rewards(
+            stake_address=pool2_reward.stake.address,
+            rewards=rewards_ledger_pool2,
+        )
+
+        # in db-sync check that pool1 reward address is used as reward address for pool1, and
+        # in the expected epochs also for pool2
+        reward_types_pool1: Dict[int, List[str]] = {}
+        for rec in rewards_db_pool1.rewards:
+            stored_types = reward_types_pool1.get(rec.earned_epoch)
+            if stored_types is None:
+                reward_types_pool1[rec.earned_epoch] = [rec.type]
+                continue
+            stored_types.append(rec.type)
+
+        for repoch, rtypes in reward_types_pool1.items():
+            if repoch <= init_epoch + 2:
+                assert rtypes == ["leader"]
+            else:
+                assert rtypes == ["leader", "leader"]
+
+        # in db-sync check that pool2 reward address is NOT used for receiving rewards anymore
+        # in the expected epochs
+        reward_types_pool2: Dict[int, List[str]] = {}
+        for rec in rewards_db_pool2.rewards:
+            stored_types = reward_types_pool2.get(rec.earned_epoch)
+            if stored_types is None:
+                reward_types_pool2[rec.earned_epoch] = [rec.type]
+                continue
+            stored_types.append(rec.type)
+
+        for repoch, rtypes in reward_types_pool2.items():
+            if repoch <= init_epoch + 2:
+                assert rtypes == ["leader"]
+            else:
+                assert not rtypes
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -2146,14 +2323,14 @@ class TestRewards:
         # make sure we managed to finish registration in the expected epoch
         assert (
             cluster.get_epoch() == init_epoch
-        ), "Registration took longer than expected and would affect other checks"
+        ), "Delegation took longer than expected and would affect other checks"
 
-        rewards_db = [
+        reward_records = [
             RewardRecord(
                 epoch_no=init_epoch,
                 reward_total=0,
-                reward_epoch=0,
-                pool_id=pool1_id,
+                reward_per_epoch=0,
+                member_pool_id=pool1_id,
                 stake_total=cluster.get_address_balance(delegation_out.pool_user.payment.address),
             )
         ]
@@ -2179,9 +2356,9 @@ class TestRewards:
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             prev_rs_record = rs_records.get(this_epoch - 1)
-            reward_epoch = rewards_db[-1].reward_epoch
-            if reward_epoch and prev_rs_record:
-                assert reward_epoch == _get_reward_amount_for_key_hash(
+            reward_for_epoch = reward_records[-1].reward_per_epoch
+            if reward_for_epoch and prev_rs_record:
+                assert reward_for_epoch == _get_reward_amount_for_key_hash(
                     stake_addr_dec, prev_rs_record
                 )
 
@@ -2197,7 +2374,7 @@ class TestRewards:
                 # make sure ledger state and actual stake correspond
                 assert (
                     _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == rewards_db[-1].stake_total
+                    == reward_records[-1].stake_total
                 )
 
             if this_epoch == init_epoch + 2:
@@ -2207,11 +2384,11 @@ class TestRewards:
 
                 assert (
                     _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == rewards_db[-1].stake_total
+                    == reward_records[-1].stake_total
                 )
                 assert (
                     _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == rewards_db[-2].stake_total
+                    == reward_records[-2].stake_total
                 )
 
             if this_epoch >= init_epoch + 3:
@@ -2221,21 +2398,21 @@ class TestRewards:
 
                 assert (
                     _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == rewards_db[-1].stake_total
+                    == reward_records[-1].stake_total
                 )
                 assert (
                     _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == rewards_db[-2].stake_total
+                    == reward_records[-2].stake_total
                 )
                 assert (
                     _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == rewards_db[-3].stake_total
+                    == reward_records[-3].stake_total
                 )
 
         LOGGER.info("Checking rewards for 8 epochs.")
         for __ in range(8):
             # reward balance in previous epoch
-            prev_epoch, prev_reward_total, *__ = rewards_db[-1]
+            prev_epoch, prev_reward_total, *__ = reward_records[-1]
 
             # wait for new epoch
             if cluster.get_epoch() == prev_epoch:
@@ -2251,9 +2428,9 @@ class TestRewards:
             # Total reward amount received this epoch.
             # If `reward_total < prev_reward_total`, withdrawal took place during previous epoch.
             if reward_total > prev_reward_total:
-                reward_epoch = reward_total - prev_reward_total
+                reward_for_epoch = reward_total - prev_reward_total
             else:
-                reward_epoch = reward_total
+                reward_for_epoch = reward_total
 
             # current payment balance
             payment_balance = cluster.get_address_balance(delegation_out.pool_user.payment.address)
@@ -2325,12 +2502,12 @@ class TestRewards:
             )
 
             # store collected rewards info
-            rewards_db.append(
+            reward_records.append(
                 RewardRecord(
                     epoch_no=this_epoch,
                     reward_total=reward_total,
-                    reward_epoch=reward_epoch,
-                    pool_id=cluster.get_stake_addr_info(
+                    reward_per_epoch=reward_for_epoch,
+                    member_pool_id=cluster.get_stake_addr_info(
                         delegation_out.pool_user.stake.address
                     ).delegation,
                     stake_total=stake_total,
@@ -2389,5 +2566,5 @@ class TestRewards:
 
             _dbsync_check_rewards(
                 stake_address=delegation_out.pool_user.stake.address,
-                rewards=rewards_db,
+                rewards=reward_records,
             )
