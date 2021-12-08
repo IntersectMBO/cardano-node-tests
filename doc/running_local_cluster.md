@@ -151,6 +151,12 @@ export PGPORT="${PGPORT:-5433}"
 export PGUSER="${PGUSER:-postgres_dbsync}"
 ```
 
+The last step is to change connection string inside [dbsync_conn.py](https://github.com/input-output-hk/cardano-node-tests/blob/master/cardano_node_tests/utils/dbsync_conn.py#L23) to include your **PGPORT** and **PGUSER**:
+
+```python
+conn = psycopg2.connect(f"dbname={DBSYNC_DB}{instance_num} user=postgres_dbsync port=5433")
+```
+
 </br>
 
 ## <a name="preparation"></a> Preparing local cluster scripts:
