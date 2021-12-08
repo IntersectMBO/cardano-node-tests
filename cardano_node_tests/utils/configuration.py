@@ -26,10 +26,7 @@ NOPOOLS = bool(os.environ.get("NOPOOLS"))
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
 if HAS_DBSYNC:
     DBSYNC_BIN = (
-        Path(os.environ["DBSYNC_REPO"])
-        / "db-sync-node-extended"
-        / "bin"
-        / "cardano-db-sync-extended"
+        Path(os.environ["DBSYNC_REPO"]) / "db-sync-node" / "bin" / "cardano-db-sync"
     ).resolve()
 else:
     DBSYNC_BIN = Path("nonexistent")
