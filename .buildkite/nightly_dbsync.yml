@@ -14,3 +14,7 @@ steps:
       - 'testrun-report.html'
       - 'scheduling.log'
       - 'errors_all.log'
+
+notify:
+  - email: "cardano_qa_node_db_sy-aaaadudb2xnnewjhenny4cgzia@input-output-rnd.slack.com"
+    if: build.state != "passed"
