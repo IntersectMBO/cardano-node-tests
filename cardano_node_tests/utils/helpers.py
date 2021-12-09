@@ -91,6 +91,21 @@ def ignore_interrupt() -> Iterator[None]:
         signal.signal(signal.SIGINT, orig_handler)
 
 
+@contextlib.contextmanager
+def environ(env: dict) -> Iterator[None]:
+    """Temporarily set environment variables and restore previous environment afterwards."""
+    original_env = {key: os.environ.get(key) for key in env}
+    os.environ.update(env)
+    try:
+        yield
+    finally:
+        for key, value in original_env.items():
+            if value is None:
+                del os.environ[key]
+            else:
+                os.environ[key] = value
+
+
 def run_command(command: Union[str, list], workdir: FileType = "", shell: bool = False) -> bytes:
     """Run command."""
     cmd: Union[str, list]
