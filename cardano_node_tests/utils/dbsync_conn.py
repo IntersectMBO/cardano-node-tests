@@ -6,11 +6,10 @@ from typing import Optional
 import psycopg2
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import constants
+from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
-
-
-DBSYNC_DB = "dbsync"
 
 
 class DBSyncCache:
@@ -20,7 +19,10 @@ class DBSyncCache:
 
 
 def _conn(instance_num: int) -> psycopg2.extensions.connection:
-    conn = psycopg2.connect(f"dbname={DBSYNC_DB}{instance_num}")
+    # Call `psycopg2.connect` with an empty string so it uses PG* env variables.
+    # Temporarily set PGDATABASE env var to the database corresponding to `instance_num`.
+    with helpers.environ({"PGDATABASE": f"{constants.DBSYNC_DB}{instance_num}"}):
+        conn = psycopg2.connect("")
     DBSyncCache.conns[instance_num] = conn
     return conn
 
@@ -29,12 +31,13 @@ def _close(instance_num: int, conn: Optional[psycopg2.extensions.connection]) ->
     if conn is None or conn.closed == 1:
         return
 
-    LOGGER.info(f"Closing connection to db-sync database {DBSYNC_DB}{instance_num}.")
+    LOGGER.info(f"Closing connection to db-sync database {constants.DBSYNC_DB}{instance_num}.")
     try:
         conn.close()
     except psycopg2.Error as err:
         LOGGER.warning(
-            f"Unable to close connection to db-sync database {DBSYNC_DB}{instance_num}: {err}"
+            "Unable to close connection to db-sync database "
+            f"{constants.DBSYNC_DB}{instance_num}: {err}"
         )
 
 
