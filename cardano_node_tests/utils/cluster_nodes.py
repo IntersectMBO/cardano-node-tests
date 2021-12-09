@@ -18,6 +18,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import slots_offset
 from cardano_node_tests.utils.types import FileType
@@ -308,6 +309,7 @@ def set_cluster_env(instance_num: int) -> None:
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
 
     os.environ["PGPASSFILE"] = str(socket_path.parent / "pgpass")
+    os.environ["PGDATABASE"] = f"{constants.DBSYNC_DB}{instance_num}"
     if not os.environ.get("PGHOST"):
         os.environ["PGHOST"] = "localhost"
     if not os.environ.get("PGPORT"):
