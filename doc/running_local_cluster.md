@@ -73,7 +73,7 @@ cd ../cardano-node-tests
 At this point it might be beneficial to also install `ipython` that will help us later with debugging:
 
 ```sh
-sudo apt install python3-pip
+pip install ipython
 ```
 
 
@@ -124,38 +124,18 @@ After script ended `postgres-qa` directory should be created with `data` directo
 "k" switch will kill already running postgres process (assuming it belongs to regular user, not root) and remove `data` directory (if you already used that directory in other test sessions).
 
 
-**Option 2**: If you don't want to stop your local postgres instance you can edit:
+**Option 2**: If you don't want to stop your local postgres instance that is already running on port **5432** then you can simply export environment variables with values that will not collide with your default postgres setup, like:
 
-`cardano-node-tests/scripts/postgres-start.sh`
+`export PGHOST=localhost PGPORT=5434 PGUSER=postgres_dbsync`
 
-and change **PGPORT** and **PGUSER** to different values that will not collide with your default
-postgres setup, like:
+and then run script:
 
-```sh
-export PGPORT="${PGPORT:-5433}"
-export PGUSER="${PGUSER:-postgres_dbsync}"
-```
-Once you do that and run preparation script (which is described in detail in section **Preparing local cluster scripts**):
+`./scripts/postgres-start.sh "/home/username/Projects/tmp/postgres-qa" -k`
 
-`prepare-cluster-scripts -d scripts/destination/dir -s cardano_node_tests/cluster_scripts/alonzo`
+that will start a separate postgres database for testing.
 
-you need to edit following files created by that script inside `cardano-node-tests/scripts/destination/dir`
-```sh
-run_dbsync.sh
-postgres-setup.sh
-```
-and change **PGPORT** and **PGUSER**:
+Now you are ready to run preparation script (which is described in detail in next section **Preparing local cluster scripts**)
 
-```sh
-export PGPORT="${PGPORT:-5433}"
-export PGUSER="${PGUSER:-postgres_dbsync}"
-```
-
-The last step is to change connection string inside [dbsync_conn.py](https://github.com/input-output-hk/cardano-node-tests/blob/master/cardano_node_tests/utils/dbsync_conn.py#L23) to include your **PGPORT** and **PGUSER**:
-
-```python
-conn = psycopg2.connect(f"dbname={DBSYNC_DB}{instance_num} user=postgres_dbsync port=5433")
-```
 
 </br>
 
