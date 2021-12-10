@@ -1,0 +1,135 @@
+name: SMASH tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "environemnt that services will be started for. Available options: shelley_qa, testnet, master"
+        required: true
+        default: "shelley_qa"
+      epochs_to_sync:
+        description: "How many epochs db-sync should sync"
+        required: true
+        default: "1000"
+      db_sync_branch:
+        description: cardano-db-sync branch that will be used
+        required: true
+        default: "release/12.0.x"
+      node_pr_number:
+        description: pr number that contains desired version of node. If blank latest master will be used.
+        required: false
+        default: ""
+      db_sync_pr_number:
+        description: pr number that contains desired version of db-sync. If blank latest master will be used.
+        required: false
+        default: ""
+
+
+jobs:
+  run_smash_tests:
+    name: Start services and run SMASH tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+
+      - name: Setup environment variables
+        run: |
+          echo 'ENVM='${{ github.event.inputs.environment }} >> $GITHUB_ENV
+          echo 'NODE_PR='${{ github.event.inputs.node_pr_number }} >> $GITHUB_ENV
+          echo 'DB_PR='${{ github.event.inputs.db_sync_pr_number }} >> $GITHUB_ENV
+          echo 'EPOCHS='${{ github.event.inputs.epochs_to_sync }} >> $GITHUB_ENV
+
+      - name: Checkout repository with SMASH tests
+        uses: actions/checkout@v2
+        with:
+          repository: input-output-hk/cardano-node-tests
+          ref: 'smash_tests'
+
+
+      - name: Start cardano-node
+        run: |
+          if [[ ! -z "${{ env.NODE_PR }}" ]]; then ./.github/workflows/start_node.sh -e ${{ env.ENVM }} -p ${{ env.NODE_PR }} ; else .github/workflows/start_node.sh -e ${{ env.ENVM }}; fi
+
+
+      - name: Checkout cardano-db-sync repository
+        uses: actions/checkout@v2
+        with:
+          repository: input-output-hk/cardano-db-sync
+          path: cardano-db-sync
+          ref: ${{ github.event.inputs.db_sync_branch }}
+
+
+      - name: Install Postgres
+        run: |
+          echo $environment
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev libpq5 postgresql
+          sed -e 's/^port.*/port = 5432/' /etc/postgresql/12/main/postgresql.conf > postgresql.conf
+          sudo chown postgres postgresql.conf
+          sudo mv postgresql.conf /etc/postgresql/12/main
+          sudo pg_ctlcluster 12 main start
+
+
+      - name: Check if Postgres is running
+        run: |
+          sudo apt-get update
+          sudo apt-get install net-tools
+          sleep 10
+          netstat -an
+          ls -al /var/run/postgresql/.s.PGSQL.5432 || true
+
+
+      - name: Check directory structure
+        run: |
+          echo "Current Working Directory: $PWD"
+          echo "Contents:"
+          ls -l
+
+
+      - name: Create database user
+        run: sudo -u postgres createuser --createdb --superuser runner
+
+
+      - name: Setup and start cardano-db-sync-extended
+        timeout-minutes: 50
+        run: |
+          if [[ ! -z "${{ env.DB_PR }}" ]]; then .github/workflows/start_db_sync_and_smash.sh -e ${{ env.ENVM }} -p ${{ env.DB_PR }} -t ${{ env.EPOCHS }}; else .github/workflows/start_db_sync_and_smash.sh -e ${{ env.ENVM }} -t ${{ env.EPOCHS }}; fi
+
+
+      - name: Start SMASH tests
+        env:
+          environment: ${{ github.event.inputs.environment }}
+        run: |
+          cd smash_tests
+          sudo apt-get -y install python3.8
+          sudo apt-get -y install python3-pip
+          pip3 install pytest requests furl psycopg2 pytest-html
+          pytest -svv --capture=tee-sys --environment $environment --html="test-results/report.html" --self-contained-html --junitxml="test-results/result.xml" test_smash_local_server.py
+
+
+      - name: Publish test results on GitHub
+        uses: EnricoMi/publish-unit-test-result-action/composite@v1
+        if: always()
+        with:
+          check_name: "Pytest tests results"
+          files: ${{ github.workspace }}/smash_tests/test-results/result.xml
+
+
+      - name: Publish cardano-db-sync and SMASH logs
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: db_sync_and smash_logs_${{ env.ENVM }}
+          path: ${{ github.workspace }}/cardano-db-sync/logs/*
+
+
+      - name: Publish test reports
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: pytest_results_${{ env.ENVM }}
+          path: ${{ github.workspace }}/smash_tests/test-results/*
