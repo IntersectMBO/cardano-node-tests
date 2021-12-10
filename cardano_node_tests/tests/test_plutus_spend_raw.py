@@ -2,6 +2,7 @@
 import distutils.spawn
 import itertools
 import logging
+import time
 from pathlib import Path
 from typing import List
 from typing import Optional
@@ -15,8 +16,10 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.tests import plutus_spend
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -622,6 +625,7 @@ class TestLocking:
         self,
         cluster_lock_guessing_game: clusterlib.ClusterLib,
         payment_addrs_lock_guessing_game: List[clusterlib.AddressRecord],
+        worker_id: str,
         script: str,
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
@@ -657,6 +661,13 @@ class TestLocking:
             redeemer_file = plutus_spend.PLUTUS_DIR / "typed-42.redeemer"
             expect_failure = False
 
+        if expect_failure:
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex="ValidationTagMismatch",
+                rules_file_id=worker_id,
+            )
+
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.GUESSING_GAME_PLUTUS,
             datum_file=datum_file,
@@ -685,8 +696,12 @@ class TestLocking:
             amount=50_000_000,
             expect_failure=expect_failure,
         )
+
         if expect_failure:
             assert "ValidationTagMismatch (IsValid True)" in err
+
+            # wait a bit so there's some time for error messages to appear in log file
+            time.sleep(1 if cluster.network_magic == constants.NETWORK_MAGIC_LOCAL else 5)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -694,6 +709,7 @@ class TestLocking:
         self,
         cluster_lock_always_fails: clusterlib.ClusterLib,
         payment_addrs_lock_always_fails: List[clusterlib.AddressRecord],
+        worker_id: str,
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -713,6 +729,12 @@ class TestLocking:
             datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
             redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
             execution_units=(700_000_000, 10_000_000),
+        )
+
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="ValidationTagMismatch",
+            rules_file_id=worker_id,
         )
 
         tx_output_fund = _fund_script(
@@ -737,6 +759,9 @@ class TestLocking:
             expect_failure=True,
         )
         assert "PlutusFailure" in err
+
+        # wait a bit so there's some time for error messages to appear in log file
+        time.sleep(1 if cluster.network_magic == constants.NETWORK_MAGIC_LOCAL else 5)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
