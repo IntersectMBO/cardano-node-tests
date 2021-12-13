@@ -11,6 +11,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# mypy
+.mypy_cache/
+
 # Distribution / packaging
 .Python
 env/
