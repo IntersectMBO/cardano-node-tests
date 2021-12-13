@@ -104,7 +104,19 @@ class TestUpdateProposal:
         cluster_update_proposal: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
     ):
-        """Test changing protocol parameters using update proposal ."""
+        """Test changing protocol parameters using update proposal.
+
+        * if era >= Alonzo, update Alonzo-speciffic parameters and:
+
+           - wait for next epoch
+           - check that parameters were updated
+
+        * submit update proposal
+        * in the same epoch, submit another update proposal
+        * wait for next epoch
+        * check that parameters were updated with the values submitted in the second
+          update proposal, i.e. the second update proposal overwritten the first one
+        """
         cluster = cluster_update_proposal
 
         max_tx_execution_units = 11000000000
@@ -114,6 +126,7 @@ class TestUpdateProposal:
 
         cluster.wait_for_new_epoch()
 
+        # update Alonzo-speciffic parameters in separate update proposal
         if VERSIONS.transaction_era >= VERSIONS.ALONZO:
             update_proposals_alonzo = [
                 clusterlib_utils.UpdateProposal(
@@ -177,6 +190,80 @@ class TestUpdateProposal:
             assert protocol_params["executionUnitPrices"]["priceSteps"] == 1.2
             assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
 
+        # Check that only one update proposal can be applied each epoch and that the last
+        # update proposal cancels the previous one. Following parameter values will be
+        # overwritten by the next update proposal.
+        update_proposal_canceled = [
+            clusterlib_utils.UpdateProposal(
+                arg="--min-fee-linear",
+                value=47,
+                name="txFeePerByte",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--pool-reg-deposit",
+                value=410000000,
+                name="stakePoolDeposit",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--decentralization-parameter",
+                value=0.2,
+                name="decentralization",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--pool-retirement-epoch-boundary",
+                value=18,
+                name="poolRetireMaxEpoch",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--number-of-pools",
+                value=10,
+                name="stakePoolTargetNum",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-block-body-size",
+                value=65555,
+                name="maxBlockBodySize",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-tx-size",
+                value=16400,
+                name="maxTxSize",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--min-pool-cost",
+                value=2,
+                name="minPoolCost",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-block-header-size",
+                value=1400,
+                name="maxBlockHeaderSize",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--min-fee-constant",
+                value=155390,
+                name="txFeeFixed",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--key-reg-deposit-amt",
+                value=300050,
+                name="stakeAddressDeposit",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--pool-influence",
+                value=0.5,
+                name="poolPledgeInfluence",
+            ),
+        ]
+
+        clusterlib_utils.update_params(
+            cluster_obj=cluster,
+            src_addr_record=payment_addr,
+            update_proposals=update_proposal_canceled,
+        )
+        time.sleep(2)
+
+        # the final update proposal
         update_proposals = [
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-linear",
