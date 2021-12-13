@@ -939,7 +939,7 @@ class TestStakePool:
 
         # deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
         depoch = cluster.get_epoch() + 1
         if use_build_cmd:
@@ -1055,7 +1055,7 @@ class TestStakePool:
 
         # deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
         depoch = cluster.get_epoch() + 1
         cluster.deregister_stake_pool(
@@ -1210,7 +1210,7 @@ class TestStakePool:
 
         # deregister stake pool in epoch + 2
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
         depoch = cluster.get_epoch() + 2
         cluster.deregister_stake_pool(
@@ -1738,7 +1738,7 @@ class TestStakePool:
 
         # create pool deregistration cert
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=-DEREG_BUFFER_SEC, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-DEREG_BUFFER_SEC, force_epoch=False
         )
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,

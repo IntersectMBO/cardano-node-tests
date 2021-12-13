@@ -1134,7 +1134,7 @@ class TestRewards:
 
         # make sure we have enough time to finish the transfer in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         # transfer all funds from payment address back to faucet, so no funds are staked
@@ -1239,7 +1239,7 @@ class TestRewards:
 
         # make sure we have enough time to finish the pool update in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         # load and update original pool data
@@ -1382,7 +1382,7 @@ class TestRewards:
 
         # make sure we have enough time to withdraw the pledge in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         # load pool data
@@ -1544,7 +1544,7 @@ class TestRewards:
 
         # make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         # deregister stake address - owner's stake is lower than pledge
@@ -1717,7 +1717,7 @@ class TestRewards:
 
         # make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         # withdraw pool rewards to payment address
@@ -1877,7 +1877,7 @@ class TestRewards:
 
         # make sure we have enough time to finish reward address deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         # withdraw pool rewards to payment address
