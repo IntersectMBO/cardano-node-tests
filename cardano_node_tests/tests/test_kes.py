@@ -294,7 +294,7 @@ class TestKES:
             # make sure we are not at the very end of an epoch so we still have time for
             # the first block production check
             clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=-18, force_epoch=False, check_slot=False
+                cluster_obj=cluster, start=5, stop=-18, force_epoch=False, check_slot=False
             )
 
             LOGGER.info("Checking blocks production for 5 epochs.")
