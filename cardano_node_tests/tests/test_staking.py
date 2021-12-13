@@ -87,6 +87,19 @@ def cluster_lock_pool1_2(
     )
 
 
+@pytest.fixture
+def cluster_lock_pool2_pots(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    return cluster_manager.get(
+        lock_resources=[
+            cluster_management.Resources.POOL2,
+            cluster_management.Resources.RESERVES,
+            cluster_management.Resources.TREASURY,
+        ]
+    )
+
+
 def withdraw_reward_w_build(
     cluster_obj: clusterlib.ClusterLib,
     stake_addr_record: clusterlib.AddressRecord,
@@ -678,7 +691,7 @@ class TestRewards:
     def test_reward_addr_delegation(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool2: clusterlib.ClusterLib,
+        cluster_lock_pool2_pots: clusterlib.ClusterLib,
     ):
         """Check that the rewards address can be delegated and receive rewards.
 
@@ -706,7 +719,7 @@ class TestRewards:
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
         pool_name = "node-pool2"
-        cluster = cluster_lock_pool2
+        cluster = cluster_lock_pool2_pots
         mir_reward = 50_000_000_000
 
         temp_template = clusterlib_utils.get_temp_template(cluster)
