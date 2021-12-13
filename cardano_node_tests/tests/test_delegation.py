@@ -127,7 +127,7 @@ class TestDelegateAddr:
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-10, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -186,7 +186,7 @@ class TestDelegateAddr:
         temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-10, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
@@ -270,7 +270,7 @@ class TestDelegateAddr:
 
         # make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         # files for deregistering stake address
@@ -399,7 +399,7 @@ class TestDelegateAddr:
 
         # make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-40, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-40, force_epoch=False
         )
 
         # files for deregistering / re-registering stake address
@@ -635,7 +635,7 @@ class TestDelegateAddr:
         )
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=0, stop=-10, force_epoch=False
+            cluster_obj=cluster, start=5, stop=-20, force_epoch=False
         )
         init_epoch = cluster.get_epoch()
 
