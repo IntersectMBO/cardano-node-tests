@@ -30,6 +30,7 @@ ERRORS_IGNORED = [
     "TraceDidntAdoptBlock",
     "failedScripts",
     "closed when reading data, waiting on next header",
+    "MuxIOException writev: resource vanished",
     r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
     "db-sync-node:.* AsyncCancelled",
     # TODO: remove once rewards are fixed in db-sync
