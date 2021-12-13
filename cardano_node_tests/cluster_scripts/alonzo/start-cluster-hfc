@@ -11,6 +11,7 @@ STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 NUM_BFT_NODES=1
 NUM_POOLS=3
 NETWORK_MAGIC=42
+PROPOSAL_DELAY=5
 BYRON_SECURITY_PARAM=100
 POOL_PLEDGE=1000000000000
 INIT_SUPPLY=45000000000000000
@@ -30,12 +31,57 @@ cardano_cli_log() {
     set -"$sets"
 
     case "$out" in
-      *"resource vanished"*) printf "Retrying \`cardano-cli %s\`. Failure:\n%s\n" "$*" "$out" >&2; sleep 1 ;;
-      *) if [ -n "$out" ]; then echo "$out"; fi; break ;;
+      *"resource vanished"*)
+        printf "Retrying \`cardano-cli %s\`. Failure:\n%s\n" "$*" "$out" >&2
+        sleep 1
+        ;;
+      *)
+        if [ -n "$out" ]; then echo "$out"; fi
+        break
+        ;;
     esac
   done
 
   return "$retval"
+}
+
+get_epoch() {
+  cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.epoch'
+}
+
+get_slot() {
+  future_offset="${1:-0}"
+  cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r ".slot + $future_offset"
+}
+
+get_era() {
+  cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r ".era"
+}
+
+wait_for_era() {
+  for _ in {1..10}; do
+    era="$(get_era)"
+    if [ "$era" = "$1" ]; then
+      return
+    fi
+    sleep 2
+  done
+
+  echo "Unexpected era '$era' instead of '$1'" >&2
+  exit 1
+}
+
+wait_for_epoch() {
+  for _ in {1..10}; do
+    epoch="$(get_epoch)"
+    if [ "$epoch" -ge "$1" ]; then
+      return
+    fi
+    sleep 2
+  done
+
+  echo "Unexpected epoch '$epoch' instead of '$1'" >&2
+  exit 1
 }
 
 if [ -e "$SCRIPT_DIR/shell_env" ]; then
@@ -342,8 +388,8 @@ for i in $(seq 1 $NUM_BFT_NODES); do
 done
 
 # length of Byron era is hardcoded to 200 sec (+2 sec buffer)
-echo "Waiting 202 sec for Shelley era to start"
-sleep 202
+echo "Waiting 200 sec for Shelley era to start"
+sleep 200
 
 
 #
@@ -351,8 +397,7 @@ sleep 202
 #
 
 
-ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
-[ "$ERA" = "Shelley" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+wait_for_era "Shelley"
 
 # start db-sync
 if [ -n "${DBSYNC_REPO:-""}" ]; then
@@ -360,6 +405,7 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
   supervisorctl start dbsync
 fi
 
+sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to transfer to Allegra, transfering funds to pool owners, registering pools and delegations"
 
 ALLEGRA_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-allegra.proposal"
@@ -373,7 +419,7 @@ done
 
 cardano_cli_log governance create-update-proposal \
   --out-file "$ALLEGRA_HF_PROPOSAL" \
-  --epoch 1 \
+  --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 3 \
   --protocol-minor-version 0
@@ -406,7 +452,7 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             --address "$TXIN_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
-TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+TTL="$(get_slot 1000)"
 
 POOL_ARGS=()
 for i in $(seq 1 $NUM_POOLS); do
@@ -480,10 +526,10 @@ cardano_cli_log transaction submit \
   --testnet-magic "$NETWORK_MAGIC"
 
 EPOCH_SEC="$(jq '.epochLength * .slotLength' < "$STATE_CLUSTER/shelley/genesis.json")"
-WAIT_SEC="$((EPOCH_SEC + 2))"
+NEXT_EPOCH_SLEEP="$((EPOCH_SEC - PROPOSAL_DELAY))"
 
-echo "Waiting $WAIT_SEC sec for Allegra era to start"
-sleep "$WAIT_SEC"
+echo "Waiting $NEXT_EPOCH_SLEEP sec for Allegra era to start"
+sleep "$NEXT_EPOCH_SLEEP"
 
 
 #
@@ -491,16 +537,16 @@ sleep "$WAIT_SEC"
 #
 
 
-ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
-[ "$ERA" = "Allegra" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+wait_for_era "Allegra"
 
+sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to transfer to Mary, set d = 0"
 
 MARY_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-mary.proposal"
 
 cardano_cli_log governance create-update-proposal \
   --out-file "$MARY_HF_PROPOSAL" \
-  --epoch 2 \
+  --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --decentralization-parameter 0 \
   --protocol-major-version 4 \
@@ -528,7 +574,7 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             --address "$TXIN_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
-TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+TTL="$(get_slot 1000)"
 
 cardano_cli_log transaction build-raw \
   --allegra-era \
@@ -577,8 +623,8 @@ cardano_cli_log transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-echo "Waiting $WAIT_SEC sec for Mary era to start"
-sleep "$WAIT_SEC"
+echo "Waiting $NEXT_EPOCH_SLEEP sec for Mary era to start"
+sleep "$NEXT_EPOCH_SLEEP"
 
 
 #
@@ -586,16 +632,16 @@ sleep "$WAIT_SEC"
 #
 
 
-ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
-[ "$ERA" = "Mary" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+wait_for_era "Mary"
 
+sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to transfer to Alonzo"
 
 ALONZO_UPDATE_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-alonzo.proposal"
 
 cardano_cli_log governance create-update-proposal \
   --out-file "$ALONZO_UPDATE_PROPOSAL" \
-  --epoch 3 \
+  --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 5 \
   --protocol-minor-version 0
@@ -622,7 +668,7 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             --address "$TXIN_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
-TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+TTL="$(get_slot 1000)"
 
 cardano_cli_log transaction build-raw \
   --mary-era \
@@ -674,7 +720,7 @@ cardano_cli_log transaction submit \
 # give it some time before restaring the nodes so the update proposal Tx is likely to get through
 echo "Waiting 15 sec before restarting the nodes"
 sleep 15
-ALONZO_WAIT_SEC="$((WAIT_SEC - 15))"
+NEXT_EPOCH_SLEEP_RESTART="$((NEXT_EPOCH_SLEEP - 15))"
 
 for conf in "$STATE_CLUSTER"/config-*.json; do
   jq -r '."LastKnownBlockVersion-Major" = 5' < "$conf" > "${conf}_jq"
@@ -683,8 +729,8 @@ for conf in "$STATE_CLUSTER"/config-*.json; do
 done
 supervisorctl restart nodes:
 
-echo "Waiting $ALONZO_WAIT_SEC sec for Alonzo era to start"
-sleep "$ALONZO_WAIT_SEC"
+echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Alonzo era to start"
+sleep "$NEXT_EPOCH_SLEEP_RESTART"
 
 
 #
@@ -692,9 +738,9 @@ sleep "$ALONZO_WAIT_SEC"
 #
 
 
-ERA="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.era')"
-[ "$ERA" = "Alonzo" ] || { echo "Unexpected era '$ERA' on line $LINENO" >&2; exit 1; }  # assert
+wait_for_era "Alonzo"
 
+sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to update to PV6"
 
 ALONZO_UPDATE_PROPOSAL_PV6="$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6.proposal"
@@ -702,7 +748,7 @@ ALONZO_UPDATE_PROPOSAL_PV6="$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6.pr
 # protocol version + dapps parameters update
 cardano_cli_log governance create-update-proposal \
   --out-file "$ALONZO_UPDATE_PROPOSAL_PV6" \
-  --epoch 4 \
+  --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 6 \
   --protocol-minor-version 0 \
@@ -731,7 +777,7 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             --address "$TXIN_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
 
-TTL="$(cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot + 1000')"
+TTL="$(get_slot 1000)"
 
 cardano_cli_log transaction build-raw \
   --alonzo-era \
@@ -785,13 +831,17 @@ echo "Waiting 15 sec before restarting the nodes"
 sleep 15
 supervisorctl restart nodes:
 
-echo "Waiting $ALONZO_WAIT_SEC sec for Alonzo era with PV6 to start"
-sleep "$ALONZO_WAIT_SEC"
+ALONZO_EPOCH="$(get_epoch)"
+
+echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Alonzo era with PV6 to start"
+sleep "$NEXT_EPOCH_SLEEP_RESTART"
 
 
 #
 # In Alonzo era with PV6
 #
+
+wait_for_epoch "$((ALONZO_EPOCH + 1))"
 
 cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
@@ -799,6 +849,6 @@ cardano_cli_log query protocol-parameters \
 
 PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")"
 
-[ "$PROTOCOL_VERSION" = 6 ] ||  { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
+[ "$PROTOCOL_VERSION" = 6 ] || { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster-hfc\` to stop"
