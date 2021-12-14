@@ -9,10 +9,11 @@ lint:
 	pre-commit run -a
 
 # generate sphinx documentation
+.PHONY: doc
 doc:
-	mkdir -p docs/build
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
+	mkdir -p src_docs/build
+	$(MAKE) -C src_docs clean
+	$(MAKE) -C src_docs html
 
 
 ARTIFACTS_DIR ?= .artifacts/
