@@ -136,17 +136,17 @@ To build documentation using Sphinx, run
 $ make doc
 ```
 
-The documentation is generated to `docs/build/html`.
+The documentation is generated to `src_docs/build/html`.
 
 To publish documentation to https://input-output-hk.github.io/cardano-node-tests/, run:
 
 ```sh
 # checkout the "github_pages" branch
 $ git checkout github_pages
-# copy/move content of docs/build/html to docs
-$ mv docs/build/html/* docs/
+# copy/move content of src_docs/build/html to src_docs
+$ mv src_docs/build/html/* src_docs/
 # stage changes
-$ git add docs
+$ git add src_docs
 # commit changes
 $ git commit
 # push to origin/github_pages (upstream/github_pages)
