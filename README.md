@@ -144,9 +144,10 @@ To publish documentation to https://input-output-hk.github.io/cardano-node-tests
 # checkout the "github_pages" branch
 $ git checkout github_pages
 # copy/move content of src_docs/build/html to src_docs
-$ mv src_docs/build/html/* src_docs/
+$ rm -rf docs/*
+$ cp -aT src_docs/build/html docs
 # stage changes
-$ git add src_docs
+$ git add docs
 # commit changes
 $ git commit
 # push to origin/github_pages (upstream/github_pages)
