@@ -164,5 +164,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # main()
-    update_mainnet_tx_count_per_epoch(305)
+    main()
+    # update_mainnet_tx_count_per_epoch(305)
