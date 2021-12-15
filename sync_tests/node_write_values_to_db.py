@@ -15,8 +15,7 @@ RESULTS_FILE_NAME = r"sync_results.json"
 
 
 def main():
-    # env = vars(args)["environment"]
-    env = "mainnet"
+    env = vars(args)["environment"]
 
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
@@ -35,7 +34,7 @@ def main():
     print(f" - listdir: {os.listdir(current_directory)}")
 
     print("  ==== Move to 'sync_tests' directory")
-    # os.chdir(current_directory / "sync_tests")
+    os.chdir(current_directory / "sync_tests")
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
     print(f" - sync_tests listdir: {os.listdir(current_directory)}")
@@ -165,4 +164,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main()
-    # update_mainnet_tx_count_per_epoch(305)
+    # update_mainnet_tx_count_per_epoch(307)
