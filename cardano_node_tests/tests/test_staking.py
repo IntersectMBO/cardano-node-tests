@@ -892,6 +892,12 @@ class TestRewards:
                 signing_key_files=mir_tx_files.signing_key_files,
                 tx_name=f"{temp_template}_{fund_src}",
             )
+
+            LOGGER.info(
+                f"Submitting MIR cert for tranferring funds from {fund_src} to "
+                f"'{pool_reward.stake.address}' in epoch {cluster.get_epoch()} "
+                f"on cluster instance {cluster_manager.cluster_instance_num}"
+            )
             cluster.submit_tx(tx_file=mir_tx_signed, txins=mir_tx_raw_output.txins)
 
             return mir_tx_raw_output
