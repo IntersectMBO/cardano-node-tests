@@ -416,7 +416,10 @@ class TestMIRCerts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_transfer_to_treasury(
-        self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_pots: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Send funds from the reserves pot to the treasury pot.
 
@@ -450,6 +453,10 @@ class TestMIRCerts:
             assert "MIRTransferNotCurrentlyAllowed" in str(excinfo.value)
             return
 
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds to treasury in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
+        )
         tx_raw_output = cluster.send_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
@@ -486,7 +493,10 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_transfer_to_treasury(
-        self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_pots: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Send funds from the reserves pot to the treasury pot.
 
@@ -515,6 +525,11 @@ class TestMIRCerts:
             tx_files=tx_files,
             fee_buffer=1000_000,
             witness_override=2,
+        )
+
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds to treasury in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -551,7 +566,10 @@ class TestMIRCerts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_transfer_to_reserves(
-        self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_pots: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Send funds from the treasury pot to the reserves pot.
 
@@ -585,6 +603,10 @@ class TestMIRCerts:
             assert "MIRTransferNotCurrentlyAllowed" in str(excinfo.value)
             return
 
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds to reserves in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
+        )
         tx_raw_output = cluster.send_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
@@ -621,7 +643,10 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
     def test_build_transfer_to_reserves(
-        self, cluster_pots: clusterlib.ClusterLib, pool_users: List[clusterlib.PoolUser]
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_pots: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Send funds from the treasury pot to the reserves pot.
 
@@ -656,6 +681,11 @@ class TestMIRCerts:
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
+
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds to reserves in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
+        )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         assert (
@@ -688,6 +718,7 @@ class TestMIRCerts:
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_stake_addr_from(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_user: clusterlib.PoolUser,
         fund_src: str,
@@ -725,6 +756,11 @@ class TestMIRCerts:
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds from {fund_src} to "
+            f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
+        )
         tx_raw_output = cluster.send_tx(
             src_address=registered_user.payment.address,
             tx_name=temp_template,
@@ -763,6 +799,7 @@ class TestMIRCerts:
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_build_pay_stake_addr_from(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_user: clusterlib.PoolUser,
         fund_src: str,
@@ -813,6 +850,12 @@ class TestMIRCerts:
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
+        )
+
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds from {fund_src} to "
+            f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
@@ -899,6 +942,7 @@ class TestMIRCerts:
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_unregistered_stake_addr_from(  # noqa: C901
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         fund_src: str,
@@ -959,6 +1003,11 @@ class TestMIRCerts:
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds from {fund_src} to "
+            f"'{pool_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
+        )
         tx_raw_output = cluster.send_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
