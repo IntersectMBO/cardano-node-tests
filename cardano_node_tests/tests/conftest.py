@@ -50,8 +50,6 @@ def pytest_addoption(parser: Any) -> None:
 
 
 def pytest_configure(config: Any) -> None:
-    # for detecting if code is running in pytest, or imported while e.g. building documentation
-    configuration._called_from_test = True  # type: ignore
     config._metadata["cardano-node"] = str(VERSIONS.node)
     config._metadata["cardano-node rev"] = VERSIONS.git_rev
     config._metadata["ghc"] = VERSIONS.ghc
