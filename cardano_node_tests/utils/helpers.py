@@ -228,8 +228,13 @@ def write_json(location: FileType, content: dict) -> FileType:
 
 
 def decode_bech32(bech32: str) -> str:
-    """Convert from bech32 strings."""
+    """Convert from bech32 string."""
     return run_command(f"echo '{bech32}' | bech32", shell=True).decode().strip()
+
+
+def encode_bech32(prefix: str, data: str) -> str:
+    """Convert to bech32 string."""
+    return run_command(f"echo '{data}' | bech32 {prefix}", shell=True).decode().strip()
 
 
 def check_dir_arg(dir_path: str) -> Optional[Path]:
