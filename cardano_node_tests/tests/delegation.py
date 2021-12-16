@@ -48,7 +48,7 @@ def cluster_and_pool(
         cluster_obj: clusterlib.ClusterLib = cluster_manager.get()
 
         # getting ledger state on official testnet is too expensive,
-        # use one of hardcoded pool ids if possible
+        # use one of hardcoded pool IDs if possible
         if (
             cluster_nodes.get_cluster_type().testnet_type  # type: ignore
             == cluster_nodes.Testnets.testnet
@@ -69,11 +69,11 @@ def cluster_and_pool(
         else:
             pytest.skip("Cannot find any usable pool.")
     else:
-        cluster_obj = cluster_manager.get(use_resources=[cluster_management.Resources.POOL1])
+        cluster_obj = cluster_manager.get(use_resources=[cluster_management.Resources.POOL3])
         pool_id = get_pool_id(
             cluster_obj=cluster_obj,
             addrs_data=cluster_manager.cache.addrs_data,
-            pool_name="node-pool1",
+            pool_name="node-pool3",
         )
     return cluster_obj, pool_id
 
