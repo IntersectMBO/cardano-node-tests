@@ -13,6 +13,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 
 LOGGER = logging.getLogger(__name__)
@@ -43,19 +44,27 @@ def cluster_and_pool(
     instance, that's why cluster instance and pool id are tied together in
     single fixture.
     """
-    if cluster_nodes.ClusterType.TESTNET_NOPOOLS:
+    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS:
         cluster_obj: clusterlib.ClusterLib = cluster_manager.get()
-        stake_dist = cluster_obj.get_stake_distribution()
 
-        # select a pool with high stake distribution and reasonable margin
-        s_pool_ids = sorted(stake_dist, key=lambda key: stake_dist[key])
-        for pool_id in s_pool_ids:
+        # getting ledger state on official testnet is too expensive,
+        # use one of hardcoded pool ids if possible
+        if (
+            cluster_nodes.get_cluster_type().testnet_type  # type: ignore
+            == cluster_nodes.Testnets.testnet
+        ):
+            stake_pools = cluster_obj.get_stake_pools()
+            for pool_id in constants.TESTNET_POOL_IDS:
+                if pool_id in stake_pools:
+                    return cluster_obj, pool_id
+
+        blocks_before = clusterlib_utils.get_blocks_before(cluster_obj)
+        # sort pools by how many blocks they produce
+        pool_ids_s = sorted(blocks_before, key=blocks_before.get, reverse=True)  # type: ignore
+        # select a pool with reasonable margin
+        for pool_id in pool_ids_s:
             pool_params = cluster_obj.get_pool_params(pool_id)
-            if (
-                pool_params.pool_params["margin"] <= 0.5
-                and pool_params.pool_params["pledge"] > 0
-                and not pool_params.retiring
-            ):
+            if pool_params.pool_params["margin"] <= 0.5 and not pool_params.retiring:
                 break
         else:
             pytest.skip("Cannot find any usable pool.")
