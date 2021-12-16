@@ -18,6 +18,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -154,6 +155,19 @@ def _stop_all_cluster_instances(
     cluster_nodes.save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
+def _testnet_cleanup(pytest_tmp_dir: Path) -> None:
+    """Perform testnet cleanup at the end of session."""
+    if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET_NOPOOLS:
+        return
+
+    # there's only one cluster instance for testnets, so we don't need to use cluster manager
+    cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
+
+    destdir = pytest_tmp_dir.parent / f"cleanup-{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
+    with helpers.change_cwd(dir_path=destdir):
+        testnet_cleanup.cleanup(cluster_obj=cluster_obj, location=pytest_tmp_dir)
+
+
 @pytest.fixture(scope="session")
 def cluster_chores(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
@@ -176,6 +190,7 @@ def cluster_chores(
             tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
+        _testnet_cleanup(pytest_tmp_dir=pytest_tmp_dir)
         _stop_all_cluster_instances(
             tmp_path_factory=tmp_path_factory,
             worker_id=worker_id,
@@ -199,6 +214,7 @@ def cluster_chores(
 
         os.remove(lock_dir / f".started_session_{worker_id}")
         if not list(lock_dir.glob(".started_session_*")):
+            _testnet_cleanup(pytest_tmp_dir=pytest_tmp_dir)
             _stop_all_cluster_instances(
                 tmp_path_factory=tmp_path_factory,
                 worker_id=worker_id,
