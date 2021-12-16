@@ -380,7 +380,7 @@ class TestMIRCerts:
             created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster_pots,
                 name_template=f"test_mir_certs_ci{cluster_manager.cluster_instance_num}",
-                no_of_addr=4,
+                no_of_addr=5,
             )
             fixture_cache.value = created_users
 
@@ -394,24 +394,27 @@ class TestMIRCerts:
         return created_users
 
     @pytest.fixture
-    def registered_user(
+    def registered_users(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-    ) -> clusterlib.PoolUser:
+    ) -> List[clusterlib.PoolUser]:
         """Register pool user's stake address."""
+        registered = pool_users[1:3]
+
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
-            fixture_cache.value = pool_users[1]
+            fixture_cache.value = registered
 
-        temp_template = f"test_mir_certs_ci{cluster_manager.cluster_instance_num}"
-        pool_user = pool_users[1]
-        clusterlib_utils.register_stake_address(
-            cluster_obj=cluster_pots, pool_user=pool_users[1], name_template=temp_template
-        )
-        return pool_user
+        for i, pool_user in enumerate(registered):
+            temp_template = f"test_mir_certs_{i}_ci{cluster_manager.cluster_instance_num}"
+            clusterlib_utils.register_stake_address(
+                cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
+            )
+
+        return registered
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -720,7 +723,7 @@ class TestMIRCerts:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        registered_user: clusterlib.PoolUser,
+        registered_users: List[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Send funds from the reserves or treasury pot to stake address.
@@ -728,10 +731,12 @@ class TestMIRCerts:
         * generate an MIR certificate
         * submit a TX with the MIR certificate
         * check that the expected amount was added to the stake address reward account
+        * (optional) check transaction in db-sync
         """
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
         amount = 50_000_000
+        registered_user = registered_users[0]
 
         init_reward = cluster.get_stake_addr_info(
             registered_user.stake.address
@@ -801,7 +806,7 @@ class TestMIRCerts:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        registered_user: clusterlib.PoolUser,
+        registered_users: List[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Send funds from the reserves or treasury pot to stake address.
@@ -811,10 +816,12 @@ class TestMIRCerts:
         * generate an MIR certificate
         * submit a TX with the MIR certificate
         * check that the expected amount was added to the stake address reward account
+        * (optional) check transaction in db-sync
         """
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
         amount = 50_000_000
+        registered_user = registered_users[0]
 
         init_reward = cluster.get_stake_addr_info(
             registered_user.stake.address
@@ -889,7 +896,7 @@ class TestMIRCerts:
     def test_exceed_pay_stake_addr_from(
         self,
         cluster_pots: clusterlib.ClusterLib,
-        registered_user: clusterlib.PoolUser,
+        registered_users: List[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Try to send more funds than available from the reserves or treasury pot to stake address.
@@ -903,6 +910,7 @@ class TestMIRCerts:
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
         amount = 30_000_000_000_000_000
+        registered_user = registered_users[0]
 
         init_balance = cluster.get_address_balance(registered_user.payment.address)
 
@@ -952,13 +960,16 @@ class TestMIRCerts:
 
         * generate an MIR certificate
         * if a stake address should be known on blockchain:
+
             - register the stake address
             - if transfering funds from treasury, deregister the stake address
               BEFORE submitting the TX
+
         * submit a TX with the MIR certificate
         * if a stake address should be known on blockchain and if transfering funds from reserves,
           deregister the stake address AFTER submitting the TX
         * check that the amount was NOT added to the stake address reward account
+        * (optional) check transaction in db-sync
         """
         # pylint: disable=too-many-branches
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
@@ -966,10 +977,10 @@ class TestMIRCerts:
 
         if fund_src == self.TREASURY:
             amount = 1_500_000_000_000
-            pool_user = pool_users[2]
+            pool_user = pool_users[3]
         else:
             amount = 50_000_000_000_000
-            pool_user = pool_users[3]
+            pool_user = pool_users[4]
 
         init_balance = cluster.get_address_balance(pool_user.payment.address)
 
