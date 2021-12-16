@@ -679,6 +679,30 @@ def filtered_ledger_state(
     return helpers.run_in_bash(cmd).decode("utf-8").strip()
 
 
+def get_blocks_before(
+    cluster_obj: clusterlib.ClusterLib,
+) -> Dict[str, int]:
+    """Get `blocksBefore` section of ledger state with bech32 encoded pool ids."""
+    cardano_cmd = " ".join(
+        [
+            "cardano-cli",
+            "query",
+            "ledger-state",
+            *cluster_obj.magic_args,
+            f"--{cluster_obj.protocol}-mode",
+        ]
+    )
+    # get rid of a huge amount of data we don't have any use for
+    cmd = (
+        f"{cardano_cmd} | jq -n --stream -c "
+        "'fromstream(1|truncate_stream(inputs|select(.[0][0] == \"blocksBefore\")))'"
+    )
+
+    out_str = helpers.run_in_bash(cmd).decode("utf-8").strip()
+    out_json: dict = json.loads(out_str)
+    return {helpers.encode_bech32(prefix="pool", data=key): val for key, val in out_json.items()}
+
+
 def get_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
 ) -> dict:
