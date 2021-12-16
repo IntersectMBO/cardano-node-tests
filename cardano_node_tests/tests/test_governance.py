@@ -380,7 +380,7 @@ class TestMIRCerts:
             created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster_pots,
                 name_template=f"test_mir_certs_ci{cluster_manager.cluster_instance_num}",
-                no_of_addr=4,
+                no_of_addr=5,
             )
             fixture_cache.value = created_users
 
@@ -394,24 +394,27 @@ class TestMIRCerts:
         return created_users
 
     @pytest.fixture
-    def registered_user(
+    def registered_users(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-    ) -> clusterlib.PoolUser:
+    ) -> List[clusterlib.PoolUser]:
         """Register pool user's stake address."""
+        registered = pool_users[1:3]
+
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
-            fixture_cache.value = pool_users[1]
+            fixture_cache.value = registered
 
-        temp_template = f"test_mir_certs_ci{cluster_manager.cluster_instance_num}"
-        pool_user = pool_users[1]
-        clusterlib_utils.register_stake_address(
-            cluster_obj=cluster_pots, pool_user=pool_users[1], name_template=temp_template
-        )
-        return pool_user
+        for i, pool_user in enumerate(registered):
+            temp_template = f"test_mir_certs_{i}_ci{cluster_manager.cluster_instance_num}"
+            clusterlib_utils.register_stake_address(
+                cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
+            )
+
+        return registered
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -720,7 +723,7 @@ class TestMIRCerts:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        registered_user: clusterlib.PoolUser,
+        registered_users: List[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Send funds from the reserves or treasury pot to stake address.
@@ -728,10 +731,12 @@ class TestMIRCerts:
         * generate an MIR certificate
         * submit a TX with the MIR certificate
         * check that the expected amount was added to the stake address reward account
+        * (optional) check transaction in db-sync
         """
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
         amount = 50_000_000
+        registered_user = registered_users[0]
 
         init_reward = cluster.get_stake_addr_info(
             registered_user.stake.address
@@ -801,7 +806,7 @@ class TestMIRCerts:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        registered_user: clusterlib.PoolUser,
+        registered_users: List[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Send funds from the reserves or treasury pot to stake address.
@@ -811,10 +816,12 @@ class TestMIRCerts:
         * generate an MIR certificate
         * submit a TX with the MIR certificate
         * check that the expected amount was added to the stake address reward account
+        * (optional) check transaction in db-sync
         """
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
         amount = 50_000_000
+        registered_user = registered_users[0]
 
         init_reward = cluster.get_stake_addr_info(
             registered_user.stake.address
@@ -885,11 +892,277 @@ class TestMIRCerts:
             )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_pay_stake_addr_from_both(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_pots: clusterlib.ClusterLib,
+        registered_users: List[clusterlib.PoolUser],
+    ):
+        """Send funds from the reserves and treasury pots to stake address.
+
+        * generate an MIR certificate for transferring from treasury
+        * generate an MIR certificate for transferring from reserves
+        * submit a TX with the treasury MIR certificate
+        * in the same epoch as the previous TX, submit a TX with the reserves MIR certificate
+        * check that the expected amount was added to the stake address reward account
+        * (optional) check transactions in db-sync
+        """
+        cluster = cluster_pots
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+        amount = 50_000_000
+        registered_user = registered_users[0]
+
+        init_reward = cluster.get_stake_addr_info(
+            registered_user.stake.address
+        ).reward_account_balance
+        init_balance = cluster.get_address_balance(registered_user.payment.address)
+
+        mir_cert_treasury = cluster.gen_mir_cert_stake_addr(
+            stake_addr=registered_user.stake.address,
+            reward=amount,
+            tx_name=f"{temp_template}_treasury",
+            use_treasury=True,
+        )
+        tx_files_treasury = clusterlib.TxFiles(
+            certificate_files=[mir_cert_treasury],
+            signing_key_files=[
+                registered_user.payment.skey_file,
+                *cluster.genesis_keys.delegate_skeys,
+            ],
+        )
+
+        mir_cert_reserves = cluster.gen_mir_cert_stake_addr(
+            stake_addr=registered_user.stake.address,
+            reward=amount,
+            tx_name=f"{temp_template}_reserves",
+        )
+        tx_files_reserves = clusterlib.TxFiles(
+            certificate_files=[mir_cert_reserves],
+            signing_key_files=[
+                registered_user.payment.skey_file,
+                *cluster.genesis_keys.delegate_skeys,
+            ],
+        )
+
+        # send the transaction at the beginning of an epoch
+        if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
+            cluster.wait_for_new_epoch()
+
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds from treasury to "
+            f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
+        )
+        tx_raw_output_treasury = cluster.send_tx(
+            src_address=registered_user.payment.address,
+            tx_name=f"{temp_template}_treasury",
+            tx_files=tx_files_treasury,
+        )
+
+        time.sleep(2)
+
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds from reserves to "
+            f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
+        )
+        tx_raw_output_reserves = cluster.send_tx(
+            src_address=registered_user.payment.address,
+            tx_name=f"{temp_template}_reserves",
+            tx_files=tx_files_reserves,
+        )
+
+        assert (
+            cluster.get_address_balance(registered_user.payment.address)
+            == init_balance - tx_raw_output_treasury.fee - tx_raw_output_reserves.fee
+        ), f"Incorrect balance for source address `{registered_user.payment.address}`"
+
+        cluster.wait_for_new_epoch()
+
+        assert (
+            cluster.get_stake_addr_info(registered_user.stake.address).reward_account_balance
+            == init_reward + amount * 2
+        ), f"Incorrect reward balance for stake address `{registered_user.stake.address}`"
+
+        tx_db_record_treasury = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_treasury
+        )
+        if tx_db_record_treasury:
+            tx_db_record_reserves = dbsync_utils.check_tx(
+                cluster_obj=cluster, tx_raw_output=tx_raw_output_reserves
+            )
+            assert tx_db_record_reserves
+
+            assert (
+                not tx_db_record_treasury.reserve
+            ), f"Reserve record is not empty: {tx_db_record_treasury.reserve}"
+            assert (
+                not tx_db_record_reserves.treasury
+            ), f"Treasury record is not empty: {tx_db_record_reserves.treasury}"
+
+            db_treasury = tx_db_record_treasury.treasury[0]
+            assert db_treasury.amount == amount, (
+                "Incorrect amount transferred using MIR certificate "
+                f"({db_treasury.amount} != {amount})"
+            )
+            assert db_treasury.address == registered_user.stake.address, (
+                "Incorrect stake address "
+                f"({db_treasury.address} != {registered_user.stake.address})"
+            )
+
+            db_reserve = tx_db_record_reserves.reserve[0]
+            assert db_reserve.amount == amount, (
+                "Incorrect amount transferred using MIR certificate "
+                f"({db_reserve.amount} != {amount})"
+            )
+            assert db_reserve.address == registered_user.stake.address, (
+                "Incorrect stake address "
+                f"({db_reserve.address} != {registered_user.stake.address})"
+            )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_pay_multi_stake_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_pots: clusterlib.ClusterLib,
+        registered_users: List[clusterlib.PoolUser],
+    ):
+        """Send funds from the reserves and treasury pots to multiple stake addresses in single TX.
+
+        * generate an MIR certificates for transferring from treasury for each stake address
+        * generate an MIR certificates for transferring from reserves for each stake address
+        * submit a TX with all the MIR certificates generated in previous steps
+        * check that the expected amount was added to all stake address reward accounts
+        * (optional) check transaction in db-sync
+        """
+        cluster = cluster_pots
+        temp_template = clusterlib_utils.get_temp_template(cluster)
+        amount_treasury = 50_000_000
+        amount_reserves = 60_000_000
+
+        init_reward_u0 = cluster.get_stake_addr_info(
+            registered_users[0].stake.address
+        ).reward_account_balance
+        init_reward_u1 = cluster.get_stake_addr_info(
+            registered_users[1].stake.address
+        ).reward_account_balance
+        init_balance = cluster.get_address_balance(registered_users[0].payment.address)
+
+        mir_cert_treasury_u0 = cluster.gen_mir_cert_stake_addr(
+            stake_addr=registered_users[0].stake.address,
+            reward=amount_treasury,
+            tx_name=f"{temp_template}_treasury_u0",
+            use_treasury=True,
+        )
+        mir_cert_reserves_u0 = cluster.gen_mir_cert_stake_addr(
+            stake_addr=registered_users[0].stake.address,
+            reward=amount_reserves,
+            tx_name=f"{temp_template}_reserves_u0",
+        )
+        mir_cert_treasury_u1 = cluster.gen_mir_cert_stake_addr(
+            stake_addr=registered_users[1].stake.address,
+            reward=amount_treasury,
+            tx_name=f"{temp_template}_treasury_u1",
+            use_treasury=True,
+        )
+        mir_cert_reserves_u1 = cluster.gen_mir_cert_stake_addr(
+            stake_addr=registered_users[1].stake.address,
+            reward=amount_reserves,
+            tx_name=f"{temp_template}_reserves_u1",
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[
+                mir_cert_treasury_u0,
+                mir_cert_reserves_u0,
+                mir_cert_treasury_u1,
+                mir_cert_reserves_u1,
+            ],
+            signing_key_files=[
+                registered_users[0].payment.skey_file,
+                *cluster.genesis_keys.delegate_skeys,
+            ],
+        )
+
+        # send the transaction at the beginning of an epoch
+        if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
+            cluster.wait_for_new_epoch()
+
+        LOGGER.info(
+            f"Submitting MIR cert for tranferring funds from treasury and reserves to "
+            f"multiple stake addresses in epoch {cluster.get_epoch()} "
+            f"on cluster instance {cluster_manager.cluster_instance_num}"
+        )
+        tx_raw_output = cluster.send_tx(
+            src_address=registered_users[0].payment.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+        )
+
+        assert (
+            cluster.get_address_balance(registered_users[0].payment.address)
+            == init_balance - tx_raw_output.fee
+        ), f"Incorrect balance for source address `{registered_users[0].payment.address}`"
+
+        cluster.wait_for_new_epoch()
+
+        assert (
+            cluster.get_stake_addr_info(registered_users[0].stake.address).reward_account_balance
+            == init_reward_u0 + amount_treasury + amount_reserves
+        ), f"Incorrect reward balance for stake address `{registered_users[0].stake.address}`"
+        assert (
+            cluster.get_stake_addr_info(registered_users[1].stake.address).reward_account_balance
+            == init_reward_u1 + amount_treasury + amount_reserves
+        ), f"Incorrect reward balance for stake address `{registered_users[1].stake.address}`"
+
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            db_treasury_u0 = tx_db_record.treasury[0]
+            db_reserve_u0 = tx_db_record.reserve[0]
+            assert db_treasury_u0.amount == amount_treasury, (
+                "Incorrect amount transferred using MIR certificate "
+                f"({db_treasury_u0.amount} != {amount_treasury})"
+            )
+            assert db_treasury_u0.address == registered_users[0].stake.address, (
+                "Incorrect stake address "
+                f"({db_treasury_u0.address} != {registered_users[0].stake.address})"
+            )
+            assert db_reserve_u0.amount == amount_reserves, (
+                "Incorrect amount transferred using MIR certificate "
+                f"({db_reserve_u0.amount} != {amount_reserves})"
+            )
+            assert db_reserve_u0.address == registered_users[0].stake.address, (
+                "Incorrect stake address "
+                f"({db_reserve_u0.address} != {registered_users[0].stake.address})"
+            )
+
+            db_treasury_u1 = tx_db_record.treasury[1]
+            db_reserve_u1 = tx_db_record.reserve[1]
+            assert db_treasury_u1.amount == amount_treasury, (
+                "Incorrect amount transferred using MIR certificate "
+                f"({db_treasury_u1.amount} != {amount_treasury})"
+            )
+            assert db_treasury_u1.address == registered_users[1].stake.address, (
+                "Incorrect stake address "
+                f"({db_treasury_u1.address} != {registered_users[1].stake.address})"
+            )
+            assert db_reserve_u1.amount == amount_reserves, (
+                "Incorrect amount transferred using MIR certificate "
+                f"({db_reserve_u1.amount} != {amount_reserves})"
+            )
+            assert db_reserve_u1.address == registered_users[1].stake.address, (
+                "Incorrect stake address "
+                f"({db_reserve_u1.address} != {registered_users[1].stake.address})"
+            )
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_exceed_pay_stake_addr_from(
         self,
         cluster_pots: clusterlib.ClusterLib,
-        registered_user: clusterlib.PoolUser,
+        registered_users: List[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Try to send more funds than available from the reserves or treasury pot to stake address.
@@ -903,6 +1176,7 @@ class TestMIRCerts:
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
         amount = 30_000_000_000_000_000
+        registered_user = registered_users[0]
 
         init_balance = cluster.get_address_balance(registered_user.payment.address)
 
@@ -952,13 +1226,16 @@ class TestMIRCerts:
 
         * generate an MIR certificate
         * if a stake address should be known on blockchain:
+
             - register the stake address
             - if transfering funds from treasury, deregister the stake address
               BEFORE submitting the TX
+
         * submit a TX with the MIR certificate
         * if a stake address should be known on blockchain and if transfering funds from reserves,
           deregister the stake address AFTER submitting the TX
         * check that the amount was NOT added to the stake address reward account
+        * (optional) check transaction in db-sync
         """
         # pylint: disable=too-many-branches
         temp_template = f"{clusterlib_utils.get_temp_template(cluster_pots)}_{fund_src}"
@@ -966,10 +1243,10 @@ class TestMIRCerts:
 
         if fund_src == self.TREASURY:
             amount = 1_500_000_000_000
-            pool_user = pool_users[2]
+            pool_user = pool_users[3]
         else:
             amount = 50_000_000_000_000
-            pool_user = pool_users[3]
+            pool_user = pool_users[4]
 
         init_balance = cluster.get_address_balance(pool_user.payment.address)
 
