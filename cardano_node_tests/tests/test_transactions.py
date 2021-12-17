@@ -27,10 +27,11 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import constants
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
@@ -213,7 +214,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_transfer_funds(
         self,
@@ -264,7 +265,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_no_change(
         self,
@@ -733,7 +734,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_multiple_same_txins(
         self,
         cluster: clusterlib.ClusterLib,
@@ -998,9 +999,7 @@ class TestMultiInOut:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1036,9 +1035,7 @@ class TestMultiInOut:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1074,9 +1071,7 @@ class TestMultiInOut:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1112,9 +1107,7 @@ class TestMultiInOut:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1436,7 +1429,7 @@ class TestNotBalanced:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_not_enough_for_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1473,7 +1466,7 @@ class TestNotBalanced:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(transfer_add=st.integers(), change_amount=st.integers(min_value=0))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_wrong_balance(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1880,7 +1873,7 @@ class TestNegative:
         assert "HandshakeError" in str(excinfo.value)
 
         # wait a bit so there's some time for error messages to appear in log file
-        time.sleep(1 if cluster.network_magic == constants.NETWORK_MAGIC_LOCAL else 5)
+        time.sleep(1 if cluster.network_magic == configuration.NETWORK_MAGIC_LOCAL else 5)
 
     @allure.link(helpers.get_vcs_link())
     def test_wrong_signing_key(
@@ -1945,9 +1938,7 @@ class TestNegative:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1974,9 +1965,7 @@ class TestNegative:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1999,7 +1988,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_send_funds_to_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2014,9 +2003,9 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_to_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2036,7 +2025,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_send_funds_to_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2051,9 +2040,9 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_to_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2075,7 +2064,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_send_funds_to_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2090,11 +2079,11 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_to_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2114,7 +2103,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_send_funds_from_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2129,9 +2118,9 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_from_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2151,7 +2140,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_send_funds_from_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2166,9 +2155,9 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_from_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2190,7 +2179,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_send_funds_from_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2205,11 +2194,11 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_from_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2228,9 +2217,9 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_invalid_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2249,11 +2238,11 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_invalid_chars_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2272,9 +2261,9 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_send_funds_invalid_length_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2299,9 +2288,7 @@ class TestNegative:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -2340,9 +2327,7 @@ class TestNegative:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -2377,7 +2362,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_invalid_lenght_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2402,9 +2387,9 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_build_invalid_lenght_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2552,7 +2537,7 @@ class TestNegative:
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_missing_tx_in(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2595,7 +2580,7 @@ class TestNegative:
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_missing_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2637,7 +2622,7 @@ class TestNegative:
         assert re.search(r"Missing:.* --change-address ADDRESS", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_multiple_change_addresses(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2743,7 +2728,7 @@ class TestMetadata:
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -2790,7 +2775,7 @@ class TestMetadata:
         assert "Failed reading: satisfy" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -2837,7 +2822,7 @@ class TestMetadata:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -2903,7 +2888,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -2991,7 +2976,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -3090,7 +3075,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @pytest.mark.dbsync
     def test_build_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord

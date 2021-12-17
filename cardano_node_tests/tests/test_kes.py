@@ -12,6 +12,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
@@ -53,7 +54,7 @@ def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> cl
 @pytest.fixture(scope="module")
 def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""
-    pytest_globaltemp = helpers.get_pytest_globaltemp(tmp_path_factory)
+    pytest_globaltemp = common.get_pytest_globaltemp(tmp_path_factory)
     max_kes_evolutions = 10
 
     # need to lock because this same fixture can run on several workers in parallel

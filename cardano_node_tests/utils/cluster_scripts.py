@@ -128,7 +128,7 @@ class LocalScripts(ScriptsTypes):
         )
 
     def _reconfigure_local(self, indir: Path, destdir: Path, instance_num: int) -> None:
-        """Reconfigure scripts and config files located in this repository."""
+        """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num)
         for infile in indir.glob("*"):
             fname = infile.name
@@ -156,7 +156,7 @@ class LocalScripts(ScriptsTypes):
             with open(dest_file, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
 
-            # make files without extension executable
+            # make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
                 dest_file.chmod(0o755)
 
@@ -257,7 +257,7 @@ class TestnetScripts(ScriptsTypes):
     def _reconfigure_testnet(
         self, indir: Path, destdir: Path, instance_num: int, globs: List[str]
     ) -> None:
-        """Reconfigure scripts and config files located in this repository."""
+        """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num)
         _infiles = [list(indir.glob(g)) for g in globs]
         infiles = list(itertools.chain.from_iterable(_infiles))
@@ -285,7 +285,7 @@ class TestnetScripts(ScriptsTypes):
             with open(dest_file, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
 
-            # make files without extension executable
+            # make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
                 dest_file.chmod(0o755)
 

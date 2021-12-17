@@ -13,7 +13,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import constants
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 
 LOGGER = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def cluster_and_pool(
             == cluster_nodes.Testnets.testnet
         ):
             stake_pools = cluster_obj.get_stake_pools()
-            for pool_id in constants.TESTNET_POOL_IDS:
+            for pool_id in configuration.TESTNET_POOL_IDS:
                 if pool_id in stake_pools:
                     return cluster_obj, pool_id
 

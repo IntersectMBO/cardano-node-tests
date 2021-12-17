@@ -12,6 +12,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -71,7 +72,7 @@ class TestFee:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(fee=st.integers(max_value=-1))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_negative_fee(
         self,
         cluster: clusterlib.ClusterLib,
