@@ -190,7 +190,7 @@ class ClusterManager:
             run_log = Path(env_log).expanduser()
             if not run_log.is_absolute():
                 # the path is relative to LAUNCH_PATH (current path can differ)
-                run_log = helpers.LAUNCH_PATH / run_log
+                run_log = configuration.LAUNCH_PATH / run_log
             # create the log file if it doesn't exist
             _touch(run_log)
         else:

@@ -10,10 +10,10 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_mint
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -70,7 +70,7 @@ def payment_addrs(
     VERSIONS.transaction_era < VERSIONS.ALONZO,
     reason="runs only with Alonzo+ TX",
 )
-@pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+@pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
 class TestBuildMinting:
     """Tests for minting using Plutus smart contracts and `transaction build`."""
 

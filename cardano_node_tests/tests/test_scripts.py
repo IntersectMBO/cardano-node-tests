@@ -15,9 +15,9 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -205,9 +205,7 @@ class TestBasic:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -270,9 +268,7 @@ class TestBasic:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -365,9 +361,7 @@ class TestBasic:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -442,9 +436,7 @@ class TestBasic:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -522,9 +514,7 @@ class TestBasic:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -948,9 +938,7 @@ class TestTimeLocking:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1021,9 +1009,7 @@ class TestTimeLocking:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1092,9 +1078,7 @@ class TestTimeLocking:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1183,9 +1167,7 @@ class TestTimeLocking:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1258,9 +1240,7 @@ class TestTimeLocking:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1349,9 +1329,7 @@ class TestTimeLocking:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1466,9 +1444,7 @@ class TestAuxiliaryScripts:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1540,9 +1516,7 @@ class TestAuxiliaryScripts:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1615,9 +1589,7 @@ class TestAuxiliaryScripts:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1681,9 +1653,7 @@ class TestAuxiliaryScripts:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
