@@ -2,9 +2,12 @@
 import distutils.spawn
 import logging
 import os
+import shutil
 from pathlib import Path
 from typing import Any
+from typing import Dict
 from typing import Generator
+from typing import Optional
 
 import pytest
 from _pytest.config import Config
@@ -138,6 +141,31 @@ def close_dbconn() -> Generator[None, None, None]:
     dbsync_conn.close_all()
 
 
+def _copy_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
+    """Copy collected tests and cluster artifacts to artifacts dir."""
+    pytest_tmp_dir = pytest_tmp_dir.resolve()
+    if not pytest_tmp_dir.is_dir():
+        return None
+
+    destdir = artifacts_dir / f"{pytest_tmp_dir.stem}-{helpers.get_rand_str(8)}"
+    if destdir.resolve().is_dir():
+        shutil.rmtree(destdir)
+    shutil.copytree(pytest_tmp_dir, destdir, symlinks=True, ignore_dangling_symlinks=True)
+
+    return destdir
+
+
+def _save_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
+    """Save tests and cluster artifacts."""
+    artifacts_base_dir = pytest_config.getoption("--artifacts-base-dir")
+    if not artifacts_base_dir:
+        return
+
+    artifacts_dir = Path(artifacts_base_dir)
+    _copy_artifacts(pytest_tmp_dir, artifacts_dir)
+    LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
+
+
 def _stop_all_cluster_instances(
     tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config, pytest_tmp_dir: Path
 ) -> None:
@@ -152,7 +180,7 @@ def _stop_all_cluster_instances(
         cluster_manager_obj.stop_all_clusters()
 
     # save artifacts
-    cluster_nodes.save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
+    _save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
 def _testnet_cleanup(pytest_tmp_dir: Path) -> None:
@@ -163,19 +191,36 @@ def _testnet_cleanup(pytest_tmp_dir: Path) -> None:
     # there's only one cluster instance for testnets, so we don't need to use cluster manager
     cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
 
-    destdir = pytest_tmp_dir.parent / f"cleanup-{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
+    destdir = pytest_tmp_dir.parent / f"cleanup-{pytest_tmp_dir.stem}-{helpers.get_rand_str(8)}"
     with helpers.change_cwd(dir_path=destdir):
         testnet_cleanup.cleanup(cluster_obj=cluster_obj, location=pytest_tmp_dir)
 
 
+def _save_env_for_allure(pytest_config: Config) -> None:
+    """Save environment info in a format for Allure."""
+    alluredir = pytest_config.getoption("--alluredir")
+
+    if not alluredir:
+        return
+
+    alluredir = configuration.LAUNCH_PATH / alluredir
+    metadata: Dict[str, Any] = pytest_config._metadata  # type: ignore
+    with open(alluredir / "environment.properties", "w+", encoding="utf-8") as infile:
+        for k, v in metadata.items():
+            if isinstance(v, dict):
+                continue
+            name = k.replace(" ", ".")
+            infile.write(f"{name}={v}\n")
+
+
 @pytest.fixture(scope="session")
-def cluster_chores(
+def testenv_setup_teardown(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
 ) -> Generator[None, None, None]:
     pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
 
     # save environment info for Allure
-    helpers.save_env_for_allure(request.config)
+    _save_env_for_allure(request.config)
 
     if not worker_id or worker_id == "master":
         # if cluster was started outside of test framework, do nothing
@@ -224,7 +269,7 @@ def cluster_chores(
 
 
 @pytest.fixture(scope="session", autouse=True)
-def session_autouse(change_dir: Any, close_dbconn: Any, cluster_chores: Any) -> None:
+def session_autouse(change_dir: Any, close_dbconn: Any, testenv_setup_teardown: Any) -> None:
     """Autouse session fixtures that are required for session setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
     pass

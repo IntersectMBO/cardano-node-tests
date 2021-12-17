@@ -19,10 +19,10 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -182,9 +182,7 @@ class TestMinting:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -865,9 +863,7 @@ class TestMinting:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1058,9 +1054,7 @@ class TestPolicies:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1158,9 +1152,7 @@ class TestPolicies:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1595,9 +1587,7 @@ class TestTransfer:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1691,9 +1681,7 @@ class TestTransfer:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1832,9 +1820,7 @@ class TestTransfer:
             False,
             pytest.param(
                 True,
-                marks=pytest.mark.skipif(
-                    not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG
-                ),
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
             ),
         ),
         ids=("build_raw", "build"),
@@ -1940,7 +1926,7 @@ class TestNegative:
             max_size=1000,
         )
     )
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_long_name(
         self,
         cluster: clusterlib.ClusterLib,

@@ -9,9 +9,9 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -201,7 +201,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_transfer_to_treasury(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -351,7 +351,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     def test_build_transfer_to_reserves(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -507,7 +507,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(not constants.BUILD_USABLE, reason=constants.BUILD_SKIP_MSG)
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_build_pay_stake_addr_from(
         self,
