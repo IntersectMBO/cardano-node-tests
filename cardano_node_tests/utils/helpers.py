@@ -18,13 +18,10 @@ import time
 from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import Dict
 from typing import Iterator
 from typing import Optional
 from typing import Union
 
-from _pytest.config import Config
-from _pytest.tmpdir import TempdirFactory
 from filelock import FileLock
 
 from cardano_node_tests.utils.types import FileType
@@ -35,7 +32,6 @@ logging.getLogger("filelock").setLevel(logging.WARNING)
 
 LOGGER = logging.getLogger(__name__)
 
-LAUNCH_PATH = Path(os.getcwd())
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 
 
@@ -53,19 +49,6 @@ else:
     def xdist_sleep(secs: float) -> None:
         # pylint: disable=all
         pass
-
-
-@functools.lru_cache
-def hypothesis_settings() -> Any:
-    import hypothesis
-
-    return hypothesis.settings(
-        deadline=None,
-        suppress_health_check=(
-            hypothesis.HealthCheck.too_slow,
-            hypothesis.HealthCheck.function_scoped_fixture,
-        ),
-    )
 
 
 @contextlib.contextmanager
@@ -169,15 +152,6 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
     return f"{timestamp}{rand_str_component}"
 
 
-def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
-    """Return global temporary directory for a single pytest run."""
-    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
-    basetemp = pytest_tmp_dir.parent if IS_XDIST else pytest_tmp_dir
-    basetemp = basetemp / "tmp"
-    basetemp.mkdir(exist_ok=True)
-    return basetemp
-
-
 def get_vcs_link() -> str:
     """Return link to the current line in GitHub."""
     calling_frame = inspect.currentframe().f_back  # type: ignore
@@ -255,23 +229,6 @@ def check_file_arg(file_path: str) -> Optional[Path]:
     if not (abs_path.exists() and abs_path.is_file()):
         raise argparse.ArgumentTypeError(f"check_file_arg: file '{file_path}' doesn't exist")
     return abs_path
-
-
-def save_env_for_allure(pytest_config: Config) -> None:
-    """Save environment info in a format for Allure."""
-    alluredir = pytest_config.getoption("--alluredir")
-
-    if not alluredir:
-        return
-
-    alluredir = LAUNCH_PATH / alluredir
-    metadata: Dict[str, Any] = pytest_config._metadata  # type: ignore
-    with open(alluredir / "environment.properties", "w+") as infile:
-        for k, v in metadata.items():
-            if isinstance(v, dict):
-                continue
-            name = k.replace(" ", ".")
-            infile.write(f"{name}={v}\n")
 
 
 def get_cmd_path(cmd: str) -> Path:

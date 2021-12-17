@@ -12,13 +12,11 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 
-from _pytest.config import Config
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
-from cardano_node_tests.utils import constants
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import slots_offset
 from cardano_node_tests.utils.types import FileType
@@ -309,7 +307,7 @@ def set_cluster_env(instance_num: int) -> None:
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
 
     os.environ["PGPASSFILE"] = str(socket_path.parent / "pgpass")
-    os.environ["PGDATABASE"] = f"{constants.DBSYNC_DB}{instance_num}"
+    os.environ["PGDATABASE"] = f"{configuration.DBSYNC_DB}{instance_num}"
     if not os.environ.get("PGHOST"):
         os.environ["PGHOST"] = "localhost"
     if not os.environ.get("PGPORT"):
@@ -496,27 +494,3 @@ def save_cluster_artifacts(artifacts_dir: Path, clean: bool = False) -> Optional
         shutil.rmtree(state_dir, ignore_errors=True)
 
     return destdir
-
-
-def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
-    """Save collected tests and cluster artifacts."""
-    pytest_tmp_dir = pytest_tmp_dir.resolve()
-    if not pytest_tmp_dir.is_dir():
-        return None
-
-    destdir = artifacts_dir / f"{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
-    if destdir.resolve().is_dir():
-        shutil.rmtree(destdir)
-    shutil.copytree(pytest_tmp_dir, destdir, symlinks=True, ignore_dangling_symlinks=True)
-
-    LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
-    return destdir
-
-
-def save_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
-    """Save tests and cluster artifacts."""
-    artifacts_base_dir = pytest_config.getoption("--artifacts-base-dir")
-    if not artifacts_base_dir:
-        return
-
-    save_collected_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))

@@ -16,7 +16,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.tests import plutus_spend
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import constants
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
@@ -701,7 +701,7 @@ class TestLocking:
             assert "ValidationTagMismatch (IsValid True)" in err
 
             # wait a bit so there's some time for error messages to appear in log file
-            time.sleep(1 if cluster.network_magic == constants.NETWORK_MAGIC_LOCAL else 5)
+            time.sleep(1 if cluster.network_magic == configuration.NETWORK_MAGIC_LOCAL else 5)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -761,7 +761,7 @@ class TestLocking:
         assert "PlutusFailure" in err
 
         # wait a bit so there's some time for error messages to appear in log file
-        time.sleep(1 if cluster.network_magic == constants.NETWORK_MAGIC_LOCAL else 5)
+        time.sleep(1 if cluster.network_magic == configuration.NETWORK_MAGIC_LOCAL else 5)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
