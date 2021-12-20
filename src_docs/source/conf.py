@@ -73,10 +73,10 @@ html_static_path = ["_static"]
 if os.environ.get("CARDANO_TESTS_GIT_REV"):
     cardano_node_tests._git_rev = os.environ.get("CARDANO_TESTS_GIT_REV")
 else:
-    p = subprocess.Popen(
+    with subprocess.Popen(
         ["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-    stdout, __ = p.communicate()
+    ) as p:
+        stdout, __ = p.communicate()
     cardano_node_tests._git_rev = stdout.decode().strip()
 if not cardano_node_tests._git_rev:
     cardano_node_tests._git_rev = "master"
