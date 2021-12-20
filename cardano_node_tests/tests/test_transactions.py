@@ -1953,6 +1953,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         addr = pool_users[0].stake.address
         self._send_funds_to_invalid_address(
             cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=use_build_cmd
@@ -1980,6 +1982,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         dst_addr = pool_users[1].payment.address
         utxo_addr = cluster.get_utxo(address=dst_addr)[0].utxo_hash
         self._send_funds_to_invalid_address(
@@ -2713,6 +2717,8 @@ class TestMetadata:
 
         The metadata file is a valid JSON, but not in a format that is expected.
         """
+        common.get_test_id(cluster)
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_WRONG_FILE],
@@ -2738,6 +2744,8 @@ class TestMetadata:
 
         The metadata file is a valid JSON, but not in a format that is expected.
         """
+        common.get_test_id(cluster)
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_WRONG_FILE],
@@ -2760,6 +2768,8 @@ class TestMetadata:
 
         The metadata file is an invalid JSON.
         """
+        common.get_test_id(cluster)
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_INVALID_FILE],
@@ -2785,6 +2795,8 @@ class TestMetadata:
 
         The metadata file is an invalid JSON.
         """
+        common.get_test_id(cluster)
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_INVALID_FILE],
@@ -2805,6 +2817,8 @@ class TestMetadata:
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
         """Try to build a transaction with metadata JSON longer than 64 bytes."""
+        common.get_test_id(cluster)
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_LONG_FILE],
@@ -2830,6 +2844,8 @@ class TestMetadata:
 
         Uses `cardano-cli transaction build` command for building the transactions.
         """
+        common.get_test_id(cluster)
+
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_LONG_FILE],

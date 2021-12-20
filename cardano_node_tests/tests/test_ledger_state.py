@@ -7,6 +7,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -53,5 +54,6 @@ class TestLedgerState:
     )
     def test_ledger_state_keys(self, cluster: clusterlib.ClusterLib):
         """Check output of `query ledger-state`."""
+        common.get_test_id(cluster)
         ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
         assert tuple(sorted(ledger_state)) == LEDGER_STATE_KEYS

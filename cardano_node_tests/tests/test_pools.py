@@ -1972,6 +1972,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1995,6 +1997,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -2018,6 +2022,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -2041,6 +2047,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -2078,6 +2086,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -2125,6 +2135,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(

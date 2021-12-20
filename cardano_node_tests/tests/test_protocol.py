@@ -8,6 +8,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -74,6 +75,7 @@ class TestProtocol:
     @allure.link(helpers.get_vcs_link())
     def test_protocol_state_keys(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-state`."""
+        common.get_test_id(cluster)
         protocol_state = cluster.get_protocol_state()
         assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
 
@@ -81,6 +83,7 @@ class TestProtocol:
     @pytest.mark.xfail
     def test_protocol_state_outfile(self, cluster: clusterlib.ClusterLib):
         """Check output file produced by `query protocol-state`."""
+        common.get_test_id(cluster)
         protocol_state: dict = json.loads(
             cluster.query_cli(["protocol-state", "--out-file", "/dev/stdout"])
         )
@@ -89,5 +92,6 @@ class TestProtocol:
     @allure.link(helpers.get_vcs_link())
     def test_protocol_params(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-parameters`."""
+        common.get_test_id(cluster)
         protocol_params = cluster.get_protocol_params()
         assert tuple(sorted(protocol_params.keys())) == PROTOCOL_PARAM_KEYS

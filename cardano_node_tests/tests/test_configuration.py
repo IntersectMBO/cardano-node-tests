@@ -141,6 +141,7 @@ class TestBasic:
     def test_epoch_length(self, cluster_epoch_length: clusterlib.ClusterLib):
         """Test the *epochLength* configuration."""
         cluster = cluster_epoch_length
+        common.get_test_id(cluster)
 
         assert cluster.slot_length == 0.2
         assert cluster.epoch_length == 1500
@@ -151,6 +152,7 @@ class TestBasic:
     def test_slot_length(self, cluster_slot_length: clusterlib.ClusterLib):
         """Test the *slotLength* configuration."""
         cluster = cluster_slot_length
+        common.get_test_id(cluster)
 
         assert cluster.slot_length == 0.3
         assert cluster.epoch_length == 1000
