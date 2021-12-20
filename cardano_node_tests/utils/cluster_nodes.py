@@ -79,32 +79,10 @@ class LocalCluster(ClusterType):
         """Get offset of blocks from Byron era vs current configuration."""
         # unlike in `TestnetCluster`, don't cache slots offset value, we might
         # test different configurations of slot length etc.
-        genesis_byron_json = state_dir / "byron" / "genesis.json"
-        with open(genesis_byron_json, encoding="utf-8") as in_json:
-            genesis_byron = json.load(in_json)
-        genesis_shelley_json = state_dir / "shelley" / "genesis.json"
-        with open(genesis_shelley_json, encoding="utf-8") as in_json:
-            genesis_shelley = json.load(in_json)
-
-        slot_duration_byron_msec = int(genesis_byron["blockVersionData"]["slotDuration"])
-        slot_duration_byron = float(slot_duration_byron_msec / 1000)
-        slot_duration_shelley = float(genesis_shelley["slotLength"])
-        slots_per_epoch_shelley = int(genesis_shelley["epochLength"])
-        byron_k = int(genesis_byron["protocolConsts"]["k"])
-
-        byron_epoch_sec = int(byron_k * 10 * slot_duration_byron)
-        shelley_epoch_sec = int(slots_per_epoch_shelley * slot_duration_shelley)
-
-        if (slot_duration_byron == slot_duration_shelley) and (
-            byron_epoch_sec == shelley_epoch_sec
-        ):
-            return 0
-
-        # assume that shelley starts at epoch 1, i.e. after a single byron epoch
-        slots_in_byron = int(byron_epoch_sec / slot_duration_byron)
-        slots_in_shelley = int(shelley_epoch_sec / slot_duration_shelley)
-        offset = slots_in_shelley - slots_in_byron
-
+        offset = slots_offset.get_slots_offset(
+            genesis_byron=state_dir / "byron" / "genesis.json",
+            genesis_shelley=state_dir / "shelley" / "genesis.json",
+        )
         return offset
 
     def get_cluster_obj(
