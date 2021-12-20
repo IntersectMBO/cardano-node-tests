@@ -4,7 +4,7 @@ from typing import Any
 
 from _pytest.tmpdir import TempdirFactory
 
-from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.versions import VERSIONS
 
 
@@ -34,7 +34,7 @@ def hypothesis_settings() -> Any:
 def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
     """Return global temporary directory for a single pytest run."""
     pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
-    basetemp = pytest_tmp_dir.parent if helpers.IS_XDIST else pytest_tmp_dir
+    basetemp = pytest_tmp_dir.parent if configuration.IS_XDIST else pytest_tmp_dir
     basetemp = basetemp / "tmp"
     basetemp.mkdir(exist_ok=True)
     return basetemp

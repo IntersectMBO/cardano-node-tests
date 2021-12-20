@@ -21,6 +21,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -251,7 +252,7 @@ def testenv_setup_teardown(
 
     yield
 
-    with helpers.FileLockIfXdist(f"{lock_dir}/{cluster_management.CLUSTER_LOCK}"):
+    with locking.FileLockIfXdist(f"{lock_dir}/{cluster_management.CLUSTER_LOCK}"):
         cluster_manager_obj = cluster_management.ClusterManager(
             tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )

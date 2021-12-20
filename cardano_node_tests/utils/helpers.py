@@ -22,33 +22,12 @@ from typing import Iterator
 from typing import Optional
 from typing import Union
 
-from filelock import FileLock
-
 from cardano_node_tests.utils.types import FileType
-
-# suppress messages from filelock
-logging.getLogger("filelock").setLevel(logging.WARNING)
 
 
 LOGGER = logging.getLogger(__name__)
 
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
-
-
-# Use dummy locking if not executing with multiple workers.
-# When running with multiple workers, operations with shared resources (like faucet addresses)
-# need to be locked to single worker (otherwise e.g. balances would not check).
-if os.environ.get("PYTEST_XDIST_TESTRUNUID"):
-    IS_XDIST = True
-    FileLockIfXdist: Any = FileLock
-    xdist_sleep = time.sleep
-else:
-    IS_XDIST = False
-    FileLockIfXdist = contextlib.nullcontext
-
-    def xdist_sleep(secs: float) -> None:
-        # pylint: disable=all
-        pass
 
 
 @contextlib.contextmanager

@@ -14,6 +14,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import locking
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     pytest_globaltemp = common.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
-    with helpers.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_epoch_1200.lock"):
+    with locking.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_epoch_1200.lock"):
         destdir = pytest_globaltemp / "startup_files_epoch_1200"
         destdir.mkdir(exist_ok=True)
 
@@ -73,7 +74,7 @@ def slot_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     pytest_globaltemp = common.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
-    with helpers.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_slot_03.lock"):
+    with locking.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_slot_03.lock"):
         destdir = pytest_globaltemp / "startup_files_slot_03"
         destdir.mkdir(exist_ok=True)
 
