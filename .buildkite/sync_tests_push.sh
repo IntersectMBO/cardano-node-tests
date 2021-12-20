@@ -5,6 +5,9 @@ echo "Authenticating push using SSH with $sshkey"
 export GIT_SSH_COMMAND="ssh -i $sshkey -F /dev/null"
 remote="git@github.com:input-output-hk/cardano-node-tests.git"
 
+git config user.email "dorin.solomon@iohk.io"
+git config user.name "Dorin Solomon"
+
 git add sync_tests/node_sync_tests_results.db
 git add sync_tests/csv_files
 
