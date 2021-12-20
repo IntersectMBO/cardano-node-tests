@@ -122,7 +122,7 @@ class TestDelegateAddr:
         * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-20, force_epoch=False
@@ -179,7 +179,7 @@ class TestDelegateAddr:
         """
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-20, force_epoch=False
@@ -226,7 +226,7 @@ class TestDelegateAddr:
         * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-20, force_epoch=False
@@ -354,7 +354,7 @@ class TestDelegateAddr:
         * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-20, force_epoch=False
@@ -492,7 +492,7 @@ class TestDelegateAddr:
           was not needed
         * (optional) check records in db-sync
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -580,7 +580,7 @@ class TestDelegateAddr:
         * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -691,7 +691,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         # create stake address registration cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -711,7 +711,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         # create stake address delegation cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -733,7 +733,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -767,7 +767,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -831,7 +831,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -896,7 +896,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -989,7 +989,7 @@ class TestNegative:
         use_build_cmd: bool,
     ):
         """Deregister not registered stake address."""
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment

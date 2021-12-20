@@ -205,9 +205,7 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = (
-            f"{clusterlib_utils.get_temp_template(cluster)}_{aname_type}_{use_build_cmd}"
-        )
+        temp_template = f"{common.get_test_id(cluster)}_{aname_type}_{use_build_cmd}"
         asset_name_dec = (
             f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         )
@@ -307,7 +305,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{aname_type}"
+        temp_template = f"{common.get_test_id(cluster)}_{aname_type}"
         asset_name_dec = (
             f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         )
@@ -399,7 +397,7 @@ class TestMinting:
         num_of_scripts = 5
         expected_fee = 263621
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         amount = 5
         token_mint_addr = issuers_addrs[0]
         i_addrs = clusterlib_utils.create_payment_addr_records(
@@ -505,7 +503,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -599,7 +597,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
         asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
@@ -693,7 +691,7 @@ class TestMinting:
         * check fees in Lovelace
         """
         rand = clusterlib.get_rand_str(8)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand}"
         amount = 5
         tokens_num, expected_fee = tokens_db
 
@@ -790,7 +788,7 @@ class TestMinting:
         * check fees in Lovelace
         """
         rand = clusterlib.get_rand_str(8)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand}"
         amount = 5
         tokens_num, expected_fee = tokens_db
 
@@ -883,7 +881,7 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
         asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 50
@@ -975,7 +973,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         asset_name_dec = f"ěůřščžďťň{clusterlib.get_rand_str(4)}"
         asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
@@ -1069,7 +1067,7 @@ class TestPolicies:
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1167,7 +1165,7 @@ class TestPolicies:
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1250,7 +1248,7 @@ class TestPolicies:
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test that it's NOT possible to mint tokens when the "before" slot is in the past."""
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1323,7 +1321,7 @@ class TestPolicies:
 
         The "before" slot is in the future and the given range is invalid.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1385,7 +1383,7 @@ class TestPolicies:
 
         The "after" slot is in the future and the given range is invalid.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1458,7 +1456,7 @@ class TestPolicies:
 
         The "after" slot is in the past.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1607,7 +1605,7 @@ class TestTransfer:
         * check expected token balances for both source and destination addresses
         * check fees in Lovelace
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{amount}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}"
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -1700,7 +1698,7 @@ class TestTransfer:
         * check expected token balances for both source and destination addresses for each token
         * check fees in Lovelace
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         amount = 1000
         rand = clusterlib.get_rand_str(5)
 
@@ -1837,7 +1835,7 @@ class TestTransfer:
         use_build_cmd: bool,
     ):
         """Try to create an UTxO with just native tokens, no ADA. Expect failure."""
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         amount = 10
 
         src_address = new_token.token_mint_addr.address
