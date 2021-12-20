@@ -15,9 +15,9 @@ from typing import Tuple
 import pytest
 
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ ERRORS_IGNORED = [
     # can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node:.*could not serialize access",
 ]
-if configuration.CLUSTER_ERA == "alonzo":
+if VERSIONS.cluster_era == VERSIONS.ALONZO:
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
 ERRORS_RULES_FILE_NAME = ".errors_rules"
 
