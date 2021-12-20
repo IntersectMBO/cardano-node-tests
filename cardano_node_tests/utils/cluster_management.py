@@ -624,6 +624,7 @@ class _ClusterGetter:
         if not cluster_obj:
             cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
             cluster_obj.cluster_id = instance_num
+            cluster_obj._cluster_manager = self.cm  # type: ignore
 
         # setup faucet addresses
         if not (state_dir / cluster_nodes.ADDRS_DATA).exists():
@@ -634,6 +635,7 @@ class _ClusterGetter:
         # reload data if necessary
         self._reload_cluster_obj(state_dir=state_dir)
         cluster_obj.cluster_id = instance_num
+        cluster_obj._cluster_manager = self.cm  # type: ignore
 
         return cluster_obj
 
@@ -1005,6 +1007,7 @@ class _ClusterGetter:
                     cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
 
                 cluster_obj.cluster_id = instance_num
+                cluster_obj._cluster_manager = self.cm  # type: ignore
 
                 # `cluster_obj` is ready, we can start the test
                 break
