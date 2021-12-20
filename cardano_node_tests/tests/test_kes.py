@@ -113,6 +113,8 @@ class TestKES:
     ):
         """Test expired KES."""
         cluster = cluster_kes
+        common.get_test_id(cluster)
+
         expire_timeout = 200
 
         expected_errors = [
