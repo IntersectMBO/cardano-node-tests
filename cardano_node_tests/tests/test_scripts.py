@@ -179,7 +179,7 @@ class TestBasic:
 
         There was an issue that script address was 32 bytes instead of 28 bytes.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -218,7 +218,7 @@ class TestBasic:
         use_build_cmd: bool,
     ):
         """Send funds to and from script address using the *all* script."""
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -286,7 +286,7 @@ class TestBasic:
         * send funds from script address using single witness
         * send funds from script address using multiple witnesses
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -374,7 +374,7 @@ class TestBasic:
         use_build_cmd: bool,
     ):
         """Send funds to and from script address using the *atLeast* script."""
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -449,7 +449,7 @@ class TestBasic:
         use_build_cmd: bool,
     ):
         """Send funds to script address using TX signed with skeys (not using witness files)."""
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         src_address = payment_addrs[0].address
         amount = 2000_000
 
@@ -527,7 +527,7 @@ class TestBasic:
         use_build_cmd: bool,
     ):
         """Send funds from script address using TX signed with skeys (not using witness files)."""
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         dst_addr = payment_addrs[1]
         amount = 2000_000
 
@@ -610,7 +610,7 @@ class TestBasic:
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Send funds from script address using the *all* script with zero skeys."""
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
@@ -657,7 +657,7 @@ class TestBasic:
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Send funds from script address using the *atLeast* script with no required witnesses."""
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -742,7 +742,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -793,7 +793,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs[:-1]]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -844,7 +844,7 @@ class TestNegative:
 
         Num of skeys < required. Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -951,7 +951,7 @@ class TestTimeLocking:
         use_build_cmd: bool,
     ):
         """Check that it is possible to spend from script address after given slot."""
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1022,7 +1022,7 @@ class TestTimeLocking:
         use_build_cmd: bool,
     ):
         """Check that it is possible to spend from script address before given slot."""
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1094,7 +1094,7 @@ class TestTimeLocking:
 
         The "before" slot is in the past.
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1183,7 +1183,7 @@ class TestTimeLocking:
 
         The "before" slot is in the future and the given range is invalid.
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1256,7 +1256,7 @@ class TestTimeLocking:
 
         The "after" slot is in the future and the given range is invalid.
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1345,7 +1345,7 @@ class TestTimeLocking:
 
         The "after" slot is in the past.
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1460,7 +1460,7 @@ class TestAuxiliaryScripts:
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1532,7 +1532,7 @@ class TestAuxiliaryScripts:
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1605,7 +1605,7 @@ class TestAuxiliaryScripts:
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1668,7 +1668,7 @@ class TestAuxiliaryScripts:
 
         Expect failure.
         """
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         tx_files = clusterlib.TxFiles(
             # not valid script file

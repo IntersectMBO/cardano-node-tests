@@ -13,6 +13,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
@@ -346,7 +347,7 @@ class TestRewards:
         * withdraw rewards to payment address
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         # check pool rewards only when own pool is available
         check_pool_rewards = (
             cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET
@@ -430,7 +431,7 @@ class TestRewards:
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
@@ -722,7 +723,7 @@ class TestRewards:
         cluster = cluster_lock_pool2_pots
         mir_reward = 50_000_000_000
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
@@ -1097,7 +1098,7 @@ class TestRewards:
         pool_name = "node-pool1"
         cluster = cluster_use_pool1
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-20, force_epoch=False
@@ -1213,7 +1214,7 @@ class TestRewards:
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -1356,7 +1357,7 @@ class TestRewards:
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -1518,7 +1519,7 @@ class TestRewards:
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -1691,7 +1692,7 @@ class TestRewards:
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -1870,7 +1871,7 @@ class TestRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
         for i in range(5):
@@ -2075,7 +2076,7 @@ class TestRewards:
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
         pool_name = "node-pool2"
         cluster = cluster_lock_pool1_2
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool1_rec = cluster_manager.cache.addrs_data["node-pool1"]
         pool1_reward = clusterlib.PoolUser(payment=pool1_rec["payment"], stake=pool1_rec["reward"])
@@ -2316,7 +2317,7 @@ class TestRewards:
         pool2_name = "node-pool2"
         cluster = cluster_use_pool1_2
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool1_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool1_name

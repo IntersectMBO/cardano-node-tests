@@ -151,7 +151,7 @@ class TestKES:
         node_name = "pool2"
         cluster = cluster_lock_pool2
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         node_cold = pool_rec["cold_key_pair"]
@@ -265,7 +265,7 @@ class TestKES:
         node_name = "pool2"
         cluster = cluster_lock_pool2
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         node_cold = pool_rec["cold_key_pair"]
@@ -350,7 +350,7 @@ class TestKES:
         pool_name = "node-pool2"
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         out_file = temp_dir / f"{temp_template}_shouldnt_exist.opcert"
 
         # try to generate new operational certificate without specifying the `--kes-period`
