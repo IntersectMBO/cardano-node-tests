@@ -660,7 +660,7 @@ class TestStakePool:
         Check that pool was registered and stake address delegated.
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -738,7 +738,7 @@ class TestStakePool:
         Check that pool was registered and stake address delegated.
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -813,9 +813,7 @@ class TestStakePool:
         Check that pool was registered.
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = (
-            f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}_{no_of_addr}_{use_build_cmd}"
-        )
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{no_of_addr}_{use_build_cmd}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -876,7 +874,7 @@ class TestStakePool:
         * check that the pool deposit was returned to reward account
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -1002,7 +1000,7 @@ class TestStakePool:
         * check that the stake addresses were delegated
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -1157,7 +1155,7 @@ class TestStakePool:
         * check that the stake addresses is still delegated
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -1304,7 +1302,7 @@ class TestStakePool:
         * check that the pool metadata hash was correctly updated on chain
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
         no_of_addr = 3
 
         pool_name = f"pool_{rand_str}"
@@ -1438,7 +1436,7 @@ class TestStakePool:
         * check that the pool parameters were correctly updated on chain
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
         no_of_addr = 2
 
         pool_name = f"pool_{rand_str}"
@@ -1552,7 +1550,7 @@ class TestStakePool:
         * check that the pool was correctly registered on chain
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -1685,7 +1683,7 @@ class TestStakePool:
           is not registered (deposit is lost)
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -1784,7 +1782,7 @@ class TestPoolCost:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
-            temp_template = clusterlib_utils.get_temp_template(cluster)
+            temp_template = common.get_test_id(cluster)
 
             pool_owners = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster,
@@ -1860,7 +1858,7 @@ class TestPoolCost:
         """Create and register a stake pool with *pool cost* >= *minPoolCost*."""
         cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{rand_str}_{pool_cost}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{pool_cost}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -1974,6 +1972,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -1997,6 +1997,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -2020,6 +2022,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -2043,6 +2047,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -2080,6 +2086,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
@@ -2127,6 +2135,8 @@ class TestNegative:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
@@ -2172,7 +2182,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool_metadata = {
             "description": "cardano-node-tests E2E tests",
@@ -2197,7 +2207,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -2222,7 +2232,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -2247,7 +2257,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         pool_metadata = {
             "name": "cardano-node-tests",

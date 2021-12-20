@@ -8,6 +8,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -94,6 +95,7 @@ class TestUpdateProposals:
           update proposal, i.e. the second update proposal overwritten the first one
         """
         cluster = cluster_update_proposal
+        common.get_test_id(cluster)
 
         max_tx_execution_units = 11000000000
         max_block_execution_units = 110000000000

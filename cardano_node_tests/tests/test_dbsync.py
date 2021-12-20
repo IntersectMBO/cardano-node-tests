@@ -7,6 +7,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from packaging import version
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -91,6 +92,7 @@ class TestDBSync:
     def test_table_names(self, cluster):
         """Check that all the expected tables are present in db-sync."""
         # pylint: disable=unused-argument
+        common.get_test_id(cluster)
         assert self.DBSYNC_TABLES.issubset(dbsync_queries.query_table_names())
 
     @allure.link(helpers.get_vcs_link())
@@ -99,6 +101,8 @@ class TestDBSync:
     def test_blocks(self, cluster):  # noqa: C901
         """Check expected values in the `block` table in db-sync."""
         # pylint: disable=too-many-branches
+        common.get_test_id(cluster)
+
         tip = cluster.get_tip()
         block_no = int(tip["block"])
         epoch = int(tip["epoch"])

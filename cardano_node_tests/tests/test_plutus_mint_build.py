@@ -90,7 +90,7 @@ class TestBuildMinting:
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -209,7 +209,7 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -347,7 +347,7 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -513,7 +513,7 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -638,7 +638,7 @@ class TestBuildMinting:
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 

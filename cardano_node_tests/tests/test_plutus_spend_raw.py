@@ -13,6 +13,7 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_spend
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
@@ -474,7 +475,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
@@ -527,7 +528,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_context_eq
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         amount = 10_000_000
         deposit_amount = cluster.get_address_deposit()
 
@@ -642,7 +643,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_guessing_game
-        temp_template = f"{clusterlib_utils.get_temp_template(cluster)}_{script}"
+        temp_template = f"{common.get_test_id(cluster)}_{script}"
 
         if script.endswith("game_42_43"):
             datum_file = plutus_spend.PLUTUS_DIR / "typed-42.datum"
@@ -722,7 +723,7 @@ class TestLocking:
           and the expected error was raised
         """
         cluster = cluster_lock_always_fails
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_FAILS_PLUTUS,
@@ -780,7 +781,7 @@ class TestLocking:
         * check that the amount was not transferred and collateral UTxO was spent
         """
         cluster = cluster_lock_always_fails
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_FAILS_PLUTUS,
@@ -828,7 +829,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
         payment_addr = payment_addrs_lock_always_suceeds[0]
 
@@ -890,7 +891,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
         payment_addr = payment_addrs_lock_always_suceeds[0]
 
@@ -955,7 +956,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
@@ -1004,7 +1005,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs_lock_always_suceeds[0]
         dst_addr = payment_addrs_lock_always_suceeds[1]
@@ -1078,7 +1079,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         max_collateral_ins = cluster.get_protocol_params()["maxCollateralInputs"]
         collateral_utxos = []
@@ -1180,7 +1181,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         cluster = cluster_lock_always_suceeds
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,

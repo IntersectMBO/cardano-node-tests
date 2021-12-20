@@ -7,8 +7,8 @@ import pytest
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -52,6 +52,9 @@ class TestCLI:
         """Check the default protocol mode - command works even without specifying protocol mode."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:
             pytest.skip("runs on cluster in full cardano mode")
+
+        common.get_test_id(cluster)
+
         cluster.cli(
             [
                 "query",
@@ -71,6 +74,9 @@ class TestCLI:
         """Check that it is possible to return the whole UTxO on local cluster."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:
             pytest.skip("runs on cluster in full cardano mode")
+
+        common.get_test_id(cluster)
+
         cluster.cli(
             [
                 "query",
@@ -91,6 +97,8 @@ class TestCLI:
     )
     def test_testnet_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on testnets."""
+        common.get_test_id(cluster)
+
         magic_args = " ".join(cluster.magic_args)
         helpers.run_in_bash(f"cardano-cli query utxo --whole-utxo {magic_args} > /dev/null")
 
@@ -102,6 +110,8 @@ class TestCLI:
     @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
+        common.get_test_id(cluster)
+
         tx_body = cluster.view_tx(tx_body_file=self.TX_BODY_FILE)
         tx = cluster.view_tx(tx_file=self.TX_FILE)
         assert tx_body == tx
@@ -119,11 +129,13 @@ class TestAddressInfo:
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
     def test_address_info_payment(self, cluster: clusterlib.ClusterLib, addr_gen: str):
         """Check payment address info."""
+        temp_template = common.get_test_id(cluster)
+
         if addr_gen == "static":
             address = "addr_test1vzp4kj0rmnl5q5046e2yy697fndej56tm35jekemj6ew2gczp74wk"
         else:
             payment_rec = cluster.gen_payment_addr_and_keys(
-                name=clusterlib_utils.get_temp_template(cluster),
+                name=temp_template,
             )
             address = payment_rec.address
 
@@ -140,11 +152,13 @@ class TestAddressInfo:
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
     def test_address_info_stake(self, cluster: clusterlib.ClusterLib, addr_gen: str):
         """Check stake address info."""
+        temp_template = common.get_test_id(cluster)
+
         if addr_gen == "static":
             address = "stake_test1uz5mstpskyhpcvaw2enlfk8fa5k335cpd0lfz6chd5c2xpck3nld4"
         else:
             stake_rec = cluster.gen_stake_addr_and_keys(
-                name=clusterlib_utils.get_temp_template(cluster),
+                name=temp_template,
             )
             address = stake_rec.address
 
@@ -160,7 +174,7 @@ class TestAddressInfo:
     @allure.link(helpers.get_vcs_link())
     def test_address_info_script(self, cluster: clusterlib.ClusterLib):
         """Check script address info."""
-        temp_template = clusterlib_utils.get_temp_template(cluster)
+        temp_template = common.get_test_id(cluster)
 
         # create payment address
         payment_rec = cluster.gen_payment_addr_and_keys(
