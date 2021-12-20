@@ -25,10 +25,19 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
+
+if configuration.IS_XDIST:
+    xdist_sleep = time.sleep
+else:
+
+    def xdist_sleep(secs: float) -> None:
+        # pylint: disable=unused-argument
+        pass
 
 
 class Resources:
@@ -140,7 +149,7 @@ class ClusterManager:
         self.tmp_path_factory = tmp_path_factory
         self.pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
 
-        self.is_xdist = helpers.IS_XDIST
+        self.is_xdist = configuration.IS_XDIST
         if self.is_xdist:
             self.lock_dir = self.pytest_tmp_dir.parent
             self.range_num = 5
@@ -202,7 +211,7 @@ class ClusterManager:
         """Log message."""
         if not self.manager_log.is_file():
             return
-        with helpers.FileLockIfXdist(self.log_lock):
+        with locking.FileLockIfXdist(self.log_lock):
             with open(self.manager_log, "a", encoding="utf-8") as logfile:
                 logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
 
@@ -268,7 +277,7 @@ class ClusterManager:
 
     def set_needs_restart(self) -> None:
         """Indicate that the cluster needs restart."""
-        with helpers.FileLockIfXdist(self.cluster_lock):
+        with locking.FileLockIfXdist(self.cluster_lock):
             self._log(f"c{self.cluster_instance_num}: called `set_needs_restart`")
             _touch(self.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}")
 
@@ -298,7 +307,7 @@ class ClusterManager:
         if self._cluster_instance_num == -1:
             return
 
-        with helpers.FileLockIfXdist(self.cluster_lock):
+        with locking.FileLockIfXdist(self.cluster_lock):
             self._log(f"c{self.cluster_instance_num}: called `on_test_stop`")
 
             # remove resource locking files created by the worker
@@ -455,7 +464,7 @@ class _ClusterGetter:
             self.cm._log(
                 f"c{self.cm.cluster_instance_num}: failed to start cluster:\n{excp}\ncluster dead"
             )
-            if not helpers.IS_XDIST:
+            if not configuration.IS_XDIST:
                 pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
             _touch(self.cm.instance_dir / CLUSTER_DEAD_FILE)
             return False
@@ -677,10 +686,10 @@ class _ClusterGetter:
                 self._restart(start_cmd=start_cmd)
 
             if not first_iteration:
-                helpers.xdist_sleep(random.random() * sleep_delay)
+                xdist_sleep(random.random() * sleep_delay)
 
             # nothing time consuming can go under this lock as it will block all other workers
-            with helpers.FileLockIfXdist(self.cm.cluster_lock):
+            with locking.FileLockIfXdist(self.cm.cluster_lock):
                 test_on_worker = list(
                     self.cm.lock_dir.glob(
                         f"{CLUSTER_DIR_TEMPLATE}*/{TEST_RUNNING_GLOB}_{self.cm.worker_id}"

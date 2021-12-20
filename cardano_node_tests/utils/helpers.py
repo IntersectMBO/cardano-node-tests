@@ -22,33 +22,12 @@ from typing import Iterator
 from typing import Optional
 from typing import Union
 
-from filelock import FileLock
-
 from cardano_node_tests.utils.types import FileType
-
-# suppress messages from filelock
-logging.getLogger("filelock").setLevel(logging.WARNING)
 
 
 LOGGER = logging.getLogger(__name__)
 
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
-
-
-# Use dummy locking if not executing with multiple workers.
-# When running with multiple workers, operations with shared resources (like faucet addresses)
-# need to be locked to single worker (otherwise e.g. balances would not check).
-if os.environ.get("PYTEST_XDIST_TESTRUNUID"):
-    IS_XDIST = True
-    FileLockIfXdist: Any = FileLock
-    xdist_sleep = time.sleep
-else:
-    IS_XDIST = False
-    FileLockIfXdist = contextlib.nullcontext
-
-    def xdist_sleep(secs: float) -> None:
-        # pylint: disable=all
-        pass
 
 
 @contextlib.contextmanager
@@ -97,6 +76,7 @@ def run_command(command: Union[str, list], workdir: FileType = "", shell: bool =
     else:
         cmd = command
 
+    # pylint: disable=consider-using-with
     if workdir:
         with change_cwd(workdir):
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
@@ -187,16 +167,16 @@ def wait_for(
 
 def checksum(filename: FileType, blocksize: int = 65536) -> str:
     """Return file checksum."""
-    hash = hashlib.blake2b()
+    hash_o = hashlib.blake2b()
     with open(filename, "rb") as f:
         for block in iter(lambda: f.read(blocksize), b""):
-            hash.update(block)
-    return hash.hexdigest()
+            hash_o.update(block)
+    return hash_o.hexdigest()
 
 
 def write_json(location: FileType, content: dict) -> FileType:
     """Write dictionary content to JSON file."""
-    with open(Path(location).expanduser(), "w") as out_file:
+    with open(Path(location).expanduser(), "w", encoding="utf-8") as out_file:
         out_file.write(json.dumps(content, indent=4))
     return location
 
@@ -241,12 +221,12 @@ def get_cmd_path(cmd: str) -> Path:
 
 def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str) -> None:
     """Replace a string in file with another string."""
-    with open(infile) as in_fp:
+    with open(infile, encoding="utf-8") as in_fp:
         content = in_fp.read()
 
     replaced_content = content.replace(orig_str, new_str)
 
-    with open(outfile, "w") as out_fp:
+    with open(outfile, "w", encoding="utf-8") as out_fp:
         out_fp.write(replaced_content)
 
 
