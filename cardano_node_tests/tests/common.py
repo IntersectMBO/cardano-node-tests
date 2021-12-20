@@ -1,9 +1,12 @@
 import functools
+import inspect
 from pathlib import Path
 from typing import Any
 
 from _pytest.tmpdir import TempdirFactory
+from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -38,3 +41,19 @@ def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
     basetemp = basetemp / "tmp"
     basetemp.mkdir(exist_ok=True)
     return basetemp
+
+
+def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
+    """Return unique test ID - function name + assigned cluster instance + random string.
+
+    Log the test ID into cluster manager log file.
+    """
+    func_name = inspect.currentframe().f_back.f_code.co_name  # type: ignore
+    rand_str = clusterlib.get_rand_str(3)
+    test_id = f"{func_name}_ci{cluster_obj.cluster_id}_{rand_str}"
+
+    # log to cluster manager log file - getting test ID happens at the beginning of a test,
+    # so the log entry can be used for determining when the test started
+    cm: cluster_management.ClusterManager = cluster_obj._cluster_manager  # type: ignore
+    cm._log(f"c{cm.cluster_instance_num}: got ID `{test_id}` for test function `{func_name}`")
+    return test_id
