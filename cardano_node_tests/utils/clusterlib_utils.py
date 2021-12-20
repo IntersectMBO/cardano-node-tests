@@ -19,6 +19,7 @@ import cbor2
 import yaml
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils.types import FileType
@@ -49,8 +50,13 @@ def get_temp_template(cluster_obj: clusterlib.ClusterLib) -> str:
     """Return test function name and assigned cluster instance."""
     func_name = inspect.currentframe().f_back.f_code.co_name  # type: ignore
     rand_str = clusterlib.get_rand_str(3)
-    temp_teplate = f"{func_name}_ci{cluster_obj.cluster_id}_{rand_str}"
-    return temp_teplate
+    test_id = f"{func_name}_ci{cluster_obj.cluster_id}_{rand_str}"
+
+    # log to cluster manager log file - getting test ID happens at the beginning of a test,
+    # so the log entry can be used for determining when the test started
+    cm: cluster_management.ClusterManager = cluster_obj._cluster_manager  # type: ignore
+    cm._log(f"c{cm.cluster_instance_num}: got ID `{test_id}` for test function `{func_name}`")
+    return test_id
 
 
 def register_stake_address(
