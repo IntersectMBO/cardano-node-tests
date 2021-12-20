@@ -7,6 +7,7 @@ LAUNCH_PATH = Path(os.getcwd())
 
 NETWORK_MAGIC_LOCAL = 42
 DBSYNC_DB = "dbsync"
+IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
 TESTNET_POOL_IDS = (
     "pool18yslg3q320jex6gsmetukxvzm7a20qd90wsll9anlkrfua38flr",

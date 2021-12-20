@@ -28,6 +28,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import locking
 
 LOGGER = logging.getLogger(__name__)
 DEREG_BUFFER_SEC = 30
@@ -58,7 +59,7 @@ def pool_cost_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     pytest_globaltemp = common.get_pytest_globaltemp(tmp_path_factory)
 
     # need to lock because this same fixture can run on several workers in parallel
-    with helpers.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_pool_500.lock"):
+    with locking.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_pool_500.lock"):
         destdir = pytest_globaltemp / "startup_files_pool_500"
         destdir.mkdir(exist_ok=True)
 

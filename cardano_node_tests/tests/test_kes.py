@@ -17,6 +17,7 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -58,7 +59,7 @@ def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     max_kes_evolutions = 10
 
     # need to lock because this same fixture can run on several workers in parallel
-    with helpers.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_short_kes.lock"):
+    with locking.FileLockIfXdist(f"{pytest_globaltemp}/startup_files_short_kes.lock"):
         destdir = pytest_globaltemp / "startup_files_short_kes"
         destdir.mkdir(exist_ok=True)
 
