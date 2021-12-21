@@ -1,4 +1,3 @@
-import functools
 import inspect
 from pathlib import Path
 from typing import Any
@@ -8,6 +7,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 
@@ -20,7 +20,7 @@ BUILD_SKIP_MSG = (
 )
 
 
-@functools.lru_cache
+@helpers.callonce
 def hypothesis_settings() -> Any:
     # pylint: disable=import-outside-toplevel
     import hypothesis
