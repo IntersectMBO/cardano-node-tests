@@ -193,6 +193,8 @@ def _testnet_cleanup(pytest_tmp_dir: Path) -> None:
     cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
 
     destdir = pytest_tmp_dir.parent / f"cleanup-{pytest_tmp_dir.stem}-{helpers.get_rand_str(8)}"
+    destdir.mkdir(parents=True, exist_ok=True)
+
     with helpers.change_cwd(dir_path=destdir):
         testnet_cleanup.cleanup(cluster_obj=cluster_obj, location=pytest_tmp_dir)
 
