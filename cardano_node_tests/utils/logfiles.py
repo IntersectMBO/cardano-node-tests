@@ -17,6 +17,7 @@ import pytest
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ def add_ignore_rule(files_glob: str, regex: str, rules_file_id: str) -> None:
     """Add ignore rule for expected errors."""
     state_dir = cluster_nodes.get_cluster_env().state_dir
     rules_file = state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
-    basetemp = helpers.get_basetemp()
+    basetemp = temptools.get_basetemp()
 
     with locking.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
         with open(rules_file, "a", encoding="utf-8") as infile:
@@ -93,7 +94,7 @@ def del_rules_file(rules_file_id: str) -> None:
     """Delete rules file identified by `rules_file_id`."""
     state_dir = cluster_nodes.get_cluster_env().state_dir
     rules_file = state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
-    basetemp = helpers.get_basetemp()
+    basetemp = temptools.get_basetemp()
 
     with locking.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
         try:
@@ -106,7 +107,7 @@ def get_ignore_rules() -> List[Tuple[str, str]]:
     """Get rules (file glob and regex) for ignored errors."""
     rules: List[Tuple[str, str]] = []
     state_dir = cluster_nodes.get_cluster_env().state_dir
-    basetemp = helpers.get_basetemp()
+    basetemp = temptools.get_basetemp()
 
     with locking.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
         for rules_file in state_dir.glob(f"{ERRORS_RULES_FILE_NAME}_*"):
