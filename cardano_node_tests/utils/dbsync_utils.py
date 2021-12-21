@@ -182,7 +182,7 @@ def check_address_reward(
 
     if errors:
         err_str = ", ".join(errors)
-        raise AssertionError(f"The 'earned epoch' and 'spendable epoch' don't match: {err_str}")
+        raise AssertionError(f"The 'earned epoch' and 'spendable epoch' don't match: {err_str}.")
 
     return reward
 
@@ -255,7 +255,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
         if tx_id == -1:
             tx_id = query_row.tx_id
         if tx_id != query_row.tx_id:
-            raise AssertionError("Transaction ID differs from the expected ID")
+            raise AssertionError("Transaction ID differs from the expected ID.")
 
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:
@@ -717,7 +717,7 @@ def check_pool_deregistration(pool_id: str, retiring_epoch: int) -> Optional[Poo
             retiring_epoch == db_pool_data.retiring_epoch
         ), f"Mismatch in epoch values: {retiring_epoch} VS {db_pool_data.retiring_epoch}"
     else:
-        raise AssertionError(f"Stake pool `{pool_id}` not retired")
+        raise AssertionError(f"Stake pool `{pool_id}` not retired.")
 
     return db_pool_data
 
