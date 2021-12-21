@@ -223,11 +223,11 @@ def check_file_arg(file_path: str) -> Optional[Path]:
 
 
 def get_cmd_path(cmd: str) -> Path:
-    """Return file path of the command."""
-    start_script = shutil.which(cmd)
-    if not start_script:
-        raise AssertionError(f"The `{cmd}` not found on PATH")
-    return Path(start_script)
+    """Return file path of a command."""
+    cmd_path = shutil.which(cmd)
+    if not cmd_path:
+        raise AssertionError(f"The `{cmd}` was not found on PATH.")
+    return Path(cmd_path)
 
 
 def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str) -> None:
