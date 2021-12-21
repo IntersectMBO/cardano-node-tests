@@ -2029,7 +2029,7 @@ class TestRewards:
                 if pool_id in cluster.get_stake_distribution():
                     break
             else:
-                raise AssertionError(f"Stake pool `{pool_id}` not registered even after 5 epochs")
+                raise AssertionError(f"Stake pool `{pool_id}` not registered even after 5 epochs.")
 
             # wait before checking delegation and rewards
             cluster.wait_for_new_epoch(3, padding_seconds=30)

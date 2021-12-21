@@ -677,7 +677,7 @@ class _ClusterGetter:
         if start_cmd:
             if not (singleton or mark):
                 raise AssertionError(
-                    "Custom start command can be used only together with `singleton` or `mark`"
+                    "Custom start command can be used only together with `singleton` or `mark`."
                 )
             # always clean after test(s) that started cluster with custom configuration
             cleanup = True

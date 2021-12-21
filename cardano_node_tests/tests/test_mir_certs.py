@@ -49,7 +49,7 @@ def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> List[dbsync_qu
             break
     else:
         raise AssertionError(
-            f"Got {len(pots_records)} record(s) instead of expected {expected_len}"
+            f"Got {len(pots_records)} record(s) instead of expected {expected_len}."
         )
 
     return pots_records

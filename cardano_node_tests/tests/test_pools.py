@@ -128,7 +128,7 @@ def _check_staking(
         if stake_pool_id in cluster_obj.get_stake_distribution():
             break
     else:
-        raise AssertionError(f"Stake pool `{stake_pool_id}` not registered even after 3 epochs")
+        raise AssertionError(f"Stake pool `{stake_pool_id}` not registered even after 3 epochs.")
 
     for owner in pool_owners:
         stake_addr_info = cluster_obj.get_stake_addr_info(owner.stake.address)
@@ -1122,7 +1122,8 @@ class TestStakePool:
                 break
         else:
             raise AssertionError(
-                f"Stake pool `{pool_creation_out.stake_pool_id}` not registered even after 5 epochs"
+                f"Stake pool `{pool_creation_out.stake_pool_id}` not registered "
+                "even after 5 epochs."
             )
         # check that pool was correctly setup
         _check_pool(
@@ -1259,7 +1260,7 @@ class TestStakePool:
         for __ in range(3):
             cluster.wait_for_new_epoch(padding_seconds=10)
             if not cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params:
-                raise AssertionError("Pool `{pool_creation_out.stake_pool_id}` got deregistered")
+                raise AssertionError("Pool `{pool_creation_out.stake_pool_id}` got deregistered.")
 
         # check that pool is still correctly setup
         _check_pool(
