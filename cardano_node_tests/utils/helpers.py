@@ -13,7 +13,6 @@ import shutil
 import signal
 import string
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -122,14 +121,6 @@ def run_in_bash(command: str, workdir: FileType = "") -> bytes:
 def get_current_commit() -> str:
     # TODO: make sure we are in correct repo
     return os.environ.get("GIT_REVISION") or run_command("git rev-parse HEAD").decode().strip()
-
-
-@callonce
-def get_basetemp() -> Path:
-    """Return base temporary directory for tests artifacts."""
-    tempdir = Path(tempfile.gettempdir()) / "cardano-node-tests"
-    tempdir.mkdir(mode=0o700, exist_ok=True)
-    return tempdir
 
 
 # TODO: unify with the implementation in clusterlib
