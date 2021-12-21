@@ -27,6 +27,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
@@ -147,15 +148,14 @@ class ClusterManager:
         self.worker_id = worker_id
         self.pytest_config = pytest_config
         self.tmp_path_factory = tmp_path_factory
-        self.pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
+        self.pytest_tmp_dir = temptools.get_pytest_worker_tmp(tmp_path_factory)
+        self.lock_dir = temptools.get_pytest_root_tmp(tmp_path_factory)
 
         self.is_xdist = configuration.IS_XDIST
         if self.is_xdist:
-            self.lock_dir = self.pytest_tmp_dir.parent
             self.range_num = 5
             self.num_of_instances = CLUSTERS_COUNT
         else:
-            self.lock_dir = self.pytest_tmp_dir
             self.range_num = 1
             self.num_of_instances = 1
 

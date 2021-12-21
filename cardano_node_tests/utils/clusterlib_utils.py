@@ -20,6 +20,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
@@ -115,7 +116,9 @@ def fund_from_genesis(
     if not fund_dst:
         return
 
-    with locking.FileLockIfXdist(f"{helpers.get_basetemp()}/{cluster_obj.genesis_utxo_addr}.lock"):
+    with locking.FileLockIfXdist(
+        f"{temptools.get_basetemp()}/{cluster_obj.genesis_utxo_addr}.lock"
+    ):
         tx_name = tx_name or helpers.get_timestamped_rand_str()
         tx_name = f"{tx_name}_genesis_funding"
         fund_tx_files = clusterlib.TxFiles(
@@ -148,7 +151,7 @@ def return_funds_to_faucet(
     """
     tx_name = tx_name or helpers.get_timestamped_rand_str()
     tx_name = f"{tx_name}_return_funds"
-    with locking.FileLockIfXdist(f"{helpers.get_basetemp()}/{faucet_addr}.lock"):
+    with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{faucet_addr}.lock"):
         try:
             logging.disable(logging.ERROR)
             for src in src_addrs:
@@ -193,7 +196,7 @@ def fund_from_faucet(
         return
 
     src_address = faucet_data["payment"].address
-    with locking.FileLockIfXdist(f"{helpers.get_basetemp()}/{src_address}.lock"):
+    with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{src_address}.lock"):
         tx_name = tx_name or helpers.get_timestamped_rand_str()
         tx_name = f"{tx_name}_funding"
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])

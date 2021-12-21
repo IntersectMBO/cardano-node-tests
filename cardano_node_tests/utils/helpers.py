@@ -13,13 +13,14 @@ import shutil
 import signal
 import string
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Iterator
 from typing import Optional
+from typing import TypeVar
 from typing import Union
 
 from cardano_node_tests.utils.types import FileType
@@ -28,6 +29,24 @@ from cardano_node_tests.utils.types import FileType
 LOGGER = logging.getLogger(__name__)
 
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
+
+TCallable = TypeVar("TCallable", bound=Callable)
+
+
+def callonce(func: TCallable) -> TCallable:
+    """Call a function and cache its return value."""
+    result: list = []
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):  # type: ignore
+        if result:
+            return result[0]
+
+        retval = func(*args, **kwargs)
+        result.append(retval)
+        return retval
+
+    return cast(TCallable, wrapper)
 
 
 @contextlib.contextmanager
@@ -98,18 +117,10 @@ def run_in_bash(command: str, workdir: FileType = "") -> bytes:
     return run_command(cmd, workdir=workdir)
 
 
-@functools.lru_cache
+@callonce
 def get_current_commit() -> str:
     # TODO: make sure we are in correct repo
     return os.environ.get("GIT_REVISION") or run_command("git rev-parse HEAD").decode().strip()
-
-
-@functools.lru_cache
-def get_basetemp() -> Path:
-    """Return base temporary directory for tests artifacts."""
-    tempdir = Path(tempfile.gettempdir()) / "cardano-node-tests"
-    tempdir.mkdir(mode=0o700, exist_ok=True)
-    return tempdir
 
 
 # TODO: unify with the implementation in clusterlib
