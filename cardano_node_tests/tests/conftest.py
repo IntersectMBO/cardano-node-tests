@@ -22,6 +22,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -130,7 +131,7 @@ def pytest_collection_modifyitems(config: Any, items: list) -> None:
 @pytest.fixture(scope="session")
 def change_dir(tmp_path_factory: TempdirFactory) -> None:
     """Change CWD to temp directory before running tests."""
-    tmp_path = tmp_path_factory.getbasetemp()
+    tmp_path = temptools.get_pytest_worker_tmp(tmp_path_factory)
     os.chdir(tmp_path)
     LOGGER.info(f"Changed CWD to '{tmp_path}'.")
 
@@ -184,7 +185,7 @@ def _stop_all_cluster_instances(
     _save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
-def _testnet_cleanup(pytest_tmp_dir: Path) -> None:
+def _testnet_cleanup(pytest_root_tmp: Path) -> None:
     """Perform testnet cleanup at the end of session."""
     if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET_NOPOOLS:
         return
@@ -192,11 +193,11 @@ def _testnet_cleanup(pytest_tmp_dir: Path) -> None:
     # there's only one cluster instance for testnets, so we don't need to use cluster manager
     cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
 
-    destdir = pytest_tmp_dir.parent / f"cleanup-{pytest_tmp_dir.stem}-{helpers.get_rand_str(8)}"
+    destdir = pytest_root_tmp.parent / f"cleanup-{pytest_root_tmp.stem}-{helpers.get_rand_str(8)}"
     destdir.mkdir(parents=True, exist_ok=True)
 
     with helpers.change_cwd(dir_path=destdir):
-        testnet_cleanup.cleanup(cluster_obj=cluster_obj, location=pytest_tmp_dir)
+        testnet_cleanup.cleanup(cluster_obj=cluster_obj, location=pytest_root_tmp)
 
 
 def _save_env_for_allure(pytest_config: Config) -> None:
@@ -220,7 +221,7 @@ def _save_env_for_allure(pytest_config: Config) -> None:
 def testenv_setup_teardown(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
 ) -> Generator[None, None, None]:
-    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
+    pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
 
     # save environment info for Allure
     _save_env_for_allure(request.config)
@@ -238,36 +239,34 @@ def testenv_setup_teardown(
             tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
-        _testnet_cleanup(pytest_tmp_dir=pytest_tmp_dir)
+        _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
         _stop_all_cluster_instances(
             tmp_path_factory=tmp_path_factory,
             worker_id=worker_id,
             pytest_config=request.config,
-            pytest_tmp_dir=pytest_tmp_dir,
+            pytest_tmp_dir=pytest_root_tmp,
         )
         return
 
-    lock_dir = pytest_tmp_dir = pytest_tmp_dir.parent
-
     # pylint: disable=consider-using-with
-    open(lock_dir / f".started_session_{worker_id}", "a", encoding="utf-8").close()
+    open(pytest_root_tmp / f".started_session_{worker_id}", "a", encoding="utf-8").close()
 
     yield
 
-    with locking.FileLockIfXdist(f"{lock_dir}/{cluster_management.CLUSTER_LOCK}"):
+    with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
         cluster_manager_obj = cluster_management.ClusterManager(
             tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
 
-        os.remove(lock_dir / f".started_session_{worker_id}")
-        if not list(lock_dir.glob(".started_session_*")):
-            _testnet_cleanup(pytest_tmp_dir=pytest_tmp_dir)
+        os.remove(pytest_root_tmp / f".started_session_{worker_id}")
+        if not list(pytest_root_tmp.glob(".started_session_*")):
+            _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
             _stop_all_cluster_instances(
                 tmp_path_factory=tmp_path_factory,
                 worker_id=worker_id,
                 pytest_config=request.config,
-                pytest_tmp_dir=pytest_tmp_dir,
+                pytest_tmp_dir=pytest_root_tmp,
             )
 
 

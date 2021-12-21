@@ -1,5 +1,4 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
-import functools
 import json
 import logging
 import os
@@ -260,7 +259,7 @@ class TestnetNopoolsCluster(TestnetCluster):
         )
 
 
-@functools.lru_cache
+@helpers.callonce
 def get_cluster_type() -> ClusterType:
     """Return instance of the cluster type indicated by configuration."""
     if configuration.BOOTSTRAP_DIR and configuration.NOPOOLS:

@@ -1,13 +1,10 @@
-import functools
 import inspect
-from pathlib import Path
 from typing import Any
 
-from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
-from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 
@@ -20,7 +17,7 @@ BUILD_SKIP_MSG = (
 )
 
 
-@functools.lru_cache
+@helpers.callonce
 def hypothesis_settings() -> Any:
     # pylint: disable=import-outside-toplevel
     import hypothesis
@@ -32,15 +29,6 @@ def hypothesis_settings() -> Any:
             hypothesis.HealthCheck.function_scoped_fixture,
         ),
     )
-
-
-def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
-    """Return global temporary directory for a single pytest run."""
-    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
-    basetemp = pytest_tmp_dir.parent if configuration.IS_XDIST else pytest_tmp_dir
-    basetemp = basetemp / "tmp"
-    basetemp.mkdir(exist_ok=True)
-    return basetemp
 
 
 def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
