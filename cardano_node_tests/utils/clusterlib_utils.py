@@ -66,7 +66,7 @@ def register_stake_address(
     )
 
     if not cluster_obj.get_stake_addr_info(pool_user.stake.address):
-        raise AssertionError(f"The address {pool_user.stake.address} was not registered")
+        raise AssertionError(f"The address {pool_user.stake.address} was not registered.")
 
     return tx_raw_output
 
@@ -625,7 +625,7 @@ def new_tokens(
         token = f"{policyid}.{asset_name}"
 
         if cluster_obj.get_utxo(address=token_mint_addr.address, coins=[token]):
-            raise AssertionError("The token already exists")
+            raise AssertionError("The token already exists.")
 
         tokens_to_mint.append(
             TokenRecord(
@@ -647,7 +647,7 @@ def new_tokens(
     for token_rec in tokens_to_mint:
         token_utxo = cluster_obj.get_utxo(address=token_mint_addr.address, coins=[token_rec.token])
         if not (token_utxo and token_utxo[0].amount == amount):
-            raise AssertionError("The token was not minted")
+            raise AssertionError("The token was not minted.")
 
     return tokens_to_mint
 
@@ -758,7 +758,7 @@ def wait_for_epoch_interval(
 
     if start_abs >= stop_abs:
         raise AssertionError(
-            f"The 'start' ({start_abs}) needs to be lower than 'stop' ({stop_abs})"
+            f"The 'start' ({start_abs}) needs to be lower than 'stop' ({stop_abs})."
         )
 
     start_epoch = cluster_obj.get_epoch()
@@ -777,12 +777,12 @@ def wait_for_epoch_interval(
         if stop_abs < s_from_epoch_start:
             if force_epoch:
                 raise AssertionError(
-                    f"Cannot reach the given interval ({start_abs}s to {stop_abs}s) in this epoch"
+                    f"Cannot reach the given interval ({start_abs}s to {stop_abs}s) in this epoch."
                 )
             if cluster_obj.get_epoch() >= start_epoch + 2:
                 raise AssertionError(
                     f"Was unable to reach the given interval ({start_abs}s to {stop_abs}s) "
-                    "in past 3 epochs"
+                    "in past 3 epochs."
                 )
             cluster_obj.wait_for_new_epoch()
             continue
@@ -798,7 +798,7 @@ def wait_for_epoch_interval(
         if not check_slot:
             break
     else:
-        raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s")
+        raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s.")
 
 
 def get_amount(
