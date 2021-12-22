@@ -1,5 +1,5 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i bash -p niv nix gnugrep gnumake gnutar coreutils adoptopenjdk-jre-bin curl git
+#! nix-shell -i bash -p niv nix gnugrep gnumake gnutar coreutils adoptopenjdk-jre-bin curl git xz
 #! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
@@ -35,6 +35,13 @@ retval="$?"
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/grep_errors.sh"
+
+# save testing artifacts
+# shellcheck disable=SC1090,SC1091
+. "$REPODIR/.buildkite/save_artifacts.sh"
+
+# compress scheduling log
+xz scheduling.log
 
 echo
 echo "Dir content:"
