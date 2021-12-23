@@ -43,6 +43,14 @@ if HAS_DBSYNC:
 else:
     DBSYNC_BIN = Path("nonexistent")
 
+HAS_SMASH = HAS_DBSYNC and bool(os.environ.get("USE_SMASH"))
+if HAS_SMASH:
+    SMASH_BIN = (
+        Path(os.environ["DBSYNC_REPO"]) / "smash-server" / "bin" / "cardano-smash-server"
+    ).resolve()
+else:
+    SMASH_BIN = Path("nonexistent")
+
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 
 # determine what scripts to use to start the cluster

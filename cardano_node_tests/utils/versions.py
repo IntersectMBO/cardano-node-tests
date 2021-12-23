@@ -39,6 +39,12 @@ class Versions:
         self.dbsync_ghc = dbsync_version_db.get("ghc")
         self.dbsync_git_rev = dbsync_version_db.get("git_rev")
 
+        smash_version_db = self.get_smash_version() if configuration.HAS_SMASH else {}
+        self.smash = version.parse(smash_version_db.get("version") or "0")
+        self.smash_platform = smash_version_db.get("platform")
+        self.smash_ghc = smash_version_db.get("ghc")
+        self.smash_git_rev = smash_version_db.get("git_rev")
+
     def get_cardano_version(self) -> dict:
         """Return version info for cardano-node."""
         out = helpers.run_command("cardano-node --version").decode().strip()
@@ -64,6 +70,19 @@ class Versions:
             "git_rev": git_info.split(" ")[-1],
         }
         return version_db
+
+    def get_smash_version(self) -> dict:
+        """Return version info for smash."""
+        out = helpers.run_command(f"{configuration.SMASH_BIN} --version").decode().strip()
+        env_info, git_info, *__ = out.splitlines()
+        smash, platform, ghc, *__ = env_info.split(" - ")
+        version_smash = {
+            "version": smash.split(" ")[-1],
+            "platform": platform,
+            "ghc": ghc,
+            "git_rev": git_info.split(" ")[-1],
+        }
+        return version_smash
 
     def __repr__(self) -> str:
         return (

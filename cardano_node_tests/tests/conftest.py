@@ -73,6 +73,13 @@ def pytest_configure(config: Any) -> None:
         config._metadata["db-sync ghc"] = VERSIONS.dbsync_ghc
         config._metadata["db-sync exe"] = str(configuration.DBSYNC_BIN)
 
+    config._metadata["HAS_SMASH"] = str(configuration.HAS_SMASH)
+    if configuration.HAS_SMASH:
+        config._metadata["smash"] = str(VERSIONS.smash)
+        config._metadata["smash rev"] = VERSIONS.smash_git_rev
+        config._metadata["smash ghc"] = VERSIONS.smash_ghc
+        config._metadata["smash exe"] = str(configuration.SMASH_BIN)
+
     if "nix/store" not in config._metadata["cardano-cli exe"]:
         LOGGER.warning("WARNING: Not using `cardano-cli` from nix!")
 
@@ -116,6 +123,27 @@ def _mark_needs_dbsync_tests(items: list) -> bool:
     return True
 
 
+def _mark_needs_smash_tests(items: list) -> bool:
+    """Mark 'needs_smash' tests with additional markers."""
+    skip_marker = pytest.mark.skip(reason="smash not available")
+    smash_marker = pytest.mark.smash
+
+    for item in items:
+        if "needs_smash" not in item.keywords:
+            continue
+
+        # all tests marked with 'needs_smash' are smash tests, and should be marked
+        # with the 'smash' marker as well
+        if "smash" not in item.keywords:
+            item.add_marker(smash_marker)
+
+        # skip all tests that require smash when smash is not available
+        if not configuration.HAS_SMASH:
+            item.add_marker(skip_marker)
+
+    return True
+
+
 @pytest.mark.tryfirst
 def pytest_collection_modifyitems(config: Any, items: list) -> None:
     # prevent on slave nodes (xdist)
@@ -126,6 +154,7 @@ def pytest_collection_modifyitems(config: Any, items: list) -> None:
         return
 
     _mark_needs_dbsync_tests(items=items)
+    _mark_needs_smash_tests(items=items)
 
 
 @pytest.fixture(scope="session")
