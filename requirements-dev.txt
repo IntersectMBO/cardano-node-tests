@@ -12,20 +12,3 @@ Sphinx==3.2.1
 m2r2
 numpydoc
 sphinx_rtd_theme
-
-# install
-allure-pytest
-cardano-clusterlib
-cbor2
-filelock
-hypothesis
-psycopg2-binary
-pydantic
-pytest
-pytest-html
-pytest-metadata
-pytest-order
-pytest-xdist
-pyyaml
-requests
-setuptools>=21.0.0
