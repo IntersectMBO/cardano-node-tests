@@ -6,7 +6,7 @@
   "maxProposalSize": "700",
   "mpcThd": "20000000000000",
   "scriptVersion": 0,
-  "slotDuration": "200",
+  "slotDuration": "2000",
   "softforkRule": {
     "initThd": "900000000000000",
     "minThd": "600000000000000",
