@@ -8,6 +8,7 @@ import inspect
 import logging
 import os
 import random
+import shutil
 import time
 from pathlib import Path
 from typing import Any
@@ -148,8 +149,7 @@ class ClusterManager:
         self.worker_id = worker_id
         self.pytest_config = pytest_config
         self.tmp_path_factory = tmp_path_factory
-        self.pytest_tmp_dir = temptools.get_pytest_worker_tmp(tmp_path_factory)
-        self.lock_dir = temptools.get_pytest_root_tmp(tmp_path_factory)
+        self.pytest_tmp_dir = temptools.get_pytest_root_tmp(tmp_path_factory)
 
         self.is_xdist = configuration.IS_XDIST
         if self.is_xdist:
@@ -159,8 +159,8 @@ class ClusterManager:
             self.range_num = 1
             self.num_of_instances = 1
 
-        self.cluster_lock = f"{self.lock_dir}/{CLUSTER_LOCK}"
-        self.log_lock = f"{self.lock_dir}/{LOG_LOCK}"
+        self.cluster_lock = f"{self.pytest_tmp_dir}/{CLUSTER_LOCK}"
+        self.log_lock = f"{self.pytest_tmp_dir}/{LOG_LOCK}"
         self.manager_log = self._init_log()
 
         self._cluster_instance_num = -1
@@ -182,7 +182,7 @@ class ClusterManager:
 
     @property
     def instance_dir(self) -> Path:
-        instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{self.cluster_instance_num}"
+        instance_dir = self.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{self.cluster_instance_num}"
         return instance_dir
 
     @property
@@ -203,7 +203,7 @@ class ClusterManager:
             # create the log file if it doesn't exist
             _touch(run_log)
         else:
-            run_log = self.lock_dir / RUN_LOG_FILE
+            run_log = self.pytest_tmp_dir / RUN_LOG_FILE
 
         return run_log.resolve()
 
@@ -216,11 +216,39 @@ class ClusterManager:
                 logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
 
     def _create_startup_files_dir(self, instance_num: int) -> Path:
-        instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        instance_dir = self.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
         rand_str = clusterlib.get_rand_str(8)
         startup_files_dir = instance_dir / "startup_files" / rand_str
         startup_files_dir.mkdir(exist_ok=True, parents=True)
         return startup_files_dir
+
+    def save_cluster_artifacts(self, state_dir: Path) -> None:
+        """Save cluster artifacts (logs, certs, etc.) to pytest temp dir."""
+        destdir = (
+            self.pytest_tmp_dir
+            / "cluster_artifacts"
+            / f"{state_dir.name}_{clusterlib.get_rand_str(8)}"
+        )
+        destdir.mkdir(parents=True)
+
+        files_list = list(state_dir.glob("*.std*"))
+        files_list.extend(list(state_dir.glob("*.json")))
+        dirs_to_copy = ("nodes", "shelley")
+
+        for fpath in files_list:
+            shutil.copy(fpath, destdir)
+        for dname in dirs_to_copy:
+            src_dir = state_dir / dname
+            if not src_dir.exists():
+                continue
+            shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
+
+        if not os.listdir(destdir):
+            destdir.rmdir()
+            return
+
+        LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
+        shutil.rmtree(state_dir, ignore_errors=True)
 
     def save_worker_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this pytest worker.
@@ -243,7 +271,7 @@ class ClusterManager:
         """Stop all cluster instances."""
         self._log("called `stop_all_clusters`")
         for instance_num in range(self.num_of_instances):
-            instance_dir = self.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+            instance_dir = self.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
             if (
                 not (instance_dir / CLUSTER_RUNNING_FILE).exists()
                 or (instance_dir / CLUSTER_STOPPED_FILE).exists()
@@ -271,7 +299,7 @@ class ClusterManager:
                 log_file=state_dir / CLUSTER_START_CMDS_LOG,
                 pytest_config=self.pytest_config,
             )
-            cluster_nodes.save_cluster_artifacts(artifacts_dir=self.pytest_tmp_dir, clean=True)
+            self.save_cluster_artifacts(state_dir)
             _touch(instance_dir / CLUSTER_STOPPED_FILE)
             self._log(f"stopped cluster instance {instance_num}")
 
@@ -375,14 +403,6 @@ class _ClusterGetter:
     def __init__(self, cluster_manager: ClusterManager) -> None:
         self.cm = cluster_manager  # pylint: disable=invalid-name
 
-    def _restart_save_cluster_artifacts(self, clean: bool = False) -> None:
-        """Save cluster artifacts (logs, certs, etc.) to pytest temp dir before cluster restart."""
-        cluster_obj = self.cm.cache.cluster_obj
-        if not cluster_obj:
-            return
-
-        cluster_nodes.save_cluster_artifacts(artifacts_dir=self.cm.pytest_tmp_dir, clean=clean)
-
     def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> bool:  # noqa: C901
         """Restart cluster.
 
@@ -444,7 +464,7 @@ class _ClusterGetter:
                     log_file=state_dir / CLUSTER_START_CMDS_LOG,
                     pytest_config=self.cm.pytest_config,
                 )
-                self._restart_save_cluster_artifacts(clean=True)
+                self.cm.save_cluster_artifacts(state_dir)
 
             try:
                 _kill_supervisor(self.cm.cluster_instance_num)
@@ -481,7 +501,7 @@ class _ClusterGetter:
 
     def _is_restart_needed(self, instance_num: int) -> bool:
         """Check if it is necessary to restart cluster."""
-        instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        instance_dir = self.cm.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
         if not (instance_dir / CLUSTER_RUNNING_FILE).exists():
             return True
         if list(instance_dir.glob(f"{RESTART_NEEDED_GLOB}_*")):
@@ -491,7 +511,7 @@ class _ClusterGetter:
     def _on_marked_test_stop(self, instance_num: int) -> None:
         """Perform actions after marked tests are finished."""
         self.cm._log(f"c{instance_num}: in `_on_marked_test_stop`")
-        instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        instance_dir = self.cm.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
 
         # set cluster to be restarted if needed
         restart_after_mark_files = list(instance_dir.glob(f"{RESTART_AFTER_MARK_GLOB}_*"))
@@ -617,7 +637,7 @@ class _ClusterGetter:
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
         # make sure instance dir exists
-        instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        instance_dir = self.cm.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
         instance_dir.mkdir(exist_ok=True, parents=True)
 
         cluster_obj = self.cm.cache.cluster_obj
@@ -693,7 +713,7 @@ class _ClusterGetter:
             # nothing time consuming can go under this lock as it will block all other workers
             with locking.FileLockIfXdist(self.cm.cluster_lock):
                 test_on_worker = list(
-                    self.cm.lock_dir.glob(
+                    self.cm.pytest_tmp_dir.glob(
                         f"{CLUSTER_DIR_TEMPLATE}*/{TEST_RUNNING_GLOB}_{self.cm.worker_id}"
                     )
                 )
@@ -718,7 +738,7 @@ class _ClusterGetter:
                     if selected_instance != -1 and instance_num != selected_instance:
                         continue
 
-                    instance_dir = self.cm.lock_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+                    instance_dir = self.cm.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
                     instance_dir.mkdir(exist_ok=True)
 
                     # if the selected instance failed to start, move on to other instance
@@ -734,7 +754,9 @@ class _ClusterGetter:
                             os.remove(sf)
 
                         dead_clusters = list(
-                            self.cm.lock_dir.glob(f"{CLUSTER_DIR_TEMPLATE}*/{CLUSTER_DEAD_FILE}")
+                            self.cm.pytest_tmp_dir.glob(
+                                f"{CLUSTER_DIR_TEMPLATE}*/{CLUSTER_DEAD_FILE}"
+                            )
                         )
                         if len(dead_clusters) == self.cm.num_of_instances:
                             raise RuntimeError("All clusters are dead, cannot run.")
@@ -785,7 +807,7 @@ class _ClusterGetter:
                         )
 
                         marked_running_my_anywhere = list(
-                            self.cm.lock_dir.glob(
+                            self.cm.pytest_tmp_dir.glob(
                                 f"{CLUSTER_DIR_TEMPLATE}*/{TEST_CURR_MARK_GLOB}_{mark}"
                             )
                         )
@@ -798,7 +820,7 @@ class _ClusterGetter:
                             continue
 
                         marked_starting_my_anywhere = list(
-                            self.cm.lock_dir.glob(
+                            self.cm.pytest_tmp_dir.glob(
                                 f"{CLUSTER_DIR_TEMPLATE}*/{TEST_MARK_STARTING_GLOB}_{mark}_*"
                             )
                         )
