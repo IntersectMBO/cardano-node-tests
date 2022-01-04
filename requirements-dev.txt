@@ -6,9 +6,3 @@ pre-commit
 pylint
 types-PyYAML
 types-requests
-
-# documentation
-Sphinx==3.2.1
-m2r2
-numpydoc
-sphinx_rtd_theme
