@@ -3,13 +3,11 @@ import json
 import logging
 import os
 import pickle
-import shutil
 from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import NamedTuple
-from typing import Optional
 
 from cardano_clusterlib import clusterlib
 
@@ -440,34 +438,3 @@ def load_addrs_data() -> dict:
     data_file = Path(get_cluster_env().state_dir) / ADDRS_DATA
     with open(data_file, "rb") as in_data:
         return pickle.load(in_data)  # type: ignore
-
-
-def save_cluster_artifacts(artifacts_dir: Path, clean: bool = False) -> Optional[Path]:
-    """Save cluster artifacts."""
-    destdir = artifacts_dir / f"cluster_artifacts_{clusterlib.get_rand_str(8)}"
-    destdir.mkdir(parents=True)
-
-    state_dir = Path(get_cluster_env().state_dir)
-    files_list = list(state_dir.glob("*.std*"))
-    files_list.extend(list(state_dir.glob("*.json")))
-    dirs_to_copy = ("nodes", "shelley")
-
-    for fpath in files_list:
-        shutil.copy(fpath, destdir)
-    for dname in dirs_to_copy:
-        src_dir = state_dir / dname
-        if not src_dir.exists():
-            continue
-        shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
-
-    if not os.listdir(destdir):
-        destdir.rmdir()
-        return None
-
-    LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
-
-    if clean:
-        LOGGER.info(f"Cleaning cluster artifacts in '{state_dir}'.")
-        shutil.rmtree(state_dir, ignore_errors=True)
-
-    return destdir
