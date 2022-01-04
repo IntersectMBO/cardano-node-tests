@@ -1,12 +1,16 @@
 # install cardano_node_tests and its dependencies
+install: export SETUPTOOLS_USE_DISTUTILS=stdlib  # TODO: workaround for https://github.com/asottile/reorder_python_imports/issues/210
 install:
-	python3 -m pip install --upgrade pip==21.2.4  # TODO: remove once pip 21.3 works
+	python3 -m pip install --upgrade pip
 	python3 -m pip install --upgrade wheel
-	python3 -m pip install --upgrade -r requirements-dev.txt
+	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-dev.txt
+
 
 # run linters
+lint: export SETUPTOOLS_USE_DISTUTILS=stdlib  # TODO: workaround for https://github.com/asottile/reorder_python_imports/issues/210
 lint:
 	pre-commit run -a
+
 
 # generate sphinx documentation
 .PHONY: doc
@@ -15,6 +19,8 @@ doc:
 	$(MAKE) -C src_docs clean
 	$(MAKE) -C src_docs html
 
+
+# run tests
 
 ARTIFACTS_DIR ?= .artifacts/
 COVERAGE_DIR ?= .cli_coverage/
