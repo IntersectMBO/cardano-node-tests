@@ -13,7 +13,7 @@ repos:
     language_version: python3
     require_serial: true
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.0.1
+  rev: v4.1.0
   hooks:
   - id: trailing-whitespace
     language_version: python3
@@ -32,7 +32,7 @@ repos:
     language_version: python3
     additional_dependencies: [flake8-comprehensions]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.29.1
+  rev: v2.31.0
   hooks:
   - id: pyupgrade
     language_version: python3
@@ -42,7 +42,7 @@ repos:
   - id: pydocstyle
     language_version: python3
 - repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.8.0.1
+  rev: v0.8.0.3
   hooks:
   - id: shellcheck
 - repo: local
