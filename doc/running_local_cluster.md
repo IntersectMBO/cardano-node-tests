@@ -143,8 +143,6 @@ Now you are ready to run preparation script (which is described in detail in nex
 
 Inside `cardano-node-tests/cardano_node_tests/cluster_scripts` there are folders with all the data and scripts necessairy for starting cluster in various eras and setups:
 
-- `mary` - prepare files to start cluster in `Byron` era and transition it through update proposals to `Mary` era. Once cluster is ready it will be in `Mary` era and decentralistion parameter is set to: `d = 0`.
-
 - `alonzo` - prepare files to start cluster in `Byron` era and transition it through update proposals to `Alonzo` era. Once cluster is ready it will be in `Alonzo` era and decentralistion parameter is set to: `d = 0`.
 
 - `testnets_nopools` - prepare files so cluster will run on real network but without setting up our
@@ -156,11 +154,7 @@ own pool there.
 
 </br>
 
-If you want to prepare cluster for running in **mary** era use:
-
-`prepare-cluster-scripts -d scripts/destination/dir -s cardano_node_tests/cluster_scripts/mary`
-
-for preparing cluster to run in **alonzo** era use:
+If you want to prepare cluster for running in **alonzo** era use:
 
 `prepare-cluster-scripts -d scripts/destination/dir -s cardano_node_tests/cluster_scripts/alonzo`
 
@@ -282,15 +276,11 @@ To stop cluster run the exact command that last line suggests in the above log:
 Once cluster is started you can see that there is a directory created inside `cardano-node` with all the local cluster files:
 `cardano-node/state-cluster0`
 
-You can control cluster and transaction eras dynamically while cluster is running through usage of following environemnt variables:
+You can control transaction era dynamically while cluster is running through usage of following environment variable:
 
 ```sh
-export CLUSTER_ERA=alonzo TX_ERA=mary
+export TX_ERA=mary
 ```
-
- Available options for `CLUSTER_ERA`:
- - `mary`
- - `alonzo`
 
  Available options for `TX_ERA`:
  - `shelley`
