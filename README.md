@@ -133,6 +133,7 @@ Building documentation
 To build documentation using Sphinx, run
 
 ```
+$ make install_doc
 $ make doc
 ```
 

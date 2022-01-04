@@ -6,6 +6,12 @@ install:
 	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-dev.txt
 
 
+# install dependencies that are needed for building documentation
+install_doc: export SETUPTOOLS_USE_DISTUTILS=stdlib  # TODO: workaround for https://github.com/asottile/reorder_python_imports/issues/210
+install_doc:
+	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-doc.txt
+
+
 # run linters
 lint: export SETUPTOOLS_USE_DISTUTILS=stdlib  # TODO: workaround for https://github.com/asottile/reorder_python_imports/issues/210
 lint:
