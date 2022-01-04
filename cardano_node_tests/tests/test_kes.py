@@ -24,9 +24,9 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-# number of shelley epochs traversed during local cluster startup
+# number of epochs traversed during local cluster startup
 # NOTE: must be kept up-to-date
-NUM_OF_SHELLEY_EPOCHS = 5
+NUM_OF_EPOCHS = 6
 
 
 @pytest.fixture(scope="module")
@@ -78,8 +78,11 @@ def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         # KES needs to be valid at least until the local cluster is fully started.
         # We need to calculate how many slots there is from the start of Shelley epoch
         # until the cluster is fully started.
+        # Assume k=10, i.e. k * 10 = 100 slots in Byron era.
+        # Subtract one Byron epoch and current (last) epoch when calculating slots in
+        # Shelley epochs.
         epoch_length = genesis_spec["epochLength"]
-        cluster_start_time_slots = int(NUM_OF_SHELLEY_EPOCHS * epoch_length)
+        cluster_start_time_slots = int((NUM_OF_EPOCHS - 2) * epoch_length + 100)
         exact_kes_period_slots = int(cluster_start_time_slots / max_kes_evolutions)
 
         genesis_spec["slotsPerKESPeriod"] = int(exact_kes_period_slots * 1.2)  # add buffer
