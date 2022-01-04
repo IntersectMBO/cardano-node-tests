@@ -36,6 +36,12 @@ ifneq ($(MARKEXPR),)
 	MARKEXPR := -m "$(MARKEXPR)"
 endif
 
+# it may not be always necessary to save artifacts, e.g. when running tests on local cluster
+# on local machine
+ifndef NO_ARTIFACTS
+	ARTIFACTS_ARGS := --artifacts-base-dir=$(ARTIFACTS_DIR)
+endif
+
 .dirs:
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(ALLURE_DIR)
 
@@ -46,7 +52,7 @@ ifndef PYTEST_ARGS
 	pytest -s cardano_node_tests $(MARKEXPR) --skipall --alluredir=$(ALLURE_DIR) >/dev/null
 endif
 # run tests for real and produce Allure results
-	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) $(MARKEXPR) -n $(TEST_THREADS) --artifacts-base-dir=$(ARTIFACTS_DIR) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
+	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) $(MARKEXPR) -n $(TEST_THREADS) $(ARTIFACTS_ARGS) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(ALLURE_DIR)
 
 
 # run all tests, generate allure report
