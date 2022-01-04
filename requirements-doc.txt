@@ -1,0 +1,4 @@
+# documentation requirements
+Sphinx==3.2.1
+m2r2
+sphinx_rtd_theme
