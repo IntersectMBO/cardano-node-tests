@@ -2,12 +2,10 @@
 import distutils.spawn
 import logging
 import os
-import shutil
 from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import Generator
-from typing import Optional
 
 import pytest
 from _pytest.config import Config
@@ -16,6 +14,7 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 from xdist import workermanage
 
+from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
@@ -143,31 +142,6 @@ def close_dbconn() -> Generator[None, None, None]:
     dbsync_conn.close_all()
 
 
-def _copy_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
-    """Copy collected tests and cluster artifacts to artifacts dir."""
-    pytest_tmp_dir = pytest_tmp_dir.resolve()
-    if not pytest_tmp_dir.is_dir():
-        return None
-
-    destdir = artifacts_dir / f"{pytest_tmp_dir.stem}-{helpers.get_rand_str(8)}"
-    if destdir.resolve().is_dir():
-        shutil.rmtree(destdir)
-    shutil.copytree(pytest_tmp_dir, destdir, symlinks=True, ignore_dangling_symlinks=True)
-
-    return destdir
-
-
-def _save_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
-    """Save tests and cluster artifacts."""
-    artifacts_base_dir = pytest_config.getoption("--artifacts-base-dir")
-    if not artifacts_base_dir:
-        return
-
-    artifacts_dir = Path(artifacts_base_dir)
-    _copy_artifacts(pytest_tmp_dir, artifacts_dir)
-    LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
-
-
 def _stop_all_cluster_instances(
     tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config, pytest_tmp_dir: Path
 ) -> None:
@@ -181,8 +155,8 @@ def _stop_all_cluster_instances(
     with helpers.ignore_interrupt():
         cluster_manager_obj.stop_all_clusters()
 
-    # save artifacts
-    _save_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
+    # copy collected artifacts to dir specified by `--artifacts-base-dir`
+    artifacts.copy_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
 def _testnet_cleanup(pytest_root_tmp: Path) -> None:
