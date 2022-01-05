@@ -8,7 +8,6 @@ import inspect
 import logging
 import os
 import random
-import shutil
 import time
 from pathlib import Path
 from typing import Any
@@ -21,7 +20,7 @@ from _pytest.config import Config
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import cli_coverage
+from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import configuration
@@ -222,34 +221,6 @@ class ClusterManager:
         startup_files_dir.mkdir(exist_ok=True, parents=True)
         return startup_files_dir
 
-    def save_cluster_artifacts(self, state_dir: Path) -> None:
-        """Save cluster artifacts (logs, certs, etc.) to pytest temp dir."""
-        destdir = (
-            self.pytest_tmp_dir
-            / "cluster_artifacts"
-            / f"{state_dir.name}_{clusterlib.get_rand_str(8)}"
-        )
-        destdir.mkdir(parents=True)
-
-        files_list = list(state_dir.glob("*.std*"))
-        files_list.extend(list(state_dir.glob("*.json")))
-        dirs_to_copy = ("nodes", "shelley")
-
-        for fpath in files_list:
-            shutil.copy(fpath, destdir)
-        for dname in dirs_to_copy:
-            src_dir = state_dir / dname
-            if not src_dir.exists():
-                continue
-            shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
-
-        if not os.listdir(destdir):
-            destdir.rmdir()
-            return
-
-        LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
-        shutil.rmtree(state_dir, ignore_errors=True)
-
     def save_worker_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this pytest worker.
 
@@ -263,9 +234,7 @@ class ClusterManager:
             if not cluster_obj:
                 continue
 
-            cli_coverage.save_cli_coverage(
-                cluster_obj=cluster_obj, pytest_config=self.pytest_config
-            )
+            artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.pytest_config)
 
     def stop_all_clusters(self) -> None:
         """Stop all cluster instances."""
@@ -295,11 +264,11 @@ class ClusterManager:
             except Exception as exc:
                 LOGGER.error(f"While stopping cluster: {exc}")
 
-            cli_coverage.save_start_script_coverage(
+            artifacts.save_start_script_coverage(
                 log_file=state_dir / CLUSTER_START_CMDS_LOG,
                 pytest_config=self.pytest_config,
             )
-            self.save_cluster_artifacts(state_dir)
+            artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
             _touch(instance_dir / CLUSTER_STOPPED_FILE)
             self._log(f"stopped cluster instance {instance_num}")
 
@@ -460,11 +429,13 @@ class _ClusterGetter:
 
             # save artifacts only when produced during this test run
             if cluster_running_file.exists():
-                cli_coverage.save_start_script_coverage(
+                artifacts.save_start_script_coverage(
                     log_file=state_dir / CLUSTER_START_CMDS_LOG,
                     pytest_config=self.cm.pytest_config,
                 )
-                self.cm.save_cluster_artifacts(state_dir)
+                artifacts.save_cluster_artifacts(
+                    save_dir=self.cm.pytest_tmp_dir, state_dir=state_dir
+                )
 
             try:
                 _kill_supervisor(self.cm.cluster_instance_num)
@@ -613,7 +584,7 @@ class _ClusterGetter:
         if not cluster_obj:
             return
 
-        cli_coverage.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.cm.pytest_config)
+        artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.cm.pytest_config)
 
     def _reload_cluster_obj(self, state_dir: Path) -> None:
         """Reload cluster data if necessary."""
