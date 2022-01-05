@@ -80,8 +80,10 @@ jobs:
           echo "current branch3: $(git branch --show-current)"
           git config pull.rebase true
           git pull origin sync_tests
+          unzip node_db.zip && mv NODE_SYN.DB node_sync_tests_results.db
           python sync_tests/node_write_values_to_db.py -e ${{ matrix.env }}
-          git add sync_tests/node_sync_tests_results.db
+          zip -9 -k node_db.zip node_sync_tests_results.db
+          git add sync_tests/node_db.zip
           git add sync_tests/csv_files
           git commit -m "added sync values for tag ${{ github.event.inputs.tag_no1 }} ${{ github.event.inputs.tag_no2 }} - ${{ matrix.env }} - ${{ matrix.os }}"
           git push origin HEAD:sync_tests --force

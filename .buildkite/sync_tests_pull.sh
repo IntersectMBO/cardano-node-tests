@@ -7,3 +7,4 @@ remote="git@github.com:input-output-hk/cardano-node-tests.git"
 
 git fetch origin
 git merge origin/sync_tests
+unzip node_db.zip && mv NODE_SYN.DB node_sync_tests_results.db
