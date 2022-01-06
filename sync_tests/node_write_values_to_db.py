@@ -41,7 +41,6 @@ def main():
     print(f"database_path: {database_path}")
 
     print("  ==== Check if there are DB columns for all the eras")
-
     print(f"Get the list of the existing eras in test")
     eras_in_test = sync_test_results_dict["eras_in_test"].replace("[", "").replace("]", "").replace(
         '"', '').split(", ")
