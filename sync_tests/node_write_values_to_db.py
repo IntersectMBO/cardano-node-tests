@@ -24,10 +24,9 @@ def main():
     with open(RESULTS_FILE_NAME, "r") as json_file:
         sync_test_results_dict = json.load(json_file)
 
-    print("Print all test results (key/values)")
-    print(f"sync_test_results_dict: {sync_test_results_dict}")
-    for key in sync_test_results_dict:
-        print(f"{key}: {sync_test_results_dict[key]}")
+    # print(f"sync_test_results_dict: {sync_test_results_dict}")
+    # for key in sync_test_results_dict:
+    #     print(f"{key}: {sync_test_results_dict[key]}")
 
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
