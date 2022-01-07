@@ -9,7 +9,9 @@ import argparse
 from sqlite_utils import get_column_names_from_table, add_column_to_table, get_last_row_no, \
     add_test_values_into_db, export_db_table_to_csv, drop_table
 from node_create_db import create_table, mainnet_tx_count_table
+from utils import unzip_file, zip_file, delete_file
 
+DATABASE_ARCHIVE_NAME = r"node_db.zip"
 DATABASE_NAME = r"node_sync_tests_results.db"
 RESULTS_FILE_NAME = r"sync_results.json"
 
@@ -24,10 +26,6 @@ def main():
     with open(RESULTS_FILE_NAME, "r") as json_file:
         sync_test_results_dict = json.load(json_file)
 
-    # print(f"sync_test_results_dict: {sync_test_results_dict}")
-    # for key in sync_test_results_dict:
-    #     print(f"{key}: {sync_test_results_dict[key]}")
-
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
     print(f" - listdir: {os.listdir(current_directory)}")
@@ -36,7 +34,14 @@ def main():
     os.chdir(current_directory / "sync_tests")
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
-    print(f" - sync_tests listdir: {os.listdir(current_directory)}")
+
+    print(f"  ==== Extract the {DATABASE_ARCHIVE_NAME} inside the 'sync_tests' directory")
+    unzip_file(DATABASE_ARCHIVE_NAME)
+
+    print(f"  ==== Delete the {DATABASE_ARCHIVE_NAME} from the 'sync_tests' directory")
+    delete_file(Path(current_directory) / DATABASE_ARCHIVE_NAME)
+
+    print(f" - listdir inside sync_tests dir: {os.listdir(current_directory)}")
     database_path = Path(current_directory) / DATABASE_NAME
     print(f"database_path: {database_path}")
 
@@ -125,6 +130,12 @@ def main():
     print(f"  ==== Exporting the {env + '_epoch_duration'} table as CSV")
     export_db_table_to_csv(database_path, env + '_epoch_duration')
 
+    print(f"  ==== Archive the {DATABASE_NAME} in the 'sync_tests' directory")
+    zip_file(DATABASE_ARCHIVE_NAME, DATABASE_NAME)
+
+    print(f"  ==== Delete the {DATABASE_NAME} from the 'sync_tests' directory")
+    delete_file(Path(current_directory) / DATABASE_NAME)
+
 
 def update_mainnet_tx_count_per_epoch(actual_epoch_no):
     from sync_tests.node_sync_test import get_tx_count_per_epoch
@@ -162,4 +173,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main()
-    # update_mainnet_tx_count_per_epoch(307)
+    # update_mainnet_tx_count_per_epoch(312)

@@ -1,5 +1,6 @@
 import os
 import platform
+import zipfile
 from datetime import datetime
 
 import psutil
@@ -51,3 +52,24 @@ def get_directory_size(start_path='.'):
             fp = os.path.join(dirpath, f)
             total_size += os.path.getsize(fp)
     return total_size
+
+
+def zip_file(archive_name, file_name):
+    with zipfile.ZipFile(archive_name, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zip:
+        zip.write(file_name)
+
+
+def unzip_file(file_name):
+    with zipfile.ZipFile(file_name, 'r') as zip:
+        zip.printdir()
+
+        print(f"Extracting all the files from {file_name}...")
+        zip.extractall()
+
+
+def delete_file(file_path):
+    # file_path should be a Path (pathlib object)
+    try:
+        file_path.unlink()
+    except OSError as e:
+        print(f"Error: {file_path} : {e.strerror}")
