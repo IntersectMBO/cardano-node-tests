@@ -92,7 +92,7 @@ def pool_users_disposable(
 
 
 @pytest.mark.testnets
-@pytest.mark.order(3)
+@pytest.mark.order(8)
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
@@ -207,7 +207,7 @@ class TestDelegateAddr:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.order(2)
+    @pytest.mark.order(7)
     @pytest.mark.dbsync
     @pytest.mark.long
     def test_deregister(
@@ -329,7 +329,7 @@ class TestDelegateAddr:
             assert delegation_out.pool_user.stake.address in tx_db_dereg.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.order(2)
+    @pytest.mark.order(7)
     @pytest.mark.dbsync
     @pytest.mark.long
     def test_undelegate(
