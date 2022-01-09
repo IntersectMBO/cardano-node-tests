@@ -629,7 +629,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     return pool_creation_out
 
 
-@pytest.mark.order(2)
+@pytest.mark.order(7)
 @pytest.mark.testnets
 @pytest.mark.long
 @pytest.mark.dbsync
@@ -1767,7 +1767,7 @@ class TestStakePool:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
-@pytest.mark.order(2)
+@pytest.mark.order(5)
 class TestPoolCost:
     """Tests for stake pool cost."""
 
