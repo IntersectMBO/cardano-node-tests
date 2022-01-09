@@ -363,11 +363,24 @@ rmdir "$STATE_CLUSTER/shelley/utxo-keys"
 
 # create scripts for cluster starting / stopping
 printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
-printf "#!/bin/sh\n\nsupervisorctl stop all" > "$STATE_CLUSTER/supervisorctl_stop"
 printf "#!/bin/sh\n\nsupervisorctl restart nodes:" > "$STATE_CLUSTER/supervisorctl_restart_nodes"
 printf "#!/bin/sh\n\nsupervisord --config ./%s/supervisor.conf" "$STATE_CLUSTER_NAME" \
   > "$STATE_CLUSTER/supervisord_start"
-chmod u+x "$STATE_CLUSTER"/{supervisorctl_*,supervisord_start}
+cat > "$STATE_CLUSTER/supervisord_stop" <<EoF
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
+
+supervisorctl stop all
+
+if [ -f "\$SCRIPT_DIR/supervisord.pid" ]; then
+  kill "\$(<"\$SCRIPT_DIR/supervisord.pid")"
+  rm -f "\$SCRIPT_DIR/supervisord.pid"
+fi
+EoF
+chmod u+x "$STATE_CLUSTER"/{supervisorctl_*,supervisord_*}
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
