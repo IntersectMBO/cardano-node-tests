@@ -2,7 +2,6 @@
 # pylint: disable=abstract-class-instantiated
 import json
 import logging
-import os
 import shutil
 import time
 from pathlib import Path
@@ -98,7 +97,11 @@ def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 def cluster_kes(
     cluster_manager: cluster_management.ClusterManager, short_kes_start_cluster: Path
 ) -> clusterlib.ClusterLib:
-    return cluster_manager.get(singleton=True, cleanup=True, start_cmd=str(short_kes_start_cluster))
+    return cluster_manager.get(
+        lock_resources=[cluster_management.Resources.CLUSTER],
+        cleanup=True,
+        start_cmd=str(short_kes_start_cluster),
+    )
 
 
 class TestKES:
@@ -222,7 +225,7 @@ class TestKES:
                         ), f"The pool '{pool_name}' has produced blocks in epoch {this_epoch}"
 
             # generate new operational certificate with valid `--kes-period`
-            os.remove(opcert_file)
+            opcert_file.unlink()
             valid_opcert_file = cluster.gen_node_operational_cert(
                 node_name=node_name,
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,

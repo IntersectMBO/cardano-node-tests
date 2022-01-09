@@ -21,6 +21,7 @@ from cardano_node_tests.utils.types import FileType
 LOGGER = logging.getLogger(__name__)
 
 ADDRS_DATA = "addrs_data.pickle"
+STATE_CLUSTER = "state-cluster"
 
 
 class ClusterEnv(NamedTuple):
@@ -270,7 +271,7 @@ def get_cluster_type() -> ClusterType:
 def get_cardano_node_socket_path(instance_num: int) -> Path:
     """Return path to socket file in the given cluster instance."""
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
-    state_cluster_dirname = f"state-cluster{instance_num}"
+    state_cluster_dirname = f"{STATE_CLUSTER}{instance_num}"
     state_cluster = socket_path.parent.parent / state_cluster_dirname
     new_socket_path = state_cluster / socket_path.name
     return new_socket_path
@@ -294,7 +295,7 @@ def set_cluster_env(instance_num: int) -> None:
 def get_instance_num() -> int:
     """Get cardano cluster instance number."""
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
-    instance_num = int(socket_path.parent.name.replace("state-cluster", "") or 0)
+    instance_num = int(socket_path.parent.name.replace(STATE_CLUSTER, "") or 0)
     return instance_num
 
 
@@ -303,7 +304,7 @@ def get_cluster_env() -> ClusterEnv:
     socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
     state_dir = socket_path.parent
     work_dir = state_dir.parent
-    instance_num = int(state_dir.name.replace("state-cluster", "") or 0)
+    instance_num = int(state_dir.name.replace(STATE_CLUSTER, "") or 0)
 
     cluster_env = ClusterEnv(
         socket_path=socket_path,
@@ -324,12 +325,6 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     helpers.run_command(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
     LOGGER.info("Cluster started.")
     return get_cluster_type().get_cluster_obj()
-
-
-def stop_cluster(cmd: str) -> None:
-    """Stop cluster."""
-    LOGGER.info(f"Stopping cluster with `{cmd}`.")
-    helpers.run_command(cmd, workdir=get_cluster_env().work_dir)
 
 
 def restart_all_nodes() -> None:
