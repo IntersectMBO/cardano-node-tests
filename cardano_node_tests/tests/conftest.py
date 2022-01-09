@@ -195,35 +195,18 @@ def _save_env_for_allure(pytest_config: Config) -> None:
 def testenv_setup_teardown(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
 ) -> Generator[None, None, None]:
-    pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
-
     # save environment info for Allure
     _save_env_for_allure(request.config)
 
-    if not worker_id or worker_id == "master":
-        # if cluster was started outside of test framework, do nothing
-        if cluster_management.DEV_CLUSTER_RUNNING:
-            # TODO: check that socket is open and print error if not
-            yield
-            return
-
+    # if cluster was started outside of test framework, do nothing
+    if configuration.DEV_CLUSTER_RUNNING:
+        # TODO: check that socket is open and print error if not
         yield
-
-        cluster_manager_obj = cluster_management.ClusterManager(
-            tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
-        )
-        cluster_manager_obj.save_worker_cli_coverage()
-        _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
-        _stop_all_cluster_instances(
-            tmp_path_factory=tmp_path_factory,
-            worker_id=worker_id,
-            pytest_config=request.config,
-            pytest_tmp_dir=pytest_root_tmp,
-        )
         return
 
-    # pylint: disable=consider-using-with
-    open(pytest_root_tmp / f".started_session_{worker_id}", "a", encoding="utf-8").close()
+    pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
+
+    helpers.touch(pytest_root_tmp / f".started_session_{worker_id}")
 
     yield
 
@@ -233,7 +216,7 @@ def testenv_setup_teardown(
         )
         cluster_manager_obj.save_worker_cli_coverage()
 
-        os.remove(pytest_root_tmp / f".started_session_{worker_id}")
+        (pytest_root_tmp / f".started_session_{worker_id}").unlink()
         if not list(pytest_root_tmp.glob(".started_session_*")):
             _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
             _stop_all_cluster_instances(
