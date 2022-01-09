@@ -324,7 +324,7 @@ def _get_reward_type_for_key_hash(key_hash: str, rec: list) -> List[str]:
     return rew_types
 
 
-@pytest.mark.order(1)
+@pytest.mark.order(6)
 @pytest.mark.long
 class TestRewards:
     """Tests for checking expected rewards."""
