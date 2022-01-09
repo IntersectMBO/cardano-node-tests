@@ -103,7 +103,9 @@ def cluster_epoch_length(
     cluster_manager: cluster_management.ClusterManager, epoch_length_start_cluster: Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
-        singleton=True, cleanup=True, start_cmd=str(epoch_length_start_cluster)
+        lock_resources=[cluster_management.Resources.CLUSTER],
+        cleanup=True,
+        start_cmd=str(epoch_length_start_cluster),
     )
 
 
@@ -112,7 +114,9 @@ def cluster_slot_length(
     cluster_manager: cluster_management.ClusterManager, slot_length_start_cluster: Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
-        singleton=True, cleanup=True, start_cmd=str(slot_length_start_cluster)
+        lock_resources=[cluster_management.Resources.CLUSTER],
+        cleanup=True,
+        start_cmd=str(slot_length_start_cluster),
     )
 
 

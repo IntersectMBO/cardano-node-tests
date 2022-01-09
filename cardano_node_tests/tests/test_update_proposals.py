@@ -45,7 +45,9 @@ class TestUpdateProposals:
         self,
         cluster_manager: cluster_management.ClusterManager,
     ) -> clusterlib.ClusterLib:
-        return cluster_manager.get(singleton=True, cleanup=True)
+        return cluster_manager.get(
+            lock_resources=[cluster_management.Resources.CLUSTER], cleanup=True
+        )
 
     @pytest.fixture
     def payment_addr(
