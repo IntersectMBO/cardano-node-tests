@@ -255,3 +255,9 @@ def is_in_interval(num1: float, num2: float, frac: float = 0.1) -> bool:
     _min = num2 - num2_frac
     _max = num2 + num2_frac
     return _min <= num1 <= _max
+
+
+def touch(file: Path) -> None:
+    """Do the same as unix `touch` command."""
+    with open(file, "a", encoding="utf-8"):
+        pass

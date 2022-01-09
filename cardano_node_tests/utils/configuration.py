@@ -1,6 +1,7 @@
 """Cluster and test environment configuration."""
 import os
 from pathlib import Path
+from typing import Union
 
 
 LAUNCH_PATH = Path(os.getcwd())
@@ -20,6 +21,15 @@ os.environ["CARDANO_NODE_SOCKET_PATH"] = str(
     Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
 )
 
+# resolve SCHEDULING_LOG
+SCHEDULING_LOG: Union[str, Path] = os.environ.get("SCHEDULING_LOG") or ""
+if SCHEDULING_LOG:
+    SCHEDULING_LOG = Path(SCHEDULING_LOG).expanduser()
+    if not SCHEDULING_LOG.is_absolute():
+        # the path is relative to LAUNCH_PATH (current path can differ)
+        run_log = LAUNCH_PATH / SCHEDULING_LOG
+    SCHEDULING_LOG = SCHEDULING_LOG.resolve()
+
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
 if CLUSTER_ERA not in ("", "alonzo"):
@@ -29,7 +39,12 @@ TX_ERA = os.environ.get("TX_ERA") or ""
 if TX_ERA not in ("", "shelley", "allegra", "mary", "alonzo"):
     raise RuntimeError(f"Invalid TX_ERA: {TX_ERA}")
 
-CLUSTERS_COUNT = os.environ.get("CLUSTERS_COUNT") or 0
+CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)
+WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 1)
+CLUSTERS_COUNT = int(CLUSTERS_COUNT or (WORKERS_COUNT if WORKERS_COUNT <= 9 else 9))
+
+DEV_CLUSTER_RUNNING = bool(os.environ.get("DEV_CLUSTER_RUNNING"))
+FORBID_RESTART = bool(os.environ.get("FORBID_RESTART"))
 
 BOOTSTRAP_DIR = os.environ.get("BOOTSTRAP_DIR") or ""
 

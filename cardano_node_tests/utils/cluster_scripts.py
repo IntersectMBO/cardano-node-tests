@@ -12,6 +12,8 @@ from typing import NamedTuple
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.types import FileType
 
+STOP_SCRIPT = "supervisord_stop"
+
 
 class InstanceFiles(NamedTuple):
     start_script: Path
