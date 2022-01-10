@@ -28,9 +28,9 @@ doc:
 
 # run tests
 
-ARTIFACTS_DIR ?= .artifacts/
-COVERAGE_DIR ?= .cli_coverage/
-ALLURE_DIR ?= .reports/
+ARTIFACTS_DIR ?= .artifacts
+COVERAGE_DIR ?= .cli_coverage
+ALLURE_DIR ?= .reports
 
 ifneq ($(MARKEXPR),)
 	MARKEXPR := -m "$(MARKEXPR)"
