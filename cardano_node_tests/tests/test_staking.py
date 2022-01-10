@@ -132,7 +132,7 @@ def withdraw_reward_w_build(
         tx_files=tx_files_withdrawal,
         withdrawals=[clusterlib.TxOut(address=stake_addr_record.address, amount=-1)],
         fee_buffer=2000_000,
-        witness_override=len(tx_files_withdrawal.signing_key_files) * 2,
+        witness_override=len(tx_files_withdrawal.signing_key_files),
         destination_dir=destination_dir,
     )
     tx_signed = cluster_obj.sign_tx(

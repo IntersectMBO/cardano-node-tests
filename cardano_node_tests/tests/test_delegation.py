@@ -520,7 +520,7 @@ class TestDelegateAddr:
                 tx_name=f"{temp_template}_reg_deleg",
                 tx_files=tx_files,
                 fee_buffer=2000_000,
-                witness_override=len(tx_files.signing_key_files) * 2,
+                witness_override=len(tx_files.signing_key_files),
             )
             tx_signed = cluster.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
@@ -643,7 +643,7 @@ class TestDelegateAddr:
                 tx_name=f"{temp_template}_deleg_dereg",
                 tx_files=tx_files,
                 fee_buffer=2000_000,
-                witness_override=len(tx_files.signing_key_files) * 2,
+                witness_override=len(tx_files.signing_key_files),
             )
             tx_signed = cluster.sign_tx(
                 tx_body_file=tx_raw_output_deleg.out_file,
@@ -856,7 +856,7 @@ class TestNegative:
                     tx_name=f"{temp_template}_deleg_unknown",
                     tx_files=tx_files,
                     fee_buffer=2000_000,
-                    witness_override=len(tx_files.signing_key_files) * 2,
+                    witness_override=len(tx_files.signing_key_files),
                 )
                 tx_signed = cluster.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
@@ -953,7 +953,7 @@ class TestNegative:
                     tx_name=f"{temp_template}_deleg_dereg",
                     tx_files=tx_files,
                     fee_buffer=2000_000,
-                    witness_override=len(tx_files.signing_key_files) * 2,
+                    witness_override=len(tx_files.signing_key_files),
                 )
                 tx_signed = cluster.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
@@ -1010,7 +1010,7 @@ class TestNegative:
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
                     fee_buffer=2000_000,
-                    witness_override=len(tx_files.signing_key_files) * 2,
+                    witness_override=len(tx_files.signing_key_files),
                 )
                 tx_signed = cluster.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
