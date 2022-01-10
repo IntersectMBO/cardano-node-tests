@@ -372,6 +372,9 @@ class _ClusterGetter:
 
         # don't restart cluster if it was started outside of test framework
         if configuration.DEV_CLUSTER_RUNNING:
+            self.cm._log(
+                f"c{self.cm.cluster_instance_num}: ignoring restart, dev cluster is running"
+            )
             if cluster_running_file.exists():
                 LOGGER.warning(
                     "Ignoring requested cluster restart as 'DEV_CLUSTER_RUNNING' is set."
@@ -462,6 +465,23 @@ class _ClusterGetter:
             helpers.touch(cluster_running_file)
 
         return True
+
+    def _setup_dev_cluster(self) -> None:
+        """Set up cluster instance that was already started outside of test framework."""
+        work_dir = cluster_nodes.get_cluster_env().work_dir
+        state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}0"
+        if (state_dir / cluster_nodes.ADDRS_DATA).exists():
+            return
+
+        self.cm._log("c0: setting up dev cluster")
+
+        # Create "addrs_data" directly in the cluster state dir, so it can be reused
+        # (in normal non-`DEV_CLUSTER_RUNNING` setup we want "addrs_data" stored among
+        # tests artifacts, so it can be used during cleanup etc.).
+        tmp_path = state_dir / "addrs_data"
+        tmp_path.mkdir(exist_ok=True, parents=True)
+        cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
+        cluster_nodes.setup_test_addrs(cluster_obj, tmp_path)
 
     def _is_restart_needed(self, instance_num: int) -> bool:
         """Check if it is necessary to restart cluster."""
@@ -556,7 +576,7 @@ class _ClusterGetter:
                 break
         else:
             self.cm._log(
-                f"c{instance_num}: none of the resources in '{resources}' "
+                f"c{instance_num}: none of the resources in {resources} "
                 "locked or in use, can start and lock"
             )
             return True
@@ -574,9 +594,7 @@ class _ClusterGetter:
                 break
 
         if not res_locked:
-            self.cm._log(
-                f"c{instance_num}: none of the resources in '{resources}' locked, can start"
-            )
+            self.cm._log(f"c{instance_num}: none of the resources in {resources} locked, can start")
         return bool(res_locked)
 
     def _are_resources_available(self, cget_status: ClusterGetStatus) -> bool:
@@ -613,29 +631,15 @@ class _ClusterGetter:
 
     def _reload_cluster_obj(self, state_dir: Path) -> None:
         """Reload cluster data if necessary."""
-        addrs_data_checksum = ""
-        if (state_dir / cluster_nodes.ADDRS_DATA).exists():
-            addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
-            if addrs_data_checksum == self.cm.cache.last_checksum:
-                return
+        addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
+        if addrs_data_checksum == self.cm.cache.last_checksum:
+            return
 
         # save CLI coverage collected by the old `cluster_obj` instance
         self._save_cli_coverage()
         # replace the old `cluster_obj` instance and reload data
         self.cm.cache.cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
         self.cm.cache.test_data = {}
-
-        # setup faucet addresses if needed
-        if not addrs_data_checksum:
-            assert configuration.DEV_CLUSTER_RUNNING, "This cannot happen"
-            # Create "addrs_data" directly in the cluster state dir, so it can be reused
-            # (in normal non-`DEV_CLUSTER_RUNNING` setup we want "addrs_data" stored among
-            # tests artifacts, so it can be used during cleanup etc.).
-            tmp_path = state_dir / "addrs_data"
-            tmp_path.mkdir(exist_ok=True, parents=True)
-            cluster_nodes.setup_test_addrs(self.cm.cache.cluster_obj, tmp_path)
-            addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
-
         self.cm.cache.addrs_data = cluster_nodes.load_addrs_data()
         self.cm.cache.last_checksum = addrs_data_checksum
 
@@ -863,10 +867,13 @@ class _ClusterGetter:
         right away.
         """
         # pylint: disable=too-many-statements,too-many-branches
-        if configuration.DEV_CLUSTER_RUNNING and start_cmd:
-            LOGGER.warning(
-                f"Ignoring the '{start_cmd}' cluster start command as 'DEV_CLUSTER_RUNNING' is set."
-            )
+        if configuration.DEV_CLUSTER_RUNNING:
+            if start_cmd:
+                LOGGER.warning(
+                    f"Ignoring the '{start_cmd}' cluster start command as "
+                    "'DEV_CLUSTER_RUNNING' is set."
+                )
+            self._setup_dev_cluster()
 
         if configuration.FORBID_RESTART and start_cmd:
             raise RuntimeError("Cannot use custom start command when 'FORBID_RESTART' is set.")
