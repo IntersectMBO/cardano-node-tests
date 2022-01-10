@@ -418,7 +418,7 @@ def wait_for_node_to_start(tag_no):
     # when starting from existing state it might take >10 mins for the cli to work (opening db and
     # replaying the ledger)
     start_counter = time.perf_counter()
-    get_current_tip(tag_no, 5400)
+    get_current_tip(tag_no, 18000)
     stop_counter = time.perf_counter()
 
     start_time_seconds = int(stop_counter - start_counter)
@@ -449,12 +449,12 @@ def get_current_tip(tag_no=None, timeout_seconds=10):
             return output_json["epoch"], int(output_json["block"]), output_json["hash"], \
                    int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
         except subprocess.CalledProcessError as e:
-            print(f" === Waiting 1s before retrying to get the tip again - {i}")
+            print(f" === Waiting 60s before retrying to get the tip again - {i}")
             print(f"     !!!ERROR: command {e.cmd} return with error (code {e.returncode}): {' '.join(str(e.output).split())}")
             if "Invalid argument" in str(e.output):
                 exit(1)
             pass
-        time.sleep(1)
+        time.sleep(60)
     exit(1)
 
 
