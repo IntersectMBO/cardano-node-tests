@@ -165,7 +165,7 @@ def delegate_stake_addr(
             tx_name=f"{temp_template}_reg_deleg",
             tx_files=tx_files,
             fee_buffer=2000_000,
-            witness_override=len(tx_files.signing_key_files) * 2,
+            witness_override=len(tx_files.signing_key_files),
         )
         tx_signed = cluster_obj.sign_tx(
             tx_body_file=tx_raw_output.out_file,
