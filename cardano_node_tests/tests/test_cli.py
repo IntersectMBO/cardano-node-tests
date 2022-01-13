@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -119,6 +120,38 @@ class TestCLI:
         with open(self.TX_OUT, encoding="utf-8") as infile:
             tx_view_out = infile.read()
         assert tx == tx_view_out.strip()
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(-1)
+    @pytest.mark.testnets
+    def test_stake_snapshot(self, cluster: clusterlib.ClusterLib):
+        """Test the `query stake-snapshot` command."""
+        common.get_test_id(cluster)
+
+        # make sure the queries can be finished in single epoch
+        stop = (
+            20 if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL else 200
+        )
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=-stop, force_epoch=False
+        )
+
+        active_pool_ids = cluster.get_stake_pools()
+        if not active_pool_ids:
+            pytest.skip("No active pools are available.")
+        if len(active_pool_ids) > 200:
+            pytest.skip("Skipping on this testnet, there's too many pools.")
+
+        active_mark = active_set = active_go = 0
+        for pool_id in active_pool_ids:
+            stake_snapshot = cluster.get_stake_snapshot(stake_pool_id=pool_id)
+            active_mark += stake_snapshot["poolStakeMark"]
+            active_set += stake_snapshot["poolStakeSet"]
+            active_go += stake_snapshot["poolStakeGo"]
+
+        assert active_mark == stake_snapshot["activeStakeMark"]
+        assert active_set == stake_snapshot["activeStakeSet"]
+        assert active_go == stake_snapshot["activeStakeGo"]
 
 
 @pytest.mark.testnets
