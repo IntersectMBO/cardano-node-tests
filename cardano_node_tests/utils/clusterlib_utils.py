@@ -894,7 +894,7 @@ def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
         amount_lovelace = coins_data.get(clusterlib.DEFAULT_COIN)  # type: ignore
         policies_data: dict = coins_data  # type: ignore
     except AttributeError:
-        amount_lovelace = int(coins_data.split(" ")[0] or 0)  # type: ignore
+        amount_lovelace = int(coins_data.split()[0] or 0)  # type: ignore
         policies_data = {}
 
     loaded_data = []
@@ -936,7 +936,7 @@ def check_tx_view(  # noqa: C901
         raise AssertionError(f"txouts: {tx_raw_txouts} not in {loaded_txouts}")
 
     # check fee
-    fee = int(tx_loaded.get("fee", "").split(" ")[0] or 0)
+    fee = int(tx_loaded.get("fee", "").split()[0] or 0)
     # pylint: disable=consider-using-in
     if (
         tx_raw_output.fee != -1 and tx_raw_output.fee != fee
@@ -973,7 +973,7 @@ def check_tx_view(  # noqa: C901
     if tx_loaded_withdrawals:
         for withdrawal in tx_loaded_withdrawals:
             withdrawal_key = withdrawal["credential"]["key hash"]
-            withdrawal_amount = int(withdrawal["amount"].split(" ")[0] or 0)
+            withdrawal_amount = int(withdrawal["amount"].split()[0] or 0)
             loaded_withdrawals.add((withdrawal_key, withdrawal_amount))
 
     tx_raw_withdrawals = {

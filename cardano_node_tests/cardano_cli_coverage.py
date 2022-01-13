@@ -125,7 +125,7 @@ def parse_cmd_output(output: str) -> List[str]:
             line = line.strip()
             if not line:
                 continue
-            item = line.split(" ")[0]
+            item = line.split()[0]
             cli_args.append(item)
 
     return cli_args
@@ -154,7 +154,7 @@ def get_log_coverage(log_file: Path) -> dict:
         for line in infile:
             if not line.startswith("cardano-cli"):
                 continue
-            clusterlib.record_cli_coverage(cli_args=line.split(" "), coverage_dict=coverage_dict)
+            clusterlib.record_cli_coverage(cli_args=line.split(), coverage_dict=coverage_dict)
 
     return coverage_dict
 

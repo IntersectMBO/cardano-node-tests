@@ -91,7 +91,7 @@ def run_command(command: Union[str, list], workdir: FileType = "", shell: bool =
     """Run command."""
     cmd: Union[str, list]
     if isinstance(command, str):
-        cmd = command if shell else command.split(" ")
+        cmd = command if shell else command.split()
     else:
         cmd = command
 
