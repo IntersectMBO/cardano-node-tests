@@ -45,10 +45,10 @@ class Versions:
         env_info, git_info, *__ = out.splitlines()
         node, platform, ghc, *__ = env_info.split(" - ")
         version_db = {
-            "version": node.split(" ")[-1],
+            "version": node.split()[-1],
             "platform": platform,
             "ghc": ghc,
-            "git_rev": git_info.split(" ")[-1],
+            "git_rev": git_info.split()[-1],
         }
         return version_db
 
@@ -58,10 +58,10 @@ class Versions:
         env_info, git_info, *__ = out.splitlines()
         dbsync, platform, ghc, *__ = env_info.split(" - ")
         version_db = {
-            "version": dbsync.split(" ")[-1],
+            "version": dbsync.split()[-1],
             "platform": platform,
             "ghc": ghc,
-            "git_rev": git_info.split(" ")[-1],
+            "git_rev": git_info.split()[-1],
         }
         return version_db
 

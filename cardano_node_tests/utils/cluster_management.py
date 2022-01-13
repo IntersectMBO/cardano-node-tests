@@ -89,7 +89,7 @@ def _kill_supervisor(instance_num: int) -> None:
         if port_str not in line:
             continue
         line = line.replace("  ", " ").strip()
-        pid = line.split(" ")[-1].split("/")[0]
+        pid = line.split()[-1].split("/")[0]
         os.kill(int(pid), 15)
         return
 
