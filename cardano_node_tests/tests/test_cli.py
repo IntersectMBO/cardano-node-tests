@@ -122,12 +122,11 @@ class TestCLI:
         assert tx == tx_view_out.strip()
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skip(reason="needs more testing")
     @pytest.mark.order(-1)
     @pytest.mark.testnets
     def test_stake_snapshot(self, cluster: clusterlib.ClusterLib):
         """Test the `query stake-snapshot` command."""
-        common.get_test_id(cluster)
+        temp_template = common.get_test_id(cluster)
 
         # make sure the queries can be finished in single epoch
         stop = (
@@ -143,16 +142,30 @@ class TestCLI:
         if len(active_pool_ids) > 200:
             pytest.skip("Skipping on this testnet, there's too many pools.")
 
-        active_mark = active_set = active_go = 0
+        sum_mark = sum_set = sum_go = 0
         for pool_id in active_pool_ids:
             stake_snapshot = cluster.get_stake_snapshot(stake_pool_id=pool_id)
-            active_mark += stake_snapshot["poolStakeMark"]
-            active_set += stake_snapshot["poolStakeSet"]
-            active_go += stake_snapshot["poolStakeGo"]
+            sum_mark += stake_snapshot["poolStakeMark"]
+            sum_set += stake_snapshot["poolStakeSet"]
+            sum_go += stake_snapshot["poolStakeGo"]
 
-        assert active_mark == stake_snapshot["activeStakeMark"]
-        assert active_set == stake_snapshot["activeStakeSet"]
-        assert active_go == stake_snapshot["activeStakeGo"]
+        # active stake can be lower than sum of stakes, as some pools may not be running
+        # and minting blocks
+        errors = []
+        if sum_mark < stake_snapshot["activeStakeMark"]:
+            errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
+        if sum_set < stake_snapshot["activeStakeSet"]:
+            errors.append(f"active_set: {sum_set} < {stake_snapshot['activeStakeSet']}")
+        if sum_go < stake_snapshot["activeStakeGo"]:
+            errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
+
+        if errors:
+            clusterlib_utils.save_ledger_state(
+                cluster_obj=cluster,
+                state_name=temp_template,
+            )
+            err_joined = "\n".join(errors)
+            pytest.fail(f"Errors:\n{err_joined}")
 
 
 @pytest.mark.testnets
