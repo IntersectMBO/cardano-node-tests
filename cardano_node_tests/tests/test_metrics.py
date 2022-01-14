@@ -141,7 +141,7 @@ class TestPrometheus:
         response = get_prometheus_metrics(prometheus_port)
 
         metrics = response.text.strip().split("\n")
-        metrics_keys = sorted(m.split(" ")[0] for m in metrics)
+        metrics_keys = sorted(m.split()[0] for m in metrics)
         assert metrics_keys == self.EXPECTED_METRICS, "Metrics differ"
 
 
