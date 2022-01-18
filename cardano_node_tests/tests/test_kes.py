@@ -138,8 +138,10 @@ class TestKES:
             kes_period_timeout = int(cluster.slots_per_kes_period * cluster.slot_length + 1)
             LOGGER.info(f"Waiting for {kes_period_timeout} sec for next KES period.")
             time.sleep(kes_period_timeout)
+            assert cluster.get_slot_no() == init_slot, "Unexpected new slots"
 
-        assert cluster.get_slot_no() == init_slot, "Unexpected new slots"
+            LOGGER.info("Waiting 120 secs to make sure the expected errors make it to log files.")
+            time.sleep(120)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
