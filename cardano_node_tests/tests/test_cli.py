@@ -122,6 +122,11 @@ class TestCLI:
         assert tx == tx_view_out.strip()
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skip(reason="needs more testing")
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
+        reason="different TX eras doesn't affect this test",
+    )
     @pytest.mark.order(-1)
     @pytest.mark.testnets
     def test_stake_snapshot(self, cluster: clusterlib.ClusterLib):
