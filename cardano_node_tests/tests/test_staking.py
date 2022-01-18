@@ -881,25 +881,17 @@ class TestRewards:
                     *cluster.genesis_keys.delegate_skeys,
                 ],
             )
-            mir_tx_raw_output = cluster.build_tx(
-                src_address=pool_owner.payment.address,
-                tx_name=f"{temp_template}_{fund_src}",
-                tx_files=mir_tx_files,
-                fee_buffer=1000_000,
-                witness_override=2,
-            )
-            mir_tx_signed = cluster.sign_tx(
-                tx_body_file=mir_tx_raw_output.out_file,
-                signing_key_files=mir_tx_files.signing_key_files,
-                tx_name=f"{temp_template}_{fund_src}",
-            )
 
             LOGGER.info(
                 f"Submitting MIR cert for tranferring funds from {fund_src} to "
                 f"'{pool_reward.stake.address}' in epoch {cluster.get_epoch()} "
                 f"on cluster instance {cluster_manager.cluster_instance_num}"
             )
-            cluster.submit_tx(tx_file=mir_tx_signed, txins=mir_tx_raw_output.txins)
+            mir_tx_raw_output = cluster.send_tx(
+                src_address=pool_owner.payment.address,
+                tx_name=f"{temp_template}_{fund_src}",
+                tx_files=mir_tx_files,
+            )
 
             return mir_tx_raw_output
 
