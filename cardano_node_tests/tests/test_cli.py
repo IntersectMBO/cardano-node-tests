@@ -9,7 +9,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -120,57 +119,6 @@ class TestCLI:
         with open(self.TX_OUT, encoding="utf-8") as infile:
             tx_view_out = infile.read()
         assert tx == tx_view_out.strip()
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skip(reason="needs more testing")
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-        reason="different TX eras doesn't affect this test",
-    )
-    @pytest.mark.order(-1)
-    @pytest.mark.testnets
-    def test_stake_snapshot(self, cluster: clusterlib.ClusterLib):
-        """Test the `query stake-snapshot` command."""
-        temp_template = common.get_test_id(cluster)
-
-        # make sure the queries can be finished in single epoch
-        stop = (
-            20 if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL else 200
-        )
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=-stop, force_epoch=False
-        )
-
-        active_pool_ids = cluster.get_stake_pools()
-        if not active_pool_ids:
-            pytest.skip("No active pools are available.")
-        if len(active_pool_ids) > 200:
-            pytest.skip("Skipping on this testnet, there's too many pools.")
-
-        sum_mark = sum_set = sum_go = 0
-        for pool_id in active_pool_ids:
-            stake_snapshot = cluster.get_stake_snapshot(stake_pool_id=pool_id)
-            sum_mark += stake_snapshot["poolStakeMark"]
-            sum_set += stake_snapshot["poolStakeSet"]
-            sum_go += stake_snapshot["poolStakeGo"]
-
-        # active stake can be lower than sum of stakes, as some pools may not be running
-        # and minting blocks
-        errors = []
-        if sum_mark < stake_snapshot["activeStakeMark"]:
-            errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
-        if sum_set < stake_snapshot["activeStakeSet"]:
-            errors.append(f"active_set: {sum_set} < {stake_snapshot['activeStakeSet']}")
-        if sum_go < stake_snapshot["activeStakeGo"]:
-            errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
-
-        if errors:
-            clusterlib_utils.save_ledger_state(
-                cluster_obj=cluster,
-                state_name=temp_template,
-            )
-            err_joined = "\n".join(errors)
-            pytest.fail(f"Errors:\n{err_joined}")
 
 
 @pytest.mark.testnets
