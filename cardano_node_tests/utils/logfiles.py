@@ -81,22 +81,22 @@ def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> Li
 
 def add_ignore_rule(files_glob: str, regex: str, rules_file_id: str) -> None:
     """Add ignore rule for expected errors."""
-    state_dir = cluster_nodes.get_cluster_env().state_dir
-    rules_file = state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
+    cluster_env = cluster_nodes.get_cluster_env()
+    rules_file = cluster_env.state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
     basetemp = temptools.get_basetemp()
 
-    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
+    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"):
         with open(rules_file, "a", encoding="utf-8") as infile:
             infile.write(f"{files_glob};;{regex}\n")
 
 
 def del_rules_file(rules_file_id: str) -> None:
     """Delete rules file identified by `rules_file_id`."""
-    state_dir = cluster_nodes.get_cluster_env().state_dir
-    rules_file = state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
+    cluster_env = cluster_nodes.get_cluster_env()
+    rules_file = cluster_env.state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
     basetemp = temptools.get_basetemp()
 
-    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
+    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"):
         try:
             rules_file.unlink()
         except FileNotFoundError:
@@ -106,11 +106,11 @@ def del_rules_file(rules_file_id: str) -> None:
 def get_ignore_rules() -> List[Tuple[str, str]]:
     """Get rules (file glob and regex) for ignored errors."""
     rules: List[Tuple[str, str]] = []
-    state_dir = cluster_nodes.get_cluster_env().state_dir
+    cluster_env = cluster_nodes.get_cluster_env()
     basetemp = temptools.get_basetemp()
 
-    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules.lock"):
-        for rules_file in state_dir.glob(f"{ERRORS_RULES_FILE_NAME}_*"):
+    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"):
+        for rules_file in cluster_env.state_dir.glob(f"{ERRORS_RULES_FILE_NAME}_*"):
             with open(rules_file, encoding="utf-8") as infile:
                 for line in infile:
                     if ";;" not in line:
