@@ -198,13 +198,14 @@ def testenv_setup_teardown(
     # save environment info for Allure
     _save_env_for_allure(request.config)
 
+    pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
+
     # if cluster was started outside of test framework, do nothing
     if configuration.DEV_CLUSTER_RUNNING:
         # TODO: check that socket is open and print error if not
         yield
+        _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
         return
-
-    pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
 
     helpers.touch(pytest_root_tmp / f".started_session_{worker_id}")
 
