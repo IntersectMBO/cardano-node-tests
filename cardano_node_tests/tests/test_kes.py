@@ -238,11 +238,10 @@ class TestKES:
             # copy the new certificate and restart the node
             shutil.move(str(valid_opcert_file), str(opcert_file))
             cluster_nodes.restart_nodes([node_name])
-            cluster.wait_for_new_epoch()
+            this_epoch = cluster.wait_for_new_epoch()
 
             LOGGER.info("Checking blocks production for another 5 epochs.")
             blocks_made_db = []
-            this_epoch = cluster.get_epoch()
             active_again_epoch = this_epoch
             for __ in range(5):
                 _wait_epoch_chores(this_epoch)

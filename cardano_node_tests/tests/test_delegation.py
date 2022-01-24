@@ -443,8 +443,7 @@ class TestDelegateAddr:
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
 
-        cluster.wait_for_new_epoch(padding_seconds=20)
-        this_epoch = cluster.get_epoch()
+        this_epoch = cluster.wait_for_new_epoch(padding_seconds=20)
         assert cluster.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance, "No reward was received next epoch after undelegation"
