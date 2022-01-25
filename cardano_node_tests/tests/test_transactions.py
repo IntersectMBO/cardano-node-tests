@@ -35,6 +35,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -374,7 +375,7 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -3079,8 +3080,8 @@ class TestMetadata:
         }, "Metadata in TX body doesn't match original metadata"
 
         # check `transaction view` command
-        tx_view = clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
-        assert json_body_metadata == tx_view["metadata"]
+        tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        assert json_body_metadata == tx_view_out["metadata"]
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -3140,8 +3141,8 @@ class TestMetadata:
         }, "Metadata in TX body doesn't match original metadata"
 
         # check `transaction view` command
-        tx_view = clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
-        assert json_body_metadata == tx_view["metadata"]
+        tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
+        assert json_body_metadata == tx_view_out["metadata"]
 
         # check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
