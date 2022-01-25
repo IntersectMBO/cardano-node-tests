@@ -20,6 +20,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -664,7 +665,7 @@ class TestRewards:
             )
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=withdraw_out)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=withdraw_out)
 
         tx_db_record = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output

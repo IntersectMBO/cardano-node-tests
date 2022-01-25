@@ -25,6 +25,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -281,8 +282,8 @@ class TestMinting:
         ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -480,8 +481,8 @@ class TestMinting:
         ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -754,8 +755,8 @@ class TestMinting:
         ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
-        clusterlib_utils.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
