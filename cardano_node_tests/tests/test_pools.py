@@ -30,6 +30,7 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
+from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
 DEREG_BUFFER_SEC = 30
@@ -710,9 +711,7 @@ class TestStakePool:
         )
 
         # check `transaction view` command
-        clusterlib_utils.check_tx_view(
-            cluster_obj=cluster, tx_raw_output=pool_creation_out.tx_raw_output
-        )
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=pool_creation_out.tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
