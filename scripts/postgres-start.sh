@@ -21,6 +21,7 @@ if [ "${2:-""}" = "-k" ]; then
   fi
 
   rm -rf "$POSTGRES_DIR/data"
+  rm -f "$POSTGRES_DIR"/*.lock
 fi
 
 # setup db
