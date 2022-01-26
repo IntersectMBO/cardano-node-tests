@@ -161,10 +161,11 @@ class TestLedgerState:
         seen_hashes_mark: Set[str] = set()
         seen_hashes_set: Set[str] = set()
         seen_hashes_go: Set[str] = set()
-        for pool_id in stake_pool_ids:
-            # get stake info from ledger state
-            pool_id_dec = helpers.decode_bech32(pool_id)
+        delegation_pool_ids = {*delegations_mark, *delegations_set, *delegations_go}
+        for pool_id_dec in delegation_pool_ids:
+            pool_id = helpers.encode_bech32(prefix="pool", data=pool_id_dec)
 
+            # get stake info from ledger state
             pstake_hashes_mark = delegations_mark.get(pool_id_dec) or ()
             seen_hashes_mark.update(pstake_hashes_mark)
             pstake_amounts_mark = [stake_mark[h] for h in pstake_hashes_mark]
