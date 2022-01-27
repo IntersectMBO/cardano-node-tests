@@ -19,7 +19,7 @@ from pathlib import Path
 from psutil import process_iter
 
 current_directory = os.getcwd()
-print(f" - current_directory aaa: {current_directory}")
+print(f" - current_directory: {current_directory}")
 
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB
@@ -79,6 +79,42 @@ def get_tx_count_per_epoch(env, epoch_no):
         exit(1)
 
 
+def get_current_epoch_no(env):
+    global res, url
+    headers = {'Content-type': 'application/json'}
+    payload = '{"query":"query cardanoDynamic {\\n  cardano {\\n    tip {\\n      number\\n      ' \
+              'slotInEpoch\\n      slotNo\\n      forgedAt\\n      protocolVersion\\n    }\\n    ' \
+              'currentEpoch {\\n      number\\n    }\\n  }\\n}\\n","variables":{}} '
+
+    if env == "mainnet":
+        url = MAINNET_EXPLORER_URL
+        res = requests.post(url, data=payload, headers=headers)
+    elif env == "staging":
+        url = STAGING_EXPLORER_URL
+        res = requests.post(url, data=payload, headers=headers)
+    elif env == "testnet":
+        url = TESTNET_EXPLORER_URL
+        res = requests.post(url, data=payload, headers=headers)
+    elif env == "shelley_qa":
+        url = SHELLEY_QA_EXPLORER_URL
+        res = requests.post(url, data=payload, headers=headers)
+    else:
+        print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
+              f"testnet, staging, mainnet")
+        exit(1)
+
+    status_code = res.status_code
+    if status_code == 200:
+        return res.json()['data']['cardano']['currentEpoch']['number']
+    else:
+        print(f"status_code: {status_code}")
+        print(f"response: {res.text}")
+        print(
+            f"!!! ERROR: status_code =! 200 when getting the current epoch_no on mainnet")
+        print(f"     - The Explorer might be down - {url}")
+        exit(1)
+
+
 def get_epoch_start_datetime(env, epoch_no):
     global res
     headers = {'Content-type': 'application/json'}
@@ -111,7 +147,8 @@ def get_epoch_start_datetime(env, epoch_no):
     else:
         print(f"status_code: {status_code}")
         print(f"response: {res.text}")
-        print(f"!!! ERROR: status_code =! 200 when getting start time for epoch {epoch_no} on {env}")
+        print(
+            f"!!! ERROR: status_code =! 200 when getting start time for epoch {epoch_no} on {env}")
         print(f"     - The Explorer might be down - {url}")
         exit(1)
 
@@ -128,7 +165,8 @@ def git_get_commit_sha_for_tag_no(tag_no):
         count += 1
         response = requests.get(url)
         if count > 15:
-            print(f"!!!! ERROR: Could not get the commit sha for tag {tag_no} after {count} retries")
+            print(
+                f"!!!! ERROR: Could not get the commit sha for tag {tag_no} after {count} retries")
             response.raise_for_status()
     jData = json.loads(response.content)
 
@@ -153,7 +191,8 @@ def git_get_hydra_eval_link_for_commit_sha(commit_sha):
         count += 1
         response = requests.get(url)
         if count > 10:
-            print(f"!!!! ERROR: Could not get the hydra eval link for tag {commit_sha} after {count} retries")
+            print(
+                f"!!!! ERROR: Could not get the hydra eval link for tag {commit_sha} after {count} retries")
             response.raise_for_status()
     jData = json.loads(response.content)
 
@@ -161,7 +200,8 @@ def git_get_hydra_eval_link_for_commit_sha(commit_sha):
         if "hydra.iohk.io/eval" in status.get("target_url"):
             return status.get("target_url")
 
-    print(f" ===== !!! ERROR: There is not eval link for the provided commit_sha - {commit_sha} =====")
+    print(
+        f" ===== !!! ERROR: There is not eval link for the provided commit_sha - {commit_sha} =====")
     print(json.dumps(jData, indent=2, sort_keys=True))
     return None
 
@@ -222,6 +262,9 @@ def check_string_format(input_string):
 
 
 def get_and_extract_node_files(tag_no):
+    # sometimes we cannot identify the hydra eval no for a specific tag no ->
+    # in such case we are starting the sync tests by specifying the hydra eval no
+    # but also the tag_no (in order to add it in the database)
     print(" - get and extract the pre-built node files")
     current_directory = os.getcwd()
     print(f" - current_directory for extracting node files: {current_directory}")
@@ -323,31 +366,31 @@ def get_node_config_files(env):
         + env
         + "-config.json",
         env + "-config.json",
-        )
+    )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-byron-genesis.json",
         env + "-byron-genesis.json",
-        )
+    )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-shelley-genesis.json",
         env + "-shelley-genesis.json",
-        )
+    )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-alonzo-genesis.json",
         env + "-alonzo-genesis.json",
-        )
+    )
     urllib.request.urlretrieve(
         "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
         + env
         + "-topology.json",
         env + "-topology.json",
-        )
+    )
 
 
 def enable_cardano_node_resources_monitoring(node_config_filepath):
@@ -355,7 +398,7 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
         node_config_json = json.load(json_file)
 
     node_config_json["options"]["mapBackends"]["cardano.node.resources"] = ["KatipBK"]
-    node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
+    # node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
 
     with open(node_config_filepath, "w") as json_file:
         json.dump(node_config_json, json_file, indent=2)
@@ -415,7 +458,7 @@ def get_testnet_value():
 
 def wait_for_node_to_start(tag_no):
     # when starting from clean state it might take ~30 secs for the cli to work
-    # when starting from existing state it might take >10 mins for the cli to work (opening db and
+    # when starting from existing state it might take > 10 mins for the cli to work (opening db and
     # replaying the ledger)
     start_counter = time.perf_counter()
     get_current_tip(tag_no, 18000)
@@ -426,8 +469,7 @@ def wait_for_node_to_start(tag_no):
     return start_time_seconds
 
 
-def get_current_tip(tag_no=None, timeout_seconds=10):
-    # tag_no should have this format: 1.23.0, 1.24.1, etc
+def get_current_tip(timeout_seconds=10):
     cmd = CLI + " query tip " + get_testnet_value()
 
     for i in range(timeout_seconds):
@@ -450,7 +492,8 @@ def get_current_tip(tag_no=None, timeout_seconds=10):
                    int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
         except subprocess.CalledProcessError as e:
             print(f" === Waiting 60s before retrying to get the tip again - {i}")
-            print(f"     !!!ERROR: command {e.cmd} return with error (code {e.returncode}): {' '.join(str(e.output).split())}")
+            print(
+                f"     !!!ERROR: command {e.cmd} return with error (code {e.returncode}): {' '.join(str(e.output).split())}")
             if "Invalid argument" in str(e.output):
                 exit(1)
             pass
@@ -590,11 +633,11 @@ def get_calculated_slot_no(env):
     return last_slot_no
 
 
-def wait_for_node_to_sync(env, tag_no):
+def wait_for_node_to_sync(env):
     era_details_dict = OrderedDict()
     epoch_details_dict = OrderedDict()
 
-    actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip(tag_no)
+    actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip()
     last_slot_no = get_calculated_slot_no(env)
     start_sync = time.perf_counter()
 
@@ -621,7 +664,7 @@ def wait_for_node_to_sync(env, tag_no):
 
             time.sleep(1)
             count += 1
-            actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip(tag_no)
+            actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip()
     else:
         while actual_slot <= last_slot_no:
             if count % 60 == 0:
@@ -648,7 +691,7 @@ def wait_for_node_to_sync(env, tag_no):
 
             time.sleep(1)
             count += 1
-            actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip(tag_no)
+            actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip()
 
     end_sync = time.perf_counter()
 
@@ -677,7 +720,8 @@ def wait_for_node_to_sync(env, tag_no):
         actual_era_dict["last_epoch"] = last_epoch
         actual_era_dict["end_sync_time"] = end_sync_time
 
-        no_of_epochs_in_era = int(last_epoch) - int(era_details_dict[eras_list[eras_list.index(era)]]["start_epoch"]) + 1
+        no_of_epochs_in_era = int(last_epoch) - int(
+            era_details_dict[eras_list[eras_list.index(era)]]["start_epoch"]) + 1
         actual_era_dict["slots_in_era"] = get_no_of_slots_in_era(env, era, no_of_epochs_in_era)
 
         actual_era_dict["sync_duration_secs"] = date_diff_in_seconds(
@@ -754,14 +798,19 @@ def get_data_from_logs(log_file):
     timestamps_list = list(centi_cpu_dict.keys())
     for timestamp1 in timestamps_list[1:]:
         # %CPU = dValue / dt for 1 core
-        previous_timestamp = datetime.strptime(timestamps_list[timestamps_list.index(timestamp1) - 1], "%Y-%m-%d %H:%M:%S")
-        current_timestamp = datetime.strptime(timestamps_list[timestamps_list.index(timestamp1)], "%Y-%m-%d %H:%M:%S")
-        previous_value = float(centi_cpu_dict[timestamps_list[timestamps_list.index(timestamp1) - 1]])
+        previous_timestamp = datetime.strptime(
+            timestamps_list[timestamps_list.index(timestamp1) - 1], "%Y-%m-%d %H:%M:%S")
+        current_timestamp = datetime.strptime(timestamps_list[timestamps_list.index(timestamp1)],
+                                              "%Y-%m-%d %H:%M:%S")
+        previous_value = float(
+            centi_cpu_dict[timestamps_list[timestamps_list.index(timestamp1) - 1]])
         current_value = float(centi_cpu_dict[timestamps_list[timestamps_list.index(timestamp1)]])
-        cpu_load_percent = (current_value - previous_value) / date_diff_in_seconds(current_timestamp, previous_timestamp)
+        cpu_load_percent = (current_value - previous_value) / date_diff_in_seconds(
+            current_timestamp, previous_timestamp)
         cpu_details_dict[timestamp1] = cpu_load_percent / no_of_cpu_cores
 
-    all_timestamps_list = set(list(tip_details_dict.keys()) + list(ram_details_dict.keys()) + list(cpu_details_dict.keys()))
+    all_timestamps_list = set(list(tip_details_dict.keys()) + list(ram_details_dict.keys()) + list(
+        cpu_details_dict.keys()))
     for timestamp2 in all_timestamps_list:
         if timestamp2 not in list(tip_details_dict.keys()):
             tip_details_dict[timestamp2] = ""
@@ -796,8 +845,12 @@ def main():
 
     tag_no1 = str(vars(args)["node_tag_no1"]).strip()
     tag_no2 = str(vars(args)["node_tag_no2"]).strip()
+    hydra_eval_no1 = str(vars(args)["hydra_eval_no1"]).strip()
+    hydra_eval_no2 = str(vars(args)["hydra_eval_no2"]).strip()
     print(f"node_tag_no1: {tag_no1}")
     print(f"node_tag_no2: {tag_no2}")
+    print(f"hydra_eval_no1: {hydra_eval_no1}")
+    print(f"hydra_eval_no2: {hydra_eval_no2}")
 
     platform_system, platform_release, platform_version = get_os_type()
     print(f"platform: {platform_system, platform_release, platform_version}")
@@ -817,7 +870,10 @@ def main():
     get_node_build_files_time = get_current_date_time()
     print(f"Get node build files time:  {get_node_build_files_time}")
     print("get the pre-built node files")
-    get_and_extract_node_files(tag_no1)
+    if hydra_eval_no1 == "None":
+        get_and_extract_node_files(tag_no1)
+    else:
+        get_and_extract_node_files(hydra_eval_no1)
 
     print("===================================================================================")
     print(f"====================== Start node sync test using tag_no1: {tag_no1} =============")
@@ -836,8 +892,7 @@ def main():
         secs_to_start1 = start_node_windows(env, tag_no1)
 
     print(" - waiting for the node to sync")
-    sync_time_seconds1, last_slot_no1, latest_chunk_no1, era_details_dict1, epoch_details_dict1 = wait_for_node_to_sync(
-        env, tag_no1)
+    sync_time_seconds1, last_slot_no1, latest_chunk_no1, era_details_dict1, epoch_details_dict1 = wait_for_node_to_sync(env)
 
     end_sync_time1 = get_current_date_time()
     print(f"secs_to_start1            : {secs_to_start1}")
@@ -866,7 +921,10 @@ def main():
         print("==============================================================================")
         print(f"===================== Start sync using tag_no2: {tag_no2} ===================")
         print("==============================================================================")
-        get_and_extract_node_files(tag_no2)
+        if hydra_eval_no2 == "None":
+            get_and_extract_node_files(tag_no2)
+        else:
+            get_and_extract_node_files(hydra_eval_no2)
 
         print(" --- node version ---")
         cli_version2, cli_git_rev2 = get_node_version()
@@ -880,8 +938,7 @@ def main():
             secs_to_start2 = start_node_windows(env, tag_no2)
 
         print(f" - waiting for the node to sync - using tag_no2: {tag_no2}")
-        sync_time_seconds2, last_slot_no2, latest_chunk_no2, era_details_dict2, epoch_details_dict2 = wait_for_node_to_sync(
-            env, tag_no2)
+        sync_time_seconds2, last_slot_no2, latest_chunk_no2, era_details_dict2, epoch_details_dict2 = wait_for_node_to_sync(env)
         end_sync_time2 = get_current_date_time()
 
     chain_size = get_directory_size(Path(ROOT_TEST_PATH) / "db")
@@ -939,6 +996,8 @@ def main():
     test_values_dict["total_ram_in_GB"] = get_total_ram_in_GB()
     test_values_dict["epoch_no_d_zero"] = get_epoch_no_d_zero()
     test_values_dict["start_slot_no_d_zero"] = get_start_slot_no_d_zero()
+    test_values_dict["hydra_eval_no1"] = hydra_eval_no1
+    test_values_dict["hydra_eval_no2"] = hydra_eval_no2
 
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
@@ -958,8 +1017,13 @@ if __name__ == "__main__":
         "-t2", "--node_tag_no2", help="node tag number2 - used for final sync, from existing state"
     )
     parser.add_argument(
-        "-e",
-        "--environment",
+        "-e1", "--hydra_eval_no1", help="hydra_eval_no1 - used for initial sync, from clean state"
+    )
+    parser.add_argument(
+        "-e2", "--hydra_eval_no2", help="hydra_eval_no2 - used for final sync, from existing state"
+    )
+    parser.add_argument(
+        "-e", "--environment",
         help="the environment on which to run the tests - shelley_qa, testnet, staging or mainnet.",
     )
 

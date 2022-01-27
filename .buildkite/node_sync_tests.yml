@@ -1,0 +1,14 @@
+steps:
+  - label: 'run the cardano node sync test on Mainnet using a Linux machine'
+    commands:
+      - nix-shell --run 'python ./sync_tests/node_sync_test.py -t1 $tag_no1 -t2 $tag_no2 -e "mainnet" -e1 $hydra_eval_no1 -e2 $hydra_eval_no2'
+      - './.buildkite/node_sync_tests_pull.sh'
+      - nix-shell --run 'python ./sync_tests/node_write_sync_values_to_db.py -e "mainnet"'
+    branches: "sync_tests"
+    timeout_in_minutes: 5000
+    agents:
+      system: x86_64-linux
+      queue: benchmark
+    artifact_paths:
+      - 'logfile.log'
+      - 'sync_results.json'

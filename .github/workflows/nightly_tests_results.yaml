@@ -1,4 +1,4 @@
-name: get automated test results
+name: save the automated tests runs status to database
 
 on:
   schedule:
@@ -23,8 +23,6 @@ jobs:
         run: |
           pip install requests
           pip install psutil
-          pip install sqlite-utils>=2.18
-          sqlite-utils --version
           pip install pandas
       - name: checkout sync_tests repo
         run: |
@@ -35,19 +33,13 @@ jobs:
           git checkout sync_tests
           echo "current branch1: $(git branch --show-current)"
       - name: get the automated tests results
+        env:
+          BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
+          AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
+          AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
+          AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
         run: |
           cd cardano_node_tests
           echo "current branch2: $(git branch --show-current)"
-          python sync_tests/results_write_values_to_db.py -t ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
-      - name: commit and push changes
-        run: |
-          cd cardano_node_tests
-          echo "current branch3: $(git branch --show-current)"
-
-          git status
-
-          git add sync_tests/automated_tests_results.db
-          git add sync_tests/csv_files
-
-          git commit -m "added automated test results"
-          git push origin HEAD:sync_tests --force
+          python sync_tests/nightly_tests_write_values_to_db.py

@@ -1,0 +1,45 @@
+name: add into the db the mainnet number of transactions per epoch
+
+on:
+  schedule:
+    - cron:  '0 8 * * *'
+  workflow_dispatch:
+    branches:
+      - sync_tests
+
+jobs:
+  cli_nightly_last_run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout cardano-node-tests repo
+        uses: actions/checkout@v2
+        with:
+          path: cardano_node_tests
+      - name: run actions/setup-python@v2
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          pip install requests
+          pip install psutil
+          pip install pandas
+      - name: checkout sync_tests repo
+        run: |
+          cd cardano_node_tests
+          git config --global user.name "sync_tests"
+          git config --global user.email "action@github.com"
+
+          git checkout sync_tests
+          echo "current branch1: $(git branch --show-current)"
+      - name: get the automated tests results
+        env:
+          BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
+          AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
+          AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
+          AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
+        run: |
+          cd cardano_node_tests
+          echo "current branch2: $(git branch --show-current)"
+          python sync_tests/node_write_mainnet_tx_count_per_epoch.py

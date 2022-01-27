@@ -12,12 +12,12 @@ on:
         description: tag number2 - used for final sync, from existing state
         required: false
         default: "None"
-      db_sync_tag_no1:
-        description: db_sync tag number1 - used for initial sync, from clean state
+      hydra_eval_no1:
+        description: hydra eval no - used for getting node prebuilt files
         required: false
         default: "None"
-      db_sync_tag_no2:
-        description: db_sync tag number2 - used for final sync, from existing state
+      hydra_eval_no2:
+        description: hydra eval no - used for getting node prebuilt files
         required: false
         default: "None"
 
@@ -34,8 +34,8 @@ jobs:
           env: '{
           "tag_no1":"${{ github.event.inputs.tag_no1 }}",
           "tag_no2":"${{ github.event.inputs.tag_no2 }}",
-          "dt_tag_no1":"${{ github.event.inputs.db_sync_tag_no1 }}",
-          "dt_tag_no2":"${{ github.event.inputs.db_sync_tag_no2 }}"
+          "hydra_eval_no1":"${{ github.event.inputs.hydra_eval_no1 }}",
+          "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}"
           }'
           branch: 'sync_tests'
   sync_test:
@@ -60,7 +60,6 @@ jobs:
           pip install requests
           pip install psutil
           pip install sqlite-utils>=2.18
-          sqlite-utils --version
           pip install pandas
       - name: checkout sync_tests repo
         run: |
@@ -73,18 +72,18 @@ jobs:
         run: |
           cd cardano_node_tests
           echo "current branch2: $(git branch --show-current)"
-          python sync_tests/node_sync_test.py -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -e ${{ matrix.env }}
-      - name: commit and push DB changes for the sync test
+          python sync_tests/node_sync_test.py -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -e1 "${{ github.event.inputs.hydra_eval_no1 }}" -e2 "${{ github.event.inputs.hydra_eval_no2 }}" -e ${{ matrix.env }}
+      - name: write the test results into the database
+        env:
+          BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
+          AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
+          AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
+          AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
         run: |
           cd cardano_node_tests
           echo "current branch3: $(git branch --show-current)"
-          git config pull.rebase true
-          git pull origin sync_tests
-          python sync_tests/node_write_values_to_db.py -e ${{ matrix.env }}
-          git add sync_tests/node_db.zip
-          git add sync_tests/csv_files
-          git commit -m "added sync values for tag ${{ github.event.inputs.tag_no1 }} ${{ github.event.inputs.tag_no2 }} - ${{ matrix.env }} - ${{ matrix.os }}"
-          git push origin HEAD:sync_tests --force
+          python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
       - name: generate artifacts
         uses: actions/upload-artifact@v2
         if: always()

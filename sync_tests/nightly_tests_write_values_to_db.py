@@ -2,14 +2,12 @@ import os
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
-import argparse
 
 import requests
 
-from sqlite_utils import add_test_values_into_db, get_column_values, export_db_table_to_csv
+from aws_db_utils import add_single_value_into_db, get_column_values
 from utils import seconds_to_time, date_diff_in_seconds
 
-DATABASE_NAME = r"automated_tests_results.db"
 ORG_SLUG = "input-output-hk"
 cli_envs = ["node_cli", "dbsync_cli"]
 nightly_envs = ["node_nightly", "node_nightly_alonzo_mary_tx", "node_nightly_alonzo_alonzo-tx",
@@ -21,6 +19,7 @@ def get_buildkite_pipeline_builds(buildkite_token, pipeline_slug):
     web_url = f"https://buildkite.com/{ORG_SLUG}/{pipeline_slug}"
     print(f"url: {url}")
     print(f"web_url: {web_url}")
+
     headers = {'Authorization': "Bearer " + buildkite_token}
     response = requests.get(url, headers=headers)
 
@@ -55,8 +54,6 @@ def get_buildkite_pipeline_slug(env):
 
 
 def main():
-    secret = vars(args)["secret"]
-
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
     print("  ==== Move to 'sync_tests' directory")
@@ -64,22 +61,19 @@ def main():
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
 
-    database_path = Path(current_directory) / DATABASE_NAME
-    print(f"database_path: {database_path}")
-
     for env in cli_envs:
         print(f" === env: {env}")
         pileline_slug = get_buildkite_pipeline_slug(env)
-        pipeline_builds = get_buildkite_pipeline_builds(secret, pileline_slug)
+        pipeline_builds = get_buildkite_pipeline_builds(os.environ["BUILDKITE_API_ACCESS_TOKEN"], pileline_slug)
         print(f" - there are {len(pipeline_builds)} builds")
         print("Adding build results into the DB")
         build_results_dict = OrderedDict()
         for build in pipeline_builds:
-            # don't add the same build no twice
+            # don't add the same build_no twice
             if build["state"] == "running":
                 print(f"  ==== build no {build['number']} is still running; not adding it into the DB yet")
                 continue
-            if build["number"] not in get_column_values(database_path, env, "build_no"):
+            if build["number"] not in get_column_values(env, "build_no"):
                 build_results_dict["build_no"] = build["number"]
                 build_results_dict["build_id"] = build["id"]
                 build_results_dict["build_web_url"] = build["web_url"]
@@ -99,23 +93,20 @@ def main():
                     build_results_dict["dbsync_rev"] = build["env"]["DBSYNC_REV"] if "DBSYNC_REV" in build["env"] else None
 
                 print(f"  ==== Writing test results into the {env} DB table for build no {build['number']}")
-                col_list = list(build_results_dict.keys())
-                col_values = list(build_results_dict.values())
-
-                if not add_test_values_into_db(database_path, env, col_list, col_values):
-                    print(f"col_list  : {col_list}")
-                    print(f"col_values: {col_values}")
+                build_results_dict = {k: "None" if v == "" else v for k, v in build_results_dict.items()}
+                col_to_insert = list(build_results_dict.keys())
+                val_to_insert = list(build_results_dict.values())
+                if not add_single_value_into_db(env, col_to_insert, val_to_insert):
+                    print(f"col_to_insert: {col_to_insert}")
+                    print(f"val_to_insert: {val_to_insert}")
                     exit(1)
             else:
                 print(f" -- results for build {build['number']} are already into the DB")
 
-        print(f"  ==== Exporting the {env} table as CSV")
-        export_db_table_to_csv(database_path, env)
-
     for env in nightly_envs:
         print(f" === env: {env}")
         pileline_slug = get_buildkite_pipeline_slug(env)
-        pipeline_builds = get_buildkite_pipeline_builds(secret, pileline_slug)
+        pipeline_builds = get_buildkite_pipeline_builds(os.environ["BUILDKITE_API_ACCESS_TOKEN"], pileline_slug)
         table_name = env
         if "node_nightly" in env:
             table_name = "node_nightly"
@@ -131,7 +122,7 @@ def main():
                 print(f"  ==== build no {build['number']} is still running; not adding it into the DB yet")
                 continue
 
-            if build["web_url"] not in get_column_values(database_path, table_name, "build_web_url"):
+            if build["web_url"] not in get_column_values(table_name, "build_web_url"):
                 build_results_dict["build_no"] = build["number"]
                 build_results_dict["build_id"] = build["id"]
                 build_results_dict["build_web_url"] = build["web_url"]
@@ -155,27 +146,17 @@ def main():
                     build_results_dict["dbsync_branch"] = "master"
 
                 print(f"  ==== Writing test results into the {env} DB table for build no {build['number']}")
+                build_results_dict = {k: "None" if v == "" else v for k, v in build_results_dict.items()}
                 col_list = list(build_results_dict.keys())
                 col_values = list(build_results_dict.values())
 
-                if not add_test_values_into_db(database_path, table_name, col_list, col_values):
+                if not add_single_value_into_db(table_name, col_list, col_values):
                     print(f"col_list  : {col_list}")
                     print(f"col_values: {col_values}")
                     exit(1)
             else:
                 print(f" -- results for build {build['number']} are already into the DB")
 
-        print(f"  ==== Exporting the {env} table as CSV")
-        export_db_table_to_csv(database_path, table_name)
-
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Get node cli nightly results\n\n")
-
-    parser.add_argument(
-        "-t", "--secret", help="buildkite secret"
-    )
-
-    args = parser.parse_args()
-
     main()
