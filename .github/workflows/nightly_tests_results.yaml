@@ -21,6 +21,7 @@ jobs:
           python-version: 3.8
       - name: install dependencies
         run: |
+          pip install pymysql
           pip install requests
           pip install psutil
           pip install pandas

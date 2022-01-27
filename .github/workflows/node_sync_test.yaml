@@ -57,9 +57,9 @@ jobs:
           python-version: 3.8
       - name: install dependencies
         run: |
+          pip install pymysql
           pip install requests
           pip install psutil
-          pip install sqlite-utils>=2.18
           pip install pandas
       - name: checkout sync_tests repo
         run: |

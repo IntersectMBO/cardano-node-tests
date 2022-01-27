@@ -24,6 +24,7 @@ jobs:
           pip install requests
           pip install psutil
           pip install pandas
+          pip install pymysql
       - name: checkout sync_tests repo
         run: |
           cd cardano_node_tests
