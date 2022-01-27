@@ -1,4 +1,4 @@
-name: save the automated tests runs status to database
+name: get_auto_tests_results
 
 on:
   schedule:
@@ -8,7 +8,7 @@ on:
       - sync_tests
 
 jobs:
-  cli_nightly_last_run:
+  auto_tests_results:
     runs-on: ubuntu-latest
     steps:
       - name: checkout cardano-node-tests repo

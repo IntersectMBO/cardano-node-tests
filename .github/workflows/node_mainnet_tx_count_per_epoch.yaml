@@ -1,4 +1,4 @@
-name: add into the db the mainnet number of transactions per epoch
+name: get_mainnet_tx_no_per_epoch
 
 on:
   schedule:
@@ -8,7 +8,7 @@ on:
       - sync_tests
 
 jobs:
-  cli_nightly_last_run:
+  mainnet_tx_no_per_epoch:
     runs-on: ubuntu-latest
     steps:
       - name: checkout cardano-node-tests repo

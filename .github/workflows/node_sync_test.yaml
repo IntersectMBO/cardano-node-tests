@@ -1,4 +1,4 @@
-name: node sync tests
+name: node_sync_tests
 
 on:
   workflow_dispatch:
@@ -22,7 +22,7 @@ on:
         default: "None"
 
 jobs:
-  sync_test_mainnet:
+  node_sync_test_mainnet:
     runs-on: ubuntu-latest
     steps:
       - name: trigger the Buildkite pipeline - run sync tests on mainnet
@@ -38,7 +38,7 @@ jobs:
           "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}"
           }'
           branch: 'sync_tests'
-  sync_test:
+  node_sync_test:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
