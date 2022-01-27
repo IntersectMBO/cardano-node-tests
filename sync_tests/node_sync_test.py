@@ -461,7 +461,7 @@ def wait_for_node_to_start(tag_no):
     # when starting from existing state it might take > 10 mins for the cli to work (opening db and
     # replaying the ledger)
     start_counter = time.perf_counter()
-    get_current_tip(tag_no, 18000)
+    get_current_tip(timeout_seconds=18000)
     stop_counter = time.perf_counter()
 
     start_time_seconds = int(stop_counter - start_counter)
