@@ -188,6 +188,7 @@ class BlockDBRow(NamedTuple):
     epoch_slot_no: Optional[int]
     block_no: Optional[int]
     previous_id: Optional[int]
+    pool_id: str
 
 
 class SchemaVersionStages(NamedTuple):
@@ -585,18 +586,29 @@ def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]
 
 
 def query_blocks(
-    epoch_from: int = 0, epoch_to: int = 99999999
+    pool_id_bech32: str = "", epoch_from: int = 0, epoch_to: int = 99999999
 ) -> Generator[BlockDBRow, None, None]:
     """Query block records in db-sync."""
+    if pool_id_bech32:
+        pool_query = "(pool_hash.view = %s) AND"
+        query_vars: tuple = (pool_id_bech32, epoch_from, epoch_to)
+    else:
+        pool_query = ""
+        query_vars = (epoch_from, epoch_to)
+
     query = (
         "SELECT"
-        " id, epoch_no, slot_no, epoch_slot_no, block_no, previous_id "
+        " block.id, block.epoch_no, block.slot_no, block.epoch_slot_no, block.block_no,"
+        " block.previous_id,"
+        " pool_hash.view "
         "FROM block "
-        "WHERE (epoch_no BETWEEN %s AND %s) "
-        "ORDER BY id;"
+        "INNER JOIN slot_leader ON slot_leader.id = block.slot_leader_id "
+        "INNER JOIN pool_hash ON pool_hash.id = slot_leader.pool_hash_id "
+        f"WHERE {pool_query} (epoch_no BETWEEN %s AND %s) "
+        "ORDER BY block.id;"
     )
 
-    with execute(query=query, vars=(epoch_from, epoch_to)) as cur:
+    with execute(query=query, vars=query_vars) as cur:
         while (result := cur.fetchone()) is not None:
             yield BlockDBRow(*result)
 
