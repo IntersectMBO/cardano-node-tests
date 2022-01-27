@@ -1,10 +1,12 @@
 """Tests for db-sync."""
 import logging
 from pathlib import Path
+from typing import List
 
 import allure
 import pytest
 from _pytest.tmpdir import TempdirFactory
+from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.tests import common
@@ -89,16 +91,15 @@ class TestDBSync:
         reason="needs db-sync version >= 12.0.0",
     )
     @pytest.mark.testnets
-    def test_table_names(self, cluster):
+    def test_table_names(self, cluster: clusterlib.ClusterLib):
         """Check that all the expected tables are present in db-sync."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
         assert self.DBSYNC_TABLES.issubset(dbsync_queries.query_table_names())
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(-10)
     @pytest.mark.testnets
-    def test_blocks(self, cluster):  # noqa: C901
+    def test_blocks(self, cluster: clusterlib.ClusterLib):  # noqa: C901
         """Check expected values in the `block` table in db-sync."""
         # pylint: disable=too-many-branches
         common.get_test_id(cluster)
@@ -113,7 +114,7 @@ class TestDBSync:
 
         rec = None
         prev_rec = None
-        errors = []
+        errors: List[str] = []
         for rec in dbsync_queries.query_blocks(epoch_from=epoch_from):
             if not prev_rec:
                 prev_rec = rec
@@ -198,7 +199,11 @@ class TestDBSync:
             raise AssertionError(errors_str)
 
         # db-sync can be max 1 block behind or ahead
-        if rec and block_no not in (rec.block_no, rec.block_no - 1, rec.block_no + 1):
+        if (
+            rec
+            and rec.block_no
+            and block_no not in (rec.block_no, rec.block_no - 1, rec.block_no + 1)
+        ):
             raise AssertionError(
                 "last `block_no` value is different than expected; "
                 f"{block_no} not in ({rec.block_no}, {rec.block_no - 1}, {rec.block_no + 1})"
