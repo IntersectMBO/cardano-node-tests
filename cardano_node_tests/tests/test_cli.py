@@ -8,7 +8,9 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -101,6 +103,88 @@ class TestCLI:
 
         magic_args = " ".join(cluster.magic_args)
         helpers.run_in_bash(f"cardano-cli query utxo --whole-utxo {magic_args} > /dev/null")
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era != VERSIONS.LAST_KNOWN_ERA,
+        reason="works only with the latest TX era",
+    )
+    def test_pretty_utxo(
+        self, cluster_manager: cluster_management.ClusterManager, cluster: clusterlib.ClusterLib
+    ):
+        """Check that pretty printed `query utxo` output looks as expected."""
+        temp_template = common.get_test_id(cluster)
+        amount1 = 2000_000
+        amount2 = 2500_000
+
+        # create source and destination payment addresses
+        payment_addrs = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_src",
+            f"{temp_template}_dst",
+            cluster_obj=cluster,
+        )
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            payment_addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=amount1 + amount2 + 10_000_000,
+        )
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        txouts = [
+            clusterlib.TxOut(address=dst_address, amount=amount1),
+            clusterlib.TxOut(address=dst_address, amount=amount2),
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        tx_raw_output = cluster.send_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            join_txouts=False,
+        )
+
+        utxo_out = (
+            cluster.cli(
+                [
+                    "query",
+                    "utxo",
+                    "--address",
+                    dst_address,
+                    *cluster.magic_args,
+                ]
+            )
+            .stdout.decode("utf-8")
+            .split()
+        )
+
+        txid = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
+        expected_out = [
+            "TxHash",
+            "TxIx",
+            "Amount",
+            "--------------------------------------------------------------------------------"
+            "------",
+            txid,
+            "0",
+            str(amount1),
+            "lovelace",
+            "+",
+            "TxOutDatumNone",
+            txid,
+            "1",
+            str(amount2),
+            "lovelace",
+            "+",
+            "TxOutDatumNone",
+        ]
+
+        assert utxo_out == expected_out
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
