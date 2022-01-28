@@ -1,4 +1,4 @@
-name: get_mainnet_tx_no_per_epoch
+name: mainnet_tx_count_per_epoch
 
 on:
   schedule:
@@ -8,7 +8,7 @@ on:
       - sync_tests
 
 jobs:
-  mainnet_tx_no_per_epoch:
+  mainnet_tx_count_per_epoch:
     runs-on: ubuntu-latest
     steps:
       - name: checkout cardano-node-tests repo
@@ -30,6 +30,7 @@ jobs:
           cd cardano_node_tests
           git config --global user.name "sync_tests"
           git config --global user.email "action@github.com"
+          echo "current branch: $(git branch --show-current)"
 
           git checkout sync_tests
           echo "current branch1: $(git branch --show-current)"

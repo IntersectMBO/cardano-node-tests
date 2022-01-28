@@ -1,4 +1,4 @@
-name: get_auto_tests_results
+name: auto_tests_results
 
 on:
   schedule:
@@ -30,6 +30,7 @@ jobs:
           cd cardano_node_tests
           git config --global user.name "sync_tests"
           git config --global user.email "action@github.com"
+          echo "current branch: $(git branch --show-current)"
 
           git checkout sync_tests
           echo "current branch1: $(git branch --show-current)"

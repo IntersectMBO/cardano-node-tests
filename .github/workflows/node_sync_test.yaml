@@ -13,11 +13,11 @@ on:
         required: false
         default: "None"
       hydra_eval_no1:
-        description: hydra eval no - used for getting node prebuilt files
+        description: hydra_eval_no1 - used for getting node prebuilt files for the initial sync
         required: false
         default: "None"
       hydra_eval_no2:
-        description: hydra eval no - used for getting node prebuilt files
+        description: hydra_eval_no2 - used for getting node prebuilt files for the final sync
         required: false
         default: "None"
 
