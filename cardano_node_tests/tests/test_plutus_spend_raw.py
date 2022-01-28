@@ -449,6 +449,48 @@ def _spend_locked_txin(
     return "", tx_raw_output
 
 
+def _check_pretty_utxo(
+    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
+) -> str:
+    """Check that pretty printed `query utxo` output looks as expected."""
+    err = ""
+    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+
+    utxo_out = (
+        cluster_obj.cli(
+            [
+                "query",
+                "utxo",
+                "--tx-in",
+                f"{txid}#0",
+                *cluster_obj.magic_args,
+            ]
+        )
+        .stdout.decode("utf-8")
+        .split()
+    )
+
+    expected_out = [
+        "TxHash",
+        "TxIx",
+        "Amount",
+        "--------------------------------------------------------------------------------------",
+        txid,
+        "0",
+        str(tx_raw_output.txouts[0].amount),
+        tx_raw_output.txouts[0].coin,
+        "+",
+        "TxOutDatumHash",
+        "ScriptDataInAlonzoEra",
+        f'"{tx_raw_output.txouts[0].datum_hash}"',
+    ]
+
+    if utxo_out != expected_out:
+        err = f"Pretty UTxO output doesn't match expected output:\n{utxo_out}\nvs\n{expected_out}"
+
+    return err
+
+
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALONZO,
     reason="runs only with Alonzo+ TX",
@@ -492,6 +534,9 @@ class TestLocking:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+
+        utxo_err = _check_pretty_utxo(cluster_obj=cluster, tx_raw_output=tx_output_fund)
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
@@ -504,6 +549,9 @@ class TestLocking:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+
+        if utxo_err:
+            pytest.fail(utxo_err)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
