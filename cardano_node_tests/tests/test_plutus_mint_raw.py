@@ -66,6 +66,49 @@ def payment_addrs(
     return addrs
 
 
+def _check_pretty_utxo(
+    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
+) -> str:
+    """Check that pretty printed `query utxo` output looks as expected."""
+    err = ""
+    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+
+    utxo_out = (
+        cluster_obj.cli(
+            [
+                "query",
+                "utxo",
+                "--tx-in",
+                f"{txid}#0",
+                *cluster_obj.magic_args,
+            ]
+        )
+        .stdout.decode("utf-8")
+        .split()
+    )
+
+    expected_out = [
+        "TxHash",
+        "TxIx",
+        "Amount",
+        "--------------------------------------------------------------------------------------",
+        txid,
+        "0",
+        str(tx_raw_output.txouts[0].amount),
+        tx_raw_output.txouts[0].coin,
+        "+",
+        str(tx_raw_output.txouts[1].amount),
+        tx_raw_output.txouts[1].coin,
+        "+",
+        "TxOutDatumNone",
+    ]
+
+    if utxo_out != expected_out:
+        err = f"Pretty UTxO output doesn't match expected output:\n{utxo_out}\nvs\n{expected_out}"
+
+    return err
+
+
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALONZO,
     reason="runs only with Alonzo+ TX",
@@ -197,6 +240,10 @@ class TestMinting:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
+
+        utxo_err = _check_pretty_utxo(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
+        if utxo_err:
+            pytest.fail(utxo_err)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
