@@ -1,4 +1,4 @@
-name: node sync tests
+name: node_sync_tests
 
 on:
   workflow_dispatch:
@@ -13,16 +13,16 @@ on:
         required: false
         default: "None"
       hydra_eval_no1:
-        description: hydra eval no - used for getting node prebuilt files
+        description: hydra_eval_no1 - used for getting node prebuilt files for the initial sync
         required: false
         default: "None"
       hydra_eval_no2:
-        description: hydra eval no - used for getting node prebuilt files
+        description: hydra_eval_no2 - used for getting node prebuilt files for the final sync
         required: false
         default: "None"
 
 jobs:
-  sync_test_mainnet:
+  node_sync_test_mainnet:
     runs-on: ubuntu-latest
     steps:
       - name: trigger the Buildkite pipeline - run sync tests on mainnet
@@ -38,7 +38,7 @@ jobs:
           "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}"
           }'
           branch: 'sync_tests'
-  sync_test:
+  node_sync_test:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -57,9 +57,9 @@ jobs:
           python-version: 3.8
       - name: install dependencies
         run: |
+          pip install pymysql
           pip install requests
           pip install psutil
-          pip install sqlite-utils>=2.18
           pip install pandas
       - name: checkout sync_tests repo
         run: |
@@ -89,4 +89,6 @@ jobs:
         if: always()
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.os }}
-          path: cardano_node_tests/logfile.log
+          path: |
+            cardano_node_tests/logfile.log
+            cardano_node_tests/sync_results.json
