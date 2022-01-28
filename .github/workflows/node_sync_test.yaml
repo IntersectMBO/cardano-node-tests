@@ -89,4 +89,6 @@ jobs:
         if: always()
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.os }}
-          path: cardano_node_tests/logfile.log
+          path: |
+            cardano_node_tests/logfile.log
+            cardano_node_tests/sync_results.json

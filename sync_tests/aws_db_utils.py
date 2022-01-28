@@ -232,6 +232,29 @@ def delete_all_rows_from_table(table_name):
     print(f"Successfully deleted {initial_rows_no - final_rows_no} rows from table {table_name}")
 
 
+def delete_record(table_name, column_name, delete_value):
+    print(f"Deleting rows containing '{delete_value}' value inside the '{column_name}' column")
+    initial_rows_no = get_last_row_no(table_name)
+    print(f"Deleting {column_name} = {delete_value} from {table_name} table")
+
+    conn = create_connection()
+    sql_query = f"DELETE from {table_name} where {column_name}=\"{delete_value}\""
+    print(f"  -- sql_query: {sql_query}")
+    try:
+        cur = conn.cursor()
+        cur.execute(sql_query)
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(f"!!! ERROR: Failed to delete record {column_name} = {delete_value} from {table_name} table: --> {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+    final_rows_no = get_last_row_no(table_name)
+    print(f"Successfully deleted {initial_rows_no - final_rows_no} rows from table {table_name}")
+
+
 def add_bulk_csv_to_table(table_name, csv_path):
     df = pd.read_csv(csv_path)
     # replace nan/empty values with "None"
@@ -240,3 +263,12 @@ def add_bulk_csv_to_table(table_name, csv_path):
     col_to_insert = list(df.columns)
     val_to_insert = df.values.tolist()
     add_bulk_values_into_db(table_name, col_to_insert, val_to_insert)
+
+
+# Delete specified identifiers
+# env = "testnet"
+# delete_strings = ["testnet_37"]
+# for del_str in delete_strings:
+#     delete_record(env, "identifier", del_str)
+#     delete_record(env + "_epoch_duration", "identifier", del_str)
+#     delete_record(env + "_logs", "identifier", del_str)
