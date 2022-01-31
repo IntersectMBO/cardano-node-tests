@@ -23,6 +23,7 @@ class PoolDataDBRow(NamedTuple):
     vrf_key_hash: memoryview
     pledge: int
     reward_addr: memoryview
+    reward_addr_view: str
     active_epoch_no: int
     meta_id: int
     margin: decimal.Decimal
@@ -562,21 +563,24 @@ def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]
         "SELECT DISTINCT"
         " pool_hash.id, pool_hash.hash_raw, pool_hash.view,"
         " pool_update.cert_index, pool_update.vrf_key_hash, pool_update.pledge,"
-        " pool_update.reward_addr, pool_update.active_epoch_no, pool_update.meta_id,"
+        " join_reward_address.hash_raw, join_reward_address.view,"
+        " pool_update.active_epoch_no, pool_update.meta_id,"
         " pool_update.margin, pool_update.fixed_cost, pool_update.registered_tx_id,"
-        " pool_metadata_ref.url as metadata_url,pool_metadata_ref.hash AS metadata_hash,"
+        " pool_metadata_ref.url AS metadata_url, pool_metadata_ref.hash AS metadata_hash,"
         " pool_owner.addr_id AS owner_stake_address_id,"
-        " stake_address.hash_raw AS owner,"
+        " join_owner_address.hash_raw AS owner,"
         " pool_relay.ipv4, pool_relay.ipv6, pool_relay.dns_name, pool_relay.port,"
         " pool_retire.cert_index AS retire_cert_index,"
         " pool_retire.announced_tx_id AS retire_announced_tx_id, pool_retire.retiring_epoch "
         "FROM pool_hash "
-        "INNER JOIN pool_update ON pool_hash.id=pool_update.hash_id "
-        "FULL JOIN pool_metadata_ref ON pool_update.meta_id=pool_metadata_ref.id "
-        "INNER JOIN pool_owner ON pool_hash.id=pool_owner.pool_hash_id "
-        "FULL JOIN pool_relay ON pool_update.id=pool_relay.update_id "
-        "FULL JOIN pool_retire ON pool_hash.id=pool_retire.hash_id "
-        "INNER JOIN stake_address ON pool_owner.addr_id=stake_address.id "
+        "INNER JOIN pool_update ON pool_hash.id = pool_update.hash_id "
+        "FULL JOIN pool_metadata_ref ON pool_update.meta_id = pool_metadata_ref.id "
+        "INNER JOIN pool_owner ON pool_update.id = pool_owner.pool_update_id "
+        "FULL JOIN pool_relay ON pool_update.id = pool_relay.update_id "
+        "FULL JOIN pool_retire ON pool_hash.id = pool_retire.hash_id "
+        "INNER JOIN stake_address join_reward_address ON"
+        " pool_update.reward_addr_id = join_reward_address.id "
+        "INNER JOIN stake_address join_owner_address ON pool_owner.addr_id = join_owner_address.id "
         "WHERE pool_hash.view = %s ORDER BY registered_tx_id;"
     )
 
