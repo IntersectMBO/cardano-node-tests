@@ -87,6 +87,8 @@ def add_column_to_table(table_name, column_name, column_type):
 
 
 def add_single_value_into_db(table_name, col_names_list, col_values_list):
+    print(f"Adding 1 new entry into {table_name} table")
+    initial_rows_no = get_last_row_no(table_name)
     col_names = ','.join(col_names_list)
     col_spaces = ','.join(['%s'] * len(col_names_list))
     conn = create_connection()
@@ -103,6 +105,8 @@ def add_single_value_into_db(table_name, col_names_list, col_values_list):
     finally:
         if conn:
             conn.close()
+    final_rows_no = get_last_row_no(table_name)
+    print(f"Successfully added {final_rows_no - initial_rows_no} rows into table {table_name}")
     return True
 
 

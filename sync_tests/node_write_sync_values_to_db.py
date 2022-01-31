@@ -79,6 +79,7 @@ def main():
         df1_column_names = ["identifier", "timestamp", "slot_no", "ram_bytes", "cpu_percent"]
         df1 = pd.DataFrame(columns=df1_column_names)
 
+        print(f"    ==== Creating the dataframe with the test values")
         for key, val in log_values_dict.items():
             new_row = {"identifier": sync_test_results_dict["identifier"],
                        "timestamp": key,
@@ -107,7 +108,8 @@ def main():
             new_row = {"identifier": sync_test_results_dict["identifier"],
                        "epoch_no": epoch,
                        "sync_duration_secs": sync_duration_values_dict[epoch]}
-            df2 = df2.concat(new_row, ignore_index=True)
+            row_df = pd.DataFrame([new_row])
+            df2 = pd.concat([row_df, df2], ignore_index=True)
 
         col_to_insert = list(df2.columns)
         val_to_insert = df2.values.tolist()
