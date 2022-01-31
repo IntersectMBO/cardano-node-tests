@@ -27,13 +27,15 @@ jobs:
           pip install pymysql
       - name: checkout sync_tests repo
         run: |
+          echo $PWD
+          echo "current branch: $(git branch --show-current)"
           cd cardano_node_tests
           git config --global user.name "sync_tests"
           git config --global user.email "action@github.com"
-          echo "current branch: $(git branch --show-current)"
+          echo "current branch1: $(git branch --show-current)"
 
           git checkout sync_tests
-          echo "current branch1: $(git branch --show-current)"
+          echo "current branch2: $(git branch --show-current)"
       - name: get the automated tests results
         env:
           BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
