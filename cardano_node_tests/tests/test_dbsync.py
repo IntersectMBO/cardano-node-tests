@@ -41,7 +41,6 @@ class TestDBSync:
 
     DBSYNC_TABLES = {
         "ada_pots",
-        "admin_user",
         "block",
         "collateral_tx_in",
         "cost_model",
@@ -53,6 +52,7 @@ class TestDBSync:
         "epoch_reward_total_received",
         "epoch_stake",
         "epoch_sync_time",
+        "extra_key_witness",
         "ma_tx_mint",
         "ma_tx_out",
         "meta",
@@ -87,8 +87,8 @@ class TestDBSync:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.dbsync < version.parse("12.0.0"),
-        reason="needs db-sync version >= 12.0.0",
+        VERSIONS.dbsync < version.parse("12.0.1"),
+        reason="needs db-sync version >= 12.0.1",
     )
     @pytest.mark.testnets
     def test_table_names(self, cluster: clusterlib.ClusterLib):
