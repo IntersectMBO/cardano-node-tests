@@ -138,8 +138,8 @@ def main():
                     build_results_dict["cluster_era"] = build["env"]["CLUSTER_ERA"]
                     build_results_dict["tx_era"] = build["env"]["TX_ERA"]
                 else:
-                    build_results_dict["cluster_era"] = "mary"
-                    build_results_dict["tx_era"] = "mary"
+                    build_results_dict["cluster_era"] = "alonzo"
+                    build_results_dict["tx_era"] = "alonzo"
 
                 build_results_dict["node_branch"] = "master"
                 if "dbsync" in env:
