@@ -228,7 +228,6 @@ class TestLedgerState:
         if sum_go < stake_snapshot["activeStakeGo"]:
             errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
 
-        # TODO: xfail for now, until we figure out all the corner cases
         if errors:
             err_joined = "\n".join(errors)
-            pytest.xfail(f"Errors:\n{err_joined}")
+            pytest.fail(f"Errors:\n{err_joined}")
