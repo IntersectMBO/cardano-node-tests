@@ -306,8 +306,11 @@ class ClusterManager:
         if self._cluster_instance_num == -1:
             return
 
+        # search for errors in cluster logfiles
+        errors = logfiles.search_and_clean(ignore_file_id=self.worker_id)
+
         with locking.FileLockIfXdist(self.cluster_lock):
-            self._log(f"c{self.cluster_instance_num}: called `on_test_stop`")
+            self._log(f"c{self._cluster_instance_num}: called `on_test_stop`")
 
             # remove resource locking files created by the worker
             resource_locking_files = list(
@@ -326,17 +329,8 @@ class ClusterManager:
             # remove file that indicates that a test is running on the worker
             (self.instance_dir / f"{TEST_RUNNING_GLOB}_{self.worker_id}").unlink(missing_ok=True)
 
-            # search for errors in cluster logfiles
-            errors = logfiles.search_cluster_artifacts()
-
-            # There's only one test running on a worker at a time. Deleting the coresponding rules
-            # file right after a test is finished is therefore safe. The effect is that the rules
-            # apply only from the time they were added (by `logfiles.add_ignore_rule`) until the end
-            # of the test.
-            logfiles.del_rules_file(rules_file_id=self.worker_id)
-
-            if errors:
-                logfiles.report_artifacts_errors(errors)
+        if errors:
+            logfiles.report_artifacts_errors(errors)
 
     def get(
         self,
