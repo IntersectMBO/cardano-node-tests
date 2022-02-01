@@ -12,8 +12,6 @@ from typing import List
 from typing import NamedTuple
 from typing import Tuple
 
-import pytest
-
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
@@ -42,7 +40,7 @@ ERRORS_IGNORED = [
 ]
 if VERSIONS.cluster_era == VERSIONS.ALONZO:
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
-ERRORS_RULES_FILE_NAME = ".errors_rules"
+ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 
 class RotableLog(NamedTuple):
@@ -79,28 +77,15 @@ def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> Li
     return logfile_records
 
 
-def add_ignore_rule(files_glob: str, regex: str, rules_file_id: str) -> None:
+def add_ignore_rule(files_glob: str, regex: str, ignore_file_id: str) -> None:
     """Add ignore rule for expected errors."""
     cluster_env = cluster_nodes.get_cluster_env()
-    rules_file = cluster_env.state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
+    rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
     basetemp = temptools.get_basetemp()
 
     with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"):
         with open(rules_file, "a", encoding="utf-8") as infile:
             infile.write(f"{files_glob};;{regex}\n")
-
-
-def del_rules_file(rules_file_id: str) -> None:
-    """Delete rules file identified by `rules_file_id`."""
-    cluster_env = cluster_nodes.get_cluster_env()
-    rules_file = cluster_env.state_dir / f"{ERRORS_RULES_FILE_NAME}_{rules_file_id}"
-    basetemp = temptools.get_basetemp()
-
-    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"):
-        try:
-            rules_file.unlink()
-        except FileNotFoundError:
-            pass
 
 
 def get_ignore_rules() -> List[Tuple[str, str]]:
@@ -110,7 +95,7 @@ def get_ignore_rules() -> List[Tuple[str, str]]:
     basetemp = temptools.get_basetemp()
 
     with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"):
-        for rules_file in cluster_env.state_dir.glob(f"{ERRORS_RULES_FILE_NAME}_*"):
+        for rules_file in cluster_env.state_dir.glob(f"{ERRORS_IGNORE_FILE_NAME}_*"):
             with open(rules_file, encoding="utf-8") as infile:
                 for line in infile:
                     if ";;" not in line:
@@ -122,19 +107,19 @@ def get_ignore_rules() -> List[Tuple[str, str]]:
 
 
 @contextlib.contextmanager
-def expect_errors(regex_pairs: List[Tuple[str, str]], rules_file_id: str) -> Iterator[None]:
+def expect_errors(regex_pairs: List[Tuple[str, str]], ignore_file_id: str) -> Iterator[None]:
     """Make sure the expected errors are present in logs.
 
     Args:
         regex_pairs: [(glob, regex)] - A list of regexes that need to be present in files
             described by the glob.
-        rules_file_id: The id of a rules file the expected error will be added to.
+        ignore_file_id: The id of a ignore file the expected error will be added to.
     """
     state_dir = cluster_nodes.get_cluster_env().state_dir
 
     glob_list = []
     for files_glob, regex in regex_pairs:
-        add_ignore_rule(files_glob=files_glob, regex=regex, rules_file_id=rules_file_id)
+        add_ignore_rule(files_glob=files_glob, regex=regex, ignore_file_id=ignore_file_id)
         glob_list.append(files_glob)
     # resolve the globs
     _expanded_paths = [list(state_dir.glob(glob_item)) for glob_item in glob_list]
@@ -147,6 +132,7 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], rules_file_id: str) -> Ite
 
     yield
 
+    errors = []
     for files_glob, regex in regex_pairs:
         regex_comp = re.compile(regex)
         # get list of records (file names and offsets) for given glob
@@ -171,7 +157,11 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], rules_file_id: str) -> Ite
                 if line_found:
                     break
             else:
-                raise AssertionError(f"No line matching `{regex}` found in '{logfile}'.")
+                errors.append(f"No line matching `{regex}` found in '{logfile}'.")
+
+    if errors:
+        errors_joined = "\n".join(errors)
+        raise AssertionError(errors_joined) from None
 
 
 def _get_seek(fpath: Path) -> int:
@@ -191,11 +181,11 @@ def get_ignore_regex(ignore_rules: List[Tuple[str, str]], regexes: List[str], lo
 
 def search_cluster_artifacts() -> List[Tuple[Path, str]]:
     """Search cluster artifacts for errors."""
-    state_dir = cluster_nodes.get_cluster_env().state_dir
     ignore_rules = get_ignore_rules()
+    cluster_env = cluster_nodes.get_cluster_env()
 
     errors = []
-    for logfile in state_dir.glob("*.std*"):
+    for logfile in cluster_env.state_dir.glob("*.std*"):
         # skip if the log file is status file or rotated log
         if logfile.name.endswith(".offset") or ROTATED_RE.match(logfile.name):
             continue
@@ -230,8 +220,37 @@ def search_cluster_artifacts() -> List[Tuple[Path, str]]:
     return errors
 
 
+def search_and_clean(ignore_file_id: str) -> List[Tuple[Path, str]]:
+    """Search cluster artifacts for errors and cleanup relevant ignore file when finished.
+
+    After performing the search, delete ignore file identified by `ignore_file_id` as it is no
+    longer valid.
+    Use lock, so no other `search_and_clean` can run on another worker and report the same errors.
+    """
+    cluster_env = cluster_nodes.get_cluster_env()
+    basetemp = temptools.get_basetemp()
+
+    errors = []
+    with locking.FileLockIfXdist(f"{basetemp}/search_clean_{cluster_env.instance_num}.lock"):
+        # search for errors in cluster logfiles
+        errors = search_cluster_artifacts()
+
+        # There's only one test running on a worker at a time. Deleting the coresponding rules
+        # file right after a test is finished is therefore safe. The effect is that the rules
+        # apply only from the time they were added (by `logfiles.add_ignore_rule`) until the end
+        # of the test.
+        rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
+
+        try:
+            rules_file.unlink()
+        except FileNotFoundError:
+            pass
+
+    return errors
+
+
 def report_artifacts_errors(errors: List[Tuple[Path, str]]) -> None:
     """Report errors found in artifacts."""
     err = [f"{e[0]}: {e[1]}" for e in errors]
     err_joined = "\n".join(err)
-    pytest.fail(f"Errors found in cluster log files:\n{err_joined}")
+    raise AssertionError(f"Errors found in cluster log files:\n{err_joined}") from None
