@@ -124,12 +124,18 @@ class TestKES:
 
         expire_timeout = 200
 
-        expected_errors = [
-            ("*.stdout", "TraceNoLedgerView"),
-            ("*.stdout", "KESKeyAlreadyPoisoned"),
-            ("*.stdout", "KESCouldNotEvolve"),
-        ]
-        with logfiles.expect_errors(expected_errors, rules_file_id=worker_id):
+        expected_err_regexes = ["TraceNoLedgerView", "KESKeyAlreadyPoisoned", "KESCouldNotEvolve"]
+        # ignore expected errors in all matching log files
+        for err in expected_err_regexes:
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex=err,
+                ignore_file_id=worker_id,
+            )
+        # search for expected errors only in log files corresponding to pools
+        expected_errors = [("pool*.stdout", err) for err in expected_err_regexes]
+
+        with logfiles.expect_errors(expected_errors, ignore_file_id=worker_id):
             LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
             time.sleep(expire_timeout)
 
@@ -200,12 +206,12 @@ class TestKES:
             expected_errors = [
                 (f"{node_name}.stdout", "TPraosCannotForgeKeyNotUsableYet"),
             ]
-            with logfiles.expect_errors(expected_errors, rules_file_id=cluster_manager.worker_id):
+            with logfiles.expect_errors(expected_errors, ignore_file_id=cluster_manager.worker_id):
                 # restart the node with the new operational certificate
                 logfiles.add_ignore_rule(
                     files_glob="*.stdout",
                     regex="MuxBearerClosed",
-                    rules_file_id=cluster_manager.worker_id,
+                    ignore_file_id=cluster_manager.worker_id,
                 )
                 shutil.copy(invalid_opcert_file, opcert_file)
                 cluster_nodes.restart_nodes([node_name])
@@ -298,7 +304,7 @@ class TestKES:
             logfiles.add_ignore_rule(
                 files_glob="*.stdout",
                 regex="MuxBearerClosed",
-                rules_file_id=cluster_manager.worker_id,
+                ignore_file_id=cluster_manager.worker_id,
             )
             shutil.copy(new_opcert_file, opcert_file)
             cluster_nodes.restart_nodes([node_name])
