@@ -714,7 +714,7 @@ class TestLocking:
             logfiles.add_ignore_rule(
                 files_glob="*.stdout",
                 regex="ValidationTagMismatch",
-                rules_file_id=worker_id,
+                ignore_file_id=worker_id,
             )
 
         plutus_op = plutus_spend.PlutusOp(
@@ -783,7 +783,7 @@ class TestLocking:
         logfiles.add_ignore_rule(
             files_glob="*.stdout",
             regex="ValidationTagMismatch",
-            rules_file_id=worker_id,
+            ignore_file_id=worker_id,
         )
 
         tx_output_fund = _fund_script(
