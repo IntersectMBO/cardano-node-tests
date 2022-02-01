@@ -17,6 +17,7 @@ import string
 import time
 from pathlib import Path
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import allure
@@ -1221,15 +1222,36 @@ class TestManyUTXOs:
                 for multiple in range(1, 21):
                     less_than_1_ada = int(float(multiple / 20) * 1000_000)
                     amount = less_than_1_ada + 1000_000
-                    self._from_to_transactions(
-                        cluster_obj=cluster,
-                        payment_addr=payment_addr,
-                        tx_name=f"{temp_template}_{amount}_{i}",
-                        out_addrs=out_addrs,
-                        amount=amount,
-                    )
+
+                    # repeat transaction when "BadInputsUTxO" error happens
+                    excp: Optional[clusterlib.CLIError] = None
+                    for r in range(2):
+                        if r > 0:
+                            cluster.wait_for_new_block(2)
+                        try:
+                            self._from_to_transactions(
+                                cluster_obj=cluster,
+                                payment_addr=payment_addr,
+                                tx_name=f"{temp_template}_{amount}_r{r}_{i}",
+                                out_addrs=out_addrs,
+                                amount=amount,
+                            )
+                        except clusterlib.CLIError as err:
+                            # The "BadInputsUTxO" error happens when a single UTxO is used in two
+                            # transactions. This can happen from time to time, we stress
+                            # the network here and waiting for 2 blocks may not be enough to get a
+                            # transaction through.
+                            if "BadInputsUTxO" not in str(err):
+                                raise
+                            excp = err
+                        else:
+                            break
+                    else:
+                        if excp:
+                            raise excp
 
             # create 200 UTxOs with 10 ADA
+            cluster.wait_for_new_block(2)
             self._from_to_transactions(
                 cluster_obj=cluster,
                 payment_addr=payment_addr,
