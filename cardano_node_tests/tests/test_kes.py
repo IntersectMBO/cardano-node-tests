@@ -29,22 +29,8 @@ NUM_OF_EPOCHS = 6
 
 
 @pytest.fixture(scope="module")
-def create_temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir."""
-    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
-    p.mkdir(exist_ok=True, parents=True)
-    return p
-
-
-@pytest.fixture
-def temp_dir(create_temp_dir: Path):
-    """Change to a temporary dir."""
-    with helpers.change_cwd(create_temp_dir):
-        yield create_temp_dir
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
+def this_testfile():
+    return __file__
 
 
 @pytest.fixture
@@ -357,7 +343,7 @@ class TestKES:
         self,
         cluster: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to generate new operational certificate without specifying the `--kes-period`.
 
@@ -367,7 +353,7 @@ class TestKES:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         temp_template = common.get_test_id(cluster)
-        out_file = temp_dir / f"{temp_template}_shouldnt_exist.opcert"
+        out_file = testfile_temp_dir / f"{temp_template}_shouldnt_exist.opcert"
 
         # try to generate new operational certificate without specifying the `--kes-period`
         with pytest.raises(clusterlib.CLIError) as excinfo:

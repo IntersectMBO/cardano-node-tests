@@ -1,11 +1,9 @@
 """Tests for Prometheus and EKG metrics."""
 import logging
-from pathlib import Path
 
 import allure
 import pytest
 import requests
-from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
@@ -17,25 +15,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def create_temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir."""
-    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
-    p.mkdir(exist_ok=True, parents=True)
-    return p
+def this_testfile():
+    return __file__
 
 
-@pytest.fixture
-def temp_dir(create_temp_dir: Path):
-    """Change to a temporary dir."""
-    with helpers.change_cwd(create_temp_dir):
-        yield create_temp_dir
-
-
-# use the "temp_dir" fixture for all tests automatically; skip all tests for now
-pytestmark = [
-    pytest.mark.skip(reason="metrics data are not stable yet"),
-    pytest.mark.usefixtures("temp_dir"),
-]
+# skip all tests for now
+pytestmark = pytest.mark.skip(reason="metrics data are not stable yet")
 
 
 @pytest.fixture
