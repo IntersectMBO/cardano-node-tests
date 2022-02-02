@@ -9,7 +9,6 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
@@ -21,22 +20,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def create_temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir."""
-    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
-    p.mkdir(exist_ok=True, parents=True)
-    return p
-
-
-@pytest.fixture
-def temp_dir(create_temp_dir: Path):
-    """Change to a temporary dir."""
-    with helpers.change_cwd(create_temp_dir):
-        yield create_temp_dir
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
+def this_testfile():
+    return __file__
 
 
 @pytest.mark.testnets
@@ -320,7 +305,7 @@ class TestExpectedFees:
     def test_pool_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
@@ -337,7 +322,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -373,7 +358,7 @@ class TestExpectedFees:
     def test_pool_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
@@ -391,7 +376,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(

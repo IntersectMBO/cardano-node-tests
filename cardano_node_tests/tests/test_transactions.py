@@ -25,7 +25,6 @@ import cbor2
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
@@ -46,22 +45,8 @@ ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
 @pytest.fixture(scope="module")
-def create_temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir."""
-    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
-    p.mkdir(exist_ok=True, parents=True)
-    return p
-
-
-@pytest.fixture
-def temp_dir(create_temp_dir: Path):
-    """Change to a temporary dir."""
-    with helpers.change_cwd(create_temp_dir):
-        yield create_temp_dir
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
+def this_testfile():
+    return __file__
 
 
 def _get_raw_tx_values(
@@ -598,7 +583,7 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Build a transaction with a missing `--tx-out` parameter."""
         temp_template = common.get_test_id(cluster)
@@ -608,7 +593,7 @@ class TestBasic:
             tx_name=temp_template,
             src_record=payment_addrs[0],
             dst_record=payment_addrs[1],
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
         )
         txins, __ = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -636,7 +621,7 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Submit a transaction with a missing `--ttl` (`--invalid-hereafter`) parameter."""
         temp_template = common.get_test_id(cluster)
@@ -649,7 +634,7 @@ class TestBasic:
             tx_name=temp_template,
             src_record=payment_addrs[0],
             dst_record=payment_addrs[0],
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
         )
         txins, txouts = _get_txins_txouts(tx_raw_template.txins, tx_raw_template.txouts)
         tx_raw_output = tx_raw_template._replace(invalid_hereafter=None)
@@ -687,7 +672,7 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to build a transaction with multiple identical txins."""
         temp_template = common.get_test_id(cluster)
@@ -700,7 +685,7 @@ class TestBasic:
             tx_name=temp_template,
             src_record=payment_addrs[0],
             dst_record=payment_addrs[0],
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
         )
         txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -741,7 +726,7 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Build a transaction with multiple identical txins.
 
@@ -754,7 +739,7 @@ class TestBasic:
             tx_name=temp_template,
             src_record=payment_addrs[0],
             dst_record=payment_addrs[1],
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             for_build_command=True,
         )
         txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
@@ -1402,7 +1387,7 @@ class TestNotBalanced:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to build a transaction with a negative change.
 
@@ -1437,7 +1422,7 @@ class TestNotBalanced:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_raw_tx_bare(
-                out_file=temp_dir / f"{helpers.get_timestamped_rand_str()}_tx.body",
+                out_file=testfile_temp_dir / f"{helpers.get_timestamped_rand_str()}_tx.body",
                 txins=txins,
                 txouts=txouts,
                 tx_files=tx_files,
@@ -1494,7 +1479,7 @@ class TestNotBalanced:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         transfer_add: int,
         change_amount: int,
     ):
@@ -1518,7 +1503,7 @@ class TestNotBalanced:
         hypothesis.assume(0 <= transferred_amount <= src_addr_highest_utxo.amount)
 
         tx_name = f"test_wrong_balance_ci{cluster.cluster_id}"
-        out_file_tx = temp_dir / f"{tx_name}_tx.body"
+        out_file_tx = testfile_temp_dir / f"{tx_name}_tx.body"
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.calculate_tx_ttl()
 
@@ -2451,7 +2436,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to build a transaction with a missing `--fee` parameter.
 
@@ -2464,7 +2449,7 @@ class TestNegative:
             tx_name=temp_template,
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
         )
         txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -2492,7 +2477,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to build a Shelley era TX with a missing `--ttl` (`--invalid-hereafter`) parameter.
 
@@ -2505,7 +2490,7 @@ class TestNegative:
             tx_name=temp_template,
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
         )
         txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -2530,7 +2515,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to build a transaction with a missing `--tx-in` parameter.
 
@@ -2543,7 +2528,7 @@ class TestNegative:
             tx_name=temp_template,
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
         )
         __, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
 
@@ -2569,7 +2554,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to build a transaction with a missing `--tx-in` parameter.
 
@@ -2584,7 +2569,7 @@ class TestNegative:
             tx_name=temp_template,
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             for_build_command=True,
         )
         __, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
@@ -2612,7 +2597,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to build a transaction with a missing `--change-address` parameter.
 
@@ -2627,7 +2612,7 @@ class TestNegative:
             tx_name=temp_template,
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             for_build_command=True,
         )
         txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
@@ -2654,7 +2639,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to build a transaction with multiple `--change-address` parameters.
 
@@ -2669,7 +2654,7 @@ class TestNegative:
             tx_name=temp_template,
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             for_build_command=True,
         )
         txins, txouts = _get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)

@@ -235,6 +235,35 @@ def session_autouse(change_dir: Any, close_dbconn: Any, testenv_setup_teardown: 
     pass
 
 
+@pytest.fixture(scope="module")
+def testfile_temp_dir(tmp_path_factory: TempdirFactory, this_testfile: str) -> Path:
+    """Return a temporary dir for storing test artifacts.
+
+    The dir is specific to a single test file.
+    """
+    p = (
+        temptools.get_pytest_worker_tmp(tmp_path_factory)
+        .joinpath(helpers.get_id_for_mktemp(this_testfile))
+        .resolve()
+    )
+    p.mkdir(exist_ok=True, parents=True)
+    return p
+
+
+@pytest.fixture
+def cd_testfile_temp_dir(testfile_temp_dir: Path) -> Generator[Path, None, None]:
+    """Change to a temporary dir specific to a test file."""
+    with helpers.change_cwd(testfile_temp_dir):
+        yield testfile_temp_dir
+
+
+@pytest.fixture(autouse=True)
+def function_autouse(cd_testfile_temp_dir: Generator[Path, None, None]) -> None:
+    """Autouse function fixtures that are required for each test setup and teardown."""
+    # pylint: disable=unused-argument,unnecessary-pass
+    pass
+
+
 @pytest.fixture
 def cluster_manager(
     tmp_path_factory: TempdirFactory,

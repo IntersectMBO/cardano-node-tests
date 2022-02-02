@@ -37,22 +37,8 @@ DEREG_BUFFER_SEC = 30
 
 
 @pytest.fixture(scope="module")
-def create_temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir."""
-    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
-    p.mkdir(exist_ok=True, parents=True)
-    return p
-
-
-@pytest.fixture
-def temp_dir(create_temp_dir: Path):
-    """Change to a temporary dir."""
-    with helpers.change_cwd(create_temp_dir):
-        yield create_temp_dir
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
+def this_testfile():
+    return __file__
 
 
 @pytest.fixture(scope="module")
@@ -653,7 +639,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         request: FixtureRequest,
         use_build_cmd: bool,
     ):
@@ -672,7 +658,7 @@ class TestStakePool:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -704,7 +690,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_data=pool_data,
             request=request,
             use_build_cmd=use_build_cmd,
@@ -729,7 +715,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         request: FixtureRequest,
         use_build_cmd: bool,
     ):
@@ -748,7 +734,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -780,7 +766,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_data=pool_data,
             request=request,
             use_build_cmd=use_build_cmd,
@@ -803,7 +789,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         no_of_addr: int,
         request: FixtureRequest,
         use_build_cmd: bool,
@@ -841,7 +827,7 @@ class TestStakePool:
         _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -864,7 +850,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         use_build_cmd: bool,
     ):
         """Deregister stake pool.
@@ -884,7 +870,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -916,7 +902,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_data=pool_data,
             use_build_cmd=use_build_cmd,
         )
@@ -987,7 +973,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         request: FixtureRequest,
     ):
         """Reregister stake pool.
@@ -1010,7 +996,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -1040,7 +1026,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_data=pool_data,
         )
 
@@ -1083,7 +1069,7 @@ class TestStakePool:
         tx_files = clusterlib.TxFiles(
             certificate_files=[
                 pool_creation_out.pool_reg_cert_file,
-                *list(temp_dir.glob(f"{temp_template}*_stake_deleg.cert")),
+                *list(testfile_temp_dir.glob(f"{temp_template}*_stake_deleg.cert")),
             ],
             signing_key_files=pool_creation_out.tx_raw_output.tx_files.signing_key_files,
         )
@@ -1094,7 +1080,7 @@ class TestStakePool:
         # deregister stake pool
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-            with helpers.change_cwd(temp_dir):
+            with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=pool_creation_out.cold_key_pair,
@@ -1143,7 +1129,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         request: FixtureRequest,
     ):
         """Reregister a stake pool that is in course of being retired.
@@ -1166,7 +1152,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -1196,7 +1182,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_data=pool_data,
         )
 
@@ -1224,7 +1210,7 @@ class TestStakePool:
         tx_files = clusterlib.TxFiles(
             certificate_files=[
                 pool_creation_out.pool_reg_cert_file,
-                *list(temp_dir.glob(f"{temp_template}*_stake_deleg.cert")),
+                *list(testfile_temp_dir.glob(f"{temp_template}*_stake_deleg.cert")),
             ],
             signing_key_files=pool_creation_out.tx_raw_output.tx_files.signing_key_files,
         )
@@ -1238,7 +1224,7 @@ class TestStakePool:
         # deregister stake pool
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-            with helpers.change_cwd(temp_dir):
+            with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=pool_creation_out.cold_key_pair,
@@ -1292,7 +1278,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         use_build_cmd: bool,
         request: FixtureRequest,
     ):
@@ -1314,7 +1300,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_metadata_updated = {
@@ -1324,7 +1310,7 @@ class TestStakePool:
             "homepage": "www.qa22.com",
         }
         pool_metadata_updated_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata_updated.json",
+            testfile_temp_dir / f"{pool_name}_registration_metadata_updated.json",
             pool_metadata_updated,
         )
 
@@ -1361,7 +1347,7 @@ class TestStakePool:
         pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1426,7 +1412,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         use_build_cmd: bool,
         request: FixtureRequest,
     ):
@@ -1448,7 +1434,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         min_pool_cost = cluster.get_protocol_params().get("minPoolCost", 500)
@@ -1485,7 +1471,7 @@ class TestStakePool:
         pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1539,7 +1525,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         request: FixtureRequest,
     ):
         """Create and register a stake pool with TX signed in multiple stages.
@@ -1640,7 +1626,7 @@ class TestStakePool:
         # deregister stake pool
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
-            with helpers.change_cwd(temp_dir):
+            with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=node_cold,
@@ -1809,7 +1795,7 @@ class TestPoolCost:
         self,
         cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_cost: int,
     ):
         """Try to create and register a stake pool with pool cost lower than *minPoolCost*.
@@ -1832,7 +1818,7 @@ class TestPoolCost:
             _create_register_pool(
                 cluster_obj=cluster,
                 temp_template=temp_template,
-                temp_dir=temp_dir,
+                temp_dir=testfile_temp_dir,
                 pool_owners=pool_owners,
                 pool_data=pool_data,
             )
@@ -1852,7 +1838,7 @@ class TestPoolCost:
         cluster_manager: cluster_management.ClusterManager,
         cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_cost: int,
         request: FixtureRequest,
     ):
@@ -1887,7 +1873,7 @@ class TestPoolCost:
         _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=temp_dir,
+            temp_dir=testfile_temp_dir,
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1940,7 +1926,7 @@ class TestNegative:
     def gen_pool_registration_cert_data(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ) -> Tuple[str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair]:
         pool_name = f"pool_{clusterlib.get_rand_str(4)}"
 
@@ -1951,7 +1937,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / "hypothesis_metadata_registration_metadata.json", pool_metadata
+            testfile_temp_dir / "hypothesis_metadata_registration_metadata.json", pool_metadata
         )
         pool_metadata_hash = cluster.gen_pool_metadata_hash(pool_metadata_file)
 
@@ -2177,7 +2163,7 @@ class TestNegative:
     def test_stake_pool_metadata_no_name(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to create pool metadata hash when missing the *name* key.
 
@@ -2191,7 +2177,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2202,7 +2188,7 @@ class TestNegative:
     def test_stake_pool_metadata_no_description(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to create pool metadata hash when missing the *description* key.
 
@@ -2216,7 +2202,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2227,7 +2213,7 @@ class TestNegative:
     def test_stake_pool_metadata_no_ticker(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to create pool metadata hash when missing the *ticker* key.
 
@@ -2241,7 +2227,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2252,7 +2238,7 @@ class TestNegative:
     def test_stake_pool_metadata_no_homepage(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
     ):
         """Try to create pool metadata hash when missing the *homepage* key.
 
@@ -2266,7 +2252,7 @@ class TestNegative:
             "ticker": "IOG1",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2279,7 +2265,7 @@ class TestNegative:
     def test_stake_pool_metadata_long_name(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_name: str,
     ):
         """Try to create pool metadata hash when the *name* value is longer than allowed.
@@ -2295,7 +2281,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2312,7 +2298,7 @@ class TestNegative:
     def test_stake_pool_metadata_long_description(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_description: str,
     ):
         """Try to create pool metadata hash when the *description* value is longer than allowed.
@@ -2328,7 +2314,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2345,7 +2331,7 @@ class TestNegative:
     def test_stake_pool_metadata_long_ticker(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_ticker: str,
     ):
         """Try to create pool metadata hash when the *ticker* value is longer than allowed.
@@ -2363,7 +2349,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2380,7 +2366,7 @@ class TestNegative:
     def test_stake_pool_metadata_long_homepage(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_homepage: str,
     ):
         """Try to create pool metadata hash when the *homepage* value is longer than allowed.
@@ -2396,7 +2382,7 @@ class TestNegative:
             "homepage": pool_homepage,
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
