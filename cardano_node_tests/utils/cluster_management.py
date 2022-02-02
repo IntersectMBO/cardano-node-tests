@@ -448,11 +448,14 @@ class _ClusterGetter:
             helpers.touch(self.cm.instance_dir / CLUSTER_DEAD_FILE)
             return False
 
-        # setup faucet addresses
+        # Create temp dir for faucet addresses data.
+        # Pytest's mktemp adds number to the end of the dir name, so keep the trailing '_'
+        # as separator. Resulting dir name is e.g. 'addrs_data_ci3_0'.
         tmp_path = Path(
-            self.cm.tmp_path_factory.mktemp(f"addrs_data_ci{self.cm.cluster_instance_num}")
+            self.cm.tmp_path_factory.mktemp(f"addrs_data_ci{self.cm.cluster_instance_num}_")
         )
-        cluster_nodes.setup_test_addrs(cluster_obj, tmp_path)
+        # setup faucet addresses
+        cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=tmp_path)
 
         # create file that indicates that the cluster is running
         if not cluster_running_file.exists():
@@ -475,7 +478,7 @@ class _ClusterGetter:
         tmp_path = state_dir / "addrs_data"
         tmp_path.mkdir(exist_ok=True, parents=True)
         cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
-        cluster_nodes.setup_test_addrs(cluster_obj, tmp_path)
+        cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=tmp_path)
 
     def _is_restart_needed(self, instance_num: int) -> bool:
         """Check if it is necessary to restart cluster."""
