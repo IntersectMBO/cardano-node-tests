@@ -24,11 +24,7 @@ os.environ["CARDANO_NODE_SOCKET_PATH"] = str(
 # resolve SCHEDULING_LOG
 SCHEDULING_LOG: Union[str, Path] = os.environ.get("SCHEDULING_LOG") or ""
 if SCHEDULING_LOG:
-    SCHEDULING_LOG = Path(SCHEDULING_LOG).expanduser()
-    if not SCHEDULING_LOG.is_absolute():
-        # the path is relative to LAUNCH_PATH (current path can differ)
-        run_log = LAUNCH_PATH / SCHEDULING_LOG
-    SCHEDULING_LOG = SCHEDULING_LOG.resolve()
+    SCHEDULING_LOG = Path(SCHEDULING_LOG).expanduser().resolve()
 
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
@@ -53,7 +49,7 @@ NOPOOLS = bool(os.environ.get("NOPOOLS"))
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
 if HAS_DBSYNC:
     DBSYNC_BIN = (
-        Path(os.environ["DBSYNC_REPO"]) / "db-sync-node" / "bin" / "cardano-db-sync"
+        Path(os.environ["DBSYNC_REPO"]).expanduser() / "db-sync-node" / "bin" / "cardano-db-sync"
     ).resolve()
 else:
     DBSYNC_BIN = Path("nonexistent")
