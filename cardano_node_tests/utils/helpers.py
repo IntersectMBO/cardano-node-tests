@@ -87,7 +87,12 @@ def environ(env: dict) -> Iterator[None]:
                 os.environ[key] = value
 
 
-def run_command(command: Union[str, list], workdir: FileType = "", shell: bool = False) -> bytes:
+def run_command(
+    command: Union[str, list],
+    workdir: FileType = "",
+    ignore_fail: bool = False,
+    shell: bool = False,
+) -> bytes:
     """Run command."""
     cmd: Union[str, list]
     if isinstance(command, str):
@@ -103,7 +108,7 @@ def run_command(command: Union[str, list], workdir: FileType = "", shell: bool =
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     stdout, stderr = p.communicate()
 
-    if p.returncode != 0:
+    if not ignore_fail and p.returncode != 0:
         err_dec = stderr.decode()
         err_dec = err_dec or stdout.decode()
         raise AssertionError(f"An error occurred while running `{command}`: {err_dec}")

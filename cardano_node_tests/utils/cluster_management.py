@@ -480,12 +480,28 @@ class _ClusterGetter:
         cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
         cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=tmp_path)
 
+    def _is_healthy(self, instance_num: int) -> bool:
+        """Check health of cluster services."""
+        statuses = cluster_nodes.services_status(instance_num=instance_num)
+        failed_services = [s.name for s in statuses if s.status == "FATAL"]
+        not_running_services = [(s.name, s.status) for s in statuses if s.status != "RUNNING"]
+        if failed_services:
+            self.cm._log(f"c{instance_num}: found failed services {failed_services}")
+        elif not_running_services:
+            self.cm._log(f"c{instance_num}: found not running services {not_running_services}")
+        return not failed_services
+
     def _is_restart_needed(self, instance_num: int) -> bool:
         """Check if it is necessary to restart cluster."""
         instance_dir = self.cm.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        # if cluster instance is not started yet
         if not (instance_dir / CLUSTER_RUNNING_FILE).exists():
             return True
+        # if it was indicated that the cluster instance needs to be restarted
         if list(instance_dir.glob(f"{RESTART_NEEDED_GLOB}_*")):
+            return True
+        # if a service failed on cluster instance
+        if not self._is_healthy(instance_num):
             return True
         return False
 
@@ -762,7 +778,8 @@ class _ClusterGetter:
         initial_marked_test = bool(cget_status.mark and not cget_status.marked_running)
         singleton_test = Resources.CLUSTER in cget_status.lock_resources
         new_cmd_restart = bool(cget_status.start_cmd and (initial_marked_test or singleton_test))
-        if not (new_cmd_restart or self._is_restart_needed(cget_status.instance_num)):
+        will_restart = new_cmd_restart or self._is_restart_needed(cget_status.instance_num)
+        if not will_restart:
             return True
 
         # if tests are running on the instance, we cannot restart, therefore we cannot continue

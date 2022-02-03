@@ -8,6 +8,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import NamedTuple
+from typing import Optional
 
 from cardano_clusterlib import clusterlib
 
@@ -31,6 +32,14 @@ class ClusterEnv(NamedTuple):
     instance_num: int
     cluster_era: str
     tx_era: str
+
+
+class ServiceStatus(NamedTuple):
+    name: str
+    status: str
+    pid: Optional[int]
+    uptime: Optional[str]
+    message: str = ""
 
 
 class Testnets:
@@ -327,37 +336,83 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     return get_cluster_type().get_cluster_obj()
 
 
-def restart_all_nodes() -> None:
+def restart_all_nodes(instance_num: Optional[int] = None) -> None:
     """Restart all Cardano nodes of the running cluster."""
     LOGGER.info("Restarting all cluster nodes.")
-    cluster_env = get_cluster_env()
-    supervisor_port = (
-        get_cluster_type().cluster_scripts.get_instance_ports(cluster_env.instance_num).supervisor
-    )
+
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
     try:
-        helpers.run_command(
-            f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:",
-            workdir=cluster_env.work_dir,
-        )
+        helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:")
     except Exception as exc:
         LOGGER.debug(f"Failed to restart cluster nodes: {exc}")
 
 
-def restart_nodes(node_names: List[str]) -> None:
-    """Restart list of Cardano nodes of the running cluster."""
-    LOGGER.info(f"Restarting cluster nodes {node_names}.")
-    cluster_env = get_cluster_env()
-    supervisor_port = (
-        get_cluster_type().cluster_scripts.get_instance_ports(cluster_env.instance_num).supervisor
-    )
-    for node_name in node_names:
+def restart_services(service_names: List[str], instance_num: Optional[int] = None) -> None:
+    """Restart list of services running on the running cluster."""
+    LOGGER.info(f"Restarting services {service_names}.")
+
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
+    for service_name in service_names:
         try:
             helpers.run_command(
-                f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:{node_name}",
-                workdir=cluster_env.work_dir,
+                f"supervisorctl -s http://localhost:{supervisor_port} restart {service_name}"
             )
         except Exception as exc:
-            LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
+            LOGGER.debug(f"Failed to restart service `{service_name}`: {exc}")
+
+
+def restart_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
+    """Restart list of Cardano nodes of the running cluster."""
+    service_names = [f"nodes:{n}" for n in node_names]
+    restart_services(service_names=service_names, instance_num=instance_num)
+
+
+def services_status(
+    service_names: Optional[List[str]] = None, instance_num: Optional[int] = None
+) -> List[ServiceStatus]:
+    """Return status info for list of services running on the running cluster (all by default)."""
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
+    service_names_arg = " ".join(service_names) if service_names else "all"
+
+    status_out = (
+        helpers.run_command(
+            f"supervisorctl -s http://localhost:{supervisor_port} status {service_names_arg}",
+            ignore_fail=True,
+        )
+        .decode()
+        .strip()
+        .split("\n")
+    )
+
+    statuses = []
+    for status_line in status_out:
+        service_name, status, *running_status = status_line.split()
+        if running_status and running_status[0] == "pid":
+            _pid, pid, _uptime, uptime, *other = running_status
+            message = " ".join(other)
+        else:
+            pid, uptime = "", ""
+            message = " ".join(running_status)
+        statuses.append(
+            ServiceStatus(
+                name=service_name,
+                status=status,
+                pid=int(pid.rstrip(",")) if pid else None,
+                uptime=uptime or None,
+                message=message,
+            )
+        )
+
+    return statuses
 
 
 def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
