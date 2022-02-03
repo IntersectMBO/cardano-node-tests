@@ -46,8 +46,7 @@ def save_cluster_artifacts(save_dir: Path, state_dir: Path) -> None:
     destdir = save_dir / "cluster_artifacts" / f"{state_dir.name}_{helpers.get_rand_str(8)}"
     destdir.mkdir(parents=True)
 
-    files_list = list(state_dir.glob("*.std*"))
-    files_list.extend(list(state_dir.glob("*.json")))
+    files_list = [*state_dir.glob("*.std*"), *state_dir.glob("*.json"), *state_dir.glob("*.log")]
     dirs_to_copy = ("nodes", "shelley")
 
     for fpath in files_list:
