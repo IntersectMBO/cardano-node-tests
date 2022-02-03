@@ -8,6 +8,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import NamedTuple
+from typing import Optional
 
 from cardano_clusterlib import clusterlib
 
@@ -327,37 +328,41 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     return get_cluster_type().get_cluster_obj()
 
 
-def restart_all_nodes() -> None:
+def restart_all_nodes(instance_num: Optional[int] = None) -> None:
     """Restart all Cardano nodes of the running cluster."""
     LOGGER.info("Restarting all cluster nodes.")
-    cluster_env = get_cluster_env()
-    supervisor_port = (
-        get_cluster_type().cluster_scripts.get_instance_ports(cluster_env.instance_num).supervisor
-    )
+
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
     try:
-        helpers.run_command(
-            f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:",
-            workdir=cluster_env.work_dir,
-        )
+        helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:")
     except Exception as exc:
         LOGGER.debug(f"Failed to restart cluster nodes: {exc}")
 
 
-def restart_nodes(node_names: List[str]) -> None:
-    """Restart list of Cardano nodes of the running cluster."""
-    LOGGER.info(f"Restarting cluster nodes {node_names}.")
-    cluster_env = get_cluster_env()
-    supervisor_port = (
-        get_cluster_type().cluster_scripts.get_instance_ports(cluster_env.instance_num).supervisor
-    )
-    for node_name in node_names:
+def restart_services(service_names: List[str], instance_num: Optional[int] = None) -> None:
+    """Restart list of services running on the running cluster."""
+    LOGGER.info(f"Restarting services {service_names}.")
+
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
+    for service_name in service_names:
         try:
             helpers.run_command(
-                f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:{node_name}",
-                workdir=cluster_env.work_dir,
+                f"supervisorctl -s http://localhost:{supervisor_port} restart {service_name}"
             )
         except Exception as exc:
-            LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
+            LOGGER.debug(f"Failed to restart service `{service_name}`: {exc}")
+
+
+def restart_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
+    """Restart list of Cardano nodes of the running cluster."""
+    service_names = [f"nodes:{n}" for n in node_names]
+    restart_services(service_names=service_names, instance_num=instance_num)
 
 
 def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
