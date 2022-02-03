@@ -34,6 +34,14 @@ class ClusterEnv(NamedTuple):
     tx_era: str
 
 
+class ServiceStatus(NamedTuple):
+    name: str
+    status: str
+    pid: Optional[int]
+    uptime: Optional[str]
+    message: str = ""
+
+
 class Testnets:
     shelley_qa = "shelley_qa"
     testnet = "testnet"
@@ -363,6 +371,48 @@ def restart_nodes(node_names: List[str], instance_num: Optional[int] = None) -> 
     """Restart list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     restart_services(service_names=service_names, instance_num=instance_num)
+
+
+def services_status(
+    service_names: Optional[List[str]] = None, instance_num: Optional[int] = None
+) -> List[ServiceStatus]:
+    """Return status info for list of services running on the running cluster (all by default)."""
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
+    service_names_arg = " ".join(service_names) if service_names else "all"
+
+    status_out = (
+        helpers.run_command(
+            f"supervisorctl -s http://localhost:{supervisor_port} status {service_names_arg}",
+            ignore_fail=True,
+        )
+        .decode()
+        .strip()
+        .split("\n")
+    )
+
+    statuses = []
+    for status_line in status_out:
+        service_name, status, *running_status = status_line.split()
+        if running_status and running_status[0] == "pid":
+            _pid, pid, _uptime, uptime, *other = running_status
+            message = " ".join(other)
+        else:
+            pid, uptime = "", ""
+            message = " ".join(running_status)
+        statuses.append(
+            ServiceStatus(
+                name=service_name,
+                status=status,
+                pid=int(pid.rstrip(",")) if pid else None,
+                uptime=uptime or None,
+                message=message,
+            )
+        )
+
+    return statuses
 
 
 def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
