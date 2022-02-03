@@ -62,7 +62,6 @@ tests: .dirs .run_tests
 
 
 # run all enabled tests on testnet, generate allure report
-testnets: export DbSyncAbortOnPanic=1
 testnets: export NOPOOLS=1
 testnets: export CLUSTERS_COUNT=1
 testnets: export FORBID_RESTART=1
