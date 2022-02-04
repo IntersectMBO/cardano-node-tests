@@ -1527,7 +1527,7 @@ class TestNotBalanced:
                 ttl=ttl,
             )
         except clusterlib.CLIError as exc:
-            if change_amount >= 2 ** 64:
+            if change_amount >= 2**64:
                 exc_val = str(exc)
                 assert "out of bounds" in exc_val or "exceeds the max bound" in exc_val
                 return
