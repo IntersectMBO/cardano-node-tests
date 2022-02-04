@@ -3,6 +3,7 @@ install:
 	python3 -m pip install --upgrade pip
 	python3 -m pip install --upgrade wheel
 	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-dev.txt
+	virtualenv --upgrade-embed-wheels
 
 
 # install dependencies that are needed for building documentation
