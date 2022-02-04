@@ -44,11 +44,6 @@ DATA_DIR = Path(__file__).parent / "data"
 ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
-@pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
 def _get_raw_tx_values(
     cluster_obj: clusterlib.ClusterLib,
     tx_name: str,
