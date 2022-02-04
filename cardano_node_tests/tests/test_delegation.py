@@ -18,11 +18,6 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
 @pytest.fixture
 def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
