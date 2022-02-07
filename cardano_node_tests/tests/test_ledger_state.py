@@ -97,7 +97,7 @@ class TestLedgerState:
         errors = []
 
         ledger_state_keys = set(ledger_state)
-        if not ledger_state_keys == LEDGER_STATE_KEYS:
+        if ledger_state_keys != LEDGER_STATE_KEYS:
             errors.append(
                 "unexpected ledger state keys: "
                 f"{ledger_state_keys.difference(LEDGER_STATE_KEYS)} and "

@@ -712,12 +712,13 @@ def check_pool_deregistration(pool_id: str, retiring_epoch: int) -> Optional[Poo
     db_pool_data = get_pool_data(pool_id)
     assert db_pool_data, f"No data returned from db-sync for pool {pool_id}"
 
-    if db_pool_data.retire_announced_tx_id and db_pool_data.retiring_epoch:
-        assert (
-            retiring_epoch == db_pool_data.retiring_epoch
-        ), f"Mismatch in epoch values: {retiring_epoch} VS {db_pool_data.retiring_epoch}"
-    else:
-        raise AssertionError(f"Stake pool `{pool_id}` not retired.")
+    assert (
+        db_pool_data.retire_announced_tx_id and db_pool_data.retiring_epoch
+    ), f"Stake pool `{pool_id}` not retired"
+
+    assert (
+        retiring_epoch == db_pool_data.retiring_epoch
+    ), f"Mismatch in epoch values: {retiring_epoch} VS {db_pool_data.retiring_epoch}"
 
     return db_pool_data
 
@@ -794,12 +795,11 @@ def check_pool_data(ledger_pool_data: dict, pool_id: str) -> Optional[PoolDataRe
             f"Expected: {ledger_reward_address} vs Returned: {db_pool_data.reward_addr}"
         )
 
-    if ledger_pool_data["relays"]:
-        if ledger_pool_data["relays"] != db_pool_data.relays:
-            errors_list.append(
-                "'relays' value is different than expected; "
-                f"Expected: {ledger_pool_data['relays']} vs Returned: {db_pool_data.relays}"
-            )
+    if ledger_pool_data["relays"] and ledger_pool_data["relays"] != db_pool_data.relays:
+        errors_list.append(
+            "'relays' value is different than expected; "
+            f"Expected: {ledger_pool_data['relays']} vs Returned: {db_pool_data.relays}"
+        )
 
     if errors_list:
         errors_str = "\n\n".join(errors_list)
