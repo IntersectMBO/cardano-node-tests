@@ -83,9 +83,10 @@ def add_ignore_rule(files_glob: str, regex: str, ignore_file_id: str) -> None:
     rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
     basetemp = temptools.get_basetemp()
 
-    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"):
-        with open(rules_file, "a", encoding="utf-8") as infile:
-            infile.write(f"{files_glob};;{regex}\n")
+    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"), open(
+        rules_file, "a", encoding="utf-8"
+    ) as infile:
+        infile.write(f"{files_glob};;{regex}\n")
 
 
 def get_ignore_rules() -> List[Tuple[str, str]]:
@@ -241,10 +242,8 @@ def search_and_clean(ignore_file_id: str) -> List[Tuple[Path, str]]:
         # of the test.
         rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
 
-        try:
+        with contextlib.suppress(FileNotFoundError):
             rules_file.unlink()
-        except FileNotFoundError:
-            pass
 
     return errors
 

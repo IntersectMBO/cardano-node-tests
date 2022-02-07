@@ -5,6 +5,7 @@
 * return funds to faucet
 """
 import concurrent.futures
+import contextlib
 import functools
 import logging
 import random
@@ -98,7 +99,7 @@ def return_funds_to_faucet(
 
     LOGGER.info(f"Returning funds from '{src_addr.address}'")
     # try to return funds; don't mind if there's not enough funds for fees etc.
-    try:
+    with contextlib.suppress(clusterlib.CLIError):
         cluster_obj.send_tx(
             src_address=src_addr.address,
             tx_name=tx_name,
@@ -107,8 +108,6 @@ def return_funds_to_faucet(
             tx_files=fund_tx_files,
             verify_tx=False,
         )
-    except clusterlib.CLIError:
-        pass
 
 
 def create_addr_record(addr_file: Path) -> clusterlib.AddressRecord:

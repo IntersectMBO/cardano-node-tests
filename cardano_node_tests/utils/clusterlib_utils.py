@@ -1,5 +1,6 @@
 """Utilities that extends the functionality of `cardano-clusterlib`."""
 # pylint: disable=abstract-class-instantiated
+import contextlib
 import itertools
 import json
 import logging
@@ -156,7 +157,7 @@ def return_funds_to_faucet(
                 fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount)]
                 fund_tx_files = clusterlib.TxFiles(signing_key_files=[src.skey_file])
                 # try to return funds; don't mind if there's not enough funds for fees etc.
-                try:
+                with contextlib.suppress(Exception):
                     cluster_obj.send_funds(
                         src_address=src.address,
                         destinations=fund_dst,
@@ -164,8 +165,6 @@ def return_funds_to_faucet(
                         tx_files=fund_tx_files,
                         destination_dir=destination_dir,
                     )
-                except Exception:
-                    pass
         finally:
             logging.disable(logging.NOTSET)
 
