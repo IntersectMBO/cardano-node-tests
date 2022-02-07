@@ -207,9 +207,10 @@ class ClusterManager:
         if not configuration.SCHEDULING_LOG:
             return
 
-        with locking.FileLockIfXdist(self.log_lock):
-            with open(configuration.SCHEDULING_LOG, "a", encoding="utf-8") as logfile:
-                logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
+        with locking.FileLockIfXdist(self.log_lock), open(
+            configuration.SCHEDULING_LOG, "a", encoding="utf-8"
+        ) as logfile:
+            logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
 
     def _create_startup_files_dir(self, instance_num: int) -> Path:
         instance_dir = self.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
@@ -425,10 +426,8 @@ class _ClusterGetter:
                     save_dir=self.cm.pytest_tmp_dir, state_dir=state_dir
                 )
 
-            try:
+            with contextlib.suppress(Exception):
                 _kill_supervisor(self.cm.cluster_instance_num)
-            except Exception:
-                pass
 
             try:
                 cluster_obj = cluster_nodes.start_cluster(
