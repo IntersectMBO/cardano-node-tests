@@ -25,7 +25,13 @@ jobs:
   node_sync_test_mainnet:
     runs-on: ubuntu-latest
     steps:
-      - name: trigger the Buildkite pipeline - run sync tests on mainnet
+      - name: trigger the Buildkite pipeline - run sync tests on Mainnet
+        env:
+          BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
+          AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
+          AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
+          AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
         uses: zegocover/buildkite-pipeline-action@master
         with:
           access_token: '${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}'
@@ -62,13 +68,6 @@ jobs:
           pip install requests
           pip install psutil
           pip install pandas
-      - name: checkout sync_tests repo
-        run: |
-          cd cardano_node_tests
-          git config --global user.name "sync_tests"
-          git config --global user.email "action@github.com"
-          git checkout sync_tests
-          echo "current branch1: $(git branch --show-current)"
       - name: run sync test
         run: |
           cd cardano_node_tests
