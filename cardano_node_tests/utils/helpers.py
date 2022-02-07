@@ -52,7 +52,7 @@ def callonce(func: TCallable) -> TCallable:
 @contextlib.contextmanager
 def change_cwd(dir_path: FileType) -> Iterator[FileType]:
     """Change and restore CWD - context manager."""
-    orig_cwd = os.getcwd()
+    orig_cwd = Path.cwd()
     os.chdir(dir_path)
     LOGGER.debug(f"Changed CWD to '{dir_path}'.")
     try:
