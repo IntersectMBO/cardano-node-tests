@@ -31,7 +31,11 @@ repos:
   hooks:
   - id: flake8
     language_version: python3
-    additional_dependencies: [flake8-comprehensions]
+    additional_dependencies:
+    - flake8-comprehensions
+    - flake8-pytest-style
+    - flake8-simplify
+    - flake8-use-pathlib
 - repo: https://github.com/asottile/pyupgrade
   rev: v2.31.0
   hooks:
@@ -43,7 +47,7 @@ repos:
   - id: pydocstyle
     language_version: python3
 - repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.8.0.3
+  rev: v0.8.0.4
   hooks:
   - id: shellcheck
 - repo: local
