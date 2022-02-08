@@ -153,12 +153,6 @@ def get_vcs_link() -> str:
     return url
 
 
-def get_id_for_mktemp(file_path: str) -> str:
-    """Return an id for mktemp based on file path."""
-    fpart = file_path[file_path.rfind("/") + 1 :].replace(".", "_")
-    return fpart
-
-
 def wait_for(
     func: Callable, delay: int = 5, num_sec: int = 180, message: str = "", silent: bool = False
 ) -> Any:
