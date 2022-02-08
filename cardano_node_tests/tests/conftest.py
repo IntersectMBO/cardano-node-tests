@@ -241,15 +241,15 @@ def testfile_temp_dir(tmp_path_factory: TempdirFactory) -> Path:
 
     The dir is specific to a single test file.
     """
-    # get the current test file
-    file_path = (
+    # get a dir path based on the test file running
+    dir_path = (
         (os.getenv("PYTEST_CURRENT_TEST") or "unknown")
         .split("::")[0]
         .split("/")[-1]
         .replace(".", "_")
     )
 
-    p = temptools.get_pytest_worker_tmp(tmp_path_factory).joinpath(file_path).resolve()
+    p = temptools.get_pytest_worker_tmp(tmp_path_factory).joinpath(dir_path).resolve()
 
     p.mkdir(exist_ok=True, parents=True)
 
