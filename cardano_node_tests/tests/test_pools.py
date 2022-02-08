@@ -37,11 +37,6 @@ DEREG_BUFFER_SEC = 30
 
 
 @pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
-@pytest.fixture(scope="module")
 def pool_cost_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     """Update *minPoolCost* to 500."""
     shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)

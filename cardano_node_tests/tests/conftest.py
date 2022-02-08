@@ -236,17 +236,23 @@ def session_autouse(change_dir: Any, close_dbconn: Any, testenv_setup_teardown: 
 
 
 @pytest.fixture(scope="module")
-def testfile_temp_dir(tmp_path_factory: TempdirFactory, this_testfile: str) -> Path:
+def testfile_temp_dir(tmp_path_factory: TempdirFactory) -> Path:
     """Return a temporary dir for storing test artifacts.
 
     The dir is specific to a single test file.
     """
-    p = (
-        temptools.get_pytest_worker_tmp(tmp_path_factory)
-        .joinpath(helpers.get_id_for_mktemp(this_testfile))
-        .resolve()
+    # get a dir path based on the test file running
+    dir_path = (
+        (os.getenv("PYTEST_CURRENT_TEST") or "unknown")
+        .split("::")[0]
+        .split("/")[-1]
+        .replace(".", "_")
     )
+
+    p = temptools.get_pytest_worker_tmp(tmp_path_factory).joinpath(dir_path).resolve()
+
     p.mkdir(exist_ok=True, parents=True)
+
     return p
 
 

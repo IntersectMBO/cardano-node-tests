@@ -22,11 +22,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
-@pytest.fixture(scope="module")
 def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
     """Update *epochLength* to 1200."""
     shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)

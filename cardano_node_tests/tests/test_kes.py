@@ -28,11 +28,6 @@ LOGGER = logging.getLogger(__name__)
 NUM_OF_EPOCHS = 6
 
 
-@pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
 @pytest.fixture
 def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(lock_resources=[cluster_management.Resources.POOL2])

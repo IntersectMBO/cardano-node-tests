@@ -30,11 +30,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
 @pytest.fixture
 def issuers_addrs_fresh(
     cluster_manager: cluster_management.ClusterManager,
