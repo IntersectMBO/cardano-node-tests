@@ -1,4 +1,5 @@
 """Tests for cardano-cli that doesn't fit into any other test file."""
+import json
 import logging
 from pathlib import Path
 
@@ -268,3 +269,25 @@ class TestAddressInfo:
         assert addr_info.era == "shelley"
         assert addr_info.encoding == "bech32"
         assert addr_info.type == "payment"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_address_info_payment_with_outfile(self, cluster: clusterlib.ClusterLib):
+        """Compare payment address info with and without outfile provided."""
+        # just a static address to preform the test
+        address = "addr_test1vzp4kj0rmnl5q5046e2yy697fndej56tm35jekemj6ew2gczp74wk"
+
+        # get address information
+        cli_out = cluster.cli(["address", "info", "--address", str(address)])
+        address_info_no_outfile = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
+
+        # get address information using an output file
+        out_file = "/dev/stdout"
+        cli_out = cluster.cli(
+            ["address", "info", "--address", str(address), "--out-file", out_file]
+        )
+        address_info_with_outfile = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
+
+        # check if the information obtained by the two methods is the same
+        assert (
+            address_info_no_outfile == address_info_with_outfile
+        ), "Address information doesn't match"
