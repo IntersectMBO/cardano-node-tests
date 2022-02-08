@@ -18,11 +18,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
 def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> List[dbsync_queries.ADAPotsDBRow]:
     for r in range(4):
         if r > 0:

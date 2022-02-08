@@ -27,11 +27,6 @@ LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
 
 
-@pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
 def multisig_tx(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,

@@ -19,11 +19,6 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
 @pytest.fixture
 def cluster_use_pool3(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(use_resources=[cluster_management.Resources.POOL3])

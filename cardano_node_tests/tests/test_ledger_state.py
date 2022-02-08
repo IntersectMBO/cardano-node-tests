@@ -19,11 +19,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def this_testfile():
-    return __file__
-
-
 LEDGER_STATE_KEYS = {
     "blocksBefore",
     "blocksCurrent",
