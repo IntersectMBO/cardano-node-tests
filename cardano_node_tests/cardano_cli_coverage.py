@@ -18,6 +18,7 @@ from cardano_node_tests.utils.types import UnpackableSequence
 LOGGER = logging.getLogger(__name__)
 
 SKIPPED = (
+    "build-script",
     "byron",
     "convert-byron-key",
     "convert-byron-genesis-vkey",
@@ -26,9 +27,11 @@ SKIPPED = (
     "convert-itn-bip32-key",
     "version",
     "--byron-era",
-    "--byron-mode",
     "--byron-key",
+    "--byron-mode",
+    "--epoch-slots",
     "--mainnet",
+    "--shelley-mode",
     "--version",
     "-h,--help",
 )
