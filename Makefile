@@ -14,6 +14,7 @@ install_doc:
 # run linters
 lint:
 	pre-commit run -a
+	if type pytype >/dev/null 2>&1; then pytype cardano_node_tests; fi
 
 
 # generate sphinx documentation

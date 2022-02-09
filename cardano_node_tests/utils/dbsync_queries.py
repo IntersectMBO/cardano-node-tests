@@ -201,6 +201,7 @@ class SchemaVersionStages(NamedTuple):
 @contextlib.contextmanager
 def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
+    cur = None
     try:
         cur = dbsync_conn.conn().cursor()
 
@@ -216,7 +217,8 @@ def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cur
 
         yield cur
     finally:
-        cur.close()
+        if cur is not None:
+            cur.close()
 
 
 class SchemaVersion:
