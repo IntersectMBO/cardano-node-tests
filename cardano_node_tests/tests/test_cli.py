@@ -286,3 +286,54 @@ class TestAddressInfo:
         assert (
             address_info_no_outfile == address_info_with_outfile
         ), "Address information doesn't match"
+
+
+@pytest.mark.testnets
+class TestKey:
+    """Tests for cardano-cli key."""
+
+    @allure.link(helpers.get_vcs_link())
+    def test_non_extended_key_valid(self, cluster: clusterlib.ClusterLib):
+        """Check that the non-extended verification key is according the verification key."""
+        temp_template = common.get_test_id(cluster)
+
+        # get an extended verification key
+        payment_keys = cluster.gen_payment_key_pair(
+            key_name=f"{temp_template}_extended", extended=True
+        )
+
+        with open(payment_keys.vkey_file, encoding="utf-8") as in_file:
+            # ignore the first 4 chars, just an informative keyword
+            extended_vkey = json.loads(in_file.read().strip()).get("cborHex", "")[4:]
+
+        # get a non-extended verification key using the extended key
+        non_extended_key_file = cluster.gen_non_extended_verification_key(
+            key_name=temp_template, extended_verification_key_file=payment_keys.vkey_file
+        )
+
+        with open(non_extended_key_file, encoding="utf-8") as in_file:
+            # ignore the first 4 chars, just an informative keyword
+            non_extended_vkey = json.loads(in_file.read().strip()).get("cborHex", "")[4:]
+
+        assert extended_vkey.startswith(non_extended_vkey)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_non_extended_key_error(self, cluster: clusterlib.ClusterLib):
+        """Try to get a non-extended verification key with a signing key file.
+
+        Expect failure. Should only allow extended verification key files.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        # get an extended key
+        payment_keys = cluster.gen_payment_key_pair(
+            key_name=f"{temp_template}_extended", extended=True
+        )
+
+        # try to get a non-extended verification key using the extended signing key
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.gen_non_extended_verification_key(
+                key_name=temp_template, extended_verification_key_file=payment_keys.skey_file
+            )
+
+        assert "TextEnvelope type error:  Expected one of:" in str(excinfo.value)
