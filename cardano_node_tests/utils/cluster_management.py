@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import Iterable
 from typing import Iterator
 from typing import Optional
 
@@ -28,7 +29,6 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
-from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
@@ -130,8 +130,8 @@ class MarkedTestsStatus:
 @dataclasses.dataclass
 class ClusterGetStatus:
     mark: str
-    lock_resources: UnpackableSequence
-    use_resources: UnpackableSequence
+    lock_resources: Iterable[str]
+    use_resources: Iterable[str]
     cleanup: bool
     start_cmd: str
     selected_instance: int = -1
@@ -141,9 +141,9 @@ class ClusterGetStatus:
     restart_ready: bool = False
     first_iteration: bool = True
     instance_dir: Path = Path("nonexistent")
-    started_tests: UnpackableSequence = ()
-    marked_starting: UnpackableSequence = ()
-    marked_running: UnpackableSequence = ()
+    started_tests: Iterable[Path] = ()
+    marked_starting: Iterable[Path] = ()
+    marked_running: Iterable[Path] = ()
 
 
 class ClusterManager:
@@ -336,8 +336,8 @@ class ClusterManager:
     def get(
         self,
         mark: str = "",
-        lock_resources: UnpackableSequence = (),
-        use_resources: UnpackableSequence = (),
+        lock_resources: Iterable[str] = (),
+        use_resources: Iterable[str] = (),
         cleanup: bool = False,
         start_cmd: str = "",
     ) -> clusterlib.ClusterLib:
@@ -574,7 +574,7 @@ class _ClusterGetter:
             self._on_marked_test_stop(instance_num)
 
     def _are_resources_usable(
-        self, resources: UnpackableSequence, instance_dir: Path, instance_num: int
+        self, resources: Iterable[str], instance_dir: Path, instance_num: int
     ) -> bool:
         """Check if resources are locked or in use."""
         for res in resources:
@@ -595,7 +595,7 @@ class _ClusterGetter:
         return False
 
     def _are_resources_locked(
-        self, resources: UnpackableSequence, instance_dir: Path, instance_num: int
+        self, resources: Iterable[str], instance_dir: Path, instance_num: int
     ) -> bool:
         """Check if resources are locked."""
         res_locked = []
@@ -869,8 +869,8 @@ class _ClusterGetter:
     def get(  # noqa: C901
         self,
         mark: str = "",
-        lock_resources: UnpackableSequence = (),
-        use_resources: UnpackableSequence = (),
+        lock_resources: Iterable[str] = (),
+        use_resources: Iterable[str] = (),
         cleanup: bool = False,
         start_cmd: str = "",
     ) -> clusterlib.ClusterLib:
@@ -880,6 +880,9 @@ class _ClusterGetter:
         right away.
         """
         # pylint: disable=too-many-statements,too-many-branches
+        assert not isinstance(lock_resources, str), "`lock_resources` must be sequence of strings"
+        assert not isinstance(use_resources, str), "`use_resources` must be sequence of strings"
+
         if configuration.DEV_CLUSTER_RUNNING:
             if start_cmd:
                 LOGGER.warning(
