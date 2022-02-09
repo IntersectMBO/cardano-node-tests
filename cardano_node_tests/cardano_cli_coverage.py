@@ -7,13 +7,13 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+from typing import Iterable
 from typing import List
 from typing import Tuple
 
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
@@ -103,8 +103,9 @@ def merge_coverage(dict_a: dict, dict_b: dict) -> dict:
     return dict_a
 
 
-def cli(cli_args: UnpackableSequence) -> str:
+def cli(cli_args: Iterable[str]) -> str:
     """Run the `cardano-cli` command."""
+    assert not isinstance(cli_args, str), "`cli_args` must be sequence of strings"
     with subprocess.Popen(list(cli_args), stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
         __, stderr = p.communicate()
     return stderr.decode()
@@ -134,7 +135,7 @@ def parse_cmd_output(output: str) -> List[str]:
     return cli_args
 
 
-def get_available_commands(cli_args: UnpackableSequence, ignore_skips: bool = False) -> dict:
+def get_available_commands(cli_args: Iterable[str], ignore_skips: bool = False) -> dict:
     """Get all available cardano-cli sub-commands and options."""
     cli_out = cli(cli_args)
     new_cli_args = parse_cmd_output(cli_out)
