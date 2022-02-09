@@ -9,6 +9,7 @@ from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Union
 
 from cardano_clusterlib import clusterlib
 
@@ -172,7 +173,9 @@ class TestnetCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET
-        self.cluster_scripts: cluster_scripts.TestnetScripts = cluster_scripts.TestnetScripts()
+        self.cluster_scripts: Union[
+            cluster_scripts.ScriptsTypes, cluster_scripts.TestnetScripts
+        ] = cluster_scripts.TestnetScripts()
 
         # cached values
         self._testnet_type = ""
