@@ -45,6 +45,9 @@ class TestLeadershipSchedule:
         cluster = cluster_use_pool3
         temp_template = common.get_test_id(cluster)
 
+        if not clusterlib_utils.cli_has("query leadership-schedule"):
+            pytest.skip("The `cardano-cli query leadership-schedule` command is not available.")
+
         pool_name = "node-pool3"
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
