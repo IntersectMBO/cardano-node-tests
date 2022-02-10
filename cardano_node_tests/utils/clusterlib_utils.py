@@ -878,3 +878,20 @@ def create_script_context(
 
     helpers.run_command(cmd_args)
     assert redeemer_file.exists()
+
+
+def cli_has(command: str) -> bool:
+    """Check if a cardano-cli subcommand or argument is available.
+
+    E.g. `cli_has("query leadership-schedule --next")`
+    """
+    err_str = ""
+    try:
+        helpers.run_command(f"cardano-cli {command}")
+    except AssertionError as err:
+        err_str = str(err)
+    else:
+        return True
+
+    cmd_err = err_str.split(":", maxsplit=1)[1].strip()
+    return not cmd_err.startswith("Invalid")
