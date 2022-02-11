@@ -105,6 +105,7 @@ def get_current_epoch_no(env):
 
     status_code = res.status_code
     if status_code == 200:
+        print(f"response: {res.text}")
         parsed = json.loads(res.json())
         print(json.dumps(parsed, indent=2, sort_keys=True))
         return res.json()['data']['cardano']['currentEpoch']['number']
