@@ -44,7 +44,7 @@ def set_repo_paths():
 
 
 def get_tx_count_per_epoch(env, epoch_no):
-    global res
+    global res, url
     headers = {'Content-type': 'application/json'}
     payload = '{"query":"query searchForEpochByNumber($number: Int!) {\\n  epochs(where: {number: ' \
               '{_eq: $number}}) {\\n    ...EpochOverview\\n  }\\n}\\n\\nfragment EpochOverview on ' \
@@ -54,21 +54,18 @@ def get_tx_count_per_epoch(env, epoch_no):
 
     if env == "mainnet":
         url = MAINNET_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "staging":
         url = STAGING_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "testnet":
         url = TESTNET_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "shelley_qa":
         url = SHELLEY_QA_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     else:
         print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
               f"testnet, staging, mainnet")
         exit(1)
 
+    res = requests.post(url, data=payload, headers=headers)
     status_code = res.status_code
     if status_code == 200:
         return res.json()['data']['epochs'][0]['transactionsCount']
@@ -122,7 +119,7 @@ def get_current_epoch_no(env):
 
 
 def get_epoch_start_datetime(env, epoch_no):
-    global res
+    global res, url
     headers = {'Content-type': 'application/json'}
     payload = '{"query":"query searchForEpochByNumber($number: Int!) {\\n  epochs(where: {number: ' \
               '{_eq: $number}}) {\\n    ...EpochOverview\\n  }\\n}\\n\\nfragment EpochOverview on ' \
@@ -132,21 +129,18 @@ def get_epoch_start_datetime(env, epoch_no):
 
     if env == "mainnet":
         url = MAINNET_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "staging":
         url = STAGING_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "testnet":
         url = TESTNET_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "shelley_qa":
         url = SHELLEY_QA_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     else:
         print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
               f"testnet, staging, mainnet")
         exit(1)
 
+    res = requests.post(url, data=payload, headers=headers)
     status_code = res.status_code
     if status_code == 200:
         return res.json()['data']['epochs'][0]['startedAt']
