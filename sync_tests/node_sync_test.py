@@ -81,33 +81,36 @@ def get_tx_count_per_epoch(env, epoch_no):
 
 def get_current_epoch_no(env):
     global res, url
-    headers = {'Content-type': 'application/json'}
+    headers = {'Content-type': 'application/json', 'Referer': 'https://explorer.cardano.org/en'}
     payload = '{"query":"query cardanoDynamic {\\n  cardano {\\n    tip {\\n      number\\n      ' \
               'slotInEpoch\\n      slotNo\\n      forgedAt\\n      protocolVersion\\n    }\\n    ' \
               'currentEpoch {\\n      number\\n    }\\n  }\\n}\\n","variables":{}} '
 
     if env == "mainnet":
         url = MAINNET_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "staging":
         url = STAGING_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "testnet":
         url = TESTNET_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     elif env == "shelley_qa":
         url = SHELLEY_QA_EXPLORER_URL
-        res = requests.post(url, data=payload, headers=headers)
     else:
         print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
               f"testnet, staging, mainnet")
         exit(1)
 
+    res = requests.post(url, headers=headers, data=payload)
     status_code = res.status_code
+
     if status_code == 200:
-        print(f"response: {res.text}")
-        parsed = json.loads(res.json())
-        print(json.dumps(parsed, indent=2, sort_keys=True))
+        count = 0
+        while "data" in res.json() and res.json()['data'] is None:
+            print(f"response {count}: {res.json()}")
+            time.sleep(30)
+            count += 1
+            if count > 10:
+                print("!!! ERROR: Not able to get the epochNo after 10 tries")
+                exit(1)
         return res.json()['data']['cardano']['currentEpoch']['number']
     else:
         print(f"status_code: {status_code}")
