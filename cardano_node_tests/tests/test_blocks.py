@@ -27,46 +27,66 @@ def cluster_use_pool3(cluster_manager: cluster_management.ClusterManager) -> clu
 class TestLeadershipSchedule:
     """Tests for cardano-cli leadership-schedule."""
 
+    @pytest.fixture(scope="class")
+    def skip_leadership_schedule(self):
+        if not clusterlib_utils.cli_has("query leadership-schedule"):
+            pytest.skip("The `cardano-cli query leadership-schedule` command is not available.")
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.needs_dbsync
+    @pytest.mark.parametrize("for_epoch", ("current", "next"))
     def test_pool_blocks(
         self,
+        skip_leadership_schedule: None,
         cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool3: clusterlib.ClusterLib,
+        for_epoch: str,
     ):
         """Check that blocks were minted according to leadership schedule.
 
-        * get leadership schedule for selected pool at the beginning of an epoch
-        * wait for next epoch
-        * get info about minted blocks in previous epoch for the selected pool
+        * query leadership schedule for selected pool for current epoch or next epoch
+        * wait for epoch that comes after the queried epoch
+        * get info about minted blocks in queried epoch for the selected pool
         * compare leadership schedule with blocks that were actually minted
         * compare db-sync records with ledger state dump
         """
+        # pylint: disable=unused-argument
         cluster = cluster_use_pool3
         temp_template = common.get_test_id(cluster)
-
-        if not clusterlib_utils.cli_has("query leadership-schedule"):
-            pytest.skip("The `cardano-cli query leadership-schedule` command is not available.")
 
         pool_name = "node-pool3"
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 
-        # wait for beginning of an epoch
-        epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        if for_epoch == "current":
+            # wait for beginning of an epoch
+            queried_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        else:
+            # wait for stable stake distribution for next epoch, that is last 300 slots of
+            # current epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster,
+                start=-int(300 * cluster.slot_length),
+                stop=-10,
+                force_epoch=False,
+            )
+            queried_epoch = cluster.get_epoch() + 1
 
-        # get leadership schedule for selected pool
+        # query leadership schedule for selected pool
         leadership_schedule = cluster.get_leadership_schedule(
             vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
             cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
+            for_next=for_epoch != "current",
         )
 
-        # wait for next epoch
-        cluster.wait_for_new_epoch()
+        # wait for epoch that comes after the queried epoch
+        cluster.wait_for_new_epoch(new_epochs=1 if for_epoch == "current" else 2)
 
-        # get info about minted blocks in previous epoch for the selected pool
+        # get info about minted blocks in queried epoch for the selected pool
         minted_blocks = list(
-            dbsync_queries.query_blocks(pool_id_bech32=pool_id, epoch_from=epoch, epoch_to=epoch)
+            dbsync_queries.query_blocks(
+                pool_id_bech32=pool_id, epoch_from=queried_epoch, epoch_to=queried_epoch
+            )
         )
         slots_when_minted = {r.slot_no for r in minted_blocks}
 
@@ -105,3 +125,38 @@ class TestLeadershipSchedule:
         if errors:
             err_joined = "\n".join(errors)
             pytest.fail(f"Errors:\n{err_joined}")
+
+    @allure.link(helpers.get_vcs_link())
+    def test_unstable_stake_distribution(
+        self,
+        skip_leadership_schedule: None,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Try to query leadership schedule for next epoch when stake distribution is unstable.
+
+        Expect failure.
+        """
+        # pylint: disable=unused-argument
+        common.get_test_id(cluster)
+
+        pool_name = "node-pool3"
+        pool_rec = cluster_manager.cache.addrs_data[pool_name]
+
+        # wait for epoch interval where stake distribution for next epoch is unstable,
+        # that is anytime before last 300 slots of current epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster,
+            start=5,
+            stop=-int(300 * cluster.slot_length + 5),
+            force_epoch=False,
+        )
+
+        # it should NOT be possible to query leadership schedule
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.get_leadership_schedule(
+                vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
+                cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
+                for_next=True,
+            )
+        assert "current stake distribution is currently unstable" in str(excinfo.value)
