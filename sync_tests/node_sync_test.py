@@ -143,6 +143,14 @@ def get_epoch_start_datetime(env, epoch_no):
     res = requests.post(url, data=payload, headers=headers)
     status_code = res.status_code
     if status_code == 200:
+        count = 0
+        while "data" in res.json() and res.json()['data'] is None:
+            print(f"response {count}: {res.json()}")
+            time.sleep(30)
+            count += 1
+            if count > 10:
+                print(f"!!! ERROR: Not able to get start time for epoch {epoch_no} on {env} after 10 tries")
+                exit(1)
         return res.json()['data']['epochs'][0]['startedAt']
     else:
         print(f"status_code: {status_code}")
