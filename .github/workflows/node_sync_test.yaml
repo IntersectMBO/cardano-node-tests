@@ -42,7 +42,12 @@ jobs:
           "tag_no1":"${{ github.event.inputs.tag_no1 }}",
           "tag_no2":"${{ github.event.inputs.tag_no2 }}",
           "hydra_eval_no1":"${{ github.event.inputs.hydra_eval_no1 }}",
-          "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}"
+          "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}",
+          "BLOCKFROST_API_KEY":"${{ secrets.BLOCKFROST_API_KEY }}",
+          "AWS_DB_USERNAME":"${{ secrets.AWS_DB_USERNAME }}",
+          "AWS_DB_PASS":"${{ secrets.AWS_DB_PASS }}",
+          "AWS_DB_NAME":"${{ secrets.AWS_DB_NAME }}",
+          "AWS_DB_HOSTNAME":"${{ secrets.AWS_DB_HOSTNAME }}"
           }'
           branch: 'sync_tests'
   node_sync_test:
