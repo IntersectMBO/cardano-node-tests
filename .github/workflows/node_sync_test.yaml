@@ -32,6 +32,7 @@ jobs:
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
           AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
           AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
+          BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
         uses: zegocover/buildkite-pipeline-action@master
         with:
           access_token: '${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}'
