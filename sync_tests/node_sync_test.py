@@ -18,6 +18,9 @@ from pathlib import Path
 
 from psutil import process_iter
 
+from explorer_utils import get_epoch_start_datetime_from_explorer
+from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
+
 current_directory = os.getcwd()
 print(f" - current_directory: {current_directory}")
 
@@ -30,135 +33,12 @@ ROOT_TEST_PATH = ""
 NODE_LOG_FILE = "logfile.log"
 RESULTS_FILE_NAME = r"sync_results.json"
 
-MAINNET_EXPLORER_URL = "https://explorer.cardano.org/graphql"
-STAGING_EXPLORER_URL = "https://explorer.staging.cardano.org/graphql"
-TESTNET_EXPLORER_URL = "https://explorer.cardano-testnet.iohkdev.io/graphql"
-SHELLEY_QA_EXPLORER_URL = "https://explorer.shelley-qa.dev.cardano.org/graphql"
-
 
 def set_repo_paths():
     global ROOT_TEST_PATH
     ROOT_TEST_PATH = Path.cwd()
 
     print(f"ROOT_TEST_PATH: {ROOT_TEST_PATH}")
-
-
-def get_tx_count_per_epoch(env, epoch_no):
-    global res, url
-    headers = {'Content-type': 'application/json'}
-    payload = '{"query":"query searchForEpochByNumber($number: Int!) {\\n  epochs(where: {number: ' \
-              '{_eq: $number}}) {\\n    ...EpochOverview\\n  }\\n}\\n\\nfragment EpochOverview on ' \
-              'Epoch {\\n  blocks(limit: 1) {\\n    protocolVersion\\n  }\\n  blocksCount\\n  ' \
-              'lastBlockTime\\n  number\\n  startedAt\\n  output\\n  transactionsCount\\n}\\n",' \
-              '"variables":{"number":' + str(epoch_no) + '}} '
-
-    if env == "mainnet":
-        url = MAINNET_EXPLORER_URL
-    elif env == "staging":
-        url = STAGING_EXPLORER_URL
-    elif env == "testnet":
-        url = TESTNET_EXPLORER_URL
-    elif env == "shelley_qa":
-        url = SHELLEY_QA_EXPLORER_URL
-    else:
-        print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
-              f"testnet, staging, mainnet")
-        exit(1)
-
-    res = requests.post(url, data=payload, headers=headers)
-    status_code = res.status_code
-    if status_code == 200:
-        return res.json()['data']['epochs'][0]['transactionsCount']
-    else:
-        print(f"status_code: {status_code}")
-        print(f"response: {res.text}")
-        print(f"!!! ERROR: status_code =! 200 when getting txs_count for epoch {epoch_no} on {env}")
-        exit(1)
-
-
-def get_current_epoch_no(env):
-    global res, url
-    headers = {'Content-type': 'application/json', 'Referer': 'https://explorer.cardano.org/en'}
-    payload = '{"query":"query cardanoDynamic {\\n  cardano {\\n    tip {\\n      number\\n      ' \
-              'slotInEpoch\\n      slotNo\\n      forgedAt\\n      protocolVersion\\n    }\\n    ' \
-              'currentEpoch {\\n      number\\n    }\\n  }\\n}\\n","variables":{}} '
-
-    if env == "mainnet":
-        url = MAINNET_EXPLORER_URL
-    elif env == "staging":
-        url = STAGING_EXPLORER_URL
-    elif env == "testnet":
-        url = TESTNET_EXPLORER_URL
-    elif env == "shelley_qa":
-        url = SHELLEY_QA_EXPLORER_URL
-    else:
-        print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
-              f"testnet, staging, mainnet")
-        exit(1)
-
-    res = requests.post(url, headers=headers, data=payload)
-    status_code = res.status_code
-
-    if status_code == 200:
-        count = 0
-        while "data" in res.json() and res.json()['data'] is None:
-            print(f"response {count}: {res.json()}")
-            time.sleep(30)
-            count += 1
-            if count > 10:
-                print("!!! ERROR: Not able to get the epochNo after 10 tries")
-                exit(1)
-        return res.json()['data']['cardano']['currentEpoch']['number']
-    else:
-        print(f"status_code: {status_code}")
-        print(f"response: {res.text}")
-        print(
-            f"!!! ERROR: status_code =! 200 when getting the current epoch_no on mainnet")
-        print(f"     - The Explorer might be down - {url}")
-        exit(1)
-
-
-def get_epoch_start_datetime(env, epoch_no):
-    global res, url
-    headers = {'Content-type': 'application/json'}
-    payload = '{"query":"query searchForEpochByNumber($number: Int!) {\\n  epochs(where: {number: ' \
-              '{_eq: $number}}) {\\n    ...EpochOverview\\n  }\\n}\\n\\nfragment EpochOverview on ' \
-              'Epoch {\\n  blocks(limit: 1) {\\n    protocolVersion\\n  }\\n  blocksCount\\n  ' \
-              'lastBlockTime\\n  number\\n  startedAt\\n  output\\n  transactionsCount\\n}\\n",' \
-              '"variables":{"number":' + str(epoch_no) + '}} '
-
-    if env == "mainnet":
-        url = MAINNET_EXPLORER_URL
-    elif env == "staging":
-        url = STAGING_EXPLORER_URL
-    elif env == "testnet":
-        url = TESTNET_EXPLORER_URL
-    elif env == "shelley_qa":
-        url = SHELLEY_QA_EXPLORER_URL
-    else:
-        print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
-              f"testnet, staging, mainnet")
-        exit(1)
-
-    res = requests.post(url, data=payload, headers=headers)
-    status_code = res.status_code
-    if status_code == 200:
-        count = 0
-        while "data" in res.json() and res.json()['data'] is None:
-            print(f"response {count}: {res.json()}")
-            time.sleep(30)
-            count += 1
-            if count > 10:
-                print(f"!!! ERROR: Not able to get start time for epoch {epoch_no} on {env} after 10 tries")
-                exit(1)
-        return res.json()['data']['epochs'][0]['startedAt']
-    else:
-        print(f"status_code: {status_code}")
-        print(f"response: {res.text}")
-        print(
-            f"!!! ERROR: status_code =! 200 when getting start time for epoch {epoch_no} on {env}")
-        print(f"     - The Explorer might be down - {url}")
-        exit(1)
 
 
 def git_get_commit_sha_for_tag_no(tag_no):
@@ -660,7 +540,10 @@ def wait_for_node_to_sync(env):
                       f" - syncProgress: {syncProgress}")
             if actual_era not in era_details_dict:
                 current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-                actual_era_start_time = get_epoch_start_datetime(env, actual_epoch)
+                if env == "mainnet":
+                    actual_era_start_time = get_epoch_start_datetime_from_blockfrost(actual_epoch)
+                else:
+                    actual_era_start_time = get_epoch_start_datetime_from_explorer(env, actual_epoch)
                 actual_era_dict = {"start_epoch": actual_epoch,
                                    "start_time": actual_era_start_time,
                                    "start_sync_time": current_time}
@@ -687,7 +570,10 @@ def wait_for_node_to_sync(env):
                     # https://github.com/input-output-hk/cardano-node/issues/2568
                     actual_epoch = 1
                 current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-                actual_era_start_time = get_epoch_start_datetime(env, actual_epoch)
+                if env == "mainnet":
+                    actual_era_start_time = get_epoch_start_datetime_from_blockfrost(actual_epoch)
+                else:
+                    actual_era_start_time = get_epoch_start_datetime_from_explorer(env, actual_epoch)
                 actual_era_dict = {"start_epoch": actual_epoch,
                                    "start_time": actual_era_start_time,
                                    "start_sync_time": current_time}

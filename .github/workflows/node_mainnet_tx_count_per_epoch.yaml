@@ -26,6 +26,7 @@ jobs:
           pip install psutil
           pip install pandas
           pip install pymysql
+          pip install blockfrost-python
       - name: checkout sync_tests repo
         run: |
           echo $PWD
