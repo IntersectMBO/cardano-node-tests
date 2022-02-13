@@ -2,7 +2,7 @@ import pandas as pd
 
 from explorer_utils import get_tx_count_per_epoch_from_explorer, get_current_epoch_no_from_explorer
 from aws_db_utils import get_last_epoch_no_from_table, add_bulk_values_into_db
-from sync_tests.blockfrost_utils import get_tx_count_per_epoch_from_blockfrost, \
+from blockfrost_utils import get_tx_count_per_epoch_from_blockfrost, \
     get_current_epoch_no_from_blockfrost
 
 

@@ -21,9 +21,6 @@ from psutil import process_iter
 from explorer_utils import get_epoch_start_datetime_from_explorer
 from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
 
-current_directory = os.getcwd()
-print(f" - current_directory: {current_directory}")
-
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB
 
