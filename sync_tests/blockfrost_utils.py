@@ -2,18 +2,16 @@ import os
 
 from blockfrost import BlockFrostApi
 
-project_id = os.environ["BLOCKFROST_API_KEY"]
-
 
 def get_blockfrost_health():
-    api = BlockFrostApi(project_id=project_id)
+    api = BlockFrostApi(project_id=os.environ["BLOCKFROST_API_KEY"])
     health = api.health(return_type='json')
     return health['is_healthy']
 
 
 def get_tx_count_per_epoch_from_blockfrost(epoch_no):
     print(f"Getting the tx_count_per_epoch_from_blockfrost")
-    api = BlockFrostApi(project_id=project_id)
+    api = BlockFrostApi(project_id=os.environ["BLOCKFROST_API_KEY"])
     if get_blockfrost_health():
         return api.epoch(number=epoch_no).tx_count
     else:
@@ -22,7 +20,7 @@ def get_tx_count_per_epoch_from_blockfrost(epoch_no):
 
 def get_current_epoch_no_from_blockfrost():
     print(f"Getting the current_epoch_no_from_blockfrost")
-    api = BlockFrostApi(project_id=project_id)
+    api = BlockFrostApi(project_id=os.environ["BLOCKFROST_API_KEY"])
     if get_blockfrost_health():
         return api.epoch_latest().epoch
     else:
@@ -31,7 +29,7 @@ def get_current_epoch_no_from_blockfrost():
 
 def get_epoch_start_datetime_from_blockfrost(epoch_no):
     print(f"Getting the epoch_start_datetime_from_blockfrost")
-    api = BlockFrostApi(project_id=project_id)
+    api = BlockFrostApi(project_id=os.environ["BLOCKFROST_API_KEY"])
     if get_blockfrost_health():
         return api.epoch(number=epoch_no).start_time
     else:
