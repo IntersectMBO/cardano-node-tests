@@ -1,5 +1,6 @@
 auxiliary scripts: null
 certificates: null
+collateral inputs: null
 era: Mary
 fee: 190182 Lovelace
 inputs:
