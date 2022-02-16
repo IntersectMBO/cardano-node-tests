@@ -3,6 +3,7 @@
 #! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
+
 pip install pymysql
 pip install requests
 pip install psutil
