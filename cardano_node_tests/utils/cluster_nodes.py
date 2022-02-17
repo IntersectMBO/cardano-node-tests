@@ -1,45 +1,53 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
-import functools
 import json
 import logging
 import os
 import pickle
-import shutil
-from datetime import datetime
-from datetime import timezone
 from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Union
 
-from _pytest.config import Config
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import slots_offset
 from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
 ADDRS_DATA = "addrs_data.pickle"
+STATE_CLUSTER = "state-cluster"
 
 
 class ClusterEnv(NamedTuple):
     socket_path: Path
     state_dir: Path
-    repo_dir: Path
     work_dir: Path
     instance_num: int
     cluster_era: str
     tx_era: str
 
 
+class ServiceStatus(NamedTuple):
+    name: str
+    status: str
+    pid: Optional[int]
+    uptime: Optional[str]
+    message: str = ""
+
+
 class Testnets:
     shelley_qa = "shelley_qa"
+    testnet = "testnet"
+    staging = "staging"
+    mainnet = "mainnet"
 
 
 class ClusterType:
@@ -54,7 +62,9 @@ class ClusterType:
         self.type = "unknown"
         self.cluster_scripts = cluster_scripts.ScriptsTypes()
 
-    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+    def get_cluster_obj(
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+    ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
@@ -63,13 +73,6 @@ class ClusterType:
     ) -> Dict[str, Dict[str, Any]]:
         """Create addresses and their keys for usage in tests."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
-
-
-def _datetime2timestamp(datetime_str: str) -> int:
-    """Convert UTC datetime string to timestamp."""
-    converted_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-    timestamp = converted_time.replace(tzinfo=timezone.utc).timestamp()
-    return int(timestamp)
 
 
 class LocalCluster(ClusterType):
@@ -84,45 +87,25 @@ class LocalCluster(ClusterType):
         """Get offset of blocks from Byron era vs current configuration."""
         # unlike in `TestnetCluster`, don't cache slots offset value, we might
         # test different configurations of slot length etc.
-        genesis_byron_json = state_dir / "byron" / "genesis.json"
-        with open(genesis_byron_json) as in_json:
-            genesis_byron = json.load(in_json)
-        genesis_shelley_json = state_dir / "shelley" / "genesis.json"
-        with open(genesis_shelley_json) as in_json:
-            genesis_shelley = json.load(in_json)
-
-        slot_duration_byron_msec = int(genesis_byron["blockVersionData"]["slotDuration"])
-        slot_duration_byron = float(slot_duration_byron_msec / 1000)
-        slot_duration_shelley = float(genesis_shelley["slotLength"])
-        slots_per_epoch_shelley = int(genesis_shelley["epochLength"])
-        byron_k = int(genesis_byron["protocolConsts"]["k"])
-
-        byron_epoch_sec = int(byron_k * 10 * slot_duration_byron)
-        shelley_epoch_sec = int(slots_per_epoch_shelley * slot_duration_shelley)
-
-        if (slot_duration_byron == slot_duration_shelley) and (
-            byron_epoch_sec == shelley_epoch_sec
-        ):
-            return 0
-
-        # assume that shelley starts at epoch 1, i.e. after a single byron epoch
-        slots_in_byron = int(byron_epoch_sec / slot_duration_byron)
-        slots_in_shelley = int(shelley_epoch_sec / slot_duration_shelley)
-        offset = slots_in_shelley - slots_in_byron
-
+        offset = slots_offset.get_slots_offset(
+            genesis_byron=state_dir / "byron" / "genesis.json",
+            genesis_shelley=state_dir / "shelley" / "genesis.json",
+        )
         return offset
 
-    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+    def get_cluster_obj(
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+    ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
-        slots_offset = self._get_slots_offset(cluster_env.state_dir)
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
-            protocol=clusterlib.Protocols.CARDANO,
-            tx_era=cluster_env.tx_era,
-            slots_offset=slots_offset,
+            protocol=protocol or clusterlib.Protocols.CARDANO,
+            tx_era=tx_era or cluster_env.tx_era,
+            slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
+        cluster_obj._min_change_value = 2000_000  # TODO: hardcoded `minUTxOValue`
         return cluster_obj
 
     def create_addrs_data(
@@ -134,19 +117,20 @@ class LocalCluster(ClusterType):
         cluster_env = get_cluster_env()
         instance_num = cluster_env.instance_num
 
-        addrs_data: Dict[str, Dict[str, Any]] = {}
+        # create new addresses
+        new_addrs_data: Dict[str, Dict[str, Any]] = {}
         for addr_name in self.test_addr_records:
             addr_name_instance = f"{addr_name}_ci{instance_num}"
             payment = cluster_obj.gen_payment_addr_and_keys(
                 name=addr_name_instance,
                 destination_dir=destination_dir,
             )
-            addrs_data[addr_name] = {
+            new_addrs_data[addr_name] = {
                 "payment": payment,
             }
 
-        LOGGER.debug("Funding created addresses.")
-        # update `addrs_data` with byron addresses
+        # create records for existing byron addresses
+        byron_addrs_data: Dict[str, Dict[str, Any]] = {}
         byron_dir = get_cluster_env().state_dir / "byron"
         for b in range(len(list(byron_dir.glob("*.skey")))):
             byron_addr = {
@@ -158,31 +142,40 @@ class LocalCluster(ClusterType):
                     skey_file=byron_dir / f"payment-keys.00{b}-converted.skey",
                 )
             }
-            addrs_data[f"byron00{b}"] = byron_addr
+            byron_addrs_data[f"byron00{b}"] = byron_addr
 
-        # fund from converted byron address
-        to_fund = [d["payment"] for d in addrs_data.values()]
+        # fund new addresses from byron address
+        LOGGER.debug("Funding created addresses.")
+        to_fund = [d["payment"] for d in new_addrs_data.values()]
         clusterlib_utils.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
-            faucet_data=addrs_data["byron000"],
-            amount=6_000_000_000_000,
+            faucet_data=byron_addrs_data["byron000"],
+            amount=100_000_000_000_000,
             destination_dir=destination_dir,
             force=True,
         )
 
+        addrs_data = {**new_addrs_data, **byron_addrs_data}
         return addrs_data
 
 
 class TestnetCluster(ClusterType):
     """Testnet cluster type (full cardano mode)."""
 
-    TESTNETS = {1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"}}
+    TESTNETS = {
+        1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"},
+        1563999616: {"type": Testnets.testnet, "shelley_start": "2020-07-28T20:20:16Z"},
+        1506450213: {"type": Testnets.staging, "shelley_start": "2020-08-01T18:23:33Z"},
+        1506203091: {"type": Testnets.mainnet, "shelley_start": "2020-07-29T21:44:51Z"},
+    }
 
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET
-        self.cluster_scripts: cluster_scripts.TestnetScripts = cluster_scripts.TestnetScripts()
+        self.cluster_scripts: Union[
+            cluster_scripts.ScriptsTypes, cluster_scripts.TestnetScripts
+        ] = cluster_scripts.TestnetScripts()
 
         # cached values
         self._testnet_type = ""
@@ -196,7 +189,7 @@ class TestnetCluster(ClusterType):
 
         cluster_env = get_cluster_env()
         genesis_byron_json = cluster_env.state_dir / "genesis-byron.json"
-        with open(genesis_byron_json) as in_json:
+        with open(genesis_byron_json, encoding="utf-8") as in_json:
             genesis_byron = json.load(in_json)
 
         start_timestamp: int = genesis_byron["startTime"]
@@ -210,46 +203,40 @@ class TestnetCluster(ClusterType):
         if self._slots_offset != -1:
             return self._slots_offset
 
-        genesis_byron_json = state_dir / "genesis-byron.json"
-        with open(genesis_byron_json) as in_json:
-            genesis_byron = json.load(in_json)
-        genesis_shelley_json = state_dir / "genesis-shelley.json"
-        with open(genesis_shelley_json) as in_json:
-            genesis_shelley = json.load(in_json)
+        genesis_byron = state_dir / "genesis-byron.json"
+        genesis_shelley = state_dir / "genesis-shelley.json"
 
-        start_timestamp: int = genesis_byron["startTime"]
+        with open(genesis_byron, encoding="utf-8") as in_json:
+            byron_dict = json.load(in_json)
+        start_timestamp: int = byron_dict["startTime"]
 
         shelley_start: str = self.TESTNETS.get(start_timestamp, {}).get("shelley_start", "")
         if not shelley_start:
             self._slots_offset = 0
             return 0
 
-        testnet_timestamp = _datetime2timestamp(shelley_start)
-        offset_sec = testnet_timestamp - start_timestamp
-
-        slot_duration_byron_msec = int(genesis_byron["blockVersionData"]["slotDuration"])
-        slot_duration_byron = float(slot_duration_byron_msec / 1000)
-        slot_duration_shelley = float(genesis_shelley["slotLength"])
-
-        # assume that epoch length is the same for byron and shelley epochs
-        slots_in_byron = int(offset_sec / slot_duration_byron)
-        slots_in_shelley = int(offset_sec / slot_duration_shelley)
-        offset = slots_in_shelley - slots_in_byron
+        offset = slots_offset.get_slots_offset(
+            genesis_byron=genesis_byron,
+            genesis_shelley=genesis_shelley,
+            shelley_start=shelley_start,
+        )
 
         self._slots_offset = offset
         return offset
 
-    def get_cluster_obj(self) -> clusterlib.ClusterLib:
+    def get_cluster_obj(
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+    ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
-        slots_offset = self._get_slots_offset(cluster_env.state_dir)
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
-            protocol=clusterlib.Protocols.CARDANO,
-            tx_era=cluster_env.tx_era,
-            slots_offset=slots_offset,
+            protocol=protocol or clusterlib.Protocols.CARDANO,
+            tx_era=tx_era or cluster_env.tx_era,
+            slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
+        cluster_obj._min_change_value = 2000_000  # TODO: hardcoded `minUTxOValue`
         return cluster_obj
 
     def create_addrs_data(
@@ -283,7 +270,7 @@ class TestnetNopoolsCluster(TestnetCluster):
         )
 
 
-@functools.lru_cache
+@helpers.callonce
 def get_cluster_type() -> ClusterType:
     """Return instance of the cluster type indicated by configuration."""
     if configuration.BOOTSTRAP_DIR and configuration.NOPOOLS:
@@ -295,31 +282,45 @@ def get_cluster_type() -> ClusterType:
 
 def get_cardano_node_socket_path(instance_num: int) -> Path:
     """Return path to socket file in the given cluster instance."""
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).resolve()
-    state_cluster_dirname = f"state-cluster{instance_num}"
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
+    state_cluster_dirname = f"{STATE_CLUSTER}{instance_num}"
     state_cluster = socket_path.parent.parent / state_cluster_dirname
     new_socket_path = state_cluster / socket_path.name
     return new_socket_path
 
 
-def set_cardano_node_socket_path(instance_num: int) -> None:
-    """Set the `CARDANO_NODE_SOCKET_PATH` env variable for the given cluster instance."""
+def set_cluster_env(instance_num: int) -> None:
+    """Set env variables for the given cluster instance."""
     socket_path = get_cardano_node_socket_path(instance_num)
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
+
+    os.environ["PGPASSFILE"] = str(socket_path.parent / "pgpass")
+    os.environ["PGDATABASE"] = f"{configuration.DBSYNC_DB}{instance_num}"
+    if not os.environ.get("PGHOST"):
+        os.environ["PGHOST"] = "localhost"
+    if not os.environ.get("PGPORT"):
+        os.environ["PGPORT"] = "5432"
+    if not os.environ.get("PGUSER"):
+        os.environ["PGUSER"] = "postgres"
+
+
+def get_instance_num() -> int:
+    """Get cardano cluster instance number."""
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
+    instance_num = int(socket_path.parent.name.replace(STATE_CLUSTER, "") or 0)
+    return instance_num
 
 
 def get_cluster_env() -> ClusterEnv:
     """Get cardano cluster environment."""
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
+    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
     state_dir = socket_path.parent
     work_dir = state_dir.parent
-    repo_dir = Path(os.environ.get("CARDANO_NODE_REPO_PATH") or work_dir)
-    instance_num = int(state_dir.name.replace("state-cluster", "") or 0)
+    instance_num = int(state_dir.name.replace(STATE_CLUSTER, "") or 0)
 
     cluster_env = ClusterEnv(
         socket_path=socket_path,
         state_dir=state_dir,
-        repo_dir=repo_dir,
         work_dir=work_dir,
         instance_num=instance_num,
         cluster_era=configuration.CLUSTER_ERA,
@@ -333,31 +334,88 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     args_str = " ".join(args)
     args_str = f" {args_str}" if args_str else ""
     LOGGER.info(f"Starting cluster with `{cmd}{args_str}`.")
-    helpers.run_in_bash(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
+    helpers.run_command(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
     LOGGER.info("Cluster started.")
     return get_cluster_type().get_cluster_obj()
 
 
-def stop_cluster(cmd: str) -> None:
-    """Stop cluster."""
-    LOGGER.info(f"Stopping cluster with `{cmd}`.")
-    helpers.run_in_bash(cmd, workdir=get_cluster_env().work_dir)
+def restart_all_nodes(instance_num: Optional[int] = None) -> None:
+    """Restart all Cardano nodes of the running cluster."""
+    LOGGER.info("Restarting all cluster nodes.")
 
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
 
-def restart_node(node_name: str) -> None:
-    """Restart single node of the running cluster."""
-    LOGGER.info(f"Restarting cluster node `{node_name}`.")
-    cluster_env = get_cluster_env()
-    supervisor_port = (
-        get_cluster_type().cluster_scripts.get_instance_ports(cluster_env.instance_num).supervisor
-    )
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
     try:
-        helpers.run_command(
-            f"supervisorctl -s http://localhost:{supervisor_port} restart {node_name}",
-            workdir=cluster_env.work_dir,
-        )
+        helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:")
     except Exception as exc:
-        LOGGER.debug(f"Failed to restart cluster node `{node_name}`: {exc}")
+        LOGGER.debug(f"Failed to restart cluster nodes: {exc}")
+
+
+def restart_services(service_names: List[str], instance_num: Optional[int] = None) -> None:
+    """Restart list of services running on the running cluster."""
+    LOGGER.info(f"Restarting services {service_names}.")
+
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
+    for service_name in service_names:
+        try:
+            helpers.run_command(
+                f"supervisorctl -s http://localhost:{supervisor_port} restart {service_name}"
+            )
+        except Exception as exc:
+            LOGGER.debug(f"Failed to restart service `{service_name}`: {exc}")
+
+
+def restart_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
+    """Restart list of Cardano nodes of the running cluster."""
+    service_names = [f"nodes:{n}" for n in node_names]
+    restart_services(service_names=service_names, instance_num=instance_num)
+
+
+def services_status(
+    service_names: Optional[List[str]] = None, instance_num: Optional[int] = None
+) -> List[ServiceStatus]:
+    """Return status info for list of services running on the running cluster (all by default)."""
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
+    service_names_arg = " ".join(service_names) if service_names else "all"
+
+    status_out = (
+        helpers.run_command(
+            f"supervisorctl -s http://localhost:{supervisor_port} status {service_names_arg}",
+            ignore_fail=True,
+        )
+        .decode()
+        .strip()
+        .split("\n")
+    )
+
+    statuses = []
+    for status_line in status_out:
+        service_name, status, *running_status = status_line.split()
+        if running_status and running_status[0] == "pid":
+            _pid, pid, _uptime, uptime, *other = running_status
+            message = " ".join(other)
+        else:
+            pid, uptime = "", ""
+            message = " ".join(running_status)
+        statuses.append(
+            ServiceStatus(
+                name=service_name,
+                status=status,
+                pid=int(pid.rstrip(",")) if pid else None,
+                uptime=uptime or None,
+                message=message,
+            )
+        )
+
+    return statuses
 
 
 def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
@@ -433,58 +491,3 @@ def load_addrs_data() -> dict:
     data_file = Path(get_cluster_env().state_dir) / ADDRS_DATA
     with open(data_file, "rb") as in_data:
         return pickle.load(in_data)  # type: ignore
-
-
-def save_cluster_artifacts(artifacts_dir: Path, clean: bool = False) -> Optional[Path]:
-    """Save cluster artifacts."""
-    destdir = artifacts_dir / f"cluster_artifacts_{clusterlib.get_rand_str(8)}"
-    destdir.mkdir(parents=True)
-
-    state_dir = Path(get_cluster_env().state_dir)
-    files_list = list(state_dir.glob("*.std*"))
-    files_list.extend(list(state_dir.glob("*.json")))
-    dirs_to_copy = ("nodes", "shelley")
-
-    for fpath in files_list:
-        shutil.copy(fpath, destdir)
-    for dname in dirs_to_copy:
-        src_dir = state_dir / dname
-        if not src_dir.exists():
-            continue
-        shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
-
-    if not os.listdir(destdir):
-        destdir.rmdir()
-        return None
-
-    LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
-
-    if clean:
-        LOGGER.info(f"Cleaning cluster artifacts in '{state_dir}'.")
-        shutil.rmtree(state_dir, ignore_errors=True)
-
-    return destdir
-
-
-def save_collected_artifacts(pytest_tmp_dir: Path, artifacts_dir: Path) -> Optional[Path]:
-    """Save collected tests and cluster artifacts."""
-    pytest_tmp_dir = pytest_tmp_dir.resolve()
-    if not pytest_tmp_dir.is_dir():
-        return None
-
-    destdir = artifacts_dir / f"{pytest_tmp_dir.stem}-{clusterlib.get_rand_str(8)}"
-    if destdir.resolve().is_dir():
-        shutil.rmtree(destdir)
-    shutil.copytree(pytest_tmp_dir, destdir, symlinks=True, ignore_dangling_symlinks=True)
-
-    LOGGER.info(f"Collected artifacts saved to '{artifacts_dir}'.")
-    return destdir
-
-
-def save_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
-    """Save tests and cluster artifacts."""
-    artifacts_base_dir = pytest_config.getoption("--artifacts-base-dir")
-    if not artifacts_base_dir:
-        return
-
-    save_collected_artifacts(pytest_tmp_dir, Path(artifacts_base_dir))

@@ -12,6 +12,8 @@ from typing import NamedTuple
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.types import FileType
 
+STOP_SCRIPT = "supervisord_stop"
+
 
 class InstanceFiles(NamedTuple):
     start_script: Path
@@ -128,7 +130,7 @@ class LocalScripts(ScriptsTypes):
         )
 
     def _reconfigure_local(self, indir: Path, destdir: Path, instance_num: int) -> None:
-        """Reconfigure scripts and config files located in this repository."""
+        """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num)
         for infile in indir.glob("*"):
             fname = infile.name
@@ -138,7 +140,7 @@ class LocalScripts(ScriptsTypes):
                 shutil.copy(infile, dest_file)
                 continue
 
-            with open(infile) as in_fp:
+            with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
             new_content = content.replace("/state-cluster", f"/state-cluster{instance_num}")
@@ -153,11 +155,11 @@ class LocalScripts(ScriptsTypes):
                 # reconfigure metrics ports in config-*.json
                 new_content = new_content.replace("3030", str(instance_ports.ekg_bft1 // 10))
 
-            with open(dest_file, "w") as out_fp:
+            with open(dest_file, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
 
-            # make files without extension executable
-            if "." not in fname:
+            # make `*.sh` files and files without extension executable
+            if "." not in fname or fname.endswith(".sh"):
                 dest_file.chmod(0o755)
 
     def prepare_scripts_files(
@@ -193,7 +195,7 @@ class LocalScripts(ScriptsTypes):
 class TestnetScripts(ScriptsTypes):
     """Testnet cluster scripts (full cardano mode)."""
 
-    TESTNET_GLOBS = ("config*.json", "genesis-*.json", "topology-*.json")
+    TESTNET_GLOBS = ("config*.json", "genesis-*.json", "topology-*.json", "dbsync-config.*")
     BOOTSTRAP_CONF = "testnet_conf"
 
     def __init__(self) -> None:
@@ -257,7 +259,7 @@ class TestnetScripts(ScriptsTypes):
     def _reconfigure_testnet(
         self, indir: Path, destdir: Path, instance_num: int, globs: List[str]
     ) -> None:
-        """Reconfigure scripts and config files located in this repository."""
+        """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num)
         _infiles = [list(indir.glob(g)) for g in globs]
         infiles = list(itertools.chain.from_iterable(_infiles))
@@ -269,7 +271,7 @@ class TestnetScripts(ScriptsTypes):
                 shutil.copy(infile, dest_file)
                 continue
 
-            with open(infile) as in_fp:
+            with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
             new_content = content.replace("/state-cluster", f"/state-cluster{instance_num}")
@@ -282,11 +284,11 @@ class TestnetScripts(ScriptsTypes):
                 "supervisorctl ", f"supervisorctl -s http://127.0.0.1:{instance_ports.supervisor} "
             )
 
-            with open(dest_file, "w") as out_fp:
+            with open(dest_file, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
 
-            # make files without extension executable
-            if "." not in fname:
+            # make `*.sh` files and files without extension executable
+            if "." not in fname or fname.endswith(".sh"):
                 dest_file.chmod(0o755)
 
     def _is_bootstrap_conf_dir(self, bootstrap_dir: Path) -> bool:

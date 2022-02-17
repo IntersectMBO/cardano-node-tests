@@ -7,27 +7,31 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+from typing import Iterable
 from typing import List
 from typing import Tuple
 
+from cardano_clusterlib import clusterlib
+
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.types import UnpackableSequence
 
 LOGGER = logging.getLogger(__name__)
 
 SKIPPED = (
+    "build-script",
     "byron",
     "convert-byron-key",
     "convert-byron-genesis-vkey",
     "convert-itn-key",
     "convert-itn-extended-key",
     "convert-itn-bip32-key",
-    "genesis",
     "version",
     "--byron-era",
-    "--byron-mode",
     "--byron-key",
+    "--byron-mode",
+    "--epoch-slots",
     "--mainnet",
+    "--shelley-mode",
     "--version",
     "-h,--help",
 )
@@ -35,7 +39,7 @@ SKIPPED = (
 
 def get_args() -> argparse.Namespace:
     """Get script command line arguments."""
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n", maxsplit=1)[0])
     parser.add_argument(
         "-i",
         "--input-files",
@@ -99,8 +103,9 @@ def merge_coverage(dict_a: dict, dict_b: dict) -> dict:
     return dict_a
 
 
-def cli(cli_args: UnpackableSequence) -> str:
+def cli(cli_args: Iterable[str]) -> str:
     """Run the `cardano-cli` command."""
+    assert not isinstance(cli_args, str), "`cli_args` must be sequence of strings"
     with subprocess.Popen(list(cli_args), stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
         __, stderr = p.communicate()
     return stderr.decode()
@@ -124,13 +129,13 @@ def parse_cmd_output(output: str) -> List[str]:
             line = line.strip()
             if not line:
                 continue
-            item = line.split(" ")[0]
+            item = line.split()[0]
             cli_args.append(item)
 
     return cli_args
 
 
-def get_available_commands(cli_args: UnpackableSequence, ignore_skips: bool = False) -> dict:
+def get_available_commands(cli_args: Iterable[str], ignore_skips: bool = False) -> dict:
     """Get all available cardano-cli sub-commands and options."""
     cli_out = cli(cli_args)
     new_cli_args = parse_cmd_output(cli_out)
@@ -146,16 +151,33 @@ def get_available_commands(cli_args: UnpackableSequence, ignore_skips: bool = Fa
     return command_dict
 
 
-def get_coverage(input_jsons: List[Path], available_commands: dict) -> dict:
+def get_log_coverage(log_file: Path) -> dict:
+    """Get coverage info from log file containing CLI commands."""
+    coverage_dict: dict = {}
+    with open(log_file, encoding="utf-8") as infile:
+        for line in infile:
+            if not line.startswith("cardano-cli"):
+                continue
+            clusterlib.record_cli_coverage(cli_args=line.split(), coverage_dict=coverage_dict)
+
+    return coverage_dict
+
+
+def get_coverage(coverage_files: List[Path], available_commands: dict) -> dict:
     """Get coverage info by merging available data."""
     coverage_dict = copy.deepcopy(available_commands)
-    for in_json in input_jsons:
-        with open(in_json) as infile:
-            coverage = json.load(infile)
+    for in_coverage in coverage_files:
+        if in_coverage.suffix == ".json":
+            with open(in_coverage, encoding="utf-8") as infile:
+                coverage = json.load(infile)
+        else:
+            coverage = get_log_coverage(in_coverage)
+
         if coverage.get("cardano-cli", {}).get("_count") is None:
             raise AttributeError(
-                f"Data in '{in_json}' doesn't seem to be in proper coverage format."
+                f"Data in '{in_coverage}' doesn't seem to be in proper coverage format."
             )
+
         coverage_dict = merge_coverage(coverage_dict, coverage)
 
     return coverage_dict
@@ -228,7 +250,9 @@ def main() -> int:
         "cardano-cli": get_available_commands(["cardano-cli"], ignore_skips=args.ignore_skips)
     }
     try:
-        coverage = get_coverage(input_jsons=args.input_files, available_commands=available_commands)
+        coverage = get_coverage(
+            coverage_files=args.input_files, available_commands=available_commands
+        )
     except AttributeError as exc:
         LOGGER.error(str(exc))
         return 1

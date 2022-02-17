@@ -13,64 +13,46 @@ import shutil
 import signal
 import string
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import Dict
+from typing import cast
 from typing import Iterator
 from typing import Optional
-
-from _pytest.config import Config
-from _pytest.tmpdir import TempdirFactory
-from filelock import FileLock
+from typing import TypeVar
+from typing import Union
 
 from cardano_node_tests.utils.types import FileType
-
-# suppress messages from filelock
-logging.getLogger("filelock").setLevel(logging.WARNING)
 
 
 LOGGER = logging.getLogger(__name__)
 
-LAUNCH_PATH = Path(os.getcwd())
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 
-
-# Use dummy locking if not executing with multiple workers.
-# When running with multiple workers, operations with shared resources (like faucet addresses)
-# need to be locked to single worker (otherwise e.g. balances would not check).
-if os.environ.get("PYTEST_XDIST_TESTRUNUID"):
-    IS_XDIST = True
-    FileLockIfXdist: Any = FileLock
-    xdist_sleep = time.sleep
-else:
-    IS_XDIST = False
-    FileLockIfXdist = contextlib.nullcontext
-
-    def xdist_sleep(secs: float) -> None:
-        # pylint: disable=all
-        pass
+TCallable = TypeVar("TCallable", bound=Callable)
 
 
-@functools.lru_cache
-def hypothesis_settings() -> Any:
-    import hypothesis
+def callonce(func: TCallable) -> TCallable:
+    """Call a function and cache its return value."""
+    result: list = []
 
-    return hypothesis.settings(
-        deadline=None,
-        suppress_health_check=(
-            hypothesis.HealthCheck.too_slow,
-            hypothesis.HealthCheck.function_scoped_fixture,
-        ),
-    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):  # type: ignore
+        if result:
+            return result[0]
+
+        retval = func(*args, **kwargs)
+        result.append(retval)
+        return retval
+
+    return cast(TCallable, wrapper)
 
 
 @contextlib.contextmanager
 def change_cwd(dir_path: FileType) -> Iterator[FileType]:
     """Change and restore CWD - context manager."""
-    orig_cwd = os.getcwd()
+    orig_cwd = Path.cwd()
     os.chdir(dir_path)
     LOGGER.debug(f"Changed CWD to '{dir_path}'.")
     try:
@@ -90,40 +72,60 @@ def ignore_interrupt() -> Iterator[None]:
         signal.signal(signal.SIGINT, orig_handler)
 
 
-def run_command(command: str, workdir: FileType = "", shell: bool = False) -> bytes:
+@contextlib.contextmanager
+def environ(env: dict) -> Iterator[None]:
+    """Temporarily set environment variables and restore previous environment afterwards."""
+    original_env = {key: os.environ.get(key) for key in env}
+    os.environ.update(env)
+    try:
+        yield
+    finally:
+        for key, value in original_env.items():
+            if value is None:
+                del os.environ[key]
+            else:
+                os.environ[key] = value
+
+
+def run_command(
+    command: Union[str, list],
+    workdir: FileType = "",
+    ignore_fail: bool = False,
+    shell: bool = False,
+) -> bytes:
     """Run command."""
-    cmd = command if shell else command.split(" ")
+    cmd: Union[str, list]
+    if isinstance(command, str):
+        cmd = command if shell else command.split()
+    else:
+        cmd = command
+
+    # pylint: disable=consider-using-with
     if workdir:
         with change_cwd(workdir):
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     else:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     stdout, stderr = p.communicate()
-    if p.returncode != 0:
+
+    if not ignore_fail and p.returncode != 0:
         err_dec = stderr.decode()
         err_dec = err_dec or stdout.decode()
         raise AssertionError(f"An error occurred while running `{command}`: {err_dec}")
+
     return stdout
 
 
 def run_in_bash(command: str, workdir: FileType = "") -> bytes:
     """Run command(s) in bash."""
-    cmd = f"bash -c '{command}'"
-    return run_command(cmd, workdir=workdir, shell=True)
+    cmd = ["bash", "-o", "pipefail", "-c", f"{command}"]
+    return run_command(cmd, workdir=workdir)
 
 
-@functools.lru_cache
+@callonce
 def get_current_commit() -> str:
     # TODO: make sure we are in correct repo
     return os.environ.get("GIT_REVISION") or run_command("git rev-parse HEAD").decode().strip()
-
-
-@functools.lru_cache
-def get_basetemp() -> Path:
-    """Return base temporary directory for tests artifacts."""
-    tempdir = Path(tempfile.gettempdir()) / "cardano-node-tests"
-    tempdir.mkdir(mode=0o700, exist_ok=True)
-    return tempdir
 
 
 # TODO: unify with the implementation in clusterlib
@@ -146,15 +148,6 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
     return f"{timestamp}{rand_str_component}"
 
 
-def get_pytest_globaltemp(tmp_path_factory: TempdirFactory) -> Path:
-    """Return global temporary directory for a single pytest run."""
-    pytest_tmp_dir = Path(tmp_path_factory.getbasetemp())
-    basetemp = pytest_tmp_dir.parent if IS_XDIST else pytest_tmp_dir
-    basetemp = basetemp / "tmp"
-    basetemp.mkdir(exist_ok=True)
-    return basetemp
-
-
 def get_vcs_link() -> str:
     """Return link to the current line in GitHub."""
     calling_frame = inspect.currentframe().f_back  # type: ignore
@@ -163,18 +156,6 @@ def get_vcs_link() -> str:
     fpart = fpath[fpath.find("cardano_node_tests") :]
     url = f"{GITHUB_URL}/blob/{get_current_commit()}/{fpart}#L{lineno}"
     return url
-
-
-def get_func_name() -> str:
-    """Return calling function name."""
-    func_name = inspect.currentframe().f_back.f_code.co_name  # type: ignore
-    return func_name
-
-
-def get_id_for_mktemp(file_path: str) -> str:
-    """Return an id for mktemp based on file path."""
-    fpart = file_path[file_path.rfind("/") + 1 :].replace(".", "_")
-    return fpart
 
 
 def wait_for(
@@ -196,23 +177,28 @@ def wait_for(
 
 def checksum(filename: FileType, blocksize: int = 65536) -> str:
     """Return file checksum."""
-    hash = hashlib.blake2b()
+    hash_o = hashlib.blake2b()
     with open(filename, "rb") as f:
         for block in iter(lambda: f.read(blocksize), b""):
-            hash.update(block)
-    return hash.hexdigest()
+            hash_o.update(block)
+    return hash_o.hexdigest()
 
 
 def write_json(location: FileType, content: dict) -> FileType:
     """Write dictionary content to JSON file."""
-    with open(Path(location).expanduser(), "w") as out_file:
+    with open(Path(location).expanduser(), "w", encoding="utf-8") as out_file:
         out_file.write(json.dumps(content, indent=4))
     return location
 
 
 def decode_bech32(bech32: str) -> str:
-    """Convert from bech32 strings."""
+    """Convert from bech32 string."""
     return run_command(f"echo '{bech32}' | bech32", shell=True).decode().strip()
+
+
+def encode_bech32(prefix: str, data: str) -> str:
+    """Convert to bech32 string."""
+    return run_command(f"echo '{data}' | bech32 {prefix}", shell=True).decode().strip()
 
 
 def check_dir_arg(dir_path: str) -> Optional[Path]:
@@ -235,39 +221,22 @@ def check_file_arg(file_path: str) -> Optional[Path]:
     return abs_path
 
 
-def save_env_for_allure(pytest_config: Config) -> None:
-    """Save environment info in a format for Allure."""
-    alluredir = pytest_config.getoption("--alluredir")
-
-    if not alluredir:
-        return
-
-    alluredir = LAUNCH_PATH / alluredir
-    metadata: Dict[str, Any] = pytest_config._metadata  # type: ignore
-    with open(alluredir / "environment.properties", "w+") as infile:
-        for k, v in metadata.items():
-            if isinstance(v, dict):
-                continue
-            name = k.replace(" ", ".")
-            infile.write(f"{name}={v}\n")
-
-
 def get_cmd_path(cmd: str) -> Path:
-    """Return file path of the command."""
-    start_script = shutil.which(cmd)
-    if not start_script:
-        raise AssertionError(f"The `{cmd}` not found on PATH")
-    return Path(start_script)
+    """Return file path of a command."""
+    cmd_path = shutil.which(cmd)
+    if not cmd_path:
+        raise AssertionError(f"The `{cmd}` was not found on PATH.")
+    return Path(cmd_path)
 
 
 def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str) -> None:
     """Replace a string in file with another string."""
-    with open(infile) as in_fp:
+    with open(infile, encoding="utf-8") as in_fp:
         content = in_fp.read()
 
     replaced_content = content.replace(orig_str, new_str)
 
-    with open(outfile, "w") as out_fp:
+    with open(outfile, "w", encoding="utf-8") as out_fp:
         out_fp.write(replaced_content)
 
 
@@ -285,3 +254,9 @@ def is_in_interval(num1: float, num2: float, frac: float = 0.1) -> bool:
     _min = num2 - num2_frac
     _max = num2 + num2_frac
     return _min <= num1 <= _max
+
+
+def touch(file: Path) -> None:
+    """Do the same as unix `touch` command."""
+    with open(file, "a", encoding="utf-8"):
+        pass

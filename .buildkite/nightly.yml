@@ -9,7 +9,13 @@ steps:
     agents:
       system: x86_64-linux
     artifact_paths:
-      - 'allure-report.tar.bz2'
+      - 'allure-report.tar.xz'
       - 'cli_coverage.json'
-      - 'nightly-report.html'
-      - 'scheduling.log'
+      - 'testrun-report.html'
+      - 'scheduling.log.xz'
+      - 'errors_all.log'
+      - 'testing_artifacts.tar.xz'
+
+notify:
+  - email: "cardano_qa_node_db_sy-aaaadudb2xnnewjhenny4cgzia@input-output-rnd.slack.com"
+    if: build.state != "passed"

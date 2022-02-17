@@ -4,7 +4,6 @@
 * time locking
 * auxiliary scripts
 """
-import json
 import logging
 import random
 from pathlib import Path
@@ -12,39 +11,20 @@ from typing import List
 from typing import Optional
 
 import allure
-import cbor2
 import pytest
-from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).parent / "data"
-
-
-@pytest.fixture(scope="module")
-def create_temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir."""
-    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
-    p.mkdir(exist_ok=True, parents=True)
-    return p
-
-
-@pytest.fixture
-def temp_dir(create_temp_dir: Path):
-    """Change to a temporary dir."""
-    with helpers.change_cwd(create_temp_dir):
-        yield create_temp_dir
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 def multisig_tx(
@@ -57,6 +37,7 @@ def multisig_tx(
     multisig_script: Optional[Path] = None,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
+    use_build_cmd: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
     # record initial balances
@@ -64,10 +45,11 @@ def multisig_tx(
     dst_init_balance = cluster_obj.get_address_balance(dst_address)
 
     # create TX body
-    tx_files = (
-        clusterlib.TxFiles(script_files=clusterlib.ScriptFiles(txin_scripts=[multisig_script]))
+    script_txins = (
+        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
         if multisig_script
-        else None
+        else []
     )
     destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
     witness_count_add = len(payment_skey_files)
@@ -75,25 +57,37 @@ def multisig_tx(
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add += 5
 
-    ttl = cluster_obj.calculate_tx_ttl()
-    fee = cluster_obj.calculate_tx_fee(
-        src_address=src_address,
-        tx_name=temp_template,
-        txouts=destinations,
-        tx_files=tx_files,
-        ttl=ttl,
-        witness_count_add=witness_count_add,
-    )
-    tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=src_address,
-        tx_name=temp_template,
-        txouts=destinations,
-        tx_files=tx_files,
-        fee=fee,
-        ttl=ttl,
-        invalid_hereafter=invalid_hereafter,
-        invalid_before=invalid_before,
-    )
+    if use_build_cmd:
+        tx_raw_output = cluster_obj.build_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            script_txins=script_txins,
+            fee_buffer=2000_000,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            witness_override=witness_count_add,
+        )
+    else:
+        ttl = cluster_obj.calculate_tx_ttl()
+        fee = cluster_obj.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            script_txins=script_txins,
+            ttl=ttl,
+            witness_count_add=witness_count_add,
+        )
+        tx_raw_output = cluster_obj.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            script_txins=script_txins,
+            fee=fee,
+            ttl=ttl,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+        )
 
     # create witness file for each key
     witness_files = [
@@ -118,7 +112,7 @@ def multisig_tx(
     # check final balances
     assert (
         cluster_obj.get_address_balance(src_address)
-        == src_init_balance - tx_raw_output.fee - amount
+        == src_init_balance - amount - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     assert (
@@ -144,7 +138,7 @@ class TestBasic:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"multi_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(20)],
+                *[f"multi_addr_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(20)],
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -154,7 +148,7 @@ class TestBasic:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=20_000_000,
+            amount=10_000_000_000,
         )
 
         return addrs
@@ -167,7 +161,7 @@ class TestBasic:
 
         There was an issue that script address was 32 bytes instead of 28 bytes.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -187,12 +181,26 @@ class TestBasic:
         assert len(script_address) == len(payment_addrs[0].address)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_multisig_all(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Send funds to and from script address using the *all* script."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -215,8 +223,9 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=2_000_000,
+            amount=5000_000,
             payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
         )
 
         # send funds from script address
@@ -225,18 +234,33 @@ class TestBasic:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000,
+            amount=2000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
+            use_build_cmd=use_build_cmd,
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_multisig_any(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Send funds using the *any* script.
 
@@ -244,7 +268,7 @@ class TestBasic:
         * send funds from script address using single witness
         * send funds from script address using multiple witnesses
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -272,8 +296,9 @@ class TestBasic:
                 temp_template=f"{temp_template}_to",
                 src_address=payment_addrs[0].address,
                 dst_address=script_address,
-                amount=5_000_000,
+                amount=50_000_000,
                 payment_skey_files=[payment_skey_files[0]],
+                use_build_cmd=use_build_cmd,
             )
         )
 
@@ -285,9 +310,10 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_single_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=1000,
+                    amount=2000_000,
                     payment_skey_files=[payment_skey_files[random.randrange(0, skeys_len)]],
                     multisig_script=multisig_script,
+                    use_build_cmd=use_build_cmd,
                 )
             )
 
@@ -300,9 +326,10 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_multi_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=1000,
+                    amount=2000_000,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
+                    use_build_cmd=use_build_cmd,
                 )
             )
 
@@ -310,12 +337,26 @@ class TestBasic:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_multisig_atleast(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Send funds to and from script address using the *atLeast* script."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -345,8 +386,9 @@ class TestBasic:
                 temp_template=f"{temp_template}_to",
                 src_address=payment_addrs[0].address,
                 dst_address=script_address,
-                amount=2_000_000,
+                amount=20_000_000,
                 payment_skey_files=[payment_skey_files[0]],
+                use_build_cmd=use_build_cmd,
             )
         )
 
@@ -359,9 +401,10 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=1000,
+                    amount=2000_000,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
+                    use_build_cmd=use_build_cmd,
                 )
             )
 
@@ -369,14 +412,28 @@ class TestBasic:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_normal_tx_to_script_addr(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Send funds to script address using TX signed with skeys (not using witness files)."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         src_address = payment_addrs[0].address
-        amount = 1000
+        amount = 2000_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -398,17 +455,32 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=script_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        tx_raw_output = cluster.send_funds(
-            src_address=src_address,
-            tx_name=temp_template,
-            destinations=destinations,
-            tx_files=tx_files,
-        )
+        if use_build_cmd:
+            tx_raw_output = cluster.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=destinations,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_funds(
+                src_address=src_address,
+                tx_name=temp_template,
+                destinations=destinations,
+                tx_files=tx_files,
+            )
 
         # check final balances
         assert (
             cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - amount
+            == src_init_balance - amount - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
@@ -418,14 +490,28 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_normal_tx_from_script_addr(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Send funds from script address using TX signed with skeys (not using witness files)."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         dst_addr = payment_addrs[1]
-        amount = 1000
+        amount = 2000_000
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -448,8 +534,9 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=300_000,
+            amount=4500_000,
             payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
         )
 
         # record initial balances
@@ -459,21 +546,40 @@ class TestBasic:
         # send funds from script address
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(
-            script_files=clusterlib.ScriptFiles(txin_scripts=[multisig_script]),
             signing_key_files=[dst_addr.skey_file],
         )
+        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        script_txins = [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
 
-        tx_out_from = cluster.send_tx(
-            src_address=script_address,
-            tx_name=f"{temp_template}_from",
-            txouts=destinations,
-            tx_files=tx_files,
-        )
+        if use_build_cmd:
+            tx_out_from = cluster.build_tx(
+                src_address=script_address,
+                tx_name=f"{temp_template}_from",
+                txouts=destinations,
+                script_txins=script_txins,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+                witness_override=2,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_out_from.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=f"{temp_template}_from",
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_out_from.txins)
+        else:
+            tx_out_from = cluster.send_tx(
+                src_address=script_address,
+                tx_name=f"{temp_template}_from",
+                txouts=destinations,
+                script_txins=script_txins,
+                tx_files=tx_files,
+            )
 
         # check final balances
         assert (
             cluster.get_address_balance(script_address)
-            == src_init_balance - tx_out_from.fee - amount
+            == src_init_balance - amount - tx_out_from.fee
         ), f"Incorrect balance for script address `{script_address}`"
 
         assert (
@@ -489,7 +595,7 @@ class TestBasic:
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Send funds from script address using the *all* script with zero skeys."""
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
 
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
@@ -511,7 +617,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=2_000_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -521,7 +627,7 @@ class TestBasic:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000,
+            amount=1500_000,
             payment_skey_files=[payment_skey_files[0]],
             multisig_script=multisig_script,
         )
@@ -536,7 +642,7 @@ class TestBasic:
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Send funds from script address using the *atLeast* script with no required witnesses."""
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -560,7 +666,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=2_000_000,
+            amount=3000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -570,7 +676,7 @@ class TestBasic:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000,
+            amount=1000_000,
             payment_skey_files=[],
             multisig_script=multisig_script,
         )
@@ -595,7 +701,10 @@ class TestNegative:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"multi_neg_addr_ci{cluster_manager.cluster_instance}_{i}" for i in range(10)],
+                *[
+                    f"multi_neg_addr_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(10)
+                ],
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -618,7 +727,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -641,7 +750,7 @@ class TestNegative:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=300_000,
+            amount=3000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -652,7 +761,7 @@ class TestNegative:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1000,
+                amount=1000_000,
                 payment_skey_files=payment_skey_files[:-1],
                 multisig_script=multisig_script,
             )
@@ -669,7 +778,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs[:-1]]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -692,7 +801,7 @@ class TestNegative:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=300_000,
+            amount=3000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -703,7 +812,7 @@ class TestNegative:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1000,
+                amount=2000_000,
                 payment_skey_files=[payment_skey_files[-1]],
                 multisig_script=multisig_script,
             )
@@ -720,7 +829,7 @@ class TestNegative:
 
         Num of skeys < required. Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -747,7 +856,7 @@ class TestNegative:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=300_000,
+            amount=3000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -759,7 +868,7 @@ class TestNegative:
                     temp_template=f"{temp_template}_from_fail{num_of_skeys}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=1000,
+                    amount=1000_000,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
                 )
@@ -791,7 +900,7 @@ class TestTimeLocking:
 
             addrs = clusterlib_utils.create_payment_addr_records(
                 *[
-                    f"multi_addr_time_locking_ci{cluster_manager.cluster_instance}_{i}"
+                    f"multi_addr_time_locking_ci{cluster_manager.cluster_instance_num}_{i}"
                     for i in range(20)
                 ],
                 cluster_obj=cluster,
@@ -803,18 +912,31 @@ class TestTimeLocking:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=20_000_000,
         )
 
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_script_after(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Check that it is possible to spend from script address after given slot."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -839,33 +961,53 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=2_000_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
         )
 
         # send funds from script address
+        invalid_hereafter = cluster.get_slot_no() + 1000
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000,
+            amount=2000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1000,
+            invalid_hereafter=invalid_hereafter,
+            use_build_cmd=use_build_cmd,
         )
+
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_script_before(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Check that it is possible to spend from script address before given slot."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -892,8 +1034,9 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=2_000_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
         )
 
         # send funds from script address
@@ -902,26 +1045,41 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000,
+            amount=2000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_before_past(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Check that it's NOT possible to spend from the script address.
 
         The "before" slot is in the past.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -948,8 +1106,9 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=500_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
         )
 
         # send funds from script address - valid range, slot is already in the past
@@ -959,11 +1118,12 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail1",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=10,
+                amount=1500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=before_slot,
+                use_build_cmd=use_build_cmd,
             )
         assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
 
@@ -974,26 +1134,41 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail2",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=10,
+                amount=1500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=before_slot + 1,
+                use_build_cmd=use_build_cmd,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_before_future(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Check that it's NOT possible to spend from the script address.
 
         The "before" slot is in the future and the given range is invalid.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1020,8 +1195,9 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=500_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
         )
 
         # send funds from script address - invalid range, slot is in the future
@@ -1031,26 +1207,41 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=10,
+                amount=1500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=before_slot + 1,
+                use_build_cmd=use_build_cmd,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_after_future(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Check that it's NOT possible to spend from the script address.
 
         The "after" slot is in the future and the given range is invalid.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1077,8 +1268,9 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=500_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
         )
 
         # send funds from script address - valid range, slot is in the future
@@ -1088,11 +1280,12 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail1",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=10,
+                amount=1500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=after_slot,
                 invalid_hereafter=after_slot + 100,
+                use_build_cmd=use_build_cmd,
             )
         assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
 
@@ -1103,26 +1296,41 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail2",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=10,
+                amount=1500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=after_slot,
+                use_build_cmd=use_build_cmd,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_after_past(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Check that it's NOT possible to spend from the script address.
 
         The "after" slot is in the past.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1149,8 +1357,9 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=500_000,
+            amount=4000_000,
             payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
         )
 
         # send funds from script address - valid slot,
@@ -1161,11 +1370,12 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=10,
+                amount=1500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
                 invalid_hereafter=after_slot,
+                use_build_cmd=use_build_cmd,
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
@@ -1196,7 +1406,7 @@ class TestAuxiliaryScripts:
 
             addrs = clusterlib_utils.create_payment_addr_records(
                 *[
-                    f"multi_addr_aux_scripts_ci{cluster_manager.cluster_instance}_{i}"
+                    f"multi_addr_aux_scripts_ci{cluster_manager.cluster_instance_num}_{i}"
                     for i in range(20)
                 ],
                 cluster_obj=cluster,
@@ -1208,21 +1418,34 @@ class TestAuxiliaryScripts:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=20_000_000,
         )
 
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_tx_script_metadata_json(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Send transaction with auxiliary script and metadata JSON.
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1237,40 +1460,64 @@ class TestAuxiliaryScripts:
 
         tx_files = clusterlib.TxFiles(
             metadata_json_files=[self.JSON_METADATA_FILE],
-            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
             signing_key_files=[payment_addrs[0].skey_file],
+            auxiliary_script_files=[multisig_script],
         )
-        tx_raw_output = cluster.send_tx(
-            src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
-        )
-        assert tx_raw_output.fee, "Transaction had no fee"
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
+        if use_build_cmd:
+            tx_raw_output = cluster.build_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=temp_template,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_tx(
+                src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
+            )
 
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
 
-        cbor_body_script = cbor_body_metadata[1][0][1]
+        cbor_body_script = cbor_body_metadata.aux_data[0][1]
         assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
-                db_metadata == cbor_body_metadata[0]
+                db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_tx_script_metadata_cbor(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Send transaction with auxiliary script and metadata CBOR.
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1286,40 +1533,64 @@ class TestAuxiliaryScripts:
 
         tx_files = clusterlib.TxFiles(
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
-            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
             signing_key_files=[payment_addrs[0].skey_file],
+            auxiliary_script_files=[multisig_script],
         )
-        tx_raw_output = cluster.send_tx(
-            src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
-        )
-        assert tx_raw_output.fee, "Transaction had no fee"
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
+        if use_build_cmd:
+            tx_raw_output = cluster.build_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=temp_template,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_tx(
+                src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
+            )
 
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
 
-        cbor_body_script = cbor_body_metadata[1][0][2]
+        cbor_body_script = cbor_body_metadata.aux_data[0][2]
         assert len(cbor_body_script) == len(payment_vkey_files) + 1, "Auxiliary script not present"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
             assert (
-                db_metadata == cbor_body_metadata[0]
+                db_metadata == cbor_body_metadata.metadata
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_tx_script_no_metadata(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Send transaction with auxiliary script and no other metadata.
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1331,43 +1602,75 @@ class TestAuxiliaryScripts:
         )
 
         tx_files = clusterlib.TxFiles(
-            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
             signing_key_files=[payment_addrs[0].skey_file],
+            auxiliary_script_files=[multisig_script],
         )
-        tx_raw_output = cluster.send_tx(
-            src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
-        )
-        assert tx_raw_output.fee, "Transaction had no fee"
 
-        with open(tx_raw_output.out_file) as body_fp:
-            tx_body_json = json.load(body_fp)
+        if use_build_cmd:
+            tx_raw_output = cluster.build_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=temp_template,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_tx(
+                src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
+            )
 
-        cbor_body = bytes.fromhex(tx_body_json["cborHex"])
-        cbor_body_metadata = cbor2.loads(cbor_body)[2]
+        cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
 
-        cbor_body_script = cbor_body_metadata[1][0][1]
+        cbor_body_script = cbor_body_metadata.aux_data[0][1]
         assert len(cbor_body_script) == len(payment_vkey_files), "Auxiliary script not present"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     def test_tx_script_invalid(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Build transaction with invalid auxiliary script.
 
         Expect failure.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         tx_files = clusterlib.TxFiles(
-            # not valid script file
-            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[self.JSON_METADATA_FILE]),
             signing_key_files=[payment_addrs[0].skey_file],
+            # not valid script file
+            auxiliary_script_files=[self.JSON_METADATA_FILE],
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
-                src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
-            )
+            if use_build_cmd:
+                cluster.build_tx(
+                    src_address=payment_addrs[0].address,
+                    tx_name=temp_template,
+                    fee_buffer=2000_000,
+                    tx_files=tx_files,
+                )
+            else:
+                cluster.build_raw_tx(
+                    src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
+                )
         assert 'Error in $: key "type" not found' in str(excinfo.value)

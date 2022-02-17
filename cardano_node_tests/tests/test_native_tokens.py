@@ -16,36 +16,57 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def create_temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir."""
-    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
-    p.mkdir(exist_ok=True, parents=True)
-    return p
-
-
 @pytest.fixture
-def temp_dir(create_temp_dir: Path):
-    """Change to a temporary dir."""
-    with helpers.change_cwd(create_temp_dir):
-        yield create_temp_dir
+def issuers_addrs_fresh(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> List[clusterlib.AddressRecord]:
+    """Create new issuers addresses."""
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            # recreate addresses if leftover MAs are detected in-between the tests
+            cached_addrs: List[clusterlib.AddressRecord] = fixture_cache.value
+            utxos = cluster.get_utxo(address=cached_addrs[0].address)
+            for u in utxos:
+                if u.coin != clusterlib.DEFAULT_COIN:
+                    break
+            else:
+                # no MAs found in UTxOs
+                return cached_addrs
 
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[
+                f"token_minting_fresh_ci{cluster_manager.cluster_instance_num}_"
+                f"{helpers.get_timestamped_rand_str()}_{i}"
+                for i in range(5)
+            ],
+            cluster_obj=cluster,
+        )
+        fixture_cache.value = addrs
 
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
+    # fund source addresses
+    clusterlib_utils.fund_from_faucet(
+        addrs[0],
+        cluster_obj=cluster,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        amount=9000_000_000,
+    )
+
+    return addrs
 
 
 @pytest.fixture
@@ -59,7 +80,7 @@ def issuers_addrs(
             return fixture_cache.value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"token_minting_ci{cluster_manager.cluster_instance}_{i}" for i in range(5)],
+            *[f"token_minting_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(5)],
             cluster_obj=cluster,
         )
         fixture_cache.value = addrs
@@ -69,7 +90,7 @@ def issuers_addrs(
         addrs[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=900_000_000,
+        amount=9000_000_000,
     )
 
     return addrs
@@ -81,19 +102,19 @@ def simple_script_policyid(
     cluster: clusterlib.ClusterLib,
     issuers_addrs: List[clusterlib.AddressRecord],
 ) -> Tuple[Path, str]:
-    """Return script and it's PolicyId."""
+    """Return script and its PolicyId."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-    temp_template = "test_native_tokens_simple"
+    temp_template = f"test_native_tokens_simple_ci{cluster_manager.cluster_instance_num}"
     issuer_addr = issuers_addrs[1]
 
     # create simple script
     keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = Path(f"{temp_template}.script")
-    with open(script, "w") as out_json:
+    with open(script, "w", encoding="utf-8") as out_json:
         json.dump(script_content, out_json)
 
     policyid = cluster.get_policyid(script)
@@ -112,7 +133,7 @@ def multisig_script_policyid(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-    temp_template = "test_native_tokens_multisig"
+    temp_template = f"test_native_tokens_multisig_ci{cluster_manager.cluster_instance_num}"
     payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
     # create multisig script
@@ -136,12 +157,24 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: List[clusterlib.AddressRecord],
+        issuers_addrs_fresh: List[clusterlib.AddressRecord],
         aname_type: str,
+        use_build_cmd: bool,
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses.
 
@@ -149,20 +182,24 @@ class TestMinting:
           and one identified by just policyid
         * burn the minted tokens
         * check fees in Lovelace
+        * check output of the `transaction view` command
         """
         expected_fee = 201141
 
-        temp_template = f"{helpers.get_func_name()}_{aname_type}"
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
+        temp_template = f"{common.get_test_id(cluster)}_{aname_type}_{use_build_cmd}"
+        asset_name_dec = (
+            f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
+        )
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
 
-        token_mint_addr = issuers_addrs[0]
+        token_mint_addr = issuers_addrs_fresh[0]
 
         # create issuers
         if aname_type == "asset_name":
-            _issuers_vkey_files = [p.vkey_file for p in issuers_addrs]
+            _issuers_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
             payment_vkey_files = _issuers_vkey_files[1:]
-            token_issuers = issuers_addrs
+            token_issuers = issuers_addrs_fresh
         else:
             # create unique script/policyid for an empty asset name
             _empty_issuers = clusterlib_utils.create_payment_addr_records(
@@ -170,7 +207,7 @@ class TestMinting:
                 cluster_obj=cluster,
             )
             payment_vkey_files = [p.vkey_file for p in _empty_issuers]
-            token_issuers = [issuers_addrs[0], *_empty_issuers]
+            token_issuers = [issuers_addrs_fresh[0], *_empty_issuers]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -183,12 +220,11 @@ class TestMinting:
         token = f"{policyid}.{asset_name}" if asset_name else policyid
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=token_issuers,
             token_mint_addr=token_mint_addr,
@@ -200,9 +236,10 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            use_build_cmd=use_build_cmd,
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -211,9 +248,10 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
+            use_build_cmd=use_build_cmd,
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -222,6 +260,10 @@ class TestMinting:
         ) and helpers.is_in_interval(
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
+
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -244,8 +286,11 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = f"{helpers.get_func_name()}_{aname_type}"
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
+        temp_template = f"{common.get_test_id(cluster)}_{aname_type}"
+        asset_name_dec = (
+            f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
+        )
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -262,19 +307,18 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(script, "w") as out_json:
+        with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
         token = f"{policyid}.{asset_name}" if asset_name else policyid
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=[issuer_addr],
             token_mint_addr=token_mint_addr,
@@ -288,7 +332,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -299,7 +343,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -334,7 +378,7 @@ class TestMinting:
         num_of_scripts = 5
         expected_fee = 263621
 
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
         amount = 5
         token_mint_addr = issuers_addrs[0]
         i_addrs = clusterlib_utils.create_payment_addr_records(
@@ -348,18 +392,19 @@ class TestMinting:
             keyhash = cluster.get_payment_vkey_hash(i_addrs[i].vkey_file)
             script_content = {"keyHash": keyhash, "type": "sig"}
             script = Path(f"{temp_template}_{i}.script")
-            with open(script, "w") as out_json:
+            with open(script, "w", encoding="utf-8") as out_json:
                 json.dump(script_content, out_json)
 
-            asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+            asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             policyid = cluster.get_policyid(script)
             aname_token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[aname_token]
+                address=token_mint_addr.address, coins=[aname_token]
             ), "The token already exists"
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[policyid]
+                address=token_mint_addr.address, coins=[policyid]
             ), "The policyid already exists"
 
             # for each script mint both token identified by policyid + asset name and token
@@ -368,7 +413,6 @@ class TestMinting:
                 [
                     clusterlib_utils.TokenRecord(
                         token=aname_token,
-                        asset_name=asset_name,
                         amount=amount,
                         issuers_addrs=[i_addrs[i]],
                         token_mint_addr=token_mint_addr,
@@ -376,7 +420,6 @@ class TestMinting:
                     ),
                     clusterlib_utils.TokenRecord(
                         token=policyid,
-                        asset_name="",
                         amount=amount,
                         issuers_addrs=[i_addrs[i]],
                         token_mint_addr=token_mint_addr,
@@ -393,7 +436,7 @@ class TestMinting:
         )
 
         for t in tokens_mint:
-            utxo_mint = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            utxo_mint = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert (
                 utxo_mint and utxo_mint[0].amount == amount
             ), f"The {t.token} token was not minted"
@@ -407,7 +450,7 @@ class TestMinting:
         )
 
         for t in tokens_burn:
-            utxo_burn = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            utxo_burn = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not utxo_burn, f"The {t.token} token was not burnt"
 
         # check expected fees
@@ -416,6 +459,10 @@ class TestMinting:
         ) and helpers.is_in_interval(
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
+
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -437,7 +484,7 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -447,30 +494,29 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(script, "w") as out_json:
+        with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
         asset_names = [
-            f"couttscoin{clusterlib.get_rand_str(4)}",
-            f"couttscoin{clusterlib.get_rand_str(4)}",
+            f"couttscoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex(),
+            f"couttscoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex(),
         ]
         tokens = [f"{policyid}.{an}" for an in asset_names]
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=tokens
+            address=token_mint_addr.address, coins=tokens
         ), "The token already exists"
 
         tokens_mint = [
             clusterlib_utils.TokenRecord(
                 token=t,
-                asset_name=asset_names[i],
                 amount=amount,
                 issuers_addrs=[issuer_addr],
                 token_mint_addr=token_mint_addr,
                 script=script,
             )
-            for i, t in enumerate(tokens)
+            for t in tokens
         ]
 
         # first token minting
@@ -480,7 +526,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        token1_mint_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[0]])
+        token1_mint_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[0]])
         assert token1_mint_utxo and token1_mint_utxo[0].amount == amount, "The token was not minted"
 
         # second token minting and first token burning in single TX
@@ -491,9 +537,9 @@ class TestMinting:
             temp_template=f"{temp_template}_mint_burn",
         )
 
-        token1_burn_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[0]])
+        token1_burn_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[0]])
         assert not token1_burn_utxo, "The token was not burnt"
-        token2_mint_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[1]])
+        token2_mint_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[1]])
         assert token2_mint_utxo and token2_mint_utxo[0].amount == amount, "The token was not minted"
 
         # second token burning
@@ -504,7 +550,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        token2_burn_utxo = cluster.get_utxo(token_mint_addr.address, coins=[tokens[1]])
+        token2_burn_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[1]])
         assert not token2_burn_utxo, "The token was not burnt"
 
         # check expected fees
@@ -532,8 +578,9 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = helpers.get_func_name()
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+        temp_template = common.get_test_id(cluster)
+        asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -543,40 +590,46 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(script, "w") as out_json:
+        with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         # build and sign a transaction
         tx_files = clusterlib.TxFiles(
-            script_files=clusterlib.ScriptFiles(minting_scripts=[script]),
             signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file],
         )
         mint = [
-            clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
-            clusterlib.TxOut(address=token_mint_addr.address, amount=-(amount - 1), coin=token),
+            clusterlib.Mint(
+                txouts=[
+                    clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
+                    clusterlib.TxOut(
+                        address=token_mint_addr.address, amount=-(amount - 1), coin=token
+                    ),
+                ],
+                script_file=script,
+            ),
         ]
         fee = cluster.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
-            tx_files=tx_files,
             mint=mint,
+            tx_files=tx_files,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=2,
         )
         tx_raw_output = cluster.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
-            tx_files=tx_files,
-            fee=fee,
             # token minting and burning in the same TX
             mint=mint,
+            tx_files=tx_files,
+            fee=fee,
         )
         out_file_signed = cluster.sign_tx(
             tx_body_file=tx_raw_output.out_file,
@@ -587,7 +640,7 @@ class TestMinting:
         # submit signed transaction
         cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
 
         # check expected fees
@@ -625,7 +678,7 @@ class TestMinting:
         * check fees in Lovelace
         """
         rand = clusterlib.get_rand_str(8)
-        temp_template = f"{helpers.get_func_name()}_{rand}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand}"
         amount = 5
         tokens_num, expected_fee = tokens_db
 
@@ -634,13 +687,13 @@ class TestMinting:
 
         tokens_to_mint = []
         for tnum in range(tokens_num):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -667,7 +720,7 @@ class TestMinting:
         tx_out_mint = clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -679,13 +732,17 @@ class TestMinting:
         )
 
         for t in tokens_to_burn:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
+
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -718,7 +775,7 @@ class TestMinting:
         * check fees in Lovelace
         """
         rand = clusterlib.get_rand_str(8)
-        temp_template = f"{helpers.get_func_name()}_{rand}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand}"
         amount = 5
         tokens_num, expected_fee = tokens_db
 
@@ -728,13 +785,13 @@ class TestMinting:
 
         tokens_to_mint = []
         for tnum in range(tokens_num):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=[issuer_addr],
                     token_mint_addr=token_mint_addr,
@@ -761,7 +818,7 @@ class TestMinting:
         tx_out_mint = clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -773,7 +830,7 @@ class TestMinting:
         )
 
         for t in tokens_to_burn:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -785,9 +842,23 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_minting_and_partial_burning(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs_fresh: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Test minting and partial burning of tokens.
 
@@ -797,12 +868,13 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = helpers.get_func_name()
-        asset_name = f"couttscoin{clusterlib.get_rand_str(4)}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 50
 
-        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
-        token_mint_addr = issuers_addrs[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
+        token_mint_addr = issuers_addrs_fresh[0]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -815,14 +887,13 @@ class TestMinting:
         token = f"{policyid}.{asset_name}"
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
-            issuers_addrs=issuers_addrs,
+            issuers_addrs=issuers_addrs_fresh,
             token_mint_addr=token_mint_addr,
             script=multisig_script,
         )
@@ -832,12 +903,15 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            use_build_cmd=use_build_cmd,
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
+        # the `transaction build` command doesn't balance MAs, so use the `build-raw` with
+        # clusterlib magic for this partial burning
         burn_amount = amount - 10
         token_burn = token_mint._replace(amount=-burn_amount)
         tx_out_burn1 = clusterlib_utils.mint_or_burn_witness(
@@ -846,7 +920,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn1",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert (
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not burned"
@@ -857,6 +931,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[final_burn],
             temp_template=f"{temp_template}_burn2",
+            use_build_cmd=use_build_cmd,
         )
 
         # check expected fee
@@ -885,8 +960,9 @@ class TestMinting:
         """
         expected_fee = 188821
 
-        temp_template = helpers.get_func_name()
-        asset_name = f"ěůřščžďťň{clusterlib.get_rand_str(4)}"
+        temp_template = common.get_test_id(cluster)
+        asset_name_dec = f"ěůřščžďťň{clusterlib.get_rand_str(4)}"
+        asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -896,19 +972,18 @@ class TestMinting:
         keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
-        with open(script, "w") as out_json:
+        with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
         policyid = cluster.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
         assert not cluster.get_utxo(
-            token_mint_addr.address, coins=[token]
+            address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=[issuer_addr],
             token_mint_addr=token_mint_addr,
@@ -922,7 +997,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert (
             token_utxo and token_utxo[0].amount == amount
         ), "The token was not minted or expected chars are not present in the asset name"
@@ -935,7 +1010,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[token])
+        token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -958,19 +1033,33 @@ class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_valid_policy_after(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs_fresh: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
-        token_mint_addr = issuers_addrs[0]
-        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+        token_mint_addr = issuers_addrs_fresh[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -984,19 +1073,19 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
-                    issuers_addrs=issuers_addrs,
+                    issuers_addrs=issuers_addrs_fresh,
                     token_mint_addr=token_mint_addr,
                     script=multisig_script,
                 )
@@ -1009,10 +1098,11 @@ class TestPolicies:
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -1023,10 +1113,11 @@ class TestPolicies:
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         for t in tokens_to_burn:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -1040,19 +1131,33 @@ class TestPolicies:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_valid_policy_before(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs_fresh: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
         expected_fee = 228113
 
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
-        token_mint_addr = issuers_addrs[0]
-        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+        token_mint_addr = issuers_addrs_fresh[0]
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs_fresh]
 
         before_slot = cluster.get_slot_no() + 10_000
 
@@ -1068,19 +1173,19 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
-                    issuers_addrs=issuers_addrs,
+                    issuers_addrs=issuers_addrs_fresh,
                     token_mint_addr=token_mint_addr,
                     script=multisig_script,
                 )
@@ -1093,10 +1198,11 @@ class TestPolicies:
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -1107,10 +1213,11 @@ class TestPolicies:
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
             invalid_hereafter=cluster.get_slot_no() + 1000,
+            use_build_cmd=use_build_cmd,
         )
 
         for t in tokens_to_burn:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -1128,7 +1235,7 @@ class TestPolicies:
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
         """Test that it's NOT possible to mint tokens when the "before" slot is in the past."""
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1149,17 +1256,17 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1190,7 +1297,7 @@ class TestPolicies:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
@@ -1201,7 +1308,7 @@ class TestPolicies:
 
         The "before" slot is in the future and the given range is invalid.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1222,17 +1329,17 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1252,7 +1359,7 @@ class TestPolicies:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
@@ -1263,7 +1370,7 @@ class TestPolicies:
 
         The "after" slot is in the future and the given range is invalid.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1284,17 +1391,17 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1325,7 +1432,7 @@ class TestPolicies:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
@@ -1336,7 +1443,7 @@ class TestPolicies:
 
         The "after" slot is in the past.
         """
-        temp_template = helpers.get_func_name()
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1357,17 +1464,17 @@ class TestPolicies:
 
         tokens_to_mint = []
         for tnum in range(5):
-            asset_name = f"couttscoin{rand}{tnum}"
+            asset_name_dec = f"couttscoin{rand}{tnum}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
             token = f"{policyid}.{asset_name}"
 
             assert not cluster.get_utxo(
-                token_mint_addr.address, coins=[token]
+                address=token_mint_addr.address, coins=[token]
             ), "The token already exists"
 
             tokens_to_mint.append(
                 clusterlib_utils.TokenRecord(
                     token=token,
-                    asset_name=asset_name,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
                     token_mint_addr=token_mint_addr,
@@ -1387,7 +1494,7 @@ class TestPolicies:
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
         for t in tokens_to_mint:
-            token_utxo = cluster.get_utxo(token_mint_addr.address, coins=[t.token])
+            token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[t.token])
             assert not token_utxo, "The token was minted unexpectedly"
 
 
@@ -1411,7 +1518,10 @@ class TestTransfer:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"token_transfer_ci{cluster_manager.cluster_instance}_{i}" for i in range(10)],
+                *[
+                    f"token_transfer_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(10)
+                ],
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -1421,7 +1531,6 @@ class TestTransfer:
             addrs[0],
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=20_000_000,
         )
 
         return addrs
@@ -1438,8 +1547,9 @@ class TestTransfer:
                 return fixture_cache.value  # type: ignore
 
             rand = clusterlib.get_rand_str(4)
-            temp_template = f"test_tx_new_token_{rand}"
-            asset_name = f"couttscoin{rand}"
+            temp_template = f"test_tx_new_token_ci{cluster_manager.cluster_instance_num}_{rand}"
+            asset_name_dec = f"couttscoin{rand}"
+            asset_name = asset_name_dec.encode("utf-8").hex()
 
             new_tokens = clusterlib_utils.new_tokens(
                 asset_name,
@@ -1456,6 +1566,17 @@ class TestTransfer:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_transfer_tokens(
         self,
@@ -1463,6 +1584,7 @@ class TestTransfer:
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
         amount: int,
+        use_build_cmd: bool,
     ):
         """Test sending tokens to payment address.
 
@@ -1470,8 +1592,7 @@ class TestTransfer:
         * check expected token balances for both source and destination addresses
         * check fees in Lovelace
         """
-        temp_template = f"{helpers.get_func_name()}_{amount}"
-        amount_lovelace = 10
+        temp_template = f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}"
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -1480,18 +1601,46 @@ class TestTransfer:
         src_init_balance_token = cluster.get_address_balance(src_address, coin=new_token.token)
         dst_init_balance_token = cluster.get_address_balance(dst_address, coin=new_token.token)
 
-        destinations = [
+        ma_destinations = [
             clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token),
+        ]
+
+        min_value = cluster.calculate_min_req_utxo(txouts=ma_destinations)
+        assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value.value, "No Lovelace required for `min-ada-value`"
+        amount_lovelace = min_value.value
+
+        destinations = [
+            *ma_destinations,
             clusterlib.TxOut(address=dst_address, amount=amount_lovelace),
         ]
+
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
-        tx_raw_output = cluster.send_funds(
-            src_address=src_address,
-            destinations=destinations,
-            tx_name=temp_template,
-            tx_files=tx_files,
-        )
+        if use_build_cmd:
+            # TODO: add ADA txout for change address - see node issue #3057
+            destinations.append(clusterlib.TxOut(address=src_address, amount=amount_lovelace))
+
+            tx_raw_output = cluster.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=destinations,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_funds(
+                src_address=src_address,
+                destinations=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
 
         assert (
             cluster.get_address_balance(src_address, coin=new_token.token)
@@ -1500,7 +1649,7 @@ class TestTransfer:
 
         assert (
             cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - amount_lovelace
+            == src_init_balance - amount_lovelace - tx_raw_output.fee
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         assert (
@@ -1511,12 +1660,24 @@ class TestTransfer:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
+        use_build_cmd: bool,
     ):
         """Test sending multiple different tokens to payment addresses.
 
@@ -1524,18 +1685,17 @@ class TestTransfer:
         * check expected token balances for both source and destination addresses for each token
         * check fees in Lovelace
         """
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         amount = 1000
-        amount_lovelace = 10
         rand = clusterlib.get_rand_str(5)
 
         new_tokens = clusterlib_utils.new_tokens(
-            *[f"couttscoin{rand}{i}" for i in range(5)],
+            *[f"couttscoin{rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{rand}",
             token_mint_addr=payment_addrs[0],
             issuer_addr=payment_addrs[1],
-            amount=1_000_000,
+            amount=1000_000,
         )
         new_tokens.append(new_token)
 
@@ -1548,32 +1708,76 @@ class TestTransfer:
         src_init_balance_tokens = []
         dst_init_balance_tokens1 = []
         dst_init_balance_tokens2 = []
-        destinations = []
+        ma_destinations_address1 = []
+        ma_destinations_address2 = []
         for t in new_tokens:
             src_init_balance_tokens.append(cluster.get_address_balance(src_address, coin=t.token))
             dst_init_balance_tokens1.append(cluster.get_address_balance(dst_address1, coin=t.token))
             dst_init_balance_tokens2.append(cluster.get_address_balance(dst_address2, coin=t.token))
 
-            destinations.append(clusterlib.TxOut(address=dst_address1, amount=amount, coin=t.token))
-            destinations.append(clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token))
+            ma_destinations_address1.append(
+                clusterlib.TxOut(address=dst_address1, amount=amount, coin=t.token)
+            )
+            ma_destinations_address2.append(
+                clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token)
+            )
 
-        destinations.append(clusterlib.TxOut(address=dst_address1, amount=amount_lovelace))
-        destinations.append(clusterlib.TxOut(address=dst_address2, amount=amount_lovelace))
+        min_value_address1 = cluster.calculate_min_req_utxo(txouts=ma_destinations_address1)
+        assert min_value_address1.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value_address1.value, "No Lovelace required for `min-ada-value`"
+        amount_lovelace_address1 = min_value_address1.value
+
+        min_value_address2 = cluster.calculate_min_req_utxo(txouts=ma_destinations_address2)
+        assert min_value_address2.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value_address2.value, "No Lovelace required for `min-ada-value`"
+        amount_lovelace_address2 = min_value_address2.value
+
+        destinations = [
+            *ma_destinations_address1,
+            clusterlib.TxOut(address=dst_address1, amount=amount_lovelace_address1),
+            *ma_destinations_address2,
+            clusterlib.TxOut(address=dst_address2, amount=amount_lovelace_address2),
+        ]
 
         tx_files = clusterlib.TxFiles(
             signing_key_files={t.token_mint_addr.skey_file for t in new_tokens}
         )
 
-        tx_raw_output = cluster.send_funds(
-            src_address=src_address,
-            destinations=destinations,
-            tx_name=temp_template,
-            tx_files=tx_files,
-        )
+        if use_build_cmd:
+            # TODO: add ADA txout for change address
+            destinations.append(
+                clusterlib.TxOut(
+                    address=src_address, amount=amount_lovelace_address1 + amount_lovelace_address2
+                )
+            )
+
+            tx_raw_output = cluster.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=destinations,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_funds(
+                src_address=src_address,
+                destinations=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
 
         assert (
             cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - amount_lovelace * 2
+            == src_init_balance
+            - amount_lovelace_address1
+            - amount_lovelace_address2
+            - tx_raw_output.fee
         ), f"Incorrect Lovelace balance for source address `{src_address}`"
 
         for idx, token in enumerate(new_tokens):
@@ -1595,6 +1799,17 @@ class TestTransfer:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
         reason="runs only on local cluster",
@@ -1604,9 +1819,10 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
+        use_build_cmd: bool,
     ):
         """Try to create an UTxO with just native tokens, no ADA. Expect failure."""
-        temp_template = helpers.get_func_name()
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         amount = 10
 
         src_address = new_token.token_mint_addr.address
@@ -1616,13 +1832,29 @@ class TestTransfer:
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_funds(
-                src_address=src_address,
-                destinations=destinations,
-                tx_name=temp_template,
-                tx_files=tx_files,
-            )
-        assert "OutputTooSmallUTxO" in str(excinfo.value)
+            if use_build_cmd:
+                expected_error = "Minimum required UTxO:"
+
+                # TODO: add ADA txout for change address
+                destinations.append(clusterlib.TxOut(address=src_address, amount=3500_000))
+
+                cluster.build_tx(
+                    src_address=src_address,
+                    tx_name=temp_template,
+                    txouts=destinations,
+                    fee_buffer=2000_000,
+                    tx_files=tx_files,
+                )
+            else:
+                expected_error = "OutputTooSmallUTxO"
+
+                cluster.send_funds(
+                    src_address=src_address,
+                    destinations=destinations,
+                    tx_name=temp_template,
+                    tx_files=tx_files,
+                )
+        assert expected_error in str(excinfo.value)
 
 
 @pytest.mark.testnets
@@ -1648,18 +1880,25 @@ class TestNegative:
 
         # build and sign a transaction
         tx_files = clusterlib.TxFiles(
-            script_files=clusterlib.ScriptFiles(minting_scripts=[n.script for n in new_tokens]),
             signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files],
         )
+        mint = [
+            clusterlib.Mint(
+                txouts=[
+                    clusterlib.TxOut(
+                        address=n.token_mint_addr.address, amount=n.amount, coin=n.token
+                    )
+                ],
+                script_file=n.script,
+            )
+            for n in new_tokens
+        ]
         tx_raw_output = cluster_obj.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
+            mint=mint,
             tx_files=tx_files,
             fee=100_000,
-            mint=[
-                clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
-                for n in new_tokens
-            ],
         )
         out_file_signed = cluster_obj.sign_tx(
             tx_body_file=tx_raw_output.out_file,
@@ -1669,6 +1908,7 @@ class TestNegative:
 
         return out_file_signed
 
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
         asset_name=st.text(
             alphabet=st.characters(
@@ -1678,7 +1918,7 @@ class TestNegative:
             max_size=1000,
         )
     )
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_long_name(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1690,17 +1930,17 @@ class TestNegative:
 
         The name can also contain characters that are not allowed. Expect failure.
         """
-        temp_template = "test_long_name"
+        temp_template = f"test_long_name_ci{cluster.cluster_id}"
 
         script, policyid = simple_script_policyid
-        token = f"{policyid}.{asset_name}"
+        asset_name_enc = asset_name.encode("utf-8").hex()
+        token = f"{policyid}.{asset_name_enc}"
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
         amount = 20_000_000
 
         token_mint = clusterlib_utils.TokenRecord(
             token=token,
-            asset_name=asset_name,
             amount=amount,
             issuers_addrs=[issuer_addr],
             token_mint_addr=token_mint_addr,
@@ -1714,8 +1954,4 @@ class TestNegative:
                 temp_template=f"{temp_template}_mint",
             )
         exc_val = str(excinfo.value)
-        assert (
-            "name exceeds 32 bytes" in exc_val
-            or "expecting letter or digit, white space" in exc_val
-            or "expecting alphanumeric asset name" in exc_val
-        )
+        assert "name exceeds 32 bytes" in exc_val or "expecting hexadecimal digit" in exc_val

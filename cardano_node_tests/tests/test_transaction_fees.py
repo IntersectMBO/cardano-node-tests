@@ -9,33 +9,14 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="module")
-def create_temp_dir(tmp_path_factory: TempdirFactory):
-    """Create a temporary dir."""
-    p = Path(tmp_path_factory.getbasetemp()).joinpath(helpers.get_id_for_mktemp(__file__)).resolve()
-    p.mkdir(exist_ok=True, parents=True)
-    return p
-
-
-@pytest.fixture
-def temp_dir(create_temp_dir: Path):
-    """Change to a temporary dir."""
-    with helpers.change_cwd(create_temp_dir):
-        yield create_temp_dir
-
-
-# use the "temp_dir" fixture for all tests automatically
-pytestmark = pytest.mark.usefixtures("temp_dir")
 
 
 @pytest.mark.testnets
@@ -54,8 +35,8 @@ class TestFee:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                f"addr_test_fee_ci{cluster_manager.cluster_instance}_0",
-                f"addr_test_fee_ci{cluster_manager.cluster_instance}_1",
+                f"addr_test_fee_ci{cluster_manager.cluster_instance_num}_0",
+                f"addr_test_fee_ci{cluster_manager.cluster_instance_num}_1",
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -71,7 +52,7 @@ class TestFee:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(fee=st.integers(max_value=-1))
-    @helpers.hypothesis_settings()
+    @common.hypothesis_settings()
     def test_negative_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -82,7 +63,7 @@ class TestFee:
 
         Expect failure.
         """
-        temp_template = f"{helpers.get_func_name()}_{helpers.get_timestamped_rand_str()}"
+        temp_template = f"test_negative_fee_ci{cluster.cluster_id}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -112,7 +93,7 @@ class TestFee:
 
         Expect failure.
         """
-        temp_template = f"{helpers.get_func_name()}_{fee_change}"
+        temp_template = f"{common.get_test_id(cluster)}_{fee_change}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -151,8 +132,8 @@ class TestFee:
         fee_add: int,
     ):
         """Send a transaction with fee that is same or higher than expected."""
-        temp_template = f"{helpers.get_func_name()}_{fee_add}"
-        amount = 100
+        temp_template = f"{common.get_test_id(cluster)}_{fee_add}"
+        amount = 2000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -208,7 +189,7 @@ class TestExpectedFees:
 
             created_users = clusterlib_utils.create_pool_users(
                 cluster_obj=cluster,
-                name_template=f"test_expected_fees_ci{cluster_manager.cluster_instance}",
+                name_template=f"test_expected_fees_ci{cluster_manager.cluster_instance_num}",
                 no_of_addr=201,
             )
             fixture_cache.value = created_users
@@ -300,7 +281,7 @@ class TestExpectedFees:
         ]
 
         # create TX data
-        _txins = [cluster_obj.get_utxo(r.address) for r in from_addr_recs]
+        _txins = [cluster_obj.get_utxo(address=r.address) for r in from_addr_recs]
         # flatten the list of lists that is _txins
         txins = list(itertools.chain.from_iterable(_txins))
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
@@ -319,14 +300,14 @@ class TestExpectedFees:
     def test_pool_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
         """Test pool registration fees."""
         no_of_addr, expected_fee = addr_fee
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{no_of_addr}"
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -336,7 +317,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -372,14 +353,14 @@ class TestExpectedFees:
     def test_pool_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        temp_dir: Path,
+        testfile_temp_dir: Path,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
         """Test pool deregistration fees."""
         no_of_addr, expected_fee = addr_fee
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{helpers.get_func_name()}_{rand_str}_{no_of_addr}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{no_of_addr}"
         src_address = pool_users[0].payment.address
 
         pool_name = f"pool_{rand_str}"
@@ -390,7 +371,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -442,7 +423,7 @@ class TestExpectedFees:
     ):
         """Test stake address registration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}"
+        temp_template = f"{common.get_test_id(cluster)}_{no_of_addr}"
         src_address = pool_users[0].payment.address
         selected_users = pool_users[:no_of_addr]
 
@@ -480,7 +461,7 @@ class TestExpectedFees:
     ):
         """Test stake address deregistration fees."""
         no_of_addr, expected_fee = addr_fee
-        temp_template = f"{helpers.get_func_name()}_{no_of_addr}"
+        temp_template = f"{common.get_test_id(cluster)}_{no_of_addr}"
         src_address = pool_users[0].payment.address
         selected_users = pool_users[:no_of_addr]
 
@@ -519,7 +500,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Test fees for 1 tx from 1 payment address to 1 payment address."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
+        temp_template = f"{common.get_test_id(cluster)}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -541,7 +522,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Test fees for 1 tx from 1 payment address to 10 payment addresses."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
+        temp_template = f"{common.get_test_id(cluster)}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -563,7 +544,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Test fees for 1 tx from 10 payment addresses to 1 payment address."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
+        temp_template = f"{common.get_test_id(cluster)}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -585,7 +566,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Test fees for 1 tx from 10 payment addresses to 10 payment addresses."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
+        temp_template = f"{common.get_test_id(cluster)}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -607,7 +588,7 @@ class TestExpectedFees:
         amount_expected: Tuple[int, int],
     ):
         """Test fees for 1 tx from 100 payment addresses to 100 payment addresses."""
-        temp_template = f"{helpers.get_func_name()}_{amount_expected[0]}"
+        temp_template = f"{common.get_test_id(cluster)}_{amount_expected[0]}"
 
         self._from_to_transactions(
             cluster_obj=cluster,

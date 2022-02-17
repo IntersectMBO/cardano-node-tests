@@ -11,6 +11,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# mypy
+.mypy_cache/
+
 # Distribution / packaging
 .Python
 env/
@@ -58,7 +61,7 @@ coverage.xml
 *.pot
 
 # Sphinx documentation
-docs/_build/
+src_docs/_build/
 
 # PyBuilder
 target/

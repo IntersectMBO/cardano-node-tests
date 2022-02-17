@@ -5,10 +5,10 @@
         "homepage": "https://cardano.org",
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "55577d74986a2fdeb4d0ec8637122f14e185997c",
-        "sha256": "1w9jnqhzvwbabfv2p9c5l43pm7l7in7xkw00pm71fwpkk7ngm2dp",
+        "rev": "37d86a65b4ffd7a500bd6fc7246793b1363ff60a",
+        "sha256": "16607m707bgbi431szbqfj37y450vv9kvvlji22g1l686v7sf17q",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-node/archive/55577d74986a2fdeb4d0ec8637122f14e185997c.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-node/archive/37d86a65b4ffd7a500bd6fc7246793b1363ff60a.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
@@ -17,10 +17,10 @@
         "homepage": "https://github.com/NixOS/nixpkgs",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "03aa75f46d14e3323d03262ca424b2e7f0aab99c",
-        "sha256": "08krad9fgn0i9cn6b7ddfwsd383xk0zscz1aabz6338qf8qjb2sb",
+        "rev": "592d84b591967909dc7a283b78fb6ba6b6429946",
+        "sha256": "07vx4dfshirsc2sj5lvsian6waxn7d5vdfd9aabqrlgszvg5r9gf",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/03aa75f46d14e3323d03262ca424b2e7f0aab99c.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/592d84b591967909dc7a283b78fb6ba6b6429946.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

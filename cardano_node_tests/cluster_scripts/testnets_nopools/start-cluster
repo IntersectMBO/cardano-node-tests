@@ -8,8 +8,13 @@ SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
-  echo "Cluster already running. Please run \`stop-cluster\` first!" >&2
+  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster\` first!" >&2
   exit 1
+fi
+
+if [ -e "$SCRIPT_DIR/shell_env" ]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$SCRIPT_DIR/shell_env"
 fi
 
 rm -rf "$STATE_CLUSTER"
@@ -29,8 +34,10 @@ cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 cp "$TESTNET_CONF_DIR/genesis-byron.json" "$STATE_CLUSTER/genesis-byron.json"
 cp "$TESTNET_CONF_DIR/genesis-shelley.json" "$STATE_CLUSTER/genesis-shelley.json"
+cp "$TESTNET_CONF_DIR/genesis-alonzo.json" "$STATE_CLUSTER/genesis-alonzo.json"
 ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.json"
+ln -rs "$STATE_CLUSTER/genesis-alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.json"
 
 PRODUCER="$(jq '.Producers[0]' "$TESTNET_CONF_DIR"/topology-*.json)"
 jq --argjson relay "$PRODUCER" '.Producers[0] = $relay' "$SCRIPT_DIR/topology-relay1.json" \
@@ -43,25 +50,71 @@ jq --arg ekg "$RELAY1_EKG" --arg prometheus "$RELAY1_PROMETHEUS" \
   "$TESTNET_CONF_DIR"/config-*.json > "$STATE_CLUSTER/config-relay1.json"
 chmod u+w "$STATE_CLUSTER"/config-*.json
 
+# enable db-sync service
+if [ -n "${DBSYNC_REPO:-""}" ]; then
+  [ -e "$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync" ] || \
+    { echo "The \`$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync\` not found, line $LINENO" >&2; exit 1; }  # assert
+
+  # copy db-sync config file
+  cp "$TESTNET_CONF_DIR/dbsync-config.yaml" "$STATE_CLUSTER/dbsync-config.yaml"
+
+  # copy db-sync state
+  cp -r "$TESTNET_DIR/db-sync" "$STATE_CLUSTER/db-sync"
+
+  state_cluster_name="${STATE_CLUSTER##*/}"
+  cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
+
+[program:dbsync]
+command=$SCRIPT_DIR/run_dbsync.sh
+stderr_logfile=./$state_cluster_name/dbsync.stderr
+stdout_logfile=./$state_cluster_name/dbsync.stdout
+autostart=false
+EoF
+fi
+
 # create scripts for cluster starting / stopping
 printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
-printf "#!/bin/sh\n\nsupervisorctl stop all" > "$STATE_CLUSTER/supervisorctl_stop"
 printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
   > "$STATE_CLUSTER/supervisord_start"
-chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_start}
+cat > "$STATE_CLUSTER/supervisord_stop" <<EoF
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
+
+supervisorctl stop all
+
+if [ -f "\$SCRIPT_DIR/supervisord.pid" ]; then
+  kill "\$(<"\$SCRIPT_DIR/supervisord.pid")"
+  rm -f "\$SCRIPT_DIR/supervisord.pid"
+fi
+EoF
+chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_*}
 
 # copy db
-cp -r "$TESTNET_DIR/node1-db" "$STATE_CLUSTER/db-relay1"
+cp -r "$TESTNET_DIR/relay1-db" "$STATE_CLUSTER/db-relay1"
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
-while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
-  echo "Waiting 5 seconds for relay node to start"; sleep 5
+echo "Waiting until replay is finished"
+sleep 10
+while tail -n 10 "$STATE_CLUSTER/relay1.stdout" | grep -E -q "replay progress|IPSubscriptionTarget"; do
+  sleep 10
 done
+
+for _ in {1..10}; do
+  if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
+    break
+  fi
+  echo "Waiting 5 seconds for relay node to start"
+  sleep 5
+done
+[ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the relay node, line $LINENO" >&2; exit 1; }  # assert
 
 echo "Waiting to make sure the chain is synced"
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
-while :; do
+for _ in {1..600}; do
   start_slot="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot')"
   sleep 30
   end_slot="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot')"
@@ -71,4 +124,21 @@ while :; do
   sleep 5
 done
 
-echo "Cluster started. Run \`stop-cluster\` to stop"
+if [ -n "${DBSYNC_REPO:-""}" ]; then
+  echo "Starting db-sync"
+  supervisorctl start dbsync
+  sleep 10
+
+  echo "Waiting to make sure db-sync is synced"
+  for _ in {1..600}; do
+    node_block="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.block')"
+    sleep 5
+    dbsync_block="$("$SCRIPT_DIR/dbsync_block_no.sh")"
+    if [ "$node_block" -le "$dbsync_block" ]; then
+      break
+    fi
+    sleep 60
+  done
+fi
+
+echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"

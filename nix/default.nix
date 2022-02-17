@@ -2,6 +2,7 @@
 , crossSystem ? null
 , config ? {}
 , sourcesOverride ? {}
+, ...
 }:
 
 let
@@ -18,13 +19,13 @@ let
           pytest-allure = self.callPackage ./pytest-allure.nix {};
           cardano-clusterlib = self.callPackage ./cardano-clusterlib.nix {};
           _hypothesis = self.hypothesis.overridePythonAttrs(old: rec {
-            version = "6.8.8";
+            version = "6.23.2";
             doCheck = false;
             src =  super.fetchFromGitHub {
               owner = "HypothesisWorks";
               repo = "hypothesis-python";
               rev = "hypothesis-python-${version}";
-              sha256 = "1y2aamla2qd4sz0alsbj740bpkq203v4malbvzci2k134g5dmvcq";
+              sha256 = "1mdygyq6ra4kysi0y2g3a4bgpqrcb8ci2061117zyms419qwwh4l";
             };
           });
         };
@@ -39,8 +40,9 @@ let
           cardano-clusterlib
           pytest-allure
           pytest-html
-          pytest-ordering
+          pytest-order
           pytest_xdist
+          pyyaml
           setuptools
           filelock
           pydantic
