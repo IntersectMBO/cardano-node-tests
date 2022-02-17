@@ -317,10 +317,10 @@ def _build_spend_locked_txin(
     # spend the "locked" UTxO
 
     plutus_txins = [
-        clusterlib.PlutusTxIn(
+        clusterlib.ScriptTxIn(
             txins=script_utxos,
-            collaterals=collateral_utxos,
             script_file=plutus_op.script_file,
+            collaterals=collateral_utxos,
             datum_file=plutus_op.datum_file,
             redeemer_file=plutus_op.redeemer_file,
         )
@@ -344,8 +344,8 @@ def _build_spend_locked_txin(
                 tx_name=f"{temp_template}_step2",
                 tx_files=tx_files,
                 txouts=txouts,
+                script_txins=plutus_txins,
                 change_address=script_address,
-                plutus_txins=plutus_txins,
             )
         return str(excinfo.value), None
 
@@ -354,8 +354,8 @@ def _build_spend_locked_txin(
         tx_name=f"{temp_template}_step2",
         tx_files=tx_files,
         txouts=txouts,
+        script_txins=plutus_txins,
         change_address=script_address,
-        plutus_txins=plutus_txins,
         invalid_hereafter=invalid_hereafter,
         invalid_before=invalid_before,
         deposit=deposit_amount,
@@ -384,7 +384,9 @@ def _build_spend_locked_txin(
 
         return "", tx_output
 
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=[t.txins[0] for t in tx_output.plutus_txins])
+    cluster_obj.submit_tx(
+        tx_file=tx_signed, txins=[t.txins[0] for t in tx_output.script_txins if t.txins]
+    )
 
     assert (
         cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance + amount
@@ -1051,10 +1053,10 @@ class TestBuildLocking:
         dst_step1_balance = cluster.get_address_balance(dst_addr.address)
 
         plutus_txins = [
-            clusterlib.PlutusTxIn(
+            clusterlib.ScriptTxIn(
                 txins=script_utxos,
-                collaterals=collateral_utxos,
                 script_file=plutus_op.script_file,
+                collaterals=collateral_utxos,
                 datum_file=plutus_op.datum_file,
                 redeemer_file=plutus_op.redeemer_file,
             )
@@ -1073,8 +1075,8 @@ class TestBuildLocking:
             # `collateral_utxos` is used both as collateral and as normal Tx input
             txins=collateral_utxos,
             txouts=txouts,
+            script_txins=plutus_txins,
             change_address=script_address,
-            plutus_txins=plutus_txins,
         )
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
@@ -1083,7 +1085,7 @@ class TestBuildLocking:
         )
 
         cluster.submit_tx(
-            tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_step2.plutus_txins]
+            tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_step2.script_txins if t.txins]
         )
 
         assert (

@@ -1,4 +1,5 @@
 """Checks for `transaction view` CLI command."""
+import itertools
 import logging
 import re
 from typing import Dict
@@ -115,7 +116,8 @@ def check_tx_view(  # noqa: C901
 
     # check minting and burning
     loaded_mint = set(_load_assets(assets=tx_loaded.get("mint") or {}))
-    tx_raw_mint = {(r.amount, r.coin) for r in tx_raw_output.mint}
+    mint_txouts = list(itertools.chain.from_iterable(m.txouts for m in tx_raw_output.mint))
+    tx_raw_mint = {(r.amount, r.coin) for r in mint_txouts}
 
     if tx_raw_mint != loaded_mint:
         raise AssertionError(f"mint: {tx_raw_mint} != {loaded_mint}")

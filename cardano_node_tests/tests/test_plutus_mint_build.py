@@ -125,34 +125,37 @@ class TestBuildMinting:
         collateral_utxo = clusterlib.UTXOData(
             utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
         )
-        plutus_mint_data = [
-            clusterlib.PlutusMint(
-                txins=mint_utxos,
-                collaterals=[collateral_utxo],
-                script_file=plutus_mint.MINTING_PLUTUS,
-                redeemer_file=redeemer_file,
-            )
-        ]
 
         policyid = cluster.get_policyid(plutus_mint.MINTING_PLUTUS)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
-        mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_mint.MINTING_PLUTUS,
+                collaterals=[collateral_utxo],
+                redeemer_file=redeemer_file,
+            )
+        ]
 
         tx_files_step2 = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file],
         )
         txouts_step2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint,
+            *mint_txouts,
         ]
         tx_output_step2 = cluster.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
+            txins=mint_utxos,
             txouts=txouts_step2,
-            plutus_mint=plutus_mint_data,
-            mint=mint,
+            mint=plutus_mint_data,
         )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
@@ -255,36 +258,38 @@ class TestBuildMinting:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
             redeemer_value = 1000000000000
 
-        plutus_mint_data = [
-            clusterlib.PlutusMint(
-                txins=mint_utxos,
-                collaterals=[collateral_utxo],
-                script_file=plutus_mint.TIME_RANGE_PLUTUS,
-                redeemer_value=str(redeemer_value),
-            )
-        ]
-
         policyid = cluster.get_policyid(plutus_mint.TIME_RANGE_PLUTUS)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
-        mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_mint.TIME_RANGE_PLUTUS,
+                collaterals=[collateral_utxo],
+                redeemer_value=str(redeemer_value),
+            )
+        ]
 
         tx_files_step2 = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file],
         )
         txouts_step2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint,
+            *mint_txouts,
         ]
         tx_output_step2 = cluster.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
+            txins=mint_utxos,
             txouts=txouts_step2,
-            plutus_mint=plutus_mint_data,
+            mint=plutus_mint_data,
             invalid_before=slot_step2 - slots_offset,
             invalid_hereafter=slot_step2 + slots_offset,
-            mint=mint,
         )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
@@ -382,14 +387,16 @@ class TestBuildMinting:
         policyid = cluster.get_policyid(plutus_mint.MINTING_CONTEXT_EQUIVALENCE_PLUTUS)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
-        mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
 
         tx_files_step2 = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file, plutus_mint.SIGNING_KEY_GOLDEN],
         )
         txouts_step2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint,
+            *mint_txouts,
         ]
 
         # generate a dummy redeemer in order to create a txbody from which
@@ -400,10 +407,10 @@ class TestBuildMinting:
         )
 
         plutus_mint_data_dummy = [
-            clusterlib.PlutusMint(
-                txins=mint_utxos,
-                collaterals=[collateral_utxo],
+            clusterlib.Mint(
+                txouts=mint_txouts,
                 script_file=plutus_mint.MINTING_CONTEXT_EQUIVALENCE_PLUTUS,
+                collaterals=[collateral_utxo],
                 redeemer_file=redeemer_file_dummy,
             )
         ]
@@ -412,10 +419,10 @@ class TestBuildMinting:
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_dummy",
             tx_files=tx_files_step2,
+            txins=mint_utxos,
             txouts=txouts_step2,
-            plutus_mint=plutus_mint_data_dummy,
+            mint=plutus_mint_data_dummy,
             required_signers=[plutus_mint.SIGNING_KEY_GOLDEN],
-            mint=mint,
             invalid_before=1,
             invalid_hereafter=invalid_hereafter,
             script_valid=False,
@@ -440,10 +447,10 @@ class TestBuildMinting:
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
+            txins=mint_utxos,
             txouts=txouts_step2,
-            plutus_mint=plutus_mint_data,
+            mint=plutus_mint_data,
             required_signers=[plutus_mint.SIGNING_KEY_GOLDEN],
-            mint=mint,
             invalid_before=1,
             invalid_hereafter=invalid_hereafter,
         )
@@ -553,35 +560,38 @@ class TestBuildMinting:
         collateral_utxo = clusterlib.UTXOData(
             utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
         )
-        plutus_mint_data = [
-            clusterlib.PlutusMint(
-                txins=mint_utxos,
-                collaterals=[collateral_utxo],
-                script_file=plutus_mint.MINTING_PLUTUS,
-                redeemer_file=redeemer_file,
-            )
-        ]
 
         policyid = cluster.get_policyid(plutus_mint.MINTING_PLUTUS)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
-        mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_mint.MINTING_PLUTUS,
+                collaterals=[collateral_utxo],
+                redeemer_file=redeemer_file,
+            )
+        ]
 
         tx_files_step2 = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file, signing_key_golden],
         )
         txouts_step2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint,
+            *mint_txouts,
         ]
         tx_output_step2 = cluster.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
+            txins=mint_utxos,
             txouts=txouts_step2,
-            plutus_mint=plutus_mint_data,
+            mint=plutus_mint_data,
             required_signers=[signing_key_golden],
-            mint=mint,
         )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
@@ -673,35 +683,38 @@ class TestBuildMinting:
         collateral_utxo = clusterlib.UTXOData(
             utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
         )
-        plutus_mint_data = [
-            clusterlib.PlutusMint(
-                txins=mint_utxos,
-                collaterals=[collateral_utxo],
-                script_file=plutus_mint.MINTING_PLUTUS,
-                redeemer_file=redeemer_file,
-            )
-        ]
 
         policyid = cluster.get_policyid(plutus_mint.MINTING_PLUTUS)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
-        mint = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_mint.MINTING_PLUTUS,
+                collaterals=[collateral_utxo],
+                redeemer_file=redeemer_file,
+            )
+        ]
 
         tx_files_step2 = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file],
         )
         txouts_step2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint,
+            *mint_txouts,
         ]
         tx_output_step2 = cluster.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
+            txins=mint_utxos,
             txouts=txouts_step2,
-            plutus_mint=plutus_mint_data,
+            mint=plutus_mint_data,
             required_signers=[plutus_mint.SIGNING_KEY_GOLDEN],
-            mint=mint,
         )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
