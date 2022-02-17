@@ -3,6 +3,7 @@
 #! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
+
 pip install blockfrost-python
 
 tag_no1=$1
