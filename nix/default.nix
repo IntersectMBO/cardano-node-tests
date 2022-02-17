@@ -52,6 +52,8 @@ let
           psycopg2
           pandas
           psutil
+          pymysql
+          blockfrost-python
         ])) ];
       });
     });
