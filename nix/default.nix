@@ -53,7 +53,6 @@ let
           pandas
           psutil
           pymysql
-          blockfrost-python
         ])) ];
       });
     });
