@@ -530,8 +530,8 @@ def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> List[clusterlib.TxOut
 
 def _tx_scripts_hashes(
     cluster_obj: clusterlib.ClusterLib,
-    records: Union[clusterlib.OptionalPlutusTxIns, clusterlib.OptionalPlutusMintData],
-) -> Dict[str, Union[clusterlib.OptionalPlutusTxIns, clusterlib.OptionalPlutusMintData]]:
+    records: Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint],
+) -> Dict[str, Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint]]:
     """Create a hash table of Tx Plutus data indexed by script hash."""
     hashes_db: dict = {}
 
@@ -564,12 +564,16 @@ def _db_redeemer_hashes(
 
 
 def _compare_redeemers(
-    tx_data: Dict[str, Union[clusterlib.OptionalPlutusTxIns, clusterlib.OptionalPlutusMintData]],
+    tx_data: Dict[str, Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint]],
     db_data: Dict[str, List[RedeemerRecord]],
     purpose: str,
 ) -> None:
     """Compare redeemers data available in Tx data with data in db-sync."""
     for script_hash, tx_recs in tx_data.items():
+        # if redeemer is not present, it is not plutus script
+        if tx_recs and not (tx_recs[0].redeemer_file or tx_recs[0].redeemer_value):
+            return
+
         db_redeemer_recs = db_data.get(script_hash)
         assert db_redeemer_recs, f"No redeemer info in db-sync for script hash `{script_hash}`"
 
@@ -638,8 +642,7 @@ def check_tx(
 
     combined_txins: Set[clusterlib.UTXOData] = {
         *tx_raw_output.txins,
-        *[p.txins[0] for p in tx_raw_output.plutus_txins],
-        *[p.txins[0] for p in tx_raw_output.plutus_mint],
+        *[p.txins[0] for p in tx_raw_output.script_txins if p.txins],
     }
     txin_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in combined_txins}
     db_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in response.txins}
@@ -647,16 +650,17 @@ def check_tx(
         txin_utxos == db_utxos
     ), f"Not all TX inputs are present in the db ({txin_utxos} != {db_utxos})"
 
-    tx_mint_txouts = sorted(_sum_mint_txouts(tx_raw_output.mint))
-    len_db_mint, len_out_mint = len(response.mint), len(tx_mint_txouts)
+    tx_mint_txouts = list(itertools.chain.from_iterable(m.txouts for m in tx_raw_output.mint))
+    tx_mint_by_token = sorted(_sum_mint_txouts(tx_mint_txouts))
+    len_db_mint, len_out_mint = len(response.mint), len(tx_mint_by_token)
     assert (
         len_db_mint == len_out_mint
     ), f"Number of MA minting doesn't match ({len_db_mint} != {len_out_mint})"
 
     db_mint_txouts = sorted(clusterlib_utils.utxodata2txout(r) for r in response.mint)
     assert (
-        tx_mint_txouts == db_mint_txouts
-    ), f"MA minting outputs don't match ({tx_mint_txouts} != {db_mint_txouts})"
+        tx_mint_by_token == db_mint_txouts
+    ), f"MA minting outputs don't match ({tx_mint_by_token} != {db_mint_txouts})"
 
     len_db_withdrawals = len(response.withdrawals)
     len_out_withdrawals = len(tx_raw_output.withdrawals)
@@ -671,7 +675,13 @@ def check_tx(
     ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
 
     tx_collaterals_nested = [
-        r.collaterals for r in (*tx_raw_output.plutus_txins, *tx_raw_output.plutus_mint)
+        r.collaterals
+        for r in (
+            *tx_raw_output.script_txins,
+            *tx_raw_output.mint,
+            *tx_raw_output.complex_certs,
+            *tx_raw_output.script_withdrawals,
+        )
     ]
     tx_collaterals = set(itertools.chain.from_iterable(tx_collaterals_nested))
     db_collaterals = set(response.collaterals)
@@ -689,11 +699,9 @@ def check_tx(
 
     # compare redeemers data
     tx_plutus_in_hashes = _tx_scripts_hashes(
-        cluster_obj=cluster_obj, records=tx_raw_output.plutus_txins
+        cluster_obj=cluster_obj, records=tx_raw_output.script_txins
     )
-    tx_plutus_mint_hashes = _tx_scripts_hashes(
-        cluster_obj=cluster_obj, records=tx_raw_output.plutus_mint
-    )
+    tx_plutus_mint_hashes = _tx_scripts_hashes(cluster_obj=cluster_obj, records=tx_raw_output.mint)
     db_redeemer_hashes = _db_redeemer_hashes(records=response.redeemers)
     _compare_redeemers(tx_data=tx_plutus_in_hashes, db_data=db_redeemer_hashes, purpose="spend")
     _compare_redeemers(tx_data=tx_plutus_mint_hashes, db_data=db_redeemer_hashes, purpose="mint")

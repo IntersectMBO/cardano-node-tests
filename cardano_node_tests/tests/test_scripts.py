@@ -45,10 +45,11 @@ def multisig_tx(
     dst_init_balance = cluster_obj.get_address_balance(dst_address)
 
     # create TX body
-    tx_files = (
-        clusterlib.TxFiles(script_files=clusterlib.ScriptFiles(txin_scripts=[multisig_script]))
+    script_txins = (
+        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
         if multisig_script
-        else clusterlib.TxFiles()
+        else []
     )
     destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
     witness_count_add = len(payment_skey_files)
@@ -61,8 +62,8 @@ def multisig_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
+            script_txins=script_txins,
             fee_buffer=2000_000,
-            tx_files=tx_files,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
             witness_override=witness_count_add,
@@ -73,7 +74,7 @@ def multisig_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
-            tx_files=tx_files,
+            script_txins=script_txins,
             ttl=ttl,
             witness_count_add=witness_count_add,
         )
@@ -81,7 +82,7 @@ def multisig_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
-            tx_files=tx_files,
+            script_txins=script_txins,
             fee=fee,
             ttl=ttl,
             invalid_hereafter=invalid_hereafter,
@@ -545,15 +546,17 @@ class TestBasic:
         # send funds from script address
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(
-            script_files=clusterlib.ScriptFiles(txin_scripts=[multisig_script]),
             signing_key_files=[dst_addr.skey_file],
         )
+        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        script_txins = [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
 
         if use_build_cmd:
             tx_out_from = cluster.build_tx(
                 src_address=script_address,
                 tx_name=f"{temp_template}_from",
                 txouts=destinations,
+                script_txins=script_txins,
                 fee_buffer=2000_000,
                 tx_files=tx_files,
                 witness_override=2,
@@ -569,6 +572,7 @@ class TestBasic:
                 src_address=script_address,
                 tx_name=f"{temp_template}_from",
                 txouts=destinations,
+                script_txins=script_txins,
                 tx_files=tx_files,
             )
 
@@ -1456,8 +1460,8 @@ class TestAuxiliaryScripts:
 
         tx_files = clusterlib.TxFiles(
             metadata_json_files=[self.JSON_METADATA_FILE],
-            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
             signing_key_files=[payment_addrs[0].skey_file],
+            auxiliary_script_files=[multisig_script],
         )
 
         if use_build_cmd:
@@ -1529,8 +1533,8 @@ class TestAuxiliaryScripts:
 
         tx_files = clusterlib.TxFiles(
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
-            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
             signing_key_files=[payment_addrs[0].skey_file],
+            auxiliary_script_files=[multisig_script],
         )
 
         if use_build_cmd:
@@ -1598,8 +1602,8 @@ class TestAuxiliaryScripts:
         )
 
         tx_files = clusterlib.TxFiles(
-            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[multisig_script]),
             signing_key_files=[payment_addrs[0].skey_file],
+            auxiliary_script_files=[multisig_script],
         )
 
         if use_build_cmd:
@@ -1652,9 +1656,9 @@ class TestAuxiliaryScripts:
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         tx_files = clusterlib.TxFiles(
-            # not valid script file
-            script_files=clusterlib.ScriptFiles(auxiliary_scripts=[self.JSON_METADATA_FILE]),
             signing_key_files=[payment_addrs[0].skey_file],
+            # not valid script file
+            auxiliary_script_files=[self.JSON_METADATA_FILE],
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:

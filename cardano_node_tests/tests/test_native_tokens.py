@@ -602,28 +602,34 @@ class TestMinting:
 
         # build and sign a transaction
         tx_files = clusterlib.TxFiles(
-            script_files=clusterlib.ScriptFiles(minting_scripts=[script]),
             signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file],
         )
         mint = [
-            clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
-            clusterlib.TxOut(address=token_mint_addr.address, amount=-(amount - 1), coin=token),
+            clusterlib.Mint(
+                txouts=[
+                    clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
+                    clusterlib.TxOut(
+                        address=token_mint_addr.address, amount=-(amount - 1), coin=token
+                    ),
+                ],
+                script_file=script,
+            ),
         ]
         fee = cluster.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
-            tx_files=tx_files,
             mint=mint,
+            tx_files=tx_files,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=2,
         )
         tx_raw_output = cluster.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
-            tx_files=tx_files,
-            fee=fee,
             # token minting and burning in the same TX
             mint=mint,
+            tx_files=tx_files,
+            fee=fee,
         )
         out_file_signed = cluster.sign_tx(
             tx_body_file=tx_raw_output.out_file,
@@ -1874,18 +1880,25 @@ class TestNegative:
 
         # build and sign a transaction
         tx_files = clusterlib.TxFiles(
-            script_files=clusterlib.ScriptFiles(minting_scripts=[n.script for n in new_tokens]),
             signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files],
         )
+        mint = [
+            clusterlib.Mint(
+                txouts=[
+                    clusterlib.TxOut(
+                        address=n.token_mint_addr.address, amount=n.amount, coin=n.token
+                    )
+                ],
+                script_file=n.script,
+            )
+            for n in new_tokens
+        ]
         tx_raw_output = cluster_obj.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
+            mint=mint,
             tx_files=tx_files,
             fee=100_000,
-            mint=[
-                clusterlib.TxOut(address=n.token_mint_addr.address, amount=n.amount, coin=n.token)
-                for n in new_tokens
-            ],
         )
         out_file_signed = cluster_obj.sign_tx(
             tx_body_file=tx_raw_output.out_file,

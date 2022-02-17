@@ -249,7 +249,6 @@ def create_pool_users(
 ) -> List[clusterlib.PoolUser]:
     """Create PoolUsers."""
     pool_users = []
-    payment_addrs = []
     for i in range(no_of_addr):
         # create key pairs and addresses
         stake_addr_rec = create_stake_addr_records(
@@ -262,7 +261,6 @@ def create_pool_users(
         )[0]
         # create pool user struct
         pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
-        payment_addrs.append(payment_addr_rec)
         pool_users.append(pool_user)
 
     return pool_users
@@ -479,38 +477,42 @@ def mint_or_burn_witness(
     src_address = new_tokens[0].token_mint_addr.address
 
     # create TX body
-    tx_files = clusterlib.TxFiles(
-        script_files=clusterlib.ScriptFiles(minting_scripts=[t.script for t in new_tokens]),
-    )
     mint = [
-        clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+        clusterlib.Mint(
+            txouts=[
+                clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+            ],
+            script_file=t.script,
+        )
         for t in new_tokens
     ]
 
     if use_build_cmd:
+        mint_txouts = [
+            clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+            for t in new_tokens
+        ]
         txouts = [
             # meet the minimum required UTxO value
             clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=2000_000),
             # leave out token burning records
-            *[t for t in mint if t.amount > 0],
+            *[t for t in mint_txouts if t.amount > 0],
         ]
 
         tx_raw_output = cluster_obj.build_tx(
             src_address=src_address,
             tx_name=temp_template,
-            tx_files=tx_files,
             txouts=txouts,
             fee_buffer=2000_000,
+            mint=mint,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
-            mint=mint,
             witness_override=len(issuers_skey_files),
         )
     else:
         fee = cluster_obj.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
-            tx_files=tx_files,
             mint=mint,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=len(issuers_skey_files),
@@ -518,11 +520,10 @@ def mint_or_burn_witness(
         tx_raw_output = cluster_obj.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
-            tx_files=tx_files,
+            mint=mint,
             fee=fee,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
-            mint=mint,
         )
 
     # create witness file for each required key
@@ -565,27 +566,31 @@ def mint_or_burn_sign(
 
     # build and sign a transaction
     tx_files = clusterlib.TxFiles(
-        script_files=clusterlib.ScriptFiles(minting_scripts=[t.script for t in new_tokens]),
         signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files],
     )
     mint = [
-        clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+        clusterlib.Mint(
+            txouts=[
+                clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+            ],
+            script_file=t.script,
+        )
         for t in new_tokens
     ]
     fee = cluster_obj.calculate_tx_fee(
         src_address=src_address,
         tx_name=temp_template,
-        tx_files=tx_files,
         mint=mint,
+        tx_files=tx_files,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add=len(issuers_skey_files),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=src_address,
         tx_name=temp_template,
+        mint=mint,
         tx_files=tx_files,
         fee=fee,
-        mint=mint,
     )
     out_file_signed = cluster_obj.sign_tx(
         tx_body_file=tx_raw_output.out_file,
