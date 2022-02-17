@@ -52,7 +52,7 @@ if HAS_DBSYNC:
         Path(os.environ["DBSYNC_REPO"]).expanduser() / "db-sync-node" / "bin" / "cardano-db-sync"
     ).resolve()
 else:
-    DBSYNC_BIN = Path("nonexistent")
+    DBSYNC_BIN = Path("/nonexistent")
 
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 
