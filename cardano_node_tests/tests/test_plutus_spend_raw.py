@@ -340,10 +340,10 @@ def _spend_locked_txin(
     # spend the "locked" UTxO
 
     plutus_txins = [
-        clusterlib.PlutusTxIn(
+        clusterlib.ScriptTxIn(
             txins=script_utxos,
-            collaterals=collateral_utxos,
             script_file=plutus_op.script_file,
+            collaterals=collateral_utxos,
             execution_units=(plutusrequiredtime, plutusrequiredspace),
             datum_file=plutus_op.datum_file,
             redeemer_file=plutus_op.redeemer_file,
@@ -366,7 +366,7 @@ def _spend_locked_txin(
         txouts=txouts,
         tx_files=tx_files,
         fee=fee_redeem,
-        plutus_txins=plutus_txins,
+        script_txins=plutus_txins,
         invalid_hereafter=invalid_hereafter,
         invalid_before=invalid_before,
         script_valid=script_valid,
@@ -408,7 +408,9 @@ def _spend_locked_txin(
 
         return err, tx_raw_output
 
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=[t.txins[0] for t in tx_raw_output.plutus_txins])
+    cluster_obj.submit_tx(
+        tx_file=tx_signed, txins=[t.txins[0] for t in tx_raw_output.script_txins if t.txins]
+    )
 
     assert (
         cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance + amount

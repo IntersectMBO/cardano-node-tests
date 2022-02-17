@@ -140,7 +140,7 @@ class ClusterGetStatus:
     restart_here: bool = False
     restart_ready: bool = False
     first_iteration: bool = True
-    instance_dir: Path = Path("nonexistent")
+    instance_dir: Path = Path("/nonexistent")
     started_tests: Iterable[Path] = ()
     marked_starting: Iterable[Path] = ()
     marked_running: Iterable[Path] = ()
