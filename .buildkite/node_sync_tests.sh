@@ -1,6 +1,6 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i bash -p python39Full python39Packages.virtualenv python39Packages.pip python39Packages.pandas
-#! nix-shell -I nixpkgs=./nix
+#! nix-shell -i bash -p python39Full python39Packages.virtualenv python39Packages.pip python39Packages.pandas python39Packages.psutil python39Packages.requests
+# ! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
 set -xeuo pipefail
@@ -19,9 +19,9 @@ python3 -m venv "$WORKDIR/.env_sync"
 echo "test: $(python -c 'import sys, sys.prefix == sys.base_prefix')"
 
 echo " ==== install packages into python virtual env"
-python3 -m pip install blockfrost-python, psutil, pymysql
+python3 -m pip install blockfrost-python
 
-python3 -c "import requests,pandas;"
+python3 -c "import requests,pandas, psutil, pymysql;"
 
 tag_no1=$1
 tag_no2=$2
