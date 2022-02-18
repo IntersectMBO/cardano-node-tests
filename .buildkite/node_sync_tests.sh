@@ -1,5 +1,5 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i bash -p python39Full python39Packages.virtualenv python39Packages.pip python39Packages.pandas python39Packages.psutil python39Packages.requests
+#! nix-shell -i bash -p python39Full python39Packages.virtualenv python39Packages.pip python39Packages.pandas python39Packages.psutil python39Packages.requests python39Packages.pymysql
 # ! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
