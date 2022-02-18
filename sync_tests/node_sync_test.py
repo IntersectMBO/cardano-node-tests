@@ -125,12 +125,15 @@ def get_hydra_build_download_url(eval_url, os_type):
 
         if os_type.lower() == "windows":
             if build_jData.get("job") == "cardano-node-win64":
+                print(f"build_jData: {build_jData}")
                 return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-win64.zip"
         elif os_type.lower() == "linux":
             if build_jData.get("job") == "cardano-node-linux":
+                print(f"build_jData: {build_jData}")
                 return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-linux.tar.gz"
         elif os_type.lower() == "macos":
             if build_jData.get("job") == "cardano-node-macos":
+                print(f"build_jData: {build_jData}")
                 return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-macos.tar.gz"
 
     print(f" ===== !!! ERROR: No build has found for the required os_type - {os_type} - {eval_url}")
