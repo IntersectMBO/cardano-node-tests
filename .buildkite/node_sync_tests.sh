@@ -19,9 +19,9 @@ python3 -m venv "$WORKDIR/.env_sync"
 echo "test: $(python -c 'import sys, sys.prefix == sys.base_prefix')"
 
 echo " ==== install packages into python virtual env"
-python3 -m pip install blockfrost-python
+python3 -m pip install blockfrost-python, psutil, pymysql
 
-python3 -c "import requests,pandas, psutil, pymysql;"
+python3 -c "import requests,pandas;"
 
 tag_no1=$1
 tag_no2=$2
