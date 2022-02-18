@@ -3,6 +3,8 @@
 #! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
+set -xeuo pipefail
+
 echo " ==== set WORKDIR"
 WORKDIR="/scratch/workdir"
 rm -rf "$WORKDIR"
@@ -17,7 +19,9 @@ python3 -m venv "$WORKDIR/.env_sync"
 echo "test: $(python -c 'import sys, sys.prefix == sys.base_prefix')"
 
 echo " ==== install packages into python virtual env"
-pip install blockfrost-python pymysql requests psutil pandas
+python3 -m pip install blockfrost-python
+
+python3 -c "import requests,pandas;"
 
 tag_no1=$1
 tag_no2=$2
