@@ -21,6 +21,7 @@ echo "test: $(python -c 'import sys, sys.prefix == sys.base_prefix')"
 echo " ==== install packages into python virtual env"
 python3 -m pip install blockfrost-python
 
+echo " ==== importing packages from nix (https://search.nixos.org/packages)"
 python3 -c "import requests,pandas, psutil, pymysql;"
 
 tag_no1=$1
