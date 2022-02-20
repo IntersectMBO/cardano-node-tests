@@ -7,10 +7,10 @@ import pandas as pd
 def create_connection():
     conn = None
     try:
-        conn = pymysql.connect(host="database-1.csnxovlgjohu.us-east-2.rds.amazonaws.com",
-                               user="admin",
-                               password="Iog_Qa_db",
-                               db="qa_sync_tests_db",
+        conn = pymysql.connect(host=os.environ["AWS_DB_HOSTNAME"],
+                               user=os.environ["AWS_DB_USERNAME"],
+                               password=os.environ["AWS_DB_PASS"],
+                               db=os.environ["AWS_DB_NAME"],
                                )
         return conn
     except Exception as e:
