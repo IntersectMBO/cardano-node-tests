@@ -7,10 +7,10 @@ import pandas as pd
 def create_connection():
     conn = None
     try:
-        conn = pymysql.connect(host=os.environ["AWS_DB_HOSTNAME"],
-                               user=os.environ["AWS_DB_USERNAME"],
-                               password=os.environ["AWS_DB_PASS"],
-                               db=os.environ["AWS_DB_NAME"],
+        conn = pymysql.connect(host="database-1.csnxovlgjohu.us-east-2.rds.amazonaws.com",
+                               user="admin",
+                               password="Iog_Qa_db",
+                               db="qa_sync_tests_db",
                                )
         return conn
     except Exception as e:
@@ -259,6 +259,25 @@ def delete_record(table_name, column_name, delete_value):
     print(f"Successfully deleted {initial_rows_no - final_rows_no} rows from table {table_name}")
 
 
+def update_record(table_name, column_name, old_value, new_value):
+    print(f"Updating {column_name} = {new_value} from {table_name} table")
+
+    conn = create_connection()
+    sql_query = f"UPDATE {table_name} SET {column_name}=\"{new_value}\" where {column_name}=\"{old_value}\""
+    print(f"  -- sql_query: {sql_query}")
+    try:
+        cur = conn.cursor()
+        cur.execute(sql_query)
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(f"!!! ERROR: Failed to update record {column_name} = {new_value} from {table_name} table: --> {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
 def add_bulk_csv_to_table(table_name, csv_path):
     df = pd.read_csv(csv_path)
     # replace nan/empty values with "None"
@@ -268,7 +287,6 @@ def add_bulk_csv_to_table(table_name, csv_path):
     val_to_insert = df.values.tolist()
     add_bulk_values_into_db(table_name, col_to_insert, val_to_insert)
 
-
 # Delete specified identifiers
 # env = "testnet"
 # delete_strings = ["testnet_37"]
@@ -276,3 +294,7 @@ def add_bulk_csv_to_table(table_name, csv_path):
 #     delete_record(env, "identifier", del_str)
 #     delete_record(env + "_epoch_duration", "identifier", del_str)
 #     delete_record(env + "_logs", "identifier", del_str)
+
+# Update column values
+# env = "mainnet"
+# update_record(env, "alonzo_start_time", "1631483091", "2021-09-12T21:47:46Z")
