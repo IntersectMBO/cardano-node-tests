@@ -125,16 +125,25 @@ def get_hydra_build_download_url(eval_url, os_type):
 
         if os_type.lower() == "windows":
             if build_jData.get("job") == "cardano-node-win64":
+                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"build_jData: {build_jData}")
-                return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-win64.zip"
+                print(f"  -- cardano_node_pr: {build_jData.get('jobset')}")
+                print(f"  -- job_name: {job_name}")
+                return f"https://hydra.iohk.io/build/{build_no}/download/1/{job_name}"
         elif os_type.lower() == "linux":
             if build_jData.get("job") == "cardano-node-linux":
+                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"build_jData: {build_jData}")
-                return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-linux.tar.gz"
+                print(f"  -- cardano_node_pr: {build_jData.get('jobset')}")
+                print(f"  -- job_name: {job_name}")
+                return f"https://hydra.iohk.io/build/{build_no}/download/1/{job_name}"
         elif os_type.lower() == "macos":
             if build_jData.get("job") == "cardano-node-macos":
+                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"build_jData: {build_jData}")
-                return f"https://hydra.iohk.io/build/{build_no}/download/1/cardano-node-1.24.0-macos.tar.gz"
+                print(f"  -- cardano_node_pr: {build_jData.get('jobset')}")
+                print(f"  -- job_name: {job_name}")
+                return f"https://hydra.iohk.io/build/{build_no}/download/1/{job_name}"
 
     print(f" ===== !!! ERROR: No build has found for the required os_type - {os_type} - {eval_url}")
     return None
