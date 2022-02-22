@@ -2,6 +2,7 @@
 # pylint: disable=abstract-class-instantiated
 import json
 import logging
+import os
 import shutil
 import time
 from pathlib import Path
@@ -12,6 +13,7 @@ from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import kes
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
@@ -131,6 +133,64 @@ class TestKES:
             time.sleep(120)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(5)
+    @pytest.mark.skipif(
+        not (VERSIONS.cluster_era == VERSIONS.transaction_era == VERSIONS.LAST_KNOWN_ERA),
+        reason="meant to run only with the latest cluster era and the latest transaction era",
+    )
+    @pytest.mark.skipif(bool(os.environ.get("CI")), reason="meant to run only outside of CI")
+    def test_op_cert_with_expired_kes(
+        self,
+        cluster_kes: clusterlib.ClusterLib,
+        cluster_manager: cluster_management.ClusterManager,
+        worker_id: str,
+    ):
+        """Test kes period info command with an operational certificate with an expired KES."""
+        cluster = cluster_kes
+        common.get_test_id(cluster)
+
+        expire_timeout = 200
+
+        pool_rec = cluster_manager.cache.addrs_data["node-pool1"]
+        node_name = "pool1"
+
+        pool_cert_file = cluster.gen_node_operational_cert(
+            node_name=f"{node_name}_pool1_cert_file",
+            kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+            cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+            cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+            kes_period=cluster.get_kes_period(),
+        )
+
+        opcert_file: Path = pool_rec["pool_operational_cert"]
+        shutil.copy(pool_cert_file, opcert_file)
+        cluster_nodes.restart_nodes([node_name])
+
+        expected_err_regexes = ["TraceNoLedgerView", "KESKeyAlreadyPoisoned", "KESCouldNotEvolve"]
+        # ignore expected errors in all matching log files
+        for err in expected_err_regexes:
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex=err,
+                ignore_file_id=worker_id,
+            )
+
+        # wait that the operational certificate expires
+        LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
+        time.sleep(expire_timeout)
+
+        kes_period_timeout = int(cluster.slots_per_kes_period * cluster.slot_length + 1)
+        LOGGER.info(f"Waiting for {kes_period_timeout} sec for next KES period.")
+        time.sleep(kes_period_timeout)
+
+        # check kes-period-info with an operational certificate with kes expired
+        kes_period_info = cluster.get_kes_period_info(pool_cert_file)
+
+        kes.check_kes_period_info_result(
+            kes_output=kes_period_info, expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
+        )
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
     def test_opcert_future_kes_period(
         self,
@@ -175,13 +235,13 @@ class TestKES:
             )
 
         with cluster_manager.restart_on_failure():
-            # generate new operational certificate with `--kes-period` in the past
+            # generate new operational certificate with `--kes-period` in the future
             invalid_opcert_file = cluster.gen_node_operational_cert(
-                node_name=node_name,
+                node_name=f"{node_name}_invalid_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-                kes_period=cluster.get_kes_period() + 5,
+                kes_period=cluster.get_kes_period() + 100,
             )
 
             expected_errors = [
@@ -213,17 +273,22 @@ class TestKES:
                             stake_pool_id_dec not in blocks_made
                         ), f"The pool '{pool_name}' has produced blocks in epoch {this_epoch}"
 
+            # check kes-period-info with operational certificate with invalid `--kes-period`
+            kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
+            )
+
             # generate new operational certificate with valid `--kes-period`
-            opcert_file.unlink()
             valid_opcert_file = cluster.gen_node_operational_cert(
-                node_name=node_name,
+                node_name=f"{node_name}_valid_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
                 kes_period=cluster.get_kes_period(),
             )
             # copy the new certificate and restart the node
-            shutil.move(str(valid_opcert_file), str(opcert_file))
+            shutil.copy(valid_opcert_file, opcert_file)
             cluster_nodes.restart_nodes([node_name])
             this_epoch = cluster.wait_for_new_epoch()
 
@@ -243,6 +308,18 @@ class TestKES:
             assert any(blocks_made_db), (
                 f"The pool '{pool_name}' has not produced any blocks "
                 f"since epoch {active_again_epoch}"
+            )
+
+            # check kes-period-info with valid operational certificate
+            kes_period_info = cluster.get_kes_period_info(valid_opcert_file)
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+            )
+
+            # check kes-period-info with invalid operational certificate, wrong counter and period
+            kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_INVALID
             )
 
     @allure.link(helpers.get_vcs_link())
@@ -270,11 +347,12 @@ class TestKES:
         stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
 
         opcert_file = pool_rec["pool_operational_cert"]
+        opcert_file_old = shutil.copy(opcert_file, f"{opcert_file}_old")
 
         with cluster_manager.restart_on_failure():
             # generate new operational certificate with valid `--kes-period`
             new_opcert_file = cluster.gen_node_operational_cert(
-                node_name=node_name,
+                node_name=f"{node_name}_new_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
@@ -327,6 +405,12 @@ class TestKES:
             assert any(blocks_made_db), (
                 f"The pool '{pool_name}' has not produced any blocks "
                 f"since epoch {updated_epoch}"
+            )
+
+            # check kes-period-info with operational certificate with a wrong counter
+            kes_period_info = cluster.get_kes_period_info(opcert_file_old)
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.INVALID_COUNTERS
             )
 
     @allure.link(helpers.get_vcs_link())
