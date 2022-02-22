@@ -1,5 +1,6 @@
 """Tests for staking, rewards, blocks production on real block-producing pools."""
 import logging
+from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
@@ -13,6 +14,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import kes
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
@@ -1843,6 +1845,7 @@ class TestRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
+        pool_opcert_file: Path = pool_rec["pool_operational_cert"]
         temp_template = common.get_test_id(cluster)
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")
@@ -1944,6 +1947,12 @@ class TestRewards:
                 pool_id
             ).pool_params, f"The pool {pool_id} was not deregistered"
 
+            # check command kes-period-info case: de-register pool
+            kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+            )
+
             # check that the balance for source address was correctly updated
             assert src_dereg_balance - tx_raw_output.fee == cluster.get_address_balance(
                 pool_owner.payment.address
@@ -1985,6 +1994,13 @@ class TestRewards:
                 tx_files=tx_files,
             )
 
+            # check command kes-period-info case: re-register pool, check without
+            # waiting to take effect
+            kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+            )
+
             # check that the balance for source address was correctly updated and that the
             # pool deposit was needed
             assert (
@@ -2002,6 +2018,12 @@ class TestRewards:
                     break
             else:
                 raise AssertionError(f"Stake pool `{pool_id}` not registered even after 5 epochs.")
+
+            # check command kes-period-info case: re-register pool
+            kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+            )
 
             # wait before checking delegation and rewards
             cluster.wait_for_new_epoch(3, padding_seconds=30)
