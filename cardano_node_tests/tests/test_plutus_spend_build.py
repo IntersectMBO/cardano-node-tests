@@ -384,6 +384,20 @@ def _build_spend_locked_txin(
 
         return "", tx_output
 
+    # calculate cost of Plutus script
+    plutus_cost = cluster_obj.calculate_plutus_script_cost(
+        src_address=payment_addr.address,
+        tx_name=f"{temp_template}_step2",
+        tx_files=tx_files,
+        txouts=txouts,
+        script_txins=plutus_txins,
+        change_address=script_address,
+        invalid_hereafter=invalid_hereafter,
+        invalid_before=invalid_before,
+        deposit=deposit_amount,
+        script_valid=script_valid,
+    )
+
     cluster_obj.submit_tx(
         tx_file=tx_signed, txins=[t.txins[0] for t in tx_output.script_txins if t.txins]
     )
@@ -402,7 +416,12 @@ def _build_spend_locked_txin(
             cluster_obj.get_address_balance(script_address, coin=token.coin) == 0
         ), f"Incorrect token balance for script address `{script_address}`"
 
-    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
+    tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
+    # compare cost of Plutus script with data from db-sync
+    if tx_db_record:
+        dbsync_utils.check_plutus_cost(
+            redeemers_record=tx_db_record.redeemers[0], cost_record=plutus_cost[0]
+        )
 
     return "", tx_output
 

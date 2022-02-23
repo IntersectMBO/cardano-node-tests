@@ -106,7 +106,7 @@ def delegate_stake_addr(
     pool_user: PoolUserScript,
     pool_id: str,
     redeemer_file: Path,
-) -> clusterlib.TxRawOutput:
+) -> Tuple[clusterlib.TxRawOutput, List[dict]]:
     """Submit registration certificate and delegate to pool."""
     # create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.gen_stake_addr_registration_cert(
@@ -144,6 +144,16 @@ def delegate_stake_addr(
         fee_buffer=2000_000,
         witness_override=len(tx_files.signing_key_files),
     )
+    # calculate cost of Plutus script
+    plutus_cost = cluster_obj.calculate_plutus_script_cost(
+        src_address=pool_user.payment.address,
+        tx_name=f"{temp_template}_reg_deleg",
+        txins=txins,
+        tx_files=tx_files,
+        complex_certs=[reg_cert_script, deleg_cert_script],
+        fee_buffer=2000_000,
+        witness_override=len(tx_files.signing_key_files),
+    )
     tx_signed = cluster_obj.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
@@ -163,7 +173,7 @@ def delegate_stake_addr(
     assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
     assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
-    return tx_raw_output
+    return tx_raw_output, plutus_cost
 
 
 def deregister_stake_addr(
@@ -210,6 +220,17 @@ def deregister_stake_addr(
         script_withdrawals=[withdrawal_script],
         witness_override=len(tx_files.signing_key_files),
     )
+    # calculate cost of Plutus script
+    plutus_cost = cluster_obj.calculate_plutus_script_cost(
+        src_address=pool_user.payment.address,
+        tx_name=f"{temp_template}_dereg_withdraw",
+        txins=txins,
+        tx_files=tx_files,
+        complex_certs=[dereg_cert_script],
+        fee_buffer=2000_000,
+        script_withdrawals=[withdrawal_script],
+        witness_override=len(tx_files.signing_key_files),
+    )
     tx_signed = cluster_obj.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
@@ -234,6 +255,11 @@ def deregister_stake_addr(
     tx_db_dereg = dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
     if tx_db_dereg:
         assert pool_user.stake.address in tx_db_dereg.stake_deregistration
+
+        # compare cost of Plutus script with data from db-sync
+        dbsync_utils.check_plutus_cost(
+            redeemers_record=tx_db_dereg.redeemers[0], cost_record=plutus_cost[0]
+        )
 
     return tx_raw_output
 
@@ -331,7 +357,7 @@ class TestDelegateAddr:
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
-        tx_raw_delegation_out = delegate_stake_addr(
+        tx_raw_delegation_out, plutus_cost_deleg = delegate_stake_addr(
             cluster_obj=cluster,
             temp_template=temp_template,
             txins=deleg_utxos,
@@ -381,3 +407,9 @@ class TestDelegateAddr:
 
         if reward_error:
             raise AssertionError(reward_error)
+
+        # compare cost of Plutus script with data from db-sync
+        if tx_db_record:
+            dbsync_utils.check_plutus_cost(
+                redeemers_record=tx_db_record.redeemers[0], cost_record=plutus_cost_deleg[0]
+            )
