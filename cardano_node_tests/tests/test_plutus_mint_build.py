@@ -455,6 +455,19 @@ class TestBuildMinting:
             invalid_hereafter=invalid_hereafter,
         )
 
+        # calculate cost of Plutus script
+        plutus_cost_step2 = cluster.calculate_plutus_script_cost(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            required_signers=[plutus_mint.SIGNING_KEY_GOLDEN],
+            invalid_before=1,
+            invalid_hereafter=invalid_hereafter,
+        )
+
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
@@ -471,7 +484,14 @@ class TestBuildMinting:
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
+        tx_db_record_step2 = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=tx_output_step2
+        )
+        # compare cost of Plutus script with data from db-sync
+        if tx_db_record_step2:
+            dbsync_utils.check_plutus_cost(
+                redeemers_record=tx_db_record_step2.redeemers[0], cost_record=plutus_cost_step2[0]
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
