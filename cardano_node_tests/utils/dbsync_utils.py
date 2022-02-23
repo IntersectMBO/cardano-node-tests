@@ -814,3 +814,11 @@ def check_pool_data(ledger_pool_data: dict, pool_id: str) -> Optional[PoolDataRe
         raise AssertionError(f"{errors_str}\n\nStake Pool Details: \n{ledger_pool_data}")
 
     return db_pool_data
+
+
+def check_plutus_cost(redeemers_record: RedeemerRecord, cost_record: dict) -> None:
+    """Compare cost of Plutus script with data from db-sync."""
+    assert redeemers_record.unit_mem == cost_record["executionUnits"]["memory"]
+    assert redeemers_record.unit_steps == cost_record["executionUnits"]["steps"]
+    assert redeemers_record.fee == cost_record["lovelaceCost"]
+    assert redeemers_record.script_hash == cost_record["scriptHash"]
