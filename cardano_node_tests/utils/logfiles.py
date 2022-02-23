@@ -37,6 +37,8 @@ ERRORS_IGNORED = [
     "db-sync-node:.* validateEpochRewardsBefore",
     # can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node:.*could not serialize access",
+    # can happen on p2p when local roots are not up yet
+    r"PeerSelection:Info.*TracePromoteColdFailed.*Network\.Socket\.connect: .* does not exist",
 ]
 if VERSIONS.cluster_era == VERSIONS.ALONZO:
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
