@@ -233,7 +233,10 @@ def _fund_script(
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
     )
-    datum_hash = cluster_obj.get_hash_script_data(script_data_file=plutus_op.datum_file)
+    datum_hash = cluster_obj.get_hash_script_data(
+        script_data_file=plutus_op.datum_file if plutus_op.datum_file else None,
+        script_data_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else None,
+    )
     txouts = [
         clusterlib.TxOut(
             address=script_address,
@@ -345,8 +348,10 @@ def _spend_locked_txin(
             script_file=plutus_op.script_file,
             collaterals=collateral_utxos,
             execution_units=(plutusrequiredtime, plutusrequiredspace),
-            datum_file=plutus_op.datum_file,
-            redeemer_file=plutus_op.redeemer_file,
+            datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
+            datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
+            redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
+            redeemer_cbor_file=plutus_op.redeemer_cbor_file if plutus_op.redeemer_cbor_file else "",
         )
     ]
     tx_files = tx_files._replace(
@@ -504,7 +509,7 @@ class TestLocking:
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+            redeemer_cbor_file=plutus_spend.PLUTUS_DIR / "42.redeemer.cbor",
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -927,8 +932,8 @@ class TestLocking:
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+            datum_cbor_file=plutus_spend.PLUTUS_DIR / "typed-42.datum.cbor",
+            redeemer_cbor_file=plutus_spend.PLUTUS_DIR / "42.redeemer.cbor",
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -990,7 +995,7 @@ class TestLocking:
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
+            datum_cbor_file=plutus_spend.PLUTUS_DIR / "42.datum.cbor",
             redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
             execution_units=(700_000_000, 10_000_000),
         )
