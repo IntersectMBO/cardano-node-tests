@@ -20,8 +20,10 @@ CONTEXT_EQUIVALENCE_LOCK = "context_eq_script"
 
 class PlutusOp(NamedTuple):
     script_file: Path
-    datum_file: Path
-    redeemer_file: Path
+    datum_file: Optional[Path] = None
+    datum_cbor_file: Optional[Path] = None
+    redeemer_file: Optional[Path] = None
+    redeemer_cbor_file: Optional[Path] = None
     execution_units: Optional[Tuple[int, int]] = None
 
 
