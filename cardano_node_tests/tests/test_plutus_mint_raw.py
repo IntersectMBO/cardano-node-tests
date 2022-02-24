@@ -122,7 +122,7 @@ class TestMinting:
         fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
         collateral_amount = int(fee_step2 * 1.5)
 
-        redeemer_file = plutus_mint.PLUTUS_DIR / "42.redeemer"
+        redeemer_cbor_file = plutus_mint.PLUTUS_DIR / "42.redeemer.cbor"
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
 
@@ -187,7 +187,7 @@ class TestMinting:
                 script_file=plutus_mint.MINTING_PLUTUS,
                 collaterals=[collateral_utxo],
                 execution_units=(plutusrequiredtime, plutusrequiredspace),
-                redeemer_file=redeemer_file,
+                redeemer_cbor_file=redeemer_cbor_file,
             )
         ]
 

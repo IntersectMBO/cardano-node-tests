@@ -224,7 +224,10 @@ def _build_fund_script(
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
     )
-    datum_hash = cluster_obj.get_hash_script_data(script_data_file=plutus_op.datum_file)
+    datum_hash = cluster_obj.get_hash_script_data(
+        script_data_file=plutus_op.datum_file if plutus_op.datum_file else None,
+        script_data_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else None,
+    )
     txouts = [
         clusterlib.TxOut(address=script_address, amount=script_fund, datum_hash=datum_hash),
         # for collateral
@@ -321,8 +324,10 @@ def _build_spend_locked_txin(
             txins=script_utxos,
             script_file=plutus_op.script_file,
             collaterals=collateral_utxos,
-            datum_file=plutus_op.datum_file,
-            redeemer_file=plutus_op.redeemer_file,
+            datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
+            datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
+            redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
+            redeemer_cbor_file=plutus_op.redeemer_cbor_file if plutus_op.redeemer_cbor_file else "",
         )
     ]
     tx_files = tx_files._replace(
@@ -462,7 +467,7 @@ class TestBuildLocking:
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+            redeemer_cbor_file=plutus_spend.PLUTUS_DIR / "42.redeemer.cbor",
         )
 
         tx_output_fund = _build_fund_script(
@@ -860,8 +865,8 @@ class TestBuildLocking:
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+            datum_cbor_file=plutus_spend.PLUTUS_DIR / "typed-42.datum.cbor",
+            redeemer_cbor_file=plutus_spend.PLUTUS_DIR / "42.redeemer.cbor",
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1049,7 +1054,7 @@ class TestBuildLocking:
 
         plutus_op = plutus_spend.PlutusOp(
             script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
+            datum_cbor_file=plutus_spend.PLUTUS_DIR / "typed-42.datum.cbor",
             redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
         )
 
@@ -1076,8 +1081,12 @@ class TestBuildLocking:
                 txins=script_utxos,
                 script_file=plutus_op.script_file,
                 collaterals=collateral_utxos,
-                datum_file=plutus_op.datum_file,
-                redeemer_file=plutus_op.redeemer_file,
+                datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
+                datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
+                redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file
+                if plutus_op.redeemer_cbor_file
+                else "",
             )
         ]
         tx_files = clusterlib.TxFiles(
