@@ -204,7 +204,7 @@ class TestAddressInfo:
             )
             address = payment_rec.address
 
-        addr_info = cluster.address_info(address=address)
+        addr_info = cluster.get_address_info(address=address)
 
         assert addr_info.address == address
         assert addr_info.era == "shelley"
@@ -227,7 +227,7 @@ class TestAddressInfo:
             )
             address = stake_rec.address
 
-        addr_info = cluster.address_info(address=address)
+        addr_info = cluster.get_address_info(address=address)
 
         assert addr_info.address == address
         assert addr_info.era == "shelley"
@@ -258,7 +258,7 @@ class TestAddressInfo:
         # create script address
         address = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
 
-        addr_info = cluster.address_info(address=address)
+        addr_info = cluster.get_address_info(address=address)
 
         assert addr_info.address == address
         assert addr_info.era == "shelley"
