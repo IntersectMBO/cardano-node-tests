@@ -498,7 +498,7 @@ def stop_node():
     for proc in process_iter():
         if "cardano-node" in proc.name():
             print(f" --- Killing the `cardano-node` process - {proc}")
-            proc.send_signal(signal.SIGTERM)
+            proc.send_signal(signal.SIGINT)
             proc.terminate()
             proc.kill()
     time.sleep(10)
