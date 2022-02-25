@@ -562,7 +562,7 @@ def wait_for_node_to_sync(env):
                 actual_epoch_dict = {"start_sync_time": current_time}
                 epoch_details_dict[actual_epoch] = actual_epoch_dict
 
-            time.sleep(1)
+            time.sleep(5)
             count += 1
             actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip()
     else:
