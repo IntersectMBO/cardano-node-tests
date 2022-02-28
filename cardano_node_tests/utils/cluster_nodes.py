@@ -106,7 +106,8 @@ class LocalCluster(ClusterType):
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         cluster_obj._min_change_value = 2000_000  # TODO: hardcoded `minUTxOValue`
-        cluster_obj.use_cddl = True  # TODO: remove once `--cddl-format` is deprecated
+        # TODO: remove once `--cddl-format` is deprecated
+        cluster_obj.use_cddl = configuration.USE_CDDL
         return cluster_obj
 
     def create_addrs_data(
@@ -238,7 +239,8 @@ class TestnetCluster(ClusterType):
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         cluster_obj._min_change_value = 2000_000  # TODO: hardcoded `minUTxOValue`
-        cluster_obj.use_cddl = True  # TODO: remove once `--cddl-format` is deprecated
+        # TODO: remove once `--cddl-format` is deprecated
+        cluster_obj.use_cddl = configuration.USE_CDDL
         return cluster_obj
 
     def create_addrs_data(
