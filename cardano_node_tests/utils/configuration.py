@@ -10,6 +10,8 @@ NETWORK_MAGIC_LOCAL = 42
 DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
+USE_CDDL = bool(os.environ.get("USE_CDDL"))  # TODO: remove once `--cddl-format` is deprecated
+
 TESTNET_POOL_IDS = (
     "pool18yslg3q320jex6gsmetukxvzm7a20qd90wsll9anlkrfua38flr",
     "pool15sfcpy4tps5073gmra0e6tm2dgtrn004yr437qmeh44sgjlg2ex",
