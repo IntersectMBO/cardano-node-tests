@@ -196,7 +196,8 @@ class TestDelegateAddr:
     ):
         """Deregister stake address.
 
-        * submit registration certificate and delegate to pool
+        * create two payment addresses that share single stake address
+        * register and delegate the stake address to pool
         * attempt to deregister the stake address - deregistration is expected to fail
           because there are rewards in the stake address
         * withdraw rewards to payment address and deregister stake address
@@ -206,6 +207,27 @@ class TestDelegateAddr:
         """
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
+
+        # create two payment addresses that share single stake address (just to test that
+        # delegation works as expected even under such circumstances)
+        stake_addr_rec = clusterlib_utils.create_stake_addr_records(
+            f"{temp_template}_addr0", cluster_obj=cluster
+        )[0]
+        payment_addr_recs = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_addr0",
+            f"{temp_template}_addr1",
+            cluster_obj=cluster,
+            stake_vkey_file=stake_addr_rec.vkey_file,
+        )
+
+        # fund payment address
+        clusterlib_utils.fund_from_faucet(
+            *payment_addr_recs,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-20, force_epoch=False
@@ -217,6 +239,7 @@ class TestDelegateAddr:
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
+            pool_user=pool_user,
             pool_id=pool_id,
         )
 
@@ -227,6 +250,17 @@ class TestDelegateAddr:
         tx_db_deleg = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
         )
+        if tx_db_deleg:
+            # check in db-sync that both payment addresses share single stake address
+            assert (
+                dbsync_utils.get_utxo(address=payment_addr_recs[0].address).stake_address
+                == stake_addr_rec.address
+            )
+            assert (
+                dbsync_utils.get_utxo(address=payment_addr_recs[1].address).stake_address
+                == stake_addr_rec.address
+            )
+
         delegation.db_check_delegation(
             pool_user=delegation_out.pool_user,
             db_record=tx_db_deleg,
@@ -306,6 +340,10 @@ class TestDelegateAddr:
         )
         if tx_db_dereg:
             assert delegation_out.pool_user.stake.address in tx_db_dereg.stake_deregistration
+            assert (
+                cluster.get_address_balance(src_address)
+                == dbsync_utils.get_utxo(address=src_address).amount_sum
+            ), f"Unexpected balance for source address `{src_address}` in db-sync"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
