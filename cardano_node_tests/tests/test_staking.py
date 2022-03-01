@@ -397,7 +397,8 @@ class TestRewards:
     ):
         """Check that the stake address and pool owner are receiving rewards.
 
-        * delegate to pool
+        * create two payment addresses that share single stake address
+        * register and delegate the stake address to pool
         * create UTxOs with native tokens
         * collect data for pool owner and pool users for 9 epochs
 
@@ -423,6 +424,27 @@ class TestRewards:
         token_rand = clusterlib.get_rand_str(5)
         token_amount = 1_000_000
 
+        # create two payment addresses that share single stake address (just to test that
+        # delegation works as expected even under such circumstances)
+        stake_addr_rec = clusterlib_utils.create_stake_addr_records(
+            f"{temp_template}_addr0", cluster_obj=cluster
+        )[0]
+        payment_addr_recs = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_addr0",
+            f"{temp_template}_addr1",
+            cluster_obj=cluster,
+            stake_vkey_file=stake_addr_rec.vkey_file,
+        )
+
+        # fund payment address
+        clusterlib_utils.fund_from_faucet(
+            *payment_addr_recs,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)
+
         # make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=-40, force_epoch=False
@@ -438,6 +460,7 @@ class TestRewards:
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
+            pool_user=pool_user,
             pool_id=pool_id,
         )
 
@@ -459,7 +482,11 @@ class TestRewards:
         ), "Delegation took longer than expected and would affect other checks"
 
         user_stake_addr_dec = helpers.decode_bech32(delegation_out.pool_user.stake.address)[2:]
-        user_payment_balance = cluster.get_address_balance(delegation_out.pool_user.payment.address)
+
+        # balance for both payment addresses associated with the single stake address
+        user_payment_balance = cluster.get_address_balance(
+            payment_addr_recs[0].address
+        ) + cluster.get_address_balance(payment_addr_recs[1].address)
 
         user_rewards = [
             RewardRecord(
@@ -667,6 +694,16 @@ class TestRewards:
             _dbsync_check_rewards(
                 stake_address=pool_reward.stake.address,
                 rewards=owner_rewards,
+            )
+
+            # check in db-sync that both payment addresses share single stake address
+            assert (
+                dbsync_utils.get_utxo(address=payment_addr_recs[0].address).stake_address
+                == stake_addr_rec.address
+            )
+            assert (
+                dbsync_utils.get_utxo(address=payment_addr_recs[1].address).stake_address
+                == stake_addr_rec.address
             )
 
     @allure.link(helpers.get_vcs_link())
