@@ -92,6 +92,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(5)
+    @pytest.mark.long
     @pytest.mark.skipif(
         not (VERSIONS.cluster_era == VERSIONS.transaction_era == VERSIONS.LAST_KNOWN_ERA),
         reason="meant to run only with the latest cluster era and the latest transaction era",
@@ -134,6 +135,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(5)
+    @pytest.mark.long
     @pytest.mark.skipif(
         not (VERSIONS.cluster_era == VERSIONS.transaction_era == VERSIONS.LAST_KNOWN_ERA),
         reason="meant to run only with the latest cluster era and the latest transaction era",
@@ -192,6 +194,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
+    @pytest.mark.long
     def test_opcert_future_kes_period(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
@@ -324,6 +327,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
+    @pytest.mark.long
     def test_update_valid_opcert(
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
