@@ -1748,6 +1748,7 @@ class TestStakePool:
 
 
 @pytest.mark.order(5)
+@pytest.mark.long
 class TestPoolCost:
     """Tests for stake pool cost."""
 
