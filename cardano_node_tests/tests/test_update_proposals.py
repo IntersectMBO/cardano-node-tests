@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.order(8)
+@pytest.mark.long
 class TestUpdateProposals:
     """Tests for update proposals."""
 
