@@ -118,6 +118,7 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
     VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
     reason="different TX eras doesn't affect this test, pointless to run",
 )
+@pytest.mark.long
 class TestBasic:
     """Basic tests for node configuration."""
 
