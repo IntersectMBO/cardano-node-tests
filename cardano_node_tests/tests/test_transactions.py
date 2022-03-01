@@ -193,7 +193,12 @@ class TestBasic:
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            assert (
+                cluster.get_address_balance(src_address)
+                == dbsync_utils.get_utxo(address=src_address).amount_sum
+            ), f"Unexpected balance for source address `{src_address}` in db-sync"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)

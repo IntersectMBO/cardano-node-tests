@@ -56,6 +56,27 @@ class RewardRecord(NamedTuple):
     rewards: List[RewardEpochRecord]
     reward_sum: int
 
+    def __bool__(self) -> bool:
+        return self.reward_sum > 0
+
+
+class UTxORecord(NamedTuple):
+    utxo_hash: str
+    utxo_ix: int
+    has_script: bool
+    amount: int
+    data_hash: str
+
+
+class PaymentAddrRecord(NamedTuple):
+    payment_address: str
+    stake_address: Optional[str]
+    amount_sum: int
+    utxos: List[UTxORecord]
+
+    def __bool__(self) -> bool:
+        return self.amount_sum > 0
+
 
 class PoolDataRecord(NamedTuple):
     id: int
@@ -132,9 +153,7 @@ class TxPrelimRecord(NamedTuple):
     last_row: dbsync_queries.TxDBRow
 
 
-def get_address_reward(
-    address: str, epoch_from: int = 0, epoch_to: int = 99999999
-) -> Optional[RewardRecord]:
+def get_address_reward(address: str, epoch_from: int = 0, epoch_to: int = 99999999) -> RewardRecord:
     """Get reward data for stake address from db-sync.
 
     The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
@@ -153,23 +172,23 @@ def get_address_reward(
             )
         )
     if not rewards:
-        return None
+        return RewardRecord(address=address, reward_sum=0, rewards=[])
 
     reward_sum = functools.reduce(lambda x, y: x + y.amount, rewards, 0)
     # pylint: disable=undefined-loop-variable
-    return RewardRecord(address=db_row.address, rewards=rewards, reward_sum=reward_sum)
+    return RewardRecord(address=db_row.address, reward_sum=reward_sum, rewards=rewards)
 
 
 def check_address_reward(
     address: str, epoch_from: int = 0, epoch_to: int = 99999999
-) -> Optional[RewardRecord]:
+) -> RewardRecord:
     """Check reward data for stake address in db-sync.
 
     The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
     """
     reward = get_address_reward(address=address, epoch_from=epoch_from, epoch_to=epoch_to)
-    if reward is None:
-        return None
+    if not reward:
+        return reward
 
     errors = []
     for r in reward.rewards:
@@ -185,6 +204,37 @@ def check_address_reward(
         raise AssertionError(f"The 'earned epoch' and 'spendable epoch' don't match: {err_str}.")
 
     return reward
+
+
+def get_utxo(address: str) -> PaymentAddrRecord:
+    """Return UTxO info for payment address from db-sync."""
+    utxos = []
+    for db_row in dbsync_queries.query_utxo(address=address):
+        utxos.append(
+            UTxORecord(
+                utxo_hash=db_row.tx_hash.hex(),
+                utxo_ix=db_row.utxo_ix,
+                has_script=db_row.has_script,
+                amount=int(db_row.value),
+                data_hash=db_row.data_hash.hex() if db_row.data_hash else "",
+            )
+        )
+    if not utxos:
+        return PaymentAddrRecord(
+            payment_address=address,
+            stake_address=None,
+            amount_sum=0,
+            utxos=[],
+        )
+
+    amount_sum = functools.reduce(lambda x, y: x + y.amount, utxos, 0)
+    # pylint: disable=undefined-loop-variable
+    return PaymentAddrRecord(
+        payment_address=db_row.payment_address,
+        stake_address=db_row.stake_address,
+        amount_sum=amount_sum,
+        utxos=utxos,
+    )
 
 
 def get_pool_data(pool_id_bech32: str) -> Optional[PoolDataRecord]:

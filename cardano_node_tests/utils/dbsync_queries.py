@@ -182,6 +182,16 @@ class RewardDBRow(NamedTuple):
     pool_id: str
 
 
+class UTxODBRow(NamedTuple):
+    tx_hash: memoryview
+    utxo_ix: int
+    payment_address: str
+    stake_address: str
+    has_script: bool
+    value: int
+    data_hash: Optional[memoryview]
+
+
 class BlockDBRow(NamedTuple):
     id: int
     epoch_no: Optional[int]
@@ -557,6 +567,24 @@ def query_address_reward(
     with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
         while (result := cur.fetchone()) is not None:
             yield RewardDBRow(*result)
+
+
+def query_utxo(address: str) -> Generator[UTxODBRow, None, None]:
+    """Query UTxOs for payment address in db-sync."""
+    query = (
+        "SELECT"
+        " tx.hash, utxo_view.index, utxo_view.address, stake_address.view,"
+        " utxo_view.address_has_script, utxo_view.value, utxo_view.data_hash "
+        "FROM utxo_view "
+        "INNER JOIN tx ON utxo_view.tx_id = tx.id "
+        "LEFT JOIN stake_address ON utxo_view.stake_address_id = stake_address.id "
+        "WHERE utxo_view.address = %s "
+        "ORDER BY utxo_view.id;"
+    )
+
+    with execute(query=query, vars=(address,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield UTxODBRow(*result)
 
 
 def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]:
