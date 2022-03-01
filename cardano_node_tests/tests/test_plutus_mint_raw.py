@@ -654,7 +654,7 @@ class TestMinting:
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -772,9 +772,21 @@ class TestMinting:
 
         # generate the "real" redeemer
         redeemer_file = Path(f"{temp_template}_script_context.redeemer")
-        clusterlib_utils.create_script_context(
-            cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
-        )
+
+        try:
+            clusterlib_utils.create_script_context(
+                cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
+            )
+        except AssertionError as err:
+            err_msg = str(err)
+            if "DeserialiseFailure" in err_msg:
+                pytest.xfail("DeserialiseFailure: see issue #944")
+            if "TextEnvelopeTypeError" in err_msg and cluster.use_cddl:  # noqa: SIM106
+                pytest.xfail(
+                    "TextEnvelopeTypeError: `create-script-context` doesn't work with CDDL format"
+                )
+            else:
+                raise
 
         plutus_mint_data = [plutus_mint_data_dummy[0]._replace(redeemer_file=redeemer_file)]
 
