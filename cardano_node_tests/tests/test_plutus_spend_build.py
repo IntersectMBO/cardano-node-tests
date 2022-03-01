@@ -576,9 +576,21 @@ class TestBuildLocking:
         # generate the "real" redeemer
         redeemer_file = Path(f"{temp_template}_script_context.redeemer")
         tx_file_dummy = Path(f"{tx_output_dummy.out_file.with_suffix('')}.signed")
-        clusterlib_utils.create_script_context(
-            cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
-        )
+
+        try:
+            clusterlib_utils.create_script_context(
+                cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
+            )
+        except AssertionError as err:
+            err_msg = str(err)
+            if "DeserialiseFailure" in err_msg:
+                pytest.xfail("DeserialiseFailure: see issue #944")
+            if "TextEnvelopeTypeError" in err_msg and cluster.use_cddl:  # noqa: SIM106
+                pytest.xfail(
+                    "TextEnvelopeTypeError: `create-script-context` doesn't work with CDDL format"
+                )
+            else:
+                raise
 
         plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
