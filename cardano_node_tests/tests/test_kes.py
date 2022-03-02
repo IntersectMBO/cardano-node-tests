@@ -1,8 +1,8 @@
 """Tests for KES period."""
 # pylint: disable=abstract-class-instantiated
+import datetime
 import json
 import logging
-import os
 import shutil
 import time
 from pathlib import Path
@@ -87,6 +87,23 @@ def cluster_kes(
     )
 
 
+def _wait_epoch_chores(cluster_obj: clusterlib.ClusterLib, temp_template: str, this_epoch: int):
+    if cluster_obj.get_epoch() == this_epoch:
+        LOGGER.info(f"{datetime.datetime.now()}: Waiting for next epoch.")
+        cluster_obj.wait_for_new_epoch()
+
+    LOGGER.info(f"{datetime.datetime.now()}: Waiting for the end of current epoch.")
+    clusterlib_utils.wait_for_epoch_interval(
+        cluster_obj=cluster_obj, start=-19, stop=-15, force_epoch=False, check_slot=False
+    )
+
+    # save ledger state
+    clusterlib_utils.save_ledger_state(
+        cluster_obj=cluster_obj,
+        state_name=f"{temp_template}_{cluster_obj.get_epoch()}",
+    )
+
+
 class TestKES:
     """Basic tests for KES period."""
 
@@ -100,97 +117,106 @@ class TestKES:
     def test_expired_kes(
         self,
         cluster_kes: clusterlib.ClusterLib,
-        worker_id: str,
-    ):
-        """Test expired KES."""
-        cluster = cluster_kes
-        common.get_test_id(cluster)
-
-        expire_timeout = 200
-
-        expected_err_regexes = ["TraceNoLedgerView", "KESKeyAlreadyPoisoned", "KESCouldNotEvolve"]
-        # ignore expected errors in all matching log files
-        for err in expected_err_regexes:
-            logfiles.add_ignore_rule(
-                files_glob="*.stdout",
-                regex=err,
-                ignore_file_id=worker_id,
-            )
-        # search for expected errors only in log files corresponding to pools
-        expected_errors = [("pool*.stdout", err) for err in expected_err_regexes]
-
-        with logfiles.expect_errors(expected_errors, ignore_file_id=worker_id):
-            LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
-            time.sleep(expire_timeout)
-
-            init_slot = cluster.get_slot_no()
-
-            kes_period_timeout = int(cluster.slots_per_kes_period * cluster.slot_length + 1)
-            LOGGER.info(f"Waiting for {kes_period_timeout} sec for next KES period.")
-            time.sleep(kes_period_timeout)
-            assert cluster.get_slot_no() == init_slot, "Unexpected new slots"
-
-            LOGGER.info("Waiting 120 secs to make sure the expected errors make it to log files.")
-            time.sleep(120)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.order(5)
-    @pytest.mark.long
-    @pytest.mark.skipif(
-        not (VERSIONS.cluster_era == VERSIONS.transaction_era == VERSIONS.LAST_KNOWN_ERA),
-        reason="meant to run only with the latest cluster era and the latest transaction era",
-    )
-    @pytest.mark.skipif(bool(os.environ.get("CI")), reason="meant to run only outside of CI")
-    def test_op_cert_with_expired_kes(
-        self,
-        cluster_kes: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
         worker_id: str,
     ):
-        """Test kes period info command with an operational certificate with an expired KES."""
+        """Test expired KES.
+
+        * start local cluster instance configured with short KES period and low number of key
+          evolutions, so KES expires soon on all pools
+        * refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
+          the pools keep minting blocks
+        * wait for KES expiration on the selected pool
+        * check that the pool with expired KES didn't mint blocks in an epoch that followed after
+          KES expiration
+        * check KES period info command with an operational certificate with an expired KES
+        * check KES period info command with operational certificates with a valid KES
+        """
         cluster = cluster_kes
-        common.get_test_id(cluster)
+        temp_template = common.get_test_id(cluster)
 
         expire_timeout = 200
+        expire_node_name = "pool1"
+        expire_pool_name = f"node-{expire_node_name}"
+        expire_pool_rec = cluster_manager.cache.addrs_data[expire_pool_name]
+        expire_pool_id = cluster.get_stake_pool_id(expire_pool_rec["cold_key_pair"].vkey_file)
+        expire_pool_id_dec = helpers.decode_bech32(expire_pool_id)
 
-        pool_rec = cluster_manager.cache.addrs_data["node-pool1"]
-        node_name = "pool1"
+        # refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
+        # the pools keep minting blocks
+        refreshed_nodes = ["pool2", "pool3"]
 
-        pool_cert_file = cluster.gen_node_operational_cert(
-            node_name=f"{node_name}_pool1_cert_file",
-            kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
-            cold_skey_file=pool_rec["cold_key_pair"].skey_file,
-            cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-            kes_period=cluster.get_kes_period(),
-        )
+        def _refresh_opcerts():
+            for n in refreshed_nodes:
+                refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
+                refreshed_opcert_file = cluster.gen_node_operational_cert(
+                    node_name=f"{n}_refreshed_opcert",
+                    kes_vkey_file=refreshed_pool_rec["kes_key_pair"].vkey_file,
+                    cold_skey_file=refreshed_pool_rec["cold_key_pair"].skey_file,
+                    cold_counter_file=refreshed_pool_rec["cold_key_pair"].counter_file,
+                    kes_period=cluster.get_kes_period(),
+                )
+                shutil.copy(refreshed_opcert_file, refreshed_pool_rec["pool_operational_cert"])
+            cluster_nodes.restart_nodes(refreshed_nodes)
 
-        opcert_file: Path = pool_rec["pool_operational_cert"]
-        shutil.copy(pool_cert_file, opcert_file)
-        cluster_nodes.restart_nodes([node_name])
+        _refresh_opcerts()
 
-        expected_err_regexes = ["TraceNoLedgerView", "KESKeyAlreadyPoisoned", "KESCouldNotEvolve"]
-        # ignore expected errors in all matching log files
+        expected_err_regexes = ["KESKeyAlreadyPoisoned", "KESCouldNotEvolve"]
+        # ignore expected errors in bft1 node log file, as bft1 opcert will not get refreshed
         for err in expected_err_regexes:
             logfiles.add_ignore_rule(
-                files_glob="*.stdout",
+                files_glob="bft1.stdout",
                 regex=err,
                 ignore_file_id=worker_id,
             )
+        # search for expected errors only in log file corresponding to pool with expired KES
+        expected_errors = [(f"{expire_node_name}.stdout", err) for err in expected_err_regexes]
 
-        # wait that the operational certificate expires
-        LOGGER.info(f"Waiting for {expire_timeout} sec for KES expiration.")
-        time.sleep(expire_timeout)
+        this_epoch = -1
+        with logfiles.expect_errors(expected_errors, ignore_file_id=worker_id):
+            LOGGER.info(
+                f"{datetime.datetime.now()}: Waiting for {expire_timeout} sec for KES expiration."
+            )
+            time.sleep(expire_timeout)
 
-        kes_period_timeout = int(cluster.slots_per_kes_period * cluster.slot_length + 1)
-        LOGGER.info(f"Waiting for {kes_period_timeout} sec for next KES period.")
-        time.sleep(kes_period_timeout)
+            _wait_epoch_chores(
+                cluster_obj=cluster, temp_template=temp_template, this_epoch=this_epoch
+            )
+            this_epoch = cluster.get_epoch()
 
-        # check kes-period-info with an operational certificate with kes expired
-        kes_period_info = cluster.get_kes_period_info(pool_cert_file)
+            # check that the pool is not producing any blocks
+            blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)["blocksCurrent"]
+            if blocks_made:
+                assert (
+                    expire_pool_id_dec not in blocks_made
+                ), f"The pool '{expire_pool_name}' has minted blocks in epoch {this_epoch}"
 
-        kes.check_kes_period_info_result(
-            kes_output=kes_period_info, expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
+            # refresh opcerts one more time
+            _refresh_opcerts()
+
+            LOGGER.info(
+                f"{datetime.datetime.now()}: Waiting 120 secs to make sure the expected errors "
+                "make it to log files."
+            )
+            time.sleep(120)
+
+        # check kes-period-info with an operational certificate with KES expired
+        kes_info_expired = cluster.get_kes_period_info(
+            opcert_file=expire_pool_rec["pool_operational_cert"]
         )
+        kes.check_kes_period_info_result(
+            kes_output=kes_info_expired, expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
+        )
+
+        # check kes-period-info with valid operational certificates
+        for n in refreshed_nodes:
+            refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
+            kes_info_valid = cluster.get_kes_period_info(
+                opcert_file=refreshed_pool_rec["pool_operational_cert"]
+            )
+            kes.check_kes_period_info_result(
+                kes_output=kes_info_valid, expected_scenario=kes.KesScenarios.ALL_VALID
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
@@ -221,22 +247,6 @@ class TestKES:
 
         opcert_file: Path = pool_rec["pool_operational_cert"]
 
-        def _wait_epoch_chores(this_epoch: int):
-            # wait for next epoch
-            if cluster.get_epoch() == this_epoch:
-                cluster.wait_for_new_epoch()
-
-            # wait for the end of the epoch
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=-19, stop=-15, check_slot=False
-            )
-
-            # save ledger state
-            clusterlib_utils.save_ledger_state(
-                cluster_obj=cluster,
-                state_name=f"{temp_template}_{cluster.get_epoch()}",
-            )
-
         with cluster_manager.restart_on_failure():
             # generate new operational certificate with `--kes-period` in the future
             invalid_opcert_file = cluster.gen_node_operational_cert(
@@ -264,7 +274,9 @@ class TestKES:
                 LOGGER.info("Checking blocks production for 5 epochs.")
                 this_epoch = -1
                 for __ in range(5):
-                    _wait_epoch_chores(this_epoch)
+                    _wait_epoch_chores(
+                        cluster_obj=cluster, temp_template=temp_template, this_epoch=this_epoch
+                    )
                     this_epoch = cluster.get_epoch()
 
                     # check that the pool is not producing any blocks
@@ -299,7 +311,9 @@ class TestKES:
             blocks_made_db = []
             active_again_epoch = this_epoch
             for __ in range(5):
-                _wait_epoch_chores(this_epoch)
+                _wait_epoch_chores(
+                    cluster_obj=cluster, temp_template=temp_template, this_epoch=this_epoch
+                )
                 this_epoch = cluster.get_epoch()
 
                 # check that the pool is producing blocks
