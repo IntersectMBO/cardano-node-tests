@@ -16,6 +16,7 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -406,6 +407,9 @@ def _build_spend_locked_txin(
     cluster_obj.submit_tx(
         tx_file=tx_signed, txins=[t.txins[0] for t in tx_output.script_txins if t.txins]
     )
+
+    # check tx view
+    tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     assert (
         cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance + amount
