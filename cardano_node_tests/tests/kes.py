@@ -42,6 +42,8 @@ def check_kes_period_info_result(kes_output: dict, expected_scenario: str):
     elif kes_output.get("valid_counters") and not kes_output.get("valid_kes_period"):
         output_scenario = KesScenarios.INVALID_KES_PERIOD
 
-    assert (
-        expected_scenario == output_scenario
-    ), "The kes-period-command is not returning the expected results"
+    assert expected_scenario == output_scenario, (
+        "The kes-period-info command is not returning the expected results. "
+        f"Expected: '{expected_scenario}'; Returned: '{output_scenario}'\n"
+        f"Full output:\n{kes_output}"
+    )
