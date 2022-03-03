@@ -466,6 +466,7 @@ def mint_or_burn_witness(
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
     use_build_cmd: bool = False,
+    sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using witnesses.
 
@@ -474,7 +475,8 @@ def mint_or_burn_witness(
     _issuers_addrs = [t.issuers_addrs for t in new_tokens]
     issuers_addrs = set(itertools.chain.from_iterable(_issuers_addrs))
     issuers_skey_files = {p.skey_file for p in issuers_addrs}
-    src_address = new_tokens[0].token_mint_addr.address
+    token_mint_addr = new_tokens[0].token_mint_addr
+    signing_key_files = list({*issuers_skey_files, token_mint_addr.skey_file})
 
     # create TX body
     mint = [
@@ -500,25 +502,25 @@ def mint_or_burn_witness(
         ]
 
         tx_raw_output = cluster_obj.build_tx(
-            src_address=src_address,
+            src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
             fee_buffer=2000_000,
             mint=mint,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
-            witness_override=len(issuers_skey_files),
+            witness_override=len(signing_key_files),
         )
     else:
         fee = cluster_obj.calculate_tx_fee(
-            src_address=src_address,
+            src_address=token_mint_addr.address,
             tx_name=temp_template,
             mint=mint,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-            witness_count_add=len(issuers_skey_files),
+            witness_count_add=len(signing_key_files),
         )
         tx_raw_output = cluster_obj.build_raw_tx(
-            src_address=src_address,
+            src_address=token_mint_addr.address,
             tx_name=temp_template,
             mint=mint,
             fee=fee,
@@ -526,22 +528,44 @@ def mint_or_burn_witness(
             invalid_before=invalid_before,
         )
 
-    # create witness file for each required key
-    witness_files = [
-        cluster_obj.witness_tx(
+    # sign incrementally (just to check that it works)
+    if sign_incrementally and len(signing_key_files) >= 1:
+        # create witness file for first required key
+        witness_file = cluster_obj.witness_tx(
             tx_body_file=tx_raw_output.out_file,
-            witness_name=f"{temp_template}_skey{idx}",
-            signing_key_files=[skey],
+            witness_name=f"{temp_template}_skey0",
+            signing_key_files=signing_key_files[:1],
         )
-        for idx, skey in enumerate(issuers_skey_files)
-    ]
+        # sign Tx using witness file
+        tx_witnessed_file = cluster_obj.assemble_tx(
+            tx_body_file=tx_raw_output.out_file,
+            witness_files=[witness_file],
+            tx_name=f"{temp_template}_sign0",
+        )
+        # incrementally sign the already signed Tx with rest of required skeys
+        for idx, skey in enumerate(signing_key_files[1:], start=1):
+            tx_witnessed_file = cluster_obj.sign_tx(
+                tx_file=tx_witnessed_file,
+                signing_key_files=[skey],
+                tx_name=f"{temp_template}_sign{idx}",
+            )
+    else:
+        # create witness file for each required key
+        witness_files = [
+            cluster_obj.witness_tx(
+                tx_body_file=tx_raw_output.out_file,
+                witness_name=f"{temp_template}_skey{idx}",
+                signing_key_files=[skey],
+            )
+            for idx, skey in enumerate(signing_key_files)
+        ]
 
-    # sign TX using witness files
-    tx_witnessed_file = cluster_obj.assemble_tx(
-        tx_body_file=tx_raw_output.out_file,
-        witness_files=witness_files,
-        tx_name=temp_template,
-    )
+        # sign Tx using witness files
+        tx_witnessed_file = cluster_obj.assemble_tx(
+            tx_body_file=tx_raw_output.out_file,
+            witness_files=witness_files,
+            tx_name=temp_template,
+        )
 
     # submit signed TX
     cluster_obj.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
@@ -553,6 +577,7 @@ def mint_or_burn_sign(
     cluster_obj: clusterlib.ClusterLib,
     new_tokens: List[TokenRecord],
     temp_template: str,
+    sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using skeys.
 
@@ -561,13 +586,11 @@ def mint_or_burn_sign(
     _issuers_addrs = [t.issuers_addrs for t in new_tokens]
     issuers_addrs = set(itertools.chain.from_iterable(_issuers_addrs))
     issuers_skey_files = {p.skey_file for p in issuers_addrs}
-    token_mint_addr_skey_files = {t.token_mint_addr.skey_file for t in new_tokens}
-    src_address = new_tokens[0].token_mint_addr.address
+    token_mint_addr = new_tokens[0].token_mint_addr
+    signing_key_files = list({*issuers_skey_files, token_mint_addr.skey_file})
 
     # build and sign a transaction
-    tx_files = clusterlib.TxFiles(
-        signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files],
-    )
+    tx_files = clusterlib.TxFiles(signing_key_files=signing_key_files)
     mint = [
         clusterlib.Mint(
             txouts=[
@@ -578,7 +601,7 @@ def mint_or_burn_sign(
         for t in new_tokens
     ]
     fee = cluster_obj.calculate_tx_fee(
-        src_address=src_address,
+        src_address=token_mint_addr.address,
         tx_name=temp_template,
         mint=mint,
         tx_files=tx_files,
@@ -586,17 +609,33 @@ def mint_or_burn_sign(
         witness_count_add=len(issuers_skey_files),
     )
     tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=src_address,
+        src_address=token_mint_addr.address,
         tx_name=temp_template,
         mint=mint,
         tx_files=tx_files,
         fee=fee,
     )
-    out_file_signed = cluster_obj.sign_tx(
-        tx_body_file=tx_raw_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=temp_template,
-    )
+
+    # sign incrementally (just to check that it works)
+    if sign_incrementally and len(signing_key_files) >= 1:
+        out_file_signed = cluster_obj.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=signing_key_files[:1],
+            tx_name=f"{temp_template}_sign0",
+        )
+        # incrementally sign the already signed Tx with rest of required skeys
+        for idx, skey in enumerate(signing_key_files[1:], start=1):
+            out_file_signed = cluster_obj.sign_tx(
+                tx_file=out_file_signed,
+                signing_key_files=[skey],
+                tx_name=f"{temp_template}_sign{idx}",
+            )
+    else:
+        out_file_signed = cluster_obj.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
 
     # submit signed transaction
     cluster_obj.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)

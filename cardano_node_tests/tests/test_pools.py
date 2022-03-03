@@ -164,14 +164,16 @@ def _register_stake_pool_w_build(
         destination_dir=destination_dir,
     )
 
+    signing_key_files = [
+        *[p.payment.skey_file for p in pool_owners],
+        *[p.stake.skey_file for p in pool_owners],
+        cold_key_pair.skey_file,
+    ]
+
     # submit the pool registration certificate through a tx
     tx_files = clusterlib.TxFiles(
         certificate_files=[pool_reg_cert_file],
-        signing_key_files=[
-            *[p.payment.skey_file for p in pool_owners],
-            *[p.stake.skey_file for p in pool_owners],
-            cold_key_pair.skey_file,
-        ],
+        signing_key_files=signing_key_files,
     )
 
     tx_raw_output = cluster_obj.build_tx(
@@ -183,12 +185,18 @@ def _register_stake_pool_w_build(
         witness_override=len(pool_owners) * 3,
         destination_dir=destination_dir,
     )
+    # sign incrementally (just to check that it works)
     tx_signed = cluster_obj.sign_tx(
         tx_body_file=tx_raw_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=tx_name,
+        signing_key_files=signing_key_files[:1],
+        tx_name=f"{tx_name}_sign0",
     )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+    tx_signed_inc = cluster_obj.sign_tx(
+        tx_file=tx_signed,
+        signing_key_files=signing_key_files[1:],
+        tx_name=f"{tx_name}_sign1",
+    )
+    cluster_obj.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_output.txins)
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 

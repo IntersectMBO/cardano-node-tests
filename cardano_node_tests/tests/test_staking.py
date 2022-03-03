@@ -117,12 +117,18 @@ def withdraw_reward_w_build(
         witness_override=len(tx_files_withdrawal.signing_key_files),
         destination_dir=destination_dir,
     )
+    # sign incrementally (just to check that it works)
     tx_signed = cluster_obj.sign_tx(
         tx_body_file=tx_raw_withdrawal_output.out_file,
-        signing_key_files=tx_files_withdrawal.signing_key_files,
-        tx_name=f"{tx_name}_reward_withdrawal",
+        signing_key_files=[dst_addr_record.skey_file],
+        tx_name=f"{tx_name}_reward_withdrawal_sign0",
     )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_withdrawal_output.txins)
+    tx_signed_inc = cluster_obj.sign_tx(
+        tx_file=tx_signed,
+        signing_key_files=[stake_addr_record.skey_file],
+        tx_name=f"{tx_name}_reward_withdrawal_sign1",
+    )
+    cluster_obj.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_withdrawal_output.txins)
 
     if not verify:
         return tx_raw_withdrawal_output

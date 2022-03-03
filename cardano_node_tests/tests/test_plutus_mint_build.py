@@ -625,12 +625,18 @@ class TestBuildMinting:
             mint=plutus_mint_data,
             required_signers=[signing_key_golden],
         )
+        # sign incrementally (just to check that it works)
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
-            signing_key_files=tx_files_step2.signing_key_files,
-            tx_name=f"{temp_template}_step2",
+            signing_key_files=[issuer_addr.skey_file],
+            tx_name=f"{temp_template}_step2_sign0",
         )
-        cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        tx_signed_step2_inc = cluster.sign_tx(
+            tx_file=tx_signed_step2,
+            signing_key_files=[signing_key_golden],
+            tx_name=f"{temp_template}_step2_sign1",
+        )
+        cluster.submit_tx(tx_file=tx_signed_step2_inc, txins=mint_utxos)
 
         assert (
             cluster.get_address_balance(issuer_addr.address)

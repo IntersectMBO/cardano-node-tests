@@ -26,6 +26,9 @@ LOGGER = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).parent / "data"
 
+JSON_METADATA_FILE = DATA_DIR / "tx_metadata.json"
+CBOR_METADATA_FILE = DATA_DIR / "tx_metadata.cbor"
+
 
 def multisig_tx(
     cluster_obj: clusterlib.ClusterLib,
@@ -1390,9 +1393,6 @@ class TestTimeLocking:
 class TestAuxiliaryScripts:
     """Tests for auxiliary scripts."""
 
-    JSON_METADATA_FILE = DATA_DIR / "tx_metadata.json"
-    CBOR_METADATA_FILE = DATA_DIR / "tx_metadata.cbor"
-
     @pytest.fixture
     def payment_addrs(
         self,
@@ -1459,7 +1459,7 @@ class TestAuxiliaryScripts:
         )
 
         tx_files = clusterlib.TxFiles(
-            metadata_json_files=[self.JSON_METADATA_FILE],
+            metadata_json_files=[JSON_METADATA_FILE],
             signing_key_files=[payment_addrs[0].skey_file],
             auxiliary_script_files=[multisig_script],
         )
@@ -1532,7 +1532,7 @@ class TestAuxiliaryScripts:
         )
 
         tx_files = clusterlib.TxFiles(
-            metadata_cbor_files=[self.CBOR_METADATA_FILE],
+            metadata_cbor_files=[CBOR_METADATA_FILE],
             signing_key_files=[payment_addrs[0].skey_file],
             auxiliary_script_files=[multisig_script],
         )
@@ -1658,7 +1658,7 @@ class TestAuxiliaryScripts:
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
             # not valid script file
-            auxiliary_script_files=[self.JSON_METADATA_FILE],
+            auxiliary_script_files=[JSON_METADATA_FILE],
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1674,3 +1674,195 @@ class TestAuxiliaryScripts:
                     src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
                 )
         assert 'Error in $: key "type" not found' in str(excinfo.value)
+
+
+@pytest.mark.testnets
+class TestIncrementalSigning:
+    """Tests for incremental signing."""
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[
+                    f"multi_addr_inc_signing_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(20)
+                ],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addrs
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
+    @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
+    @pytest.mark.dbsync
+    def test_incremental_signing(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        tx_is: str,
+    ):
+        """Send funds from script address using TX that is signed incrementally.
+
+        Test with Tx body created by both `transaction build` and `transaction build-raw`.
+        Test with Tx created by both `transaction sign` and `transaction assemble`.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_is}"
+        dst_addr = payment_addrs[1]
+        amount = 2000_000
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        before_slot = cluster.get_slot_no() + 10_000
+
+        # create multisig script
+        multisig_script = cluster.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+        )
+
+        # create script address
+        script_address = cluster.gen_script_addr(
+            addr_name=temp_template, script_file=multisig_script
+        )
+
+        # send funds to script address
+        tx_out_to = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=4500_000,
+            payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
+        )
+
+        # record initial balances
+        src_init_balance = cluster.get_address_balance(script_address)
+        dst_init_balance = cluster.get_address_balance(dst_addr.address)
+
+        # send funds from script address
+        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        tx_files = clusterlib.TxFiles(
+            metadata_json_files=[JSON_METADATA_FILE],
+            metadata_cbor_files=[CBOR_METADATA_FILE],
+            signing_key_files=payment_skey_files,
+        )
+        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        script_txins = [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
+
+        invalid_hereafter = cluster.get_slot_no() + 1000
+        if use_build_cmd:
+            tx_out_from = cluster.build_tx(
+                src_address=script_address,
+                tx_name=f"{temp_template}_from",
+                txouts=destinations,
+                script_txins=script_txins,
+                fee_buffer=2000_000,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=100,
+                witness_override=len(payment_skey_files),
+            )
+        else:
+            ttl = cluster.calculate_tx_ttl()
+            fee = cluster.calculate_tx_fee(
+                src_address=script_address,
+                tx_name=f"{temp_template}_from",
+                txouts=destinations,
+                script_txins=script_txins,
+                tx_files=tx_files,
+                ttl=ttl,
+                witness_count_add=len(payment_skey_files),
+            )
+            tx_out_from = cluster.build_raw_tx(
+                src_address=script_address,
+                tx_name=f"{temp_template}_from",
+                txouts=destinations,
+                script_txins=script_txins,
+                tx_files=tx_files,
+                fee=fee,
+                ttl=ttl,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=100,
+            )
+
+        # sign or witness Tx body with first 2 skey and thus create Tx file that will be used for
+        # incremental signing
+        if tx_is == "signed":
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_out_from.out_file,
+                signing_key_files=payment_skey_files[:2],
+                tx_name=f"{temp_template}_from0",
+            )
+        else:
+            # sign Tx body using witness files
+            witness_files = [
+                cluster.witness_tx(
+                    tx_body_file=tx_out_from.out_file,
+                    witness_name=f"{temp_template}_from_skey{idx}",
+                    signing_key_files=[skey],
+                )
+                for idx, skey in enumerate(payment_skey_files[:2])
+            ]
+            tx_signed = cluster.assemble_tx(
+                tx_body_file=tx_out_from.out_file,
+                witness_files=witness_files,
+                tx_name=f"{temp_template}_from0",
+            )
+
+        # incrementally sign the already signed Tx with rest of required skeys
+        for idx, skey in enumerate(payment_skey_files[2:], start=1):
+            # sign multiple times with the same skey to see that it doesn't affect Tx fee
+            for r in range(5):
+                tx_signed = cluster.sign_tx(
+                    tx_file=tx_signed,
+                    signing_key_files=[skey],
+                    tx_name=f"{temp_template}_from{idx}_r{r}",
+                )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_out_from.txins)
+
+        # check final balances
+        assert (
+            cluster.get_address_balance(script_address)
+            == src_init_balance - amount - tx_out_from.fee
+        ), f"Incorrect balance for script address `{script_address}`"
+
+        assert (
+            cluster.get_address_balance(dst_addr.address) == dst_init_balance + amount
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
