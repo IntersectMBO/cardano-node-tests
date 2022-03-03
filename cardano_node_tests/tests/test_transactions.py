@@ -2680,6 +2680,78 @@ class TestNegative:
             )
         assert re.search(r"Invalid option.*--change-address", str(excinfo.value))
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("file_type", ("tx_body", "tx"))
+    def test_sign_wrong_file(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        file_type: str,
+    ):
+        """Try to sign other file type than specified by command line option (Tx vs Tx body).
+
+        Expect failure when cardano-cli CBOR serialization format is used (not CDDL format).
+
+        * specify Tx file and pass Tx body file
+        * specify Tx body file and pass Tx file
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{file_type}"
+        amount = 2000_000
+
+        src_address = pool_users[0].payment.address
+        dst_address = pool_users[1].payment.address
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        # build and sign a transaction
+        fee = cluster.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+        )
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+        )
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        if file_type == "tx":
+            # call `cardano-cli transaction sign --tx-body-file tx`
+            cli_args = {"tx_body_file": out_file_signed}
+        else:
+            # call `cardano-cli transaction sign --tx-file txbody`
+            cli_args = {"tx_file": tx_raw_output.out_file}
+
+        # when CDDL format is used, it doesn't matter what CLI option and file type
+        # combination is used
+        # TODO: move this tests from `TestNegative` once CDDL is the only supported format
+        # of Tx body
+        if cluster.use_cddl:
+            tx_signed_again = cluster.sign_tx(
+                **cli_args,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            # check that the Tx can be successfully submitted
+            cluster.submit_tx(tx_file=tx_signed_again, txins=tx_raw_output.txins)
+        else:
+            with pytest.raises(clusterlib.CLIError) as exc_body:
+                cluster.sign_tx(
+                    **cli_args,
+                    signing_key_files=tx_files.signing_key_files,
+                    tx_name=f"{temp_template}_err1",
+                )
+            assert "TextEnvelope error" in str(exc_body.value)
+
 
 @pytest.mark.testnets
 class TestMetadata:
