@@ -23,6 +23,7 @@ class TestCLI:
 
     TX_BODY_FILE = DATA_DIR / "test_tx_metadata_both_tx.body"
     TX_FILE = DATA_DIR / "test_tx_metadata_both_tx.signed"
+    TX_BODY_OUT = DATA_DIR / "test_tx_metadata_both_tx_body.out"
     TX_OUT = DATA_DIR / "test_tx_metadata_both_tx.out"
 
     @allure.link(helpers.get_vcs_link())
@@ -179,11 +180,14 @@ class TestCLI:
 
         tx_body = cluster.view_tx(tx_body_file=self.TX_BODY_FILE)
         tx = cluster.view_tx(tx_file=self.TX_FILE)
-        assert tx_body == tx
 
         with open(self.TX_OUT, encoding="utf-8") as infile:
             tx_view_out = infile.read()
         assert tx == tx_view_out.strip()
+
+        with open(self.TX_BODY_OUT, encoding="utf-8") as infile:
+            tx_body_view_out = infile.read()
+        assert tx_body == tx_body_view_out.strip()
 
 
 @pytest.mark.testnets
