@@ -1710,6 +1710,10 @@ class TestIncrementalSigning:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.MARY,
+        reason="runs only with Mary+ TX",
+    )
     @pytest.mark.parametrize(
         "use_build_cmd",
         (
