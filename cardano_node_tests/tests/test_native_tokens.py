@@ -524,6 +524,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[tokens_mint[0]],
             temp_template=f"{temp_template}_mint",
+            sign_incrementally=True,
         )
 
         token1_mint_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[0]])
@@ -535,6 +536,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn1, tokens_mint[1]],
             temp_template=f"{temp_template}_mint_burn",
+            sign_incrementally=True,
         )
 
         token1_burn_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[0]])
@@ -548,6 +550,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn2],
             temp_template=f"{temp_template}_burn",
+            sign_incrementally=True,
         )
 
         token2_burn_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[tokens[1]])
@@ -904,6 +907,7 @@ class TestMinting:
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
             use_build_cmd=use_build_cmd,
+            sign_incrementally=True,
         )
 
         token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
@@ -918,6 +922,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn1",
+            sign_incrementally=True,
         )
 
         token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
@@ -932,6 +937,7 @@ class TestMinting:
             new_tokens=[final_burn],
             temp_template=f"{temp_template}_burn2",
             use_build_cmd=use_build_cmd,
+            sign_incrementally=True,
         )
 
         # check expected fee
