@@ -37,6 +37,8 @@ ERRORS_IGNORED = [
     "db-sync-node:.*could not serialize access",
     # can happen on p2p when local roots are not up yet
     r"PeerSelection:Info:.* TracePromoteColdFailed .* Network\.Socket\.connect:",
+    # can happen on p2p when node is shutting down
+    "TrInboundGovernorError AsyncCancelled",
     # harmless when whole network is shutting down
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
 ]
