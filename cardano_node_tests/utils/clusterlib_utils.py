@@ -778,8 +778,8 @@ def wait_for_epoch_interval(
     cluster_obj: clusterlib.ClusterLib,
     start: int,
     stop: int,
-    force_epoch: bool = True,
-    check_slot: bool = True,
+    force_epoch: bool = False,
+    check_slot: bool = False,
 ) -> None:
     """Wait for time interval within an epoch.
 
@@ -790,9 +790,9 @@ def wait_for_epoch_interval(
         stop: An end of the interval, in seconds. Negative number for counting from the
             end of an epoch.
         force_epoch: A bool indicating whether the interval must be in current epoch
-            (True by default).
-        check_slot: A bool indicating whether current slot number must match the time interval
-            (True by default).
+            (False by default).
+        check_slot: A bool indicating whether to check if slot number matches time interval
+            after waiting (False by default).
     """
     start_abs = start if start >= 0 else cluster_obj.epoch_length_sec + start
     stop_abs = stop if stop >= 0 else cluster_obj.epoch_length_sec + stop
