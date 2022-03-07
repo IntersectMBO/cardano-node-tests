@@ -344,12 +344,25 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
 
-        tx_raw_output = cluster.send_funds(
+        fee = cluster.calculate_tx_fee(
             src_address=src_address,
-            destinations=destinations,
             tx_name=temp_template,
+            txouts=destinations,
             tx_files=tx_files,
         )
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+        )
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         assert (
             cluster.get_address_balance(src_address) == 0
