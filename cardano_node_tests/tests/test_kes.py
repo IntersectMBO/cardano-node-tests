@@ -93,9 +93,7 @@ def _wait_epoch_chores(cluster_obj: clusterlib.ClusterLib, temp_template: str, t
         cluster_obj.wait_for_new_epoch()
 
     LOGGER.info(f"{datetime.datetime.now()}: Waiting for the end of current epoch.")
-    clusterlib_utils.wait_for_epoch_interval(
-        cluster_obj=cluster_obj, start=-19, stop=-15, force_epoch=False, check_slot=False
-    )
+    clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster_obj, start=-19, stop=-15)
 
     # save ledger state
     clusterlib_utils.save_ledger_state(
@@ -388,9 +386,7 @@ class TestKES:
 
             # make sure we are not at the very end of an epoch so we still have time for
             # the first block production check
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=5, stop=-18, force_epoch=False, check_slot=False
-            )
+            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-18)
 
             LOGGER.info("Checking blocks production for 5 epochs.")
             blocks_made_db = []
@@ -403,7 +399,7 @@ class TestKES:
 
                 # wait for the end of the epoch
                 clusterlib_utils.wait_for_epoch_interval(
-                    cluster_obj=cluster, start=-19, stop=-15, check_slot=False
+                    cluster_obj=cluster, start=-19, stop=-15, force_epoch=True
                 )
                 this_epoch = cluster.get_epoch()
 

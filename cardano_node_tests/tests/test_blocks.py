@@ -68,7 +68,6 @@ class TestLeadershipSchedule:
                 cluster_obj=cluster,
                 start=-int(300 * cluster.slot_length),
                 stop=-10,
-                force_epoch=False,
             )
             queried_epoch = cluster.get_epoch() + 1
 
@@ -149,7 +148,6 @@ class TestLeadershipSchedule:
             cluster_obj=cluster,
             start=5,
             stop=-int(300 * cluster.slot_length + 5),
-            force_epoch=False,
         )
 
         # it should NOT be possible to query leadership schedule

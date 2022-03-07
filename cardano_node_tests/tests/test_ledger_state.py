@@ -48,9 +48,7 @@ class TestLedgerState:
         stop = (
             20 if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL else 200
         )
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=-stop, force_epoch=False
-        )
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-stop)
 
         stake_pool_ids = cluster.get_stake_pools()
         if not stake_pool_ids:
