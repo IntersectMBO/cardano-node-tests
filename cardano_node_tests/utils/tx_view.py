@@ -2,6 +2,7 @@
 import itertools
 import logging
 import re
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Set
@@ -12,6 +13,7 @@ import yaml
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,17 +63,44 @@ def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
     return [*loaded_data, *assets_data]
 
 
+def _check_collateral_inputs(
+    tx_raw_output: clusterlib.TxRawOutput, expected_collateral: list
+) -> bool:
+    """Check collateral inputs of tx_view."""
+    all_collateral_locations: List[Any] = [
+        *(tx_raw_output.mint or []),
+        *(tx_raw_output.script_txins or []),
+        *(tx_raw_output.script_withdrawals or []),
+        *(tx_raw_output.complex_certs or []),
+    ]
+
+    _collateral_ins_nested = [
+        r.collaterals for r in all_collateral_locations if hasattr(r, "collaterals")
+    ]
+
+    collateral_ins = list(itertools.chain.from_iterable(_collateral_ins_nested))
+
+    collateral_strings = {f"{c.utxo_hash}#{c.utxo_ix}" for c in collateral_ins}
+
+    return collateral_strings == set(expected_collateral)
+
+
 def check_tx_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
 ) -> dict:
     """Check output of the `transaction view` command."""
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-locals
     tx_view_raw = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
     tx_loaded: dict = load_tx_view(tx_view=tx_view_raw)
 
     # check inputs
     loaded_txins = set(tx_loaded.get("inputs") or [])
-    tx_raw_txins = {f"{r.utxo_hash}#{r.utxo_ix}" for r in tx_raw_output.txins}
+    _tx_raw_script_txins = list(
+        itertools.chain.from_iterable(r.txins for r in tx_raw_output.script_txins)
+    )
+    tx_raw_script_txins = {f"{r.utxo_hash}#{r.utxo_ix}" for r in _tx_raw_script_txins}
+    tx_raw_simple_txins = {f"{r.utxo_hash}#{r.utxo_ix}" for r in tx_raw_output.txins}
+    tx_raw_txins = tx_raw_simple_txins.union(tx_raw_script_txins)
 
     if tx_raw_txins != loaded_txins:
         raise AssertionError(f"txins: {tx_raw_txins} != {loaded_txins}")
@@ -144,5 +173,15 @@ def check_tx_view(  # noqa: C901
 
     if tx_raw_len_certs != loaded_len_certs:
         raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")
+
+    # load transaction era
+    loaded_tx_era: str = tx_loaded["era"]
+    loaded_tx_version = getattr(VERSIONS, loaded_tx_era.upper())
+
+    # check collateral inputs, this is only available on Alonzo+ TX
+    if loaded_tx_version >= VERSIONS.ALONZO and not _check_collateral_inputs(
+        tx_raw_output, tx_loaded["collateral inputs"]
+    ):
+        raise AssertionError("collateral inputs are not the expected")
 
     return tx_loaded
