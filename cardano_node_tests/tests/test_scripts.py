@@ -55,10 +55,7 @@ def multisig_tx(
         else []
     )
     destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
-    witness_count_add = len(payment_skey_files)
-    if multisig_script:
-        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add += 5
+    witness_count = len(payment_skey_files)
 
     if use_build_cmd:
         tx_raw_output = cluster_obj.build_tx(
@@ -69,7 +66,7 @@ def multisig_tx(
             fee_buffer=2000_000,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
-            witness_override=witness_count_add,
+            witness_override=witness_count,
         )
     else:
         ttl = cluster_obj.calculate_tx_ttl()
@@ -79,7 +76,7 @@ def multisig_tx(
             txouts=destinations,
             script_txins=script_txins,
             ttl=ttl,
-            witness_count_add=witness_count_add,
+            witness_count_add=witness_count,
         )
         tx_raw_output = cluster_obj.build_raw_tx(
             src_address=src_address,
@@ -176,8 +173,8 @@ class TestBasic:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # check script address length
@@ -216,8 +213,8 @@ class TestBasic:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -286,8 +283,8 @@ class TestBasic:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         tx_raw_outputs = []
@@ -306,6 +303,7 @@ class TestBasic:
         )
 
         # send funds from script address using single witness
+        expected_fee = 204969
         for i in range(5):
             tx_raw_outputs.append(
                 multisig_tx(
@@ -319,6 +317,11 @@ class TestBasic:
                     use_build_cmd=use_build_cmd,
                 )
             )
+
+            # check expected fees
+            assert helpers.is_in_interval(
+                tx_raw_outputs[-1].fee, expected_fee, frac=0.15
+            ), "TX fee doesn't fit the expected interval"
 
         # send funds from script address using multiple witnesses
         for i in range(5):
@@ -376,8 +379,8 @@ class TestBasic:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         tx_raw_outputs = []
@@ -446,8 +449,8 @@ class TestBasic:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # record initial balances
@@ -527,8 +530,8 @@ class TestBasic:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -610,8 +613,8 @@ class TestBasic:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -634,6 +637,12 @@ class TestBasic:
             payment_skey_files=[payment_skey_files[0]],
             multisig_script=multisig_script,
         )
+
+        # check expected fees
+        expected_fee = 176809
+        assert helpers.is_in_interval(
+            tx_out_from.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -659,8 +668,8 @@ class TestBasic:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -683,6 +692,12 @@ class TestBasic:
             payment_skey_files=[],
             multisig_script=multisig_script,
         )
+
+        # check expected fees
+        expected_fee = 176765
+        assert helpers.is_in_interval(
+            tx_out_from.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -743,8 +758,8 @@ class TestNegative:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -794,8 +809,8 @@ class TestNegative:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -849,8 +864,8 @@ class TestNegative:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -954,8 +969,8 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -983,6 +998,12 @@ class TestTimeLocking:
             invalid_hereafter=invalid_hereafter,
             use_build_cmd=use_build_cmd,
         )
+
+        # check expected fees
+        expected_fee = 280693 if use_build_cmd else 323857
+        assert helpers.is_in_interval(
+            tx_out_from.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
         # check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -1027,8 +1048,8 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -1055,6 +1076,12 @@ class TestTimeLocking:
             invalid_hereafter=cluster.get_slot_no() + 1000,
             use_build_cmd=use_build_cmd,
         )
+
+        # check expected fees
+        expected_fee = 279241 if use_build_cmd else 323989
+        assert helpers.is_in_interval(
+            tx_out_from.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -1099,8 +1126,8 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -1188,8 +1215,8 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -1261,8 +1288,8 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -1350,8 +1377,8 @@ class TestTimeLocking:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
@@ -1758,8 +1785,8 @@ class TestIncrementalSigning:
         )
 
         # create script address
-        script_address = cluster.gen_script_addr(
-            addr_name=temp_template, script_file=multisig_script
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
         )
 
         # send funds to script address
