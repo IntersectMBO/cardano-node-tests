@@ -68,6 +68,7 @@ class TestLeadershipSchedule:
                 cluster_obj=cluster,
                 start=-int(300 * cluster.slot_length),
                 stop=-10,
+                check_slot=True,
             )
             queried_epoch = cluster.get_epoch() + 1
 
