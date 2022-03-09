@@ -357,9 +357,11 @@ def restart_all_nodes(instance_num: Optional[int] = None) -> None:
         LOGGER.debug(f"Failed to restart cluster nodes: {exc}")
 
 
-def restart_services(service_names: List[str], instance_num: Optional[int] = None) -> None:
+def services_action(
+    service_names: List[str], action: str, instance_num: Optional[int] = None
+) -> None:
     """Restart list of services running on the running cluster."""
-    LOGGER.info(f"Restarting services {service_names}.")
+    LOGGER.info(f"Performing '{action}' action on services {service_names}.")
 
     if instance_num is None:
         instance_num = get_cluster_env().instance_num
@@ -368,16 +370,28 @@ def restart_services(service_names: List[str], instance_num: Optional[int] = Non
     for service_name in service_names:
         try:
             helpers.run_command(
-                f"supervisorctl -s http://localhost:{supervisor_port} restart {service_name}"
+                f"supervisorctl -s http://localhost:{supervisor_port} {action} {service_name}"
             )
         except Exception as exc:
             LOGGER.debug(f"Failed to restart service `{service_name}`: {exc}")
 
 
+def start_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
+    """Start list of Cardano nodes of the running cluster."""
+    service_names = [f"nodes:{n}" for n in node_names]
+    services_action(service_names=service_names, action="start", instance_num=instance_num)
+
+
+def stop_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
+    """Stop list of Cardano nodes of the running cluster."""
+    service_names = [f"nodes:{n}" for n in node_names]
+    services_action(service_names=service_names, action="stop", instance_num=instance_num)
+
+
 def restart_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
     """Restart list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
-    restart_services(service_names=service_names, instance_num=instance_num)
+    services_action(service_names=service_names, action="restart", instance_num=instance_num)
 
 
 def services_status(
