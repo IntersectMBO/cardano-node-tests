@@ -2062,26 +2062,16 @@ class TestCLITxOutSyntax:
         assert tx_raw_output.txouts
         assert tx_raw_output.mint
 
-        coin = ""
-        coin_amount = 0
-        lovelace_amount = 0
-        for t in tx_raw_output.txouts:
-            if t.coin == clusterlib.DEFAULT_COIN:
-                lovelace_amount = t.amount
-            else:
-                coin = t.coin
-                coin_amount = t.amount
-
         # test syntax for multi-asset values and txouts, see
         # https://github.com/input-output-hk/cardano-node/pull/2072
+        coin_txouts = [f"{t.amount} {t.coin}" for t in tx_raw_output.txouts]
         txout_parts = [
             "-7000",
-            "8500 lovelace",
-            f"-4000 {coin}",
+            "8500",
+            f"-4000 {token}",
             "-1500 lovelace",
-            f"4000 {coin}",
-            str(lovelace_amount),
-            f"{coin_amount} {coin}",
+            f"4000 {token}",
+            *coin_txouts,
         ]
         txout_joined = "+".join(txout_parts)
         txout_str = f"{tx_raw_output.txouts[0].address}+{txout_joined}"
@@ -2104,6 +2094,7 @@ class TestCLITxOutSyntax:
             txout_str,
             "--mint",
             mint_str,
+            "--cddl-format" if cluster.use_cddl else "--cli-format",
             "--out-file",
             str(out_file),
         ]
