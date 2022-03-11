@@ -1,3 +1,4 @@
+import json
 import os
 from collections import OrderedDict
 from datetime import datetime
@@ -10,8 +11,8 @@ from utils import seconds_to_time, date_diff_in_seconds
 
 ORG_SLUG = "input-output-hk"
 cli_envs = ["node_cli", "dbsync_cli"]
-nightly_envs = ["node_nightly", "node_nightly_alonzo_mary_tx", "node_nightly_alonzo_alonzo-tx",
-                "dbsync_nightly"]
+nightly_envs = ["node_nightly", "node_nightly_shelley_tx", "node_nightly_mary_tx",
+                "node_nightly_mary_tx_cddl", "node_nightly_p2p_cddl", "dbsync_nightly"]
 
 
 def get_buildkite_pipeline_builds(buildkite_token, pipeline_slug):
@@ -43,10 +44,16 @@ def get_buildkite_pipeline_slug(env):
         pileline_slug = "cardano-node-tests-dbsync"
     elif env == "dbsync_nightly":
         pileline_slug = "cardano-node-tests-nightly-dbsync"
-    elif env == "node_nightly_alonzo_mary_tx":
-        pileline_slug = "cardano-node-tests-nightly-alonzo-mary-tx"
-    elif env == "node_nightly_alonzo_alonzo-tx":
-        pileline_slug = "cardano-node-tests-nightly-alonzo-alonzo-tx"
+    elif env == "node_nightly_shelley_tx":
+        pileline_slug = "cardano-node-tests-nightly-shelley-tx"
+    elif env == "node_nightly_mary_tx":
+        pileline_slug = "cardano-node-tests-nightly-mary-tx"
+    elif env == "node_nightly_mary_tx_cddl":
+        pileline_slug = "cardano-node-tests-nightly-p2p-cddl"
+    elif env == "node_nightly_p2p_cddl":
+        pileline_slug = "cardano-node-tests-nightly-cddl"
+    elif env == "node_nightly_p2p":
+        pileline_slug = "cardano-node-tests-nightly-p2p"
     else:
         print(f"!!! ERROR: env {env} not expected - use one of: {cli_envs + nightly_envs}")
         exit(1)
@@ -123,6 +130,7 @@ def main():
                 continue
 
             if build["web_url"] not in get_column_values(table_name, "build_web_url"):
+                build_results_dict["details"] = env
                 build_results_dict["build_no"] = build["number"]
                 build_results_dict["build_id"] = build["id"]
                 build_results_dict["build_web_url"] = build["web_url"]
@@ -134,9 +142,9 @@ def main():
                     datetime.strptime(build_results_dict["build_started_at"], "%Y-%m-%dT%H:%M:%S.%fZ")))
                 build_results_dict["test_branch"] = build["branch"]
 
-                if "CLUSTER_ERA" in build["env"]:
-                    build_results_dict["cluster_era"] = build["env"]["CLUSTER_ERA"]
-                    build_results_dict["tx_era"] = build["env"]["TX_ERA"]
+                if "CLUSTER_ERA" in build["pipeline"]["env"]:
+                    build_results_dict["cluster_era"] = build["pipeline"]["env"]["CLUSTER_ERA"]
+                    build_results_dict["tx_era"] = build["pipeline"]["env"]["TX_ERA"]
                 else:
                     build_results_dict["cluster_era"] = "alonzo"
                     build_results_dict["tx_era"] = "alonzo"
