@@ -13,6 +13,7 @@ ORG_SLUG = "input-output-hk"
 cli_envs = ["node_cli", "dbsync_cli"]
 nightly_envs = ["node_nightly", "node_nightly_shelley_tx", "node_nightly_mary_tx",
                 "node_nightly_mary_tx_cddl", "node_nightly_p2p_cddl", "dbsync_nightly"]
+DEFAULT_ERA = "alonzo"
 
 
 def get_buildkite_pipeline_builds(buildkite_token, pipeline_slug):
@@ -142,12 +143,12 @@ def main():
                     datetime.strptime(build_results_dict["build_started_at"], "%Y-%m-%dT%H:%M:%S.%fZ")))
                 build_results_dict["test_branch"] = build["branch"]
 
+                build_results_dict["cluster_era"] = DEFAULT_ERA
+                build_results_dict["tx_era"] = DEFAULT_ERA
                 if "CLUSTER_ERA" in build["pipeline"]["env"]:
                     build_results_dict["cluster_era"] = build["pipeline"]["env"]["CLUSTER_ERA"]
+                if "TX_ERA" in build["pipeline"]["env"]:
                     build_results_dict["tx_era"] = build["pipeline"]["env"]["TX_ERA"]
-                else:
-                    build_results_dict["cluster_era"] = "alonzo"
-                    build_results_dict["tx_era"] = "alonzo"
 
                 build_results_dict["node_branch"] = "master"
                 if "dbsync" in env:
