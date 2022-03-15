@@ -177,6 +177,13 @@ class TestBuildMinting:
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
+        # check expected fees
+        expected_fee_step1 = 168977
+        assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
+
+        expected_fee_step2 = 371111
+        assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
+
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
@@ -310,6 +317,13 @@ class TestBuildMinting:
 
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        # check expected fees
+        expected_fee_step1 = 167349
+        assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
+
+        expected_fee_step2 = 411175
+        assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
@@ -650,6 +664,13 @@ class TestBuildMinting:
 
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        # check expected fees
+        expected_fee_step1 = 167349
+        assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
+
+        expected_fee_step2 = 372438
+        assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
