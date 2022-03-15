@@ -8,7 +8,6 @@
 import logging
 from pathlib import Path
 from typing import List
-from typing import NamedTuple
 from typing import Tuple
 
 import allure
@@ -30,16 +29,6 @@ PLUTUS_DIR = DATA_DIR / "plutus"
 
 GUESS_42_STAKE_PLUTUS = PLUTUS_DIR / "guess-42-stake.plutus"
 REDEEMER_42 = PLUTUS_DIR / "42.redeemer"
-
-
-class AddressRecordScript(NamedTuple):
-    address: str
-    script_file: Path
-
-
-class PoolUserScript(NamedTuple):
-    payment: clusterlib.AddressRecord
-    stake: AddressRecordScript
 
 
 @pytest.fixture
@@ -67,7 +56,7 @@ def cluster_lock_42stake(
 def pool_user(
     cluster_manager: cluster_management.ClusterManager,
     cluster_lock_42stake: Tuple[clusterlib.ClusterLib, str],
-) -> PoolUserScript:
+) -> delegation.PoolUserScript:
     """Create pool user."""
     cluster, *__ = cluster_lock_42stake
 
@@ -79,9 +68,9 @@ def pool_user(
         name=f"test_plutus_delegation_pool_user_ci{cluster_manager.cluster_instance_num}",
         stake_script_file=GUESS_42_STAKE_PLUTUS,
     )
-    pool_user = PoolUserScript(
+    pool_user = delegation.PoolUserScript(
         payment=payment_addr_rec,
-        stake=AddressRecordScript(
+        stake=delegation.AddressRecordScript(
             address=script_stake_address,
             script_file=GUESS_42_STAKE_PLUTUS,
         ),
@@ -103,7 +92,7 @@ def delegate_stake_addr(
     temp_template: str,
     txins: List[clusterlib.UTXOData],
     collaterals: List[clusterlib.UTXOData],
-    pool_user: PoolUserScript,
+    pool_user: delegation.PoolUserScript,
     pool_id: str,
     redeemer_file: Path,
 ) -> Tuple[clusterlib.TxRawOutput, List[dict]]:
@@ -181,7 +170,7 @@ def deregister_stake_addr(
     temp_template: str,
     txins: List[clusterlib.UTXOData],
     collaterals: List[clusterlib.UTXOData],
-    pool_user: PoolUserScript,
+    pool_user: delegation.PoolUserScript,
     redeemer_file: Path,
 ) -> clusterlib.TxRawOutput:
     """Deregister stake address."""
@@ -280,7 +269,7 @@ class TestDelegateAddr:
     def test_delegate_deregister(
         self,
         cluster_lock_42stake: Tuple[clusterlib.ClusterLib, str],
-        pool_user: clusterlib.PoolUser,
+        pool_user: delegation.PoolUserScript,
     ):
         """Delegate and deregister Plutus script stake address.
 

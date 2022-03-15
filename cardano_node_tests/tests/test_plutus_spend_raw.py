@@ -1,5 +1,4 @@
 """Tests for spending with Plutus using `transaction build-raw`."""
-import distutils.spawn
 import itertools
 import logging
 import time
@@ -9,6 +8,7 @@ from typing import Optional
 from typing import Tuple
 
 import allure
+import distutils.spawn
 import pytest
 from cardano_clusterlib import clusterlib
 

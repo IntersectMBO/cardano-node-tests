@@ -1,5 +1,4 @@
 """Tests for spending with Plutus using `transaction build`."""
-import distutils.spawn
 import logging
 from pathlib import Path
 from typing import List
@@ -7,6 +6,7 @@ from typing import Optional
 from typing import Tuple
 
 import allure
+import distutils.spawn
 import pytest
 from cardano_clusterlib import clusterlib
 

@@ -1,5 +1,4 @@
 # pylint: disable=abstract-class-instantiated
-import distutils.spawn
 import logging
 import os
 from pathlib import Path
@@ -7,6 +6,7 @@ from typing import Any
 from typing import Dict
 from typing import Generator
 
+import distutils.spawn
 import pytest
 from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
