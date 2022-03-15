@@ -1,11 +1,11 @@
 """Tests for minting with Plutus using `transaction build`."""
 import datetime
-import distutils.spawn
 import logging
 from pathlib import Path
 from typing import List
 
 import allure
+import distutils.spawn
 import pytest
 from cardano_clusterlib import clusterlib
 
