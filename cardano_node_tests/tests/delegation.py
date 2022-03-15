@@ -6,6 +6,7 @@ from typing import Dict
 from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -17,6 +18,16 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 
 LOGGER = logging.getLogger(__name__)
+
+
+class AddressRecordScript(NamedTuple):
+    address: str
+    script_file: Path
+
+
+class PoolUserScript(NamedTuple):
+    payment: clusterlib.AddressRecord
+    stake: AddressRecordScript
 
 
 class DelegationOut(NamedTuple):
@@ -79,7 +90,7 @@ def cluster_and_pool(
 
 
 def db_check_delegation(
-    pool_user: clusterlib.PoolUser,
+    pool_user: Union[clusterlib.PoolUser, PoolUserScript],
     db_record: Optional[dbsync_utils.TxRecord],
     deleg_epoch: int,
     pool_id: str,
