@@ -11,6 +11,12 @@ install_doc:
 	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-doc.txt
 
 
+# initialize linters
+init_lint:
+	pre-commit clean
+	pre-commit gc
+	find . -path '*/.mypy_cache/*' -delete
+
 # run linters
 lint:
 	pre-commit run -a
