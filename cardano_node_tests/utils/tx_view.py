@@ -89,7 +89,8 @@ def check_tx_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
 ) -> dict:
     """Check output of the `transaction view` command."""
-    # pylint: disable=too-many-branches,too-many-locals
+    # pylint: disable=too-many-branches,too-many-locals,too-many-statements
+
     tx_view_raw = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
     tx_loaded: dict = load_tx_view(tx_view=tx_view_raw)
 
@@ -174,9 +175,20 @@ def check_tx_view(  # noqa: C901
     if tx_raw_len_certs != loaded_len_certs:
         raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")
 
-    # load transaction era
+    # load and check transaction era
     loaded_tx_era: str = tx_loaded["era"]
     loaded_tx_version = getattr(VERSIONS, loaded_tx_era.upper())
+
+    output_tx_version = (
+        getattr(VERSIONS, tx_raw_output.era.upper())
+        if tx_raw_output.era
+        else VERSIONS.DEFAULT_TX_ERA
+    )
+
+    if loaded_tx_version != output_tx_version:
+        raise AssertionError(
+            f"transaction era is not the expected: {loaded_tx_version} != {output_tx_version}"
+        )
 
     # check collateral inputs, this is only available on Alonzo+ TX
     if loaded_tx_version >= VERSIONS.ALONZO and not _check_collateral_inputs(
