@@ -1,8 +1,10 @@
 from pathlib import Path
+from typing import List
 from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
 
+from cardano_node_tests.utils import helpers
 
 DATA_DIR = Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
@@ -47,3 +49,24 @@ class PlutusOp(NamedTuple):
 class Token(NamedTuple):
     coin: str
     amount: int
+
+
+class ExpectedCost(NamedTuple):
+    expected_time: int
+    expected_space: int
+    expected_lovelace: int
+
+
+def check_plutus_cost(plutus_cost: list, expected_cost: List[ExpectedCost]):
+    """Check plutus transaction cost.
+
+    units: the time is in picoseconds and the space is in bytes.
+    """
+    for costs, expected_values in zip(plutus_cost, expected_cost):
+        tx_time = costs["executionUnits"]["steps"]
+        tx_space = costs["executionUnits"]["memory"]
+        lovelace_cost = costs["lovelaceCost"]
+
+        assert helpers.is_in_interval(tx_time, expected_values.expected_time, frac=0.15)
+        assert helpers.is_in_interval(tx_space, expected_values.expected_space, frac=0.15)
+        assert helpers.is_in_interval(lovelace_cost, expected_values.expected_lovelace, frac=0.15)
