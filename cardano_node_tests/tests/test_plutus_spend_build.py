@@ -481,10 +481,11 @@ class TestBuildLocking:
             dst_addr=payment_addrs_lock_always_suceeds[3],
             plutus_op=plutus_op,
         )
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        _build_spend_locked_txin(
+        __, tx_output = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_suceeds[2],
@@ -494,6 +495,14 @@ class TestBuildLocking:
             plutus_op=plutus_op,
             amount=50_000_000,
         )
+
+        # check expected fees
+        expected_fee_fund = 168845
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+
+        if tx_output:
+            expected_fee = 170782
+            assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -598,7 +607,7 @@ class TestBuildLocking:
 
         plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
-        _build_spend_locked_txin(
+        __, tx_output = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=pool_users_lock_context_eq[0].payment,
@@ -612,6 +621,11 @@ class TestBuildLocking:
             invalid_before=1,
             invalid_hereafter=invalid_hereafter,
         )
+
+        # check expected fees
+        if tx_output:
+            expected_fee = 372438
+            assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -677,6 +691,7 @@ class TestBuildLocking:
             dst_addr=payment_addrs_lock_guessing_game[1],
             plutus_op=plutus_op,
         )
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
@@ -693,6 +708,10 @@ class TestBuildLocking:
         )
         if expect_failure:
             assert "The Plutus script evaluation failed" in err
+
+        # check expected fees
+        expected_fee_fund = 168845
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -728,6 +747,7 @@ class TestBuildLocking:
             dst_addr=payment_addrs_lock_always_fails[1],
             plutus_op=plutus_op,
         )
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
@@ -743,6 +763,10 @@ class TestBuildLocking:
             expect_failure=True,
         )
         assert "The Plutus script evaluation failed" in err
+
+        # check expected fees
+        expected_fee_fund = 168845
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -778,10 +802,11 @@ class TestBuildLocking:
             dst_addr=payment_addrs_lock_always_fails[1],
             plutus_op=plutus_op,
         )
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        _build_spend_locked_txin(
+        __, tx_output = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_fails[0],
@@ -792,6 +817,14 @@ class TestBuildLocking:
             amount=50_000_000,
             script_valid=False,
         )
+
+        # check expected fees
+        expected_fee_fund = 168845
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+
+        if tx_output:
+            expected_fee = 171309
+            assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -840,10 +873,11 @@ class TestBuildLocking:
             plutus_op=plutus_op,
             tokens=tokens_rec,
         )
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        _build_spend_locked_txin(
+        __, tx_output = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_suceeds[0],
@@ -854,6 +888,14 @@ class TestBuildLocking:
             amount=50_000_000,
             tokens=tokens_rec,
         )
+
+        # check expected fees
+        expected_fee_fund = 173597
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+
+        if tx_output:
+            expected_fee = 175710
+            assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -903,6 +945,7 @@ class TestBuildLocking:
             plutus_op=plutus_op,
             tokens_collateral=tokens_rec,
         )
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
@@ -918,7 +961,12 @@ class TestBuildLocking:
                 plutus_op=plutus_op,
                 amount=50_000_000,
             )
+
         assert "CollateralContainsNonADA" in str(excinfo.value)
+
+        # check expected fees
+        expected_fee_fund = 173597
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -956,6 +1004,7 @@ class TestBuildLocking:
             dst_addr=payment_addrs_lock_always_suceeds[1],
             plutus_op=plutus_op,
         )
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
 
@@ -971,6 +1020,10 @@ class TestBuildLocking:
                 amount=50_000_000,
             )
         assert "Expected key witnessed collateral" in str(excinfo.value)
+
+        # check expected fees
+        expected_fee_fund = 168845
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -1020,6 +1073,7 @@ class TestBuildLocking:
             tx_files=tx_files,
             join_txouts=False,
         )
+
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
@@ -1036,6 +1090,10 @@ class TestBuildLocking:
                 amount=50_000_000,
             )
         assert "not a Plutus script witnessed tx input" in str(excinfo.value)
+
+        # check expected fees
+        expected_fee_fund = 199087
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1141,6 +1199,13 @@ class TestBuildLocking:
             cluster.get_address_balance(script_address)
             == script_step1_balance - amount - tx_output_step2.fee + collateral_utxos[0].amount
         ), f"Incorrect balance for script address `{script_address}`"
+
+        # check expected fees
+        expected_fee_step1 = 168845
+        assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
+
+        expected_fee_step2 = 176986
+        assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
