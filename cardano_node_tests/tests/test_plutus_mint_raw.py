@@ -90,6 +90,18 @@ def _check_pretty_utxo(
     return err
 
 
+@pytest.fixture
+def execution_cost(cluster: clusterlib.ClusterLib):
+    """Get execution cost per unit in lovelace."""
+    protocol_params = cluster.get_protocol_params()
+
+    return {
+        "cost_per_time": protocol_params["executionUnitPrices"]["priceSteps"] or 0,
+        "cost_per_space": protocol_params["executionUnitPrices"]["priceMemory"] or 0,
+        "fixed_cost": protocol_params["txFeeFixed"] or 0,
+    }
+
+
 @pytest.mark.skipif(VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX")
 class TestMinting:
     """Tests for minting using Plutus smart contracts."""
@@ -98,7 +110,10 @@ class TestMinting:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_minting(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        execution_cost: dict,
     ):
         """Test minting a token with a plutus script.
 
@@ -113,13 +128,17 @@ class TestMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
+        lovelace_amount = 5_000_000
         token_amount = 5
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
-        collateral_amount_1 = int(fee_step2 * 1.5 / 2)
-        collateral_amount_2 = int(fee_step2 * 1.5 / 2)
+
+        plutusrequiredtime = 357_088_586
+        plutusrequiredspace = 974_406
+        plutus_time_cost = round(plutusrequiredtime * execution_cost["cost_per_time"])
+        plutus_space_cost = round(plutusrequiredspace * execution_cost["cost_per_space"])
+        fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
+
+        collateral_amount_1 = round(fee_step2 * 1.5 / 2)
+        collateral_amount_2 = round(fee_step2 * 1.5 / 2)
 
         redeemer_cbor_file = plutus_mint.PLUTUS_DIR / "42.redeemer.cbor"
 
@@ -255,6 +274,7 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         key: str,
+        execution_cost: dict,
     ):
         """Test minting a token with a plutus script.
 
@@ -271,10 +291,14 @@ class TestMinting:
 
         lovelace_amount = 5000_000
         token_amount = 5
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
-        collateral_amount = int(fee_step2 * 1.5)
+
+        plutusrequiredtime = 358_849_733
+        plutusrequiredspace = 978_434
+        plutus_time_cost = round(plutusrequiredtime * execution_cost["cost_per_time"])
+        plutus_space_cost = round(plutusrequiredspace * execution_cost["cost_per_space"])
+        fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
+
+        collateral_amount = round(fee_step2 * 1.5)
 
         if key == "normal":
             redeemer_file = plutus_mint.PLUTUS_DIR / "witness_golden_normal.datum"
@@ -397,7 +421,10 @@ class TestMinting:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_time_range_minting(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        execution_cost: dict,
     ):
         """Test minting a token with a time constraints plutus script.
 
@@ -412,12 +439,16 @@ class TestMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
+        lovelace_amount = 5_000_000
         token_amount = 5
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
-        collateral_amount = int(fee_step2 * 1.5)
+
+        plutusrequiredtime = 379_793_656
+        plutusrequiredspace = 1_044_064
+        plutus_time_cost = round(plutusrequiredtime * execution_cost["cost_per_time"])
+        plutus_space_cost = round(plutusrequiredspace * execution_cost["cost_per_space"])
+        fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
+
+        collateral_amount = round(fee_step2 * 1.5)
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
 
@@ -540,7 +571,10 @@ class TestMinting:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_two_scripts_minting(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        execution_cost: dict,
     ):
         """Test minting two tokens with two different Plutus scripts.
 
@@ -559,10 +593,12 @@ class TestMinting:
         lovelace_amount = 5000_000
         token_amount = 5
 
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 5000_000
+        plutusrequiredtime = 408_545_501
+        plutusrequiredspace = 1_126_016
+        plutus_time_cost = round(plutusrequiredtime * execution_cost["cost_per_time"])
+        plutus_space_cost = round(plutusrequiredspace * execution_cost["cost_per_space"])
+        fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
 
-        fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
         fee_step2_total = fee_step2 * 2
         collateral_amount = int(fee_step2 * 1.5)
 
@@ -744,7 +780,7 @@ class TestMinting:
         token_amount = 5
         plutusrequiredtime = 800_000_000
         plutusrequiredspace = 10_000_000
-        fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
+        fee_step2 = plutusrequiredtime + plutusrequiredspace + 10_000_000
         collateral_amount = int(fee_step2 * 1.5)
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
