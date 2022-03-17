@@ -9,6 +9,12 @@ REPODIR="$PWD"
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 export CLUSTERS_COUNT="${CLUSTERS_COUNT:-5}"
 
+MARKEXPR="${MARKEXPR:-"dbsync"}"
+if [ "${CI_SKIP_LONG:-"false"}" != "false" ]; then
+  MARKEXPR="${MARKEXPR:+"${MARKEXPR} and "}not long"
+fi
+export MARKEXPR
+
 WORKDIR="/scratch/workdir"
 rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR"
@@ -56,7 +62,7 @@ rm -rf "${ARTIFACTS_DIR:?}"/*
 set +e
 # shellcheck disable=SC2016
 nix-shell --run \
-  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" CI_ARGS="-m dbsync --html=testrun-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
+  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" CI_ARGS="--html=testrun-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
 retval="$?"
 
 # grep testing artifacts for errors
