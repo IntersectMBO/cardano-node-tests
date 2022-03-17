@@ -19,11 +19,29 @@ on:
         description: "db-sync branch (default: master)"
         required: false
       cluster_era:
-        description: "Cluster era (mary, alonzo; default: mary)"
-        required: false
+        type: choice
+        description: "Cluster era"
+        options:
+        - alonzo
+        default: alonzo
       tx_era:
-        description: "Tx era (default: empty)"
-        required: false
+        type: choice
+        description: "Tx era (uses default Tx era when empty)"
+        options:
+        - ""
+        - alonzo
+        - mary
+        - allegra
+        - shelley
+        default: ""
+      cddl_format:
+        type: boolean
+        default: false
+        description: "Use CDDL format for Tx body"
+      skip_long:
+        type: boolean
+        default: false
+        description: "Skip long running tests"
 
 jobs:
   dbsync_regression:
@@ -42,5 +60,7 @@ jobs:
           "DBSYNC_REV":"${{ github.event.inputs.dbsync_rev }}",
           "DBSYNC_BRANCH":"${{ github.event.inputs.dbsync_branch }}",
           "CLUSTER_ERA":"${{ github.event.inputs.cluster_era }}",
-          "TX_ERA":"${{ github.event.inputs.tx_era }}"
+          "TX_ERA":"${{ github.event.inputs.tx_era }}",
+          "USE_CDDL":"${{ github.event.inputs.cddl_format }}",
+          "CI_SKIP_LONG":"${{ github.event.inputs.skip_long }}"
           }'

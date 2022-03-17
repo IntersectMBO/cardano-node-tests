@@ -8,6 +8,12 @@ set -xeuo pipefail
 REPODIR="$PWD"
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 
+MARKEXPR="${MARKEXPR:-""}"
+if [ "${CI_SKIP_LONG:-"false"}" != "false" ]; then
+  MARKEXPR="${MARKEXPR:+"${MARKEXPR} and "}not long"
+fi
+export MARKEXPR
+
 WORKDIR="/scratch/workdir"
 rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR"
