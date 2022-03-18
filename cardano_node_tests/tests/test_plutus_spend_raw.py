@@ -13,7 +13,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests import plutus_spend
+from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -35,7 +35,7 @@ def cluster_lock_always_suceeds(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
     """
-    return cluster_manager.get(lock_resources=[str(plutus_spend.ALWAYS_SUCCEEDS_PLUTUS.stem)])
+    return cluster_manager.get(lock_resources=[str(plutus_common.ALWAYS_SUCCEEDS_PLUTUS.stem)])
 
 
 @pytest.fixture
@@ -79,7 +79,7 @@ def cluster_lock_guessing_game(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
     """
-    return cluster_manager.get(lock_resources=[str(plutus_spend.GUESSING_GAME_PLUTUS.stem)])
+    return cluster_manager.get(lock_resources=[str(plutus_common.GUESSING_GAME_PLUTUS.stem)])
 
 
 @pytest.fixture
@@ -122,7 +122,7 @@ def cluster_lock_context_eq(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
     """
-    return cluster_manager.get(lock_resources=[str(plutus_spend.CONTEXT_EQUIVALENCE_PLUTUS.stem)])
+    return cluster_manager.get(lock_resources=[str(plutus_common.CONTEXT_EQUIVALENCE_PLUTUS.stem)])
 
 
 @pytest.fixture
@@ -164,7 +164,7 @@ def cluster_lock_always_fails(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
     """
-    return cluster_manager.get(lock_resources=[str(plutus_spend.ALWAYS_FAILS_PLUTUS.stem)])
+    return cluster_manager.get(lock_resources=[str(plutus_common.ALWAYS_FAILS_PLUTUS.stem)])
 
 
 @pytest.fixture
@@ -203,12 +203,12 @@ def _fund_script(
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
-    plutus_op: plutus_spend.PlutusOp,
+    plutus_op: plutus_common.PlutusOp,
     amount: int,
     deposit_amount: int = 0,
-    tokens: Optional[List[plutus_spend.Token]] = None,  # tokens must already be in `payment_addr`
+    tokens: Optional[List[plutus_common.Token]] = None,  # tokens must already be in `payment_addr`
     tokens_collateral: Optional[
-        List[plutus_spend.Token]
+        List[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
     collateral_fraction_offset: float = 1.0,
 ) -> clusterlib.TxRawOutput:
@@ -316,13 +316,13 @@ def _spend_locked_txin(
     dst_addr: clusterlib.AddressRecord,
     script_utxos: List[clusterlib.UTXOData],
     collateral_utxos: List[clusterlib.UTXOData],
-    plutus_op: plutus_spend.PlutusOp,
+    plutus_op: plutus_common.PlutusOp,
     amount: int,
     deposit_amount: int = 0,
     tx_files: Optional[clusterlib.TxFiles] = None,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
-    tokens: Optional[List[plutus_spend.Token]] = None,
+    tokens: Optional[List[plutus_common.Token]] = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,
@@ -510,10 +510,10 @@ class TestLocking:
         cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_cbor_file=plutus_spend.PLUTUS_DIR / "42.redeemer.cbor",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -586,9 +586,9 @@ class TestLocking:
             cluster_obj=cluster, redeemer_file=redeemer_file_dummy
         )
 
-        plutus_op_dummy = plutus_spend.PlutusOp(
-            script_file=plutus_spend.CONTEXT_EQUIVALENCE_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
+        plutus_op_dummy = plutus_common.PlutusOp(
+            script_file=plutus_common.CONTEXT_EQUIVALENCE_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=redeemer_file_dummy,
             execution_units=(1000_000_000, 10_000_000),
         )
@@ -697,20 +697,20 @@ class TestLocking:
         temp_template = f"{common.get_test_id(cluster)}_{script}"
 
         if script.endswith("game_42_43"):
-            datum_file = plutus_spend.PLUTUS_DIR / "typed-42.datum"
-            redeemer_file = plutus_spend.PLUTUS_DIR / "typed-43.redeemer"
+            datum_file = plutus_common.DATUM_42_TYPED
+            redeemer_file = plutus_common.REDEEMER_43_TYPED
             expect_failure = True
         elif script.endswith("game_43_42"):
-            datum_file = plutus_spend.PLUTUS_DIR / "typed-43.datum"
-            redeemer_file = plutus_spend.PLUTUS_DIR / "typed-42.redeemer"
+            datum_file = plutus_common.DATUM_43_TYPED
+            redeemer_file = plutus_common.REDEEMER_42_TYPED
             expect_failure = True
         elif script.endswith("game_43_43"):
-            datum_file = plutus_spend.PLUTUS_DIR / "typed-43.datum"
-            redeemer_file = plutus_spend.PLUTUS_DIR / "typed-43.redeemer"
+            datum_file = plutus_common.DATUM_43_TYPED
+            redeemer_file = plutus_common.REDEEMER_43_TYPED
             expect_failure = True
         else:
-            datum_file = plutus_spend.PLUTUS_DIR / "typed-42.datum"
-            redeemer_file = plutus_spend.PLUTUS_DIR / "typed-42.redeemer"
+            datum_file = plutus_common.DATUM_42_TYPED
+            redeemer_file = plutus_common.REDEEMER_42_TYPED
             expect_failure = False
 
         if expect_failure:
@@ -720,8 +720,8 @@ class TestLocking:
                 ignore_file_id=worker_id,
             )
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.GUESSING_GAME_PLUTUS,
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_PLUTUS,
             datum_file=datum_file,
             redeemer_file=redeemer_file,
             execution_units=(700_000_000, 10_000_000),
@@ -776,10 +776,10 @@ class TestLocking:
         cluster = cluster_lock_always_fails
         temp_template = common.get_test_id(cluster)
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_FAILS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -834,10 +834,10 @@ class TestLocking:
         cluster = cluster_lock_always_fails
         temp_template = common.get_test_id(cluster)
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_FAILS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -884,10 +884,10 @@ class TestLocking:
         token_rand = clusterlib.get_rand_str(5)
         payment_addr = payment_addrs_lock_always_suceeds[0]
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -899,7 +899,7 @@ class TestLocking:
             issuer_addr=payment_addr,
             amount=100,
         )
-        tokens_rec = [plutus_spend.Token(coin=t.token, amount=t.amount) for t in tokens]
+        tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
 
         tx_output_fund = _fund_script(
             temp_template=temp_template,
@@ -946,10 +946,10 @@ class TestLocking:
         token_rand = clusterlib.get_rand_str(5)
         payment_addr = payment_addrs_lock_always_suceeds[0]
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_cbor_file=plutus_spend.PLUTUS_DIR / "typed-42.datum.cbor",
-            redeemer_cbor_file=plutus_spend.PLUTUS_DIR / "42.redeemer.cbor",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -961,7 +961,7 @@ class TestLocking:
             issuer_addr=payment_addr,
             amount=100,
         )
-        tokens_rec = [plutus_spend.Token(coin=t.token, amount=t.amount) for t in tokens]
+        tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
 
         tx_output_fund = _fund_script(
             temp_template=temp_template,
@@ -1009,10 +1009,10 @@ class TestLocking:
         cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_cbor_file=plutus_spend.PLUTUS_DIR / "42.datum.cbor",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_cbor_file=plutus_common.DATUM_42_CBOR,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -1063,10 +1063,10 @@ class TestLocking:
 
         plutusrequiredtime, plutusrequiredspace = 700_000_000, 10_000_000
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_units=(plutusrequiredtime, plutusrequiredspace),
         )
 
@@ -1148,10 +1148,10 @@ class TestLocking:
         payment_addr = payment_addrs_lock_always_suceeds[2]
         dst_addr = payment_addrs_lock_always_suceeds[3]
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -1234,10 +1234,10 @@ class TestLocking:
         cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
 
-        plutus_op = plutus_spend.PlutusOp(
-            script_file=plutus_spend.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_spend.PLUTUS_DIR / "typed-42.datum",
-            redeemer_file=plutus_spend.PLUTUS_DIR / "typed-42.redeemer",
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_units=(700_000_000, 10_000_000),
         )
 
