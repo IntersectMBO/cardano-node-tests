@@ -16,6 +16,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -23,12 +24,6 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-
-DATA_DIR = Path(__file__).parent / "data"
-PLUTUS_DIR = DATA_DIR / "plutus"
-
-GUESS_42_STAKE_PLUTUS = PLUTUS_DIR / "guess-42-stake.plutus"
-REDEEMER_42 = PLUTUS_DIR / "42.redeemer"
 
 
 @pytest.fixture
@@ -41,7 +36,7 @@ def cluster_lock_42stake(
     tests that are running in parallel, the blanaces etc. don't add up.
     """
     cluster_obj = cluster_manager.get(
-        lock_resources=[str(GUESS_42_STAKE_PLUTUS.stem)],
+        lock_resources=[str(plutus_common.STAKE_GUESS_42_PLUTUS.stem)],
         use_resources=[cluster_management.Resources.POOL3],
     )
     pool_id = delegation.get_pool_id(
@@ -62,17 +57,17 @@ def pool_user(
 
     script_stake_address = cluster.gen_stake_addr(
         addr_name=f"test_plutus_delegation_pool_user_ci{cluster_manager.cluster_instance_num}",
-        stake_script_file=GUESS_42_STAKE_PLUTUS,
+        stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS,
     )
     payment_addr_rec = cluster.gen_payment_addr_and_keys(
         name=f"test_plutus_delegation_pool_user_ci{cluster_manager.cluster_instance_num}",
-        stake_script_file=GUESS_42_STAKE_PLUTUS,
+        stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS,
     )
     pool_user = delegation.PoolUserScript(
         payment=payment_addr_rec,
         stake=delegation.AddressRecordScript(
             address=script_stake_address,
-            script_file=GUESS_42_STAKE_PLUTUS,
+            script_file=plutus_common.STAKE_GUESS_42_PLUTUS,
         ),
     )
 
@@ -351,7 +346,7 @@ class TestDelegateAddr:
             collaterals=collateral_deleg,
             pool_user=pool_user,
             pool_id=pool_id,
-            redeemer_file=REDEEMER_42,
+            redeemer_file=plutus_common.REDEEMER_42,
         )
 
         assert (
@@ -387,7 +382,7 @@ class TestDelegateAddr:
             txins=dereg_utxos,
             collaterals=[*collateral_withdraw, *collateral_dereg],
             pool_user=pool_user,
-            redeemer_file=REDEEMER_42,
+            redeemer_file=plutus_common.REDEEMER_42,
         )
 
         if reward_error:
