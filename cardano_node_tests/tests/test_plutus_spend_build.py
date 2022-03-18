@@ -31,7 +31,7 @@ def cluster_lock_always_suceeds(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
     """
-    return cluster_manager.get(lock_resources=[plutus_spend.ALWAYS_SUCCEEDS_LOCK])
+    return cluster_manager.get(lock_resources=[str(plutus_spend.ALWAYS_SUCCEEDS_PLUTUS.stem)])
 
 
 @pytest.fixture
@@ -75,7 +75,7 @@ def cluster_lock_guessing_game(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
     """
-    return cluster_manager.get(lock_resources=[plutus_spend.GUESSING_GAME_LOCK])
+    return cluster_manager.get(lock_resources=[str(plutus_spend.GUESSING_GAME_PLUTUS.stem)])
 
 
 @pytest.fixture
@@ -118,7 +118,7 @@ def cluster_lock_context_eq(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
     """
-    return cluster_manager.get(lock_resources=[plutus_spend.CONTEXT_EQUIVALENCE_LOCK])
+    return cluster_manager.get(lock_resources=[str(plutus_spend.CONTEXT_EQUIVALENCE_PLUTUS.stem)])
 
 
 @pytest.fixture
@@ -160,7 +160,7 @@ def cluster_lock_always_fails(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
     """
-    return cluster_manager.get(lock_resources=[plutus_spend.ALWAYS_FAILS_LOCK])
+    return cluster_manager.get(lock_resources=[str(plutus_spend.ALWAYS_FAILS_PLUTUS.stem)])
 
 
 @pytest.fixture
