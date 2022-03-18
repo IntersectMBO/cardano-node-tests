@@ -12,11 +12,6 @@ ALWAYS_FAILS_PLUTUS = PLUTUS_DIR / "always-fails.plutus"
 GUESSING_GAME_PLUTUS = PLUTUS_DIR / "custom-guess-42-datum-42.plutus"
 CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "context-equivalence-test.plutus"
 
-ALWAYS_SUCCEEDS_LOCK = "always_suceeds_script"
-ALWAYS_FAILS_LOCK = "always_fails_script"
-GUESSING_GAME_LOCK = "guessing_game_script"
-CONTEXT_EQUIVALENCE_LOCK = "context_eq_script"
-
 
 class PlutusOp(NamedTuple):
     script_file: Path
