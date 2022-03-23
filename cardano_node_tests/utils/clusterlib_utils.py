@@ -643,6 +643,73 @@ def mint_or_burn_sign(
     return tx_raw_output
 
 
+def withdraw_reward_w_build(
+    cluster_obj: clusterlib.ClusterLib,
+    stake_addr_record: clusterlib.AddressRecord,
+    dst_addr_record: clusterlib.AddressRecord,
+    tx_name: str,
+    verify: bool = True,
+    destination_dir: clusterlib.FileType = ".",
+) -> clusterlib.TxRawOutput:
+    """Withdraw reward to payment address.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        stake_addr_record: An `AddressRecord` tuple for the stake address with reward.
+        dst_addr_record: An `AddressRecord` tuple for the destination payment address.
+        tx_name: A name of the transaction.
+        verify: A bool indicating whether to verify that the reward was transferred correctly.
+        destination_dir: A path to directory for storing artifacts (optional).
+    """
+    dst_address = dst_addr_record.address
+    src_init_balance = cluster_obj.get_address_balance(dst_address)
+
+    tx_files_withdrawal = clusterlib.TxFiles(
+        signing_key_files=[dst_addr_record.skey_file, stake_addr_record.skey_file],
+    )
+
+    tx_raw_withdrawal_output = cluster_obj.build_tx(
+        src_address=dst_address,
+        tx_name=f"{tx_name}_reward_withdrawal",
+        tx_files=tx_files_withdrawal,
+        withdrawals=[clusterlib.TxOut(address=stake_addr_record.address, amount=-1)],
+        fee_buffer=2000_000,
+        witness_override=len(tx_files_withdrawal.signing_key_files),
+        destination_dir=destination_dir,
+    )
+    # sign incrementally (just to check that it works)
+    tx_signed = cluster_obj.sign_tx(
+        tx_body_file=tx_raw_withdrawal_output.out_file,
+        signing_key_files=[dst_addr_record.skey_file],
+        tx_name=f"{tx_name}_reward_withdrawal_sign0",
+    )
+    tx_signed_inc = cluster_obj.sign_tx(
+        tx_file=tx_signed,
+        signing_key_files=[stake_addr_record.skey_file],
+        tx_name=f"{tx_name}_reward_withdrawal_sign1",
+    )
+    cluster_obj.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_withdrawal_output.txins)
+
+    if not verify:
+        return tx_raw_withdrawal_output
+
+    # check that reward is 0
+    if cluster_obj.get_stake_addr_info(stake_addr_record.address).reward_account_balance != 0:
+        raise AssertionError("Not all rewards were transferred.")
+
+    # check that rewards were transferred
+    src_reward_balance = cluster_obj.get_address_balance(dst_address)
+    if (
+        src_reward_balance
+        != src_init_balance
+        - tx_raw_withdrawal_output.fee
+        + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
+    ):
+        raise AssertionError(f"Incorrect balance for destination address `{dst_address}`.")
+
+    return tx_raw_withdrawal_output
+
+
 def new_tokens(
     *asset_names: str,
     cluster_obj: clusterlib.ClusterLib,
