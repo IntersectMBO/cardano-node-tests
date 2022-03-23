@@ -600,7 +600,7 @@ class TestMinting:
         fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
 
         fee_step2_total = fee_step2 * 2
-        collateral_amount = int(fee_step2 * 1.5)
+        collateral_amount = int(fee_step2 * 1.6)
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
 
