@@ -1,6 +1,7 @@
 """Tests for spending with Plutus using `transaction build`."""
 import logging
 from pathlib import Path
+from typing import Any
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -215,8 +216,8 @@ def _build_fund_script(
     stokens = tokens or ()
     ctokens = tokens_collateral or ()
 
-    script_address = cluster_obj.gen_script_addr(
-        addr_name=temp_template, script_file=plutus_op.script_file
+    script_address = cluster_obj.gen_payment_addr(
+        addr_name=temp_template, payment_script_file=plutus_op.script_file
     )
     script_init_balance = cluster_obj.get_address_balance(script_address)
 
@@ -305,7 +306,7 @@ def _build_spend_locked_txin(
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,
-) -> Tuple[str, Optional[clusterlib.TxRawOutput]]:
+) -> Tuple[str, Optional[clusterlib.TxRawOutput], list]:
     """Spend the locked UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
@@ -345,7 +346,7 @@ def _build_spend_locked_txin(
 
     if expect_failure:
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            tx_output = cluster_obj.build_tx(
+            cluster_obj.build_tx(
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_step2",
                 tx_files=tx_files,
@@ -353,7 +354,7 @@ def _build_spend_locked_txin(
                 script_txins=plutus_txins,
                 change_address=script_address,
             )
-        return str(excinfo.value), None
+        return str(excinfo.value), None, []
 
     tx_output = cluster_obj.build_tx(
         src_address=payment_addr.address,
@@ -374,7 +375,7 @@ def _build_spend_locked_txin(
     )
 
     if not submit_tx:
-        return "", tx_output
+        return "", tx_output, []
 
     if not script_valid:
         cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
@@ -388,7 +389,7 @@ def _build_spend_locked_txin(
             cluster_obj.get_address_balance(script_address) == script_init_balance
         ), f"Incorrect balance for script address `{script_address}`"
 
-        return "", tx_output
+        return "", tx_output, []
 
     # calculate cost of Plutus script
     plutus_cost = cluster_obj.calculate_plutus_script_cost(
@@ -432,7 +433,7 @@ def _build_spend_locked_txin(
             redeemers_record=tx_db_record.redeemers[0], cost_record=plutus_cost[0]
         )
 
-    return "", tx_output
+    return "", tx_output, plutus_cost
 
 
 @pytest.mark.skipif(
@@ -485,7 +486,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        __, tx_output = _build_spend_locked_txin(
+        __, tx_output, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_suceeds[2],
@@ -497,12 +498,22 @@ class TestBuildLocking:
         )
 
         # check expected fees
-        expected_fee_fund = 168845
+        expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
         if tx_output:
-            expected_fee = 170782
+            expected_fee = 170_782
             assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
+
+        if plutus_cost:
+            plutus_common.check_plutus_cost(
+                plutus_cost=plutus_cost,
+                expected_cost=[
+                    plutus_common.ExpectedCost(
+                        expected_time=476_468, expected_space=1_700, expected_lovelace=133
+                    )
+                ],
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -528,6 +539,7 @@ class TestBuildLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
+        __: Any  # mypy workaround
         cluster = cluster_lock_context_eq
         temp_template = common.get_test_id(cluster)
         amount = 10_000_000
@@ -568,7 +580,7 @@ class TestBuildLocking:
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         invalid_hereafter = cluster.get_slot_no() + 1000
 
-        __, tx_output_dummy = _build_spend_locked_txin(
+        __, tx_output_dummy, __ = _build_spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
             cluster_obj=cluster,
             payment_addr=pool_users_lock_context_eq[0].payment,
@@ -607,7 +619,7 @@ class TestBuildLocking:
 
         plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
-        __, tx_output = _build_spend_locked_txin(
+        __, tx_output, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=pool_users_lock_context_eq[0].payment,
@@ -658,6 +670,7 @@ class TestBuildLocking:
         * check that the expected amount was spent when success is expected
         * (optional) check transactions in db-sync
         """
+        __: Any  # mypy workaround
         cluster = cluster_lock_guessing_game
         temp_template = f"{common.get_test_id(cluster)}_{script}"
 
@@ -695,7 +708,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        err, __ = _build_spend_locked_txin(
+        err, __, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_guessing_game[0],
@@ -731,6 +744,7 @@ class TestBuildLocking:
         * try to spend the locked UTxO
         * check that the expected error was raised
         """
+        __: Any  # mypy workaround
         cluster = cluster_lock_always_fails
         temp_template = common.get_test_id(cluster)
 
@@ -751,7 +765,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        err, __ = _build_spend_locked_txin(
+        err, __, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_fails[0],
@@ -806,7 +820,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        __, tx_output = _build_spend_locked_txin(
+        __, tx_output, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_fails[0],
@@ -819,12 +833,22 @@ class TestBuildLocking:
         )
 
         # check expected fees
-        expected_fee_fund = 168845
+        expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
         if tx_output:
-            expected_fee = 171309
+            expected_fee = 171_309
             assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
+
+        if plutus_cost:
+            plutus_common.check_plutus_cost(
+                plutus_cost=plutus_cost,
+                expected_cost=[
+                    plutus_common.ExpectedCost(
+                        expected_time=476_468, expected_space=1_700, expected_lovelace=133
+                    )
+                ],
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -877,7 +901,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        __, tx_output = _build_spend_locked_txin(
+        __, tx_output, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs_lock_always_suceeds[0],
@@ -890,12 +914,22 @@ class TestBuildLocking:
         )
 
         # check expected fees
-        expected_fee_fund = 173597
+        expected_fee_fund = 173_597
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
         if tx_output:
-            expected_fee = 175710
+            expected_fee = 175_710
             assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
+
+        if plutus_cost:
+            plutus_common.check_plutus_cost(
+                plutus_cost=plutus_cost,
+                expected_cost=[
+                    plutus_common.ExpectedCost(
+                        expected_time=476_468, expected_space=1_700, expected_lovelace=133
+                    )
+                ],
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

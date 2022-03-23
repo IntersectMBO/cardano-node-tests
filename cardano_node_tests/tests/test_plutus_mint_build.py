@@ -159,6 +159,14 @@ class TestBuildMinting:
             txouts=txouts_step2,
             mint=plutus_mint_data,
         )
+        plutus_cost = cluster.calculate_plutus_script_cost(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+        )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
@@ -175,14 +183,23 @@ class TestBuildMinting:
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
         # check expected fees
-        expected_fee_step1 = 168977
+        expected_fee_step1 = 168_977
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 371111
+        expected_fee_step2 = 371_111
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
+
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[
+                plutus_common.ExpectedCost(
+                    expected_time=357_088_586, expected_space=974_406, expected_lovelace=81_970
+                )
+            ],
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
@@ -300,6 +317,16 @@ class TestBuildMinting:
             invalid_before=slot_step2 - slots_offset,
             invalid_hereafter=slot_step2 + slots_offset,
         )
+        plutus_cost = cluster.calculate_plutus_script_cost(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            invalid_before=slot_step2 - slots_offset,
+            invalid_hereafter=slot_step2 + slots_offset,
+        )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
@@ -316,14 +343,23 @@ class TestBuildMinting:
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
         # check expected fees
-        expected_fee_step1 = 167349
+        expected_fee_step1 = 167_349
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 411175
+        expected_fee_step2 = 411_175
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
+
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[
+                plutus_common.ExpectedCost(
+                    expected_time=379_793_656, expected_space=1_044_064, expected_lovelace=87_626
+                )
+            ],
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
@@ -462,6 +498,16 @@ class TestBuildMinting:
             invalid_before=slot_step2 - slots_offset,
             invalid_hereafter=slot_step2 + slots_offset,
         )
+        plutus_cost = cluster.calculate_plutus_script_cost(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            invalid_before=slot_step2 - slots_offset,
+            invalid_hereafter=slot_step2 + slots_offset,
+        )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
@@ -495,6 +541,18 @@ class TestBuildMinting:
 
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
+
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[
+                plutus_common.ExpectedCost(
+                    expected_time=408_545_501, expected_space=1_126_016, expected_lovelace=94_428
+                ),
+                plutus_common.ExpectedCost(
+                    expected_time=427_707_230, expected_space=1_188_952, expected_lovelace=99_441
+                ),
+            ],
+        )
 
         # check transactions in db-sync
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
@@ -816,6 +874,15 @@ class TestBuildMinting:
             mint=plutus_mint_data,
             required_signers=[signing_key_golden],
         )
+        plutus_cost = cluster.calculate_plutus_script_cost(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            required_signers=[signing_key_golden],
+        )
         # sign incrementally (just to check that it works)
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_output_step2.out_file,
@@ -838,11 +905,20 @@ class TestBuildMinting:
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
         # check expected fees
-        expected_fee_step1 = 167349
+        expected_fee_step1 = 167_349
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 372438
+        expected_fee_step2 = 372_438
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
+
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[
+                plutus_common.ExpectedCost(
+                    expected_time=358_849_733, expected_space=978_434, expected_lovelace=82_329
+                )
+            ],
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
