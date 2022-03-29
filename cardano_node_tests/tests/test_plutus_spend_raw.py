@@ -77,7 +77,7 @@ def cluster_lock_guessing_game(
     """Make sure just one guessing game plutus test run at a time.
 
     Plutus script always has the same address. When one script is used in multiple
-    tests that are running in parallel, the blanaces etc. don't add up.
+    tests that are running in parallel, the balances etc. don't add up.
     """
     return cluster_manager.get(lock_resources=[str(plutus_common.GUESSING_GAME_PLUTUS.stem)])
 
@@ -229,7 +229,7 @@ def _fund_script(
 
     script_init_balance = cluster_obj.get_address_balance(script_address)
 
-    # create a Tx ouput with a datum hash at the script address
+    # create a Tx output with a datum hash at the script address
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -501,7 +501,7 @@ class TestLocking:
 
         Corresponds to Exercise 3 for Alonzo Blue.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent
@@ -558,7 +558,7 @@ class TestLocking:
     ):
         """Test context equivalence while spending a locked UTxO.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * generate a dummy redeemer and a dummy Tx
         * derive the correct redeemer from the dummy Tx
@@ -682,10 +682,10 @@ class TestLocking:
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
-        Test with with "guessing game" script that expects specific datum and redeemer value.
+        Test with "guessing game" script that expects specific datum and redeemer value.
         Test also negative scenarios where datum or redeemer value is different than expected.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent when success is expected
@@ -765,9 +765,9 @@ class TestLocking:
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
-        Test with with "always fails" script that fails for all datum / redeemer values.
+        Test with "always fails" script that fails for all datum / redeemer values.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * try to spend the locked UTxO
         * check that the amount was not transferred, collateral UTxO was not spent
@@ -824,9 +824,9 @@ class TestLocking:
     ):
         """Test failing script together with the `--script-invalid` argument - collateral is taken.
 
-        Test with with "always fails" script that fails for all datum / redeemer values.
+        Test with "always fails" script that fails for all datum / redeemer values.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * try to spend the locked UTxO
         * check that the amount was not transferred and collateral UTxO was spent
@@ -873,7 +873,7 @@ class TestLocking:
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
-        * create a Tx ouput that contains native tokens with a datum hash at the script address
+        * create a Tx output that contains native tokens with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent
@@ -1000,7 +1000,7 @@ class TestLocking:
 
         Expect failure.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * try to spend the locked UTxO while using the same UTxO as collateral
         * check that the expected error was raised
@@ -1050,7 +1050,7 @@ class TestLocking:
 
         Expect failure.
 
-        * create a Tx ouput without a datum hash
+        * create a Tx output without a datum hash
         * try to spend the UTxO like it was locked Plutus UTxO
         * check that the expected error was raised
         * (optional) check transactions in db-sync
@@ -1120,7 +1120,7 @@ class TestLocking:
         2. more collateral inputs than what is allowed
         3. no collateral input
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * create multiple UTxOs for collateral
         * spend the locked UTxO
@@ -1224,7 +1224,7 @@ class TestLocking:
 
         Expect failure.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * create a collateral UTxO with amount of ADA less than required by `collateralPercentage`
         * try to spend the UTxO

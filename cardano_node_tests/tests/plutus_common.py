@@ -43,6 +43,7 @@ class PlutusOp(NamedTuple):
     datum_cbor_file: Optional[Path] = None
     redeemer_file: Optional[Path] = None
     redeemer_cbor_file: Optional[Path] = None
+    redeemer_value: Optional[str] = None
     execution_units: Optional[Tuple[int, int]] = None
 
 
