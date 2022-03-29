@@ -523,11 +523,9 @@ class TestRewards:
         for __ in range(9):
             # reward balance in previous epoch
             prev_user_reward = user_rewards[-1].reward_total
-            (
-                prev_owner_epoch,
-                prev_owner_reward,
-                *__,
-            ) = owner_rewards[-1]
+            prev_owner_rec = owner_rewards[-1]
+            prev_owner_epoch = prev_owner_rec.epoch_no
+            prev_owner_reward = prev_owner_rec.reward_total
 
             # wait for new epoch
             if cluster.get_epoch() == prev_owner_epoch:
@@ -715,12 +713,12 @@ class TestRewards:
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             prev_rs_record = rs_records.get(this_epoch - 1)
-            owner_reward_epoch = reward_records[-1].reward_per_epoch
-            if owner_reward_epoch and prev_rs_record:
+            reward_per_epoch = reward_records[-1].reward_per_epoch
+            if reward_per_epoch and prev_rs_record:
                 prev_recorded_reward = _get_reward_amount_for_key_hash(
                     reward_addr_dec, prev_rs_record
                 )
-                assert owner_reward_epoch in (
+                assert reward_per_epoch in (
                     prev_recorded_reward,
                     prev_recorded_reward + mir_reward,
                 )
@@ -881,11 +879,9 @@ class TestRewards:
             LOGGER.info("Checking rewards for 8 epochs.")
             for __ in range(8):
                 # reward balance in previous epoch
-                (
-                    prev_epoch,
-                    prev_owner_reward,
-                    *__,
-                ) = reward_records[-1]
+                prev_reward_rec = reward_records[-1]
+                prev_epoch = prev_reward_rec.epoch_no
+                prev_reward_total = prev_reward_rec.reward_total
 
                 # wait for new epoch
                 if cluster.get_epoch() == prev_epoch:
@@ -894,24 +890,24 @@ class TestRewards:
                 this_epoch = cluster.get_epoch()
 
                 # current reward balance
-                owner_reward = cluster.get_stake_addr_info(
+                reward_total = cluster.get_stake_addr_info(
                     pool_reward.stake.address
                 ).reward_account_balance
 
                 # Total reward amount received this epoch.
-                # If `owner_reward < prev_owner_reward`, withdrawal took place during
+                # If `reward_total < prev_reward_total`, withdrawal took place during
                 # previous epoch.
-                if owner_reward > prev_owner_reward:
-                    owner_reward_epoch = owner_reward - prev_owner_reward
+                if reward_total > prev_reward_total:
+                    reward_per_epoch = reward_total - prev_reward_total
                 else:
-                    owner_reward_epoch = owner_reward
+                    reward_per_epoch = reward_total
 
                 # store collected rewards info
                 reward_records.append(
                     RewardRecord(
                         epoch_no=this_epoch,
-                        reward_total=owner_reward,
-                        reward_per_epoch=owner_reward_epoch,
+                        reward_total=reward_total,
+                        reward_per_epoch=reward_per_epoch,
                         leader_pool_ids=[pool_id],
                     )
                 )
@@ -920,11 +916,11 @@ class TestRewards:
                     mir_tx_raw_reserves = _mir_tx("reserves")
 
                 if this_epoch == init_epoch + 3:
-                    assert owner_reward_epoch > mir_reward
+                    assert reward_per_epoch > mir_reward
                     mir_tx_raw_treasury = _mir_tx("treasury")
 
                 if this_epoch == init_epoch + 4:
-                    assert owner_reward_epoch > mir_reward
+                    assert reward_per_epoch > mir_reward
 
                 # undelegate rewards address
                 if this_epoch == init_epoch + 5:
@@ -1444,9 +1440,9 @@ class TestRewards:
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             prev_rs_record = rs_records.get(this_epoch - 1)
-            reward_for_epoch = reward_records[-1].reward_per_epoch
-            if reward_for_epoch and prev_rs_record:
-                assert reward_for_epoch == _get_reward_amount_for_key_hash(
+            reward_per_epoch = reward_records[-1].reward_per_epoch
+            if reward_per_epoch and prev_rs_record:
+                assert reward_per_epoch == _get_reward_amount_for_key_hash(
                     stake_addr_dec, prev_rs_record
                 )
 
@@ -1500,7 +1496,9 @@ class TestRewards:
         LOGGER.info("Checking rewards for 8 epochs.")
         for __ in range(8):
             # reward balance in previous epoch
-            prev_epoch, prev_reward_total, *__ = reward_records[-1]
+            prev_reward_rec = reward_records[-1]
+            prev_epoch = prev_reward_rec.epoch_no
+            prev_reward_total = prev_reward_rec.reward_total
 
             # wait for new epoch
             if cluster.get_epoch() == prev_epoch:
@@ -1516,9 +1514,9 @@ class TestRewards:
             # Total reward amount received this epoch.
             # If `reward_total < prev_reward_total`, withdrawal took place during previous epoch.
             if reward_total > prev_reward_total:
-                reward_for_epoch = reward_total - prev_reward_total
+                reward_per_epoch = reward_total - prev_reward_total
             else:
-                reward_for_epoch = reward_total
+                reward_per_epoch = reward_total
 
             # current payment balance
             payment_balance = cluster.get_address_balance(delegation_out.pool_user.payment.address)
@@ -1594,7 +1592,7 @@ class TestRewards:
                 RewardRecord(
                     epoch_no=this_epoch,
                     reward_total=reward_total,
-                    reward_per_epoch=reward_for_epoch,
+                    reward_per_epoch=reward_per_epoch,
                     member_pool_id=cluster.get_stake_addr_info(
                         delegation_out.pool_user.stake.address
                     ).delegation,
