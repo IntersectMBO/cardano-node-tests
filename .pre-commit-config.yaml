@@ -7,7 +7,7 @@ repos:
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
     language_version: python3
 - repo: https://github.com/ambv/black
-  rev: 22.1.0
+  rev: 22.3.0
   hooks:
   - id: black
     args: [--safe, --quiet]
