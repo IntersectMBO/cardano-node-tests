@@ -1,4 +1,5 @@
 """Tests for spending with Plutus using `transaction build`."""
+import json
 import logging
 import shutil
 from pathlib import Path
@@ -8,6 +9,8 @@ from typing import Optional
 from typing import Tuple
 
 import allure
+import hypothesis
+import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
 
@@ -195,6 +198,37 @@ def payment_addrs_lock_always_fails(
     return addrs
 
 
+@pytest.fixture
+def fund_script_guessing_game(
+    cluster_lock_guessing_game: clusterlib.ClusterLib,
+    payment_addrs_lock_guessing_game: List[clusterlib.AddressRecord],
+) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]]:
+    """Fund a plutus script and create the locked UTxO and collateral UTxO.
+
+    Uses `cardano-cli transaction build` command for building the transactions.
+    """
+    cluster = cluster_lock_guessing_game
+    temp_template = common.get_test_id(cluster)
+
+    plutus_op = plutus_common.PlutusOp(
+        script_file=plutus_common.GUESSING_GAME_PLUTUS, datum_file=plutus_common.DATUM_42_TYPED
+    )
+
+    tx_output_fund = _build_fund_script(
+        temp_template=temp_template,
+        cluster_obj=cluster,
+        payment_addr=payment_addrs_lock_guessing_game[0],
+        dst_addr=payment_addrs_lock_guessing_game[1],
+        plutus_op=plutus_op,
+    )
+
+    txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+    script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+    collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
+
+    return script_utxos, collateral_utxos
+
+
 def _build_fund_script(
     temp_template: str,
     cluster_obj: clusterlib.ClusterLib,
@@ -210,8 +244,8 @@ def _build_fund_script(
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
-    script_fund = 1000_000_000
-    collateral_fund = 1500_000_000
+    script_fund = 1_000_000_000
+    collateral_fund = 1_500_000_000
 
     stokens = tokens or ()
     ctokens = tokens_collateral or ()
@@ -221,7 +255,7 @@ def _build_fund_script(
     )
     script_init_balance = cluster_obj.get_address_balance(script_address)
 
-    # create a Tx ouput with a datum hash at the script address
+    # create a Tx output with a datum hash at the script address
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -316,9 +350,6 @@ def _build_spend_locked_txin(
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
 
-    script_init_balance = cluster_obj.get_address_balance(script_address)
-    dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
-
     # spend the "locked" UTxO
 
     plutus_txins = [
@@ -330,6 +361,7 @@ def _build_spend_locked_txin(
             datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
             redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
             redeemer_cbor_file=plutus_op.redeemer_cbor_file if plutus_op.redeemer_cbor_file else "",
+            redeemer_value=plutus_op.redeemer_value if plutus_op.redeemer_value else "",
         )
     ]
     tx_files = tx_files._replace(
@@ -376,6 +408,9 @@ def _build_spend_locked_txin(
 
     if not submit_tx:
         return "", tx_output, []
+
+    script_init_balance = cluster_obj.get_address_balance(script_address)
+    dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
 
     if not script_valid:
         cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
@@ -458,7 +493,7 @@ class TestBuildLocking:
 
         Corresponds to Exercise 3 for Alonzo Blue.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent when success is expected
@@ -531,7 +566,7 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * generate a dummy redeemer and a dummy Tx
         * derive the correct redeemer from the dummy Tx
@@ -661,10 +696,10 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Test with with "guessing game" script that expects specific datum and redeemer value.
+        Test with "guessing game" script that expects specific datum and redeemer value.
         Test also negative scenarios where datum or redeemer value is different than expected.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent when success is expected
@@ -737,9 +772,9 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Test with with "always fails" script that fails for all datum / redeemer values.
+        Test with "always fails" script that fails for all datum / redeemer values.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * try to spend the locked UTxO
         * check that the expected error was raised
@@ -793,9 +828,9 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Test with with "always fails" script that fails for all datum / redeemer values.
+        Test with "always fails" script that fails for all datum / redeemer values.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * try to spend the locked UTxO
         * check that the amount was not transferred and collateral UTxO was spent
@@ -862,7 +897,7 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx ouput that contains native tokens with a datum hash at the script address
+        * create a Tx output that contains native tokens with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected amount was spent
@@ -1016,7 +1051,7 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx ouput with a datum hash at the script address
+        * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * try to spend the locked UTxO while using the same UTxO as collateral
         * check that the expected error was raised
@@ -1072,7 +1107,7 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx ouput without a datum hash
+        * create a Tx output without a datum hash
         * try to spend the UTxO like it was locked Plutus UTxO
         * check that the expected error was raised
         * (optional) check transactions in db-sync
@@ -1143,7 +1178,7 @@ class TestBuildLocking:
 
         Tests bug https://github.com/input-output-hk/cardano-db-sync/issues/750
 
-        * create a Tx ouput with a datum hash at the script address and a collateral UTxO
+        * create a Tx output with a datum hash at the script address and a collateral UTxO
         * check that the expected amount was locked at the script address
         * spend the locked UTxO while using the collateral UTxO both as collateral and as
           normal Tx input
@@ -1243,3 +1278,63 @@ class TestBuildLocking:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
+
+
+@pytest.mark.testnets
+class TestNegative:
+    """Tests for txin locking using Plutus smart contracts that are expected to fail."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_number=st.integers(min_value=-2 ^ 64, max_value=2 ^ 64))
+    @common.hypothesis_settings()
+    def test_guessing_game_pbt(
+        self,
+        cluster_lock_guessing_game: clusterlib.ClusterLib,
+        payment_addrs_lock_guessing_game: List[clusterlib.AddressRecord],
+        fund_script_guessing_game: Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
+        redeemer_number: int,
+    ):
+        """Try to spend a locked UtxO with and an invalid redeemer.
+
+        Expect failure.
+        """
+        hypothesis.assume(redeemer_number != 42)
+
+        cluster = cluster_lock_guessing_game
+        temp_template = f"test_guessing_game_pbt{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos = fund_script_guessing_game
+
+        redeemer_file = "redeemer_file.datum"
+
+        redeemer_content = {}
+        if redeemer_number % 3 == 0:
+            redeemer_content = {"constructor": 0, "fields": [{"int": redeemer_number}]}
+        elif redeemer_number % 2 == 0:
+            redeemer_content = {"int": redeemer_number}
+
+        if redeemer_content:
+            with open(redeemer_file, "w", encoding="utf-8") as outfile:
+                json.dump(redeemer_content, outfile)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=Path(redeemer_file) if redeemer_content else None,
+            redeemer_value=None if redeemer_content else str(redeemer_number),
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs_lock_guessing_game[0],
+                dst_addr=payment_addrs_lock_guessing_game[1],
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+
+        assert "The Plutus script evaluation failed" in str(excinfo.value)
