@@ -1,6 +1,7 @@
 """Tests for spending with Plutus using `transaction build-raw`."""
 import itertools
 import logging
+import shutil
 import time
 from pathlib import Path
 from typing import List
@@ -8,7 +9,6 @@ from typing import Optional
 from typing import Tuple
 
 import allure
-import distutils.spawn
 import pytest
 from cardano_clusterlib import clusterlib
 
@@ -546,7 +546,7 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        not distutils.spawn.find_executable("create-script-context"),
+        not shutil.which("create-script-context"),
         reason="cannot find `create-script-context` on the PATH",
     )
     @pytest.mark.dbsync
