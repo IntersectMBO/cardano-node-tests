@@ -25,6 +25,12 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+# skip tests if is not alonzo era
+pytestmark = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.ALONZO,
+    reason="runs only with Alonzo+ TX",
+)
+
 
 @pytest.fixture
 def cluster_lock_always_suceeds(
@@ -482,10 +488,6 @@ def _check_pretty_utxo(
     return err
 
 
-@pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALONZO,
-    reason="runs only with Alonzo+ TX",
-)
 class TestLocking:
     """Tests for txin locking using Plutus smart contracts."""
 

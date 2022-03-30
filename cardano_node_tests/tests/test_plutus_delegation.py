@@ -25,6 +25,12 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+# skip tests if is not alonzo era
+pytestmark = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.ALONZO,
+    reason="runs only with Alonzo+ TX",
+)
+
 
 @pytest.fixture
 def cluster_lock_42stake(
@@ -251,10 +257,6 @@ def deregister_stake_addr(
 # don't run these tests on testnets as a stake address corresponding to the Plutus script
 # might be already in use
 @pytest.mark.order(8)
-@pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALONZO,
-    reason="runs only with Alonzo+ TX",
-)
 @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
