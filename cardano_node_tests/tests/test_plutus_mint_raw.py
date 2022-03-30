@@ -20,6 +20,12 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+# skip tests if is not alonzo era
+pytestmark = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.ALONZO,
+    reason="runs only with Alonzo+ TX",
+)
+
 
 @pytest.fixture
 def payment_addrs(
@@ -102,7 +108,6 @@ def execution_cost(cluster: clusterlib.ClusterLib):
     }
 
 
-@pytest.mark.skipif(VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX")
 class TestMinting:
     """Tests for minting using Plutus smart contracts."""
 
@@ -938,7 +943,6 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
 
-@pytest.mark.skipif(VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX")
 class TestMintingNegative:
     """Tests for minting with Plutus using `transaction build-raw` that are expected to fail."""
 
