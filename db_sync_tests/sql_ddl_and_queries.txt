@@ -1,0 +1,187 @@
+
+DDL:
+
+shelley_qa_db_sync:
+
+
+sql_ddl_shelley_qa_db_sync = (
+    "CREATE TABLE shelley_qa_db_sync ("
+    " identifier varchar(255) NOT NULL,"
+    " env varchar(255) NOT NULL,"
+    " node_pr varchar(255) NOT NULL,"
+    " db_sync_branch varchar(255) DEFAULT NULL,"
+    " node_cli_version varchar(255) NOT NULL,"
+    " node_git_revision varchar(255) NOT NULL,"
+    " db_sync_version varchar(255) NOT NULL,"
+    " db_sync_git_rev varchar(255) NOT NULL,"
+    " start_test_time varchar(255) NOT NULL,"
+    " end_test_time varchar(255) NOT NULL,"
+    " total_sync_time_in_sec int DEFAULT NULL,"
+    " total_sync_time_in_h_m_s varchar(255) DEFAULT NULL,"
+    " last_synced_epoch_no int DEFAULT NULL,"
+    " last_synced_block_no int DEFAULT NULL,"
+    " platform_system varchar(255) NOT NULL,"
+    " platform_release varchar(255) NOT NULL,"
+    " platform_version varchar(255) NOT NULL,"
+    " no_of_cpu_cores int DEFAULT NULL,"
+    " total_ram_in_GB int DEFAULT NULL,"
+    " PRIMARY KEY (identifier)"
+    " ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+)
+
+create_table(sql_ddl_shelley_qa_db_sync)
+
+
+testnet_db_sync:
+
+
+sql_ddl_testnet_db_sync = (
+    "CREATE TABLE testnet_db_sync ("
+    " identifier varchar(255) NOT NULL,"
+    " env varchar(255) NOT NULL,"
+    " node_pr varchar(255) NOT NULL,"
+    " db_sync_branch varchar(255) DEFAULT NULL,"
+    " node_cli_version varchar(255) NOT NULL,"
+    " node_git_revision varchar(255) NOT NULL,"
+    " db_sync_version varchar(255) NOT NULL,"
+    " db_sync_git_rev varchar(255) NOT NULL,"
+    " start_test_time varchar(255) NOT NULL,"
+    " end_test_time varchar(255) NOT NULL,"
+    " total_sync_time_in_sec int DEFAULT NULL,"
+    " total_sync_time_in_h_m_s varchar(255) DEFAULT NULL,"
+    " last_synced_epoch_no int DEFAULT NULL,"
+    " last_synced_block_no int DEFAULT NULL,"
+    " platform_system varchar(255) NOT NULL,"
+    " platform_release varchar(255) NOT NULL,"
+    " platform_version varchar(255) NOT NULL,"
+    " no_of_cpu_cores int DEFAULT NULL,"
+    " total_ram_in_GB int DEFAULT NULL,"
+    " PRIMARY KEY (identifier)"
+    " ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+)
+
+create_table(sql_ddl_testnet_db_sync)
+
+
+mainnnet_db_sync:
+
+
+sql_ddl_mainnet_db_sync = (
+    "CREATE TABLE mainnet_db_sync ("
+    " identifier varchar(255) NOT NULL,"
+    " env varchar(255) NOT NULL,"
+    " node_pr varchar(255) NOT NULL,"
+    " db_sync_branch varchar(255) DEFAULT NULL,"
+    " node_cli_version varchar(255) NOT NULL,"
+    " node_git_revision varchar(255) NOT NULL,"
+    " db_sync_version varchar(255) NOT NULL,"
+    " db_sync_git_rev varchar(255) NOT NULL,"
+    " start_test_time varchar(255) NOT NULL,"
+    " end_test_time varchar(255) NOT NULL,"
+    " total_sync_time_in_sec int DEFAULT NULL,"
+    " total_sync_time_in_h_m_s varchar(255) DEFAULT NULL,"
+    " last_synced_epoch_no int DEFAULT NULL,"
+    " last_synced_block_no int DEFAULT NULL,"
+    " platform_system varchar(255) NOT NULL,"
+    " platform_release varchar(255) NOT NULL,"
+    " platform_version varchar(255) NOT NULL,"
+    " no_of_cpu_cores int DEFAULT NULL,"
+    " total_ram_in_GB int DEFAULT NULL,"
+    " PRIMARY KEY (identifier)"
+    " ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+)
+
+create_table(sql_ddl_mainnet_db_sync)
+
+
+shelley_qa_epoch_duration_db_sync = (
+    "CREATE TABLE shelley_qa_epoch_duration_db_sync ("
+    " identifier varchar(255) NOT NULL,"
+    " epoch_no int DEFAULT NULL,"
+    " sync_duration_secs int DEFAULT NULL"
+    " ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+)
+
+create_table(shelley_qa_epoch_duration_db_sync)
+
+
+testnet_epoch_duration_db_sync = (
+    "CREATE TABLE testnet_epoch_duration_db_sync ("
+    " identifier varchar(255) NOT NULL,"
+    " epoch_no int DEFAULT NULL,"
+    " sync_duration_secs int DEFAULT NULL"
+    " ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+)
+
+create_table(testnet_epoch_duration_db_sync)
+
+
+mainnet_epoch_duration_db_sync = (
+    "CREATE TABLE mainnet_epoch_duration_db_sync ("
+    " identifier varchar(255) NOT NULL,"
+    " epoch_no int DEFAULT NULL,"
+    " sync_duration_secs int DEFAULT NULL"
+    " ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+)
+
+create_table(mainnet_epoch_duration_db_sync)
+
+
+Performance stats tables:
+
+CREATE TABLE testnet_epoch_duration_db_sync (
+ identifier varchar(255) NOT NULL,
+ epoch_no int DEFAULT NULL,
+ sync_duration_secs int DEFAULT NULL
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+CREATE TABLE mainnet_epoch_duration_db_sync (
+ identifier varchar(255) NOT NULL,
+ epoch_no int DEFAULT NULL,
+ sync_duration_secs int DEFAULT NULL
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+ ALTER TABLE qa_sync_tests_db.testnet_db_sync ADD cpu_percent_usage DECIMAL DEFAULT NULL NULL;
+ ALTER TABLE qa_sync_tests_db.testnet_db_sync ADD total_rss_memory_usage_in_B BIGINT DEFAULT NULL NULL;
+ ALTER TABLE qa_sync_tests_db.testnet_db_sync ADD total_database_size varchar(100) DEFAULT NULL NULL;
+
+
+
+ CREATE TABLE mainnet_db_sync_snapshot_restoration (
+  identifier varchar(255) NOT NULL,
+  env varchar(255) NOT NULL,
+  node_pr varchar(255) NOT NULL,
+  node_branch varchar(255) NOT NULL,
+  db_sync_branch varchar(255) DEFAULT NULL,
+  node_cli_version varchar(255) NOT NULL,
+  node_git_revision varchar(255) NOT NULL,
+  db_sync_version varchar(255) NOT NULL,
+  db_sync_git_rev varchar(255) NOT NULL,
+  start_test_time varchar(255) NOT NULL,
+  end_test_time varchar(255) NOT NULL,
+  node_total_sync_time_in_sec int DEFAULT NULL,
+  node_total_sync_time_in_h_m_s varchar(255) DEFAULT NULL,
+  db_total_sync_time_in_sec int DEFAULT NULL,
+  db_total_sync_time_in_h_m_s varchar(255) DEFAULT NULL,
+  snapshot_url varchar(255) DEFAULT NULL,
+  snapshot_name varchar(255) DEFAULT NULL,
+  snapshot_epoch_no int DEFAULT NULL,
+  snapshot_block_no int DEFAULT NULL,
+  snapshot_slot_no int DEFAULT NULL,
+  last_synced_epoch_no int DEFAULT NULL,
+  last_synced_block_no int DEFAULT NULL,
+  last_synced_slot_no int DEFAULT NULL,
+  cpu_percent_usage decimal DEFAULT NULL,
+  total_rss_memory_usage_in_B bigint DEFAULT NULL,
+  total_database_size varchar(255) NOT NULL,
+  rollbacks varchar(10) NOT NULL,
+  errors varchar(10) NOT NULL,
+  platform_system varchar(255) NOT NULL,
+  platform_release varchar(255) NOT NULL,
+  platform_version varchar(255) NOT NULL,
+  no_of_cpu_cores int DEFAULT NULL,
+  total_ram_in_GB int DEFAULT NULL,
+  PRIMARY KEY (identifier)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
