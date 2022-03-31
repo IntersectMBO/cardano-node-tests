@@ -1,0 +1,61 @@
+name: db-sync - full sync tests
+
+on:
+  workflow_dispatch:
+    branches:
+      - db_sync_tests
+    inputs:
+      node_pr:
+        description: node pull request number
+        required: true
+        default: "3458"
+      node_branch:
+        description: node branch or tag
+        required: true
+        default: "1.33.0"
+      node_version:
+        description: node version - 1.33.0-rc2 (tag number) or 1.33.0 (release number - for released versions) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version)
+        required: true
+        default: "1.33.0"
+      db_sync_branch:
+        description: db-sync branch or tag
+        required: true
+        default: "tags/12.0.2"
+      db_sync_version:
+        description: db-sync version - 12.0.0-rc2 (tag number) or 12.0.2 (release number - for released versions) or 12.0.2_PR2124 (for not released and not tagged runs with a specific db_sync PR/version)
+        required: true
+        default: "12.0.2"
+      environment:
+        description: Environment on which to run the tests - shelley_qa, testnet, staging or mainnet
+        required: true
+        default: "shelley_qa"
+
+jobs:
+  db_sync_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: trigger the Buildkite pipeline - run db-sync full sync test
+        env:
+          BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
+          AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
+          AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
+          AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
+        uses: zegocover/buildkite-pipeline-action@master
+        with:
+          branch: db_sync_tests
+          access_token: '${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}'
+          pipeline: 'input-output-hk/qa-db-sync-full-sync'
+          message: ':github: Triggered by GitHub Action'
+          env: '{
+          "node_pr":"${{ github.event.inputs.node_pr }}",
+          "node_branch":"${{ github.event.inputs.node_branch }}",
+          "node_version":"${{ github.event.inputs.node_version }}",
+          "db_sync_branch":"${{ github.event.inputs.db_sync_branch }}",
+          "db_sync_version":"${{ github.event.inputs.db_sync_version }}",
+          "environment":"${{ github.event.inputs.environment }}",
+          "AWS_DB_USERNAME":"${{ secrets.AWS_DB_USERNAME }}",
+          "AWS_DB_PASS":"${{ secrets.AWS_DB_PASS }}",
+          "AWS_DB_NAME":"${{ secrets.AWS_DB_NAME }}",
+          "AWS_DB_HOSTNAME":"${{ secrets.AWS_DB_HOSTNAME }}"
+          }'

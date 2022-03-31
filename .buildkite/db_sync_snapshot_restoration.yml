@@ -1,0 +1,13 @@
+steps:
+  - label: ':drum_with_drumsticks: Snapshot restoration test :drum_with_drumsticks:'
+    commands:
+      - git checkout origin/db_sync_tests
+      - git pull origin db_sync_tests
+      - cd db_sync_tests
+      - df -h
+      - nix-shell --run 'python ./db_sync_snapshot_restoration.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -surl "${snapshot_url}" -e "${environment}"'
+      - nix-shell --run 'python ./write_snapshot_restoration_test_data_to_db.py -e "${environment}"'
+    timeout_in_minutes: 14400
+    agents:
+      system: x86_64-linux
+      queue: benchmark_large
