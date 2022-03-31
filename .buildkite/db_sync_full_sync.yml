@@ -1,0 +1,14 @@
+steps:
+  - label: ':drum_with_drumsticks: Full sync test :drum_with_drumsticks:'
+    commands:
+      - git checkout origin/db_sync_tests
+      - git pull origin db_sync_tests
+      - cd db_sync_tests
+      - df -h
+      - nix-shell --run 'python ./db_sync_tests.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}"  -e "${environment}"'
+      - nix-shell --run 'python ./write_test_data_to_db.py -e "${environment}"'
+      - nix-shell --run 'python ./generate_plot.py'
+    timeout_in_minutes: 43200
+    agents:
+      system: x86_64-linux
+      queue: benchmark_large
