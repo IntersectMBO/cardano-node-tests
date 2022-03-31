@@ -140,7 +140,7 @@ def return_funds_to_faucet(
     *src_addrs: clusterlib.AddressRecord,
     cluster_obj: clusterlib.ClusterLib,
     faucet_addr: str,
-    amount: int = -1,
+    amount: Union[int, List[int]] = -1,
     tx_name: Optional[str] = None,
     destination_dir: FileType = ".",
 ) -> None:
@@ -150,16 +150,19 @@ def return_funds_to_faucet(
     """
     tx_name = tx_name or helpers.get_timestamped_rand_str()
     tx_name = f"{tx_name}_return_funds"
+    if isinstance(amount, int):
+        amount = [amount] * len(src_addrs)
+
     with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{faucet_addr}.lock"):
         try:
             logging.disable(logging.ERROR)
-            for src in src_addrs:
-                fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount)]
-                fund_tx_files = clusterlib.TxFiles(signing_key_files=[src.skey_file])
+            for addr, amount_rec in zip(src_addrs, amount):
+                fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount_rec)]
+                fund_tx_files = clusterlib.TxFiles(signing_key_files=[addr.skey_file])
                 # try to return funds; don't mind if there's not enough funds for fees etc.
                 with contextlib.suppress(Exception):
                     cluster_obj.send_funds(
-                        src_address=src.address,
+                        src_address=addr.address,
                         destinations=fund_dst,
                         tx_name=tx_name,
                         tx_files=fund_tx_files,
@@ -173,7 +176,7 @@ def fund_from_faucet(
     *dst_addrs: Union[clusterlib.AddressRecord, clusterlib.PoolUser],
     cluster_obj: clusterlib.ClusterLib,
     faucet_data: dict,
-    amount: int = 1000_000_000,
+    amount: Union[int, List[int]] = 1000_000_000,
     tx_name: Optional[str] = None,
     destination_dir: FileType = ".",
     force: bool = False,
@@ -183,11 +186,13 @@ def fund_from_faucet(
     dst_addr_records: List[clusterlib.AddressRecord] = [
         (r.payment if hasattr(r, "payment") else r) for r in dst_addrs  # type: ignore
     ]
+    if isinstance(amount, int):
+        amount = [amount] * len(dst_addr_records)
 
     fund_dst = [
-        clusterlib.TxOut(address=d.address, amount=amount)
-        for d in dst_addr_records
-        if force or cluster_obj.get_address_balance(d.address) < amount
+        clusterlib.TxOut(address=d.address, amount=a)
+        for d, a in zip(dst_addr_records, amount)
+        if force or cluster_obj.get_address_balance(d.address) < a
     ]
     if not fund_dst:
         return
