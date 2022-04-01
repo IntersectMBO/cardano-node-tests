@@ -25,7 +25,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-# skip tests if is not alonzo era
+# skip all tests if Tx era < alonzo
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALONZO,
     reason="runs only with Alonzo+ TX",
@@ -33,33 +33,17 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def cluster_lock_always_suceeds(
+def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
-) -> clusterlib.ClusterLib:
-    """Make sure just one txin plutus test run at a time.
-
-    Plutus script always has the same address. When one script is used in multiple
-    tests that are running in parallel, the blanaces etc. don't add up.
-    """
-    return cluster_manager.get(lock_resources=[str(plutus_common.ALWAYS_SUCCEEDS_PLUTUS.stem)])
-
-
-@pytest.fixture
-def payment_addrs_lock_always_suceeds(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_always_suceeds: clusterlib.ClusterLib,
+    cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.AddressRecord]:
-    """Create new payment address while using the `cluster_lock_always_suceeds` fixture."""
-    cluster = cluster_lock_always_suceeds
+    """Create new payment addresses."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
         addrs = clusterlib_utils.create_payment_addr_records(
-            *[
-                f"plutus_payment_lock_allsucceeds_ci{cluster_manager.cluster_instance_num}_{i}"
-                for i in range(4)
-            ],
+            *[f"payment_addrs_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(4)],
             cluster_obj=cluster,
         )
         fixture_cache.value = addrs
@@ -77,75 +61,18 @@ def payment_addrs_lock_always_suceeds(
 
 
 @pytest.fixture
-def cluster_lock_guessing_game(
+def pool_users(
     cluster_manager: cluster_management.ClusterManager,
-) -> clusterlib.ClusterLib:
-    """Make sure just one guessing game plutus test run at a time.
-
-    Plutus script always has the same address. When one script is used in multiple
-    tests that are running in parallel, the blanaces etc. don't add up.
-    """
-    return cluster_manager.get(lock_resources=[str(plutus_common.GUESSING_GAME_PLUTUS.stem)])
-
-
-@pytest.fixture
-def payment_addrs_lock_guessing_game(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_guessing_game: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
-    """Create new payment address while using the `cluster_lock_guessing_game` fixture."""
-    cluster = cluster_lock_guessing_game
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        addrs = clusterlib_utils.create_payment_addr_records(
-            *[
-                f"plutus_payment_lock_ggame_ci{cluster_manager.cluster_instance_num}_{i}"
-                for i in range(2)
-            ],
-            cluster_obj=cluster,
-        )
-        fixture_cache.value = addrs
-
-    # fund source address
-    clusterlib_utils.fund_from_faucet(
-        addrs[0],
-        cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=20_000_000_000,
-    )
-
-    return addrs
-
-
-@pytest.fixture
-def cluster_lock_context_eq(
-    cluster_manager: cluster_management.ClusterManager,
-) -> clusterlib.ClusterLib:
-    """Make sure just one guessing game plutus test run at a time.
-
-    Plutus script always has the same address. When one script is used in multiple
-    tests that are running in parallel, the blanaces etc. don't add up.
-    """
-    return cluster_manager.get(lock_resources=[str(plutus_common.CONTEXT_EQUIVALENCE_PLUTUS.stem)])
-
-
-@pytest.fixture
-def pool_users_lock_context_eq(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_context_eq: clusterlib.ClusterLib,
+    cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.PoolUser]:
-    """Create new pool users while using the `cluster_lock_context_eq` fixture."""
-    cluster = cluster_lock_context_eq
+    """Create new pool users."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
         created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
-            name_template="plutus_payment_lock_context_eq_ci"
-            f"{cluster_manager.cluster_instance_num}",
+            name_template=f"pool_users_ci{cluster_manager.cluster_instance_num}",
             no_of_addr=2,
         )
         fixture_cache.value = created_users
@@ -162,58 +89,14 @@ def pool_users_lock_context_eq(
 
 
 @pytest.fixture
-def cluster_lock_always_fails(
-    cluster_manager: cluster_management.ClusterManager,
-) -> clusterlib.ClusterLib:
-    """Make sure just one txin plutus test run at a time.
-
-    Plutus script always has the same address. When one script is used in multiple
-    tests that are running in parallel, the blanaces etc. don't add up.
-    """
-    return cluster_manager.get(lock_resources=[str(plutus_common.ALWAYS_FAILS_PLUTUS.stem)])
-
-
-@pytest.fixture
-def payment_addrs_lock_always_fails(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_always_fails: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
-    """Create new payment address while using the `cluster_lock_always_fails` fixture."""
-    cluster = cluster_lock_always_fails
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        addrs = clusterlib_utils.create_payment_addr_records(
-            *[
-                f"plutus_payment_lock_allfails_ci{cluster_manager.cluster_instance_num}_{i}"
-                for i in range(2)
-            ],
-            cluster_obj=cluster,
-        )
-        fixture_cache.value = addrs
-
-    # fund source address
-    clusterlib_utils.fund_from_faucet(
-        addrs[0],
-        cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=20_000_000_000,
-    )
-
-    return addrs
-
-
-@pytest.fixture
 def fund_script_guessing_game(
-    cluster_lock_guessing_game: clusterlib.ClusterLib,
-    payment_addrs_lock_guessing_game: List[clusterlib.AddressRecord],
+    cluster: clusterlib.ClusterLib,
+    payment_addrs: List[clusterlib.AddressRecord],
 ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]]:
     """Fund a plutus script and create the locked UTxO and collateral UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
-    cluster = cluster_lock_guessing_game
     temp_template = common.get_test_id(cluster)
 
     plutus_op = plutus_common.PlutusOp(
@@ -223,8 +106,8 @@ def fund_script_guessing_game(
     tx_output_fund = _build_fund_script(
         temp_template=temp_template,
         cluster_obj=cluster,
-        payment_addr=payment_addrs_lock_guessing_game[0],
-        dst_addr=payment_addrs_lock_guessing_game[1],
+        payment_addr=payment_addrs[0],
+        dst_addr=payment_addrs[1],
         plutus_op=plutus_op,
     )
 
@@ -259,7 +142,6 @@ def _build_fund_script(
     script_address = cluster_obj.gen_payment_addr(
         addr_name=temp_template, payment_script_file=plutus_op.script_file
     )
-    script_init_balance = cluster_obj.get_address_balance(script_address)
 
     # create a Tx output with a datum hash at the script address
 
@@ -309,19 +191,24 @@ def _build_fund_script(
     )
     cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-    script_balance = cluster_obj.get_address_balance(script_address)
-    assert (
-        script_balance == script_init_balance + script_fund
-    ), f"Incorrect balance for script address `{script_address}`"
+    txid = cluster_obj.get_txid(tx_body_file=tx_output.out_file)
+
+    script_utxos = cluster_obj.get_utxo(txin=f"{txid}#1", coins=[clusterlib.DEFAULT_COIN])
+    assert script_utxos, "No script UTxO"
+
+    script_balance = script_utxos[0].amount
+    assert script_balance == script_fund, f"Incorrect balance for script address `{script_address}`"
 
     for token in stokens:
+        token_balance = cluster_obj.get_utxo(txin=f"{txid}#1", coins=[token.coin])[0].amount
         assert (
-            cluster_obj.get_address_balance(script_address, coin=token.coin) == token.amount
+            token_balance == token.amount
         ), f"Incorrect token balance for script address `{script_address}`"
 
     for token in ctokens:
+        token_balance = cluster_obj.get_utxo(txin=f"{txid}#2", coins=[token.coin])[0].amount
         assert (
-            cluster_obj.get_address_balance(dst_addr.address, coin=token.coin) == token.amount
+            token_balance == token.amount
         ), f"Incorrect token balance for address `{dst_addr.address}`"
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
@@ -351,7 +238,7 @@ def _build_spend_locked_txin(
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-locals
     script_address = script_utxos[0].address
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
@@ -415,8 +302,9 @@ def _build_spend_locked_txin(
     if not submit_tx:
         return "", tx_output, []
 
-    script_init_balance = cluster_obj.get_address_balance(script_address)
     dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
+
+    script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
 
     if not script_valid:
         cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
@@ -426,9 +314,10 @@ def _build_spend_locked_txin(
             == dst_init_balance - collateral_utxos[0].amount
         ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
-        assert (
-            cluster_obj.get_address_balance(script_address) == script_init_balance
-        ), f"Incorrect balance for script address `{script_address}`"
+        for u in script_utxos_lovelace:
+            assert cluster_obj.get_utxo(
+                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+            ), f"Inputs were unexpectedly spent for `{script_address}`"
 
         return "", tx_output, []
 
@@ -450,22 +339,24 @@ def _build_spend_locked_txin(
         tx_file=tx_signed, txins=[t.txins[0] for t in tx_output.script_txins if t.txins]
     )
 
-    # check tx view
-    tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_output)
-
     assert (
         cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance + amount
     ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-    assert (
-        cluster_obj.get_address_balance(script_address)
-        == script_init_balance - amount - tx_output.fee - deposit_amount
-    ), f"Incorrect balance for script address `{script_address}`"
+    for u in script_utxos_lovelace:
+        assert not cluster_obj.get_utxo(
+            txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+        ), f"Inputs were NOT spent for `{script_address}`"
 
     for token in spent_tokens:
-        assert (
-            cluster_obj.get_address_balance(script_address, coin=token.coin) == 0
-        ), f"Incorrect token balance for script address `{script_address}`"
+        script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
+        for u in script_utxos_token:
+            assert not cluster_obj.get_utxo(
+                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[token.coin]
+            ), f"Token inputs were NOT spent for `{script_address}`"
+
+    # check tx view
+    tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
     # compare cost of Plutus script with data from db-sync
@@ -486,8 +377,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_txin_locking(
         self,
-        cluster_lock_always_suceeds: clusterlib.ClusterLib,
-        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -503,7 +394,6 @@ class TestBuildLocking:
           when failure is expected
         * (optional) check transactions in db-sync
         """
-        cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
@@ -515,8 +405,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_suceeds[2],
-            dst_addr=payment_addrs_lock_always_suceeds[3],
+            payment_addr=payment_addrs[2],
+            dst_addr=payment_addrs[3],
             plutus_op=plutus_op,
         )
 
@@ -526,8 +416,8 @@ class TestBuildLocking:
         __, tx_output, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_suceeds[2],
-            dst_addr=payment_addrs_lock_always_suceeds[3],
+            payment_addr=payment_addrs[2],
+            dst_addr=payment_addrs[3],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
@@ -561,8 +451,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_context_equivalance(
         self,
-        cluster_lock_context_eq: clusterlib.ClusterLib,
-        pool_users_lock_context_eq: List[clusterlib.PoolUser],
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
     ):
         """Test context equivalence while spending a locked UTxO.
 
@@ -577,7 +467,6 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         __: Any  # mypy workaround
-        cluster = cluster_lock_context_eq
         temp_template = common.get_test_id(cluster)
         amount = 10_000_000
         deposit_amount = cluster.get_address_deposit()
@@ -585,7 +474,7 @@ class TestBuildLocking:
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr2",
-            stake_vkey_file=pool_users_lock_context_eq[0].stake.vkey_file,
+            stake_vkey_file=pool_users[0].stake.vkey_file,
         )
 
         tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
@@ -607,8 +496,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=pool_users_lock_context_eq[0].payment,
-            dst_addr=pool_users_lock_context_eq[1].payment,
+            payment_addr=pool_users[0].payment,
+            dst_addr=pool_users[1].payment,
             plutus_op=plutus_op_dummy,
         )
 
@@ -620,8 +509,8 @@ class TestBuildLocking:
         __, tx_output_dummy, __ = _build_spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
             cluster_obj=cluster,
-            payment_addr=pool_users_lock_context_eq[0].payment,
-            dst_addr=pool_users_lock_context_eq[1].payment,
+            payment_addr=pool_users[0].payment,
+            dst_addr=pool_users[1].payment,
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op_dummy,
@@ -659,8 +548,8 @@ class TestBuildLocking:
         __, tx_output, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=pool_users_lock_context_eq[0].payment,
-            dst_addr=pool_users_lock_context_eq[1].payment,
+            payment_addr=pool_users[0].payment,
+            dst_addr=pool_users[1].payment,
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
@@ -690,8 +579,8 @@ class TestBuildLocking:
     )
     def test_guessing_game(
         self,
-        cluster_lock_guessing_game: clusterlib.ClusterLib,
-        payment_addrs_lock_guessing_game: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
         script: str,
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
@@ -708,7 +597,6 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         __: Any  # mypy workaround
-        cluster = cluster_lock_guessing_game
         temp_template = f"{common.get_test_id(cluster)}_{script}"
 
         if script.endswith("game_42_43"):
@@ -737,8 +625,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_guessing_game[0],
-            dst_addr=payment_addrs_lock_guessing_game[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
         )
 
@@ -748,8 +636,8 @@ class TestBuildLocking:
         err, __, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_guessing_game[0],
-            dst_addr=payment_addrs_lock_guessing_game[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
@@ -767,8 +655,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_always_fails(
         self,
-        cluster_lock_always_fails: clusterlib.ClusterLib,
-        payment_addrs_lock_always_fails: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -782,7 +670,6 @@ class TestBuildLocking:
         * check that the expected error was raised
         """
         __: Any  # mypy workaround
-        cluster = cluster_lock_always_fails
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
@@ -794,8 +681,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_fails[0],
-            dst_addr=payment_addrs_lock_always_fails[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
         )
 
@@ -805,8 +692,8 @@ class TestBuildLocking:
         err, __, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_fails[0],
-            dst_addr=payment_addrs_lock_always_fails[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
@@ -823,8 +710,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_script_invalid(
         self,
-        cluster_lock_always_fails: clusterlib.ClusterLib,
-        payment_addrs_lock_always_fails: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Test failing script together with the `--script-invalid` argument - collateral is taken.
 
@@ -837,7 +724,6 @@ class TestBuildLocking:
         * try to spend the locked UTxO
         * check that the amount was not transferred and collateral UTxO was spent
         """
-        cluster = cluster_lock_always_fails
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
@@ -849,8 +735,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_fails[0],
-            dst_addr=payment_addrs_lock_always_fails[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
         )
 
@@ -860,8 +746,8 @@ class TestBuildLocking:
         __, tx_output, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_fails[0],
-            dst_addr=payment_addrs_lock_always_fails[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
@@ -892,8 +778,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_txin_token_locking(
         self,
-        cluster_lock_always_suceeds: clusterlib.ClusterLib,
-        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a plutus script and spending the locked UTxO.
 
@@ -905,10 +791,9 @@ class TestBuildLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
-        payment_addr = payment_addrs_lock_always_suceeds[0]
+        payment_addr = payment_addrs[0]
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
@@ -929,8 +814,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_suceeds[0],
-            dst_addr=payment_addrs_lock_always_suceeds[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             tokens=tokens_rec,
         )
@@ -941,8 +826,8 @@ class TestBuildLocking:
         __, tx_output, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_suceeds[0],
-            dst_addr=payment_addrs_lock_always_suceeds[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
@@ -973,8 +858,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_collateral_w_tokens(
         self,
-        cluster_lock_always_suceeds: clusterlib.ClusterLib,
-        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Test spending the locked UTxO while collateral contains native tokens.
 
@@ -987,10 +872,9 @@ class TestBuildLocking:
         * check that the expected error was raised
         * (optional) check transactions in db-sync
         """
-        cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
-        payment_addr = payment_addrs_lock_always_suceeds[0]
+        payment_addr = payment_addrs[0]
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
@@ -1011,8 +895,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_suceeds[0],
-            dst_addr=payment_addrs_lock_always_suceeds[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             tokens_collateral=tokens_rec,
         )
@@ -1025,8 +909,8 @@ class TestBuildLocking:
             _build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
-                payment_addr=payment_addrs_lock_always_suceeds[0],
-                dst_addr=payment_addrs_lock_always_suceeds[1],
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
@@ -1044,8 +928,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_same_collateral_txin(
         self,
-        cluster_lock_always_suceeds: clusterlib.ClusterLib,
-        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Test spending the locked UTxO while using the same UTxO as collateral.
 
@@ -1059,7 +943,6 @@ class TestBuildLocking:
         * check that the expected error was raised
         * (optional) check transactions in db-sync
         """
-        cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
@@ -1071,8 +954,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs_lock_always_suceeds[0],
-            dst_addr=payment_addrs_lock_always_suceeds[1],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
         )
 
@@ -1083,8 +966,8 @@ class TestBuildLocking:
             _build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
-                payment_addr=payment_addrs_lock_always_suceeds[0],
-                dst_addr=payment_addrs_lock_always_suceeds[1],
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=script_utxos,
                 plutus_op=plutus_op,
@@ -1100,8 +983,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_no_datum_txin(
         self,
-        cluster_lock_always_suceeds: clusterlib.ClusterLib,
-        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Test using UTxO without datum hash in place of locked UTxO.
 
@@ -1114,11 +997,10 @@ class TestBuildLocking:
         * check that the expected error was raised
         * (optional) check transactions in db-sync
         """
-        cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
 
-        payment_addr = payment_addrs_lock_always_suceeds[0]
-        dst_addr = payment_addrs_lock_always_suceeds[1]
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
@@ -1171,8 +1053,8 @@ class TestBuildLocking:
     @pytest.mark.testnets
     def test_collateral_is_txin(
         self,
-        cluster_lock_always_suceeds: clusterlib.ClusterLib,
-        payment_addrs_lock_always_suceeds: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Test spending the locked UTxO while using single UTxO for both collateral and Tx input.
 
@@ -1187,11 +1069,10 @@ class TestBuildLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        cluster = cluster_lock_always_suceeds
         temp_template = common.get_test_id(cluster)
 
-        payment_addr = payment_addrs_lock_always_suceeds[2]
-        dst_addr = payment_addrs_lock_always_suceeds[3]
+        payment_addr = payment_addrs[2]
+        dst_addr = payment_addrs[3]
 
         amount = 50_000_000
 
@@ -1218,7 +1099,6 @@ class TestBuildLocking:
         collateral_utxos = cluster.get_utxo(txin=f"{txid_step1}#2")
         script_address = script_utxos[0].address
 
-        script_step1_balance = cluster.get_address_balance(script_address)
         dst_step1_balance = cluster.get_address_balance(dst_addr.address)
 
         plutus_txins = [
@@ -1266,10 +1146,10 @@ class TestBuildLocking:
             == dst_step1_balance + amount - collateral_utxos[0].amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-        assert (
-            cluster.get_address_balance(script_address)
-            == script_step1_balance - amount - tx_output_step2.fee + collateral_utxos[0].amount
-        ), f"Incorrect balance for script address `{script_address}`"
+        for u in script_utxos:
+            assert not cluster.get_utxo(
+                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+            ), f"Inputs were NOT spent for `{script_address}`"
 
         # check expected fees
         expected_fee_step1 = 168845
@@ -1292,8 +1172,8 @@ class TestNegative:
     @common.hypothesis_settings()
     def test_guessing_game_pbt(
         self,
-        cluster_lock_guessing_game: clusterlib.ClusterLib,
-        payment_addrs_lock_guessing_game: List[clusterlib.AddressRecord],
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
         fund_script_guessing_game: Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
         redeemer_number: int,
     ):
@@ -1303,7 +1183,6 @@ class TestNegative:
         """
         hypothesis.assume(redeemer_number != 42)
 
-        cluster = cluster_lock_guessing_game
         temp_template = f"test_guessing_game_pbt{cluster.cluster_id}"
 
         script_utxos, collateral_utxos = fund_script_guessing_game
@@ -1331,8 +1210,8 @@ class TestNegative:
             _build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
-                payment_addr=payment_addrs_lock_guessing_game[0],
-                dst_addr=payment_addrs_lock_guessing_game[1],
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
