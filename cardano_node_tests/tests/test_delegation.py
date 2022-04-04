@@ -154,7 +154,7 @@ class TestDelegateAddr:
         * check that the stake address was delegated
         * (optional) check records in db-sync
         """
-        pool_name = "node-pool1"
+        pool_name = cluster_management.Resources.POOL1
         cluster = cluster_use_pool1
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
