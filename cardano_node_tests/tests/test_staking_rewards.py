@@ -272,7 +272,7 @@ class TestRewards:
         init_epoch = cluster.get_epoch()
 
         if check_pool_rewards:
-            pool_rec = cluster_manager.cache.addrs_data["node-pool1"]
+            pool_rec = cluster_manager.cache.addrs_data[cluster_management.Resources.POOL1]
             pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
             init_owner_rewards = cluster.get_stake_addr_info(
                 pool_reward.stake.address
@@ -339,7 +339,7 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
-        pool_name = "node-pool1"
+        pool_name = cluster_management.Resources.POOL1
         cluster = cluster_use_pool1
 
         temp_template = common.get_test_id(cluster)
@@ -662,7 +662,7 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool2_pots
         mir_reward = 50_000_000_000
 
@@ -1026,7 +1026,7 @@ class TestRewards:
         * keep withdrawing new rewards so reward balance is 0
         * check that reward amount is decreasing epoch after epoch
         """
-        pool_name = "node-pool1"
+        pool_name = cluster_management.Resources.POOL1
         cluster = cluster_use_pool1
 
         temp_template = common.get_test_id(cluster)
@@ -1142,11 +1142,11 @@ class TestRewards:
            - expected pool ids
         """
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool1_2
         temp_template = common.get_test_id(cluster)
 
-        pool1_rec = cluster_manager.cache.addrs_data["node-pool1"]
+        pool1_rec = cluster_manager.cache.addrs_data[cluster_management.Resources.POOL1]
         pool1_reward = clusterlib.PoolUser(payment=pool1_rec["payment"], stake=pool1_rec["reward"])
         pool1_node_cold = pool1_rec["cold_key_pair"]
         pool1_id = cluster.get_stake_pool_id(pool1_node_cold.vkey_file)
@@ -1379,8 +1379,8 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
-        pool1_name = "node-pool1"
-        pool2_name = "node-pool2"
+        pool1_name = cluster_management.Resources.POOL1
+        pool2_name = cluster_management.Resources.POOL2
         cluster = cluster_use_pool1_2
 
         temp_template = common.get_test_id(cluster)

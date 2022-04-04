@@ -90,7 +90,7 @@ def cluster_and_pool(
         pool_id = get_pool_id(
             cluster_obj=cluster_obj,
             addrs_data=cluster_manager.cache.addrs_data,
-            pool_name="node-pool3",
+            pool_name=cluster_management.Resources.POOL3,
         )
     return cluster_obj, pool_id
 

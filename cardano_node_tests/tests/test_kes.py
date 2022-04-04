@@ -232,7 +232,7 @@ class TestKES:
         * generate new operational certificate with valid `--kes-period` and restart the node
         * check that the pool is producing blocks again
         """
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         node_name = "pool2"
         cluster = cluster_lock_pool2
 
@@ -357,7 +357,7 @@ class TestKES:
           minting blocks again
         * check `kes-period-info` with the old (replaced) operational certificate
         """
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         node_name = "pool2"
         cluster = cluster_lock_pool2
 
@@ -480,7 +480,7 @@ class TestKES:
 
         Expect failure.
         """
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         temp_template = common.get_test_id(cluster)
