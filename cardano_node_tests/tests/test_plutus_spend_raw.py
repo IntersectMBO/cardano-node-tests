@@ -813,6 +813,119 @@ class TestLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_collaterals(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        scenario: str,
+    ):
+        """Test dividing required collateral amount into multiple collateral UTxOs.
+
+        Test 3 scenarios:
+        1. maximum allowed number of collateral inputs
+        2. more collateral inputs than what is allowed
+        3. no collateral input
+
+        * create a Tx output with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * create multiple UTxOs for collateral
+        * spend the locked UTxO
+        * check that the expected amount was spent when success is expected
+        * OR check that the amount was not transferred and collateral UTxO was not spent
+          when failure is expected
+        * (optional) check transactions in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+
+        max_collateral_ins = cluster.get_protocol_params()["maxCollateralInputs"]
+        collateral_utxos = []
+
+        if scenario == "max":
+            collateral_num = max_collateral_ins
+            exp_err = ""
+        elif scenario == "max+1":
+            collateral_num = max_collateral_ins + 1
+            exp_err = "TooManyCollateralInputs"
+        else:
+            collateral_num = 0
+            exp_err = "Transaction body has no collateral inputs"
+
+        payment_addr = payment_addrs[2]
+        dst_addr = payment_addrs[3]
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        tx_output_fund = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addr,
+            dst_addr=dst_addr,
+            plutus_op=plutus_op,
+            amount=50_000_000,
+        )
+        fund_txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{fund_txid}#0")
+        fund_collateral_utxos = cluster.get_utxo(txin=f"{fund_txid}#1")
+
+        if collateral_num:
+            # instead of using the collateral UTxO created by `_fund_script`, create multiple new
+            # collateral UTxOs with the combined amount matching the original UTxO
+            collateral_amount_part = int(fund_collateral_utxos[0].amount // collateral_num) + 1
+            txouts_collaterals = [
+                clusterlib.TxOut(address=dst_addr.address, amount=collateral_amount_part)
+                for __ in range(collateral_num)
+            ]
+            tx_files_collaterals = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+            tx_output_collaterals = cluster.send_tx(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_collaterals",
+                txouts=txouts_collaterals,
+                tx_files=tx_files_collaterals,
+                join_txouts=False,
+            )
+            txid_collaterals = cluster.get_txid(tx_body_file=tx_output_collaterals.out_file)
+            _utxos_nested = [
+                cluster.get_utxo(txin=f"{txid_collaterals}#{i}") for i in range(collateral_num)
+            ]
+            collateral_utxos = list(itertools.chain.from_iterable(_utxos_nested))
+
+        if exp_err:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                _spend_locked_txin(
+                    temp_template=temp_template,
+                    cluster_obj=cluster,
+                    dst_addr=dst_addr,
+                    script_utxos=script_utxos,
+                    collateral_utxos=collateral_utxos,
+                    plutus_op=plutus_op,
+                    amount=50_000_000,
+                )
+            assert exp_err in str(excinfo.value)
+        else:
+            _spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+
+
+@pytest.mark.testnets
+class TestNegative:
+    """Tests for txin locking using Plutus smart contracts that are expected to fail."""
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_collateral_w_tokens(
@@ -987,114 +1100,6 @@ class TestLocking:
                 amount=50_000_000,
             )
         assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
-    def test_collaterals(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        scenario: str,
-    ):
-        """Test dividing required collateral amount into multiple collateral UTxOs.
-
-        Test 3 scenarios:
-        1. maximum allowed number of collateral inputs
-        2. more collateral inputs than what is allowed
-        3. no collateral input
-
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * create multiple UTxOs for collateral
-        * spend the locked UTxO
-        * check that the expected amount was spent when success is expected
-        * OR check that the amount was not transferred and collateral UTxO was not spent
-          when failure is expected
-        * (optional) check transactions in db-sync
-        """
-        temp_template = common.get_test_id(cluster)
-
-        max_collateral_ins = cluster.get_protocol_params()["maxCollateralInputs"]
-        collateral_utxos = []
-
-        if scenario == "max":
-            collateral_num = max_collateral_ins
-            exp_err = ""
-        elif scenario == "max+1":
-            collateral_num = max_collateral_ins + 1
-            exp_err = "TooManyCollateralInputs"
-        else:
-            collateral_num = 0
-            exp_err = "Transaction body has no collateral inputs"
-
-        payment_addr = payment_addrs[2]
-        dst_addr = payment_addrs[3]
-
-        plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_common.DATUM_42_TYPED,
-            redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(700_000_000, 10_000_000),
-        )
-
-        tx_output_fund = _fund_script(
-            temp_template=temp_template,
-            cluster_obj=cluster,
-            payment_addr=payment_addr,
-            dst_addr=dst_addr,
-            plutus_op=plutus_op,
-            amount=50_000_000,
-        )
-        fund_txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{fund_txid}#0")
-        fund_collateral_utxos = cluster.get_utxo(txin=f"{fund_txid}#1")
-
-        if collateral_num:
-            # instead of using the collateral UTxO created by `_fund_script`, create multiple new
-            # collateral UTxOs with the combined amount matching the original UTxO
-            collateral_amount_part = int(fund_collateral_utxos[0].amount // collateral_num) + 1
-            txouts_collaterals = [
-                clusterlib.TxOut(address=dst_addr.address, amount=collateral_amount_part)
-                for __ in range(collateral_num)
-            ]
-            tx_files_collaterals = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
-            tx_output_collaterals = cluster.send_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_collaterals",
-                txouts=txouts_collaterals,
-                tx_files=tx_files_collaterals,
-                join_txouts=False,
-            )
-            txid_collaterals = cluster.get_txid(tx_body_file=tx_output_collaterals.out_file)
-            _utxos_nested = [
-                cluster.get_utxo(txin=f"{txid_collaterals}#{i}") for i in range(collateral_num)
-            ]
-            collateral_utxos = list(itertools.chain.from_iterable(_utxos_nested))
-
-        if exp_err:
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                _spend_locked_txin(
-                    temp_template=temp_template,
-                    cluster_obj=cluster,
-                    dst_addr=dst_addr,
-                    script_utxos=script_utxos,
-                    collateral_utxos=collateral_utxos,
-                    plutus_op=plutus_op,
-                    amount=50_000_000,
-                )
-            assert exp_err in str(excinfo.value)
-        else:
-            _spend_locked_txin(
-                temp_template=temp_template,
-                cluster_obj=cluster,
-                dst_addr=dst_addr,
-                script_utxos=script_utxos,
-                collateral_utxos=collateral_utxos,
-                plutus_op=plutus_op,
-                amount=50_000_000,
-            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

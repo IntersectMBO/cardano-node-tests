@@ -856,6 +856,178 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    def test_collateral_is_txin(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test spending the locked UTxO while using single UTxO for both collateral and Tx input.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Tests bug https://github.com/input-output-hk/cardano-db-sync/issues/750
+
+        * create a Tx output with a datum hash at the script address and a collateral UTxO
+        * check that the expected amount was locked at the script address
+        * spend the locked UTxO while using the collateral UTxO both as collateral and as
+          normal Tx input
+        * check that the expected amount was spent
+        * (optional) check transactions in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+
+        payment_addr = payment_addrs[2]
+        dst_addr = payment_addrs[3]
+
+        amount = 50_000_000
+
+        # Step 1: fund the script address
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
+        )
+
+        tx_output_step1 = _build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addr,
+            dst_addr=dst_addr,
+            plutus_op=plutus_op,
+        )
+
+        # Step 2: spend the "locked" UTxO
+
+        txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid_step1}#2")
+        script_address = script_utxos[0].address
+
+        dst_step1_balance = cluster.get_address_balance(dst_addr.address)
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_op.script_file,
+                collaterals=collateral_utxos,
+                datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
+                datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
+                redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file
+                if plutus_op.redeemer_cbor_file
+                else "",
+            )
+        ]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[dst_addr.skey_file],
+        )
+        txouts = [
+            clusterlib.TxOut(address=dst_addr.address, amount=amount),
+        ]
+
+        tx_output_step2 = cluster.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files,
+            # `collateral_utxos` is used both as collateral and as normal Tx input
+            txins=collateral_utxos,
+            txouts=txouts,
+            script_txins=plutus_txins,
+            change_address=script_address,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output_step2.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        cluster.submit_tx(
+            tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_step2.script_txins if t.txins]
+        )
+
+        assert (
+            cluster.get_address_balance(dst_addr.address)
+            == dst_step1_balance + amount - collateral_utxos[0].amount
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        for u in script_utxos:
+            assert not cluster.get_utxo(
+                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+            ), f"Inputs were NOT spent for `{script_address}`"
+
+        # check expected fees
+        expected_fee_step1 = 168845
+        assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
+
+        expected_fee_step2 = 176986
+        assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
+
+
+@pytest.mark.testnets
+class TestNegative:
+    """Tests for txin locking using Plutus smart contracts that are expected to fail."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_number=st.integers(min_value=-2 ^ 64, max_value=2 ^ 64))
+    @common.hypothesis_settings()
+    def test_guessing_game_pbt(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        fund_script_guessing_game: Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
+        redeemer_number: int,
+    ):
+        """Try to spend a locked UtxO with and an invalid redeemer.
+
+        Expect failure.
+        """
+        hypothesis.assume(redeemer_number != 42)
+
+        temp_template = f"test_guessing_game_pbt{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos = fund_script_guessing_game
+
+        redeemer_file = "redeemer_file.datum"
+
+        redeemer_content = {}
+        if redeemer_number % 3 == 0:
+            redeemer_content = {"constructor": 0, "fields": [{"int": redeemer_number}]}
+        elif redeemer_number % 2 == 0:
+            redeemer_content = {"int": redeemer_number}
+
+        if redeemer_content:
+            with open(redeemer_file, "w", encoding="utf-8") as outfile:
+                json.dump(redeemer_content, outfile)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=Path(redeemer_file) if redeemer_content else None,
+            redeemer_value=None if redeemer_content else str(redeemer_number),
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+
+        assert "The Plutus script evaluation failed" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
     def test_collateral_w_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1047,175 +1219,3 @@ class TestBuildLocking:
         # check expected fees
         expected_fee_fund = 199087
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
-    def test_collateral_is_txin(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-    ):
-        """Test spending the locked UTxO while using single UTxO for both collateral and Tx input.
-
-        Uses `cardano-cli transaction build` command for building the transactions.
-
-        Tests bug https://github.com/input-output-hk/cardano-db-sync/issues/750
-
-        * create a Tx output with a datum hash at the script address and a collateral UTxO
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO while using the collateral UTxO both as collateral and as
-          normal Tx input
-        * check that the expected amount was spent
-        * (optional) check transactions in db-sync
-        """
-        temp_template = common.get_test_id(cluster)
-
-        payment_addr = payment_addrs[2]
-        dst_addr = payment_addrs[3]
-
-        amount = 50_000_000
-
-        # Step 1: fund the script address
-
-        plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
-            redeemer_file=plutus_common.REDEEMER_42_TYPED,
-        )
-
-        tx_output_step1 = _build_fund_script(
-            temp_template=temp_template,
-            cluster_obj=cluster,
-            payment_addr=payment_addr,
-            dst_addr=dst_addr,
-            plutus_op=plutus_op,
-        )
-
-        # Step 2: spend the "locked" UTxO
-
-        txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid_step1}#2")
-        script_address = script_utxos[0].address
-
-        dst_step1_balance = cluster.get_address_balance(dst_addr.address)
-
-        plutus_txins = [
-            clusterlib.ScriptTxIn(
-                txins=script_utxos,
-                script_file=plutus_op.script_file,
-                collaterals=collateral_utxos,
-                datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
-                datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
-                redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
-                redeemer_cbor_file=plutus_op.redeemer_cbor_file
-                if plutus_op.redeemer_cbor_file
-                else "",
-            )
-        ]
-        tx_files = clusterlib.TxFiles(
-            signing_key_files=[dst_addr.skey_file],
-        )
-        txouts = [
-            clusterlib.TxOut(address=dst_addr.address, amount=amount),
-        ]
-
-        tx_output_step2 = cluster.build_tx(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
-            tx_files=tx_files,
-            # `collateral_utxos` is used both as collateral and as normal Tx input
-            txins=collateral_utxos,
-            txouts=txouts,
-            script_txins=plutus_txins,
-            change_address=script_address,
-        )
-        tx_signed = cluster.sign_tx(
-            tx_body_file=tx_output_step2.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_step2",
-        )
-
-        cluster.submit_tx(
-            tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_step2.script_txins if t.txins]
-        )
-
-        assert (
-            cluster.get_address_balance(dst_addr.address)
-            == dst_step1_balance + amount - collateral_utxos[0].amount
-        ), f"Incorrect balance for destination address `{dst_addr.address}`"
-
-        for u in script_utxos:
-            assert not cluster.get_utxo(
-                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
-            ), f"Inputs were NOT spent for `{script_address}`"
-
-        # check expected fees
-        expected_fee_step1 = 168845
-        assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
-
-        expected_fee_step2 = 176986
-        assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
-
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
-
-
-@pytest.mark.testnets
-class TestNegative:
-    """Tests for txin locking using Plutus smart contracts that are expected to fail."""
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_number=st.integers(min_value=-2 ^ 64, max_value=2 ^ 64))
-    @common.hypothesis_settings()
-    def test_guessing_game_pbt(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        fund_script_guessing_game: Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
-        redeemer_number: int,
-    ):
-        """Try to spend a locked UtxO with and an invalid redeemer.
-
-        Expect failure.
-        """
-        hypothesis.assume(redeemer_number != 42)
-
-        temp_template = f"test_guessing_game_pbt{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos = fund_script_guessing_game
-
-        redeemer_file = "redeemer_file.datum"
-
-        redeemer_content = {}
-        if redeemer_number % 3 == 0:
-            redeemer_content = {"constructor": 0, "fields": [{"int": redeemer_number}]}
-        elif redeemer_number % 2 == 0:
-            redeemer_content = {"int": redeemer_number}
-
-        if redeemer_content:
-            with open(redeemer_file, "w", encoding="utf-8") as outfile:
-                json.dump(redeemer_content, outfile)
-
-        plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_PLUTUS,
-            datum_file=plutus_common.DATUM_42_TYPED,
-            redeemer_file=Path(redeemer_file) if redeemer_content else None,
-            redeemer_value=None if redeemer_content else str(redeemer_number),
-        )
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            _build_spend_locked_txin(
-                temp_template=temp_template,
-                cluster_obj=cluster,
-                payment_addr=payment_addrs[0],
-                dst_addr=payment_addrs[1],
-                script_utxos=script_utxos,
-                collateral_utxos=collateral_utxos,
-                plutus_op=plutus_op,
-                amount=50_000_000,
-            )
-
-        assert "The Plutus script evaluation failed" in str(excinfo.value)
