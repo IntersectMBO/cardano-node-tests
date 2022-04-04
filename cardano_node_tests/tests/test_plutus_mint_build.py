@@ -20,7 +20,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-# skip tests if is not alonzo era
+# skip all tests if Tx era < alonzo
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALONZO,
     reason="runs only with Alonzo+ TX",

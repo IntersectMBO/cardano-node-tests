@@ -25,7 +25,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-# skip tests if is not alonzo era
+# skip all tests if Tx era < alonzo
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALONZO,
     reason="runs only with Alonzo+ TX",
@@ -48,7 +48,7 @@ def cluster_lock_42stake(
     pool_id = delegation.get_pool_id(
         cluster_obj=cluster_obj,
         addrs_data=cluster_manager.cache.addrs_data,
-        pool_name="node-pool3",
+        pool_name=cluster_management.Resources.POOL3,
     )
     return cluster_obj, pool_id
 
