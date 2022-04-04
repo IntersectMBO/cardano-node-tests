@@ -54,7 +54,7 @@ class TestLeadershipSchedule:
         cluster = cluster_use_pool3
         temp_template = common.get_test_id(cluster)
 
-        pool_name = "node-pool3"
+        pool_name = cluster_management.Resources.POOL3
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 
@@ -140,7 +140,7 @@ class TestLeadershipSchedule:
         # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
-        pool_name = "node-pool3"
+        pool_name = cluster_management.Resources.POOL3
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         # wait for epoch interval where stake distribution for next epoch is unstable,

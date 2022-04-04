@@ -55,15 +55,13 @@ def cluster_and_pool(
     instance, that's why cluster instance and pool id are tied together in
     single fixture.
     """
-    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS:
+    cluster_type = cluster_nodes.get_cluster_type()
+    if cluster_type.type == cluster_nodes.ClusterType.TESTNET_NOPOOLS:
         cluster_obj: clusterlib.ClusterLib = cluster_manager.get()
 
         # getting ledger state on official testnet is too expensive,
         # use one of hardcoded pool IDs if possible
-        if (
-            cluster_nodes.get_cluster_type().testnet_type  # type: ignore
-            == cluster_nodes.Testnets.testnet
-        ):
+        if cluster_type.testnet_type == cluster_nodes.Testnets.testnet:  # type: ignore
             stake_pools = cluster_obj.get_stake_pools()
             for pool_id in configuration.TESTNET_POOL_IDS:
                 if pool_id in stake_pools:
@@ -79,12 +77,20 @@ def cluster_and_pool(
                 break
         else:
             pytest.skip("Cannot find any usable pool.")
+    elif cluster_type.type == cluster_nodes.ClusterType.TESTNET:
+        # the "testnet" cluster has just single pool, "node-pool1"
+        cluster_obj = cluster_manager.get(use_resources=[cluster_management.Resources.POOL1])
+        pool_id = get_pool_id(
+            cluster_obj=cluster_obj,
+            addrs_data=cluster_manager.cache.addrs_data,
+            pool_name=cluster_management.Resources.POOL1,
+        )
     else:
         cluster_obj = cluster_manager.get(use_resources=[cluster_management.Resources.POOL3])
         pool_id = get_pool_id(
             cluster_obj=cluster_obj,
             addrs_data=cluster_manager.cache.addrs_data,
-            pool_name="node-pool3",
+            pool_name=cluster_management.Resources.POOL3,
         )
     return cluster_obj, pool_id
 

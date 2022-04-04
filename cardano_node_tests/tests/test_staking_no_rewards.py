@@ -47,7 +47,7 @@ class TestNoRewards:
         * check that new rewards were received by those delegating to the pool
         * check that pool owner is also receiving rewards
         """
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -186,7 +186,7 @@ class TestNoRewards:
         * check that new rewards were received by those delegating to the pool
         * check that pool owner is also receiving rewards
         """
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -344,7 +344,7 @@ class TestNoRewards:
         * check that new rewards were received by those delegating to the pool
         * check that pool owner is also receiving rewards
         """
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -513,7 +513,7 @@ class TestNoRewards:
         * return the pool to the original state - reregister reward address
         * check that pool owner is receiving rewards
         """
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -687,7 +687,7 @@ class TestNoRewards:
         """
         # pylint: disable=too-many-statements
         __: Any  # mypy workaround
-        pool_name = "node-pool2"
+        pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
