@@ -124,12 +124,41 @@ def get_db_sync_archive_url(db_pr):
     return f"https://hydra.iohk.io/job/Cardano/cardano-db-sync{cardano_db_sync_pr}/cardano-db-sync-linux/latest-finished/download/1/"
 
 
-def download_snapshot(snapshot_url):
+def download_and_extract_node_snapshot():
+    current_directory = os.getcwd()
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    if get_environment() == "mainnet":
+        snapshot_url = 'https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz'
+    elif get_environment() == "testnet":
+        snapshot_url = 'https://updates-cardano-testnet.s3.amazonaws.com/cardano-node-state/db-testnet.tar.gz'
+    else:
+        snapshot_url = ''
+
+    archive_name = snapshot_url.split("/")[-1].strip()
+
+    print("Download node snapshot file:")
+    print(f" - current_directory: {current_directory}")
+    print(f" - download_url: {snapshot_url}")
+    print(f" - archive name: {archive_name}")
+
+    with requests.get(snapshot_url, headers = headers, stream = True) as r:
+        r.raise_for_status()
+        with open(archive_name, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+    print(f" ------ listdir (before archive extraction): {os.listdir(current_directory)}")
+    tf = tarfile.open(Path(current_directory) / archive_name)
+    tf.extractall(Path(current_directory))
+    print(f" ------ listdir (after archive extraction): {os.listdir(current_directory)}")
+
+
+def download_db_sync_snapshot(snapshot_url):
     current_directory = os.getcwd()
     headers = {'User-Agent': 'Mozilla/5.0'}
     archive_name = snapshot_url.split("/")[-1].strip()
 
-    print("Download snapshot file:")
+    print("Download db-sync snapshot file:")
     print(f" - current_directory: {current_directory}")
     print(f" - download_url: {snapshot_url}")
     print(f" - archive name: {archive_name}")
@@ -294,9 +323,9 @@ def start_node_in_cwd(env):
     print(f"current_directory: {current_directory}")
     cmd = (
         f"./cardano-node run --topology {env}-topology.json --database-path "
-        f"{Path(ROOT_TEST_PATH) / 'cardano-node' / 'db'} "
+        f"{Path(ROOT_TEST_PATH)}/cardano-node/db-{env} "
         f"--host-addr 0.0.0.0 --port 3000 --config "
-        f"{env}-config.json --socket-path ./db/node.socket"
+        f"{env}-config.json --socket-path ./db-{env}/node.socket"
     )
 
     logfile = open(NODE_LOG_FILE_PATH, "w+")
@@ -671,6 +700,7 @@ def main():
     get_node_config_files(env)
     get_and_extract_archive_files(get_node_archive_url(node_pr))
     cli_version, cli_git_rev = get_node_version()
+    download_and_extract_node_snapshot()
     start_node_in_cwd(env)
     print("--- Node startup")
     print_file(NODE_LOG_FILE_PATH, 80)
@@ -682,7 +712,7 @@ def main():
     DB_SYNC_DIR = clone_repo_fork('cardano-db-sync', db_branch)
     os.chdir(DB_SYNC_DIR)
 
-    snapshot_name = download_snapshot(snapshot_url)
+    snapshot_name = download_db_sync_snapshot(snapshot_url)
     expected_snapshot_sha_256_sum = get_snapshot_sha_256_sum(snapshot_url)
     actual_snapshot_sha_256_sum = get_file_sha_256_sum(snapshot_name)
     assert expected_snapshot_sha_256_sum == actual_snapshot_sha_256_sum, "Incorrect sha 256 sum"

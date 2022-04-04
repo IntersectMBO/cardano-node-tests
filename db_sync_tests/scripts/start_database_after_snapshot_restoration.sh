@@ -4,12 +4,7 @@
 
 cd cardano-db-sync
 
-echo "PWD: ${PWD}"
-
 export PGPASSFILE=config/pgpass-$ENVIRONMENT
-
-cat ${PGPASSFILE}
-echo "PGPASFILE: ${PGPASSFILE} ENVIRONMENT: ${ENVIRONMENT} LOG_FILEPATH: ${LOG_FILEPATH}"
 
 nix-build -A cardano-db-sync -o db-sync-node
 

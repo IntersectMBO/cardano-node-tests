@@ -4,10 +4,6 @@
 
 cd cardano-db-sync
 
-echo "Inside create pgpass file"
-
 export PGPASSFILE=config/pgpass-$ENVIRONMENT
 echo "${POSTGRES_DIR}:5432:${ENVIRONMENT}:${PGUSER}:*" > $PGPASSFILE
 chmod 600 $PGPASSFILE
-
-cat $PGPASSFILE
