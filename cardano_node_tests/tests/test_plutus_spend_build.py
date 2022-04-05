@@ -38,23 +38,21 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"payment_addrs_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(4)],
-            cluster_obj=cluster,
-        )
-        fixture_cache.value = addrs
+    rand_str = clusterlib.get_rand_str(4)
+    addrs = clusterlib_utils.create_payment_addr_records(
+        *[
+            f"payment_addrs_ci{cluster_manager.cluster_instance_num}_{rand_str}_{i}"
+            for i in range(2)
+        ],
+        cluster_obj=cluster,
+    )
 
     # fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
-        addrs[2],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=20_000_000_000,
+        amount=3_000_000_000,
     )
 
     return addrs
@@ -66,23 +64,19 @@ def pool_users(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.PoolUser]:
     """Create new pool users."""
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        created_users = clusterlib_utils.create_pool_users(
-            cluster_obj=cluster,
-            name_template=f"pool_users_ci{cluster_manager.cluster_instance_num}",
-            no_of_addr=2,
-        )
-        fixture_cache.value = created_users
+    rand_str = clusterlib.get_rand_str(4)
+    created_users = clusterlib_utils.create_pool_users(
+        cluster_obj=cluster,
+        name_template=f"pool_users_ci{cluster_manager.cluster_instance_num}_{rand_str}",
+        no_of_addr=2,
+    )
 
     # fund source address
     clusterlib_utils.fund_from_faucet(
         created_users[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=20_000_000_000,
+        amount=3_000_000_000,
     )
 
     return created_users
@@ -405,8 +399,8 @@ class TestBuildLocking:
         tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs[2],
-            dst_addr=payment_addrs[3],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
         )
 
@@ -416,8 +410,8 @@ class TestBuildLocking:
         __, tx_output, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs[2],
-            dst_addr=payment_addrs[3],
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
@@ -876,8 +870,8 @@ class TestBuildLocking:
         """
         temp_template = common.get_test_id(cluster)
 
-        payment_addr = payment_addrs[2]
-        dst_addr = payment_addrs[3]
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
 
         amount = 50_000_000
 
