@@ -243,7 +243,7 @@ def testfile_temp_dir(tmp_path_factory: TempdirFactory) -> Path:
     """
     # get a dir path based on the test file running
     dir_path = (
-        (os.getenv("PYTEST_CURRENT_TEST") or "unknown")
+        (os.environ.get("PYTEST_CURRENT_TEST") or "unknown")
         .split("::")[0]
         .split("/")[-1]
         .replace(".", "_")

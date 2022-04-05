@@ -38,12 +38,9 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    rand_str = clusterlib.get_rand_str(4)
+    test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
-        *[
-            f"payment_addrs_ci{cluster_manager.cluster_instance_num}_{rand_str}_{i}"
-            for i in range(2)
-        ],
+        *[f"{test_id}_payment_addr_{i}" for i in range(2)],
         cluster_obj=cluster,
     )
 
@@ -64,10 +61,10 @@ def pool_users(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.PoolUser]:
     """Create new pool users."""
-    rand_str = clusterlib.get_rand_str(4)
+    test_id = common.get_test_id(cluster)
     created_users = clusterlib_utils.create_pool_users(
         cluster_obj=cluster,
-        name_template=f"pool_users_ci{cluster_manager.cluster_instance_num}_{rand_str}",
+        name_template=f"{test_id}_pool_users",
         no_of_addr=2,
     )
 

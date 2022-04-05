@@ -60,13 +60,14 @@ def pool_user(
 ) -> delegation.PoolUserScript:
     """Create pool user."""
     cluster, *__ = cluster_lock_42stake
+    test_id = common.get_test_id(cluster)
 
     script_stake_address = cluster.gen_stake_addr(
-        addr_name=f"test_plutus_delegation_pool_user_ci{cluster_manager.cluster_instance_num}",
+        addr_name=f"{test_id}_pool_user",
         stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS,
     )
     payment_addr_rec = cluster.gen_payment_addr_and_keys(
-        name=f"test_plutus_delegation_pool_user_ci{cluster_manager.cluster_instance_num}",
+        name=f"{test_id}_pool_user",
         stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS,
     )
     pool_user = delegation.PoolUserScript(
