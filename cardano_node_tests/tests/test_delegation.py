@@ -42,7 +42,7 @@ def pool_users(
 
         created_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
-            name_template=f"test_delegation_pool_users_ci{cluster_manager.cluster_instance_num}",
+            name_template=f"test_delegation_pool_user_ci{cluster_manager.cluster_instance_num}",
             no_of_addr=2,
         )
         fixture_cache.value = created_users
@@ -62,9 +62,10 @@ def pool_users_disposable(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.PoolUser]:
     """Create function scoped pool users."""
+    test_id = common.get_test_id(cluster)
     pool_users = clusterlib_utils.create_pool_users(
         cluster_obj=cluster,
-        name_template=f"test_delegation_pool_users_{clusterlib.get_rand_str(3)}",
+        name_template=f"{test_id}_pool_user",
         no_of_addr=2,
     )
     return pool_users
