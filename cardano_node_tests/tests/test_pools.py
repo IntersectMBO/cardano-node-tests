@@ -1932,12 +1932,13 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         testfile_temp_dir: Path,
     ) -> Tuple[str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair]:
-        pool_name = f"pool_{clusterlib.get_rand_str(4)}"
+        rand_str = clusterlib.get_rand_str(3)
+        pool_name = f"pool_{rand_str}"
 
         pool_metadata = {
             "name": pool_name,
             "description": "cardano-node-tests E2E tests",
-            "ticker": "IOG2",
+            "ticker": f"IO{rand_str}",
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(

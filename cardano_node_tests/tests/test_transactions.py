@@ -138,9 +138,10 @@ class TestBasic:
         cluster: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses for `test_build_no_change`."""
+        test_id = common.get_test_id(cluster)
         addrs = clusterlib_utils.create_payment_addr_records(
-            f"addr_no_change_ci{cluster_manager.cluster_instance_num}_0",
-            f"addr_no_change_ci{cluster_manager.cluster_instance_num}_1",
+            f"{test_id}_addr_no_change_0",
+            f"{test_id}_addr_no_change_1",
             cluster_obj=cluster,
         )
 
