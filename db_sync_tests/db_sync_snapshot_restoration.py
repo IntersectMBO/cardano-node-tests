@@ -234,7 +234,7 @@ def set_node_socket_path_env_var_in_cwd():
     current_directory = Path.cwd()
     if not 'cardano-node' == basename(normpath(current_directory)):
         raise Exception(f"You're not inside 'cardano-node' directory but in: {current_directory}")
-    socket_path = 'db/node.socket'
+    socket_path = f"db-{get_environment()}/node.socket"
     export_env_var("CARDANO_NODE_SOCKET_PATH", socket_path)
 
 
@@ -333,22 +333,21 @@ def start_node_in_cwd(env):
 
     try:
         p = subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=logfile)
-        print("waiting for db folder to be created")
+        print("waiting for socket file to be created")
         counter = 0
-        timeout_counter = 5 * ONE_MINUTE
-        while not os.path.isdir(current_directory / "db"):
-            time.sleep(1)
-            counter += 1
+        timeout_counter = 30 * ONE_MINUTE
+        while not os.path.exists(f"{current_directory}/db-{env}/node.socket"):
+            time.sleep(ONE_MINUTE)
+            counter += ONE_MINUTE
             if counter > timeout_counter:
                 print(
-                    f"ERROR: waited {timeout_counter} seconds and the DB folder was not created yet")
+                    f"ERROR: waited {timeout_counter} seconds and socket file was not created yet")
                 exit(1)
 
-        print(f"DB folder was created after {counter} seconds")
-        secs_to_start = wait_for_node_to_start()
-        print(f" - listdir current_directory: {os.listdir(current_directory)}")
-        print(f" - listdir db: {os.listdir(current_directory / 'db')}")
-        return secs_to_start
+        print(f"node.socket was created after {counter} seconds")
+        db_folder =  f"db-{env}"
+        print(f" - listdir db: {os.listdir(current_directory/db_folder)}")
+        return counter
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
             "command '{}' return with error (code {}): {}".format(
