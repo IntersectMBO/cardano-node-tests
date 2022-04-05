@@ -33,12 +33,9 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> List[clusterlib.AddressRecord]:
     """Create new payment address."""
+    test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
-        *[
-            f"plutus_payment_ci{cluster_manager.cluster_instance_num}_"
-            f"{clusterlib.get_rand_str(4)}_{i}"
-            for i in range(2)
-        ],
+        *[f"{test_id}_payment_addr_{i}" for i in range(2)],
         cluster_obj=cluster,
     )
 
