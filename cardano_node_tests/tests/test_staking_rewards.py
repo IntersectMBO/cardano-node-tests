@@ -268,7 +268,7 @@ class TestRewards:
         )
 
         # make sure we have enough time to finish the registration/delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-300)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-300)
         init_epoch = cluster.get_epoch()
 
         if check_pool_rewards:
@@ -309,7 +309,7 @@ class TestRewards:
 
         # withdraw rewards to payment address, make sure we have enough time to finish
         # the withdrawal in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-300)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-300)
         cluster.withdraw_reward(
             stake_addr_record=delegation_out.pool_user.stake,
             dst_addr_record=delegation_out.pool_user.payment,
@@ -570,16 +570,18 @@ class TestRewards:
 
             # wait 4 epochs for first rewards
             if this_epoch >= init_epoch + 4:
-                assert owner_reward > prev_owner_reward, "New reward was not received by pool owner"
+                assert owner_reward > prev_owner_reward, "New reward was NOT received by pool owner"
                 assert (
                     user_reward > prev_user_reward
-                ), "New reward was not received by stake address"
+                ), "New reward was NOT received by stake address"
 
             _check_ledger_state(this_epoch=this_epoch)
 
         # withdraw rewards to payment address
         if this_epoch == cluster.get_epoch():
             cluster.wait_for_new_epoch()
+
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-30)
 
         withdraw_out = cluster.withdraw_reward(
             stake_addr_record=delegation_out.pool_user.stake,
@@ -887,6 +889,10 @@ class TestRewards:
                 if cluster.get_epoch() == prev_epoch:
                     cluster.wait_for_new_epoch()
 
+                # wait before recording reward
+                clusterlib_utils.wait_for_epoch_interval(
+                    cluster_obj=cluster, start=10, stop=30, force_epoch=True
+                )
                 this_epoch = cluster.get_epoch()
 
                 # current reward balance
@@ -1031,7 +1037,7 @@ class TestRewards:
 
         temp_template = common.get_test_id(cluster)
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -1177,10 +1183,6 @@ class TestRewards:
         else:
             pytest.skip("Pools haven't received any rewards, cannot continue.")
 
-        # make sure we have enough time to submit pool registration cert in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
-        init_epoch = cluster.get_epoch()
-
         # fund source address so the pledge is still met after TX fees are deducted
         clusterlib_utils.fund_from_faucet(
             pool2_reward,
@@ -1189,6 +1191,10 @@ class TestRewards:
             amount=150_000_000,
             force=True,
         )
+
+        # make sure we have enough time to submit pool registration cert in one epoch
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        init_epoch = cluster.get_epoch()
 
         # set pool2 reward address to the reward address of pool1 by resubmitting the pool
         # registration certificate
@@ -1502,8 +1508,12 @@ class TestRewards:
 
             # wait for new epoch
             if cluster.get_epoch() == prev_epoch:
-                cluster.wait_for_new_epoch(padding_seconds=15)
+                cluster.wait_for_new_epoch()
 
+            # wait before recording reward
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=10, stop=30, force_epoch=True
+            )
             this_epoch = cluster.get_epoch()
 
             # current reward balance
@@ -1553,7 +1563,7 @@ class TestRewards:
             if this_epoch == init_epoch + 4:
                 assert (
                     reward_total > prev_reward_total
-                ), "New reward was not received by stake address"
+                ), "New reward was NOT received by stake address"
 
                 # deregister stake address
                 clusterlib_utils.deregister_stake_address(
@@ -1563,7 +1573,7 @@ class TestRewards:
                 )
                 # wait for second half of an epoch
                 clusterlib_utils.wait_for_epoch_interval(
-                    cluster_obj=cluster, start=-60, stop=-40, force_epoch=True
+                    cluster_obj=cluster, start=-60, stop=-45, force_epoch=True
                 )
                 # re-register, delegate to pool1
                 delegation_out_ep4 = delegation.delegate_stake_addr(
@@ -1580,7 +1590,11 @@ class TestRewards:
             if this_epoch >= init_epoch + 6:
                 assert (
                     reward_total > prev_reward_total
-                ), "New reward was not received by stake address"
+                ), "New reward was NOT received by stake address"
+
+            assert (
+                cluster.get_epoch() == this_epoch
+            ), "Failed to finish actions in single epoch, it would affect other checks"
 
             # sleep till the end of epoch
             clusterlib_utils.wait_for_epoch_interval(
