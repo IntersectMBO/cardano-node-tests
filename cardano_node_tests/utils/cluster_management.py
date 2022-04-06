@@ -129,6 +129,8 @@ class MarkedTestsStatus:
 
 @dataclasses.dataclass
 class ClusterGetStatus:
+    """Intermediate status while trying to `get` suitable cluster instance."""
+
     mark: str
     lock_resources: Iterable[str]
     use_resources: Iterable[str]
@@ -142,12 +144,15 @@ class ClusterGetStatus:
     restart_ready: bool = False
     first_iteration: bool = True
     instance_dir: Path = Path("/nonexistent")
-    started_tests: Iterable[Path] = ()
-    marked_starting: Iterable[Path] = ()
-    marked_running: Iterable[Path] = ()
+    # status files
+    started_tests_sfiles: Iterable[Path] = ()
+    marked_starting_sfiles: Iterable[Path] = ()
+    marked_running_sfiles: Iterable[Path] = ()
 
 
 class ClusterManager:
+    """Set of management methods for cluster instances."""
+
     manager_cache: Dict[int, ClusterManagerCache] = {}
 
     @classmethod
@@ -277,14 +282,14 @@ class ClusterManager:
             self._log(f"c{instance_num}: stopped cluster instance")
 
     def set_needs_restart(self) -> None:
-        """Indicate that the cluster needs restart."""
+        """Indicate that the cluster instance needs restart."""
         with locking.FileLockIfXdist(self.cluster_lock):
             self._log(f"c{self.cluster_instance_num}: called `set_needs_restart`")
             helpers.touch(self.instance_dir / f"{RESTART_NEEDED_GLOB}_{self.worker_id}")
 
     @contextlib.contextmanager
     def restart_on_failure(self) -> Iterator[None]:
-        """Indicate that the cluster needs restart if command failed - context manager."""
+        """Indicate that the cluster instance needs restart if command failed - context manager."""
         try:
             yield
         except Exception:
@@ -304,7 +309,7 @@ class ClusterManager:
             self.cache.test_data[curline_hash] = container.value
 
     def on_test_stop(self) -> None:
-        """Perform actions after the test finished."""
+        """Perform actions after a test is finished."""
         if self._cluster_instance_num == -1:
             return
 
@@ -510,7 +515,7 @@ class _ClusterGetter:
         self.cm._log(f"c{instance_num}: in `_on_marked_test_stop`")
         instance_dir = self.cm.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
 
-        # set cluster to be restarted if needed
+        # set cluster instance to be restarted if needed
         restart_after_mark_files = list(instance_dir.glob(f"{RESTART_AFTER_MARK_GLOB}_*"))
         if restart_after_mark_files:
             for f in restart_after_mark_files:
@@ -521,9 +526,9 @@ class _ClusterGetter:
             helpers.touch(instance_dir / f"{RESTART_NEEDED_GLOB}_{self.cm.worker_id}")
 
         # remove file that indicates that tests with the mark are running
-        marked_running = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
-        if marked_running:
-            marked_running[0].unlink()
+        marked_running_sfiles = list(instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*"))
+        if marked_running_sfiles:
+            marked_running_sfiles[0].unlink()
 
     def _get_marked_tests_status(
         self, cache: Dict[int, MarkedTestsStatus], instance_num: int
@@ -547,7 +552,7 @@ class _ClusterGetter:
         keeps track of marked tests and clear the mark and cluster instance only when no marked
         test was running for some time.
         """
-        if not cget_status.marked_running:
+        if not cget_status.marked_running_sfiles:
             return
 
         # get marked tests status
@@ -556,7 +561,7 @@ class _ClusterGetter:
         )
 
         # update marked tests status
-        in_progress = bool(cget_status.started_tests or cget_status.marked_starting)
+        in_progress = bool(cget_status.started_tests_sfiles or cget_status.marked_starting_sfiles)
         instance_num = cget_status.instance_num
 
         if in_progress:
@@ -726,7 +731,7 @@ class _ClusterGetter:
                 f"c{cget_status.instance_num}: locking to this cluster instance, "
                 f"it has my mark '{cget_status.mark}'"
             )
-        elif cget_status.marked_running or cget_status.marked_starting:
+        elif cget_status.marked_running_sfiles or cget_status.marked_starting_sfiles:
             self.cm._log(
                 f"c{cget_status.instance_num}: tests marked with other mark starting "
                 f"or running, I have different mark '{cget_status.mark}'"
@@ -775,7 +780,7 @@ class _ClusterGetter:
 
         # restart is needed when custom start command was specified and the test is marked test or
         # singleton
-        initial_marked_test = bool(cget_status.mark and not cget_status.marked_running)
+        initial_marked_test = bool(cget_status.mark and not cget_status.marked_running_sfiles)
         singleton_test = Resources.CLUSTER in cget_status.lock_resources
         new_cmd_restart = bool(cget_status.start_cmd and (initial_marked_test or singleton_test))
         will_restart = new_cmd_restart or self._is_restart_needed(cget_status.instance_num)
@@ -783,7 +788,7 @@ class _ClusterGetter:
             return True
 
         # if tests are running on the instance, we cannot restart, therefore we cannot continue
-        if cget_status.started_tests:
+        if cget_status.started_tests_sfiles:
             self.cm._log(f"c{cget_status.instance_num}: tests are running, cannot restart")
             return False
 
@@ -792,7 +797,7 @@ class _ClusterGetter:
         # Cluster restart will be performed by this worker.
         # By setting `restart_here`, we make sure this worker continue on this cluster instance
         # after restart is finished. It is important because the `start_cmd` used for starting the
-        # cluster might be specific to the test.
+        # cluster instance might be specific to the test.
         cget_status.restart_here = True
         cget_status.selected_instance = cget_status.instance_num
 
@@ -805,7 +810,7 @@ class _ClusterGetter:
         return True
 
     def _finish_restart(self, cget_status: ClusterGetStatus) -> bool:
-        """On first call setup cluster instance for restart, on second call perform cleanup."""
+        """On first call, setup cluster instance for restart. On second call, perform cleanup."""
         if not cget_status.restart_here:
             return True
 
@@ -833,13 +838,13 @@ class _ClusterGetter:
     def _create_test_status_files(self, cget_status: ClusterGetStatus) -> None:
         """Create status files for test that is about to start on this cluster instance."""
         # this test is a first marked test
-        if cget_status.mark and not cget_status.marked_running:
+        if cget_status.mark and not cget_status.marked_running_sfiles:
             self.cm._log(f"c{cget_status.instance_num}: starting '{cget_status.mark}' tests")
             helpers.touch(
                 self.cm.instance_dir
                 / f"{TEST_CURR_MARK_GLOB}_{cget_status.mark}_{self.cm.worker_id}"
             )
-            for sf in cget_status.marked_starting:
+            for sf in cget_status.marked_starting_sfiles:
                 sf.unlink()
 
         # create status file for each in-use resource
@@ -970,16 +975,16 @@ class _ClusterGetter:
                         continue
 
                     # are there tests already running on this cluster instance?
-                    cget_status.started_tests = list(
+                    cget_status.started_tests_sfiles = list(
                         cget_status.instance_dir.glob(f"{TEST_RUNNING_GLOB}_*")
                     )
 
                     # "marked tests" = group of tests marked with a specific mark.
                     # While these tests are running, no unmarked test can start.
-                    cget_status.marked_starting = list(
+                    cget_status.marked_starting_sfiles = list(
                         cget_status.instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_*")
                     )
-                    cget_status.marked_running = list(
+                    cget_status.marked_running_sfiles = list(
                         cget_status.instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_*")
                     )
 
@@ -996,7 +1001,10 @@ class _ClusterGetter:
                             continue
 
                         # check if we need to wait until unmarked tests are finished
-                        if not cget_status.marked_running and cget_status.started_tests:
+                        if (
+                            not cget_status.marked_running_sfiles
+                            and cget_status.started_tests_sfiles
+                        ):
                             cget_status.sleep_delay = 10
                             continue
 
@@ -1006,7 +1014,7 @@ class _ClusterGetter:
                         )
 
                     # no unmarked test can run while marked tests are starting or running
-                    elif cget_status.marked_running or cget_status.marked_starting:
+                    elif cget_status.marked_running_sfiles or cget_status.marked_starting_sfiles:
                         self.cm._log(
                             f"c{instance_num}: marked tests starting or running, "
                             f"I don't have mark"
