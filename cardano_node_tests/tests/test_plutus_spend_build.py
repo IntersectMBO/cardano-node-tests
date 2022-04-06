@@ -964,7 +964,9 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @hypothesis.given(redeemer_number=st.integers(min_value=-2 ^ 64, max_value=2 ^ 64))
+    @hypothesis.given(
+        redeemer_number=st.integers(min_value=-(2**64) - 1, max_value=(2**64) - 1)
+    )
     @common.hypothesis_settings()
     def test_guessing_game_pbt(
         self,
