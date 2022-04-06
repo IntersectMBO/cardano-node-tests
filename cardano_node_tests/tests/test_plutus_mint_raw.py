@@ -117,11 +117,11 @@ class TestMinting:
         payment_addrs: List[clusterlib.AddressRecord],
         execution_cost: dict,
     ):
-        """Test minting a token with a plutus script.
+        """Test minting a token with a Plutus script.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a plutus script
+        * mint the token using a Plutus script
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
@@ -278,11 +278,11 @@ class TestMinting:
         key: str,
         execution_cost: dict,
     ):
-        """Test minting a token with a plutus script.
+        """Test minting a token with a Plutus script.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a plutus script with required signer
+        * mint the token using a Plutus script with required signer
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
@@ -428,11 +428,11 @@ class TestMinting:
         payment_addrs: List[clusterlib.AddressRecord],
         execution_cost: dict,
     ):
-        """Test minting a token with a time constraints plutus script.
+        """Test minting a token with a time constraints Plutus script.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a plutus script
+        * mint the token using a Plutus script
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
@@ -948,13 +948,13 @@ class TestMintingNegative:
     def test_minting_with_invalid_collaterals(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting a token with a plutus script with invalid collaterals.
+        """Test minting a token with a Plutus script with invalid collaterals.
 
         Expect failure.
 
         * fund the token issuer and create an UTxO for collateral with insufficient funds
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a plutus script
+        * mint the token using a Plutus script
         * check that the minting failed because no valid collateral was provided
         """
         # pylint: disable=too-many-locals
@@ -1066,13 +1066,13 @@ class TestMintingNegative:
     def test_minting_with_insufficient_collaterals(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting a token with a plutus script with invalid collaterals.
+        """Test minting a token with a Plutus script with invalid collaterals.
 
         Expect failure.
 
         * fund the token issuer and create an UTxO for collateral with insufficient funds
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a plutus script
+        * mint the token using a Plutus script
         * check that the minting failed because a collateral with insufficient funds was provided
         """
         # pylint: disable=too-many-locals
@@ -1184,13 +1184,13 @@ class TestMintingNegative:
     def test_witness_redeemer_missing_signer(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting a token with a plutus script with invalid signers.
+        """Test minting a token with a Plutus script with invalid signers.
 
         Expect failure.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * try to mint the token using a plutus script and a TX with signing key missing for
+        * try to mint the token using a Plutus script and a TX with signing key missing for
           the required signer
         * check that the minting failed because the required signers were not provided
         """
