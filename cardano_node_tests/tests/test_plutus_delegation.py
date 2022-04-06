@@ -36,7 +36,7 @@ pytestmark = pytest.mark.skipif(
 def cluster_lock_42stake(
     cluster_manager: cluster_management.ClusterManager,
 ) -> Tuple[clusterlib.ClusterLib, str]:
-    """Make sure just one staking plutus test run at a time.
+    """Make sure just one staking Plutus test run at a time.
 
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the blanaces etc. don't add up.
