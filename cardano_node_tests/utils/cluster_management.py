@@ -134,6 +134,7 @@ class ClusterGetStatus:
     use_resources: Iterable[str]
     cleanup: bool
     start_cmd: str
+    current_test: str
     selected_instance: int = -1
     instance_num: int = -1
     sleep_delay: int = 1
@@ -912,8 +913,11 @@ class _ClusterGetter:
             use_resources=use_resources,
             cleanup=cleanup,
             start_cmd=start_cmd,
+            current_test=os.environ.get("PYTEST_CURRENT_TEST") or "",
         )
         marked_tests_cache: Dict[int, MarkedTestsStatus] = {}
+
+        self.cm._log(f"want to run test '{cget_status.current_test}'")
 
         # iterate until it is possible to start the test
         while True:
@@ -1023,6 +1027,7 @@ class _ClusterGetter:
                     # we've found suitable cluster instance
                     cget_status.selected_instance = instance_num
                     self.cm._cluster_instance_num = instance_num
+                    self.cm._log(f"c{instance_num}: can run test '{cget_status.current_test}'")
                     # set environment variables that are needed when restarting the cluster
                     # and running tests
                     cluster_nodes.set_cluster_env(instance_num)
