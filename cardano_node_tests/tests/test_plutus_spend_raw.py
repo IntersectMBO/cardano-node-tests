@@ -93,7 +93,7 @@ def _fund_script(
     ] = None,  # tokens must already be in `payment_addr`
     collateral_fraction_offset: float = 1.0,
 ) -> clusterlib.TxRawOutput:
-    """Fund a plutus script and create the locked UTxO and collateral UTxO."""
+    """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
     assert plutus_op.execution_units, "Execution units not provided"
     plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
 
@@ -373,17 +373,17 @@ def _check_pretty_utxo(
 
 
 class TestLocking:
-    """Tests for txin locking using Plutus smart contracts."""
+    """Tests for Tx output locking using Plutus smart contracts."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_txin_locking(
+    def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ):
-        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+        """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
         Corresponds to Exercise 3 for Alonzo Blue.
 
@@ -563,7 +563,7 @@ class TestLocking:
         worker_id: str,
         script: str,
     ):
-        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+        """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
         Test with "guessing game" script that expects specific datum and redeemer value.
         Test also negative scenarios where datum or redeemer value is different than expected.
@@ -645,7 +645,7 @@ class TestLocking:
         payment_addrs: List[clusterlib.AddressRecord],
         worker_id: str,
     ):
-        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+        """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
         Test with "always fails" script that fails for all datum / redeemer values.
 
@@ -746,7 +746,7 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_txin_token_locking(
+    def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
@@ -914,7 +914,7 @@ class TestLocking:
 
 @pytest.mark.testnets
 class TestNegative:
-    """Tests for txin locking using Plutus smart contracts that are expected to fail."""
+    """Tests for Tx output locking using Plutus smart contracts that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1031,7 +1031,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    def test_no_datum_txin(
+    def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],

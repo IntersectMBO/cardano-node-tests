@@ -61,13 +61,13 @@ class TestBuildMinting:
     def test_minting(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting a token with a plutus script.
+        """Test minting a token with a Plutus script.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a plutus script
+        * mint the token using a Plutus script
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
@@ -213,13 +213,13 @@ class TestBuildMinting:
     def test_time_range_minting(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test minting a token with a time constraints plutus script.
+        """Test minting a token with a time constraints Plutus script.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a plutus script
+        * mint the token using a Plutus script
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
@@ -776,13 +776,13 @@ class TestBuildMinting:
         payment_addrs: List[clusterlib.AddressRecord],
         key: str,
     ):
-        """Test minting a token with a plutus script.
+        """Test minting a token with a Plutus script.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a plutus script with required signer
+        * mint the token using a Plutus script with required signer
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
@@ -939,13 +939,13 @@ class TestBuildMintingNegative:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ):
-        """Test minting a token with a plutus script with invalid signers.
+        """Test minting a token with a Plutus script with invalid signers.
 
         Expect failure.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * try to mint the token using a plutus script and a TX with signing key missing for
+        * try to mint the token using a Plutus script and a TX with signing key missing for
           the required signer
         * check that the minting failed because the required signers were not provided
         """

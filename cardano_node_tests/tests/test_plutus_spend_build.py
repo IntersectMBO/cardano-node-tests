@@ -84,7 +84,7 @@ def fund_script_guessing_game(
     cluster: clusterlib.ClusterLib,
     payment_addrs: List[clusterlib.AddressRecord],
 ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]]:
-    """Fund a plutus script and create the locked UTxO and collateral UTxO.
+    """Fund a Plutus script and create the locked UTxO and collateral UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
@@ -120,7 +120,7 @@ def _build_fund_script(
         List[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
 ) -> clusterlib.TxRawOutput:
-    """Fund a plutus script and create the locked UTxO and collateral UTxO.
+    """Fund a Plutus script and create the locked UTxO and collateral UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
@@ -361,17 +361,17 @@ def _build_spend_locked_txin(
 
 @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
 class TestBuildLocking:
-    """Tests for txin locking using Plutus smart contracts and `transaction build`."""
+    """Tests for Tx output locking using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_txin_locking(
+    def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ):
-        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+        """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
@@ -574,7 +574,7 @@ class TestBuildLocking:
         payment_addrs: List[clusterlib.AddressRecord],
         script: str,
     ):
-        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+        """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
@@ -649,7 +649,7 @@ class TestBuildLocking:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ):
-        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+        """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
@@ -767,12 +767,12 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_txin_token_locking(
+    def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ):
-        """Test locking a Tx output with a plutus script and spending the locked UTxO.
+        """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
@@ -960,7 +960,7 @@ class TestBuildLocking:
 
 @pytest.mark.testnets
 class TestNegative:
-    """Tests for txin locking using Plutus smart contracts that are expected to fail."""
+    """Tests for Tx output locking using Plutus smart contracts that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -973,7 +973,7 @@ class TestNegative:
         fund_script_guessing_game: Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
         redeemer_number: int,
     ):
-        """Try to spend a locked UtxO with and an invalid redeemer.
+        """Try to spend a locked UTxO with an invalid redeemer.
 
         Expect failure.
         """
@@ -983,7 +983,7 @@ class TestNegative:
 
         script_utxos, collateral_utxos = fund_script_guessing_game
 
-        redeemer_file = "redeemer_file.datum"
+        redeemer_file = f"{temp_template}.redeemer"
 
         redeemer_content = {}
         if redeemer_number % 3 == 0:
@@ -1144,7 +1144,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    def test_no_datum_txin(
+    def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
