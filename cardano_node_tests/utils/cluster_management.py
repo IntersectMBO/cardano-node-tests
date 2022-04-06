@@ -650,6 +650,7 @@ class _ClusterGetter:
     def _reload_cluster_obj(self, state_dir: Path) -> None:
         """Reload cluster data if necessary."""
         addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
+        # the checksum will not match when cluster was restarted
         if addrs_data_checksum == self.cm.cache.last_checksum:
             return
 
@@ -935,9 +936,8 @@ class _ClusterGetter:
             # nothing time consuming can go under this lock as all other workers will need to wait
             with locking.FileLockIfXdist(self.cm.cluster_lock):
                 if self._is_already_running(cget_status):
-                    assert (
-                        self.cm.cache.cluster_obj
-                    ), "`cluster_obj` not available, that cannot happen"
+                    if not self.cm.cache.cluster_obj:
+                        raise AssertionError("`cluster_obj` not available, that cannot happen")
                     return self.cm.cache.cluster_obj
 
                 # needs to be set here, before the first `continue`
@@ -1052,7 +1052,8 @@ class _ClusterGetter:
 
                 self._create_test_status_files(cget_status)
 
-                # check if it is necessary to reload data
+                # Check if it is necessary to reload data. This still needs to happen under
+                # global lock.
                 state_dir = cluster_nodes.get_cluster_env().state_dir
                 self._reload_cluster_obj(state_dir=state_dir)
 
@@ -1061,8 +1062,7 @@ class _ClusterGetter:
 
         cluster_obj = self.cm.cache.cluster_obj
         if not cluster_obj:
-            cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
-
+            raise AssertionError("`cluster_obj` not available, that cannot happen")
         cluster_obj.cluster_id = instance_num
         cluster_obj._cluster_manager = self.cm  # type: ignore
 
