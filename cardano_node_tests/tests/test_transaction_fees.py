@@ -124,7 +124,7 @@ class TestFee:
         assert "FeeTooSmallUTxO" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("fee_add", (0, 1000, 100_000, 1_000_000))
+    @pytest.mark.parametrize("fee_add", (0, 1_000, 100_000, 1_000_000))
     def test_expected_or_higher_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -133,7 +133,7 @@ class TestFee:
     ):
         """Send a transaction with fee that is same or higher than expected."""
         temp_template = f"{common.get_test_id(cluster)}_{fee_add}"
-        amount = 2000_000
+        amount = 2_000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -322,7 +322,7 @@ class TestExpectedFees:
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
-            pool_pledge=1000,
+            pool_pledge=1_000,
             pool_cost=15,
             pool_margin=0.2,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
@@ -414,7 +414,7 @@ class TestExpectedFees:
         ), "Expected fee doesn't match the actual fee"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("addr_fee", [(1, 178965), (3, 206949), (5, 234933), (10, 304893)])
+    @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 304_893)])
     def test_addr_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -452,7 +452,7 @@ class TestExpectedFees:
         ), "Expected fee doesn't match the actual fee"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("addr_fee", [(1, 178965), (3, 206949), (5, 234933), (10, 304893)])
+    @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 304_893)])
     def test_addr_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -491,7 +491,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
-        "amount_expected", [(1, 176677), (100, 176721), (11_000, 176765), (100_000, 176853)]
+        "amount_expected", [(1, 176_677), (100, 176_721), (11_000, 176_765), (100_000, 176_853)]
     )
     def test_transaction_to_1_addr_from_1_addr_fees(
         self,
@@ -513,7 +513,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
-        "amount_expected", [(1, 226573), (100, 227013), (11_000, 227453), (100_000, 228333)]
+        "amount_expected", [(1, 226_573), (100, 227_013), (11_000, 227_453), (100_000, 228_333)]
     )
     def test_transaction_to_10_addrs_from_1_addr_fees(
         self,
@@ -535,7 +535,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
-        "amount_expected", [(1, 259661), (100, 259705), (11_000, 259749), (100_000, 259837)]
+        "amount_expected", [(1, 259_661), (100, 259_705), (11_000, 259_749), (100_000, 259_837)]
     )
     def test_transaction_to_1_addr_from_10_addrs_fees(
         self,
@@ -557,7 +557,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
-        "amount_expected", [(1, 309557), (100, 309997), (11_000, 310437), (100_000, 311317)]
+        "amount_expected", [(1, 309_557), (100, 309_997), (11_000, 310_437), (100_000, 311_317)]
     )
     def test_transaction_to_10_addrs_from_10_addrs_fees(
         self,
@@ -579,7 +579,8 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
-        "amount_expected", [(1, 1370881), (100, 1375281), (11_000, 1379681), (100_000, 1388481)]
+        "amount_expected",
+        [(1, 1_370_881), (100, 1_375_281), (11_000, 1_379_681), (100_000, 1_388_481)],
     )
     def test_transaction_to_100_addrs_from_100_addrs_fees(
         self,

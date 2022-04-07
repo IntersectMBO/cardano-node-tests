@@ -63,7 +63,7 @@ def issuers_addrs_fresh(
         addrs[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=9000_000_000,
+        amount=9_000_000_000,
     )
 
     return addrs
@@ -178,7 +178,7 @@ class TestMinting:
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses.
 
-        * mint 2 tokens - one itentified by policyid + asset name
+        * mint 2 tokens - one identified by policyid + asset name
           and one identified by just policyid
         * burn the minted tokens
         * check fees in Lovelace
@@ -280,13 +280,13 @@ class TestMinting:
     ):
         """Test minting and burning of tokens, sign the transaction using skeys.
 
-        * mint 2 tokens - one itentified by policyid + asset name
+        * mint 2 tokens - one identified by policyid + asset name
           and one identified by just policyid
         * burn the minted tokens
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        expected_fee = 188821
+        expected_fee = 188_821
 
         temp_template = f"{common.get_test_id(cluster)}_{aname_type}"
         asset_name_dec = (
@@ -369,7 +369,7 @@ class TestMinting:
 
         * create tokens issuers
         * create a script for each issuer
-        * mint 2 tokens with each script - one itentified by policyid + asset name
+        * mint 2 tokens with each script - one identified by policyid + asset name
           and one identified by just policyid. The minting is done in single transaction,
           the transaction is signed using skeys.
         * check that the tokens were minted
@@ -379,7 +379,7 @@ class TestMinting:
         * (optional) check transactions in db-sync
         """
         num_of_scripts = 5
-        expected_fee = 263621
+        expected_fee = 263_621
 
         temp_template = common.get_test_id(cluster)
         amount = 5
@@ -486,7 +486,7 @@ class TestMinting:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        expected_fee = 188821
+        expected_fee = 188_821
 
         temp_template = common.get_test_id(cluster)
         amount = 5
@@ -662,11 +662,11 @@ class TestMinting:
     @pytest.mark.parametrize(
         "tokens_db",
         (
-            (5, 226133),
-            (10, 259353),
-            (50, 444549),
-            (100, 684349),
-            (1000, 0),
+            (5, 226_133),
+            (10, 259_353),
+            (50, 444_549),
+            (100, 684_349),
+            (1_000, 0),
         ),
     )
     @pytest.mark.dbsync
@@ -720,7 +720,7 @@ class TestMinting:
         if tokens_num >= 500:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
-            if tokens_num >= 1000:
+            if tokens_num >= 1_000:
                 assert "(UtxoFailure (MaxTxSizeUTxO" in str(excinfo.value)
             else:
                 assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
@@ -760,11 +760,11 @@ class TestMinting:
     @pytest.mark.parametrize(
         "tokens_db",
         (
-            (5, 215617),
-            (10, 246857),
-            (50, 426333),
-            (100, 666133),
-            (1000, 0),
+            (5, 215_617),
+            (10, 246_857),
+            (50, 426_333),
+            (100, 666_133),
+            (1_000, 0),
         ),
     )
     @pytest.mark.dbsync
@@ -819,7 +819,7 @@ class TestMinting:
         if tokens_num >= 500:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
-            if tokens_num >= 1000:
+            if tokens_num >= 1_000:
                 assert "(UtxoFailure (MaxTxSizeUTxO" in str(excinfo.value)
             else:
                 assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
@@ -877,7 +877,7 @@ class TestMinting:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        expected_fee = 201141
+        expected_fee = 201_141
 
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
@@ -973,7 +973,7 @@ class TestMinting:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        expected_fee = 188821
+        expected_fee = 188_821
 
         temp_template = common.get_test_id(cluster)
         asset_name_dec = f"ěůřščžďťň{clusterlib.get_rand_str(4)}"
@@ -1067,7 +1067,7 @@ class TestPolicies:
         use_build_cmd: bool,
     ):
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
-        expected_fee = 228113
+        expected_fee = 228_113
 
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
@@ -1112,7 +1112,7 @@ class TestPolicies:
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1000,
+            invalid_hereafter=cluster.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
@@ -1127,7 +1127,7 @@ class TestPolicies:
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1000,
+            invalid_hereafter=cluster.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
@@ -1165,7 +1165,7 @@ class TestPolicies:
         use_build_cmd: bool,
     ):
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
-        expected_fee = 228113
+        expected_fee = 228_113
 
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         rand = clusterlib.get_rand_str(4)
@@ -1212,7 +1212,7 @@ class TestPolicies:
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1000,
+            invalid_hereafter=cluster.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
@@ -1227,7 +1227,7 @@ class TestPolicies:
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1000,
+            invalid_hereafter=cluster.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
@@ -1580,7 +1580,7 @@ class TestTransfer:
         return new_token
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1, 10, 200, 2000, 100_000))
+    @pytest.mark.parametrize("amount", (1, 10, 200, 2_000, 100_000))
     @pytest.mark.parametrize(
         "use_build_cmd",
         (
@@ -1641,7 +1641,7 @@ class TestTransfer:
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
             tx_signed = cluster.sign_tx(
@@ -1703,7 +1703,7 @@ class TestTransfer:
         * (optional) check transactions in db-sync
         """
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
-        amount = 1000
+        amount = 1_000
         rand = clusterlib.get_rand_str(5)
 
         new_tokens = clusterlib_utils.new_tokens(
@@ -1712,7 +1712,7 @@ class TestTransfer:
             temp_template=f"{temp_template}_{rand}",
             token_mint_addr=payment_addrs[0],
             issuer_addr=payment_addrs[1],
-            amount=1000_000,
+            amount=1_000_000,
         )
         new_tokens.append(new_token)
 
@@ -1772,7 +1772,7 @@ class TestTransfer:
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
             tx_signed = cluster.sign_tx(
@@ -1859,7 +1859,7 @@ class TestTransfer:
                     src_address=src_address,
                     tx_name=temp_template,
                     txouts=destinations,
-                    fee_buffer=2000_000,
+                    fee_buffer=2_000_000,
                     tx_files=tx_files,
                 )
             else:
@@ -1932,7 +1932,7 @@ class TestNegative:
                 blacklist_categories=["C"], blacklist_characters=[" ", "+", "\xa0"]
             ),
             min_size=33,
-            max_size=1000,
+            max_size=1_000,
         )
     )
     @common.hypothesis_settings()
@@ -1987,7 +1987,7 @@ class TestCLITxOutSyntax:
     def test_multiasset_txouts_syntax(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
     ):
-        """Test syntax for specifying muti-asset values and txouts via CLI.
+        """Test syntax for specifying multi-asset values and txouts via CLI.
 
         Test it by minting one token and burning the same token in single transaction.
 
@@ -2001,12 +2001,12 @@ class TestCLITxOutSyntax:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        expected_fee = 187105
+        expected_fee = 187_105
 
         temp_template = common.get_test_id(cluster)
         asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
         asset_name = asset_name_dec.encode("utf-8").hex()
-        amount = 5000
+        amount = 5_000
 
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
@@ -2035,7 +2035,7 @@ class TestCLITxOutSyntax:
                 txouts=[
                     clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
                     clusterlib.TxOut(
-                        address=token_mint_addr.address, amount=-(amount - 1000), coin=token
+                        address=token_mint_addr.address, amount=-(amount - 1_000), coin=token
                     ),
                 ],
                 script_file=script,
@@ -2113,7 +2113,7 @@ class TestCLITxOutSyntax:
         cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         token_utxo = cluster.get_utxo(address=token_mint_addr.address, coins=[token])
-        assert token_utxo and token_utxo[0].amount == 1000, "The token was not minted"
+        assert token_utxo and token_utxo[0].amount == 1_000, "The token was not minted"
 
         # check expected fees
         assert helpers.is_in_interval(
