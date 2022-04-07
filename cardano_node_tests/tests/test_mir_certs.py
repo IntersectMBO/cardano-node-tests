@@ -19,6 +19,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> List[dbsync_queries.ADAPotsDBRow]:
+    pots_records = []
     for r in range(4):
         if r > 0:
             LOGGER.warning(f"Repeating the `ada_pots` SQL query for the {r} time.")
@@ -143,8 +144,8 @@ class TestMIRCerts:
             return
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds to treasury in epoch {cluster.get_epoch()} "
-            f"on cluster instance {cluster_manager.cluster_instance_num}"
+            f"Submitting MIR cert for transferring funds to treasury in epoch {cluster.get_epoch()}"
+            f" on cluster instance {cluster_manager.cluster_instance_num}"
         )
         tx_raw_output = cluster.send_tx(
             src_address=pool_user.payment.address,
@@ -212,13 +213,13 @@ class TestMIRCerts:
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
-            fee_buffer=1000_000,
+            fee_buffer=1_000_000,
             witness_override=2,
         )
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds to treasury in epoch {cluster.get_epoch()} "
-            f"on cluster instance {cluster_manager.cluster_instance_num}"
+            f"Submitting MIR cert for transferring funds to treasury in epoch {cluster.get_epoch()}"
+            f" on cluster instance {cluster_manager.cluster_instance_num}"
         )
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -293,8 +294,8 @@ class TestMIRCerts:
             return
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds to reserves in epoch {cluster.get_epoch()} "
-            f"on cluster instance {cluster_manager.cluster_instance_num}"
+            f"Submitting MIR cert for transferring funds to reserves in epoch {cluster.get_epoch()}"
+            f" on cluster instance {cluster_manager.cluster_instance_num}"
         )
         tx_raw_output = cluster.send_tx(
             src_address=pool_user.payment.address,
@@ -362,7 +363,7 @@ class TestMIRCerts:
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
-            fee_buffer=1000_000,
+            fee_buffer=1_000_000,
             witness_override=2,
         )
         tx_signed = cluster.sign_tx(
@@ -372,8 +373,8 @@ class TestMIRCerts:
         )
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds to reserves in epoch {cluster.get_epoch()} "
-            f"on cluster instance {cluster_manager.cluster_instance_num}"
+            f"Submitting MIR cert for transferring funds to reserves in epoch {cluster.get_epoch()}"
+            f" on cluster instance {cluster_manager.cluster_instance_num}"
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
@@ -448,7 +449,7 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds from {fund_src} to "
+            f"Submitting MIR cert for transferring funds from {fund_src} to "
             f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
@@ -536,7 +537,7 @@ class TestMIRCerts:
             src_address=registered_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
-            fee_buffer=1000_000,
+            fee_buffer=1_000_000,
             witness_override=2,
         )
         tx_signed = cluster.sign_tx(
@@ -546,7 +547,7 @@ class TestMIRCerts:
         )
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds from {fund_src} to "
+            f"Submitting MIR cert for transferring funds from {fund_src} to "
             f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
@@ -636,7 +637,7 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds from treasury to "
+            f"Submitting MIR cert for transferring funds from treasury to "
             f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
@@ -649,7 +650,7 @@ class TestMIRCerts:
         time.sleep(2)
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds from reserves to "
+            f"Submitting MIR cert for transferring funds from reserves to "
             f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
@@ -777,7 +778,7 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds from treasury and reserves to "
+            f"Submitting MIR cert for transferring funds from treasury and reserves to "
             f"multiple stake addresses in epoch {cluster.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
@@ -914,11 +915,11 @@ class TestMIRCerts:
         * if a stake address should be known on blockchain:
 
             - register the stake address
-            - if transfering funds from treasury, deregister the stake address
+            - if transferring funds from treasury, deregister the stake address
               BEFORE submitting the TX
 
         * submit a TX with the MIR certificate
-        * if a stake address should be known on blockchain and if transfering funds from reserves,
+        * if a stake address should be known on blockchain and if transferring funds from reserves,
           deregister the stake address AFTER submitting the TX
         * check that the amount was NOT added to the stake address reward account
         * (optional) check transaction in db-sync
@@ -967,7 +968,7 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
         LOGGER.info(
-            f"Submitting MIR cert for tranferring funds from {fund_src} to "
+            f"Submitting MIR cert for transferring funds from {fund_src} to "
             f"'{pool_user.stake.address}' in epoch {cluster.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )

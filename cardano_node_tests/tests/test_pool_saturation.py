@@ -49,10 +49,10 @@ def cluster_lock_pools(cluster_manager: cluster_management.ClusterManager) -> cl
     )
 
 
-def _get_saturation_treshold(
+def _get_saturation_threshold(
     cluster_obj: clusterlib.ClusterLib, ledger_state: dict, pool_id: str
 ) -> int:
-    """Calculate how much Lovelace is needed to reach saturation treshold."""
+    """Calculate how much Lovelace is needed to reach saturation threshold."""
     account_state = ledger_state["stateBefore"]["esAccountState"]
     active_supply = (
         cluster_obj.genesis["maxLovelaceSupply"]
@@ -63,8 +63,8 @@ def _get_saturation_treshold(
     saturation_amount = int(active_supply / k_param)
 
     pool_stake = int(cluster_obj.get_stake_snapshot(pool_id)["poolStakeMark"])
-    saturation_treshold = saturation_amount - pool_stake
-    return saturation_treshold
+    saturation_threshold = saturation_amount - pool_stake
+    return saturation_threshold
 
 
 def _get_reward_per_block(pool_record: PoolRecord, owner_rewards: bool = False) -> Dict[int, float]:
@@ -303,7 +303,7 @@ class TestPoolSaturation:
                     )
                 )
 
-                pool_rec.saturation_amounts[this_epoch] = _get_saturation_treshold(
+                pool_rec.saturation_amounts[this_epoch] = _get_saturation_threshold(
                     cluster_obj=cluster, ledger_state=ledger_state, pool_id=pool_rec.id
                 )
 

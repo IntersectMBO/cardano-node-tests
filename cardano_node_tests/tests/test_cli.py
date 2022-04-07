@@ -97,8 +97,8 @@ class TestCLI:
     ):
         """Check that pretty printed `query utxo` output looks as expected."""
         temp_template = common.get_test_id(cluster)
-        amount1 = 2000_000
-        amount2 = 2500_000
+        amount1 = 2_000_000
+        amount2 = 2_500_000
 
         # create source and destination payment addresses
         payment_addrs = clusterlib_utils.create_payment_addr_records(
@@ -263,7 +263,9 @@ class TestAddressInfo:
         )
 
         # create script address
-        address = cluster.gen_script_addr(addr_name=temp_template, script_file=multisig_script)
+        address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
 
         addr_info = cluster.get_address_info(address=address)
 

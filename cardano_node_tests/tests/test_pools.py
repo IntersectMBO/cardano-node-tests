@@ -141,7 +141,7 @@ def _register_stake_pool_w_build(
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
-        pool_data: A `PoolData` tuple cointaining info about the stake pool.
+        pool_data: A `PoolData` tuple containing info about the stake pool.
         pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
         vrf_vkey_file: A path to node VRF vkey file.
         cold_key_pair: A `ColdKeyPair` tuple containing the key pair and the counter.
@@ -181,7 +181,7 @@ def _register_stake_pool_w_build(
         tx_name=tx_name,
         tx_files=tx_files,
         deposit=deposit,
-        fee_buffer=2000_000,
+        fee_buffer=2_000_000,
         witness_override=len(pool_owners) * 3,
         destination_dir=destination_dir,
     )
@@ -214,7 +214,7 @@ def _create_stake_pool_w_build(
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
-        pool_data: A `PoolData` tuple cointaining info about the stake pool.
+        pool_data: A `PoolData` tuple containing info about the stake pool.
         pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
         tx_name: A name of the transaction.
         destination_dir: A path to directory for storing artifacts (optional).
@@ -320,7 +320,7 @@ def _deregister_stake_pool_w_build(
         src_address=pool_owners[0].payment.address,
         tx_name=tx_name,
         tx_files=tx_files,
-        fee_buffer=2000_000,
+        fee_buffer=2_000_000,
         witness_override=len(pool_owners) * 3,
         destination_dir=destination_dir,
     )
@@ -465,7 +465,7 @@ def _create_register_pool_delegate_stake_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
-            fee_buffer=2000_000,
+            fee_buffer=2_000_000,
             witness_override=len(pool_owners) * 3,
         )
         tx_signed = cluster_obj.sign_tx(
@@ -585,7 +585,7 @@ def _create_register_pool_tx_delegate_stake_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
-            fee_buffer=2000_000,
+            fee_buffer=2_000_000,
             witness_override=len(pool_owners) * 3,
         )
         tx_signed = cluster_obj.sign_tx(
@@ -666,7 +666,7 @@ class TestStakePool:
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
-            pool_pledge=1000,
+            pool_pledge=1_000,
             pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
             pool_metadata_url="https://bit.ly/3bDUg9z",
@@ -742,7 +742,7 @@ class TestStakePool:
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
-            pool_pledge=1000,
+            pool_pledge=1_000,
             pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
@@ -806,7 +806,7 @@ class TestStakePool:
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
-            pool_pledge=12345,
+            pool_pledge=12_345,
             pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.123,
         )
@@ -1444,7 +1444,7 @@ class TestStakePool:
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
-            pool_pledge=4567,
+            pool_pledge=4_567,
             pool_cost=min_pool_cost,
             pool_margin=0.01,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
@@ -1812,7 +1812,7 @@ class TestPoolCost:
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
-            pool_pledge=12345,
+            pool_pledge=12_345,
             pool_cost=pool_cost,
             pool_margin=0.123,
         )
@@ -1835,7 +1835,7 @@ class TestPoolCost:
             assert "StakePoolCostTooLowPOOL" in err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("pool_cost", [500, 9999999])
+    @pytest.mark.parametrize("pool_cost", [500, 9_999_999])
     @pytest.mark.dbsync
     def test_stake_pool_cost(
         self,
@@ -1853,7 +1853,7 @@ class TestPoolCost:
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
-            pool_pledge=12345,
+            pool_pledge=12_345,
             pool_cost=pool_cost,
             pool_margin=0.123,
         )
@@ -2148,7 +2148,7 @@ class TestNegative:
                     src_address=pool_users[0].payment.address,
                     tx_name="deregister_unregistered",
                     tx_files=tx_files,
-                    fee_buffer=2000_000,
+                    fee_buffer=2_000_000,
                 )
                 tx_signed = cluster.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
@@ -2416,7 +2416,7 @@ class TestNegative:
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
-            pool_pledge=1000,
+            pool_pledge=1_000,
             pool_cost=500_000_000,
             pool_margin=0.2,
             pool_metadata_url=(f"https://gist.githubusercontent.com/{metadata_url}.json"),
