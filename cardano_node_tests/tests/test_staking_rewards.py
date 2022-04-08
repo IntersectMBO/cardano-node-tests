@@ -1021,7 +1021,7 @@ class TestRewards:
     ):
         """Check that rewards are gradually decreasing when funds are being transfered.
 
-        Even though nothing is staked and rewards are being transfered from reward address, there
+        Even though nothing is staked and rewards are being transferred from reward address, there
         are still some funds staked on the reward address at the time ledger snapshot is taken. For
         that reason the reward amount received every epoch is gradually decreasing over the period
         of several epochs until it is finally 0.

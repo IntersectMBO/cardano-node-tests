@@ -495,7 +495,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        invalid_hereafter = cluster.get_slot_no() + 1000
+        invalid_hereafter = cluster.get_slot_no() + 1_000
 
         __, tx_output_dummy, __ = _build_spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
@@ -553,7 +553,7 @@ class TestBuildLocking:
 
         # check expected fees
         if tx_output:
-            expected_fee = 372438
+            expected_fee = 372_438
             assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
@@ -639,7 +639,7 @@ class TestBuildLocking:
             assert "The Plutus script evaluation failed" in err
 
         # check expected fees
-        expected_fee_fund = 168845
+        expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
@@ -694,7 +694,7 @@ class TestBuildLocking:
         assert "The Plutus script evaluation failed" in err
 
         # check expected fees
-        expected_fee_fund = 168845
+        expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
@@ -948,10 +948,10 @@ class TestBuildLocking:
             ), f"Inputs were NOT spent for `{script_address}`"
 
         # check expected fees
-        expected_fee_step1 = 168845
+        expected_fee_step1 = 168_845
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 176986
+        expected_fee_step2 = 176_986
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
@@ -1141,7 +1141,7 @@ class TestNegative:
         assert "Expected key witnessed collateral" in str(excinfo.value)
 
         # check expected fees
-        expected_fee_fund = 168845
+        expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
@@ -1210,5 +1210,5 @@ class TestNegative:
         assert "not a Plutus script witnessed tx input" in str(excinfo.value)
 
         # check expected fees
-        expected_fee_fund = 199087
+        expected_fee_fund = 199_087
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)

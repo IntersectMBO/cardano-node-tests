@@ -76,8 +76,8 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
-        script_fund = 1000_000_000
+        lovelace_amount = 5_000_000
+        script_fund = 1_000_000_000
         collateral_fund_1 = 750_000_000
         collateral_fund_2 = 750_000_000
         token_amount = 5
@@ -228,9 +228,9 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
-        script_fund = 1000_000_000
-        collateral_fund = 1500_000_000
+        lovelace_amount = 5_000_000
+        script_fund = 1_000_000_000
+        collateral_fund = 1_500_000_000
         token_amount = 5
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
@@ -276,16 +276,16 @@ class TestBuildMinting:
         )
 
         slot_step2 = cluster.get_slot_no()
-        slots_offset = 1000
-        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1000
+        slots_offset = 1_000
+        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
         if protocol_version > 5:
             # POSIX timestamp + offset
-            redeemer_value = int(datetime.datetime.now().timestamp() * 1000) + timestamp_offset_ms
+            redeemer_value = int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
         else:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
-            redeemer_value = 1000000000000
+            redeemer_value = 1_000_000_000_000
 
         policyid = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
@@ -389,9 +389,9 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
-        script_fund = 1000_000_000
-        collateral_fund = 1500_000_000
+        lovelace_amount = 5_000_000
+        script_fund = 1_000_000_000
+        collateral_fund = 1_500_000_000
         token_amount = 5
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
@@ -438,18 +438,18 @@ class TestBuildMinting:
         slot_step2 = cluster.get_slot_no()
 
         # "time range" qacoin
-        slots_offset = 1000
-        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1000
+        slots_offset = 1_000
+        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
         if protocol_version > 5:
             # POSIX timestamp + offset
             redeemer_value_timerange = (
-                int(datetime.datetime.now().timestamp() * 1000) + timestamp_offset_ms
+                int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
             )
         else:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
-            redeemer_value_timerange = 1000_000_000_000
+            redeemer_value_timerange = 1_000_000_000_000
 
         policyid_timerange = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS)
         asset_name_timerange = f"qacoint{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
@@ -536,10 +536,10 @@ class TestBuildMinting:
         ), "The 'anyone' token was not minted"
 
         # check expected fees
-        expected_fee_step1 = 168977
+        expected_fee_step1 = 168_977
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 633269
+        expected_fee_step2 = 633_269
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         # check tx_view
@@ -588,9 +588,9 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
-        script_fund = 1000_000_000
-        collateral_fund = 1500_000_000
+        lovelace_amount = 5_000_000
+        script_fund = 1_000_000_000
+        collateral_fund = 1_500_000_000
         token_amount = 5
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
@@ -628,7 +628,7 @@ class TestBuildMinting:
 
         # Step 2: mint the "qacoin"
 
-        invalid_hereafter = cluster.get_slot_no() + 1000
+        invalid_hereafter = cluster.get_slot_no() + 1_000
 
         txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
         mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
@@ -791,9 +791,9 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
-        script_fund = 1000_000_000
-        collateral_fund = 1500_000_000
+        lovelace_amount = 5_000_000
+        script_fund = 1_000_000_000
+        collateral_fund = 1_500_000_000
         token_amount = 5
 
         if key == "normal":
@@ -954,9 +954,9 @@ class TestBuildMintingNegative:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
-        script_fund = 1000_000_000
-        collateral_fund = 1500_000_000
+        lovelace_amount = 5_000_000
+        script_fund = 1_000_000_000
+        collateral_fund = 1_500_000_000
         token_amount = 5
 
         redeemer_file = plutus_common.DATUM_WITNESS_GOLDEN_NORMAL

@@ -524,7 +524,7 @@ class TestDelegateAddr:
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_reg_deleg",
                 tx_files=tx_files,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 witness_override=len(tx_files.signing_key_files),
             )
             tx_signed = cluster.sign_tx(
@@ -645,7 +645,7 @@ class TestDelegateAddr:
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_deleg_dereg",
                 tx_files=tx_files,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 witness_override=len(tx_files.signing_key_files),
             )
             tx_signed = cluster.sign_tx(
@@ -858,7 +858,7 @@ class TestNegative:
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_deleg_unknown",
                     tx_files=tx_files,
-                    fee_buffer=2000_000,
+                    fee_buffer=2_000_000,
                     witness_override=len(tx_files.signing_key_files),
                 )
                 tx_signed = cluster.sign_tx(
@@ -955,7 +955,7 @@ class TestNegative:
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_deleg_dereg",
                     tx_files=tx_files,
-                    fee_buffer=2000_000,
+                    fee_buffer=2_000_000,
                     witness_override=len(tx_files.signing_key_files),
                 )
                 tx_signed = cluster.sign_tx(
@@ -1012,7 +1012,7 @@ class TestNegative:
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
-                    fee_buffer=2000_000,
+                    fee_buffer=2_000_000,
                     witness_override=len(tx_files.signing_key_files),
                 )
                 tx_signed = cluster.sign_tx(

@@ -42,7 +42,7 @@ def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
         with open(startup_files.genesis_spec, encoding="utf-8") as fp_in:
             genesis_spec = json.load(fp_in)
 
-        genesis_spec["epochLength"] = 1500
+        genesis_spec["epochLength"] = 1_500
 
         with open(startup_files.genesis_spec, "w", encoding="utf-8") as fp_out:
             json.dump(genesis_spec, fp_out)
@@ -129,7 +129,7 @@ class TestBasic:
         common.get_test_id(cluster)
 
         assert cluster.slot_length == 0.2
-        assert cluster.epoch_length == 1500
+        assert cluster.epoch_length == 1_500
         check_epoch_length(cluster)
 
     @allure.link(helpers.get_vcs_link())
@@ -139,5 +139,5 @@ class TestBasic:
         common.get_test_id(cluster)
 
         assert cluster.slot_length == 0.3
-        assert cluster.epoch_length == 1000
+        assert cluster.epoch_length == 1_000
         check_epoch_length(cluster)

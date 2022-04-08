@@ -291,7 +291,7 @@ class TestMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
+        lovelace_amount = 5_000_000
         token_amount = 5
 
         plutusrequiredtime = 358_849_733
@@ -503,16 +503,16 @@ class TestMinting:
         )
 
         slot_step2 = cluster.get_slot_no()
-        slots_offset = 1000
-        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1000
+        slots_offset = 1_000
+        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
         if protocol_version > 5:
             # POSIX timestamp + offset
-            redeemer_value = int(datetime.datetime.now().timestamp() * 1000) + timestamp_offset_ms
+            redeemer_value = int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
         else:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
-            redeemer_value = 1000000000000
+            redeemer_value = 1_000_000_000_000
 
         policyid = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
@@ -592,7 +592,7 @@ class TestMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
+        lovelace_amount = 5_000_000
         token_amount = 5
 
         plutusrequiredtime = 408_545_501
@@ -657,18 +657,18 @@ class TestMinting:
         slot_step2 = cluster.get_slot_no()
 
         # "time range" qacoin
-        slots_offset = 1000
-        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1000
+        slots_offset = 1_000
+        timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
         if protocol_version > 5:
             # POSIX timestamp + offset
             redeemer_value_timerange = (
-                int(datetime.datetime.now().timestamp() * 1000) + timestamp_offset_ms
+                int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
             )
         else:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
-            redeemer_value_timerange = 1000_000_000_000
+            redeemer_value_timerange = 1_000_000_000_000
 
         policyid_timerange = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS)
         asset_name_timerange = f"qacoint{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
@@ -778,7 +778,7 @@ class TestMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
+        lovelace_amount = 5_000_000
         token_amount = 5
         plutusrequiredtime = 800_000_000
         plutusrequiredspace = 10_000_000
@@ -829,7 +829,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        invalid_hereafter = cluster.get_slot_no() + 1000
+        invalid_hereafter = cluster.get_slot_no() + 1_000
 
         txid_step1 = cluster.get_txid(tx_body_file=tx_raw_output_step1.out_file)
         mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#0")
@@ -962,7 +962,7 @@ class TestMintingNegative:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
+        lovelace_amount = 5_000_000
         token_amount = 5
         plutusrequiredtime = 700_000_000
         plutusrequiredspace = 10_000_000
@@ -1080,12 +1080,12 @@ class TestMintingNegative:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
+        lovelace_amount = 5_000_000
         token_amount = 5
         plutusrequiredtime = 700_000_000
         plutusrequiredspace = 10_000_000
         fee_step2 = int(plutusrequiredspace + plutusrequiredtime) + 10_000_000
-        collateral_amount = 5000_000
+        collateral_amount = 5_000_000
 
         redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR
 
@@ -1199,7 +1199,7 @@ class TestMintingNegative:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5000_000
+        lovelace_amount = 5_000_000
         token_amount = 5
         plutusrequiredtime = 700_000_000
         plutusrequiredspace = 10_000_000
