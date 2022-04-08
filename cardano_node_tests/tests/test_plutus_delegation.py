@@ -39,7 +39,7 @@ def cluster_lock_42stake(
     """Make sure just one staking Plutus test run at a time.
 
     Plutus script always has the same address. When one script is used in multiple
-    tests that are running in parallel, the blanaces etc. don't add up.
+    tests that are running in parallel, the balances etc. don't add up.
     """
     cluster_obj = cluster_manager.get(
         lock_resources=[str(plutus_common.STAKE_GUESS_42_PLUTUS.stem)],
@@ -132,7 +132,7 @@ def delegate_stake_addr(
         txins=txins,
         tx_files=tx_files,
         complex_certs=[reg_cert_script, deleg_cert_script],
-        fee_buffer=2000_000,
+        fee_buffer=2_000_000,
         witness_override=len(tx_files.signing_key_files),
     )
     # calculate cost of Plutus script
@@ -142,7 +142,7 @@ def delegate_stake_addr(
         txins=txins,
         tx_files=tx_files,
         complex_certs=[reg_cert_script, deleg_cert_script],
-        fee_buffer=2000_000,
+        fee_buffer=2_000_000,
         witness_override=len(tx_files.signing_key_files),
     )
     tx_signed = cluster_obj.sign_tx(
@@ -207,7 +207,7 @@ def deregister_stake_addr(
         txins=txins,
         tx_files=tx_files,
         complex_certs=[dereg_cert_script],
-        fee_buffer=2000_000,
+        fee_buffer=2_000_000,
         script_withdrawals=[withdrawal_script],
         witness_override=len(tx_files.signing_key_files),
     )
@@ -218,7 +218,7 @@ def deregister_stake_addr(
         txins=txins,
         tx_files=tx_files,
         complex_certs=[dereg_cert_script],
-        fee_buffer=2000_000,
+        fee_buffer=2_000_000,
         script_withdrawals=[withdrawal_script],
         witness_override=len(tx_files.signing_key_files),
     )
@@ -281,11 +281,11 @@ class TestDelegateAddr:
         cluster, pool_id = cluster_lock_42stake
         temp_template = common.get_test_id(cluster)
 
-        collateral_fund_deleg = 1500_000_000
-        collateral_fund_withdraw = 1500_000_000
-        collateral_fund_dereg = 1500_000_000
-        deleg_fund = 1500_000_000
-        dereg_fund = 1500_000_000
+        collateral_fund_deleg = 1_500_000_000
+        collateral_fund_withdraw = 1_500_000_000
+        collateral_fund_dereg = 1_500_000_000
+        deleg_fund = 1_500_000_000
+        dereg_fund = 1_500_000_000
 
         if cluster.get_stake_addr_info(pool_user.stake.address):
             pytest.skip(
@@ -294,10 +294,6 @@ class TestDelegateAddr:
             )
 
         # Step 1: create Tx inputs for step 2 and step 3
-
-        tx_files_step1 = clusterlib.TxFiles(
-            signing_key_files=[pool_user.payment.skey_file],
-        )
         txouts_step1 = [
             # for collateral
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_deleg),

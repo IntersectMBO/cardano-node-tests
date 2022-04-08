@@ -61,7 +61,7 @@ def _get_raw_tx_values(
 
     if for_build_command:
         fee = 0
-        min_change = 1500_000
+        min_change = 1_500_000
     else:
         fee = cluster_obj.calculate_tx_fee(
             src_address=src_address,
@@ -103,7 +103,7 @@ def _get_txins_txouts(
 
 @pytest.mark.testnets
 class TestBasic:
-    """Test basic transactions - transfering funds, transaction IDs."""
+    """Test basic transactions - transferring funds, transaction IDs."""
 
     @pytest.fixture
     def payment_addrs(
@@ -155,7 +155,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.parametrize("amount", (1500_000, 2000_000, 10_000_000))
+    @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     def test_transfer_funds(
         self,
         cluster: clusterlib.ClusterLib,
@@ -217,7 +217,7 @@ class TestBasic:
         * check expected balances for both source and destination addresses
         """
         temp_template = common.get_test_id(cluster)
-        amount = 1500_000
+        amount = 1_500_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -233,7 +233,7 @@ class TestBasic:
             tx_name=temp_template,
             tx_files=tx_files,
             txouts=txouts,
-            fee_buffer=1000_000,
+            fee_buffer=1_000_000,
         )
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -390,14 +390,14 @@ class TestBasic:
 
         The destination address is a valid address that was generated sometime
         in the past. The test verifies it is possible to use a valid address
-        even though it was not generated while running a speciffic cardano
+        even though it was not generated while running a specific cardano
         network.
 
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2000_000
+        amount = 2_000_000
 
         src_address = payment_addrs[0].address
         dst_address = "addr_test1vpst87uzwafqkxumyf446zr2jsyn44cfpu9fe8yqanyuh6glj2hkl"
@@ -439,7 +439,7 @@ class TestBasic:
         * get txid from transaction body
         * get txid from signed transaction
         * check that txid from transaction body matches the txid from signed transaction
-        * check that txid has expected lenght
+        * check that txid has expected length
         * check that the txid is listed in UTxO hashes for both source and destination addresses
         """
         temp_template = common.get_test_id(cluster)
@@ -447,7 +447,7 @@ class TestBasic:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=2000_000)]
+        destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         tx_raw_output = cluster.send_funds(
             src_address=src_address,
@@ -478,11 +478,11 @@ class TestBasic:
     ):
         """Send a transaction with extra signing key.
 
-        Check that it is possible to use unneded signing key in addition to the necessary
+        Check that it is possible to use unneeded signing key in addition to the necessary
         signing keys for signing the transaction.
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2000_000
+        amount = 2_000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -524,7 +524,7 @@ class TestBasic:
         Check that it is possible to specify the same signing key twice.
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2000_000
+        amount = 2_000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -576,7 +576,7 @@ class TestBasic:
             src_record,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=2000_000,
+            amount=2_000_000,
         )
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_record.skey_file])
@@ -837,14 +837,14 @@ class TestMultiInOut:
         # zero balance after each test.
         fund_amount = int(amount * len(dst_addresses) / len(from_addr_recs))
         # min UTxO on testnets is 1.x ADA
-        fund_amount = fund_amount if fund_amount >= 1500_000 else 1500_000
+        fund_amount = fund_amount if fund_amount >= 1_500_000 else 1_500_000
         fund_dst = [
             clusterlib.TxOut(address=d.address, amount=fund_amount) for d in from_addr_recs[:-1]
         ]
         # add more funds to the last "from" address so it can cover TX fee
         last_from_addr_rec = from_addr_recs[-1]
         fund_dst.append(
-            clusterlib.TxOut(address=last_from_addr_rec.address, amount=fund_amount + 5000_000)
+            clusterlib.TxOut(address=last_from_addr_rec.address, amount=fund_amount + 5_000_000)
         )
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
@@ -854,7 +854,7 @@ class TestMultiInOut:
                 tx_name=f"{tx_name}_add_funds",
                 tx_files=fund_tx_files,
                 txouts=fund_dst,
-                fee_buffer=1000_000,
+                fee_buffer=1_000_000,
             )
             tx_signed_fund = cluster_obj.sign_tx(
                 tx_body_file=tx_output_fund.out_file,
@@ -895,7 +895,7 @@ class TestMultiInOut:
                 txouts=txouts,
                 change_address=src_address,
                 tx_files=tx_files,
-                fee_buffer=1000_000,
+                fee_buffer=1_000_000,
             )
             tx_signed = cluster_obj.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
@@ -968,7 +968,7 @@ class TestMultiInOut:
             tx_files=tx_files,
             ttl=ttl,
         )
-        amount = 2000_000
+        amount = 2_000_000
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         for i in range(no_of_transactions):
@@ -993,7 +993,7 @@ class TestMultiInOut:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1500_000, 2000_000, 10_000_000))
+    @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.parametrize(
         "use_build_cmd",
         (
@@ -1029,7 +1029,7 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1500_000, 2000_000, 10_000_000))
+    @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.parametrize(
         "use_build_cmd",
         (
@@ -1065,7 +1065,7 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1500_000, 2000_000, 10_000_000))
+    @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.parametrize(
         "use_build_cmd",
         (
@@ -1101,7 +1101,7 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("amount", (1500_000, 2000_000, 5000_000))
+    @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.parametrize(
         "use_build_cmd",
         (
@@ -1220,8 +1220,8 @@ class TestManyUTXOs:
 
             for i in range(25):
                 for multiple in range(1, 21):
-                    less_than_1_ada = int(float(multiple / 20) * 1000_000)
-                    amount = less_than_1_ada + 1000_000
+                    less_than_1_ada = int(float(multiple / 20) * 1_000_000)
+                    amount = less_than_1_ada + 1_000_000
 
                     # repeat transaction when "BadInputsUTxO" error happens
                     excp: Optional[clusterlib.CLIError] = None
@@ -1273,7 +1273,7 @@ class TestManyUTXOs:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.parametrize("amount", (1500_000, 5000_000, 10_000_000))
+    @pytest.mark.parametrize("amount", (1_500_000, 5_000_000, 10_000_000))
     def test_mini_transactions(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1320,7 +1320,7 @@ class TestManyUTXOs:
 
         # optimize list of txins so the total amount of funds in selected UTxOs is close
         # to the amount of needed funds
-        needed_funds = amount + fee + 5000_000  # add a buffer
+        needed_funds = amount + fee + 5_000_000  # add a buffer
         total_funds = functools.reduce(lambda x, y: x + y.amount, txins, 0)
         funds_optimized = total_funds
         txins_optimized = txins[:]
@@ -1615,7 +1615,7 @@ class TestNegative:
     ):
         """Send funds from payment address to invalid address."""
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=addr, amount=1000_000)]
+        destinations = [clusterlib.TxOut(address=addr, amount=1_000_000)]
 
         # it should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1625,7 +1625,7 @@ class TestNegative:
                     tx_name="to_invalid",
                     txouts=destinations,
                     tx_files=tx_files,
-                    fee_buffer=1000_000,
+                    fee_buffer=1_000_000,
                 )
             else:
                 cluster_obj.build_raw_tx(
@@ -1647,7 +1647,7 @@ class TestNegative:
     ):
         """Send funds from invalid payment address."""
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000_000)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_000_000)]
 
         # it should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1657,7 +1657,7 @@ class TestNegative:
                     tx_name="from_invalid",
                     txouts=destinations,
                     tx_files=tx_files,
-                    fee_buffer=1000_000,
+                    fee_buffer=1_000_000,
                 )
             else:
                 cluster_obj.build_raw_tx(
@@ -1677,7 +1677,7 @@ class TestNegative:
     ):
         """Send funds with invalid change address."""
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000_000)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_000_000)]
 
         # it should NOT be possible to build a transaction using an invalid change address
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1687,7 +1687,7 @@ class TestNegative:
                 txouts=destinations,
                 change_address=addr,
                 tx_files=tx_files,
-                fee_buffer=1000_000,
+                fee_buffer=1_000_000,
             )
         assert "invalid address" in str(excinfo.value)
 
@@ -1702,7 +1702,7 @@ class TestNegative:
         """Send funds with invalid UTxO."""
         src_addr = pool_users[0].payment
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1000_000)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_000_000)]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
@@ -1712,7 +1712,7 @@ class TestNegative:
                     txins=[utxo],
                     txouts=destinations,
                     tx_files=tx_files,
-                    fee_buffer=1000_000,
+                    fee_buffer=1_000_000,
                 )
             else:
                 cluster_obj.send_tx(
@@ -1782,7 +1782,7 @@ class TestNegative:
         Expect failure.
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2000_000
+        amount = 2_000_000
 
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
@@ -1842,7 +1842,7 @@ class TestNegative:
         Expect failure.
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2000_000
+        amount = 2_000_000
 
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
@@ -1912,7 +1912,7 @@ class TestNegative:
 
         # use wrong signing key
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[1].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1500_000)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_500_000)]
 
         # it should NOT be possible to submit a transaction with wrong signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1942,7 +1942,7 @@ class TestNegative:
         temp_template = common.get_test_id(cluster)
 
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1500_000)]
+        destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_500_000)]
 
         # it should NOT be possible to submit a transaction when TX era > network era
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2429,7 +2429,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"test_build_invalid_lenght_utxo_hash_ci{cluster.cluster_id}"
+        temp_template = f"test_build_invalid_length_utxo_hash_ci{cluster.cluster_id}"
 
         utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
@@ -2710,7 +2710,7 @@ class TestNegative:
         * specify Tx body file and pass Tx file
         """
         temp_template = f"{common.get_test_id(cluster)}_{file_type}"
-        amount = 2000_000
+        amount = 2_000_000
 
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
@@ -2808,7 +2808,7 @@ class TestMetadata:
     def test_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Try to build a transaction with wrong fromat of metadata JSON.
+        """Try to build a transaction with wrong format of metadata JSON.
 
         The metadata file is a valid JSON, but not in a format that is expected.
         """
@@ -2833,7 +2833,7 @@ class TestMetadata:
     def test_build_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Try to build a transaction with wrong fromat of metadata JSON.
+        """Try to build a transaction with wrong format of metadata JSON.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
@@ -2851,7 +2851,7 @@ class TestMetadata:
                 src_address=payment_addr.address,
                 tx_name="wrong_json_format",
                 tx_files=tx_files,
-                fee_buffer=1000_000,
+                fee_buffer=1_000_000,
             )
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
 
@@ -2903,7 +2903,7 @@ class TestMetadata:
                 src_address=payment_addr.address,
                 tx_name="invalid_metadata",
                 tx_files=tx_files,
-                fee_buffer=1000_000,
+                fee_buffer=1_000_000,
             )
         assert "Failed reading: satisfy" in str(excinfo.value)
 
@@ -2952,7 +2952,7 @@ class TestMetadata:
                 src_address=payment_addr.address,
                 tx_name="too_long_metadata",
                 tx_files=tx_files,
-                fee_buffer=1000_000,
+                fee_buffer=1_000_000,
             )
         assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(
             excinfo.value
@@ -3021,7 +3021,7 @@ class TestMetadata:
             src_address=payment_addr.address,
             tx_name=temp_template,
             tx_files=tx_files,
-            fee_buffer=1000_000,
+            fee_buffer=1_000_000,
         )
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -3109,7 +3109,7 @@ class TestMetadata:
             src_address=payment_addr.address,
             tx_name=temp_template,
             tx_files=tx_files,
-            fee_buffer=1000_000,
+            fee_buffer=1_000_000,
         )
 
         tx_signed = cluster.sign_tx(
@@ -3209,7 +3209,7 @@ class TestMetadata:
             src_address=payment_addr.address,
             tx_name=temp_template,
             tx_files=tx_files,
-            fee_buffer=1000_000,
+            fee_buffer=1_000_000,
         )
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -3316,7 +3316,7 @@ class TestMetadata:
             src_record,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=2000_000,
+            amount=2_000_000,
         )
 
         tx_files = clusterlib.TxFiles(

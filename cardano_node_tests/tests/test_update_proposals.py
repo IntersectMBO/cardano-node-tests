@@ -65,7 +65,7 @@ class TestUpdateProposals:
     ):
         """Test changing protocol parameters using update proposal.
 
-        * if era >= Alonzo, update Alonzo-speciffic parameters and:
+        * if era >= Alonzo, update Alonzo-specific parameters and:
 
            - wait for next epoch
            - check that parameters were updated
@@ -79,8 +79,8 @@ class TestUpdateProposals:
         cluster = cluster_update_proposal
         common.get_test_id(cluster)
 
-        max_tx_execution_units = 11000000000
-        max_block_execution_units = 110000000000
+        max_tx_execution_units = 11_000_000_000
+        max_block_execution_units = 110_000_000_000
         price_execution_steps = "12/10"
         price_execution_memory = "1.3"
 
@@ -161,7 +161,7 @@ class TestUpdateProposals:
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--pool-reg-deposit",
-                value=410000000,
+                value=410_000_000,
                 name="stakePoolDeposit",
             ),
             clusterlib_utils.UpdateProposal(
@@ -181,12 +181,12 @@ class TestUpdateProposals:
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-body-size",
-                value=65555,
+                value=65_555,
                 name="maxBlockBodySize",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-tx-size",
-                value=16400,
+                value=16_400,
                 name="maxTxSize",
             ),
             clusterlib_utils.UpdateProposal(
@@ -196,17 +196,17 @@ class TestUpdateProposals:
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-header-size",
-                value=1400,
+                value=1_400,
                 name="maxBlockHeaderSize",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-constant",
-                value=155390,
+                value=155_390,
                 name="txFeeFixed",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--key-reg-deposit-amt",
-                value=300050,
+                value=300_050,
                 name="stakeAddressDeposit",
             ),
             clusterlib_utils.UpdateProposal(
@@ -232,7 +232,7 @@ class TestUpdateProposals:
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--pool-reg-deposit",
-                value=400000000,
+                value=400_000_000,
                 name="stakePoolDeposit",
             ),
             clusterlib_utils.UpdateProposal(
@@ -252,12 +252,12 @@ class TestUpdateProposals:
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-body-size",
-                value=65544,
+                value=65_544,
                 name="maxBlockBodySize",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-tx-size",
-                value=16392,
+                value=16_392,
                 name="maxTxSize",
             ),
             clusterlib_utils.UpdateProposal(
@@ -267,17 +267,17 @@ class TestUpdateProposals:
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-header-size",
-                value=1200,
+                value=1_200,
                 name="maxBlockHeaderSize",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-constant",
-                value=155380,
+                value=155_380,
                 name="txFeeFixed",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--key-reg-deposit-amt",
-                value=300000,
+                value=300_000,
                 name="stakeAddressDeposit",
             ),
             clusterlib_utils.UpdateProposal(

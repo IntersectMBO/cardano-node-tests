@@ -63,7 +63,7 @@ def multisig_tx(
             tx_name=temp_template,
             txouts=destinations,
             script_txins=script_txins,
-            fee_buffer=2000_000,
+            fee_buffer=2_000_000,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
             witness_override=witness_count,
@@ -157,7 +157,7 @@ class TestBasic:
     def test_script_addr_length(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
-        """Check that script address length is the same as lenght of other addresses.
+        """Check that script address length is the same as length of other addresses.
 
         There was an issue that script address was 32 bytes instead of 28 bytes.
         """
@@ -223,7 +223,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=5000_000,
+            amount=5_000_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
@@ -234,7 +234,7 @@ class TestBasic:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=2000_000,
+            amount=2_000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             use_build_cmd=use_build_cmd,
@@ -303,7 +303,7 @@ class TestBasic:
         )
 
         # send funds from script address using single witness
-        expected_fee = 204969
+        expected_fee = 204_969
         for i in range(5):
             tx_raw_outputs.append(
                 multisig_tx(
@@ -311,7 +311,7 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_single_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=2000_000,
+                    amount=2_000_000,
                     payment_skey_files=[payment_skey_files[random.randrange(0, skeys_len)]],
                     multisig_script=multisig_script,
                     use_build_cmd=use_build_cmd,
@@ -332,7 +332,7 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_multi_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=2000_000,
+                    amount=2_000_000,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
                     use_build_cmd=use_build_cmd,
@@ -407,7 +407,7 @@ class TestBasic:
                     temp_template=f"{temp_template}_from_{i}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=2000_000,
+                    amount=2_000_000,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
                     use_build_cmd=use_build_cmd,
@@ -439,7 +439,7 @@ class TestBasic:
         """Send funds to script address using TX signed with skeys (not using witness files)."""
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         src_address = payment_addrs[0].address
-        amount = 2000_000
+        amount = 2_000_000
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -466,7 +466,7 @@ class TestBasic:
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
             tx_signed = cluster.sign_tx(
@@ -517,7 +517,7 @@ class TestBasic:
         """Send funds from script address using TX signed with skeys (not using witness files)."""
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         dst_addr = payment_addrs[1]
-        amount = 2000_000
+        amount = 2_000_000
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -540,7 +540,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4500_000,
+            amount=4_500_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
@@ -563,7 +563,7 @@ class TestBasic:
                 tx_name=f"{temp_template}_from",
                 txouts=destinations,
                 script_txins=script_txins,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 tx_files=tx_files,
                 witness_override=2,
             )
@@ -623,7 +623,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4000_000,
+            amount=4_000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -633,13 +633,13 @@ class TestBasic:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1500_000,
+            amount=1_500_000,
             payment_skey_files=[payment_skey_files[0]],
             multisig_script=multisig_script,
         )
 
         # check expected fees
-        expected_fee = 176809
+        expected_fee = 176_809
         assert helpers.is_in_interval(
             tx_out_from.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
@@ -678,7 +678,7 @@ class TestBasic:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=3_000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -688,13 +688,13 @@ class TestBasic:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=1000_000,
+            amount=1_000_000,
             payment_skey_files=[],
             multisig_script=multisig_script,
         )
 
         # check expected fees
-        expected_fee = 176765
+        expected_fee = 176_765
         assert helpers.is_in_interval(
             tx_out_from.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
@@ -768,7 +768,7 @@ class TestNegative:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=3_000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -779,7 +779,7 @@ class TestNegative:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1000_000,
+                amount=1_000_000,
                 payment_skey_files=payment_skey_files[:-1],
                 multisig_script=multisig_script,
             )
@@ -819,7 +819,7 @@ class TestNegative:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=3_000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -830,7 +830,7 @@ class TestNegative:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=2000_000,
+                amount=2_000_000,
                 payment_skey_files=[payment_skey_files[-1]],
                 multisig_script=multisig_script,
             )
@@ -874,7 +874,7 @@ class TestNegative:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=3000_000,
+            amount=3_000_000,
             payment_skey_files=[payment_skey_files[0]],
         )
 
@@ -886,7 +886,7 @@ class TestNegative:
                     temp_template=f"{temp_template}_from_fail{num_of_skeys}",
                     src_address=script_address,
                     dst_address=payment_addrs[0].address,
-                    amount=1000_000,
+                    amount=1_000_000,
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
                 )
@@ -979,19 +979,19 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4000_000,
+            amount=4_000_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
 
         # send funds from script address
-        invalid_hereafter = cluster.get_slot_no() + 1000
+        invalid_hereafter = cluster.get_slot_no() + 1_000
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=2000_000,
+            amount=2_000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             invalid_before=100,
@@ -1000,7 +1000,7 @@ class TestTimeLocking:
         )
 
         # check expected fees
-        expected_fee = 280693 if use_build_cmd else 323857
+        expected_fee = 280_693 if use_build_cmd else 323_857
         assert helpers.is_in_interval(
             tx_out_from.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
@@ -1058,7 +1058,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4000_000,
+            amount=4_000_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
@@ -1069,16 +1069,16 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_from",
             src_address=script_address,
             dst_address=payment_addrs[0].address,
-            amount=2000_000,
+            amount=2_000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1000,
+            invalid_hereafter=cluster.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
         # check expected fees
-        expected_fee = 279241 if use_build_cmd else 323989
+        expected_fee = 279_241 if use_build_cmd else 323_989
         assert helpers.is_in_interval(
             tx_out_from.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
@@ -1136,7 +1136,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4000_000,
+            amount=4_000_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
@@ -1148,7 +1148,7 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail1",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1500_000,
+                amount=1_500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
@@ -1164,7 +1164,7 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail2",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1500_000,
+                amount=1_500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
@@ -1225,7 +1225,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4000_000,
+            amount=4_000_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
@@ -1237,7 +1237,7 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1500_000,
+                amount=1_500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
@@ -1298,7 +1298,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4000_000,
+            amount=4_000_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
@@ -1310,7 +1310,7 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail1",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1500_000,
+                amount=1_500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=after_slot,
@@ -1326,7 +1326,7 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail2",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1500_000,
+                amount=1_500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
@@ -1387,7 +1387,7 @@ class TestTimeLocking:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4000_000,
+            amount=4_000_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
@@ -1400,7 +1400,7 @@ class TestTimeLocking:
                 temp_template=f"{temp_template}_from_fail",
                 src_address=script_address,
                 dst_address=payment_addrs[0].address,
-                amount=1500_000,
+                amount=1_500_000,
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
@@ -1495,7 +1495,7 @@ class TestAuxiliaryScripts:
             tx_raw_output = cluster.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=temp_template,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
             tx_signed = cluster.sign_tx(
@@ -1554,7 +1554,7 @@ class TestAuxiliaryScripts:
             script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
             payment_vkey_files=payment_vkey_files,
             required=2,
-            slot=1000,
+            slot=1_000,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
         )
 
@@ -1568,7 +1568,7 @@ class TestAuxiliaryScripts:
             tx_raw_output = cluster.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=temp_template,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
             tx_signed = cluster.sign_tx(
@@ -1637,7 +1637,7 @@ class TestAuxiliaryScripts:
             tx_raw_output = cluster.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=temp_template,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
             tx_signed = cluster.sign_tx(
@@ -1693,7 +1693,7 @@ class TestAuxiliaryScripts:
                 cluster.build_tx(
                     src_address=payment_addrs[0].address,
                     tx_name=temp_template,
-                    fee_buffer=2000_000,
+                    fee_buffer=2_000_000,
                     tx_files=tx_files,
                 )
             else:
@@ -1768,7 +1768,7 @@ class TestIncrementalSigning:
         """
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_is}"
         dst_addr = payment_addrs[1]
-        amount = 2000_000
+        amount = 2_000_000
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1795,7 +1795,7 @@ class TestIncrementalSigning:
             temp_template=f"{temp_template}_to",
             src_address=payment_addrs[0].address,
             dst_address=script_address,
-            amount=4500_000,
+            amount=4_500_000,
             payment_skey_files=[payment_skey_files[0]],
             use_build_cmd=use_build_cmd,
         )
@@ -1814,14 +1814,14 @@ class TestIncrementalSigning:
         # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
         script_txins = [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
 
-        invalid_hereafter = cluster.get_slot_no() + 1000
+        invalid_hereafter = cluster.get_slot_no() + 1_000
         if use_build_cmd:
             tx_out_from = cluster.build_tx(
                 src_address=script_address,
                 tx_name=f"{temp_template}_from",
                 txouts=destinations,
                 script_txins=script_txins,
-                fee_buffer=2000_000,
+                fee_buffer=2_000_000,
                 tx_files=tx_files,
                 invalid_hereafter=invalid_hereafter,
                 invalid_before=100,

@@ -100,8 +100,8 @@ def _fund_script(
     stokens = tokens or ()
     ctokens = tokens_collateral or ()
 
-    script_address = cluster_obj.gen_script_addr(
-        addr_name=temp_template, script_file=plutus_op.script_file
+    script_address = cluster_obj.gen_payment_addr(
+        addr_name=temp_template, payment_script_file=plutus_op.script_file
     )
 
     fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
@@ -475,7 +475,7 @@ class TestLocking:
             script_file=plutus_common.CONTEXT_EQUIVALENCE_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=redeemer_file_dummy,
-            execution_units=(1000_000_000, 10_000_000),
+            execution_units=(1_000_000_000, 10_000_000),
         )
 
         # fund the script address
@@ -492,7 +492,7 @@ class TestLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        invalid_hereafter = cluster.get_slot_no() + 1000
+        invalid_hereafter = cluster.get_slot_no() + 1_000
 
         __, tx_output_dummy = _spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
