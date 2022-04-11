@@ -612,7 +612,7 @@ class TestLocking:
             script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
             datum_file = plutus_common.DATUM_42
             redeemer_file = plutus_common.REDEEMER_42
-        elif variant.endswith("untyped_cbor"):
+        elif variant.endswith("untyped_cbor"):  # noqa: SIM106
             script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
             datum_cbor_file = plutus_common.DATUM_42_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR
@@ -930,479 +930,6 @@ class TestLocking:
 class TestNegative:
     """Tests for Tx output locking using Plutus smart contracts that are expected to fail."""
 
-    MAX_INT_VAL = (2**64) - 1
-    MIN_INT_VAL = -MAX_INT_VAL
-
-    @pytest.fixture
-    def fund_script_guessing_game(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
-    ) -> FundTupleT:
-        """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            temp_template = common.get_test_id(cluster)
-
-            payment_addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"{temp_template}_payment_addr_{i}" for i in range(2)],
-                cluster_obj=cluster,
-            )
-
-            # fund source address
-            clusterlib_utils.fund_from_faucet(
-                payment_addrs[0],
-                cluster_obj=cluster,
-                faucet_data=cluster_manager.cache.addrs_data["user1"],
-                amount=3_000_000_000,
-            )
-
-            plutus_op = plutus_common.PlutusOp(
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
-                datum_file=plutus_common.DATUM_42,
-                execution_units=(700_000_000, 10_000_000),
-            )
-
-            tx_output_fund = _fund_script(
-                temp_template=temp_template,
-                cluster_obj=cluster,
-                payment_addr=payment_addrs[0],
-                dst_addr=payment_addrs[1],
-                plutus_op=plutus_op,
-                amount=50_000_000,
-            )
-
-            txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-            script_utxos = cluster.get_utxo(txin=f"{txid}#0")
-            collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
-
-            fixture_cache.value = script_utxos, collateral_utxos, payment_addrs
-
-        return script_utxos, collateral_utxos, payment_addrs
-
-    def _failed_tx_build(
-        self,
-        cluster_obj: clusterlib.ClusterLib,
-        temp_template: str,
-        script_utxos: List[clusterlib.UTXOData],
-        collateral_utxos: List[clusterlib.UTXOData],
-        redeemer_content: str,
-        dst_addr: clusterlib.AddressRecord,
-    ) -> str:
-        """Try to build a Tx and expect failure."""
-        redeemer_file = f"{temp_template}.redeemer"
-        with open(redeemer_file, "w", encoding="utf-8") as outfile:
-            outfile.write(redeemer_content)
-
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-
-        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
-
-        plutus_txins = [
-            clusterlib.ScriptTxIn(
-                txins=script_utxos,
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
-                collaterals=collateral_utxos,
-                execution_units=(plutusrequiredtime, plutusrequiredspace),
-                datum_file=plutus_common.DATUM_42,
-                redeemer_file=Path(redeemer_file),
-            )
-        ]
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.build_raw_tx_bare(
-                out_file=f"{temp_template}_step2_tx.body",
-                txouts=txouts,
-                tx_files=tx_files,
-                fee=fee_redeem,
-                script_txins=plutus_txins,
-            )
-        return str(excinfo.value)
-
-    def _int_out_of_range(
-        self,
-        cluster_obj: clusterlib.ClusterLib,
-        temp_template: str,
-        script_utxos: List[clusterlib.UTXOData],
-        collateral_utxos: List[clusterlib.UTXOData],
-        redeemer_value: int,
-        dst_addr: clusterlib.AddressRecord,
-    ):
-        """Try to spend a locked UTxO with redeemer int value that is not in allowed range."""
-        redeemer_content = {}
-        if redeemer_value % 2 == 0:
-            redeemer_content = {"int": redeemer_value}
-
-        redeemer_file = f"{temp_template}.redeemer"
-        if redeemer_content:
-            with open(redeemer_file, "w", encoding="utf-8") as outfile:
-                json.dump(redeemer_content, outfile)
-
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-
-        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
-
-        plutus_txins = [
-            clusterlib.ScriptTxIn(
-                txins=script_utxos,
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
-                collaterals=collateral_utxos,
-                execution_units=(plutusrequiredtime, plutusrequiredspace),
-                datum_file=plutus_common.DATUM_42,
-                redeemer_file=redeemer_file if redeemer_content else "",
-                redeemer_value=str(redeemer_value) if not redeemer_content else "",
-            )
-        ]
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.build_raw_tx_bare(
-                out_file=f"{temp_template}_step2_tx.body",
-                txouts=txouts,
-                tx_files=tx_files,
-                fee=fee_redeem,
-                script_txins=plutus_txins,
-            )
-        assert "Value out of range within the script data" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
-    @common.hypothesis_settings()
-    def test_guessing_game_wrong_value(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: int,
-    ):
-        """Try to spend a locked UTxO with an unexpected redeemer value.
-
-        Expect failure.
-        """
-        hypothesis.assume(redeemer_value != 42)
-
-        temp_template = f"test_guessing_game_wrong_value_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-
-        redeemer_content = {}
-        if redeemer_value % 2 == 0:
-            redeemer_content = {"int": redeemer_value}
-
-        redeemer_file = f"{temp_template}.redeemer"
-        if redeemer_content:
-            with open(redeemer_file, "w", encoding="utf-8") as outfile:
-                json.dump(redeemer_content, outfile)
-
-        # try to spend the "locked" UTxO
-
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-        dst_addr = payment_addrs[1]
-
-        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
-
-        plutus_txins = [
-            clusterlib.ScriptTxIn(
-                txins=script_utxos,
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
-                collaterals=collateral_utxos,
-                execution_units=(plutusrequiredtime, plutusrequiredspace),
-                datum_file=plutus_common.DATUM_42,
-                redeemer_file=redeemer_file if redeemer_content else "",
-                redeemer_value=str(redeemer_value) if not redeemer_content else "",
-            )
-        ]
-        tx_raw_output = cluster.build_raw_tx_bare(
-            out_file=f"{temp_template}_step2_tx.body",
-            txouts=txouts,
-            tx_files=tx_files,
-            fee=fee_redeem,
-            script_txins=plutus_txins,
-        )
-        tx_signed = cluster.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_step2",
-        )
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx_bare(tx_file=tx_signed)
-
-        assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
-    @common.hypothesis_settings()
-    def test_wrong_min_int_range(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: int,
-    ):
-        """Try to spend a locked UTxO with a redeemer int value < minimum allowed value.
-
-        Expect failure.
-        """
-        temp_template = f"test_wrong_min_int_range_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        self._int_out_of_range(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            redeemer_value=redeemer_value,
-            dst_addr=payment_addrs[1],
-        )
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
-    @common.hypothesis_settings()
-    def test_wrong_max_int_range(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: int,
-    ):
-        """Try to spend a locked UTxO with a redeemer int value > maximum allowed value.
-
-        Expect failure.
-        """
-        temp_template = f"test_wrong_max_int_range_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        self._int_out_of_range(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            redeemer_value=redeemer_value,
-            dst_addr=payment_addrs[1],
-        )
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.binary())
-    @common.hypothesis_settings()
-    def test_guessing_game_wrong_type(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: bytes,
-    ):
-        """Try to spend a locked UTxO with an invalid redeemer type.
-
-        Expect failure.
-        """
-        temp_template = f"test_guessing_game_wrong_type_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-
-        redeemer_file = f"{temp_template}.redeemer"
-        with open(redeemer_file, "w", encoding="utf-8") as outfile:
-            json.dump({"bytes": redeemer_value.hex()}, outfile)
-
-        # try to spend the "locked" UTxO
-
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-        dst_addr = payment_addrs[1]
-
-        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
-
-        plutus_txins = [
-            clusterlib.ScriptTxIn(
-                txins=script_utxos,
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
-                collaterals=collateral_utxos,
-                execution_units=(plutusrequiredtime, plutusrequiredspace),
-                datum_file=plutus_common.DATUM_42,
-                redeemer_file=Path(redeemer_file),
-            )
-        ]
-
-        tx_raw_output = cluster.build_raw_tx_bare(
-            out_file=f"{temp_template}_step2_tx.body",
-            txouts=txouts,
-            tx_files=tx_files,
-            fee=fee_redeem,
-            script_txins=plutus_txins,
-        )
-        tx_signed = cluster.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_step2",
-        )
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx_bare(tx_file=tx_signed)
-
-        assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.binary())
-    @common.hypothesis_settings()
-    def test_json_schema_typed_int(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: bytes,
-    ):
-        """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
-
-        Redeemer is in typed format and the value doesn't comply to JSON schema. Expect failure.
-        """
-        temp_template = f"test_json_schema_typed_int_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        redeemer_content = json.dumps({"constructor": 0, "fields": [{"int": redeemer_value.hex()}]})
-
-        # try to build a Tx for spending the "locked" UTxO
-        err = self._failed_tx_build(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            redeemer_content=redeemer_content,
-            dst_addr=payment_addrs[1],
-        )
-        assert 'field "int" does not have the type required by the schema' in err
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.binary())
-    @common.hypothesis_settings()
-    def test_json_schema_untyped_int(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: bytes,
-    ):
-        """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
-
-        Redeemer is in untyped format and the value doesn't comply to JSON schema. Expect failure.
-        """
-        temp_template = f"test_json_schema_untyped_int_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        redeemer_content = json.dumps({"int": redeemer_value.hex()})
-
-        # try to build a Tx for spending the "locked" UTxO
-        err = self._failed_tx_build(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            redeemer_content=redeemer_content,
-            dst_addr=payment_addrs[1],
-        )
-        assert 'field "int" does not have the type required by the schema' in err
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.integers())
-    @common.hypothesis_settings()
-    def test_json_schema_typed_bytes(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: int,
-    ):
-        """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
-
-        Redeemer is in typed format and the value doesn't comply to JSON schema. Expect failure.
-        """
-        temp_template = f"test_json_schema_typed_bytes_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        redeemer_content = json.dumps({"constructor": 0, "fields": [{"bytes": redeemer_value}]})
-
-        # try to build a Tx for spending the "locked" UTxO
-        err = self._failed_tx_build(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            redeemer_content=redeemer_content,
-            dst_addr=payment_addrs[1],
-        )
-        assert 'field "bytes" does not have the type required by the schema' in err
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.integers())
-    @common.hypothesis_settings()
-    def test_json_schema_untyped_bytes(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: int,
-    ):
-        """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
-
-        Redeemer is in untyped format and the value doesn't comply to JSON schema. Expect failure.
-        """
-        temp_template = f"test_json_schema_untyped_bytes_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        redeemer_content = json.dumps({"bytes": redeemer_value})
-
-        # try to build a Tx for spending the "locked" UTxO
-        err = self._failed_tx_build(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            redeemer_content=redeemer_content,
-            dst_addr=payment_addrs[1],
-        )
-        assert 'field "bytes" does not have the type required by the schema' in err
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @hypothesis.given(redeemer_value=st.text())
-    @common.hypothesis_settings()
-    def test_invalid_json(
-        self,
-        cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: str,
-    ):
-        """Try to build a Tx using a redeemer value that is invalid JSON.
-
-        Expect failure.
-        """
-        temp_template = f"test_invalid_json_ci{cluster.cluster_id}"
-
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        redeemer_content = f'{{"{redeemer_value}"}}'
-
-        # try to build a Tx for spending the "locked" UTxO
-        err = self._failed_tx_build(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            redeemer_content=redeemer_content,
-            dst_addr=payment_addrs[1],
-        )
-        assert "Invalid JSON format" in err
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.parametrize(
@@ -1439,7 +966,7 @@ class TestNegative:
         elif variant.endswith("43_42"):
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_42_TYPED
-        elif variant.endswith("43_43"):
+        elif variant.endswith("43_43"):  # noqa: SIM106
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_43_TYPED
         else:
@@ -1704,3 +1231,547 @@ class TestNegative:
                 amount=50_000_000,
             )
         assert "InsufficientCollateral" in str(excinfo.value)
+
+
+@pytest.mark.testnets
+class TestNegativeRedeemer:
+    """Tests for Tx output locking using Plutus smart contracts with wrong redeemer."""
+
+    MAX_INT_VAL = (2**64) - 1
+    MIN_INT_VAL = -MAX_INT_VAL
+
+    @pytest.fixture
+    def fund_script_guessing_game(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> FundTupleT:
+        """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            temp_template = common.get_test_id(cluster)
+
+            payment_addrs = clusterlib_utils.create_payment_addr_records(
+                *[f"{temp_template}_payment_addr_{i}" for i in range(2)],
+                cluster_obj=cluster,
+            )
+
+            # fund source address
+            clusterlib_utils.fund_from_faucet(
+                payment_addrs[0],
+                cluster_obj=cluster,
+                faucet_data=cluster_manager.cache.addrs_data["user1"],
+                amount=3_000_000_000,
+            )
+
+            plutus_op = plutus_common.PlutusOp(
+                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+                datum_file=plutus_common.DATUM_42,
+                execution_units=(700_000_000, 10_000_000),
+            )
+
+            tx_output_fund = _fund_script(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+                amount=50_000_000,
+            )
+
+            txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+            script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+            collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+            fixture_cache.value = script_utxos, collateral_utxos, payment_addrs
+
+        return script_utxos, collateral_utxos, payment_addrs
+
+    def _failed_tx_build(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        temp_template: str,
+        script_utxos: List[clusterlib.UTXOData],
+        collateral_utxos: List[clusterlib.UTXOData],
+        redeemer_content: str,
+        dst_addr: clusterlib.AddressRecord,
+    ) -> str:
+        """Try to build a Tx and expect failure."""
+        redeemer_file = f"{temp_template}.redeemer"
+        with open(redeemer_file, "w", encoding="utf-8") as outfile:
+            outfile.write(redeemer_content)
+
+        plutusrequiredtime = 700_000_000
+        plutusrequiredspace = 10_000_000
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+                collaterals=collateral_utxos,
+                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                datum_file=plutus_common.DATUM_42,
+                redeemer_file=Path(redeemer_file),
+            )
+        ]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_obj.build_raw_tx_bare(
+                out_file=f"{temp_template}_step2_tx.body",
+                txouts=txouts,
+                tx_files=tx_files,
+                fee=fee_redeem,
+                script_txins=plutus_txins,
+            )
+        return str(excinfo.value)
+
+    def _int_out_of_range(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        temp_template: str,
+        script_utxos: List[clusterlib.UTXOData],
+        collateral_utxos: List[clusterlib.UTXOData],
+        redeemer_value: int,
+        dst_addr: clusterlib.AddressRecord,
+    ):
+        """Try to spend a locked UTxO with redeemer int value that is not in allowed range."""
+        redeemer_content = {}
+        if redeemer_value % 2 == 0:
+            redeemer_content = {"int": redeemer_value}
+
+        redeemer_file = f"{temp_template}.redeemer"
+        if redeemer_content:
+            with open(redeemer_file, "w", encoding="utf-8") as outfile:
+                json.dump(redeemer_content, outfile)
+
+        plutusrequiredtime = 700_000_000
+        plutusrequiredspace = 10_000_000
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+                collaterals=collateral_utxos,
+                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                datum_file=plutus_common.DATUM_42,
+                redeemer_file=redeemer_file if redeemer_content else "",
+                redeemer_value=str(redeemer_value) if not redeemer_content else "",
+            )
+        ]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_obj.build_raw_tx_bare(
+                out_file=f"{temp_template}_step2_tx.body",
+                txouts=txouts,
+                tx_files=tx_files,
+                fee=fee_redeem,
+                script_txins=plutus_txins,
+            )
+        assert "Value out of range within the script data" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
+    @common.hypothesis_settings()
+    def test_wrong_value_inside_range(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: int,
+    ):
+        """Try to spend a locked UTxO with an unexpected redeemer value.
+
+        Expect failure.
+        """
+        hypothesis.assume(redeemer_value != 42)
+
+        temp_template = f"test_wrong_value_inside_range_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+
+        redeemer_content = {}
+        if redeemer_value % 2 == 0:
+            redeemer_content = {"int": redeemer_value}
+
+        redeemer_file = f"{temp_template}.redeemer"
+        if redeemer_content:
+            with open(redeemer_file, "w", encoding="utf-8") as outfile:
+                json.dump(redeemer_content, outfile)
+
+        # try to spend the "locked" UTxO
+
+        plutusrequiredtime = 700_000_000
+        plutusrequiredspace = 10_000_000
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        dst_addr = payment_addrs[1]
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+                collaterals=collateral_utxos,
+                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                datum_file=plutus_common.DATUM_42,
+                redeemer_file=redeemer_file if redeemer_content else "",
+                redeemer_value=str(redeemer_value) if not redeemer_content else "",
+            )
+        ]
+        tx_raw_output = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txouts=txouts,
+            tx_files=tx_files,
+            fee=fee_redeem,
+            script_txins=plutus_txins,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.submit_tx_bare(tx_file=tx_signed)
+
+        assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
+    @common.hypothesis_settings()
+    def test_wrong_value_bellow_range(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: int,
+    ):
+        """Try to spend a locked UTxO with a redeemer int value < minimum allowed value.
+
+        Expect failure.
+        """
+        temp_template = f"test_wrong_value_bellow_range_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        self._int_out_of_range(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_value=redeemer_value,
+            dst_addr=payment_addrs[1],
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
+    @common.hypothesis_settings()
+    def test_wrong_value_above_range(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: int,
+    ):
+        """Try to spend a locked UTxO with a redeemer int value > maximum allowed value.
+
+        Expect failure.
+        """
+        temp_template = f"test_wrong_value_above_range_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        self._int_out_of_range(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_value=redeemer_value,
+            dst_addr=payment_addrs[1],
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.binary())
+    @common.hypothesis_settings()
+    def test_wrong_type(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: bytes,
+    ):
+        """Try to spend a locked UTxO with an invalid redeemer type.
+
+        Expect failure.
+        """
+        temp_template = f"test_wrong_type_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+
+        redeemer_file = f"{temp_template}.redeemer"
+        with open(redeemer_file, "w", encoding="utf-8") as outfile:
+            json.dump({"bytes": redeemer_value.hex()}, outfile)
+
+        # try to spend the "locked" UTxO
+
+        plutusrequiredtime = 700_000_000
+        plutusrequiredspace = 10_000_000
+        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        dst_addr = payment_addrs[1]
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+                collaterals=collateral_utxos,
+                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                datum_file=plutus_common.DATUM_42,
+                redeemer_file=Path(redeemer_file),
+            )
+        ]
+
+        tx_raw_output = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txouts=txouts,
+            tx_files=tx_files,
+            fee=fee_redeem,
+            script_txins=plutus_txins,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.submit_tx_bare(tx_file=tx_signed)
+
+        assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.binary())
+    @common.hypothesis_settings()
+    def test_json_schema_typed_int_bytes_declared(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: bytes,
+    ):
+        """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
+
+        Redeemer is in typed format and the value doesn't comply to JSON schema. Expect failure.
+        """
+        temp_template = f"test_json_schema_typed_int_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        redeemer_content = json.dumps({"constructor": 0, "fields": [{"int": redeemer_value.hex()}]})
+
+        # try to build a Tx for spending the "locked" UTxO
+        err = self._failed_tx_build(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_content=redeemer_content,
+            dst_addr=payment_addrs[1],
+        )
+        assert 'field "int" does not have the type required by the schema' in err
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.binary())
+    @common.hypothesis_settings()
+    def test_json_schema_untyped_int_bytes_declared(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: bytes,
+    ):
+        """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
+
+        Redeemer is in untyped format and the value doesn't comply to JSON schema. Expect failure.
+        """
+        temp_template = f"test_json_schema_untyped_int_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        redeemer_content = json.dumps({"int": redeemer_value.hex()})
+
+        # try to build a Tx for spending the "locked" UTxO
+        err = self._failed_tx_build(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_content=redeemer_content,
+            dst_addr=payment_addrs[1],
+        )
+        assert 'field "int" does not have the type required by the schema' in err
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.integers())
+    @common.hypothesis_settings()
+    def test_json_schema_typed_bytes_int_declared(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: int,
+    ):
+        """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
+
+        Redeemer is in typed format and the value doesn't comply to JSON schema. Expect failure.
+        """
+        temp_template = f"test_json_schema_typed_bytes_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        redeemer_content = json.dumps({"constructor": 0, "fields": [{"bytes": redeemer_value}]})
+
+        # try to build a Tx for spending the "locked" UTxO
+        err = self._failed_tx_build(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_content=redeemer_content,
+            dst_addr=payment_addrs[1],
+        )
+        assert 'field "bytes" does not have the type required by the schema' in err
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.integers())
+    @common.hypothesis_settings()
+    def test_json_schema_untyped_bytes_int_declared(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: int,
+    ):
+        """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
+
+        Redeemer is in untyped format and the value doesn't comply to JSON schema. Expect failure.
+        """
+        temp_template = f"test_json_schema_untyped_bytes_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        redeemer_content = json.dumps({"bytes": redeemer_value})
+
+        # try to build a Tx for spending the "locked" UTxO
+        err = self._failed_tx_build(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_content=redeemer_content,
+            dst_addr=payment_addrs[1],
+        )
+        assert 'field "bytes" does not have the type required by the schema' in err
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_value=st.text())
+    @common.hypothesis_settings()
+    def test_invalid_json(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_value: str,
+    ):
+        """Try to build a Tx using a redeemer value that is invalid JSON.
+
+        Expect failure.
+        """
+        temp_template = f"test_invalid_json_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        redeemer_content = f'{{"{redeemer_value}"}}'
+
+        # try to build a Tx for spending the "locked" UTxO
+        err = self._failed_tx_build(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_content=redeemer_content,
+            dst_addr=payment_addrs[1],
+        )
+        assert "Invalid JSON format" in err
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_type=st.text())
+    @common.hypothesis_settings()
+    def test_json_schema_typed_invalid_type(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_type: str,
+    ):
+        """Try to build a Tx using a JSON typed schema that specifies an invalid type.
+
+        Expect failure.
+        """
+        temp_template = f"test_json_schema_typed_invalid_type_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        redeemer_content = json.dumps({redeemer_type: 42})
+
+        # try to build a Tx for spending the "locked" UTxO
+        err = self._failed_tx_build(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_content=redeemer_content,
+            dst_addr=payment_addrs[1],
+        )
+
+        assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
+            err
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @hypothesis.given(redeemer_type=st.text())
+    @common.hypothesis_settings()
+    def test_json_schema_untyped_invalid_type(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game: FundTupleT,
+        redeemer_type: str,
+    ):
+        """Try to build a Tx using a JSON untyped schema that specifies an invalid type.
+
+        Expect failure.
+        """
+        temp_template = f"test_json_schema_typed_invalid_type_ci{cluster.cluster_id}"
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        redeemer_content = json.dumps({redeemer_type: 42})
+
+        # try to build a Tx for spending the "locked" UTxO
+        err = self._failed_tx_build(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_content=redeemer_content,
+            dst_addr=payment_addrs[1],
+        )
+
+        assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
+            err
+        )
