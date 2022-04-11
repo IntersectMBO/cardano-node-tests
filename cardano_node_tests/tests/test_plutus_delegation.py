@@ -21,6 +21,7 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -375,7 +376,7 @@ class TestDelegateAddr:
         clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
 
         # submit deregistration certificate and withdraw rewards
-        tx_raw_delegation_out = deregister_stake_addr(
+        tx_raw_deregister_out = deregister_stake_addr(
             cluster_obj=cluster,
             temp_template=temp_template,
             txins=dereg_utxos,
@@ -386,6 +387,10 @@ class TestDelegateAddr:
 
         if reward_error:
             raise AssertionError(reward_error)
+
+        # check tx_view of step 2 and step 3
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_delegation_out)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_deregister_out)
 
         # compare cost of Plutus script with data from db-sync
         if tx_db_record:
