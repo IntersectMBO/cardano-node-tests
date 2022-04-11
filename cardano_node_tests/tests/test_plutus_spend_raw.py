@@ -124,6 +124,7 @@ def _fund_script(
     datum_hash = cluster_obj.get_hash_script_data(
         script_data_file=plutus_op.datum_file if plutus_op.datum_file else None,
         script_data_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else None,
+        script_data_value=plutus_op.datum_value if plutus_op.datum_value else "",
     )
     txouts = [
         clusterlib.TxOut(
@@ -241,8 +242,10 @@ def _spend_locked_txin(
             execution_units=(plutusrequiredtime, plutusrequiredspace),
             datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
             datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
+            datum_value=plutus_op.datum_value if plutus_op.datum_value else "",
             redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
             redeemer_cbor_file=plutus_op.redeemer_cbor_file if plutus_op.redeemer_cbor_file else "",
+            redeemer_value=plutus_op.redeemer_value if plutus_op.redeemer_value else "",
         )
     ]
     tx_files = tx_files._replace(
@@ -556,65 +559,74 @@ class TestLocking:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.parametrize(
-        "script",
+        "variant",
         (
-            "guessing_game_42",  # correct datum and redeemer
-            "guessing_game_42_43",  # correct datum, wrong redeemer
-            "guessing_game_43_42",  # wrong datum, correct redeemer
-            "guessing_game_43_43",  # wrong datum and redeemer
+            "typed_json",
+            "typed_cbor",
+            "untyped_value",
+            "untyped_json",
+            "untyped_cbor",
         ),
     )
     def test_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        worker_id: str,
-        script: str,
+        variant: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
-        Test with "guessing game" script that expects specific datum and redeemer value.
-        Test also negative scenarios where datum or redeemer value is different than expected.
+        Test with "guessing game" scripts that expect specific datum and redeemer value.
+        Test both typed and untyped redeemer and datum.
+        Test passing datum and redeemer to `cardano-cli` as value, json file and cbor file.
 
         * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
-        * check that the expected amount was spent when success is expected
-        * OR check that the amount was not transferred and collateral UTxO was not spent
-          when failure is expected
+        * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{script}"
+        temp_template = f"{common.get_test_id(cluster)}_{variant}"
         amount = 50_000_000
 
-        if script.endswith("game_42_43"):
-            datum_file = plutus_common.DATUM_42_TYPED
-            redeemer_file = plutus_common.REDEEMER_43_TYPED
-            expect_failure = True
-        elif script.endswith("game_43_42"):
-            datum_file = plutus_common.DATUM_43_TYPED
-            redeemer_file = plutus_common.REDEEMER_42_TYPED
-            expect_failure = True
-        elif script.endswith("game_43_43"):
-            datum_file = plutus_common.DATUM_43_TYPED
-            redeemer_file = plutus_common.REDEEMER_43_TYPED
-            expect_failure = True
-        else:
-            datum_file = plutus_common.DATUM_42_TYPED
-            redeemer_file = plutus_common.REDEEMER_42_TYPED
-            expect_failure = False
+        datum_file: Optional[Path] = None
+        datum_cbor_file: Optional[Path] = None
+        datum_value: Optional[str] = None
+        redeemer_file: Optional[Path] = None
+        redeemer_cbor_file: Optional[Path] = None
+        redeemer_value: Optional[str] = None
 
-        if expect_failure:
-            logfiles.add_ignore_rule(
-                files_glob="*.stdout",
-                regex="ValidationTagMismatch",
-                ignore_file_id=worker_id,
-            )
+        if variant.endswith("typed_json"):
+            script_file = plutus_common.GUESSING_GAME_PLUTUS
+            datum_file = plutus_common.DATUM_42_TYPED
+            redeemer_file = plutus_common.REDEEMER_42_TYPED
+        elif variant.endswith("typed_cbor"):
+            script_file = plutus_common.GUESSING_GAME_PLUTUS
+            datum_cbor_file = plutus_common.DATUM_42_TYPED_CBOR
+            redeemer_cbor_file = plutus_common.REDEEMER_42_TYPED_CBOR
+        elif variant.endswith("untyped_value"):
+            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
+            datum_value = "42"
+            redeemer_value = "42"
+        elif variant.endswith("untyped_json"):
+            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
+            datum_file = plutus_common.DATUM_42
+            redeemer_file = plutus_common.REDEEMER_42
+        elif variant.endswith("untyped_cbor"):
+            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
+            datum_cbor_file = plutus_common.DATUM_42_CBOR
+            redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR
+        else:
+            raise AssertionError("Unknown test variant.")
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_PLUTUS,
+            script_file=script_file,
             datum_file=datum_file,
+            datum_cbor_file=datum_cbor_file,
+            datum_value=datum_value,
             redeemer_file=redeemer_file,
+            redeemer_cbor_file=redeemer_cbor_file,
+            redeemer_value=redeemer_value,
             execution_units=(700_000_000, 10_000_000),
         )
 
@@ -629,7 +641,7 @@ class TestLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        err, __ = _spend_locked_txin(
+        _spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs[1],
@@ -637,14 +649,7 @@ class TestLocking:
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=amount,
-            expect_failure=expect_failure,
         )
-
-        if expect_failure:
-            assert "ValidationTagMismatch (IsValid True)" in err
-
-            # wait a bit so there's some time for error messages to appear in log file
-            time.sleep(1 if cluster.network_magic == configuration.NETWORK_MAGIC_LOCAL else 5)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -1397,6 +1402,79 @@ class TestNegative:
             dst_addr=payment_addrs[1],
         )
         assert "Invalid JSON format" in err
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "42_43",  # correct datum, wrong redeemer
+            "43_42",  # wrong datum, correct redeemer
+            "43_43",  # wrong datum and redeemer
+        ),
+    )
+    def test_invalid_guessing_game(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        variant: str,
+    ):
+        """Test locking a Tx output with a Plutus script and spending the locked UTxO.
+
+        Test with "guessing game" script that expects specific datum and redeemer value.
+        Test negative scenarios where datum or redeemer value is different than expected.
+        Expect failure.
+
+        * create a Tx output with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * try to spend the locked UTxO
+        * check that the amount was not transferred and collateral UTxO was not spent
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{variant}"
+        amount = 50_000_000
+
+        if variant.endswith("42_43"):
+            datum_file = plutus_common.DATUM_42_TYPED
+            redeemer_file = plutus_common.REDEEMER_43_TYPED
+        elif variant.endswith("43_42"):
+            datum_file = plutus_common.DATUM_43_TYPED
+            redeemer_file = plutus_common.REDEEMER_42_TYPED
+        elif variant.endswith("43_43"):
+            datum_file = plutus_common.DATUM_43_TYPED
+            redeemer_file = plutus_common.REDEEMER_43_TYPED
+        else:
+            raise AssertionError("Unknown test variant.")
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_PLUTUS,
+            datum_file=datum_file,
+            redeemer_file=redeemer_file,
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        tx_output_fund = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=amount,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        err, __ = _spend_locked_txin(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            dst_addr=payment_addrs[1],
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op,
+            amount=amount,
+            expect_failure=True,
+        )
+
+        assert "ValidationTagMismatch (IsValid True)" in err
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
