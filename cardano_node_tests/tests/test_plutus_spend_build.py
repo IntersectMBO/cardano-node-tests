@@ -1,4 +1,5 @@
 """Tests for spending with Plutus using `transaction build`."""
+import functools
 import json
 import logging
 import shutil
@@ -178,7 +179,7 @@ def _build_fund_script(
     return tx_output
 
 
-def _build_spend_locked_txin(
+def _build_spend_locked_txin(  # noqa: C901
     temp_template: str,
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
@@ -201,9 +202,14 @@ def _build_spend_locked_txin(
     Uses `cardano-cli transaction build` command for building the transactions.
     """
     # pylint: disable=too-many-arguments,too-many-locals
-    script_address = script_utxos[0].address
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
+
+    # Change that was calculated manually will be returned to address of the first script.
+    # The remaining change that is automatically handled by the `build` command will be returned
+    # to `payment_addr`, because it would be inaccessible on script address without proper
+    # datum hash (datum hash is not provided for change that is handled by `build` command).
+    script_change_rec = script_utxos[0]
 
     # spend the "locked" UTxO
 
@@ -227,9 +233,33 @@ def _build_spend_locked_txin(
         clusterlib.TxOut(address=dst_addr.address, amount=amount),
     ]
 
+    lovelace_change_needed = False
     for token in spent_tokens:
         txouts.append(
             clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
+        )
+        # append change
+        script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
+        script_token_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_token, 0)
+        if script_token_balance > token.amount:
+            lovelace_change_needed = True
+            txouts.append(
+                clusterlib.TxOut(
+                    address=script_change_rec.address,
+                    amount=script_token_balance - token.amount,
+                    coin=token.coin,
+                    datum_hash=script_change_rec.datum_hash,
+                )
+            )
+    # add minimum (+ some) required Lovelace to change Tx output
+    if lovelace_change_needed:
+        txouts.append(
+            clusterlib.TxOut(
+                address=script_change_rec.address,
+                amount=4_000_000,
+                coin=clusterlib.DEFAULT_COIN,
+                datum_hash=script_change_rec.datum_hash,
+            )
         )
 
     if expect_failure:
@@ -240,7 +270,7 @@ def _build_spend_locked_txin(
                 tx_files=tx_files,
                 txouts=txouts,
                 script_txins=plutus_txins,
-                change_address=script_address,
+                change_address=payment_addr.address,
             )
         return str(excinfo.value), None, []
 
@@ -250,7 +280,7 @@ def _build_spend_locked_txin(
         tx_files=tx_files,
         txouts=txouts,
         script_txins=plutus_txins,
-        change_address=script_address,
+        change_address=payment_addr.address,
         invalid_hereafter=invalid_hereafter,
         invalid_before=invalid_before,
         deposit=deposit_amount,
@@ -280,7 +310,7 @@ def _build_spend_locked_txin(
         for u in script_utxos_lovelace:
             assert cluster_obj.get_utxo(
                 txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
-            ), f"Inputs were unexpectedly spent for `{script_address}`"
+            ), f"Inputs were unexpectedly spent for `{u.address}`"
 
         return "", tx_output, []
 
@@ -291,7 +321,7 @@ def _build_spend_locked_txin(
         tx_files=tx_files,
         txouts=txouts,
         script_txins=plutus_txins,
-        change_address=script_address,
+        change_address=payment_addr.address,
         invalid_hereafter=invalid_hereafter,
         invalid_before=invalid_before,
         deposit=deposit_amount,
@@ -309,14 +339,14 @@ def _build_spend_locked_txin(
     for u in script_utxos_lovelace:
         assert not cluster_obj.get_utxo(
             txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
-        ), f"Inputs were NOT spent for `{script_address}`"
+        ), f"Inputs were NOT spent for `{u.address}`"
 
     for token in spent_tokens:
         script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
         for u in script_utxos_token:
             assert not cluster_obj.get_utxo(
                 txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[token.coin]
-            ), f"Token inputs were NOT spent for `{script_address}`"
+            ), f"Token inputs were NOT spent for `{u.address}`"
 
     # check tx view
     tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_output)
@@ -758,14 +788,14 @@ class TestBuildLocking:
         Uses `cardano-cli transaction build` command for building the transactions.
 
         * create a Tx output that contains native tokens with a datum hash at the script address
-        * check that the expected amount was locked at the script address
+        * check that expected amounts of Lovelace and native tokens were locked at the script
+          address
         * spend the locked UTxO
-        * check that the expected amount was spent
+        * check that the expected amounts of Lovelace and native tokens were spent
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
-        payment_addr = payment_addrs[0]
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
@@ -777,8 +807,8 @@ class TestBuildLocking:
             *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
-            token_mint_addr=payment_addr,
-            issuer_addr=payment_addr,
+            token_mint_addr=payment_addrs[0],
+            issuer_addr=payment_addrs[0],
             amount=100,
         )
         tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
@@ -795,7 +825,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        __, tx_output, plutus_cost = _build_spend_locked_txin(
+        __, tx_output_spend, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -811,9 +841,134 @@ class TestBuildLocking:
         expected_fee_fund = 173_597
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
-        if tx_output:
+        if tx_output_spend:
             expected_fee = 175_710
-            assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
+            assert helpers.is_in_interval(tx_output_spend.fee, expected_fee, frac=0.15)
+
+        if plutus_cost:
+            plutus_common.check_plutus_cost(
+                plutus_cost=plutus_cost,
+                expected_cost=[
+                    plutus_common.ExpectedCost(
+                        expected_time=476_468, expected_space=1_700, expected_lovelace=133
+                    )
+                ],
+            )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_partial_spending(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test spending part of funds (Lovelace and native tokens) on a locked UTxO.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx output that contains native tokens with a datum hash at the script address
+        * check that expected amounts of Lovelace and native tokens were locked at the script
+          address
+        * spend the locked UTxO and create new locked UTxO with change
+        * check that the expected amounts of Lovelace and native tokens were spent
+        * (optional) check transactions in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+
+        token_rand = clusterlib.get_rand_str(5)
+
+        amount_spend = 10_000_000
+        token_amount_fund = 100
+        token_amount_spend = 20
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
+        )
+
+        tokens = clusterlib_utils.new_tokens(
+            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{token_rand}",
+            token_mint_addr=payment_addrs[0],
+            issuer_addr=payment_addrs[0],
+            amount=token_amount_fund,
+        )
+        tokens_fund_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
+
+        tx_output_fund = _build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            tokens=tokens_fund_rec,
+        )
+
+        txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid_fund}#1")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid_fund}#2")
+        tokens_spend_rec = [
+            plutus_common.Token(coin=t.token, amount=token_amount_spend) for t in tokens
+        ]
+
+        __, tx_output_spend, plutus_cost = _build_spend_locked_txin(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op,
+            amount=amount_spend,
+            tokens=tokens_spend_rec,
+        )
+
+        # check that the expected amounts of Lovelace and native tokens were spent and change UTxOs
+        # with appropriate datum hash were created
+
+        assert tx_output_spend
+        txid_spend = cluster.get_txid(tx_body_file=tx_output_spend.out_file)
+        # UTxO we created for tokens and minimum required Lovelace
+        change_utxos = cluster.get_utxo(txin=f"{txid_spend}#2")
+        # UTxO that was created by `build` command for rest of the Lovelace change (this will not
+        # have the script's datum
+        build_change_utxos = cluster.get_utxo(txin=f"{txid_spend}#0")
+
+        # Lovelace balance on original script UTxOs
+        script_lovelace_utxos = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
+        script_lovelace_balance = functools.reduce(
+            lambda x, y: x + y.amount, script_lovelace_utxos, 0
+        )
+        # Lovelace balance on change UTxOs
+        change_lovelace_utxos = [
+            u for u in [*change_utxos, *build_change_utxos] if u.coin == clusterlib.DEFAULT_COIN
+        ]
+        change_lovelace_balance = functools.reduce(
+            lambda x, y: x + y.amount, change_lovelace_utxos, 0
+        )
+
+        assert (
+            change_lovelace_balance == script_lovelace_balance - tx_output_spend.fee - amount_spend
+        )
+
+        token_amount_exp = token_amount_fund - token_amount_spend
+        assert len(change_utxos) == len(tokens_spend_rec) + 1
+        for u in change_utxos:
+            if u.coin != clusterlib.DEFAULT_COIN:
+                assert u.amount == token_amount_exp
+            assert u.datum_hash == script_utxos[0].datum_hash
+
+        # check expected fees
+
+        expected_fee_fund = 173_597
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+
+        if tx_output_spend:
+            expected_fee = 183_366
+            assert helpers.is_in_interval(tx_output_spend.fee, expected_fee, frac=0.15)
 
         if plutus_cost:
             plutus_common.check_plutus_cost(
