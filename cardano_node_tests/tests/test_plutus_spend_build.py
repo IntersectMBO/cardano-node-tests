@@ -847,11 +847,10 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
-
-        amount = 50_000_000
 
         # Step 1: fund the script address
 
@@ -1088,6 +1087,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -1104,7 +1104,7 @@ class TestNegative:
         collateral_amount = int(fee_redeem * collateral_fraction)
 
         txouts = [
-            clusterlib.TxOut(address=payment_addr.address, amount=50_000_000 + fee_redeem),
+            clusterlib.TxOut(address=payment_addr.address, amount=amount + fee_redeem),
             clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
@@ -1130,7 +1130,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=amount,
             )
         assert "not a Plutus script witnessed tx input" in str(excinfo.value)
 
@@ -1221,6 +1221,7 @@ class TestNegativeRedeemer:
 
     MAX_INT_VAL = (2**64) - 1
     MIN_INT_VAL = -MAX_INT_VAL
+    AMOUNT = 50_000_000
 
     @pytest.fixture
     def fund_script_guessing_game(
@@ -1288,7 +1289,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert "Value out of range within the script data" in str(excinfo.value)
@@ -1339,7 +1340,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert "The Plutus script evaluation failed" in str(excinfo.value)
@@ -1438,7 +1439,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert "Script debugging logs: Incorrect datum. Expected 42." in str(excinfo.value)
@@ -1482,7 +1483,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert 'The value in the field "int" does not have the type required by the schema.' in str(
@@ -1528,7 +1529,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert 'The value in the field "int" does not have the type required by the schema.' in str(
@@ -1574,7 +1575,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert (
@@ -1621,7 +1622,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert (
@@ -1667,7 +1668,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert "JSON object expected. Unexpected value" in str(excinfo.value)
@@ -1710,7 +1711,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
@@ -1755,7 +1756,7 @@ class TestNegativeRedeemer:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
         assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
