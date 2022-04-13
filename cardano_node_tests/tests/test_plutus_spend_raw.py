@@ -670,6 +670,7 @@ class TestLocking:
           and the expected error was raised
         """
         temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
@@ -690,7 +691,7 @@ class TestLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
         )
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
@@ -702,7 +703,7 @@ class TestLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
             expect_failure=True,
         )
         assert "PlutusFailure" in err
@@ -727,6 +728,7 @@ class TestLocking:
         * check that the amount was not transferred and collateral UTxO was spent
         """
         temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
@@ -741,7 +743,7 @@ class TestLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
         )
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
@@ -753,7 +755,7 @@ class TestLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
             script_valid=False,
         )
 
@@ -768,14 +770,17 @@ class TestLocking:
         """Test locking a Tx output with native tokens and spending the locked UTxO.
 
         * create a Tx output that contains native tokens with a datum hash at the script address
-        * check that the expected amount was locked at the script address
+        * check that expected amounts of Lovelace and native tokens were locked at the script
+          address
         * spend the locked UTxO
-        * check that the expected amount was spent
+        * check that the expected amounts of Lovelace and native tokens were spent
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
-        payment_addr = payment_addrs[0]
+
+        amount = 50_000_000
+        token_amount = 100
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
@@ -788,9 +793,9 @@ class TestLocking:
             *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
-            token_mint_addr=payment_addr,
-            issuer_addr=payment_addr,
-            amount=100,
+            token_mint_addr=payment_addrs[0],
+            issuer_addr=payment_addrs[0],
+            amount=token_amount,
         )
         tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
 
@@ -800,7 +805,7 @@ class TestLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
             tokens=tokens_rec,
         )
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
@@ -813,7 +818,7 @@ class TestLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
             tokens=tokens_rec,
         )
 
@@ -844,6 +849,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
 
         max_collateral_ins = cluster.get_protocol_params()["maxCollateralInputs"]
         collateral_utxos = []
@@ -874,7 +880,7 @@ class TestLocking:
             payment_addr=payment_addr,
             dst_addr=dst_addr,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
         )
         fund_txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{fund_txid}#0")
@@ -911,7 +917,7 @@ class TestLocking:
                     script_utxos=script_utxos,
                     collateral_utxos=collateral_utxos,
                     plutus_op=plutus_op,
-                    amount=50_000_000,
+                    amount=amount,
                 )
             assert exp_err in str(excinfo.value)
         else:
@@ -922,7 +928,7 @@ class TestLocking:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=amount,
             )
 
 
@@ -1022,7 +1028,9 @@ class TestNegative:
         """
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
-        payment_addr = payment_addrs[0]
+
+        amount = 50_000_000
+        token_amount = 100
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
@@ -1035,9 +1043,9 @@ class TestNegative:
             *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
-            token_mint_addr=payment_addr,
-            issuer_addr=payment_addr,
-            amount=100,
+            token_mint_addr=payment_addrs[0],
+            issuer_addr=payment_addrs[0],
+            amount=token_amount,
         )
         tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
 
@@ -1047,7 +1055,7 @@ class TestNegative:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
             tokens_collateral=tokens_rec,
         )
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
@@ -1062,7 +1070,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=amount,
             )
         assert "CollateralContainsNonADA" in str(excinfo.value)
 
@@ -1085,6 +1093,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
@@ -1099,7 +1108,7 @@ class TestNegative:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
         )
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#0")
@@ -1112,7 +1121,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=script_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=amount,
             )
         assert "InsufficientCollateral" in str(excinfo.value)
 
@@ -1133,6 +1142,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -1151,7 +1161,7 @@ class TestNegative:
         collateral_amount = int(fee_redeem * collateral_fraction)
 
         txouts = [
-            clusterlib.TxOut(address=payment_addr.address, amount=50_000_000 + fee_redeem),
+            clusterlib.TxOut(address=payment_addr.address, amount=amount + fee_redeem),
             clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
@@ -1175,7 +1185,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=amount,
             )
         assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
 
@@ -1199,6 +1209,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
@@ -1213,7 +1224,7 @@ class TestNegative:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=amount,
             collateral_fraction_offset=0.9,
         )
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
@@ -1228,7 +1239,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=amount,
             )
         assert "InsufficientCollateral" in str(excinfo.value)
 
@@ -1239,6 +1250,7 @@ class TestNegativeRedeemer:
 
     MAX_INT_VAL = (2**64) - 1
     MIN_INT_VAL = -MAX_INT_VAL
+    AMOUNT = 50_000_000
 
     @pytest.fixture
     def fund_script_guessing_game(
@@ -1278,7 +1290,7 @@ class TestNegativeRedeemer:
                 payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=self.AMOUNT,
             )
 
             txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
@@ -1308,7 +1320,7 @@ class TestNegativeRedeemer:
         fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=self.AMOUNT)]
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -1355,7 +1367,7 @@ class TestNegativeRedeemer:
         fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=self.AMOUNT)]
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -1416,7 +1428,7 @@ class TestNegativeRedeemer:
         dst_addr = payment_addrs[1]
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=self.AMOUNT)]
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -1529,7 +1541,7 @@ class TestNegativeRedeemer:
         dst_addr = payment_addrs[1]
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=50_000_000)]
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=self.AMOUNT)]
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
