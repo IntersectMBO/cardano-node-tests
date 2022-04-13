@@ -1,4 +1,5 @@
 """Tests for spending with Plutus using `transaction build-raw`."""
+import functools
 import itertools
 import json
 import logging
@@ -205,7 +206,7 @@ def _fund_script(
     return tx_raw_output
 
 
-def _spend_locked_txin(
+def _spend_locked_txin(  # noqa: C901
     temp_template: str,
     cluster_obj: clusterlib.ClusterLib,
     dst_addr: clusterlib.AddressRecord,
@@ -222,15 +223,20 @@ def _spend_locked_txin(
     submit_tx: bool = True,
 ) -> Tuple[str, clusterlib.TxRawOutput]:
     """Spend the locked UTxO."""
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-locals
     assert plutus_op.execution_units, "Execution units not provided"
     plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
 
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
 
-    script_address = script_utxos[0].address
+    # change will be returned to address of the first script
+    change_rec = script_utxos[0]
+
     fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+
+    script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
+    script_lovelace_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_lovelace, 0)
 
     # spend the "locked" UTxO
 
@@ -254,11 +260,32 @@ def _spend_locked_txin(
     txouts = [
         clusterlib.TxOut(address=dst_addr.address, amount=amount),
     ]
+    # append change
+    if script_lovelace_balance > amount + fee_redeem:
+        txouts.append(
+            clusterlib.TxOut(
+                address=change_rec.address,
+                amount=script_lovelace_balance - amount - fee_redeem,
+                datum_hash=change_rec.datum_hash,
+            )
+        )
 
     for token in spent_tokens:
         txouts.append(
             clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
         )
+        # append change
+        script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
+        script_token_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_token, 0)
+        if script_token_balance > token.amount:
+            txouts.append(
+                clusterlib.TxOut(
+                    address=change_rec.address,
+                    amount=script_token_balance - token.amount,
+                    coin=token.coin,
+                    datum_hash=change_rec.datum_hash,
+                )
+            )
 
     tx_raw_output = cluster_obj.build_raw_tx_bare(
         out_file=f"{temp_template}_step2_tx.body",
@@ -281,8 +308,6 @@ def _spend_locked_txin(
 
     dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
 
-    script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
-
     if not script_valid:
         cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
 
@@ -294,7 +319,7 @@ def _spend_locked_txin(
         for u in script_utxos_lovelace:
             assert cluster_obj.get_utxo(
                 txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
-            ), f"Inputs were unexpectedly spent for `{script_address}`"
+            ), f"Inputs were unexpectedly spent for `{u.address}`"
 
         return "", tx_raw_output
 
@@ -309,7 +334,7 @@ def _spend_locked_txin(
         for u in script_utxos_lovelace:
             assert cluster_obj.get_utxo(
                 txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
-            ), f"Inputs were unexpectedly spent for `{script_address}`"
+            ), f"Inputs were unexpectedly spent for `{u.address}`"
 
         return err, tx_raw_output
 
@@ -324,14 +349,14 @@ def _spend_locked_txin(
     for u in script_utxos_lovelace:
         assert not cluster_obj.get_utxo(
             txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
-        ), f"Inputs were NOT spent for `{script_address}`"
+        ), f"Inputs were NOT spent for `{u.address}`"
 
     for token in spent_tokens:
         script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
         for u in script_utxos_token:
             assert not cluster_obj.get_utxo(
                 txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[token.coin]
-            ), f"Token inputs were NOT spent for `{script_address}`"
+            ), f"Token inputs were NOT spent for `{u.address}`"
 
     # check tx view
     tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
@@ -821,6 +846,91 @@ class TestLocking:
             amount=amount,
             tokens=tokens_rec,
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_partial_spending(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test spending part of funds (Lovelace and native tokens) on a locked UTxO.
+
+        * create a Tx output that contains native tokens with a datum hash at the script address
+        * check that expected amounts of Lovelace and native tokens were locked at the script
+          address
+        * spend the locked UTxO and create new locked UTxO with change
+        * check that the expected amounts of Lovelace and native tokens were spent
+        * (optional) check transactions in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+
+        token_rand = clusterlib.get_rand_str(5)
+
+        amount_fund = 50_000_000
+        amount_spend = 10_000_000
+        token_amount_fund = 100
+        token_amount_spend = 20
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_units=(700_000_000, 10_000_000),
+        )
+
+        tokens = clusterlib_utils.new_tokens(
+            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{token_rand}",
+            token_mint_addr=payment_addrs[0],
+            issuer_addr=payment_addrs[0],
+            amount=token_amount_fund,
+        )
+        tokens_fund_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
+
+        tx_output_fund = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=amount_fund,
+            tokens=tokens_fund_rec,
+        )
+
+        txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid_fund}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid_fund}#1")
+        tokens_spend_rec = [
+            plutus_common.Token(coin=t.token, amount=token_amount_spend) for t in tokens
+        ]
+
+        __, tx_output_spend = _spend_locked_txin(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            dst_addr=payment_addrs[1],
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op,
+            amount=amount_spend,
+            tokens=tokens_spend_rec,
+        )
+
+        txid_spend = cluster.get_txid(tx_body_file=tx_output_spend.out_file)
+        change_utxos = cluster.get_utxo(txin=f"{txid_spend}#1")
+
+        # check that the expected amounts of Lovelace and native tokens were spent and change UTxOs
+        # with appropriate datum hash were created
+        token_amount_exp = token_amount_fund - token_amount_spend
+        assert len(change_utxos) == len(tokens_spend_rec) + 1
+        for u in change_utxos:
+            if u.coin == clusterlib.DEFAULT_COIN:
+                assert u.amount == amount_fund - amount_spend
+            else:
+                assert u.amount == token_amount_exp
+            assert u.datum_hash == script_utxos[0].datum_hash
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
