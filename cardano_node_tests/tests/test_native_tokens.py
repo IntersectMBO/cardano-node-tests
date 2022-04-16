@@ -5,6 +5,7 @@
 * locking
 * transactions
 """
+import datetime
 import itertools
 import json
 import logging
@@ -1848,13 +1849,12 @@ class TestTransfer:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token)]
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
-                expected_error = "Minimum required UTxO:"
+        if use_build_cmd:
+            expected_error = "Minimum required UTxO:"
+            # TODO: add ADA txout for change address
+            destinations.append(clusterlib.TxOut(address=src_address, amount=3500_000))
 
-                # TODO: add ADA txout for change address
-                destinations.append(clusterlib.TxOut(address=src_address, amount=3500_000))
-
+            with pytest.raises(clusterlib.CLIError) as excinfo:
                 cluster.build_tx(
                     src_address=src_address,
                     tx_name=temp_template,
@@ -1862,16 +1862,29 @@ class TestTransfer:
                     fee_buffer=2_000_000,
                     tx_files=tx_files,
                 )
-            else:
-                expected_error = "OutputTooSmallUTxO"
+            assert expected_error in str(excinfo.value)
+        else:
+            expected_error = "OutputTooSmallUTxO"
 
+            try:
                 cluster.send_funds(
                     src_address=src_address,
                     destinations=destinations,
                     tx_name=temp_template,
                     tx_files=tx_files,
                 )
-        assert expected_error in str(excinfo.value)
+            except clusterlib.CLIError as err:
+                if expected_error not in str(err):
+                    raise
+            else:
+                msg = (
+                    "https://github.com/input-output-hk/cardano-ledger/pull/2722 "
+                    "still not in cardano-node"
+                )
+                if datetime.date.today() < datetime.date(2022, 4, 30):
+                    pytest.xfail(msg)
+                else:
+                    pytest.fail(msg)
 
 
 @pytest.mark.testnets
