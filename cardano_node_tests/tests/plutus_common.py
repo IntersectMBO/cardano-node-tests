@@ -67,7 +67,16 @@ def check_plutus_cost(plutus_cost: List[dict], expected_cost: List[ExecutionCost
 
     units: the time is in picoseconds and the space is in bytes.
     """
-    for costs, expected_values in zip(plutus_cost, expected_cost):
+    # sort records by total cost
+    sorted_plutus = sorted(
+        plutus_cost,
+        key=lambda x: x["executionUnits"]["memory"]  # type: ignore
+        + x["executionUnits"]["steps"]
+        + x["lovelaceCost"],
+    )
+    sorted_expected = sorted(expected_cost, key=lambda x: x.per_space + x.per_time + x.fixed_cost)
+
+    for costs, expected_values in zip(sorted_plutus, sorted_expected):
         tx_time = costs["executionUnits"]["steps"]
         tx_space = costs["executionUnits"]["memory"]
         lovelace_cost = costs["lovelaceCost"]
