@@ -250,7 +250,7 @@ def deregister_stake_addr(
 
         # compare cost of Plutus script with data from db-sync
         dbsync_utils.check_plutus_cost(
-            redeemers_record=tx_db_dereg.redeemers[0], cost_record=plutus_cost[0]
+            redeemer_record=tx_db_dereg.redeemers[0], cost_record=plutus_cost[0]
         )
 
     return tx_raw_output
@@ -395,5 +395,5 @@ class TestDelegateAddr:
         # compare cost of Plutus script with data from db-sync
         if tx_db_record:
             dbsync_utils.check_plutus_cost(
-                redeemers_record=tx_db_record.redeemers[0], cost_record=plutus_cost_deleg[0]
+                redeemer_record=tx_db_record.redeemers[0], cost_record=plutus_cost_deleg[0]
             )

@@ -355,7 +355,7 @@ def _build_spend_locked_txin(  # noqa: C901
     # compare cost of Plutus script with data from db-sync
     if tx_db_record:
         dbsync_utils.check_plutus_cost(
-            redeemers_record=tx_db_record.redeemers[0], cost_record=plutus_cost[0]
+            redeemer_record=tx_db_record.redeemers[0], cost_record=plutus_cost[0]
         )
 
     return "", tx_output, plutus_cost
