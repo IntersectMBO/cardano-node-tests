@@ -429,9 +429,7 @@ class TestBuildLocking:
             plutus_common.check_plutus_cost(
                 plutus_cost=plutus_cost,
                 expected_cost=[
-                    plutus_common.ExpectedCost(
-                        expected_time=476_468, expected_space=1_700, expected_lovelace=133
-                    )
+                    plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
                 ],
             )
 
@@ -769,9 +767,7 @@ class TestBuildLocking:
             plutus_common.check_plutus_cost(
                 plutus_cost=plutus_cost,
                 expected_cost=[
-                    plutus_common.ExpectedCost(
-                        expected_time=476_468, expected_space=1_700, expected_lovelace=133
-                    )
+                    plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
                 ],
             )
 
@@ -849,9 +845,7 @@ class TestBuildLocking:
             plutus_common.check_plutus_cost(
                 plutus_cost=plutus_cost,
                 expected_cost=[
-                    plutus_common.ExpectedCost(
-                        expected_time=476_468, expected_space=1_700, expected_lovelace=133
-                    )
+                    plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
                 ],
             )
 
@@ -974,9 +968,7 @@ class TestBuildLocking:
             plutus_common.check_plutus_cost(
                 plutus_cost=plutus_cost,
                 expected_cost=[
-                    plutus_common.ExpectedCost(
-                        expected_time=476_468, expected_space=1_700, expected_lovelace=133
-                    )
+                    plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
                 ],
             )
 
