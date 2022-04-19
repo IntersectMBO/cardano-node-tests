@@ -677,6 +677,204 @@ class TestLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_two_scripts_spending(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test locking two Tx outputs with two different Plutus scripts in single Tx.
+
+        * create a Tx output with a datum hash at the script address
+        * check that the expected amount was locked at the script address
+        * spend the locked UTxO
+        * check that the expected amount was spent
+        * (optional) check transactions in db-sync
+        """
+        # pylint: disable=too-many-locals
+        temp_template = common.get_test_id(cluster)
+        amount = 50_000_000
+
+        protocol_params = cluster.get_protocol_params()
+
+        plutus_op1 = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_units=(476_468, 1_700),
+        )
+        plutus_op2 = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
+            execution_units=(388_458_303, 1_031_312),
+        )
+
+        # Step 1: fund the Plutus scripts
+
+        assert plutus_op1.execution_units
+        assert plutus_op2.execution_units
+
+        collateral_fraction = protocol_params["collateralPercentage"] / 100
+        execution_cost = plutus_common.get_execution_cost(protocol_params=protocol_params)
+
+        script_address1 = cluster.gen_payment_addr(
+            addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
+        )
+        fee_redeem1 = (
+            round(
+                plutus_op1.execution_units[0] * execution_cost.per_time
+                + plutus_op1.execution_units[1] * execution_cost.per_space
+            )
+            + 133  # fixed cost for the given Plutus script
+        )
+        collateral_amount1 = round(fee_redeem1 * collateral_fraction) + 2_000_000
+        datum_hash1 = cluster.get_hash_script_data(script_data_file=plutus_op1.datum_file)
+
+        script_address2 = cluster.gen_payment_addr(
+            addr_name=f"{temp_template}_addr2", payment_script_file=plutus_op2.script_file
+        )
+        fee_redeem2 = (
+            round(
+                plutus_op2.execution_units[0] * execution_cost.per_time
+                + plutus_op2.execution_units[1] * execution_cost.per_space
+            )
+            + 87_515  # fixed cost for the given Plutus script
+        )
+        collateral_amount2 = round(fee_redeem2 * collateral_fraction) + 2_000_000
+        datum_hash2 = cluster.get_hash_script_data(script_data_file=plutus_op2.datum_file)
+
+        # approx. fee for Tx size
+        fee_redeem_txsize = 180_000
+
+        # create a Tx output with a datum hash at the script address
+
+        tx_files_fund = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file],
+        )
+        txouts_fund = [
+            clusterlib.TxOut(
+                address=script_address1,
+                amount=amount + fee_redeem1,
+                datum_hash=datum_hash1,
+            ),
+            clusterlib.TxOut(
+                address=script_address2,
+                amount=amount + fee_redeem2 + fee_redeem_txsize,
+                datum_hash=datum_hash2,
+            ),
+            # for collateral
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=collateral_amount1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=collateral_amount2),
+        ]
+        fee_fund = cluster.calculate_tx_fee(
+            src_address=payment_addrs[0].address,
+            txouts=txouts_fund,
+            tx_name=f"{temp_template}_step1",
+            tx_files=tx_files_fund,
+            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            witness_count_add=2,
+        )
+        tx_output_fund = cluster.build_raw_tx(
+            src_address=payment_addrs[0].address,
+            tx_name=f"{temp_template}_step1",
+            txouts=txouts_fund,
+            tx_files=tx_files_fund,
+            fee=fee_fund,
+            join_txouts=False,
+        )
+        tx_signed_fund = cluster.sign_tx(
+            tx_body_file=tx_output_fund.out_file,
+            signing_key_files=tx_files_fund.signing_key_files,
+            tx_name=f"{temp_template}_step1",
+        )
+
+        cluster.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
+
+        txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#0", coins=[clusterlib.DEFAULT_COIN])
+        script_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#1", coins=[clusterlib.DEFAULT_COIN])
+        collateral_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#2")
+        collateral_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#3")
+
+        assert script_utxos1 and script_utxos2, "No script UTxOs"
+        assert collateral_utxos1 and collateral_utxos2, "No collateral UTxOs"
+
+        assert (
+            script_utxos1[0].amount == amount + fee_redeem1
+        ), f"Incorrect balance for script address `{script_utxos1[0].address}`"
+        assert (
+            script_utxos2[0].amount == amount + fee_redeem2 + fee_redeem_txsize
+        ), f"Incorrect balance for script address `{script_utxos2[0].address}`"
+
+        # Step 2: spend the "locked" UTxOs
+
+        assert plutus_op1.datum_file and plutus_op2.datum_file
+        assert plutus_op1.redeemer_cbor_file and plutus_op2.redeemer_cbor_file
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos1,
+                script_file=plutus_op1.script_file,
+                collaterals=collateral_utxos1,
+                execution_units=plutus_op1.execution_units,
+                datum_file=plutus_op1.datum_file,
+                redeemer_cbor_file=plutus_op1.redeemer_cbor_file,
+            ),
+            clusterlib.ScriptTxIn(
+                txins=script_utxos2,
+                script_file=plutus_op2.script_file,
+                collaterals=collateral_utxos2,
+                execution_units=plutus_op2.execution_units,
+                datum_file=plutus_op2.datum_file,
+                redeemer_cbor_file=plutus_op2.redeemer_cbor_file,
+            ),
+        ]
+        tx_files_redeem = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[1].skey_file],
+        )
+        txouts_redeem = [
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=amount * 2),
+        ]
+        tx_output_redeem = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txouts=txouts_redeem,
+            tx_files=tx_files_redeem,
+            fee=fee_redeem1 + fee_redeem2 + fee_redeem_txsize,
+            script_txins=plutus_txins,
+        )
+        tx_signed_redeem = cluster.sign_tx(
+            tx_body_file=tx_output_redeem.out_file,
+            signing_key_files=tx_files_redeem.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        dst_init_balance = cluster.get_address_balance(payment_addrs[1].address)
+
+        cluster.submit_tx(
+            tx_file=tx_signed_redeem,
+            txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
+        )
+
+        assert (
+            cluster.get_address_balance(payment_addrs[1].address) == dst_init_balance + amount * 2
+        ), f"Incorrect balance for destination address `{payment_addrs[1].address}`"
+
+        script_utxos_lovelace = [
+            u for u in [*script_utxos1, *script_utxos2] if u.coin == clusterlib.DEFAULT_COIN
+        ]
+        for u in script_utxos_lovelace:
+            assert not cluster.get_utxo(
+                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+            ), f"Inputs were NOT spent for `{u.address}`"
+
+        # check tx view
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     def test_always_fails(
         self,
