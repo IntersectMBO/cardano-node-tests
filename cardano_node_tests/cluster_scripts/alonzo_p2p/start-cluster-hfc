@@ -98,7 +98,7 @@ cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
-cp "$SCRIPT_DIR/genesis.spec.json" "$STATE_CLUSTER/shelley/genesis.spec.json"
+cp "$SCRIPT_DIR"/genesis*.spec.json "$STATE_CLUSTER/shelley/"
 
 # enable db-sync service
 if [ -n "${DBSYNC_REPO:-""}" ]; then
@@ -148,21 +148,6 @@ cardano_cli_log genesis create \
   --gen-genesis-keys "$NUM_BFT_NODES" \
   --start-time "$START_TIME_SHELLEY" \
   --gen-utxo-keys 1
-
-jq -r '
-  .maxValueSize = 5000 |
-  .collateralPercentage = 150 |
-  .maxCollateralInputs = 3 |
-  .executionPrices.prSteps = 0.0000721 |
-  .executionPrices.prMem = 0.0577 |
-  .lovelacePerUTxOWord = 34482 |
-  .maxBlockExUnits.exUnitsMem = 50000000 |
-  .maxBlockExUnits.exUnitsSteps = 40000000000 |
-  .maxTxExUnits.exUnitsMem = 10000000 |
-  .maxTxExUnits.exUnitsSteps = 10000000000' \
-  < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
-cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
-rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
 
 jq -r '
   .initialFunds = {}' \
