@@ -93,18 +93,6 @@ def _check_pretty_utxo(
     return err
 
 
-@pytest.fixture
-def execution_cost(cluster: clusterlib.ClusterLib):
-    """Get execution cost per unit in lovelace."""
-    protocol_params = cluster.get_protocol_params()
-
-    return {
-        "cost_per_time": protocol_params["executionUnitPrices"]["priceSteps"] or 0,
-        "cost_per_space": protocol_params["executionUnitPrices"]["priceMemory"] or 0,
-        "fixed_cost": protocol_params["txFeeFixed"] or 0,
-    }
-
-
 class TestMinting:
     """Tests for minting using Plutus smart contracts."""
 
@@ -115,7 +103,6 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        execution_cost: dict,
     ):
         """Test minting a token with a Plutus script.
 
@@ -135,8 +122,13 @@ class TestMinting:
 
         plutusrequiredtime = 357_088_586
         plutusrequiredspace = 974_406
-        plutus_time_cost = round(plutusrequiredtime * execution_cost["cost_per_time"])
-        plutus_space_cost = round(plutusrequiredspace * execution_cost["cost_per_space"])
+
+        execution_cost = plutus_common.get_execution_cost(
+            protocol_params=cluster.get_protocol_params()
+        )
+
+        plutus_time_cost = round(plutusrequiredtime * execution_cost.per_time)
+        plutus_space_cost = round(plutusrequiredspace * execution_cost.per_space)
         fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
 
         collateral_amount_1 = round(fee_step2 * 1.5 / 2)
@@ -276,7 +268,6 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         key: str,
-        execution_cost: dict,
     ):
         """Test minting a token with a Plutus script.
 
@@ -296,8 +287,13 @@ class TestMinting:
 
         plutusrequiredtime = 358_849_733
         plutusrequiredspace = 978_434
-        plutus_time_cost = round(plutusrequiredtime * execution_cost["cost_per_time"])
-        plutus_space_cost = round(plutusrequiredspace * execution_cost["cost_per_space"])
+
+        execution_cost = plutus_common.get_execution_cost(
+            protocol_params=cluster.get_protocol_params()
+        )
+
+        plutus_time_cost = round(plutusrequiredtime * execution_cost.per_time)
+        plutus_space_cost = round(plutusrequiredspace * execution_cost.per_space)
         fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
 
         collateral_amount = round(fee_step2 * 1.5)
@@ -426,7 +422,6 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        execution_cost: dict,
     ):
         """Test minting a token with a time constraints Plutus script.
 
@@ -446,8 +441,13 @@ class TestMinting:
 
         plutusrequiredtime = 379_793_656
         plutusrequiredspace = 1_044_064
-        plutus_time_cost = round(plutusrequiredtime * execution_cost["cost_per_time"])
-        plutus_space_cost = round(plutusrequiredspace * execution_cost["cost_per_space"])
+
+        execution_cost = plutus_common.get_execution_cost(
+            protocol_params=cluster.get_protocol_params()
+        )
+
+        plutus_time_cost = round(plutusrequiredtime * execution_cost.per_time)
+        plutus_space_cost = round(plutusrequiredspace * execution_cost.per_space)
         fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
 
         collateral_amount = round(fee_step2 * 1.5)
@@ -576,7 +576,6 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        execution_cost: dict,
     ):
         """Test minting two tokens with two different Plutus scripts.
 
@@ -597,8 +596,13 @@ class TestMinting:
 
         plutusrequiredtime = 408_545_501
         plutusrequiredspace = 1_126_016
-        plutus_time_cost = round(plutusrequiredtime * execution_cost["cost_per_time"])
-        plutus_space_cost = round(plutusrequiredspace * execution_cost["cost_per_space"])
+
+        execution_cost = plutus_common.get_execution_cost(
+            protocol_params=cluster.get_protocol_params()
+        )
+
+        plutus_time_cost = round(plutusrequiredtime * execution_cost.per_time)
+        plutus_space_cost = round(plutusrequiredspace * execution_cost.per_space)
         fee_step2 = plutus_time_cost + plutus_space_cost + 10_000_000
 
         fee_step2_total = fee_step2 * 2
