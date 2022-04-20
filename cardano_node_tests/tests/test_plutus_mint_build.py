@@ -198,8 +198,8 @@ class TestBuildMinting:
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
             expected_cost=[
-                plutus_common.ExpectedCost(
-                    expected_time=357_088_586, expected_space=974_406, expected_lovelace=81_970
+                plutus_common.ExecutionCost(
+                    per_time=357_088_586, per_space=974_406, fixed_cost=81_970
                 )
             ],
         )
@@ -358,8 +358,8 @@ class TestBuildMinting:
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
             expected_cost=[
-                plutus_common.ExpectedCost(
-                    expected_time=379_793_656, expected_space=1_044_064, expected_lovelace=87_626
+                plutus_common.ExecutionCost(
+                    per_time=379_793_656, per_space=1_044_064, fixed_cost=87_626
                 )
             ],
         )
@@ -548,11 +548,11 @@ class TestBuildMinting:
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
             expected_cost=[
-                plutus_common.ExpectedCost(
-                    expected_time=408_545_501, expected_space=1_126_016, expected_lovelace=94_428
+                plutus_common.ExecutionCost(
+                    per_time=408_545_501, per_space=1_126_016, fixed_cost=94_428
                 ),
-                plutus_common.ExpectedCost(
-                    expected_time=427_707_230, expected_space=1_188_952, expected_lovelace=99_441
+                plutus_common.ExecutionCost(
+                    per_time=427_707_230, per_space=1_188_952, fixed_cost=99_441
                 ),
             ],
         )
@@ -757,7 +757,7 @@ class TestBuildMinting:
         # compare cost of Plutus script with data from db-sync
         if tx_db_record_step2:
             dbsync_utils.check_plutus_cost(
-                redeemers_record=tx_db_record_step2.redeemers[0], cost_record=plutus_cost_step2[0]
+                redeemer_record=tx_db_record_step2.redeemers[0], cost_record=plutus_cost_step2[0]
             )
 
     @allure.link(helpers.get_vcs_link())
@@ -917,8 +917,8 @@ class TestBuildMinting:
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
             expected_cost=[
-                plutus_common.ExpectedCost(
-                    expected_time=358_849_733, expected_space=978_434, expected_lovelace=82_329
+                plutus_common.ExecutionCost(
+                    per_time=358_849_733, per_space=978_434, fixed_cost=82_329
                 )
             ],
         )

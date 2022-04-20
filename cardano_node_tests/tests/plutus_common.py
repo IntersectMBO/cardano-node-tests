@@ -56,22 +56,40 @@ class Token(NamedTuple):
     amount: int
 
 
-class ExpectedCost(NamedTuple):
-    expected_time: int
-    expected_space: int
-    expected_lovelace: int
+class ExecutionCost(NamedTuple):
+    per_time: int
+    per_space: int
+    fixed_cost: int
 
 
-def check_plutus_cost(plutus_cost: list, expected_cost: List[ExpectedCost]):
+def check_plutus_cost(plutus_cost: List[dict], expected_cost: List[ExecutionCost]):
     """Check plutus transaction cost.
 
     units: the time is in picoseconds and the space is in bytes.
     """
-    for costs, expected_values in zip(plutus_cost, expected_cost):
+    # sort records by total cost
+    sorted_plutus = sorted(
+        plutus_cost,
+        key=lambda x: x["executionUnits"]["memory"]  # type: ignore
+        + x["executionUnits"]["steps"]
+        + x["lovelaceCost"],
+    )
+    sorted_expected = sorted(expected_cost, key=lambda x: x.per_space + x.per_time + x.fixed_cost)
+
+    for costs, expected_values in zip(sorted_plutus, sorted_expected):
         tx_time = costs["executionUnits"]["steps"]
         tx_space = costs["executionUnits"]["memory"]
         lovelace_cost = costs["lovelaceCost"]
 
-        assert helpers.is_in_interval(tx_time, expected_values.expected_time, frac=0.15)
-        assert helpers.is_in_interval(tx_space, expected_values.expected_space, frac=0.15)
-        assert helpers.is_in_interval(lovelace_cost, expected_values.expected_lovelace, frac=0.15)
+        assert helpers.is_in_interval(tx_time, expected_values.per_time, frac=0.15)
+        assert helpers.is_in_interval(tx_space, expected_values.per_space, frac=0.15)
+        assert helpers.is_in_interval(lovelace_cost, expected_values.fixed_cost, frac=0.15)
+
+
+def get_execution_cost(protocol_params: dict):
+    """Get execution cost per unit in Lovelace."""
+    return ExecutionCost(
+        per_time=protocol_params["executionUnitPrices"]["priceSteps"] or 0,
+        per_space=protocol_params["executionUnitPrices"]["priceMemory"] or 0,
+        fixed_cost=protocol_params["txFeeFixed"] or 0,
+    )
