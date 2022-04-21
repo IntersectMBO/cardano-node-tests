@@ -157,9 +157,9 @@ def check_tx_view(  # noqa: C901
     loaded_withdrawals = set()
     if tx_loaded_withdrawals:
         for withdrawal in tx_loaded_withdrawals:
-            withdrawal_key = withdrawal["credential"].get("key hash") or withdrawal[
-                "credential"
-            ].get("script hash")
+            withdrawal_key = withdrawal.get("stake credential key hash") or withdrawal.get(
+                "stake credential script hash"
+            )
             withdrawal_amount = int(withdrawal["amount"].split()[0] or 0)
             loaded_withdrawals.add((withdrawal_key, withdrawal_amount))
 
@@ -171,10 +171,10 @@ def check_tx_view(  # noqa: C901
         raise AssertionError(f"withdrawals: {tx_raw_withdrawals} != {loaded_withdrawals}")
 
     # check certificates
-    tx_raw_len_certs = len(set(tx_raw_output.tx_files.certificate_files)) + len(
+    tx_raw_len_certs = len(tx_raw_output.tx_files.certificate_files) + len(
         tx_raw_output.complex_certs
     )
-    loaded_len_certs = len(set(tx_loaded.get("certificates") or ()))
+    loaded_len_certs = len(tx_loaded.get("certificates") or [])
 
     if tx_raw_len_certs != loaded_len_certs:
         raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")
