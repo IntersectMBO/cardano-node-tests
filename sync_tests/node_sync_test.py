@@ -494,13 +494,14 @@ def start_node_unix(env, tag_no):
         )
 
 
-def stop_node():
+def stop_node(platform_system):
     for proc in process_iter():
         if "cardano-node" in proc.name():
             print(f" --- Killing the `cardano-node` process - {proc}")
-            proc.send_signal(signal.SIGINT)
-            proc.terminate()
-            proc.kill()
+            if "windows" in platform_system.lower():
+                proc.send_signal(signal.SIGTERM)
+            else:
+                proc.send_signal(signal.SIGINT)
     time.sleep(10)
     for proc in process_iter():
         if "cardano-node" in proc.name():
@@ -816,7 +817,7 @@ def main():
      ) = (None, None, None, None, None, None, None, None, None, None, None, None, None, None, 0)
     if tag_no2 != "None":
         print(f"   =============== Stop node using tag_no1: {tag_no1} ======================")
-        stop_node()
+        stop_node(platform_system)
 
         print("   ================ Delete the previous node files =======================")
         delete_node_files()
