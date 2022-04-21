@@ -18,8 +18,8 @@ outputs:
   amount:
     lovelace: 2809818
   network: Testnet
-  payment credential:
-    key hash: 9545290549fe29e2c3e4905118d625bc0695779814551e948185146e
+  payment credential key hash: 9545290549fe29e2c3e4905118d625bc0695779814551e948185146e
+  reference script: null
   stake reference: null
 required signers (payment key hashes needed for scripts): null
 update proposal: null
