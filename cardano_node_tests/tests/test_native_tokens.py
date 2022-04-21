@@ -1522,6 +1522,9 @@ class TestPolicies:
 class TestTransfer:
     """Tests for transfering tokens."""
 
+    MAX_TOKEN_AMOUNT = 2**64
+    NEW_TOKENS_NUM = 20_000_000
+
     @pytest.fixture
     def payment_addrs(
         self,
@@ -1573,7 +1576,7 @@ class TestTransfer:
                 temp_template=temp_template,
                 token_mint_addr=payment_addrs[0],
                 issuer_addr=payment_addrs[1],
-                amount=20_000_000,
+                amount=self.NEW_TOKENS_NUM,
             )
             new_token = new_tokens[0]
             fixture_cache.value = new_token
@@ -1885,6 +1888,84 @@ class TestTransfer:
                     pytest.xfail(msg)
                 else:
                     pytest.fail(msg)
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(
+        token_amount=st.integers(min_value=NEW_TOKENS_NUM + 1, max_value=MAX_TOKEN_AMOUNT)
+    )
+    @common.hypothesis_settings()
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
+    def test_transfer_invalid_token_amount(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        new_token: clusterlib_utils.TokenRecord,
+        use_build_cmd: bool,
+        token_amount: int,
+    ):
+        """Test sending an invalid amount of tokens to payment address."""
+        temp_template = f"{common.get_test_id(cluster)}_{token_amount}_{use_build_cmd}"
+
+        src_address = new_token.token_mint_addr.address
+        dst_address = payment_addrs[2].address
+
+        ma_destinations = [
+            clusterlib.TxOut(address=dst_address, amount=token_amount, coin=new_token.token),
+        ]
+
+        min_amount_lovelace = 1_379_280
+
+        destinations = [
+            *ma_destinations,
+            clusterlib.TxOut(address=dst_address, amount=min_amount_lovelace),
+        ]
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
+
+        if use_build_cmd:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                # add ADA txout for change address - see node issue #3057
+                destinations.append(
+                    clusterlib.TxOut(address=src_address, amount=min_amount_lovelace)
+                )
+
+                try:
+                    logging.disable(logging.ERROR)
+                    cluster.build_tx(
+                        src_address=src_address,
+                        tx_name=temp_template,
+                        txouts=destinations,
+                        fee_buffer=2_000_000,
+                        tx_files=tx_files,
+                    )
+                finally:
+                    logging.disable(logging.NOTSET)
+
+            assert "Non-Ada assets are unbalanced" in str(excinfo.value)
+        else:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                try:
+                    logging.disable(logging.ERROR)
+                    cluster.send_funds(
+                        src_address=src_address,
+                        destinations=destinations,
+                        tx_name=temp_template,
+                        tx_files=tx_files,
+                    )
+                finally:
+                    logging.disable(logging.NOTSET)
+
+            assert "ValueNotConservedUTxO" in str(excinfo.value)
 
 
 @pytest.mark.testnets
