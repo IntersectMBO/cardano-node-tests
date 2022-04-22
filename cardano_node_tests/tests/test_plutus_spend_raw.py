@@ -40,6 +40,9 @@ FundTupleT = Tuple[
     List[clusterlib.UTXOData], List[clusterlib.UTXOData], List[clusterlib.AddressRecord]
 ]
 
+# approx. fee for Tx size
+FEE_REDEEM_TXSIZE = 180_000
+
 
 @pytest.fixture
 def payment_addrs(
@@ -95,6 +98,7 @@ def _fund_script(
     dst_addr: clusterlib.AddressRecord,
     plutus_op: plutus_common.PlutusOp,
     amount: int,
+    fee_txsize: int = FEE_REDEEM_TXSIZE,
     deposit_amount: int = 0,
     tokens: Optional[List[plutus_common.Token]] = None,  # tokens must already be in `payment_addr`
     tokens_collateral: Optional[
@@ -103,8 +107,8 @@ def _fund_script(
     collateral_fraction_offset: float = 1.0,
 ) -> clusterlib.TxRawOutput:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
-    assert plutus_op.execution_units, "Execution units not provided"
-    plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
+    # pylint: disable=too-many-locals,too-many-arguments
+    assert plutus_op.execution_cost  # for mypy
 
     stokens = tokens or ()
     ctokens = tokens_collateral or ()
@@ -113,9 +117,11 @@ def _fund_script(
         addr_name=temp_template, payment_script_file=plutus_op.script_file
     )
 
-    fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-    collateral_fraction = cluster_obj.get_protocol_params()["collateralPercentage"] / 100
-    collateral_amount = int(fee_redeem * collateral_fraction * collateral_fraction_offset)
+    redeem_cost = plutus_common.compute_cost(
+        execution_cost=plutus_op.execution_cost,
+        protocol_params=cluster_obj.get_protocol_params(),
+        collateral_fraction_offset=collateral_fraction_offset,
+    )
 
     # create a Tx output with a datum hash at the script address
 
@@ -130,11 +136,11 @@ def _fund_script(
     txouts = [
         clusterlib.TxOut(
             address=script_address,
-            amount=amount + fee_redeem + deposit_amount,
+            amount=amount + redeem_cost.fee + fee_txsize + deposit_amount,
             datum_hash=datum_hash,
         ),
         # for collateral
-        clusterlib.TxOut(address=dst_addr.address, amount=collateral_amount),
+        clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
     ]
 
     for token in stokens:
@@ -186,7 +192,7 @@ def _fund_script(
 
     script_balance = script_utxos[0].amount
     assert (
-        script_balance == amount + fee_redeem + deposit_amount
+        script_balance == amount + redeem_cost.fee + fee_txsize + deposit_amount
     ), f"Incorrect balance for script address `{script_address}`"
 
     for token in stokens:
@@ -214,6 +220,7 @@ def _spend_locked_txin(  # noqa: C901
     collateral_utxos: List[clusterlib.UTXOData],
     plutus_op: plutus_common.PlutusOp,
     amount: int,
+    fee_txsize: int = FEE_REDEEM_TXSIZE,
     tx_files: Optional[clusterlib.TxFiles] = None,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
@@ -224,8 +231,7 @@ def _spend_locked_txin(  # noqa: C901
 ) -> Tuple[str, clusterlib.TxRawOutput]:
     """Spend the locked UTxO."""
     # pylint: disable=too-many-arguments,too-many-locals
-    assert plutus_op.execution_units, "Execution units not provided"
-    plutusrequiredtime, plutusrequiredspace = plutus_op.execution_units
+    assert plutus_op.execution_cost
 
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
@@ -233,7 +239,9 @@ def _spend_locked_txin(  # noqa: C901
     # change will be returned to address of the first script
     change_rec = script_utxos[0]
 
-    fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+    redeem_cost = plutus_common.compute_cost(
+        execution_cost=plutus_op.execution_cost, protocol_params=cluster_obj.get_protocol_params()
+    )
 
     script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
     script_lovelace_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_lovelace, 0)
@@ -245,7 +253,7 @@ def _spend_locked_txin(  # noqa: C901
             txins=script_utxos,
             script_file=plutus_op.script_file,
             collaterals=collateral_utxos,
-            execution_units=(plutusrequiredtime, plutusrequiredspace),
+            execution_units=(plutus_op.execution_cost.per_time, plutus_op.execution_cost.per_space),
             datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
             datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
             datum_value=plutus_op.datum_value if plutus_op.datum_value else "",
@@ -261,11 +269,11 @@ def _spend_locked_txin(  # noqa: C901
         clusterlib.TxOut(address=dst_addr.address, amount=amount),
     ]
     # append change
-    if script_lovelace_balance > amount + fee_redeem:
+    if script_lovelace_balance > amount + redeem_cost.fee + fee_txsize:
         txouts.append(
             clusterlib.TxOut(
                 address=change_rec.address,
-                amount=script_lovelace_balance - amount - fee_redeem,
+                amount=script_lovelace_balance - amount - redeem_cost.fee - fee_txsize,
                 datum_hash=change_rec.datum_hash,
             )
         )
@@ -291,7 +299,7 @@ def _spend_locked_txin(  # noqa: C901
         out_file=f"{temp_template}_step2_tx.body",
         txouts=txouts,
         tx_files=tx_files,
-        fee=fee_redeem,
+        fee=redeem_cost.fee + fee_txsize,
         script_txins=plutus_txins,
         invalid_hereafter=invalid_hereafter,
         invalid_before=invalid_before,
@@ -430,13 +438,13 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tx_output_fund = _fund_script(
@@ -511,7 +519,7 @@ class TestLocking:
             script_file=plutus_common.CONTEXT_EQUIVALENCE_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=redeemer_file_dummy,
-            execution_units=(1_000_000_000, 10_000_000),
+            execution_cost=plutus_common.CONTEXT_EQUIVALENCE_COST,
         )
 
         # fund the script address
@@ -612,7 +620,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = f"{common.get_test_id(cluster)}_{variant}"
-        amount = 50_000_000
+        amount = 2_000_000
 
         datum_file: Optional[Path] = None
         datum_cbor_file: Optional[Path] = None
@@ -621,28 +629,32 @@ class TestLocking:
         redeemer_cbor_file: Optional[Path] = None
         redeemer_value: Optional[str] = None
 
-        if variant.endswith("typed_json"):
+        if variant == "typed_json":
             script_file = plutus_common.GUESSING_GAME_PLUTUS
             datum_file = plutus_common.DATUM_42_TYPED
             redeemer_file = plutus_common.REDEEMER_42_TYPED
-        elif variant.endswith("typed_cbor"):
+        elif variant == "typed_cbor":
             script_file = plutus_common.GUESSING_GAME_PLUTUS
             datum_cbor_file = plutus_common.DATUM_42_TYPED_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_TYPED_CBOR
-        elif variant.endswith("untyped_value"):
+        elif variant == "untyped_value":
             script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
             datum_value = "42"
             redeemer_value = "42"
-        elif variant.endswith("untyped_json"):
+        elif variant == "untyped_json":
             script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
             datum_file = plutus_common.DATUM_42
             redeemer_file = plutus_common.REDEEMER_42
-        elif variant.endswith("untyped_cbor"):  # noqa: SIM106
+        elif variant == "untyped_cbor":  # noqa: SIM106
             script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
             datum_cbor_file = plutus_common.DATUM_42_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR
         else:
             raise AssertionError("Unknown test variant.")
+
+        execution_cost = plutus_common.GUESSING_GAME_COST
+        if script_file == plutus_common.GUESSING_GAME_UNTYPED_PLUTUS:
+            execution_cost = plutus_common.GUESSING_GAME_UNTYPED_COST
 
         plutus_op = plutus_common.PlutusOp(
             script_file=script_file,
@@ -652,7 +664,7 @@ class TestLocking:
             redeemer_file=redeemer_file,
             redeemer_cbor_file=redeemer_cbor_file,
             redeemer_value=redeemer_value,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=execution_cost,
         )
 
         tx_output_fund = _fund_script(
@@ -694,7 +706,7 @@ class TestLocking:
         """
         # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         protocol_params = cluster.get_protocol_params()
 
@@ -702,51 +714,38 @@ class TestLocking:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_units=(476_468, 1_700),
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
         plutus_op2 = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
-            execution_units=(388_458_303, 1_031_312),
+            # this is higher than `plutus_common.GUESSING_GAME_COST`, because the script
+            # context has changed to include more stuff
+            execution_cost=plutus_common.ExecutionCost(
+                per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
+            ),
         )
 
         # Step 1: fund the Plutus scripts
 
-        assert plutus_op1.execution_units
-        assert plutus_op2.execution_units
-
-        collateral_fraction = protocol_params["collateralPercentage"] / 100
-        execution_cost = plutus_common.get_execution_cost(protocol_params=protocol_params)
+        assert plutus_op1.execution_cost and plutus_op2.execution_cost  # for mypy
 
         script_address1 = cluster.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
         )
-        fee_redeem1 = (
-            round(
-                plutus_op1.execution_units[0] * execution_cost.per_time
-                + plutus_op1.execution_units[1] * execution_cost.per_space
-            )
-            + 133  # fixed cost for the given Plutus script
+        redeem_cost1 = plutus_common.compute_cost(
+            execution_cost=plutus_op1.execution_cost, protocol_params=protocol_params
         )
-        collateral_amount1 = round(fee_redeem1 * collateral_fraction) + 2_000_000
         datum_hash1 = cluster.get_hash_script_data(script_data_file=plutus_op1.datum_file)
 
         script_address2 = cluster.gen_payment_addr(
             addr_name=f"{temp_template}_addr2", payment_script_file=plutus_op2.script_file
         )
-        fee_redeem2 = (
-            round(
-                plutus_op2.execution_units[0] * execution_cost.per_time
-                + plutus_op2.execution_units[1] * execution_cost.per_space
-            )
-            + 87_515  # fixed cost for the given Plutus script
+        reddem_cost2 = plutus_common.compute_cost(
+            execution_cost=plutus_op2.execution_cost, protocol_params=protocol_params
         )
-        collateral_amount2 = round(fee_redeem2 * collateral_fraction) + 2_000_000
         datum_hash2 = cluster.get_hash_script_data(script_data_file=plutus_op2.datum_file)
-
-        # approx. fee for Tx size
-        fee_redeem_txsize = 180_000
 
         # create a Tx output with a datum hash at the script address
 
@@ -756,17 +755,17 @@ class TestLocking:
         txouts_fund = [
             clusterlib.TxOut(
                 address=script_address1,
-                amount=amount + fee_redeem1,
+                amount=amount + redeem_cost1.fee,
                 datum_hash=datum_hash1,
             ),
             clusterlib.TxOut(
                 address=script_address2,
-                amount=amount + fee_redeem2 + fee_redeem_txsize,
+                amount=amount + reddem_cost2.fee + FEE_REDEEM_TXSIZE,
                 datum_hash=datum_hash2,
             ),
             # for collateral
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=collateral_amount1),
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=collateral_amount2),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=reddem_cost2.collateral),
         ]
         fee_fund = cluster.calculate_tx_fee(
             src_address=payment_addrs[0].address,
@@ -802,14 +801,16 @@ class TestLocking:
         assert collateral_utxos1 and collateral_utxos2, "No collateral UTxOs"
 
         assert (
-            script_utxos1[0].amount == amount + fee_redeem1
+            script_utxos1[0].amount == amount + redeem_cost1.fee
         ), f"Incorrect balance for script address `{script_utxos1[0].address}`"
         assert (
-            script_utxos2[0].amount == amount + fee_redeem2 + fee_redeem_txsize
+            script_utxos2[0].amount == amount + reddem_cost2.fee + FEE_REDEEM_TXSIZE
         ), f"Incorrect balance for script address `{script_utxos2[0].address}`"
 
         # Step 2: spend the "locked" UTxOs
 
+        # for mypy
+        assert plutus_op1.execution_cost and plutus_op2.execution_cost
         assert plutus_op1.datum_file and plutus_op2.datum_file
         assert plutus_op1.redeemer_cbor_file and plutus_op2.redeemer_cbor_file
 
@@ -818,7 +819,10 @@ class TestLocking:
                 txins=script_utxos1,
                 script_file=plutus_op1.script_file,
                 collaterals=collateral_utxos1,
-                execution_units=plutus_op1.execution_units,
+                execution_units=(
+                    plutus_op1.execution_cost.per_time,
+                    plutus_op1.execution_cost.per_space,
+                ),
                 datum_file=plutus_op1.datum_file,
                 redeemer_cbor_file=plutus_op1.redeemer_cbor_file,
             ),
@@ -826,7 +830,10 @@ class TestLocking:
                 txins=script_utxos2,
                 script_file=plutus_op2.script_file,
                 collaterals=collateral_utxos2,
-                execution_units=plutus_op2.execution_units,
+                execution_units=(
+                    plutus_op2.execution_cost.per_time,
+                    plutus_op2.execution_cost.per_space,
+                ),
                 datum_file=plutus_op2.datum_file,
                 redeemer_cbor_file=plutus_op2.redeemer_cbor_file,
             ),
@@ -841,7 +848,7 @@ class TestLocking:
             out_file=f"{temp_template}_step2_tx.body",
             txouts=txouts_redeem,
             tx_files=tx_files_redeem,
-            fee=fee_redeem1 + fee_redeem2 + fee_redeem_txsize,
+            fee=redeem_cost1.fee + reddem_cost2.fee + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
         )
         tx_signed_redeem = cluster.sign_tx(
@@ -893,13 +900,13 @@ class TestLocking:
           and the expected error was raised
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.ALWAYS_FAILS_COST,
         )
 
         logfiles.add_ignore_rule(
@@ -951,13 +958,13 @@ class TestLocking:
         * check that the amount was not transferred and collateral UTxO was spent
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.ALWAYS_FAILS_COST,
         )
 
         tx_output_fund = _fund_script(
@@ -1002,14 +1009,14 @@ class TestLocking:
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
 
-        amount = 50_000_000
+        amount = 2_000_000
         token_amount = 100
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1066,16 +1073,19 @@ class TestLocking:
 
         token_rand = clusterlib.get_rand_str(5)
 
-        amount_fund = 50_000_000
-        amount_spend = 10_000_000
+        amount_fund = 6_000_000
+        amount_spend = 2_000_000
         token_amount_fund = 100
         token_amount_spend = 20
+
+        # add extra fee for tokens
+        fee_redeem_txsize = FEE_REDEEM_TXSIZE + 5_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1095,6 +1105,7 @@ class TestLocking:
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             amount=amount_fund,
+            fee_txsize=fee_redeem_txsize,
             tokens=tokens_fund_rec,
         )
 
@@ -1113,6 +1124,7 @@ class TestLocking:
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=amount_spend,
+            fee_txsize=fee_redeem_txsize,
             tokens=tokens_spend_rec,
         )
 
@@ -1157,7 +1169,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         max_collateral_ins = cluster.get_protocol_params()["maxCollateralInputs"]
         collateral_utxos = []
@@ -1165,12 +1177,15 @@ class TestLocking:
         if scenario == "max":
             collateral_num = max_collateral_ins
             exp_err = ""
+            collateral_fraction_offset = 250_000.0
         elif scenario == "max+1":
             collateral_num = max_collateral_ins + 1
             exp_err = "TooManyCollateralInputs"
+            collateral_fraction_offset = 250_000.0
         else:
             collateral_num = 0
             exp_err = "Transaction body has no collateral inputs"
+            collateral_fraction_offset = 1.0
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -1179,7 +1194,7 @@ class TestLocking:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tx_output_fund = _fund_script(
@@ -1189,6 +1204,7 @@ class TestLocking:
             dst_addr=dst_addr,
             plutus_op=plutus_op,
             amount=amount,
+            collateral_fraction_offset=collateral_fraction_offset,
         )
         fund_txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{fund_txid}#0")
@@ -1272,15 +1288,15 @@ class TestNegative:
         * check that the amount was not transferred and collateral UTxO was not spent
         """
         temp_template = f"{common.get_test_id(cluster)}_{variant}"
-        amount = 50_000_000
+        amount = 2_000_000
 
-        if variant.endswith("42_43"):
+        if variant == "42_43":
             datum_file = plutus_common.DATUM_42_TYPED
             redeemer_file = plutus_common.REDEEMER_43_TYPED
-        elif variant.endswith("43_42"):
+        elif variant == "43_42":
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_42_TYPED
-        elif variant.endswith("43_43"):  # noqa: SIM106
+        elif variant == "43_43":  # noqa: SIM106
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_43_TYPED
         else:
@@ -1290,7 +1306,7 @@ class TestNegative:
             script_file=plutus_common.GUESSING_GAME_PLUTUS,
             datum_file=datum_file,
             redeemer_file=redeemer_file,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.GUESSING_GAME_COST,
         )
 
         tx_output_fund = _fund_script(
@@ -1337,14 +1353,14 @@ class TestNegative:
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
 
-        amount = 50_000_000
+        amount = 2_000_000
         token_amount = 100
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1401,13 +1417,13 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_cbor_file=plutus_common.DATUM_42_CBOR,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tx_output_fund = _fund_script(
@@ -1431,7 +1447,9 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-        assert "InsufficientCollateral" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "cardano-cli transaction submit" in err_str
+        assert "ScriptsNotPaidUTxO" in err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -1450,27 +1468,28 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
-
-        plutusrequiredtime, plutusrequiredspace = 700_000_000, 10_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(plutusrequiredtime, plutusrequiredspace),
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+        )
+        assert plutus_op.execution_cost  # for mypy
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
         )
 
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-        collateral_fraction = cluster.get_protocol_params()["collateralPercentage"] / 100
-        collateral_amount = int(fee_redeem * collateral_fraction)
-
         txouts = [
-            clusterlib.TxOut(address=payment_addr.address, amount=amount + fee_redeem),
-            clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
+            clusterlib.TxOut(
+                address=payment_addr.address, amount=amount + redeem_cost.fee + FEE_REDEEM_TXSIZE
+            ),
+            clusterlib.TxOut(address=payment_addr.address, amount=redeem_cost.collateral),
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
@@ -1517,13 +1536,15 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
+        # increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
+        execution_cost = plutus_common.ALWAYS_SUCCEEDS_COST._replace(fixed_cost=2_000_000)
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=execution_cost,
         )
 
         tx_output_fund = _fund_script(
@@ -1558,7 +1579,7 @@ class TestNegativeRedeemer:
 
     MAX_INT_VAL = (2**64) - 1
     MIN_INT_VAL = -MAX_INT_VAL
-    AMOUNT = 50_000_000
+    AMOUNT = 2_000_000
 
     @pytest.fixture
     def fund_script_guessing_game(
@@ -1589,7 +1610,7 @@ class TestNegativeRedeemer:
             plutus_op = plutus_common.PlutusOp(
                 script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
                 datum_file=plutus_common.DATUM_42,
-                execution_units=(700_000_000, 10_000_000),
+                execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
             )
 
             tx_output_fund = _fund_script(
@@ -1609,6 +1630,13 @@ class TestNegativeRedeemer:
 
         return script_utxos, collateral_utxos, payment_addrs
 
+    @pytest.fixture
+    def cost_per_unit(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ) -> plutus_common.ExecutionCost:
+        return plutus_common.get_cost_per_unit(protocol_params=cluster.get_protocol_params())
+
     def _failed_tx_build(
         self,
         cluster_obj: clusterlib.ClusterLib,
@@ -1617,15 +1645,20 @@ class TestNegativeRedeemer:
         collateral_utxos: List[clusterlib.UTXOData],
         redeemer_content: str,
         dst_addr: clusterlib.AddressRecord,
+        cost_per_unit: plutus_common.ExecutionCost,
     ) -> str:
         """Try to build a Tx and expect failure."""
         redeemer_file = f"{temp_template}.redeemer"
         with open(redeemer_file, "w", encoding="utf-8") as outfile:
             outfile.write(redeemer_content)
 
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        fee_redeem = (
+            round(
+                plutus_common.GUESSING_GAME_UNTYPED_COST.per_time * cost_per_unit.per_time
+                + plutus_common.GUESSING_GAME_UNTYPED_COST.per_space * cost_per_unit.per_space
+            )
+            + plutus_common.GUESSING_GAME_UNTYPED_COST.fixed_cost
+        )
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
         txouts = [clusterlib.TxOut(address=dst_addr.address, amount=self.AMOUNT)]
@@ -1635,7 +1668,10 @@ class TestNegativeRedeemer:
                 txins=script_utxos,
                 script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
                 collaterals=collateral_utxos,
-                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                execution_units=(
+                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_time,
+                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_space,
+                ),
                 datum_file=plutus_common.DATUM_42,
                 redeemer_file=Path(redeemer_file),
             )
@@ -1646,7 +1682,7 @@ class TestNegativeRedeemer:
                 out_file=f"{temp_template}_step2_tx.body",
                 txouts=txouts,
                 tx_files=tx_files,
-                fee=fee_redeem,
+                fee=fee_redeem + FEE_REDEEM_TXSIZE,
                 script_txins=plutus_txins,
             )
         return str(excinfo.value)
@@ -1659,6 +1695,7 @@ class TestNegativeRedeemer:
         collateral_utxos: List[clusterlib.UTXOData],
         redeemer_value: int,
         dst_addr: clusterlib.AddressRecord,
+        cost_per_unit: plutus_common.ExecutionCost,
     ):
         """Try to spend a locked UTxO with redeemer int value that is not in allowed range."""
         redeemer_content = {}
@@ -1670,9 +1707,13 @@ class TestNegativeRedeemer:
             with open(redeemer_file, "w", encoding="utf-8") as outfile:
                 json.dump(redeemer_content, outfile)
 
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        fee_redeem = (
+            round(
+                plutus_common.GUESSING_GAME_UNTYPED_COST.per_time * cost_per_unit.per_time
+                + plutus_common.GUESSING_GAME_UNTYPED_COST.per_space * cost_per_unit.per_space
+            )
+            + plutus_common.GUESSING_GAME_UNTYPED_COST.fixed_cost
+        )
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
         txouts = [clusterlib.TxOut(address=dst_addr.address, amount=self.AMOUNT)]
@@ -1682,7 +1723,10 @@ class TestNegativeRedeemer:
                 txins=script_utxos,
                 script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
                 collaterals=collateral_utxos,
-                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                execution_units=(
+                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_time,
+                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_space,
+                ),
                 datum_file=plutus_common.DATUM_42,
                 redeemer_file=redeemer_file if redeemer_content else "",
                 redeemer_value=str(redeemer_value) if not redeemer_content else "",
@@ -1694,7 +1738,7 @@ class TestNegativeRedeemer:
                 out_file=f"{temp_template}_step2_tx.body",
                 txouts=txouts,
                 tx_files=tx_files,
-                fee=fee_redeem,
+                fee=fee_redeem + FEE_REDEEM_TXSIZE,
                 script_txins=plutus_txins,
             )
         assert "Value out of range within the script data" in str(excinfo.value)
@@ -1708,6 +1752,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
         redeemer_value: int,
+        cost_per_unit: plutus_common.ExecutionCost,
     ):
         """Try to spend a locked UTxO with an unexpected redeemer value.
 
@@ -1730,9 +1775,14 @@ class TestNegativeRedeemer:
 
         # try to spend the "locked" UTxO
 
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        fee_redeem = (
+            round(
+                plutus_common.GUESSING_GAME_UNTYPED_COST.per_time * cost_per_unit.per_time
+                + plutus_common.GUESSING_GAME_UNTYPED_COST.per_space * cost_per_unit.per_space
+            )
+            + plutus_common.GUESSING_GAME_UNTYPED_COST.fixed_cost
+        )
+
         dst_addr = payment_addrs[1]
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
@@ -1743,7 +1793,10 @@ class TestNegativeRedeemer:
                 txins=script_utxos,
                 script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
                 collaterals=collateral_utxos,
-                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                execution_units=(
+                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_time,
+                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_space,
+                ),
                 datum_file=plutus_common.DATUM_42,
                 redeemer_file=redeemer_file if redeemer_content else "",
                 redeemer_value=str(redeemer_value) if not redeemer_content else "",
@@ -1753,7 +1806,7 @@ class TestNegativeRedeemer:
             out_file=f"{temp_template}_step2_tx.body",
             txouts=txouts,
             tx_files=tx_files,
-            fee=fee_redeem,
+            fee=fee_redeem + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
         )
         tx_signed = cluster.sign_tx(
@@ -1775,6 +1828,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_value: int,
     ):
         """Try to spend a locked UTxO with a redeemer int value < minimum allowed value.
@@ -1791,6 +1845,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_value=redeemer_value,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1801,6 +1856,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_value: int,
     ):
         """Try to spend a locked UTxO with a redeemer int value > maximum allowed value.
@@ -1817,6 +1873,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_value=redeemer_value,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1827,6 +1884,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_value: bytes,
     ):
         """Try to spend a locked UTxO with an invalid redeemer type.
@@ -1843,9 +1901,14 @@ class TestNegativeRedeemer:
 
         # try to spend the "locked" UTxO
 
-        plutusrequiredtime = 700_000_000
-        plutusrequiredspace = 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
+        fee_redeem = (
+            round(
+                plutus_common.GUESSING_GAME_UNTYPED_COST.per_time * cost_per_unit.per_time
+                + plutus_common.GUESSING_GAME_UNTYPED_COST.per_space * cost_per_unit.per_space
+            )
+            + plutus_common.GUESSING_GAME_UNTYPED_COST.fixed_cost
+        )
+
         dst_addr = payment_addrs[1]
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
@@ -1856,7 +1919,10 @@ class TestNegativeRedeemer:
                 txins=script_utxos,
                 script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
                 collaterals=collateral_utxos,
-                execution_units=(plutusrequiredtime, plutusrequiredspace),
+                execution_units=(
+                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_time,
+                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_space,
+                ),
                 datum_file=plutus_common.DATUM_42,
                 redeemer_file=Path(redeemer_file),
             )
@@ -1866,7 +1932,7 @@ class TestNegativeRedeemer:
             out_file=f"{temp_template}_step2_tx.body",
             txouts=txouts,
             tx_files=tx_files,
-            fee=fee_redeem,
+            fee=fee_redeem + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
         )
         tx_signed = cluster.sign_tx(
@@ -1888,6 +1954,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_value: bytes,
     ):
         """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
@@ -1907,6 +1974,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
         assert 'field "int" does not have the type required by the schema' in err
 
@@ -1918,6 +1986,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_value: bytes,
     ):
         """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
@@ -1937,6 +2006,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
         assert 'field "int" does not have the type required by the schema' in err
 
@@ -1948,6 +2018,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_value: int,
     ):
         """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
@@ -1967,6 +2038,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
         assert 'field "bytes" does not have the type required by the schema' in err
 
@@ -1978,6 +2050,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_value: int,
     ):
         """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
@@ -1997,6 +2070,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
         assert 'field "bytes" does not have the type required by the schema' in err
 
@@ -2008,6 +2082,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_value: str,
     ):
         """Try to build a Tx using a redeemer value that is invalid JSON.
@@ -2027,6 +2102,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
         assert "Invalid JSON format" in err
 
@@ -2038,6 +2114,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_type: str,
     ):
         """Try to build a Tx using a JSON typed schema that specifies an invalid type.
@@ -2057,6 +2134,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
 
         assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
@@ -2071,6 +2149,7 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
         redeemer_type: str,
     ):
         """Try to build a Tx using a JSON untyped schema that specifies an invalid type.
@@ -2090,6 +2169,7 @@ class TestNegativeRedeemer:
             collateral_utxos=collateral_utxos,
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
         )
 
         assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
