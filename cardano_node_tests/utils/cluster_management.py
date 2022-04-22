@@ -468,6 +468,14 @@ class _ClusterGetter:
 
         return True
 
+    def _is_dev_cluster_ready(self) -> bool:
+        """Check if development cluster instance is ready to be used."""
+        work_dir = cluster_nodes.get_cluster_env().work_dir
+        state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}0"
+        if (state_dir / cluster_nodes.ADDRS_DATA).exists():
+            return True
+        return False
+
     def _setup_dev_cluster(self) -> None:
         """Set up cluster instance that was already started outside of test framework."""
         work_dir = cluster_nodes.get_cluster_env().work_dir
@@ -896,7 +904,11 @@ class _ClusterGetter:
                     f"Ignoring the '{start_cmd}' cluster start command as "
                     "'DEV_CLUSTER_RUNNING' is set."
                 )
-            self._setup_dev_cluster()
+            # check if the development cluster instance is ready by now so we don't need to obtain
+            # cluster lock when it is not necessary
+            if not self._is_dev_cluster_ready():
+                with locking.FileLockIfXdist(self.cm.cluster_lock):
+                    self._setup_dev_cluster()
 
         if configuration.FORBID_RESTART and start_cmd:
             raise RuntimeError("Cannot use custom start command when 'FORBID_RESTART' is set.")
