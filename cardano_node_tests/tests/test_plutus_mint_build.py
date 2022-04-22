@@ -44,7 +44,7 @@ def payment_addrs(
         addrs[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=10_000_000_000,
+        amount=3_000_000_000,
     )
 
     return addrs
@@ -69,6 +69,8 @@ class TestBuildMinting:
         * check that the expected amount was transferred to token issuer's address
         * mint the token using a Plutus script
         * check that the token was minted and collateral UTxO was not spent
+        * check expected fees
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
@@ -76,11 +78,16 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5_000_000
-        script_fund = 1_000_000_000
-        collateral_fund_1 = 750_000_000
-        collateral_fund_2 = 750_000_000
+        lovelace_amount = 2_000_000
         token_amount = 5
+        script_fund = 200_000_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_COST, protocol_params=cluster.get_protocol_params()
+        )
+
+        collateral_amount_1 = round(minting_cost.collateral / 2)
+        collateral_amount_2 = minting_cost.collateral - collateral_amount_1
 
         redeemer_file = plutus_common.REDEEMER_42
 
@@ -90,9 +97,9 @@ class TestBuildMinting:
         txouts_step1 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=script_fund),
             # for collateral 1
-            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_fund_1),
+            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_amount_1),
             # for collateral 2
-            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_fund_2),
+            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_amount_2),
         ]
 
         tx_files_step1 = clusterlib.TxFiles(
@@ -117,18 +124,18 @@ class TestBuildMinting:
         issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
         assert (
             issuer_step1_balance
-            == issuer_init_balance + script_fund + collateral_fund_1 + collateral_fund_2
+            == issuer_init_balance + script_fund + collateral_amount_1 + collateral_amount_2
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         # Step 2: mint the "qacoin"
         txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
         mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
         collateral_utxo_1 = clusterlib.UTXOData(
-            utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund_1, address=issuer_addr.address
+            utxo_hash=txid_step1, utxo_ix=2, amount=collateral_amount_1, address=issuer_addr.address
         )
 
         collateral_utxo_2 = clusterlib.UTXOData(
-            utxo_hash=txid_step1, utxo_ix=3, amount=collateral_fund_2, address=issuer_addr.address
+            utxo_hash=txid_step1, utxo_ix=3, amount=collateral_amount_2, address=issuer_addr.address
         )
 
         policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
@@ -179,7 +186,7 @@ class TestBuildMinting:
 
         assert (
             cluster.get_address_balance(issuer_addr.address)
-            == issuer_init_balance + collateral_fund_1 + collateral_fund_2 + lovelace_amount
+            == issuer_init_balance + collateral_amount_1 + collateral_amount_2 + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
@@ -192,17 +199,13 @@ class TestBuildMinting:
         expected_fee_step2 = 371_111
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
-        # check tx_view
-        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
-
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
-            expected_cost=[
-                plutus_common.ExecutionCost(
-                    per_time=357_088_586, per_space=974_406, fixed_cost=81_970
-                )
-            ],
+            expected_cost=[plutus_common.MINTING_COST],
         )
+
+        # check tx_view
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
@@ -221,6 +224,8 @@ class TestBuildMinting:
         * check that the expected amount was transferred to token issuer's address
         * mint the token using a Plutus script
         * check that the token was minted and collateral UTxO was not spent
+        * check expected fees
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
@@ -228,10 +233,14 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5_000_000
-        script_fund = 1_000_000_000
-        collateral_fund = 1_500_000_000
+        lovelace_amount = 2_000_000
         token_amount = 5
+        script_fund = 200_000_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_TIME_RANGE_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
 
@@ -240,7 +249,7 @@ class TestBuildMinting:
         txouts_step1 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=script_fund),
             # for collateral
-            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_fund),
+            clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost.collateral),
         ]
 
         tx_files_step1 = clusterlib.TxFiles(
@@ -264,7 +273,7 @@ class TestBuildMinting:
 
         issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
         assert (
-            issuer_step1_balance == issuer_init_balance + script_fund + collateral_fund
+            issuer_step1_balance == issuer_init_balance + script_fund + minting_cost.collateral
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         # Step 2: mint the "qacoin"
@@ -272,7 +281,10 @@ class TestBuildMinting:
         txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
         mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
+            utxo_hash=txid_step1,
+            utxo_ix=2,
+            amount=minting_cost.collateral,
+            address=issuer_addr.address,
         )
 
         slot_step2 = cluster.get_slot_no()
@@ -339,7 +351,7 @@ class TestBuildMinting:
 
         assert (
             cluster.get_address_balance(issuer_addr.address)
-            == issuer_init_balance + collateral_fund + lovelace_amount
+            == issuer_init_balance + minting_cost.collateral + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
@@ -352,17 +364,13 @@ class TestBuildMinting:
         expected_fee_step2 = 411_175
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
-        # check tx_view
-        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
-
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
-            expected_cost=[
-                plutus_common.ExecutionCost(
-                    per_time=379_793_656, per_space=1_044_064, fixed_cost=87_626
-                )
-            ],
+            expected_cost=[plutus_common.MINTING_TIME_RANGE_COST],
         )
+
+        # check tx_view
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
@@ -382,6 +390,8 @@ class TestBuildMinting:
         * mint the tokens using two different Plutus scripts
         * check that the tokens were minted and collateral UTxOs were not spent
         * check transaction view output
+        * check expected fees
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
@@ -389,10 +399,26 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5_000_000
-        script_fund = 1_000_000_000
-        collateral_fund = 1_500_000_000
+        lovelace_amount = 2_000_000
         token_amount = 5
+        script_fund = 500_000_000
+
+        # this is higher than `plutus_common.MINTING*_COST`, because the script context has changed
+        # to include more stuff
+        minting_cost_two = plutus_common.ExecutionCost(
+            per_time=408_545_501, per_space=1_126_016, fixed_cost=94_428
+        )
+        minting_time_range_cost_two = plutus_common.ExecutionCost(
+            per_time=427_707_230, per_space=1_188_952, fixed_cost=99_441
+        )
+
+        protocol_params = cluster.get_protocol_params()
+        minting_cost1 = plutus_common.compute_cost(
+            execution_cost=minting_cost_two, protocol_params=protocol_params
+        )
+        minting_cost2 = plutus_common.compute_cost(
+            execution_cost=minting_time_range_cost_two, protocol_params=protocol_params
+        )
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
 
@@ -404,8 +430,8 @@ class TestBuildMinting:
         txouts_step1 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=script_fund),
             # for collaterals
-            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_fund),
-            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_fund),
+            clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost1.collateral),
+            clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost2.collateral),
         ]
         tx_output_step1 = cluster.build_tx(
             src_address=payment_addr.address,
@@ -425,7 +451,11 @@ class TestBuildMinting:
 
         issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
         assert (
-            issuer_step1_balance == issuer_init_balance + script_fund + collateral_fund * 2
+            issuer_step1_balance
+            == issuer_init_balance
+            + script_fund
+            + minting_cost1.collateral
+            + minting_cost2.collateral
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         # Step 2: mint the "qacoins"
@@ -520,7 +550,10 @@ class TestBuildMinting:
 
         assert (
             cluster.get_address_balance(issuer_addr.address)
-            == issuer_init_balance + collateral_fund * 2 + lovelace_amount
+            == issuer_init_balance
+            + minting_cost1.collateral
+            + minting_cost2.collateral
+            + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         token_utxo_timerange = cluster.get_utxo(
@@ -542,20 +575,13 @@ class TestBuildMinting:
         expected_fee_step2 = 633_269
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
-        # check tx_view
-        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
-
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
-            expected_cost=[
-                plutus_common.ExecutionCost(
-                    per_time=408_545_501, per_space=1_126_016, fixed_cost=94_428
-                ),
-                plutus_common.ExecutionCost(
-                    per_time=427_707_230, per_space=1_188_952, fixed_cost=99_441
-                ),
-            ],
+            expected_cost=[minting_cost_two, minting_time_range_cost_two],
         )
+
+        # check tx_view
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         # check transactions in db-sync
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
@@ -581,6 +607,7 @@ class TestBuildMinting:
         * derive the correct redeemer from the dummy Tx
         * mint the token using the derived redeemer
         * check that the token was minted and collateral UTxO was not spent
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
@@ -588,10 +615,14 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5_000_000
-        script_fund = 1_000_000_000
-        collateral_fund = 1_500_000_000
+        lovelace_amount = 2_000_000
         token_amount = 5
+        script_fund = 200_000_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
 
         issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
 
@@ -603,7 +634,7 @@ class TestBuildMinting:
         txouts_step1 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=script_fund),
             # for collateral
-            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_fund),
+            clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost.collateral),
         ]
         tx_output_step1 = cluster.build_tx(
             src_address=payment_addr.address,
@@ -623,7 +654,7 @@ class TestBuildMinting:
 
         issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
         assert (
-            issuer_step1_balance == issuer_init_balance + script_fund + collateral_fund
+            issuer_step1_balance == issuer_init_balance + script_fund + minting_cost.collateral
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         # Step 2: mint the "qacoin"
@@ -633,7 +664,10 @@ class TestBuildMinting:
         txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
         mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
+            utxo_hash=txid_step1,
+            utxo_ix=2,
+            amount=minting_cost.collateral,
+            address=issuer_addr.address,
         )
 
         policyid = cluster.get_policyid(plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS)
@@ -741,11 +775,16 @@ class TestBuildMinting:
 
         assert (
             cluster.get_address_balance(issuer_addr.address)
-            == issuer_init_balance + collateral_fund + lovelace_amount
+            == issuer_init_balance + minting_cost.collateral + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost_step2,
+            expected_cost=[plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST],
+        )
 
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
@@ -784,6 +823,8 @@ class TestBuildMinting:
         * check that the expected amount was transferred to token issuer's address
         * mint the token using a Plutus script with required signer
         * check that the token was minted and collateral UTxO was not spent
+        * check expected fees
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
@@ -791,10 +832,14 @@ class TestBuildMinting:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5_000_000
-        script_fund = 1_000_000_000
-        collateral_fund = 1_500_000_000
+        lovelace_amount = 2_000_000
         token_amount = 5
+        script_fund = 200_000_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_WITNESS_REDEEMER_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
 
         if key == "normal":
             redeemer_file = plutus_common.DATUM_WITNESS_GOLDEN_NORMAL
@@ -810,7 +855,7 @@ class TestBuildMinting:
         txouts_step1 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=script_fund),
             # for collateral
-            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_fund),
+            clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost.collateral),
         ]
 
         tx_files_step1 = clusterlib.TxFiles(
@@ -834,7 +879,7 @@ class TestBuildMinting:
 
         issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
         assert (
-            issuer_step1_balance == issuer_init_balance + script_fund + collateral_fund
+            issuer_step1_balance == issuer_init_balance + script_fund + minting_cost.collateral
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         # Step 2: mint the "qacoin"
@@ -842,7 +887,10 @@ class TestBuildMinting:
         txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
         mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
+            utxo_hash=txid_step1,
+            utxo_ix=2,
+            amount=minting_cost.collateral,
+            address=issuer_addr.address,
         )
 
         policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
@@ -901,7 +949,7 @@ class TestBuildMinting:
 
         assert (
             cluster.get_address_balance(issuer_addr.address)
-            == issuer_init_balance + collateral_fund + lovelace_amount
+            == issuer_init_balance + minting_cost.collateral + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
@@ -916,11 +964,7 @@ class TestBuildMinting:
 
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
-            expected_cost=[
-                plutus_common.ExecutionCost(
-                    per_time=358_849_733, per_space=978_434, fixed_cost=82_329
-                )
-            ],
+            expected_cost=[plutus_common.MINTING_WITNESS_REDEEMER_COST],
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
@@ -954,10 +998,14 @@ class TestBuildMintingNegative:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 5_000_000
-        script_fund = 1_000_000_000
-        collateral_fund = 1_500_000_000
+        lovelace_amount = 2_000_000
         token_amount = 5
+        script_fund = 200_000_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_WITNESS_REDEEMER_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
 
         redeemer_file = plutus_common.DATUM_WITNESS_GOLDEN_NORMAL
 
@@ -968,7 +1016,7 @@ class TestBuildMintingNegative:
         txouts_step1 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=script_fund),
             # for collateral
-            clusterlib.TxOut(address=issuer_addr.address, amount=collateral_fund),
+            clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost.collateral),
         ]
 
         tx_files_step1 = clusterlib.TxFiles(
@@ -992,7 +1040,7 @@ class TestBuildMintingNegative:
 
         issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
         assert (
-            issuer_step1_balance == issuer_init_balance + script_fund + collateral_fund
+            issuer_step1_balance == issuer_init_balance + script_fund + minting_cost.collateral
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         # Step 2: mint the "qacoin"
@@ -1000,7 +1048,10 @@ class TestBuildMintingNegative:
         txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
         mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
         collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=txid_step1, utxo_ix=2, amount=collateral_fund, address=issuer_addr.address
+            utxo_hash=txid_step1,
+            utxo_ix=2,
+            amount=minting_cost.collateral,
+            address=issuer_addr.address,
         )
 
         policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)

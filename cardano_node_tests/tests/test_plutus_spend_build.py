@@ -50,7 +50,7 @@ def payment_addrs(
         addrs[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=3_000_000_000,
+        amount=1_000_000_000,
     )
 
     return addrs
@@ -95,14 +95,19 @@ def _build_fund_script(
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
-    script_fund = 1_000_000_000
-    collateral_fund = 1_500_000_000
+    assert plutus_op.execution_cost  # for mypy
+
+    script_fund = 200_000_000
 
     stokens = tokens or ()
     ctokens = tokens_collateral or ()
 
     script_address = cluster_obj.gen_payment_addr(
         addr_name=temp_template, payment_script_file=plutus_op.script_file
+    )
+
+    redeem_cost = plutus_common.compute_cost(
+        execution_cost=plutus_op.execution_cost, protocol_params=cluster_obj.get_protocol_params()
     )
 
     # create a Tx output with a datum hash at the script address
@@ -118,7 +123,7 @@ def _build_fund_script(
     txouts = [
         clusterlib.TxOut(address=script_address, amount=script_fund, datum_hash=datum_hash),
         # for collateral
-        clusterlib.TxOut(address=dst_addr.address, amount=collateral_fund),
+        clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
     ]
 
     for token in stokens:
@@ -382,9 +387,9 @@ class TestBuildLocking:
         * create a Tx output with a datum hash at the script address
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
-        * check that the expected amount was spent when success is expected
-        * OR check that the amount was not transferred and collateral UTxO was spent
-          when failure is expected
+        * check that the expected amount was spent
+        * check expected fees
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
@@ -393,6 +398,7 @@ class TestBuildLocking:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tx_output_fund = _build_fund_script(
@@ -414,24 +420,20 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=2_000_000,
         )
 
         # check expected fees
         expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
-        if tx_output:
-            expected_fee = 170_782
-            assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
+        expected_fee = 170_782
+        assert tx_output and helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
-        if plutus_cost:
-            plutus_common.check_plutus_cost(
-                plutus_cost=plutus_cost,
-                expected_cost=[
-                    plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
-                ],
-            )
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[plutus_common.ALWAYS_SUCCEEDS_COST],
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -481,6 +483,7 @@ class TestBuildLocking:
             script_file=plutus_common.CONTEXT_EQUIVALENCE_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=redeemer_file_dummy,
+            execution_cost=plutus_common.CONTEXT_EQUIVALENCE_COST,
         )
 
         # fund the script address
@@ -592,28 +595,32 @@ class TestBuildLocking:
         redeemer_cbor_file: Optional[Path] = None
         redeemer_value: Optional[str] = None
 
-        if variant.endswith("typed_json"):
+        if variant == "typed_json":
             script_file = plutus_common.GUESSING_GAME_PLUTUS
             datum_file = plutus_common.DATUM_42_TYPED
             redeemer_file = plutus_common.REDEEMER_42_TYPED
-        elif variant.endswith("typed_cbor"):
+        elif variant == "typed_cbor":
             script_file = plutus_common.GUESSING_GAME_PLUTUS
             datum_cbor_file = plutus_common.DATUM_42_TYPED_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_TYPED_CBOR
-        elif variant.endswith("untyped_value"):
+        elif variant == "untyped_value":
             script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
             datum_value = "42"
             redeemer_value = "42"
-        elif variant.endswith("untyped_json"):
+        elif variant == "untyped_json":
             script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
             datum_file = plutus_common.DATUM_42
             redeemer_file = plutus_common.REDEEMER_42
-        elif variant.endswith("untyped_cbor"):  # noqa: SIM106
+        elif variant == "untyped_cbor":  # noqa: SIM106
             script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
             datum_cbor_file = plutus_common.DATUM_42_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR
         else:
             raise AssertionError("Unknown test variant.")
+
+        execution_cost = plutus_common.GUESSING_GAME_COST
+        if script_file == plutus_common.GUESSING_GAME_UNTYPED_PLUTUS:
+            execution_cost = plutus_common.GUESSING_GAME_UNTYPED_COST
 
         plutus_op = plutus_common.PlutusOp(
             script_file=script_file,
@@ -623,6 +630,7 @@ class TestBuildLocking:
             redeemer_file=redeemer_file,
             redeemer_cbor_file=redeemer_cbor_file,
             redeemer_value=redeemer_value,
+            execution_cost=execution_cost,
         )
 
         tx_output_fund = _build_fund_script(
@@ -644,7 +652,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=2_000_000,
         )
 
         # check expected fees
@@ -668,35 +676,50 @@ class TestBuildLocking:
         * spend the locked UTxO
         * check that the expected amount was spent
         * check expected fees
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
+        script_fund = 200_000_000
 
-        script_fund = 500_000_000
-        collateral_fund = 750_000_000
+        protocol_params = cluster.get_protocol_params()
 
         plutus_op1 = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
         plutus_op2 = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
+            # this is higher than `plutus_common.GUESSING_GAME_COST`, because the script
+            # context has changed to include more stuff
+            execution_cost=plutus_common.ExecutionCost(
+                per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
+            ),
         )
 
         # Step 1: fund the Plutus scripts
 
+        assert plutus_op1.execution_cost and plutus_op2.execution_cost  # for mypy
+
         script_address1 = cluster.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
+        )
+        redeem_cost1 = plutus_common.compute_cost(
+            execution_cost=plutus_op1.execution_cost, protocol_params=protocol_params
         )
         datum_hash1 = cluster.get_hash_script_data(script_data_file=plutus_op1.datum_file)
 
         script_address2 = cluster.gen_payment_addr(
             addr_name=f"{temp_template}_addr2", payment_script_file=plutus_op2.script_file
+        )
+        redeem_cost2 = plutus_common.compute_cost(
+            execution_cost=plutus_op2.execution_cost, protocol_params=protocol_params
         )
         datum_hash2 = cluster.get_hash_script_data(script_data_file=plutus_op2.datum_file)
 
@@ -717,8 +740,8 @@ class TestBuildLocking:
                 datum_hash=datum_hash2,
             ),
             # for collateral
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=collateral_fund),
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=collateral_fund),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
         tx_output_fund = cluster.build_tx(
             src_address=payment_addrs[0].address,
@@ -833,10 +856,8 @@ class TestBuildLocking:
         plutus_common.check_plutus_cost(
             plutus_cost=plutus_cost,
             expected_cost=[
-                plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133),
-                plutus_common.ExecutionCost(
-                    per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
-                ),
+                plutus_common.ALWAYS_SUCCEEDS_COST,
+                plutus_op2.execution_cost,
             ],
         )
 
@@ -877,6 +898,7 @@ class TestBuildLocking:
             script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.ALWAYS_FAILS_COST,
         )
 
         tx_output_fund = _build_fund_script(
@@ -898,7 +920,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=2_000_000,
             expect_failure=True,
         )
         assert "The Plutus script evaluation failed" in err
@@ -925,12 +947,14 @@ class TestBuildLocking:
         * try to spend the locked UTxO
         * check that the amount was not transferred and collateral UTxO was spent
         """
+        __: Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.ALWAYS_FAILS_COST,
         )
 
         tx_output_fund = _build_fund_script(
@@ -944,7 +968,7 @@ class TestBuildLocking:
         txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos = cluster.get_utxo(txin=f"{txid}#1")
         collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
-        __, tx_output, plutus_cost = _build_spend_locked_txin(
+        __, tx_output, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -952,7 +976,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=2_000_000,
             script_valid=False,
         )
 
@@ -963,14 +987,6 @@ class TestBuildLocking:
         if tx_output:
             expected_fee = 171_309
             assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
-
-        if plutus_cost:
-            plutus_common.check_plutus_cost(
-                plutus_cost=plutus_cost,
-                expected_cost=[
-                    plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
-                ],
-            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -989,6 +1005,8 @@ class TestBuildLocking:
           address
         * spend the locked UTxO
         * check that the expected amounts of Lovelace and native tokens were spent
+        * check expected fees
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
@@ -998,6 +1016,7 @@ class TestBuildLocking:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1030,7 +1049,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=50_000_000,
+            amount=2_000_000,
             tokens=tokens_rec,
         )
 
@@ -1038,17 +1057,15 @@ class TestBuildLocking:
         expected_fee_fund = 173_597
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
-        if tx_output_spend:
-            expected_fee = 175_710
-            assert helpers.is_in_interval(tx_output_spend.fee, expected_fee, frac=0.15)
+        expected_fee = 175_710
+        assert tx_output_spend and helpers.is_in_interval(
+            tx_output_spend.fee, expected_fee, frac=0.15
+        )
 
-        if plutus_cost:
-            plutus_common.check_plutus_cost(
-                plutus_cost=plutus_cost,
-                expected_cost=[
-                    plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
-                ],
-            )
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[plutus_common.ALWAYS_SUCCEEDS_COST],
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1067,6 +1084,8 @@ class TestBuildLocking:
           address
         * spend the locked UTxO and create new locked UTxO with change
         * check that the expected amounts of Lovelace and native tokens were spent
+        * check expected fees
+        * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
@@ -1081,6 +1100,7 @@ class TestBuildLocking:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1157,21 +1177,18 @@ class TestBuildLocking:
             assert u.datum_hash == script_utxos[0].datum_hash
 
         # check expected fees
-
         expected_fee_fund = 173_597
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
-        if tx_output_spend:
-            expected_fee = 183_366
-            assert helpers.is_in_interval(tx_output_spend.fee, expected_fee, frac=0.15)
+        expected_fee = 183_366
+        assert tx_output_spend and helpers.is_in_interval(
+            tx_output_spend.fee, expected_fee, frac=0.15
+        )
 
-        if plutus_cost:
-            plutus_common.check_plutus_cost(
-                plutus_cost=plutus_cost,
-                expected_cost=[
-                    plutus_common.ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
-                ],
-            )
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[plutus_common.ALWAYS_SUCCEEDS_COST],
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1195,7 +1212,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -1206,6 +1223,7 @@ class TestBuildLocking:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tx_output_step1 = _build_fund_script(
@@ -1317,6 +1335,7 @@ class TestNegative:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1351,7 +1370,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=2_000_000,
             )
 
         assert "CollateralContainsNonADA" in str(excinfo.value)
@@ -1386,6 +1405,7 @@ class TestNegative:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
         tx_output_fund = _build_fund_script(
@@ -1408,7 +1428,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=script_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=2_000_000,
             )
         assert "Expected key witnessed collateral" in str(excinfo.value)
 
@@ -1435,7 +1455,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
+        amount = 2_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -1444,16 +1464,17 @@ class TestNegative:
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+        )
+        assert plutus_op.execution_cost  # for mypy
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
         )
 
-        plutusrequiredtime, plutusrequiredspace = 700_000_000, 10_000_000
-        fee_redeem = int(plutusrequiredtime + plutusrequiredspace) + 10_000_000
-        collateral_fraction = cluster.get_protocol_params()["collateralPercentage"] / 100
-        collateral_amount = int(fee_redeem * collateral_fraction)
-
         txouts = [
-            clusterlib.TxOut(address=payment_addr.address, amount=amount + fee_redeem),
-            clusterlib.TxOut(address=payment_addr.address, amount=collateral_amount),
+            clusterlib.TxOut(address=payment_addr.address, amount=amount + redeem_cost.fee),
+            clusterlib.TxOut(address=payment_addr.address, amount=redeem_cost.collateral),
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
@@ -1518,13 +1539,13 @@ class TestNegative:
         """
         temp_template = f"{common.get_test_id(cluster)}_{variant}"
 
-        if variant.endswith("42_43"):
+        if variant == "42_43":
             datum_file = plutus_common.DATUM_42_TYPED
             redeemer_file = plutus_common.REDEEMER_43_TYPED
-        elif variant.endswith("43_42"):
+        elif variant == "43_42":
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_42_TYPED
-        elif variant.endswith("43_43"):  # noqa: SIM106
+        elif variant == "43_43":  # noqa: SIM106
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_43_TYPED
         else:
@@ -1534,7 +1555,7 @@ class TestNegative:
             script_file=plutus_common.GUESSING_GAME_PLUTUS,
             datum_file=datum_file,
             redeemer_file=redeemer_file,
-            execution_units=(700_000_000, 10_000_000),
+            execution_cost=plutus_common.GUESSING_GAME_COST,
         )
 
         tx_output_fund = _build_fund_script(
@@ -1557,7 +1578,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=50_000_000,
+                amount=2_000_000,
             )
 
         assert "The Plutus script evaluation failed" in str(excinfo.value)
@@ -1569,7 +1590,7 @@ class TestNegativeRedeemer:
 
     MAX_INT_VAL = (2**64) - 1
     MIN_INT_VAL = -MAX_INT_VAL
-    AMOUNT = 50_000_000
+    AMOUNT = 2_000_000
 
     @pytest.fixture
     def fund_script_guessing_game(
@@ -1586,6 +1607,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         tx_output_fund = _build_fund_script(
@@ -1626,6 +1648,7 @@ class TestNegativeRedeemer:
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file) if redeemer_content else None,
             redeemer_value=None if redeemer_content else str(redeemer_value),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1677,6 +1700,7 @@ class TestNegativeRedeemer:
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file) if redeemer_content else None,
             redeemer_value=None if redeemer_content else str(redeemer_value),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1776,6 +1800,7 @@ class TestNegativeRedeemer:
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1820,6 +1845,7 @@ class TestNegativeRedeemer:
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1866,6 +1892,7 @@ class TestNegativeRedeemer:
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1912,6 +1939,7 @@ class TestNegativeRedeemer:
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1959,6 +1987,7 @@ class TestNegativeRedeemer:
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2005,6 +2034,7 @@ class TestNegativeRedeemer:
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2048,6 +2078,7 @@ class TestNegativeRedeemer:
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2093,6 +2124,7 @@ class TestNegativeRedeemer:
             script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
