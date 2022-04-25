@@ -322,16 +322,26 @@ class TestPoolSaturation:
                 )
 
             with cluster_manager.restart_on_failure():
-                # fund the address delegated to "pool2" - oversaturate the pool
+                # Fund the address delegated to "pool2" to oversaturate the pool.
+                # New stake amount will be current (saturated) stake * 2.
                 if this_epoch == init_epoch + epoch_oversaturate:
                     assert (
                         pool_records[2].saturation_amounts[this_epoch] > 0
                     ), "Pool is already saturated"
+                    current_stake = int(
+                        cluster.get_stake_snapshot(pool_records[2].id)["poolStakeMark"]
+                    )
+                    overstaturate_amount = current_stake * 2
+                    saturation_threshold = pool_records[2].saturation_amounts[this_epoch]
+                    assert overstaturate_amount > saturation_threshold, (
+                        f"{overstaturate_amount} Lovelace is not enough to oversature the pool "
+                        f"({saturation_threshold} is needed)"
+                    )
                     clusterlib_utils.fund_from_faucet(
                         pool_records[2].delegation_out.pool_user.payment,
                         cluster_obj=cluster,
                         faucet_data=faucet_rec,
-                        amount=pool_records[2].saturation_amounts[this_epoch] + 70_000_000_000_000,
+                        amount=overstaturate_amount,
                         tx_name=f"{temp_template}_oversaturate_pool2",
                         force=True,
                     )
@@ -431,17 +441,17 @@ class TestPoolSaturation:
             assert pool2_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
                 pool2_rew_fraction_sat,
                 pool2_rew_fraction_over,
-                frac=0.2,
+                frac=0.4,
             )
             assert pool1_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
                 pool1_rew_fraction_sat,
                 pool2_rew_fraction_over,
-                frac=0.2,
+                frac=0.4,
             )
             assert pool3_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
                 pool3_rew_fraction_sat,
                 pool2_rew_fraction_over,
-                frac=0.2,
+                frac=0.4,
             )
 
             # Compare rewards in last (non-saturated) epoch to rewards in next-to-last
