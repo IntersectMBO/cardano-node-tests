@@ -658,7 +658,7 @@ class TestMinting:
             clusterlib.Mint(
                 txouts=mint_txouts_anyone,
                 script_file=plutus_common.MINTING_PLUTUS,
-                collaterals=collateral_utxo2,
+                collaterals=collateral_utxo1,
                 execution_units=(
                     minting_cost_two.per_time,
                     minting_cost_two.per_space,
@@ -668,7 +668,7 @@ class TestMinting:
             clusterlib.Mint(
                 txouts=mint_txouts_timerange,
                 script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS,
-                collaterals=collateral_utxo1,
+                collaterals=collateral_utxo2,
                 execution_units=(
                     minting_time_range_cost_two.per_time,
                     minting_time_range_cost_two.per_space,
