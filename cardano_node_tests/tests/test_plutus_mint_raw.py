@@ -88,6 +88,9 @@ def _check_pretty_utxo(
         str(tx_raw_output.txouts[1].amount),
         tx_raw_output.txouts[1].coin,
         "+",
+        str(tx_raw_output.txouts[2].amount),
+        tx_raw_output.txouts[2].coin,
+        "+",
         "TxOutDatumNone",
     ]
 
@@ -179,12 +182,12 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ):
-        """Test minting a token with a Plutus script.
+        """Test minting two tokens with a single Plutus script.
 
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the token was minted and collateral UTxO was not spent
+        * mint the tokens using a Plutus script
+        * check that the tokens were minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
@@ -216,10 +219,13 @@ class TestMinting:
         # Step 2: mint the "qacoin"
 
         policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
-        token = f"{policyid}.{asset_name}"
+        asset_name_a = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token_a = f"{policyid}.{asset_name_a}"
+        asset_name_b = f"qacoinb{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token_b = f"{policyid}.{asset_name_b}"
         mint_txouts = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_a),
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_b),
         ]
 
         plutus_mint_data = [
@@ -262,8 +268,15 @@ class TestMinting:
             == issuer_fund_balance - tx_raw_output_step2.fee
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
-        assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+        token_utxo_a = cluster.get_utxo(address=issuer_addr.address, coins=[token_a])
+        assert (
+            token_utxo_a and token_utxo_a[0].amount == token_amount
+        ), "The 'token a' was not minted"
+
+        token_utxo_b = cluster.get_utxo(address=issuer_addr.address, coins=[token_b])
+        assert (
+            token_utxo_b and token_utxo_b[0].amount == token_amount
+        ), "The 'token b' was not minted"
 
         # check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
