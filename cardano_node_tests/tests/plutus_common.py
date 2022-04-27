@@ -18,6 +18,7 @@ MINTING_PLUTUS = PLUTUS_DIR / "anyone-can-mint.plutus"
 MINTING_TIME_RANGE_PLUTUS = PLUTUS_DIR / "time_range.plutus"
 MINTING_CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "minting-context-equivalence-test.plutus"
 MINTING_WITNESS_REDEEMER_PLUTUS = PLUTUS_DIR / "witness-redeemer.plutus"
+MINTING_TOKENNAME_PLUTUS = PLUTUS_DIR / "mint-tokenname.plutus"
 
 STAKE_GUESS_42_PLUTUS = PLUTUS_DIR / "guess-42-stake.plutus"
 
@@ -64,6 +65,7 @@ MINTING_CONTEXT_EQUIVALENCE_COST = ExecutionCost(
 MINTING_WITNESS_REDEEMER_COST = ExecutionCost(
     per_time=369_725_712, per_space=1_013_630, fixed_cost=85_144
 )
+MINTING_TOKENNAME_COST = ExecutionCost(per_time=230_732_000, per_space=539_860, fixed_cost=47_786)
 
 
 class PlutusOp(NamedTuple):
