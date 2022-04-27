@@ -620,9 +620,19 @@ def _compare_redeemers(
 ) -> None:
     """Compare redeemers data available in Tx data with data in db-sync."""
     for script_hash, tx_recs in tx_data.items():
-        # if redeemer is not present, it is not plutus script
-        if tx_recs and not (tx_recs[0].redeemer_file or tx_recs[0].redeemer_value):
+        if not tx_recs:
             return
+
+        # if redeemer is not present, it is not plutus script
+        if not (
+            tx_recs[0].redeemer_file or tx_recs[0].redeemer_value or tx_recs[0].redeemer_cbor_file
+        ):
+            return
+
+        # when minting with one Plutus script and two (or more) redeemers, only the last redeemer
+        # is used
+        if hasattr(tx_recs[0], "txouts"):  # check it is minting record
+            tx_recs = tx_recs[-1:]  # we'll check only the last reedeemer
 
         db_redeemer_recs = db_data.get(script_hash)
         assert db_redeemer_recs, f"No redeemer info in db-sync for script hash `{script_hash}`"
