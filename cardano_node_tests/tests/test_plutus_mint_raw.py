@@ -730,6 +730,149 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
+    def test_one_policy_two_redeemers(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test minting two tokens while using one Plutus script and two redeemers.
+
+        The Plutus script used in this test for minting is passed twice, once
+        for each redeemer. The Plutus script takes the expected token name as
+        redeemer. Even though the redeemer used for minting the first token
+        doesn't match the token name, the token get's minted. That's because
+        only the last redeemer is used and all the other redeemers are ignored.
+        So it only matters that the last redeemer matches the last token name.
+
+        * fund the token issuer and create a UTxO for collateral - funds for fees and collateral
+          are sufficient for just single minting script
+        * check that the expected amount was transferred to token issuer's address
+        * mint the tokens using one Plutus script and two redeemers, where the first redeemer value
+          is invalid
+        * check that the tokens were minted and collateral UTxOs were not spent, i.e. the first
+          redeemer was ignored
+        * check transaction view output
+        * (optional) check transactions in db-sync
+        """
+        # pylint: disable=too-many-locals,too-many-statements
+        temp_template = common.get_test_id(cluster)
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_TOKENNAME_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
+
+        # Step 1: fund the token issuer
+
+        mint_utxos, collateral_utxos, tx_raw_output_step1 = _fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=lovelace_amount,
+        )
+
+        issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
+
+        # Step 2: mint the "qacoins"
+
+        policyid_tokenname = cluster.get_policyid(plutus_common.MINTING_TOKENNAME_PLUTUS)
+
+        # qacoinA
+        asset_name_a_dec = "qacoinA"
+        asset_name_a = asset_name_a_dec.encode("utf-8").hex()
+        token_a = f"{policyid_tokenname}.{asset_name_a}"
+        mint_txouts_a = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_a)
+        ]
+
+        # qacoinB
+        asset_name_b_dec = "qacoinB"
+        asset_name_b = asset_name_b_dec.encode("utf-8").hex()
+        token_b = f"{policyid_tokenname}.{asset_name_b}"
+        mint_txouts_b = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_b)
+        ]
+
+        # mint the tokens
+        plutus_mint_data = [
+            # First redeemer is ignored when there are multiple redeemers for the same
+            # minting policy. Even though we specified execution units for the script, these
+            # will not be used. That's why we were able to use the costs for just single script,
+            # even when we passed two.
+            clusterlib.Mint(
+                txouts=mint_txouts_a,
+                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS,
+                # execution units are too low, but it doesn't matter as they get ignored anyway
+                execution_units=(1, 1),
+                redeemer_value='"ignored_value"',
+            ),
+            clusterlib.Mint(
+                txouts=mint_txouts_b,
+                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_common.MINTING_TOKENNAME_COST.per_time,
+                    plutus_common.MINTING_TOKENNAME_COST.per_space,
+                ),
+                redeemer_value=f'"{asset_name_b_dec}"',
+            ),
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts_a,
+            *mint_txouts_b,
+        ]
+        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            tx_files=tx_files_step2,
+            fee=minting_cost.fee + FEE_MINT_TXSIZE,
+        )
+        tx_signed_step2 = cluster.sign_tx(
+            tx_body_file=tx_raw_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+        cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+
+        assert (
+            cluster.get_address_balance(issuer_addr.address)
+            == issuer_init_balance - tx_raw_output_step2.fee
+        ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+
+        token_utxo_a = cluster.get_utxo(address=issuer_addr.address, coins=[token_a])
+        assert (
+            token_utxo_a and token_utxo_a[0].amount == token_amount
+        ), f"The '{asset_name_a_dec}' token was not minted"
+
+        token_utxo_b = cluster.get_utxo(address=issuer_addr.address, coins=[token_b])
+        assert (
+            token_utxo_b and token_utxo_b[0].amount == token_amount
+        ), f"The '{asset_name_b_dec}' token was not minted"
+
+        # check tx_view
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
+
+        # check transactions in db-sync
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
         not shutil.which("create-script-context"),
         reason="cannot find `create-script-context` on the PATH",
