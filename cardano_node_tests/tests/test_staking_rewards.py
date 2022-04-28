@@ -1571,9 +1571,19 @@ class TestRewards:
                     pool_user=delegation_out.pool_user,
                     name_template=f"{temp_template}_ep4",
                 )
-                # wait for second half of an epoch
+                # wait for start of reward calculation, which is at 4k/f slot
+                start_reward_calc_sec = (
+                    4
+                    * cluster.genesis["securityParam"]
+                    / cluster.genesis["activeSlotsCoeff"]
+                    * cluster.genesis["slotLength"]
+                )
+                wait_for_sec = int(start_reward_calc_sec) + 1
                 clusterlib_utils.wait_for_epoch_interval(
-                    cluster_obj=cluster, start=-60, stop=-45, force_epoch=True
+                    cluster_obj=cluster,
+                    start=wait_for_sec,
+                    stop=wait_for_sec,
+                    force_epoch=True,
                 )
                 # re-register, delegate to pool1
                 delegation_out_ep4 = delegation.delegate_stake_addr(
