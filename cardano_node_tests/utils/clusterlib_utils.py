@@ -869,10 +869,8 @@ def wait_for_epoch_interval(
     start_abs = start if start >= 0 else cluster_obj.epoch_length_sec + start
     stop_abs = stop if stop >= 0 else cluster_obj.epoch_length_sec + stop
 
-    if start_abs >= stop_abs:
-        raise AssertionError(
-            f"The 'start' ({start_abs}) needs to be lower than 'stop' ({stop_abs})."
-        )
+    if start_abs > stop_abs:
+        raise AssertionError(f"The 'start' ({start_abs}) needs to be <= 'stop' ({stop_abs}).")
 
     start_epoch = cluster_obj.get_epoch()
 
