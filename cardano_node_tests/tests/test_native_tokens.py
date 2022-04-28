@@ -1923,7 +1923,7 @@ class TestTransfer:
             clusterlib.TxOut(address=dst_address, amount=token_amount, coin=new_token.token),
         ]
 
-        min_amount_lovelace = 1_379_280
+        min_amount_lovelace = 4_000_000
 
         destinations = [
             *ma_destinations,
