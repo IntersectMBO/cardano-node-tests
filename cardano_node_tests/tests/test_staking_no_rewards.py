@@ -129,12 +129,13 @@ class TestNoRewards:
 
             # Return the pool to the original state - restore pledge settings.
 
-            # fund source (pledge) address
+            # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+            # are deducted
             clusterlib_utils.fund_from_faucet(
                 pool_owner,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
-                amount=150_000_000,
+                amount=900_000_000,
                 force=True,
             )
 
@@ -165,6 +166,15 @@ class TestNoRewards:
                 orig_owner_reward
                 < cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "New reward was not received by pool reward address"
+
+        # check that pledge is still met after the owner address was used to pay for Txs
+        pool_data = clusterlib_utils.load_registered_pool_data(
+            cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
+        )
+        owner_payment_balance = cluster.get_address_balance(pool_owner.payment.address)
+        assert (
+            owner_payment_balance >= pool_data.pool_pledge
+        ), f"Pledge is not met for pool '{pool_name}'!"
 
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_unmet_pledge2(
@@ -279,7 +289,7 @@ class TestNoRewards:
                 delegation_out.pool_user,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
-                amount=150_000_000,
+                amount=900_000_000,
                 force=True,
             )
 
@@ -437,12 +447,13 @@ class TestNoRewards:
             # Return the pool to the original state - reregister stake address and
             # delegate it to the pool.
 
-            # fund source address
+            # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+            # are deducted
             clusterlib_utils.fund_from_faucet(
                 pool_owner,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
-                amount=150_000_000,
+                amount=900_000_000,
                 force=True,
             )
 
@@ -491,6 +502,15 @@ class TestNoRewards:
                 orig_user_reward
                 < cluster.get_stake_addr_info(pool_rec["reward"].address).reward_account_balance
             ), "New reward was not received by pool reward address"
+
+        # check that pledge is still met after the owner address was used to pay for Txs
+        pool_data = clusterlib_utils.load_registered_pool_data(
+            cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
+        )
+        owner_payment_balance = cluster.get_address_balance(pool_owner.payment.address)
+        assert (
+            owner_payment_balance >= pool_data.pool_pledge
+        ), f"Pledge is not met for pool '{pool_name}'!"
 
     @allure.link(helpers.get_vcs_link())
     def test_no_reward_deregistered_reward_addr(
@@ -618,12 +638,13 @@ class TestNoRewards:
 
             # Return the pool to the original state - reregister reward address.
 
-            # fund source address
+            # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+            # are deducted
             clusterlib_utils.fund_from_faucet(
                 pool_reward,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
-                amount=150_000_000,
+                amount=900_000_000,
                 force=True,
             )
 
@@ -662,6 +683,15 @@ class TestNoRewards:
             assert (
                 cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance > 0
             ), "New reward was not received by pool reward address"
+
+        # check that pledge is still met after the owner address was used to pay for Txs
+        pool_data = clusterlib_utils.load_registered_pool_data(
+            cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
+        )
+        owner_payment_balance = cluster.get_address_balance(pool_reward.payment.address)
+        assert (
+            owner_payment_balance >= pool_data.pool_pledge
+        ), f"Pledge is not met for pool '{pool_name}'!"
 
     @allure.link(helpers.get_vcs_link())
     def test_deregister_reward_addr_retire_pool(
@@ -751,12 +781,13 @@ class TestNoRewards:
                 cluster.get_stake_addr_info(pool_reward.stake.address).reward_account_balance == 0
             ), "Pool owner received unexpected rewards"
 
-            # fund source address
+            # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+            # are deducted
             clusterlib_utils.fund_from_faucet(
-                pool_reward,
+                pool_owner,
                 cluster_obj=cluster,
                 faucet_data=cluster_manager.cache.addrs_data["user1"],
-                amount=150_000_000,
+                amount=900_000_000,
                 force=True,
             )
 
@@ -884,3 +915,12 @@ class TestNoRewards:
             assert cluster.get_stake_addr_info(
                 pool_reward.stake.address
             ).reward_account_balance, "New reward was not received by pool reward address"
+
+        # check that pledge is still met after the owner address was used to pay for Txs
+        pool_data = clusterlib_utils.load_registered_pool_data(
+            cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
+        )
+        owner_payment_balance = cluster.get_address_balance(pool_owner.payment.address)
+        assert (
+            owner_payment_balance >= pool_data.pool_pledge
+        ), f"Pledge is not met for pool '{pool_name}'!"
