@@ -81,11 +81,12 @@ def _get_reward_per_block(pool_record: PoolRecord, owner_rewards: bool = False) 
     first_ep = rew_db[0].epoch_no
 
     for idx, rew_received in enumerate(rew_db):
-        if not rew_received.reward_per_epoch:
-            continue
-
         for_epoch = rew_received.epoch_no - 3
         if for_epoch < first_ep:
+            continue
+
+        if not rew_received.reward_per_epoch:
+            results[for_epoch] = 0.0
             continue
 
         rew_for = rew_db[idx - 3]
@@ -463,7 +464,7 @@ class TestPoolSaturation:
                     pool_rec.user_rewards[-1].reward_per_epoch * 100
                     < pool_rec.user_rewards[-2].reward_per_epoch
                 )
-        except AssertionError:
+        except Exception:
             # save debugging data in case of test failure
             with open(f"{temp_template}_pool_records.pickle", "wb") as out_data:
                 pickle.dump(pool_records, out_data)
