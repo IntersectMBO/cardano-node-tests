@@ -680,7 +680,7 @@ class TestRewards:
             pool_owner,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=150_000_000,
+            amount=900_000_000,
             force=True,
         )
 
@@ -970,6 +970,15 @@ class TestRewards:
 
                 _check_ledger_state(this_epoch=this_epoch)
 
+        # check that pledge is still met after the owner address was used to pay for Txs
+        pool_data = clusterlib_utils.load_registered_pool_data(
+            cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
+        )
+        owner_payment_balance = cluster.get_address_balance(pool_owner.payment.address)
+        assert (
+            owner_payment_balance >= pool_data.pool_pledge
+        ), f"Pledge is not met for pool '{pool_name}'!"
+
         # check TX records in db-sync
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_deleg)
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_undeleg)
@@ -1183,12 +1192,13 @@ class TestRewards:
         else:
             pytest.skip("Pools haven't received any rewards, cannot continue.")
 
-        # fund source address so the pledge is still met after TX fees are deducted
+        # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+        # are deducted
         clusterlib_utils.fund_from_faucet(
-            pool2_reward,
+            pool2_owner,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=150_000_000,
+            amount=900_000_000,
             force=True,
         )
 
@@ -1308,6 +1318,15 @@ class TestRewards:
         assert (
             rewards_ledger_pool2[-1].reward_per_epoch == 0
         ), "Original reward address of 'pool2' received unexpected rewards"
+
+        # check that pledge is still met after the owner address was used to pay for Txs
+        pool2_data = clusterlib_utils.load_registered_pool_data(
+            cluster_obj=cluster, pool_name=pool_name, pool_id=pool2_id
+        )
+        owner_payment_balance = cluster.get_address_balance(pool2_owner.payment.address)
+        assert (
+            owner_payment_balance >= pool2_data.pool_pledge
+        ), f"Pledge is not met for pool '{pool_name}'!"
 
         # check TX records in db-sync
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_update_pool)
