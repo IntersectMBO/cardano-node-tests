@@ -3,8 +3,8 @@
 # linting
 mypy
 pre-commit
-# pin as pylint-2.13.6 with astroid-2.11.3 is broken
-astroid==2.11.2
-pylint==2.13.5
+pylint
 types-PyYAML
 types-requests
+
+virtualenv
