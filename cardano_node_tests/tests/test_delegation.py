@@ -515,7 +515,11 @@ class TestDelegateAddr:
 
         # register and deregister stake address in single TX
         tx_files = clusterlib.TxFiles(
-            certificate_files=[stake_addr_reg_cert_file, stake_addr_dereg_cert_file],
+            certificate_files=[
+                stake_addr_reg_cert_file,
+                stake_addr_dereg_cert_file,
+            ]
+            * 3,
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
@@ -525,6 +529,7 @@ class TestDelegateAddr:
                 tx_name=f"{temp_template}_reg_deleg",
                 tx_files=tx_files,
                 fee_buffer=2_000_000,
+                deposit=0,
                 witness_override=len(tx_files.signing_key_files),
             )
             tx_signed = cluster.sign_tx(
@@ -538,6 +543,7 @@ class TestDelegateAddr:
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_reg_dereg",
                 tx_files=tx_files,
+                deposit=0,
             )
 
         # check that the balance for source address was correctly updated and that key deposit
