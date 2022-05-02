@@ -1,7 +1,7 @@
 exclude: ^sync_tests/
 repos:
 - repo: https://github.com/asottile/reorder_python_imports
-  rev: v3.0.1
+  rev: v3.1.0
   hooks:
   - id: reorder-python-imports
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
