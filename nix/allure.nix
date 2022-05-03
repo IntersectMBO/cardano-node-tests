@@ -3,10 +3,10 @@
 
 buildPythonPackage rec {
   pname = "allure-python-commons";
-  version = "2.8.18";
+  version = "2.9.45";
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1n4yp6kzf5awp731p0mz6kvlcyljvxabqmhggml5zvnabm8yl6ls";
+    sha256 = "wjjSiurDXox8UX2KIyfiWuW78sMLXiMT0g7xHXX1VJ0=";
   };
   doCheck = false;
   nativeBuildInputs = [ setuptools_scm ];
