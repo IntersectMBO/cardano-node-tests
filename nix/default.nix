@@ -18,16 +18,6 @@ let
           allure = self.callPackage ./allure.nix {};
           pytest-allure = self.callPackage ./pytest-allure.nix {};
           cardano-clusterlib = self.callPackage ./cardano-clusterlib.nix {};
-          _hypothesis = self.hypothesis.overridePythonAttrs(old: rec {
-            version = "6.23.2";
-            doCheck = false;
-            src =  super.fetchFromGitHub {
-              owner = "HypothesisWorks";
-              repo = "hypothesis-python";
-              rev = "hypothesis-python-${version}";
-              sha256 = "1mdygyq6ra4kysi0y2g3a4bgpqrcb8ci2061117zyms419qwwh4l";
-            };
-          });
         };
       };
 
@@ -48,7 +38,7 @@ let
           pydantic
           pylint
           mypy
-          _hypothesis
+          hypothesis
           cbor2
           requests
           psycopg2
