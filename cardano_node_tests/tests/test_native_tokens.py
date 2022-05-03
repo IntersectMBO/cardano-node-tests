@@ -28,6 +28,7 @@ from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+MAX_TOKEN_AMOUNT = 2**64
 
 
 @pytest.fixture
@@ -1521,7 +1522,6 @@ class TestPolicies:
 class TestTransfer:
     """Tests for transfering tokens."""
 
-    MAX_TOKEN_AMOUNT = 2**64
     NEW_TOKENS_NUM = 20_000_000
 
     @pytest.fixture
@@ -2056,6 +2056,44 @@ class TestNegative:
             )
         exc_val = str(excinfo.value)
         assert "name exceeds 32 bytes" in exc_val or "expecting hexadecimal digit" in exc_val
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(token_amount=st.integers(min_value=MAX_TOKEN_AMOUNT + 1))
+    @common.hypothesis_settings()
+    def test_minting_amount_above_the_allowed(
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        simple_script_policyid: Tuple[Path, str],
+        token_amount: int,
+    ):
+        """Test minting a token amount above the maximum allowed."""
+        temp_template = common.get_test_id(cluster)
+
+        asset_name_enc = temp_template.encode("utf-8").hex()
+
+        script, policyid = simple_script_policyid
+        token = f"{policyid}.{asset_name_enc}"
+        token_mint_addr = issuers_addrs[0]
+        issuer_addr = issuers_addrs[1]
+
+        token_mint = clusterlib_utils.TokenRecord(
+            token=token,
+            amount=token_amount,
+            issuers_addrs=[issuer_addr],
+            token_mint_addr=token_mint_addr,
+            script=script,
+        )
+
+        # token minting
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            self._mint_tx(
+                cluster_obj=cluster,
+                new_tokens=[token_mint],
+                temp_template=f"{temp_template}_mint",
+            )
+
+        assert "the number exceeds the max bound" in str(excinfo.value)
 
 
 @pytest.mark.testnets
