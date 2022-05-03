@@ -649,7 +649,6 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.xfail
     def test_multisig_no_required_atleast(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -683,15 +682,21 @@ class TestBasic:
         )
 
         # send funds from script address
-        tx_out_from = multisig_tx(
-            cluster_obj=cluster,
-            temp_template=f"{temp_template}_from",
-            src_address=script_address,
-            dst_address=payment_addrs[0].address,
-            amount=1_000_000,
-            payment_skey_files=[],
-            multisig_script=multisig_script,
-        )
+        try:
+            tx_out_from = multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_address,
+                dst_address=payment_addrs[0].address,
+                amount=1_000_000,
+                payment_skey_files=[],
+                multisig_script=multisig_script,
+            )
+        except clusterlib.CLIError as err:
+            if "Missing: (--witness-file FILE)" in str(err):
+                pytest.xfail("See cardano-node issue #3835")
+                return
+            raise
 
         # check expected fees
         expected_fee = 176_765
