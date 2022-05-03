@@ -5,7 +5,6 @@
 * locking
 * transactions
 """
-import datetime
 import itertools
 import json
 import logging
@@ -1879,15 +1878,6 @@ class TestTransfer:
             except clusterlib.CLIError as err:
                 if expected_error not in str(err):
                     raise
-            else:
-                msg = (
-                    "https://github.com/input-output-hk/cardano-ledger/pull/2722 "
-                    "still not in cardano-node"
-                )
-                if datetime.date.today() < datetime.date(2022, 4, 30):
-                    pytest.xfail(msg)
-                else:
-                    pytest.fail(msg)
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(

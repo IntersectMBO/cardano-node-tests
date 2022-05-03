@@ -254,60 +254,32 @@ class SchemaVersion:
 
 def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
     """Query a transaction in db-sync."""
-    schema_stages = SchemaVersion.stages()
-    # TODO: old schema, remove when no longer needed
-    if schema_stages.one == 9 and schema_stages.two > 19:
-        query = (
-            "SELECT"
-            " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
-            " tx.invalid_before, tx.invalid_hereafter,"
-            " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.value,"
-            " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
-            " (SELECT COUNT(id) FROM reserve WHERE tx_id=tx.id) AS reserve_count,"
-            " (SELECT COUNT(id) FROM treasury WHERE tx_id=tx.id) AS treasury_count,"
-            " (SELECT COUNT(id) FROM pot_transfer WHERE tx_id=tx.id) AS pot_transfer_count,"
-            " (SELECT COUNT(id) FROM stake_registration WHERE tx_id=tx.id) AS reg_count,"
-            " (SELECT COUNT(id) FROM stake_deregistration WHERE tx_id=tx.id) AS dereg_count,"
-            " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
-            " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
-            " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
-            " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
-            " (SELECT COUNT(id) FROM redeemer WHERE tx_id=tx.id) AS redeemer_count,"
-            " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity,"
-            " ma_tx_mint.id, ma_tx_mint.policy, ma_tx_mint.name, ma_tx_mint.quantity "
-            "FROM tx "
-            "LEFT JOIN tx_out ON tx.id = tx_out.tx_id "
-            "LEFT JOIN ma_tx_out ON tx_out.id = ma_tx_out.tx_out_id "
-            "LEFT JOIN ma_tx_mint ON tx.id = ma_tx_mint.tx_id "
-            "WHERE tx.hash = %s;"
-        )
-    else:
-        query = (
-            "SELECT"
-            " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
-            " tx.invalid_before, tx.invalid_hereafter,"
-            " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.value,"
-            " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
-            " (SELECT COUNT(id) FROM reserve WHERE tx_id=tx.id) AS reserve_count,"
-            " (SELECT COUNT(id) FROM treasury WHERE tx_id=tx.id) AS treasury_count,"
-            " (SELECT COUNT(id) FROM pot_transfer WHERE tx_id=tx.id) AS pot_transfer_count,"
-            " (SELECT COUNT(id) FROM stake_registration WHERE tx_id=tx.id) AS reg_count,"
-            " (SELECT COUNT(id) FROM stake_deregistration WHERE tx_id=tx.id) AS dereg_count,"
-            " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
-            " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
-            " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
-            " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
-            " (SELECT COUNT(id) FROM redeemer WHERE tx_id=tx.id) AS redeemer_count,"
-            " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity,"
-            " ma_tx_mint.id, join_ma_mint.policy, join_ma_mint.name, ma_tx_mint.quantity "
-            "FROM tx "
-            "LEFT JOIN tx_out ON tx.id = tx_out.tx_id "
-            "LEFT JOIN ma_tx_out ON tx_out.id = ma_tx_out.tx_out_id "
-            "LEFT JOIN ma_tx_mint ON tx.id = ma_tx_mint.tx_id "
-            "LEFT JOIN multi_asset join_ma_out ON ma_tx_out.ident = join_ma_out.id "
-            "LEFT JOIN multi_asset join_ma_mint ON ma_tx_mint.ident = join_ma_mint.id "
-            "WHERE tx.hash = %s;"
-        )
+    query = (
+        "SELECT"
+        " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
+        " tx.invalid_before, tx.invalid_hereafter,"
+        " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.value,"
+        " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
+        " (SELECT COUNT(id) FROM reserve WHERE tx_id=tx.id) AS reserve_count,"
+        " (SELECT COUNT(id) FROM treasury WHERE tx_id=tx.id) AS treasury_count,"
+        " (SELECT COUNT(id) FROM pot_transfer WHERE tx_id=tx.id) AS pot_transfer_count,"
+        " (SELECT COUNT(id) FROM stake_registration WHERE tx_id=tx.id) AS reg_count,"
+        " (SELECT COUNT(id) FROM stake_deregistration WHERE tx_id=tx.id) AS dereg_count,"
+        " (SELECT COUNT(id) FROM delegation WHERE tx_id=tx.id) AS deleg_count,"
+        " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
+        " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
+        " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
+        " (SELECT COUNT(id) FROM redeemer WHERE tx_id=tx.id) AS redeemer_count,"
+        " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity,"
+        " ma_tx_mint.id, join_ma_mint.policy, join_ma_mint.name, ma_tx_mint.quantity "
+        "FROM tx "
+        "LEFT JOIN tx_out ON tx.id = tx_out.tx_id "
+        "LEFT JOIN ma_tx_out ON tx_out.id = ma_tx_out.tx_out_id "
+        "LEFT JOIN ma_tx_mint ON tx.id = ma_tx_mint.tx_id "
+        "LEFT JOIN multi_asset join_ma_out ON ma_tx_out.ident = join_ma_out.id "
+        "LEFT JOIN multi_asset join_ma_mint ON ma_tx_mint.ident = join_ma_mint.id "
+        "WHERE tx.hash = %s;"
+    )
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
@@ -316,35 +288,19 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
 
 def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
     """Query transaction txins in db-sync."""
-    schema_stages = SchemaVersion.stages()
-    # TODO: old schema, remove when no longer needed
-    if schema_stages.one == 9 and schema_stages.two > 19:
-        query = (
-            "SELECT"
-            " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
-            " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
-            " ma_tx_out.id, ma_tx_out.policy, ma_tx_out.name, ma_tx_out.quantity "
-            "FROM tx_in "
-            "LEFT JOIN tx_out "
-            "ON (tx_out.tx_id = tx_in.tx_out_id AND tx_out.index = tx_in.tx_out_index) "
-            "LEFT JOIN tx ON tx.id = tx_in.tx_in_id "
-            "LEFT JOIN ma_tx_out ON tx_out.id = ma_tx_out.tx_out_id "
-            "WHERE tx.hash = %s;"
-        )
-    else:
-        query = (
-            "SELECT"
-            " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
-            " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
-            " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity "
-            "FROM tx_in "
-            "LEFT JOIN tx_out "
-            "ON (tx_out.tx_id = tx_in.tx_out_id AND tx_out.index = tx_in.tx_out_index) "
-            "LEFT JOIN tx ON tx.id = tx_in.tx_in_id "
-            "LEFT JOIN ma_tx_out ON tx_out.id = ma_tx_out.tx_out_id "
-            "LEFT JOIN multi_asset join_ma_out ON ma_tx_out.ident = join_ma_out.id "
-            "WHERE tx.hash = %s;"
-        )
+    query = (
+        "SELECT"
+        " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
+        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
+        " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity "
+        "FROM tx_in "
+        "LEFT JOIN tx_out "
+        "ON (tx_out.tx_id = tx_in.tx_out_id AND tx_out.index = tx_in.tx_out_index) "
+        "LEFT JOIN tx ON tx.id = tx_in.tx_in_id "
+        "LEFT JOIN ma_tx_out ON tx_out.id = ma_tx_out.tx_out_id "
+        "LEFT JOIN multi_asset join_ma_out ON ma_tx_out.ident = join_ma_out.id "
+        "WHERE tx.hash = %s;"
+    )
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
