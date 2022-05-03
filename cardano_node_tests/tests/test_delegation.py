@@ -685,6 +685,105 @@ class TestDelegateAddr:
             assert tx_db_deleg.stake_delegation[0].active_epoch_no == init_epoch + 2
             assert pool_id == tx_db_deleg.stake_delegation[0].pool_id
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_build_cmd",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+            ),
+        ),
+        ids=("build_raw", "build"),
+    )
+    @pytest.mark.dbsync
+    def test_addr_registration_certificate_order(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_users_disposable: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
+    ):
+        """Submit (de)registration certificates in single TX and check that the order matter.
+
+        * create stake address registration cert
+        * create stake address deregistration cert
+        * register, deregister, register, deregister and register stake address in single TX
+        * check that the address is registered
+        * check that the balance for source address was correctly updated and that key deposit
+          was needed
+        * (optional) check records in db-sync
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+
+        user_registered = pool_users_disposable[0]
+        user_payment = pool_users[0].payment
+        src_init_balance = cluster.get_address_balance(user_payment.address)
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+        )
+
+        # create stake address deregistration cert
+        stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+        )
+
+        # register, deregister, register, deregister and register stake address in single TX
+        # prove that the order matters
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[
+                stake_addr_reg_cert_file,
+                stake_addr_dereg_cert_file,
+                stake_addr_reg_cert_file,
+                stake_addr_dereg_cert_file,
+                stake_addr_reg_cert_file,
+            ],
+            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
+        )
+
+        deposit = cluster.get_address_deposit()
+
+        if use_build_cmd:
+            tx_raw_output = cluster.build_tx(
+                src_address=user_payment.address,
+                tx_name=f"{temp_template}_reg_dereg_cert_order",
+                tx_files=tx_files,
+                fee_buffer=2_000_000,
+                witness_override=len(tx_files.signing_key_files),
+                deposit=deposit,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=f"{temp_template}_reg_dereg_cert_order",
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        else:
+            tx_raw_output = cluster.send_tx(
+                src_address=user_payment.address,
+                tx_name=f"{temp_template}_reg_dereg",
+                tx_files=tx_files,
+                deposit=deposit,
+            )
+
+        # check that the stake address is registered
+        assert cluster.get_stake_addr_info(user_registered.stake.address).address
+
+        # check that the balance for source address was correctly updated and that key deposit
+        # was needed
+        assert (
+            cluster.get_address_balance(user_payment.address)
+            == src_init_balance - tx_raw_output.fee - deposit
+        ), f"Incorrect balance for source address `{user_payment.address}`"
+
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        if tx_db_record:
+            assert user_registered.stake.address in tx_db_record.stake_registration
+            assert user_registered.stake.address in tx_db_record.stake_deregistration
+
 
 @pytest.mark.testnets
 class TestNegative:
