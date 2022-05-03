@@ -3,10 +3,10 @@
 
 buildPythonPackage rec {
   pname = "allure-pytest";
-  version = "2.8.18";
+  version = "2.9.45";
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1sxk97fwfam0m0xm48vpqlvbfb9w0n7mkhrv3hyc47wjfv98551j";
+    sha256 = "IGIP3gill1eLFXpg/zi9zDAOMS0S6qOM8o5KYuIr2qM=";
   };
   doCheck = false;
   nativeBuildInputs = [ setuptools_scm ];
