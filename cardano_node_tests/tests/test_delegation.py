@@ -1027,4 +1027,4 @@ class TestNegative:
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
                 )
-        assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
+        assert "StakeKeyNotRegisteredDELEG" in str(excinfo.value)
