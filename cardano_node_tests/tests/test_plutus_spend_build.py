@@ -90,7 +90,7 @@ def _build_fund_script(
     tokens_collateral: Optional[
         List[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
-) -> clusterlib.TxRawOutput:
+) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
@@ -161,27 +161,45 @@ def _build_fund_script(
 
     txid = cluster_obj.get_txid(tx_body_file=tx_output.out_file)
 
-    script_utxos = cluster_obj.get_utxo(txin=f"{txid}#1", coins=[clusterlib.DEFAULT_COIN])
+    script_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
     assert script_utxos, "No script UTxO"
 
-    script_balance = script_utxos[0].amount
-    assert script_balance == script_fund, f"Incorrect balance for script address `{script_address}`"
+    script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
+    script_lovelace_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_lovelace, 0)
+    assert (
+        script_lovelace_balance == script_fund
+    ), f"Incorrect balance for script address `{script_address}`"
+
+    collateral_utxos = cluster_obj.get_utxo(txin=f"{txid}#2")
+    assert collateral_utxos, "No collateral UTxO"
+
+    collateral_utxos_lovelace = [u for u in collateral_utxos if u.coin == clusterlib.DEFAULT_COIN]
+    collateral_lovelace_balance = functools.reduce(
+        lambda x, y: x + y.amount, collateral_utxos_lovelace, 0
+    )
+    assert (
+        collateral_lovelace_balance == redeem_cost.collateral
+    ), f"Incorrect balance for collateral address `{dst_addr.address}`"
 
     for token in stokens:
-        token_balance = cluster_obj.get_utxo(txin=f"{txid}#1", coins=[token.coin])[0].amount
+        script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
+        script_token_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_token, 0)
         assert (
-            token_balance == token.amount
+            script_token_balance == token.amount
         ), f"Incorrect token balance for script address `{script_address}`"
 
     for token in ctokens:
-        token_balance = cluster_obj.get_utxo(txin=f"{txid}#2", coins=[token.coin])[0].amount
+        collateral_utxos_token = [u for u in collateral_utxos if u.coin == token.coin]
+        collateral_token_balance = functools.reduce(
+            lambda x, y: x + y.amount, collateral_utxos_token, 0
+        )
         assert (
-            token_balance == token.amount
+            collateral_token_balance == token.amount
         ), f"Incorrect token balance for address `{dst_addr.address}`"
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
-    return tx_output
+    return script_utxos, collateral_utxos, tx_output
 
 
 def _build_spend_locked_txin(  # noqa: C901
@@ -401,7 +419,7 @@ class TestBuildLocking:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -409,9 +427,6 @@ class TestBuildLocking:
             plutus_op=plutus_op,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         __, tx_output, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -487,7 +502,7 @@ class TestBuildLocking:
         )
 
         # fund the script address
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, __ = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=pool_users[0].payment,
@@ -495,9 +510,6 @@ class TestBuildLocking:
             plutus_op=plutus_op_dummy,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         invalid_hereafter = cluster.get_slot_no() + 1_000
 
         __, tx_output_dummy, __ = _build_spend_locked_txin(
@@ -633,7 +645,7 @@ class TestBuildLocking:
             execution_cost=execution_cost,
         )
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -641,9 +653,6 @@ class TestBuildLocking:
             plutus_op=plutus_op,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -901,7 +910,7 @@ class TestBuildLocking:
             execution_cost=plutus_common.ALWAYS_FAILS_COST,
         )
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -909,9 +918,6 @@ class TestBuildLocking:
             plutus_op=plutus_op,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         err, __, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -957,7 +963,7 @@ class TestBuildLocking:
             execution_cost=plutus_common.ALWAYS_FAILS_COST,
         )
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -965,9 +971,6 @@ class TestBuildLocking:
             plutus_op=plutus_op,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         __, tx_output, __ = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -1029,7 +1032,7 @@ class TestBuildLocking:
         )
         tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -1038,9 +1041,6 @@ class TestBuildLocking:
             tokens=tokens_rec,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         __, tx_output_spend, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -1113,7 +1113,7 @@ class TestBuildLocking:
         )
         tokens_fund_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -1122,9 +1122,6 @@ class TestBuildLocking:
             tokens=tokens_fund_rec,
         )
 
-        txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid_fund}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid_fund}#2")
         tokens_spend_rec = [
             plutus_common.Token(coin=t.token, amount=token_amount_spend) for t in tokens
         ]
@@ -1226,7 +1223,7 @@ class TestBuildLocking:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        tx_output_step1 = _build_fund_script(
+        script_utxos, collateral_utxos, tx_output_step1 = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addr,
@@ -1236,9 +1233,6 @@ class TestBuildLocking:
 
         # Step 2: spend the "locked" UTxO
 
-        txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid_step1}#2")
         script_address = script_utxos[0].address
 
         dst_step1_balance = cluster.get_address_balance(dst_addr.address)
@@ -1348,7 +1342,7 @@ class TestNegative:
         )
         tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -1356,10 +1350,6 @@ class TestNegative:
             plutus_op=plutus_op,
             tokens_collateral=tokens_rec,
         )
-
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _build_spend_locked_txin(
@@ -1408,16 +1398,13 @@ class TestNegative:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, __, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
         )
-
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _build_spend_locked_txin(
@@ -1558,7 +1545,7 @@ class TestNegative:
             execution_cost=plutus_common.GUESSING_GAME_COST,
         )
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, __ = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -1566,9 +1553,6 @@ class TestNegative:
             plutus_op=plutus_op,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _build_spend_locked_txin(
                 temp_template=temp_template,
@@ -1747,17 +1731,13 @@ class TestNegativeRedeemer:
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
 
-        tx_output_fund = _build_fund_script(
+        script_utxos, collateral_utxos, __ = _build_fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
         )
-
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#1")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
 
         return script_utxos, collateral_utxos
 
