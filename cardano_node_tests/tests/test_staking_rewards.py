@@ -201,23 +201,29 @@ def _dbsync_check_rewards(
     return reward_db_record
 
 
-def _get_key_hashes(rec: dict) -> List[str]:
-    """Get key hashes in ledger state snapshot record."""
-    return [r[0]["key hash"] for r in rec]
+def _get_rec_hash(rec: List[dict]):
+    """Get credential hash (key or script) from record."""
+    # make it fail when neither key nor script hash is present
+    return rec[0].get("key hash") or rec[0]["script hash"]
 
 
-def _get_val_for_key_hash(key_hash: str, rec: list) -> Any:
-    """Get value for key hash in ledger state snapshot record."""
+def _get_cred_hashes(rec: dict) -> List[str]:
+    """Get credential hashes in ledger state snapshot record."""
+    return [_get_rec_hash(r) for r in rec]
+
+
+def _get_val_for_cred_hash(key_hash: str, rec: list) -> Any:
+    """Get value for credential hash in ledger state snapshot record."""
     for r in rec:
-        if r[0]["key hash"] == key_hash:
+        if _get_rec_hash(r) == key_hash:
             return r[1]
     return None
 
 
-def _get_reward_amount_for_key_hash(key_hash: str, rec: list) -> int:
-    """Get reward amount for key hash in ledger state snapshot record."""
+def _get_rew_amount_for_cred_hash(key_hash: str, rec: list) -> int:
+    """Get reward amount for credential hash in ledger state snapshot record."""
     for r in rec:
-        if r[0]["key hash"] != key_hash:
+        if _get_rec_hash(r) != key_hash:
             continue
         rew_amount = 0
         for sr in r[1]:
@@ -226,11 +232,11 @@ def _get_reward_amount_for_key_hash(key_hash: str, rec: list) -> int:
     return 0
 
 
-def _get_reward_type_for_key_hash(key_hash: str, rec: list) -> List[str]:
-    """Get reward types for key hash in ledger state snapshot record."""
+def _get_rew_type_for_cred_hash(key_hash: str, rec: list) -> List[str]:
+    """Get reward types for credential hash in ledger state snapshot record."""
     rew_types = []
     for r in rec:
-        if r[0]["key hash"] != key_hash:
+        if _get_rec_hash(r) != key_hash:
             continue
         for sr in r[1]:
             rew_types.append(sr["rewardType"])
@@ -455,18 +461,18 @@ class TestRewards:
             prev_rs_record = rs_records.get(this_epoch - 1)
             user_reward_epoch = user_rewards[-1].reward_per_epoch
             if user_reward_epoch and prev_rs_record:
-                assert user_reward_epoch == _get_reward_amount_for_key_hash(
+                assert user_reward_epoch == _get_rew_amount_for_cred_hash(
                     user_stake_addr_dec, prev_rs_record
                 )
             owner_reward_epoch = owner_rewards[-1].reward_per_epoch
             if owner_reward_epoch and prev_rs_record:
-                assert owner_reward_epoch == _get_reward_amount_for_key_hash(
+                assert owner_reward_epoch == _get_rew_amount_for_cred_hash(
                     pool_reward_addr_dec, prev_rs_record
                 )
 
-            pstake_mark = _get_key_hashes(es_snapshot["pstakeMark"]["stake"])
-            pstake_set = _get_key_hashes(es_snapshot["pstakeSet"]["stake"])
-            pstake_go = _get_key_hashes(es_snapshot["pstakeGo"]["stake"])
+            pstake_mark = _get_cred_hashes(es_snapshot["pstakeMark"]["stake"])
+            pstake_set = _get_cred_hashes(es_snapshot["pstakeSet"]["stake"])
+            pstake_go = _get_cred_hashes(es_snapshot["pstakeGo"]["stake"])
 
             if this_epoch == init_epoch + 1:
                 assert pool_stake_addr_dec in pstake_mark
@@ -478,7 +484,7 @@ class TestRewards:
 
                 # make sure ledger state and actual stake correspond
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == user_rewards[-1].stake_total
                 )
 
@@ -488,11 +494,11 @@ class TestRewards:
                 assert user_stake_addr_dec not in pstake_go
 
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == user_rewards[-1].stake_total
                 )
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == user_rewards[-2].stake_total
                 )
 
@@ -507,15 +513,15 @@ class TestRewards:
                 assert user_stake_addr_dec in pstake_go
 
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == user_rewards[-1].stake_total
                 )
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == user_rewards[-2].stake_total
                 )
                 assert (
-                    _get_val_for_key_hash(user_stake_addr_dec, es_snapshot["pstakeGo"]["stake"])
+                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeGo"]["stake"])
                     == user_rewards[-3].stake_total
                 )
 
@@ -717,7 +723,7 @@ class TestRewards:
             prev_rs_record = rs_records.get(this_epoch - 1)
             reward_per_epoch = reward_records[-1].reward_per_epoch
             if reward_per_epoch and prev_rs_record:
-                prev_recorded_reward = _get_reward_amount_for_key_hash(
+                prev_recorded_reward = _get_rew_amount_for_cred_hash(
                     reward_addr_dec, prev_rs_record
                 )
                 assert reward_per_epoch in (
@@ -725,9 +731,9 @@ class TestRewards:
                     prev_recorded_reward + mir_reward,
                 )
 
-            pstake_mark = _get_key_hashes(es_snapshot["pstakeMark"]["stake"])
-            pstake_set = _get_key_hashes(es_snapshot["pstakeSet"]["stake"])
-            pstake_go = _get_key_hashes(es_snapshot["pstakeGo"]["stake"])
+            pstake_mark = _get_cred_hashes(es_snapshot["pstakeMark"]["stake"])
+            pstake_set = _get_cred_hashes(es_snapshot["pstakeSet"]["stake"])
+            pstake_go = _get_cred_hashes(es_snapshot["pstakeGo"]["stake"])
 
             if this_epoch == init_epoch + 1:
                 assert reward_addr_dec in pstake_mark
@@ -736,7 +742,7 @@ class TestRewards:
 
                 # make sure ledger state and actual stake correspond
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == reward_records[-1].reward_total
                 )
 
@@ -746,11 +752,11 @@ class TestRewards:
                 assert reward_addr_dec not in pstake_go
 
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == reward_records[-1].reward_total
                 )
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == reward_records[-2].reward_total
                 )
 
@@ -760,15 +766,15 @@ class TestRewards:
                 assert reward_addr_dec in pstake_go
 
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == reward_records[-1].reward_total
                 )
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == reward_records[-2].reward_total
                 )
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
                     == reward_records[-3].reward_total
                 )
 
@@ -778,11 +784,11 @@ class TestRewards:
                 assert reward_addr_dec in pstake_go
 
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == reward_records[-2].reward_total
                 )
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
                     == reward_records[-3].reward_total
                 )
 
@@ -792,7 +798,7 @@ class TestRewards:
                 assert reward_addr_dec in pstake_go
 
                 assert (
-                    _get_val_for_key_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
+                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
                     == reward_records[-3].reward_total
                 )
 
@@ -804,11 +810,11 @@ class TestRewards:
             # check that rewards are comming from multiple sources where expected
             # ("LeaderReward" and "MemberReward")
             if init_epoch + 3 <= this_epoch <= init_epoch + 7:
-                assert ["LeaderReward", "MemberReward"] == _get_reward_type_for_key_hash(
+                assert ["LeaderReward", "MemberReward"] == _get_rew_type_for_cred_hash(
                     reward_addr_dec, rs_record
                 )
             else:
-                assert ["LeaderReward"] == _get_reward_type_for_key_hash(reward_addr_dec, rs_record)
+                assert ["LeaderReward"] == _get_rew_type_for_cred_hash(reward_addr_dec, rs_record)
 
         def _mir_tx(fund_src: str) -> clusterlib.TxRawOutput:
             mir_cert = cluster.gen_mir_cert_stake_addr(
@@ -1467,13 +1473,13 @@ class TestRewards:
             prev_rs_record = rs_records.get(this_epoch - 1)
             reward_per_epoch = reward_records[-1].reward_per_epoch
             if reward_per_epoch and prev_rs_record:
-                assert reward_per_epoch == _get_reward_amount_for_key_hash(
+                assert reward_per_epoch == _get_rew_amount_for_cred_hash(
                     stake_addr_dec, prev_rs_record
                 )
 
-            pstake_mark = _get_key_hashes(es_snapshot["pstakeMark"]["stake"])
-            pstake_set = _get_key_hashes(es_snapshot["pstakeSet"]["stake"])
-            pstake_go = _get_key_hashes(es_snapshot["pstakeGo"]["stake"])
+            pstake_mark = _get_cred_hashes(es_snapshot["pstakeMark"]["stake"])
+            pstake_set = _get_cred_hashes(es_snapshot["pstakeSet"]["stake"])
+            pstake_go = _get_cred_hashes(es_snapshot["pstakeGo"]["stake"])
 
             if this_epoch == init_epoch + 1:
                 assert stake_addr_dec in pstake_mark
@@ -1482,7 +1488,7 @@ class TestRewards:
 
                 # make sure ledger state and actual stake correspond
                 assert (
-                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == reward_records[-1].stake_total
                 )
 
@@ -1492,11 +1498,11 @@ class TestRewards:
                 assert stake_addr_dec not in pstake_go
 
                 assert (
-                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == reward_records[-1].stake_total
                 )
                 assert (
-                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == reward_records[-2].stake_total
                 )
 
@@ -1506,15 +1512,15 @@ class TestRewards:
                 assert stake_addr_dec in pstake_go
 
                 assert (
-                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
+                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
                     == reward_records[-1].stake_total
                 )
                 assert (
-                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
+                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
                     == reward_records[-2].stake_total
                 )
                 assert (
-                    _get_val_for_key_hash(stake_addr_dec, es_snapshot["pstakeGo"]["stake"])
+                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeGo"]["stake"])
                     == reward_records[-3].stake_total
                 )
 
