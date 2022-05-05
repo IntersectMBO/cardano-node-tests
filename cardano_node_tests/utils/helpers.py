@@ -97,8 +97,12 @@ def run_command(
     cmd: Union[str, list]
     if isinstance(command, str):
         cmd = command if shell else command.split()
+        cmd_str = command
     else:
         cmd = command
+        cmd_str = " ".join(command)
+
+    LOGGER.debug("Running `%s`", cmd_str)
 
     # pylint: disable=consider-using-with
     if workdir:
@@ -111,7 +115,7 @@ def run_command(
     if not ignore_fail and p.returncode != 0:
         err_dec = stderr.decode()
         err_dec = err_dec or stdout.decode()
-        raise AssertionError(f"An error occurred while running `{command}`: {err_dec}")
+        raise AssertionError(f"An error occurred while running `{cmd_str}`: {err_dec}")
 
     return stdout
 
