@@ -1558,6 +1558,43 @@ class TestNotBalanced:
             cluster.submit_tx_bare(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(change_amount=st.integers(min_value=MAX_LOVELACE_AMOUNT + 1))
+    @common.hypothesis_settings()
+    def test_out_of_bounds_amount(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        pbt_highest_utxo: clusterlib.UTXOData,
+        change_amount: int,
+    ):
+        """Try to build a transaction with output Lovelace amount that is out of bounds."""
+        temp_template = common.get_test_id(cluster)
+        fee = 200_000
+
+        out_file_tx = f"{temp_template}_tx.body"
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        ttl = cluster.calculate_tx_ttl()
+
+        # use only the UTxO with the highest amount
+        txins = [pbt_highest_utxo]
+        txouts = [
+            clusterlib.TxOut(address=payment_addrs[0].address, amount=change_amount),
+        ]
+
+        try:
+            cluster.build_raw_tx_bare(
+                out_file=out_file_tx,
+                txins=txins,
+                txouts=txouts,
+                tx_files=tx_files,
+                fee=fee,
+                ttl=ttl,
+            )
+        except clusterlib.CLIError as exc:
+            exc_val = str(exc)
+            assert "out of bounds" in exc_val or "exceeds the max bound" in exc_val
+
 
 @pytest.mark.testnets
 class TestNegative:
