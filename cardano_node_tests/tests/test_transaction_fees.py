@@ -1,7 +1,6 @@
 """Tests for fees of various kinds of transactions."""
 import itertools
 import logging
-from pathlib import Path
 from typing import List
 from typing import Tuple
 
@@ -300,7 +299,6 @@ class TestExpectedFees:
     def test_pool_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
@@ -317,7 +315,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -353,7 +351,6 @@ class TestExpectedFees:
     def test_pool_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         pool_users: List[clusterlib.PoolUser],
         addr_fee: Tuple[int, int],
     ):
@@ -371,7 +368,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(

@@ -474,7 +474,6 @@ class TestKES:
         self,
         cluster: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
-        testfile_temp_dir: Path,
     ):
         """Try to generate new operational certificate without specifying the `--kes-period`.
 
@@ -484,7 +483,7 @@ class TestKES:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         temp_template = common.get_test_id(cluster)
-        out_file = testfile_temp_dir / f"{temp_template}_shouldnt_exist.opcert"
+        out_file = Path(f"{temp_template}_shouldnt_exist.opcert")
 
         # try to generate new operational certificate without specifying the `--kes-period`
         with pytest.raises(clusterlib.CLIError) as excinfo:
