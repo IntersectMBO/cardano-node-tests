@@ -44,6 +44,7 @@ PROTOCOL_PARAM_KEYS = (
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
     reason="different TX eras doesn't affect this test, pointless to run",

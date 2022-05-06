@@ -123,6 +123,7 @@ def multisig_tx(
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestBasic:
     """Basic tests for multisig transactions."""
 
@@ -709,6 +710,7 @@ class TestBasic:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestNegative:
     """Transaction tests that are expected to fail."""
 
@@ -901,6 +903,7 @@ class TestNegative:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALLEGRA,
     reason="runs only with Allegra+ TX",
@@ -1418,6 +1421,7 @@ class TestTimeLocking:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALLEGRA,
     reason="runs only with Allegra+ TX",
@@ -1709,6 +1713,7 @@ class TestAuxiliaryScripts:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestIncrementalSigning:
     """Tests for incremental signing."""
 
