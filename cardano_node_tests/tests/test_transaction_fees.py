@@ -19,6 +19,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestFee:
     """General fees tests."""
 
@@ -172,6 +173,7 @@ class TestFee:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
 
+@pytest.mark.smoke
 class TestExpectedFees:
     """Test expected fees."""
 

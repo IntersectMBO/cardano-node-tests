@@ -89,6 +89,7 @@ class TestDelegateAddr:
         ids=("build_raw", "build"),
     )
     @pytest.mark.dbsync
+    @pytest.mark.smoke
     def test_delegate_using_pool_id(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -139,6 +140,7 @@ class TestDelegateAddr:
         ids=("build_raw", "build"),
     )
     @pytest.mark.dbsync
+    @pytest.mark.smoke
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
         reason="supposed to run on cluster with pools",
@@ -481,6 +483,7 @@ class TestDelegateAddr:
         ids=("build_raw", "build"),
     )
     @pytest.mark.dbsync
+    @pytest.mark.smoke
     def test_addr_registration_deregistration(
         self,
         cluster: clusterlib.ClusterLib,
@@ -571,6 +574,7 @@ class TestDelegateAddr:
         ids=("build_raw", "build"),
     )
     @pytest.mark.dbsync
+    @pytest.mark.smoke
     def test_addr_delegation_deregistration(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
@@ -698,6 +702,7 @@ class TestDelegateAddr:
         ids=("build_raw", "build"),
     )
     @pytest.mark.dbsync
+    @pytest.mark.smoke
     def test_addr_registration_certificate_order(
         self,
         cluster: clusterlib.ClusterLib,
@@ -786,6 +791,7 @@ class TestDelegateAddr:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestNegative:
     """Tests that are expected to fail."""
 

@@ -149,6 +149,7 @@ def multisig_script_policyid(
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY,
     reason="runs only with Mary+ TX",
@@ -1041,6 +1042,7 @@ class TestMinting:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY,
     reason="runs only with Mary+ TX",
@@ -1515,6 +1517,7 @@ class TestPolicies:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY,
     reason="runs only with Mary+ TX",
@@ -1959,6 +1962,7 @@ class TestTransfer:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.MARY,
     reason="runs only with Mary+ TX",
@@ -2097,6 +2101,7 @@ class TestNegative:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
     reason="runs only with default TX era",

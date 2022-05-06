@@ -19,6 +19,7 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.needs_dbsync
 
 
+@pytest.mark.smoke
 class TestDBSync:
     """General db-sync tests."""
 
