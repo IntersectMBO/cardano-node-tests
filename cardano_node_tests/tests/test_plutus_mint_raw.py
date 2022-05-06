@@ -110,6 +110,7 @@ def _fund_issuer(
     issuer_addr: clusterlib.AddressRecord,
     minting_cost: plutus_common.ScriptCost,
     amount: int,
+    fee_txsize: int = FEE_MINT_TXSIZE,
     collateral_utxo_num: int = 1,
 ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund the token issuer."""
@@ -126,7 +127,7 @@ def _fund_issuer(
     txouts = [
         clusterlib.TxOut(
             address=issuer_addr.address,
-            amount=amount + minting_cost.fee + FEE_MINT_TXSIZE,
+            amount=amount + minting_cost.fee + fee_txsize,
         ),
         *[clusterlib.TxOut(address=issuer_addr.address, amount=a) for a in collateral_amounts],
     ]
@@ -157,11 +158,7 @@ def _fund_issuer(
     issuer_balance = cluster_obj.get_address_balance(issuer_addr.address)
     assert (
         issuer_balance
-        == issuer_init_balance
-        + amount
-        + minting_cost.fee
-        + FEE_MINT_TXSIZE
-        + minting_cost.collateral
+        == issuer_init_balance + amount + minting_cost.fee + fee_txsize + minting_cost.collateral
     ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
     txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
@@ -200,6 +197,7 @@ class TestMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
+        fee_txsize = 600_000
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_COST, protocol_params=cluster.get_protocol_params()
@@ -214,6 +212,7 @@ class TestMinting:
             issuer_addr=issuer_addr,
             minting_cost=minting_cost,
             amount=lovelace_amount,
+            fee_txsize=fee_txsize,
             collateral_utxo_num=2,
         )
 
@@ -257,7 +256,9 @@ class TestMinting:
             txouts=txouts_step2,
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
-            fee=minting_cost.fee + FEE_MINT_TXSIZE,
+            fee=minting_cost.fee + fee_txsize,
+            # ttl is optional in this test
+            invalid_hereafter=cluster.get_slot_no() + 1_000_000,
         )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,

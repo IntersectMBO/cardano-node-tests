@@ -1802,6 +1802,66 @@ class TestNegative:
         assert "ExpiredUTxO" in exc_val or "ValidityIntervalUTxO" in exc_val
 
     @allure.link(helpers.get_vcs_link())
+    def test_far_future_ttl(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Try to send a transaction with ttl too far in the future.
+
+        Too far means slot further away than current slot + 3k/f slot.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        src_address = pool_users[0].payment.address
+        dst_address = pool_users[1].payment.address
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
+        destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
+
+        # ttl can't be further than 3k/f slot
+        furthest_slot = round(
+            3 * cluster.genesis["securityParam"] / cluster.genesis["activeSlotsCoeff"]
+        )
+
+        ttl = cluster.get_slot_no() + furthest_slot + 100_000
+        fee = cluster.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            invalid_hereafter=ttl,
+        )
+
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+            invalid_hereafter=ttl,
+        )
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        # it should NOT be possible to submit a transaction with ttl far in the future
+        err_str = ""
+        try:
+            cluster.submit_tx_bare(out_file_signed)
+        except clusterlib.CLIError as err:
+            err_str = str(err)
+
+        if not err_str:
+            pytest.xfail("TTL too far in future is not rejected")
+
+        assert "ValidityIntervalUTxO" in err_str
+
+    @allure.link(helpers.get_vcs_link())
     def test_duplicated_tx(
         self,
         cluster: clusterlib.ClusterLib,
