@@ -349,6 +349,8 @@ def _create_register_pool(
 
     Common functionality for tests.
     """
+    temp_dir = temp_dir.expanduser().resolve()
+
     src_address = pool_owners[0].payment.address
     src_init_balance = cluster_obj.get_address_balance(src_address)
 
@@ -412,6 +414,8 @@ def _create_register_pool_delegate_stake_tx(
 
     Common functionality for tests.
     """
+    temp_dir = temp_dir.expanduser().resolve()
+
     # create node VRF key pair
     node_vrf = cluster_obj.gen_vrf_key_pair(node_name=pool_data.pool_name)
     # create node cold key pair and counter
@@ -642,7 +646,6 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         request: FixtureRequest,
         use_build_cmd: bool,
     ):
@@ -661,7 +664,7 @@ class TestStakePool:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -693,7 +696,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_data=pool_data,
             request=request,
             use_build_cmd=use_build_cmd,
@@ -718,7 +721,6 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         request: FixtureRequest,
         use_build_cmd: bool,
     ):
@@ -737,7 +739,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -769,7 +771,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_data=pool_data,
             request=request,
             use_build_cmd=use_build_cmd,
@@ -792,7 +794,6 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         no_of_addr: int,
         request: FixtureRequest,
         use_build_cmd: bool,
@@ -830,7 +831,7 @@ class TestStakePool:
         _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -853,7 +854,6 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         use_build_cmd: bool,
     ):
         """Deregister stake pool.
@@ -873,7 +873,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -905,7 +905,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_data=pool_data,
             use_build_cmd=use_build_cmd,
         )
@@ -999,7 +999,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -1029,7 +1029,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_data=pool_data,
         )
 
@@ -1155,7 +1155,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -1185,7 +1185,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_data=pool_data,
         )
 
@@ -1281,7 +1281,6 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         use_build_cmd: bool,
         request: FixtureRequest,
     ):
@@ -1303,7 +1302,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         pool_metadata_updated = {
@@ -1313,7 +1312,7 @@ class TestStakePool:
             "homepage": "www.qa22.com",
         }
         pool_metadata_updated_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata_updated.json",
+            f"{pool_name}_registration_metadata_updated.json",
             pool_metadata_updated,
         )
 
@@ -1350,7 +1349,7 @@ class TestStakePool:
         pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1415,7 +1414,6 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         use_build_cmd: bool,
         request: FixtureRequest,
     ):
@@ -1437,7 +1435,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{pool_name}_registration_metadata.json", pool_metadata
+            f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
         min_pool_cost = cluster.get_protocol_params().get("minPoolCost", 500)
@@ -1474,7 +1472,7 @@ class TestStakePool:
         pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1799,7 +1797,6 @@ class TestPoolCost:
         self,
         cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
-        testfile_temp_dir: Path,
         pool_cost: int,
     ):
         """Try to create and register a stake pool with pool cost lower than *minPoolCost*.
@@ -1822,7 +1819,7 @@ class TestPoolCost:
             _create_register_pool(
                 cluster_obj=cluster,
                 temp_template=temp_template,
-                temp_dir=testfile_temp_dir,
+                temp_dir=Path("."),
                 pool_owners=pool_owners,
                 pool_data=pool_data,
             )
@@ -1842,7 +1839,6 @@ class TestPoolCost:
         cluster_manager: cluster_management.ClusterManager,
         cluster_mincost: clusterlib.ClusterLib,
         pool_owners: List[clusterlib.PoolUser],
-        testfile_temp_dir: Path,
         pool_cost: int,
         request: FixtureRequest,
     ):
@@ -1877,7 +1873,7 @@ class TestPoolCost:
         _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=testfile_temp_dir,
+            temp_dir=Path("."),
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1930,7 +1926,6 @@ class TestNegative:
     def gen_pool_registration_cert_data(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
     ) -> Tuple[str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair]:
         rand_str = clusterlib.get_rand_str(3)
         pool_name = f"pool_{rand_str}"
@@ -1942,7 +1937,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / "hypothesis_metadata_registration_metadata.json", pool_metadata
+            "hypothesis_metadata_registration_metadata.json", pool_metadata
         )
         pool_metadata_hash = cluster.gen_pool_metadata_hash(pool_metadata_file)
 
@@ -2168,7 +2163,6 @@ class TestNegative:
     def test_stake_pool_metadata_no_name(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
     ):
         """Try to create pool metadata hash when missing the *name* key.
 
@@ -2182,7 +2176,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2193,7 +2187,6 @@ class TestNegative:
     def test_stake_pool_metadata_no_description(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
     ):
         """Try to create pool metadata hash when missing the *description* key.
 
@@ -2207,7 +2200,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2218,7 +2211,6 @@ class TestNegative:
     def test_stake_pool_metadata_no_ticker(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
     ):
         """Try to create pool metadata hash when missing the *ticker* key.
 
@@ -2232,7 +2224,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2243,7 +2235,6 @@ class TestNegative:
     def test_stake_pool_metadata_no_homepage(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
     ):
         """Try to create pool metadata hash when missing the *homepage* key.
 
@@ -2257,7 +2248,7 @@ class TestNegative:
             "ticker": "IOG1",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2270,7 +2261,6 @@ class TestNegative:
     def test_stake_pool_metadata_long_name(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         pool_name: str,
     ):
         """Try to create pool metadata hash when the *name* value is longer than allowed.
@@ -2286,7 +2276,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2303,7 +2293,6 @@ class TestNegative:
     def test_stake_pool_metadata_long_description(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         pool_description: str,
     ):
         """Try to create pool metadata hash when the *description* value is longer than allowed.
@@ -2319,7 +2308,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2336,7 +2325,6 @@ class TestNegative:
     def test_stake_pool_metadata_long_ticker(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         pool_ticker: str,
     ):
         """Try to create pool metadata hash when the *ticker* value is longer than allowed.
@@ -2354,7 +2342,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2371,7 +2359,6 @@ class TestNegative:
     def test_stake_pool_metadata_long_homepage(
         self,
         cluster: clusterlib.ClusterLib,
-        testfile_temp_dir: Path,
         pool_homepage: str,
     ):
         """Try to create pool metadata hash when the *homepage* value is longer than allowed.
@@ -2387,7 +2374,7 @@ class TestNegative:
             "homepage": pool_homepage,
         }
         pool_metadata_file = helpers.write_json(
-            testfile_temp_dir / f"{temp_template}_registration_metadata.json", pool_metadata
+            f"{temp_template}_registration_metadata.json", pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
