@@ -102,6 +102,7 @@ def _get_txins_txouts(
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestBasic:
     """Test basic transactions - transferring funds, transaction IDs."""
 
@@ -771,6 +772,7 @@ class TestBasic:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestMultiInOut:
     """Test transactions with multiple txins and/or txouts."""
 
@@ -1359,6 +1361,7 @@ class TestManyUTXOs:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestNotBalanced:
     """Tests for not balanced transactions."""
 
@@ -1587,6 +1590,7 @@ class TestNotBalanced:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestNegative:
     """Transaction tests that are expected to fail."""
 
@@ -2782,6 +2786,7 @@ class TestNegative:
 
 
 @pytest.mark.testnets
+@pytest.mark.smoke
 class TestMetadata:
     """Tests for transactions with metadata."""
 

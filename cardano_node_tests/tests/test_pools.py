@@ -1880,6 +1880,7 @@ class TestPoolCost:
         )
 
 
+@pytest.mark.smoke
 @pytest.mark.testnets
 class TestNegative:
     """Stake pool tests that are expected to fail."""

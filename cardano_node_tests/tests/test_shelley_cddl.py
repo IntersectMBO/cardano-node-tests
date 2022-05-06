@@ -24,6 +24,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era != VERSIONS.SHELLEY,
     reason="runs only with Shelley TX",
