@@ -45,7 +45,7 @@ FundTupleT = Tuple[
 ]
 
 # approx. fee for Tx size
-FEE_REDEEM_TXSIZE = 180_000
+FEE_REDEEM_TXSIZE = 400_000
 
 
 @pytest.fixture
