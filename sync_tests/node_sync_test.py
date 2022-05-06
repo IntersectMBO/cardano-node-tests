@@ -64,6 +64,44 @@ def git_get_commit_sha_for_tag_no(tag_no):
     return None
 
 
+def git_get_last_closed_pr_cardano_node():
+    global jData
+    url = f"https://api.github.com/repos/input-output-hk/cardano-node/pulls?state=closed"
+    response = requests.get(url)
+
+    # there is a rate limit for the provided url that we want to overpass with the below loop
+    count = 0
+    while not response.ok:
+        time.sleep(random.randint(30, 240))
+        count += 1
+        response = requests.get(url)
+        if count > 10:
+            print(
+                f"!!!! ERROR: Could not get the number of the last closed PR after {count} retries")
+            response.raise_for_status()
+    jData = json.loads(response.content)
+    print(f" -- last closed PR no is: {jData[0].get('url').split('/pulls/')[1].strip()}")
+
+    return jData[0].get('url').split("/pulls/")[1].strip()
+
+
+def get_last_eval_no_for_node_pr(node_pr_no):
+    global eval_jData, build_jData
+    eval_url = f"https://hydra.iohk.io/jobset/Cardano/cardano-node-pr-{node_pr_no}/evals"
+
+    headers = {'Content-type': 'application/json'}
+    eval_response = requests.get(eval_url, headers=headers)
+
+    eval_jData = json.loads(eval_response.content)
+
+    if eval_response.ok:
+        eval_jData = json.loads(eval_response.content)
+    else:
+        eval_response.raise_for_status()
+    print(f'last eval_no: {eval_jData["evals"][0]["id"]}')
+    return eval_jData["evals"][0]["id"]
+
+
 def git_get_hydra_eval_link_for_commit_sha(commit_sha):
     global jData
     url = f"https://api.github.com/repos/input-output-hk/cardano-node/commits/{commit_sha}/status"

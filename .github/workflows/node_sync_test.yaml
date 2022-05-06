@@ -6,10 +6,10 @@ on:
       - sync_tests
     inputs:
       tag_no1:
-        description: tag number1 - used for initial sync, from clean state
+        description: tag number1 - used for initial sync, from clean state (1.33.0-rc2 (tag number) or 1.33.0 (release number - for released versions) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
         required: true
       tag_no2:
-        description: tag number2 - used for final sync, from existing state
+        description: tag number2 - used for final sync, from existing state (1.33.0-rc2 (tag number) or 1.33.0 (release number - for released versions) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
         required: false
         default: "None"
       hydra_eval_no1:
@@ -43,6 +43,36 @@ jobs:
           "tag_no2":"${{ github.event.inputs.tag_no2 }}",
           "hydra_eval_no1":"${{ github.event.inputs.hydra_eval_no1 }}",
           "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}",
+          "env":"mainnet",
+          "BLOCKFROST_API_KEY":"${{ secrets.BLOCKFROST_API_KEY }}",
+          "AWS_DB_USERNAME":"${{ secrets.AWS_DB_USERNAME }}",
+          "AWS_DB_PASS":"${{ secrets.AWS_DB_PASS }}",
+          "AWS_DB_NAME":"${{ secrets.AWS_DB_NAME }}",
+          "AWS_DB_HOSTNAME":"${{ secrets.AWS_DB_HOSTNAME }}"
+          }'
+          branch: 'sync_tests'
+  node_sync_test_testnet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: trigger the Buildkite pipeline - run sync tests on public Testnet
+        env:
+          BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
+          AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
+          AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
+          AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
+          BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
+        uses: zegocover/buildkite-pipeline-action@master
+        with:
+          access_token: '${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}'
+          pipeline: 'input-output-hk/qa-sync-tests'
+          message: ':github: Triggered by GitHub Action'
+          env: '{
+          "tag_no1":"${{ github.event.inputs.tag_no1 }}",
+          "tag_no2":"${{ github.event.inputs.tag_no2 }}",
+          "hydra_eval_no1":"${{ github.event.inputs.hydra_eval_no1 }}",
+          "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}",
+          "env":"testnet",
           "BLOCKFROST_API_KEY":"${{ secrets.BLOCKFROST_API_KEY }}",
           "AWS_DB_USERNAME":"${{ secrets.AWS_DB_USERNAME }}",
           "AWS_DB_PASS":"${{ secrets.AWS_DB_PASS }}",
@@ -54,7 +84,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        env: [shelley_qa, testnet, staging]
+        env: [shelley_qa, staging]
+        branch:
+          - sync_tests
       fail-fast: false
     runs-on: ${{ matrix.os }}
     timeout-minutes: 600
