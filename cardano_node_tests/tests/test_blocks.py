@@ -24,6 +24,7 @@ def cluster_use_pool3(cluster_manager: cluster_management.ClusterManager) -> clu
     return cluster_manager.get(use_resources=[cluster_management.Resources.POOL3])
 
 
+@pytest.mark.smoke
 class TestLeadershipSchedule:
     """Tests for cardano-cli leadership-schedule."""
 

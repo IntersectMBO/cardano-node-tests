@@ -22,10 +22,13 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 # skip all tests if Tx era < alonzo
-pytestmark = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALONZO,
-    reason="runs only with Alonzo+ TX",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="runs only with Alonzo+ TX",
+    ),
+    pytest.mark.smoke,
+]
 
 # approx. fee for Tx size
 FEE_MINT_TXSIZE = 180_000
