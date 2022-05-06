@@ -31,7 +31,7 @@ pytestmark = [
 ]
 
 # approx. fee for Tx size
-FEE_MINT_TXSIZE = 180_000
+FEE_MINT_TXSIZE = 400_000
 
 
 @pytest.fixture
@@ -1592,7 +1592,7 @@ class TestMintingNegative:
             signing_key_files=[issuer_addr.skey_file],
         )
 
-        fee_subtract = 100_000
+        fee_subtract = 300_000
         txouts_step2 = [
             # add subtracted fee to the transferred Lovelace amount so the Tx remains balanced
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount + fee_subtract),
