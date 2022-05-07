@@ -1852,7 +1852,7 @@ class TestNegative:
         # it should NOT be possible to submit a transaction with ttl far in the future
         err_str = ""
         try:
-            cluster.submit_tx_bare(out_file_signed)
+            cluster.submit_tx(out_file_signed, txins=tx_raw_output.txins)
         except clusterlib.CLIError as err:
             err_str = str(err)
 
