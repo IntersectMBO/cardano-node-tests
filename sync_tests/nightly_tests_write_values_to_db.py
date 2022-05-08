@@ -129,6 +129,11 @@ def main():
             if build["state"] == "running":
                 print(f"  ==== build no {build['number']} is still running; not adding it into the DB yet")
                 continue
+            if build["finished_at"] is None:
+                print(f"  ==== build no {build['number']} is still running; not adding it into the DB yet")
+                print(f"build state: {build['state']}")
+                print(f"build finished_at: {build['finished_at']}")
+                continue
 
             if build["web_url"] not in get_column_values(table_name, "build_web_url"):
                 build_results_dict["details"] = env
@@ -138,9 +143,8 @@ def main():
                 build_results_dict["build_status"] = build["state"]
                 build_results_dict["build_started_at"] = build["started_at"]
                 build_results_dict["build_finished_at"] = build["finished_at"]
+                print(json.dumps(build_results_dict, indent=2))
                 if "build_finished_at" in build_results_dict:
-                    print(f'build_finished_at: {build_results_dict["build_finished_at"]}')
-                    print(f'build_finished_at datetime: {datetime.strptime(build_results_dict["build_finished_at"], "%Y-%m-%dT%H:%M:%S.%fZ")}')
                     build_results_dict["build_duration"] = seconds_to_time(date_diff_in_seconds(
                         datetime.strptime(build_results_dict["build_finished_at"], "%Y-%m-%dT%H:%M:%S.%fZ"),
                         datetime.strptime(build_results_dict["build_started_at"], "%Y-%m-%dT%H:%M:%S.%fZ")))
