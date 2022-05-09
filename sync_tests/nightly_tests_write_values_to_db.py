@@ -12,7 +12,8 @@ from utils import seconds_to_time, date_diff_in_seconds
 ORG_SLUG = "input-output-hk"
 cli_envs = ["node_cli", "dbsync_cli"]
 nightly_envs = ["node_nightly", "node_nightly_shelley_tx", "node_nightly_mary_tx",
-                "node_nightly_mary_tx_cddl", "node_nightly_p2p_cddl", "dbsync_nightly"]
+                "node_nightly_mary_tx_cddl", "node_nightly_p2p_cddl", "node_nightly_upgrade",
+                "dbsync_nightly"]
 DEFAULT_ERA = "alonzo"
 
 
@@ -55,6 +56,8 @@ def get_buildkite_pipeline_slug(env):
         pileline_slug = "cardano-node-tests-nightly-cddl"
     elif env == "node_nightly_p2p":
         pileline_slug = "cardano-node-tests-nightly-p2p"
+    elif env == "node_nightly_upgrade":
+        pileline_slug = "cardano-node-tests-nightly-upgrade"
     else:
         print(f"!!! ERROR: env {env} not expected - use one of: {cli_envs + nightly_envs}")
         exit(1)
