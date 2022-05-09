@@ -1444,71 +1444,6 @@ class TestNegative:
         assert "ScriptsNotPaidUTxO" in err_str
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_no_datum_txout(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-    ):
-        """Test using UTxO without datum hash in place of locked UTxO.
-
-        Expect failure.
-
-        * create a Tx output without a datum hash
-        * try to spend the UTxO like it was locked Plutus UTxO
-        * check that the expected error was raised
-        * (optional) check transactions in db-sync
-        """
-        temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
-
-        payment_addr = payment_addrs[0]
-        dst_addr = payment_addrs[1]
-
-        plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
-            datum_file=plutus_common.DATUM_42_TYPED,
-            redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
-        )
-        assert plutus_op.execution_cost  # for mypy
-
-        redeem_cost = plutus_common.compute_cost(
-            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
-        )
-
-        txouts = [
-            clusterlib.TxOut(
-                address=payment_addr.address, amount=amount + redeem_cost.fee + FEE_REDEEM_TXSIZE
-            ),
-            clusterlib.TxOut(address=payment_addr.address, amount=redeem_cost.collateral),
-        ]
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
-
-        tx_output_fund = cluster.send_tx(
-            src_address=payment_addr.address,
-            tx_name=temp_template,
-            txouts=txouts,
-            tx_files=tx_files,
-            join_txouts=False,
-        )
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            _spend_locked_txin(
-                temp_template=temp_template,
-                cluster_obj=cluster,
-                dst_addr=dst_addr,
-                script_utxos=script_utxos,
-                collateral_utxos=collateral_utxos,
-                plutus_op=plutus_op,
-                amount=amount,
-            )
-        assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_collateral_percent(
@@ -2318,3 +2253,167 @@ class TestNegativeRedeemer:
         assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
             err
         )
+
+
+@pytest.mark.testnets
+class TestNegativeDatum:
+    """Tests for Tx output locking using Plutus smart contracts with wrong datum."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_no_datum_txout(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test using UTxO without datum hash in place of locked UTxO.
+
+        Expect failure.
+
+        * create a Tx output without a datum hash
+        * try to spend the UTxO like it was locked Plutus UTxO
+        * check that the expected error was raised
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+        )
+        assert plutus_op.execution_cost  # for mypy
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+        )
+
+        txouts = [
+            clusterlib.TxOut(
+                address=payment_addr.address, amount=amount + redeem_cost.fee + FEE_REDEEM_TXSIZE
+            ),
+            clusterlib.TxOut(address=payment_addr.address, amount=redeem_cost.collateral),
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+        tx_output_fund = cluster.send_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            join_txouts=False,
+        )
+        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=amount,
+            )
+        assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(datum_value=st.text())
+    @common.hypothesis_settings()
+    @pytest.mark.testnets
+    def test_lock_tx_invalid_datum(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        datum_value: str,
+    ):
+        """Test locking a Tx output with an invalid datum.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        datum_file = f"{temp_template}.datum"
+        with open(datum_file, "w", encoding="utf-8") as outfile:
+            json.dump(f'{{"{datum_value}"}}', outfile)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=Path(datum_file),
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+        )
+        assert plutus_op.execution_cost  # for mypy
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _fund_script(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addr,
+                dst_addr=dst_addr,
+                plutus_op=plutus_op,
+                amount=amount,
+            )
+        assert "JSON object expected. Unexpected value" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_unlock_tx_wrong_datum(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test locking a Tx output and try to spend it with a wrong datum.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+        dst_addr = payment_addrs[1]
+
+        payment_addr = payment_addrs[0]
+
+        plutus_op_1 = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+        )
+        assert plutus_op_1.execution_cost  # for mypy
+
+        script_utxos, collateral_utxos, __ = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addr,
+            dst_addr=dst_addr,
+            plutus_op=plutus_op_1,
+            amount=amount,
+        )
+
+        # use a wrong datum to try to unlock the funds
+        plutus_op_2 = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            datum_file=plutus_common.DATUM_42,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op_2,
+                amount=amount,
+            )
+        assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
