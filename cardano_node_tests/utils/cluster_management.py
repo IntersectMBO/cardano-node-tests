@@ -8,6 +8,7 @@ import inspect
 import logging
 import os
 import random
+import shutil
 import time
 from pathlib import Path
 from typing import Any
@@ -278,6 +279,9 @@ class ClusterManager:
                 pytest_config=self.pytest_config,
             )
             artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
+
+            shutil.rmtree(state_dir, ignore_errors=True)
+
             helpers.touch(instance_dir / CLUSTER_STOPPED_FILE)
             self._log(f"c{instance_num}: stopped cluster instance")
 
@@ -431,6 +435,8 @@ class _ClusterGetter:
                 artifacts.save_cluster_artifacts(
                     save_dir=self.cm.pytest_tmp_dir, state_dir=state_dir
                 )
+
+            shutil.rmtree(state_dir, ignore_errors=True)
 
             with contextlib.suppress(Exception):
                 _kill_supervisor(self.cm.cluster_instance_num)
