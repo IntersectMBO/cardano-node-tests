@@ -62,7 +62,7 @@ rm -rf "${ARTIFACTS_DIR:?}"/*
 set +e
 # shellcheck disable=SC2016
 nix-shell --run \
-  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" CI_ARGS="--html=testrun-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; exit "$retval"'
+  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" CI_ARGS="--html=testrun-report.html --self-contained-html" make tests; retval="$?"; ./.buildkite/report.sh .; ./.buildkite/cli_coverage.sh .; exit "$retval"'
 retval="$?"
 
 # grep testing artifacts for errors
