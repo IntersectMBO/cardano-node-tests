@@ -143,7 +143,7 @@ def close_dbconn() -> Generator[None, None, None]:
 
 
 def _stop_all_cluster_instances(
-    tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config, pytest_tmp_dir: Path
+    tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config
 ) -> None:
     """Stop all cluster instances after all tests are finished."""
     cluster_manager_obj = cluster_management.ClusterManager(
@@ -154,9 +154,6 @@ def _stop_all_cluster_instances(
     # stop all cluster instances
     with helpers.ignore_interrupt():
         cluster_manager_obj.stop_all_clusters()
-
-    # copy collected artifacts to dir specified by `--artifacts-base-dir`
-    artifacts.copy_artifacts(pytest_tmp_dir=pytest_tmp_dir, pytest_config=pytest_config)
 
 
 def _testnet_cleanup(pytest_root_tmp: Path) -> None:
@@ -195,37 +192,46 @@ def _save_env_for_allure(pytest_config: Config) -> None:
 def testenv_setup_teardown(
     tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
 ) -> Generator[None, None, None]:
-    # save environment info for Allure
-    _save_env_for_allure(request.config)
-
     pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
 
-    # if cluster was started outside of test framework, do nothing
-    if configuration.DEV_CLUSTER_RUNNING:
-        # TODO: check that socket is open and print error if not
-        yield
-        _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
-        return
+    with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
+        # save environment info for Allure
+        if not list(pytest_root_tmp.glob(".started_session_*")):
+            _save_env_for_allure(request.config)
 
-    helpers.touch(pytest_root_tmp / f".started_session_{worker_id}")
+        helpers.touch(pytest_root_tmp / f".started_session_{worker_id}")
 
     yield
 
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
+        # save CLI coverage to dir specified by `--cli-coverage-dir`
         cluster_manager_obj = cluster_management.ClusterManager(
             tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
 
+        # perform cleanup if this is the last running pytest worker
         (pytest_root_tmp / f".started_session_{worker_id}").unlink()
         if not list(pytest_root_tmp.glob(".started_session_*")):
+            # perform testnet cleanup
             _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
-            _stop_all_cluster_instances(
-                tmp_path_factory=tmp_path_factory,
-                worker_id=worker_id,
-                pytest_config=request.config,
-                pytest_tmp_dir=pytest_root_tmp,
-            )
+
+            if configuration.DEV_CLUSTER_RUNNING:
+                # save cluster artifacts
+                artifacts_base_dir = request.config.getoption("--artifacts-base-dir")
+                if artifacts_base_dir:
+                    state_dir = cluster_nodes.get_cluster_env().state_dir
+                    artifacts.save_cluster_artifacts(save_dir=pytest_root_tmp, state_dir=state_dir)
+            else:
+                # stop all cluster instances, save artifacts
+                _stop_all_cluster_instances(
+                    tmp_path_factory=tmp_path_factory,
+                    worker_id=worker_id,
+                    pytest_config=request.config,
+                )
+
+            # copy collected artifacts to dir specified by `--artifacts-base-dir`
+            artifacts.copy_artifacts(pytest_tmp_dir=pytest_root_tmp, pytest_config=request.config)
 
 
 @pytest.fixture(scope="session", autouse=True)
