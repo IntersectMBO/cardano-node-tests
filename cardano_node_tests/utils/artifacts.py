@@ -62,7 +62,6 @@ def save_cluster_artifacts(save_dir: Path, state_dir: Path) -> None:
         return
 
     LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
-    shutil.rmtree(state_dir, ignore_errors=True)
 
 
 def copy_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
