@@ -157,8 +157,12 @@ def check_tx_view(  # noqa: C901
     loaded_withdrawals = set()
     if tx_loaded_withdrawals:
         for withdrawal in tx_loaded_withdrawals:
-            withdrawal_key = withdrawal.get("stake credential key hash") or withdrawal.get(
-                "stake credential script hash"
+            withdrawal_key = (
+                withdrawal.get("stake credential key hash")
+                or withdrawal.get("stake credential script hash")
+                # TODO: legacy for backwards compatibility with 1.34.1
+                or withdrawal.get("credential", {}).get("key hash")
+                or withdrawal.get("credential", {}).get("script hash")
             )
             withdrawal_amount = int(withdrawal["amount"].split()[0] or 0)
             loaded_withdrawals.add((withdrawal_key, withdrawal_amount))
