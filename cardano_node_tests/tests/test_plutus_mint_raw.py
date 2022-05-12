@@ -459,7 +459,7 @@ class TestMinting:
         # Step 2: mint the "qacoin"
 
         slot_step2 = cluster.get_slot_no()
-        slots_offset = 1_000
+        slots_offset = 10_000_000
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
@@ -504,7 +504,7 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=minting_cost.fee + FEE_MINT_TXSIZE,
-            invalid_before=slot_step2 - slots_offset,
+            invalid_before=slot_step2 - 1_000,
             invalid_hereafter=slot_step2 + slots_offset,
         )
         tx_signed_step2 = cluster.sign_tx(
