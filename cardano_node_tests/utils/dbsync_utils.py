@@ -562,6 +562,7 @@ def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> List[clusterlib.TxOut
 
     Remove address information - minting tokens doesn't include address, only amount and asset ID,
     i.e. address information is not available in `ma_tx_mint` table.
+    Remove also datum hash, which is not available as well.
     MA output is handled in Tx output checks.
     """
     mint_txouts: Dict[str, clusterlib.TxOut] = {}
@@ -570,10 +571,10 @@ def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> List[clusterlib.TxOut
         if mt.coin in mint_txouts:
             mt_stored = mint_txouts[mt.coin]
             mint_txouts[mt.coin] = mt_stored._replace(
-                address="", amount=mt_stored.amount + mt.amount
+                address="", amount=mt_stored.amount + mt.amount, datum_hash=""
             )
         else:
-            mint_txouts[mt.coin] = mt._replace(address="")
+            mint_txouts[mt.coin] = mt._replace(address="", datum_hash="")
 
     return list(mint_txouts.values())
 
