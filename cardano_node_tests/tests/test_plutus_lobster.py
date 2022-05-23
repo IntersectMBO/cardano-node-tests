@@ -28,7 +28,6 @@ pytestmark = [
         VERSIONS.transaction_era < VERSIONS.ALONZO,
         reason="runs only with Alonzo+ TX",
     ),
-    pytest.mark.smoke,
 ]
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -123,7 +122,7 @@ def _mint_lobster_nft(
     issuer_addr: clusterlib.AddressRecord,
     mint_utxos: List[clusterlib.UTXOData],
     collateral_utxos: List[clusterlib.UTXOData],
-    token_amount: int,
+    nft_amount: int,
     lovelace_amount: int,
 ) -> Tuple[str, List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Mint the LobsterNFT token."""
@@ -134,7 +133,7 @@ def _mint_lobster_nft(
     mint_txouts = [
         clusterlib.TxOut(
             address=issuer_addr.address,
-            amount=token_amount,
+            amount=nft_amount,
             coin=lobster_nft_token,
         )
     ]
@@ -181,7 +180,7 @@ def _mint_lobster_nft(
 
     token_utxo_lobster = [u for u in token_utxos if u.coin == lobster_nft_token][0]
     assert (
-        token_utxo_lobster.amount == token_amount
+        token_utxo_lobster.amount == nft_amount
     ), f"Incorrect token balance for token issuer address `{issuer_addr.address}`"
 
     return lobster_nft_token, token_utxos, tx_output
@@ -193,7 +192,7 @@ def _deploy_lobster_nft(
     issuer_addr: clusterlib.AddressRecord,
     token_utxos: List[clusterlib.UTXOData],
     lobster_nft_token: str,
-    token_amount: int,
+    nft_amount: int,
     lovelace_amount: int,
 ) -> Tuple[str, List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Deploy the LobsterNFT token to script address."""
@@ -210,7 +209,7 @@ def _deploy_lobster_nft(
         ),
         clusterlib.TxOut(
             address=script_address,
-            amount=token_amount,
+            amount=nft_amount,
             coin=lobster_nft_token,
             datum_hash=LOBSTER_DATUM_HASH,
         ),
@@ -242,13 +241,12 @@ def _deploy_lobster_nft(
 
     token_utxo_lobster = [u for u in deployed_token_utxos if u.coin == lobster_nft_token][0]
     assert (
-        token_utxo_lobster.amount == token_amount
+        token_utxo_lobster.amount == nft_amount
     ), f"Incorrect token balance for token issuer address `{script_address}`"
 
     return script_address, deployed_token_utxos, tx_output
 
 
-@pytest.mark.skipif(VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX")
 @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
 class TestLobsterChallenge:
     @allure.link(helpers.get_vcs_link())
@@ -273,14 +271,15 @@ class TestLobsterChallenge:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        lovelace_amount = 1_724_100
-        collateral_amount = 20_000_000
-        token_amount = 1
-        script_fund = 200_000_000
-
         votes_num = 50
         names_num = 1219
         io_random_seed = 42
+
+        issuer_fund = 200_000_000
+        lovelace_setup_amount = 1_724_100
+        lovelace_vote_amount = 2_034_438
+        collateral_amount = 20_000_000
+        nft_amount = 1
 
         # Step 1: fund the token issuer and create UTXO for collaterals
 
@@ -289,11 +288,11 @@ class TestLobsterChallenge:
             temp_template=temp_template,
             payment_addr=payment_addr,
             issuer_addr=issuer_addr,
-            amount=script_fund,
+            amount=issuer_fund,
             collateral_amount=collateral_amount,
         )
 
-        # Step 2: mint the "LobsterNFT"
+        # Step 2: mint the LobsterNFT token
 
         lobster_nft_token, token_utxos_step2, tx_output_step2 = _mint_lobster_nft(
             cluster_obj=cluster,
@@ -301,11 +300,11 @@ class TestLobsterChallenge:
             issuer_addr=issuer_addr,
             mint_utxos=mint_utxos,
             collateral_utxos=collateral_utxos,
-            token_amount=token_amount,
-            lovelace_amount=lovelace_amount,
+            nft_amount=nft_amount,
+            lovelace_amount=lovelace_setup_amount,
         )
 
-        # Step 3: deploy the "LobsterNFT" to script address
+        # Step 3: deploy the LobsterNFT token to script address
 
         script_address, token_utxos_step3, tx_output_step3 = _deploy_lobster_nft(
             cluster_obj=cluster,
@@ -313,9 +312,11 @@ class TestLobsterChallenge:
             issuer_addr=issuer_addr,
             token_utxos=token_utxos_step2,
             lobster_nft_token=lobster_nft_token,
-            token_amount=token_amount,
-            lovelace_amount=lovelace_amount,
+            nft_amount=nft_amount,
+            lovelace_amount=lovelace_setup_amount,
         )
+
+        tx_outputs_all = [tx_output_step1, tx_output_step2, tx_output_step3]
 
         # Step 4: prepare for voting
 
@@ -339,44 +340,45 @@ class TestLobsterChallenge:
         asset_name_votes = b"LobsterVotes".hex()
         counter_token = f"{other_policyid}.{asset_name_counter}"
         votes_token = f"{other_policyid}.{asset_name_votes}"
-        lovelace_vote_amount = 2_034_438
 
         vote_utxos = token_utxos_step3
         vote_counter = 0
-        vote_txouts = []
         utxo_votes_token: Optional[clusterlib.UTXOData] = None
         utxo_counter_token: Optional[clusterlib.UTXOData] = None
         for vote_num, vote_val in enumerate(votes, start=1):
+            # normal votes
             if vote_num <= votes_num:
                 vote_counter += vote_val
                 mint_val = vote_val
+            # final IO vote
             else:
-                # final vote - set counter to value of `(seed + counter value) % number of names`
+                # set new counter value to `(seed + counter value) % number of names`
+                # and burn excesive LobsterCounter tokens
                 mint_val = vote_val - vote_counter
                 vote_counter = vote_val
 
-            txouts_vote = [
+            txouts = [
                 # Lovelace amount
                 clusterlib.TxOut(
                     address=script_address,
                     amount=lovelace_vote_amount,
                     datum_hash=LOBSTER_DATUM_HASH,
                 ),
-                # LobsterNFT
+                # LobsterNFT token
                 clusterlib.TxOut(
                     address=script_address,
-                    amount=token_amount,
+                    amount=nft_amount,
                     coin=lobster_nft_token,
                     datum_hash=LOBSTER_DATUM_HASH,
                 ),
-                # Counter token
+                # LobsterCounter token
                 clusterlib.TxOut(
                     address=script_address,
                     amount=vote_counter,
                     coin=counter_token,
                     datum_hash=LOBSTER_DATUM_HASH,
                 ),
-                # Votes token
+                # LobsterVotes token
                 clusterlib.TxOut(
                     address=script_address,
                     amount=vote_num,
@@ -385,15 +387,15 @@ class TestLobsterChallenge:
                 ),
             ]
 
-            vote_mint_txouts = [
-                # mint new Counter tokens
+            mint_txouts = [
+                # mint new LobsterCounter tokens
                 clusterlib.TxOut(
                     address=script_address,
                     amount=mint_val,
                     coin=counter_token,
                     datum_hash=LOBSTER_DATUM_HASH,
                 ),
-                # mint 1 new Votes token
+                # mint 1 new LobsterVotes token
                 clusterlib.TxOut(
                     address=script_address,
                     amount=1,
@@ -401,16 +403,15 @@ class TestLobsterChallenge:
                     datum_hash=LOBSTER_DATUM_HASH,
                 ),
             ]
-            vote_mint_data = [
+            mint_script_data = [
                 clusterlib.Mint(
-                    txouts=vote_mint_txouts,
+                    txouts=mint_txouts,
                     script_file=OTHER_MINT_PLUTUS,
                     redeemer_value="[]",
                 )
             ]
 
-            funds_txin = cluster.get_utxo_with_highest_amount(address=payment_addr.address)
-            vote_script_txins = [
+            txin_script_data = [
                 clusterlib.ScriptTxIn(
                     txins=vote_utxos,
                     script_file=LOBSTER_PLUTUS,
@@ -420,53 +421,51 @@ class TestLobsterChallenge:
                 )
             ]
 
-            tx_files_vote = clusterlib.TxFiles(
+            tx_files = clusterlib.TxFiles(
                 signing_key_files=[payment_addr.skey_file, issuer_addr.skey_file],
             )
+            funds_txin = cluster.get_utxo_with_highest_amount(address=payment_addr.address)
             tx_output_vote = cluster.build_tx(
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_voting_{vote_num}",
                 txins=[funds_txin],
-                tx_files=tx_files_vote,
-                txouts=txouts_vote,
-                script_txins=vote_script_txins,
-                mint=vote_mint_data,
+                tx_files=tx_files,
+                txouts=txouts,
+                script_txins=txin_script_data,
+                mint=mint_script_data,
             )
-            tx_signed_vote = cluster.sign_tx(
+            tx_signed = cluster.sign_tx(
                 tx_body_file=tx_output_vote.out_file,
-                signing_key_files=tx_files_vote.signing_key_files,
+                signing_key_files=tx_files.signing_key_files,
                 tx_name=f"{temp_template}_voting_{vote_num}",
             )
-            cluster.submit_tx(tx_file=tx_signed_vote, txins=vote_utxos)
+            cluster.submit_tx(tx_file=tx_signed, txins=vote_utxos)
 
-            vote_txouts.append(tx_output_vote)
+            tx_outputs_all.append(tx_output_vote)
 
             txid_vote = cluster.get_txid(tx_body_file=tx_output_vote.out_file)
             vote_utxos = cluster.get_utxo(txin=f"{txid_vote}#1")
 
             # check expected balances
-            utxos_lovelace_vote = [u for u in vote_utxos if u.coin == clusterlib.DEFAULT_COIN][0]
+            utxos_lovelace = [u for u in vote_utxos if u.coin == clusterlib.DEFAULT_COIN][0]
             assert (
-                utxos_lovelace_vote.amount == lovelace_vote_amount
+                utxos_lovelace.amount == lovelace_vote_amount
             ), f"Incorrect Lovelace balance for script address `{script_address}`"
 
             utxo_votes_token = [u for u in vote_utxos if u.coin == votes_token][0]
             assert (
                 utxo_votes_token.amount == vote_num
-            ), f"Incorrect votes token balance for script address `{script_address}`"
+            ), f"Incorrect LobsterVotes token balance for script address `{script_address}`"
 
             utxo_counter_token = [u for u in vote_utxos if u.coin == counter_token][0]
             assert (
                 utxo_counter_token.amount == vote_counter
-            ), f"Incorrect counter token balance for script address `{script_address}`"
+            ), f"Incorrect LobsterCounter token balance for script address `{script_address}`"
 
         assert (
             utxo_counter_token and utxo_counter_token.amount == expected_counter_val
-        ), "Final balance of counter token doesn't match the expected balance"
+        ), "Final balance of LobsterCounter token doesn't match the expected balance"
 
         # check transactions in db-sync
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step3)
-        for tx_out_rec in vote_txouts:
+        for tx_out_rec in tx_outputs_all:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_rec)
