@@ -27,7 +27,12 @@ LOGGER = logging.getLogger(__name__)
 
 # number of epochs traversed during local cluster startup
 # NOTE: must be kept up-to-date
-NUM_OF_EPOCHS = 6
+if VERSIONS.cluster_era == VERSIONS.ALONZO:
+    NUM_OF_EPOCHS = 6
+elif VERSIONS.cluster_era == VERSIONS.BABBAGE:
+    NUM_OF_EPOCHS = 7
+else:
+    raise AssertionError(f"Unsupported era '{VERSIONS.cluster_era_name}'")
 
 
 @pytest.fixture
