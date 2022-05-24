@@ -177,7 +177,7 @@ class TestMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_minting(
+    def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
@@ -258,7 +258,7 @@ class TestMinting:
             tx_files=tx_files_step2,
             fee=minting_cost.fee + fee_txsize,
             # ttl is optional in this test
-            invalid_hereafter=cluster.get_slot_no() + 1_000_000,
+            invalid_hereafter=cluster.get_slot_no() + 200,
         )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
@@ -459,7 +459,7 @@ class TestMinting:
         # Step 2: mint the "qacoin"
 
         slot_step2 = cluster.get_slot_no()
-        slots_offset = 10_000_000
+        slots_offset = 200
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
@@ -504,7 +504,7 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=minting_cost.fee + FEE_MINT_TXSIZE,
-            invalid_before=slot_step2 - 1_000,
+            invalid_before=slot_step2 - slots_offset,
             invalid_hereafter=slot_step2 + slots_offset,
         )
         tx_signed_step2 = cluster.sign_tx(
@@ -629,7 +629,7 @@ class TestMinting:
         slot_step2 = cluster.get_slot_no()
 
         # "time range" qacoin
-        slots_offset = 1_000
+        slots_offset = 200
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
