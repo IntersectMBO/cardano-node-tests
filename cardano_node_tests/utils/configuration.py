@@ -30,11 +30,11 @@ if SCHEDULING_LOG:
 
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
-if CLUSTER_ERA not in ("", "alonzo"):
+if CLUSTER_ERA not in ("", "alonzo", "babbage"):
     raise RuntimeError(f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}")
 
 TX_ERA = os.environ.get("TX_ERA") or ""
-if TX_ERA not in ("", "shelley", "allegra", "mary", "alonzo"):
+if TX_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage"):
     raise RuntimeError(f"Invalid TX_ERA: {TX_ERA}")
 
 CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)

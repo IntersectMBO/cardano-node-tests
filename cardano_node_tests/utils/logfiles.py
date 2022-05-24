@@ -42,7 +42,7 @@ ERRORS_IGNORED = [
     # harmless when whole network is shutting down
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
 ]
-if VERSIONS.cluster_era == VERSIONS.ALONZO:
+if VERSIONS.cluster_era >= VERSIONS.ALONZO:
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
