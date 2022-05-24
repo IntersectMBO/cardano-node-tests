@@ -119,7 +119,7 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_minting(
+    def test_minting_one_token(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Test minting a token with a Plutus script.
@@ -283,7 +283,7 @@ class TestBuildMinting:
         # Step 2: mint the "qacoin"
 
         slot_step2 = cluster.get_slot_no()
-        slots_offset = 1_000
+        slots_offset = 200
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
@@ -463,7 +463,7 @@ class TestBuildMinting:
         slot_step2 = cluster.get_slot_no()
 
         # "time range" qacoin
-        slots_offset = 1_000
+        slots_offset = 200
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
