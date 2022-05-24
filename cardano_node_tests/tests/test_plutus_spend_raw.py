@@ -415,7 +415,7 @@ def _check_pretty_utxo(
         .split()
     )
 
-    tx_era = VERSIONS.transaction_era_name.title()
+    cluster_era = VERSIONS.cluster_era_name.title()
     expected_out = [
         "TxHash",
         "TxIx",
@@ -427,7 +427,7 @@ def _check_pretty_utxo(
         tx_raw_output.txouts[0].coin,
         "+",
         "TxOutDatumHash",
-        f"ScriptDataIn{tx_era}Era",
+        f"ScriptDataIn{cluster_era}Era",
         f'"{tx_raw_output.txouts[0].datum_hash}"',
     ]
 
