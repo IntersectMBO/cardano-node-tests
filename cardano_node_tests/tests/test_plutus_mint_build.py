@@ -27,6 +27,7 @@ pytestmark = [
         VERSIONS.transaction_era < VERSIONS.ALONZO,
         reason="runs only with Alonzo+ TX",
     ),
+    pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
     pytest.mark.smoke,
 ]
 
@@ -112,7 +113,6 @@ def _fund_issuer(
     return mint_utxos, collateral_utxos, tx_output
 
 
-@pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
 class TestBuildMinting:
     """Tests for minting using Plutus smart contracts and `transaction build`."""
 
@@ -907,7 +907,6 @@ class TestBuildMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
 
-@pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
 class TestBuildMintingNegative:
     """Tests for minting with Plutus using `transaction build` that are expected to fail."""
 
