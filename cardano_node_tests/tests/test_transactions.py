@@ -1,6 +1,6 @@
 """Tests for general transactions.
 
-* transfering funds (from 1 address to many, many to 1, many to many)
+* transferring funds (from 1 address to many, many to 1, many to many)
 * not balanced transactions
 * other negative tests like duplicated transaction, sending funds to wrong addresses,
   wrong fee, wrong ttl
@@ -42,6 +42,8 @@ LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
 
 MAX_LOVELACE_AMOUNT = 2**64
+MIN_LOVELACE_AMOUNT = 999_978
+
 ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
@@ -1587,6 +1589,108 @@ class TestNotBalanced:
         except clusterlib.CLIError as exc:
             exc_val = str(exc)
             assert "out of bounds" in exc_val or "exceeds the max bound" in exc_val
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @hypothesis.given(
+        amount=st.integers(max_value=MIN_LOVELACE_AMOUNT, min_value=-MAX_LOVELACE_AMOUNT)
+    )
+    @common.hypothesis_settings()
+    def test_build_transfer_amount_bellow_minimum(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        pbt_highest_utxo: clusterlib.UTXOData,
+        amount: int,
+    ):
+        """Try to build a transaction with amount bellow the minimum lovelace required.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "build",
+                    "--testnet-magic",
+                    str(cluster.network_magic),
+                    "--tx-in",
+                    f"{pbt_highest_utxo.utxo_hash}#{pbt_highest_utxo.utxo_ix}",
+                    "--change-address",
+                    src_address,
+                    "--tx-out",
+                    f"{dst_address}+{amount}",
+                    "--out-file",
+                    f"{temp_template}_tx.body",
+                ]
+            )
+        assert "Minimum UTxO threshold not met for tx output" in str(
+            excinfo.value
+        ) or "Negative quantity" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(
+        amount=st.integers(max_value=MIN_LOVELACE_AMOUNT, min_value=-MAX_LOVELACE_AMOUNT)
+    )
+    @common.hypothesis_settings()
+    def test_transfer_amount_bellow_minimum(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        pbt_highest_utxo: clusterlib.UTXOData,
+        amount: int,
+    ):
+        """Try to build a transaction with amount bellow the minimum lovelace required.
+
+        Uses `cardano-cli transaction build-raw` command for building the transactions.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        fee = 200_000
+
+        out_file = f"{temp_template}.body"
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "build-raw",
+                    "--fee",
+                    f"{fee}",
+                    "--tx-in",
+                    f"{pbt_highest_utxo.utxo_hash}#{pbt_highest_utxo.utxo_ix}",
+                    "--tx-out",
+                    f"{dst_address}+{amount}",
+                    f"--tx-out={src_address}+{pbt_highest_utxo.amount - amount - fee}",
+                    "--out-file",
+                    out_file,
+                ]
+            )
+
+            # create signed transaction
+            out_file_signed = cluster.sign_tx(
+                tx_body_file=out_file,
+                signing_key_files=[payment_addrs[0].skey_file],
+                tx_name=f"{temp_template}_signed",
+            )
+
+            # submit the signed transaction
+            cluster.submit_tx(tx_file=out_file_signed, txins=[pbt_highest_utxo])
+        assert "OutputTooSmallUTxO" in str(excinfo.value) or "Negative quantity" in str(
+            excinfo.value
+        )
 
 
 @pytest.mark.testnets
