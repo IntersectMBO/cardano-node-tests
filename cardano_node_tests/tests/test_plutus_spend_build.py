@@ -32,6 +32,7 @@ pytestmark = [
         VERSIONS.transaction_era < VERSIONS.ALONZO,
         reason="runs only with Alonzo+ TX",
     ),
+    pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
     pytest.mark.smoke,
 ]
 
@@ -387,7 +388,6 @@ def _build_spend_locked_txin(  # noqa: C901
     return "", tx_output, plutus_cost
 
 
-@pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
 class TestBuildLocking:
     """Tests for Tx output locking using Plutus smart contracts and `transaction build`."""
 
