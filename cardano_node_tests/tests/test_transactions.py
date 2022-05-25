@@ -2021,6 +2021,7 @@ class TestNegative:
     )
     def test_wrong_tx_era(
         self,
+        cluster: clusterlib.ClusterLib,
         cluster_wrong_tx_era: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
     ):
@@ -2028,7 +2029,6 @@ class TestNegative:
 
         Expect failure.
         """
-        cluster = cluster_wrong_tx_era
         temp_template = common.get_test_id(cluster)
 
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
@@ -2036,7 +2036,7 @@ class TestNegative:
 
         # it should NOT be possible to submit a transaction when TX era > network era
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster_wrong_tx_era.send_tx(
                 src_address=pool_users[0].payment.address,
                 tx_name=temp_template,
                 txouts=destinations,
