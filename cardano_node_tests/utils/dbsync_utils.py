@@ -879,10 +879,22 @@ def check_pool_data(ledger_pool_data: dict, pool_id: str) -> Optional[PoolDataRe
 
 def check_plutus_cost(redeemer_record: RedeemerRecord, cost_record: dict) -> None:
     """Compare cost of Plutus script with data from db-sync."""
-    assert redeemer_record.unit_mem == cost_record["executionUnits"]["memory"]
-    assert redeemer_record.unit_steps == cost_record["executionUnits"]["steps"]
-    assert redeemer_record.fee == cost_record["lovelaceCost"]
-    assert redeemer_record.script_hash == cost_record["scriptHash"]
+    errors = []
+    if redeemer_record.unit_steps != cost_record["executionUnits"]["steps"]:
+        errors.append(
+            f'time: {redeemer_record.unit_steps} vs {cost_record["executionUnits"]["steps"]}'
+        )
+    if redeemer_record.unit_mem != cost_record["executionUnits"]["memory"]:
+        errors.append(
+            f'space: {redeemer_record.unit_mem} vs {cost_record["executionUnits"]["memory"]}'
+        )
+    if redeemer_record.fee != cost_record["lovelaceCost"]:
+        errors.append(f'fixed cost: {redeemer_record.fee} vs {cost_record["lovelaceCost"]}')
+    if redeemer_record.script_hash != cost_record["scriptHash"]:
+        errors.append(f'script hash: {redeemer_record.script_hash} vs {cost_record["scriptHash"]}')
+
+    if errors:
+        raise AssertionError("\n".join(errors))
 
 
 def check_plutus_costs(redeemer_records: List[RedeemerRecord], cost_records: List[dict]) -> None:
@@ -893,6 +905,13 @@ def check_plutus_costs(redeemer_records: List[RedeemerRecord], cost_records: Lis
     if set(db_by_hash) != set(cost_by_hash):
         raise AssertionError(f"Script hashes don't match: {set(db_by_hash)} vs {set(cost_by_hash)}")
 
+    errors = []
     for db_hash, db_rec in db_by_hash.items():
         cost_rec = cost_by_hash[db_hash]
-        check_plutus_cost(redeemer_record=db_rec, cost_record=cost_rec)
+        try:
+            check_plutus_cost(redeemer_record=db_rec, cost_record=cost_rec)
+        except AssertionError as err:
+            errors.append(f"{db_hash}:\n{err}")
+
+    if errors:
+        raise AssertionError("\n".join(errors))
