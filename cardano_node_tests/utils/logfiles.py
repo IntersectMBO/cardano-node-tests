@@ -245,9 +245,7 @@ def search_and_clean(ignore_file_id: str) -> List[Tuple[Path, str]]:
         # apply only from the time they were added (by `logfiles.add_ignore_rule`) until the end
         # of the test.
         rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
-
-        with contextlib.suppress(FileNotFoundError):
-            rules_file.unlink()
+        rules_file.unlink(missing_ok=True)
 
     return errors
 
