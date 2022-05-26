@@ -103,14 +103,21 @@ def check_plutus_cost(plutus_cost: List[dict], expected_cost: List[ExecutionCost
     )
     sorted_expected = sorted(expected_cost, key=lambda x: x.per_space + x.per_time + x.fixed_cost)
 
+    errors = []
     for costs, expected_values in zip(sorted_plutus, sorted_expected):
         tx_time = costs["executionUnits"]["steps"]
         tx_space = costs["executionUnits"]["memory"]
         lovelace_cost = costs["lovelaceCost"]
 
-        assert helpers.is_in_interval(tx_time, expected_values.per_time, frac=0.15)
-        assert helpers.is_in_interval(tx_space, expected_values.per_space, frac=0.15)
-        assert helpers.is_in_interval(lovelace_cost, expected_values.fixed_cost, frac=0.15)
+        if not helpers.is_in_interval(tx_time, expected_values.per_time, frac=0.15):
+            errors.append(f"time: {tx_time} vs {expected_values.per_time}")
+        if not helpers.is_in_interval(tx_space, expected_values.per_space, frac=0.15):
+            errors.append(f"space: {tx_space} vs {expected_values.per_space}")
+        if not helpers.is_in_interval(lovelace_cost, expected_values.fixed_cost, frac=0.15):
+            errors.append(f"fixed cost: {lovelace_cost} vs {expected_values.fixed_cost}")
+
+    if errors:
+        raise AssertionError("\n".join(errors))
 
 
 def get_cost_per_unit(protocol_params: dict) -> ExecutionCost:
