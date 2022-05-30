@@ -1,5 +1,7 @@
 """Tests for update proposals."""
+import json
 import logging
+import math
 import time
 
 import allure
@@ -77,23 +79,36 @@ class TestUpdateProposals:
           update proposal, i.e. the second update proposal overwritten the first one
         """
         cluster = cluster_update_proposal
-        common.get_test_id(cluster)
+        temp_template = common.get_test_id(cluster)
 
         max_tx_execution_units = 11_000_000_000
         max_block_execution_units = 110_000_000_000
         price_execution_steps = "12/10"
         price_execution_memory = "1.3"
 
-        cluster.wait_for_new_epoch()
+        this_epoch = cluster.wait_for_new_epoch()
+
+        protocol_params = cluster.get_protocol_params()
+        with open(f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8") as fp_out:
+            json.dump(protocol_params, fp_out, indent=4)
 
         # update Alonzo-speciffic parameters in separate update proposal
         if VERSIONS.transaction_era >= VERSIONS.ALONZO:
-            update_proposals_alonzo = [
-                clusterlib_utils.UpdateProposal(
+            if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+                utxo_cost = clusterlib_utils.UpdateProposal(
                     arg="--utxo-cost-per-word",
-                    value=2,
+                    value=8001,
+                    name="",  # needs custom check
+                )
+            else:
+                utxo_cost = clusterlib_utils.UpdateProposal(
+                    arg="--utxo-cost-per-word",
+                    value=8001,
                     name="utxoCostPerWord",
-                ),
+                )
+
+            update_proposals_alonzo = [
+                utxo_cost,
                 clusterlib_utils.UpdateProposal(
                     arg="--max-value-size",
                     value=5000,
@@ -137,9 +152,14 @@ class TestUpdateProposals:
                 update_proposals=update_proposals_alonzo,
             )
 
-            cluster.wait_for_new_epoch()
+            this_epoch = cluster.wait_for_new_epoch()
 
             protocol_params = cluster.get_protocol_params()
+            with open(
+                f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8"
+            ) as fp_out:
+                json.dump(protocol_params, fp_out, indent=4)
+
             clusterlib_utils.check_updated_params(
                 update_proposals=update_proposals_alonzo, protocol_params=protocol_params
             )
@@ -149,6 +169,12 @@ class TestUpdateProposals:
             assert protocol_params["maxBlockExecutionUnits"]["steps"] == max_block_execution_units
             assert protocol_params["executionUnitPrices"]["priceSteps"] == 1.2
             assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
+
+            if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+                # the resulting number will be multiple of 8, i.e. 8008
+                assert protocol_params["utxoCostPerWord"] == math.ceil(utxo_cost.value / 8) * 8
+            else:
+                assert protocol_params["utxoCostPerWord"] == utxo_cost.value
 
         # Check that only one update proposal can be applied each epoch and that the last
         # update proposal cancels the previous one. Following parameter values will be
@@ -224,7 +250,13 @@ class TestUpdateProposals:
         time.sleep(2)
 
         # the final update proposal
+        decentralization = clusterlib_utils.UpdateProposal(
+            arg="--decentralization-parameter",
+            value=0.1,
+            name="",  # needs custom check
+        )
         update_proposals = [
+            decentralization,
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-linear",
                 value=45,
@@ -234,11 +266,6 @@ class TestUpdateProposals:
                 arg="--pool-reg-deposit",
                 value=400_000_000,
                 name="stakePoolDeposit",
-            ),
-            clusterlib_utils.UpdateProposal(
-                arg="--decentralization-parameter",
-                value=0.1,
-                name="decentralization",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--pool-retirement-epoch-boundary",
@@ -301,8 +328,17 @@ class TestUpdateProposals:
             update_proposals=update_proposals,
         )
 
-        cluster.wait_for_new_epoch()
+        this_epoch = cluster.wait_for_new_epoch()
+
+        protocol_params = cluster.get_protocol_params()
+        with open(f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8") as fp_out:
+            json.dump(protocol_params, fp_out, indent=4)
 
         clusterlib_utils.check_updated_params(
-            update_proposals=update_proposals, protocol_params=cluster.get_protocol_params()
+            update_proposals=update_proposals, protocol_params=protocol_params
         )
+
+        if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+            assert protocol_params["decentralization"] is None
+        else:
+            assert protocol_params["decentralization"] == decentralization.value
