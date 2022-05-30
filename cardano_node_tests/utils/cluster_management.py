@@ -317,11 +317,24 @@ class ClusterManager:
         if self._cluster_instance_num == -1:
             return
 
+        self._log(f"c{self._cluster_instance_num}: called `on_test_stop`")
+
         # search for errors in cluster logfiles
-        errors = logfiles.search_and_clean(ignore_file_id=self.worker_id)
+        errors = logfiles.search_cluster_artifacts()
 
         with locking.FileLockIfXdist(self.cluster_lock):
-            self._log(f"c{self._cluster_instance_num}: called `on_test_stop`")
+            # There's only one test running on a worker at a time. Deleting the coresponding rules
+            # file right after a test is finished is therefore safe. The effect is that the rules
+            # apply only from the time they were added (by `logfiles.add_ignore_rule`) until the end
+            # of the test.
+            # However sometimes we don't want to remove the rules file. Imagine situation when test
+            # failed and cluster instance needs to be restarted. The failed test already finished,
+            # but other tests are still running and need to finish first before restart can happen.
+            # If the ignored error continues to get printed into log file, tests that are still
+            # running on the cluster instance would report that error. Therefore if the cluster
+            # instance is scheduled for restart, don't delete the rules file.
+            if not list(self.instance_dir.glob(f"{RESTART_NEEDED_GLOB}_*")):
+                logfiles.clean_ignore_rules(ignore_file_id=self.worker_id)
 
             # remove resource locking files created by the worker
             resource_locking_files = list(
