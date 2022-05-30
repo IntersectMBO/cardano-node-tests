@@ -694,7 +694,7 @@ class TestNoRewards:
         ), f"Pledge is not met for pool '{pool_name}'!"
 
     @allure.link(helpers.get_vcs_link())
-    def test_deregister_reward_addr_retire_pool(
+    def test_deregister_reward_addr_retire_pool(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool2: clusterlib.ClusterLib,
@@ -715,7 +715,7 @@ class TestNoRewards:
         * check that pool deposit was needed
         * check that pool owner is receiving rewards
         """
-        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-statements,too-many-locals
         __: Any  # mypy workaround
         pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool2
@@ -823,10 +823,19 @@ class TestNoRewards:
             ).pool_params, f"The pool {pool_id} was not deregistered"
 
             # check command kes-period-info case: de-register pool
-            kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes.check_kes_period_info_result(
-                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
-            )
+            # TODO: the query is currently broken
+            kes_query_currently_broken = False
+            try:
+                kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
+            except clusterlib.CLIError as err:
+                if "currentlyBroken" not in str(err):
+                    raise
+                kes_query_currently_broken = True
+
+            if not kes_query_currently_broken:
+                kes.check_kes_period_info_result(
+                    kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+                )
 
             # check that the balance for source address was correctly updated
             assert src_dereg_balance - tx_raw_output.fee == cluster.get_address_balance(
@@ -871,10 +880,11 @@ class TestNoRewards:
 
             # check command kes-period-info case: re-register pool, check without
             # waiting to take effect
-            kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes.check_kes_period_info_result(
-                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
-            )
+            if not kes_query_currently_broken:
+                kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
+                kes.check_kes_period_info_result(
+                    kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+                )
 
             # check that the balance for source address was correctly updated and that the
             # pool deposit was needed
@@ -895,10 +905,11 @@ class TestNoRewards:
                 raise AssertionError(f"Stake pool `{pool_id}` not registered even after 5 epochs.")
 
             # check command kes-period-info case: re-register pool
-            kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes.check_kes_period_info_result(
-                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
-            )
+            if not kes_query_currently_broken:
+                kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
+                kes.check_kes_period_info_result(
+                    kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+                )
 
             # wait before checking delegation and rewards
             cluster.wait_for_new_epoch(3, padding_seconds=30)
