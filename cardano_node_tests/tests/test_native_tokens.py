@@ -722,10 +722,7 @@ class TestMinting:
         if tokens_num >= 500:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
-            if tokens_num >= 1_000:
-                assert "(UtxoFailure (MaxTxSizeUTxO" in str(excinfo.value)
-            else:
-                assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
+            assert "OutputTooBigUTxO" in str(excinfo.value)
             return
 
         tx_out_mint = clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
@@ -821,10 +818,7 @@ class TestMinting:
         if tokens_num >= 500:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
-            if tokens_num >= 1_000:
-                assert "(UtxoFailure (MaxTxSizeUTxO" in str(excinfo.value)
-            else:
-                assert "(UtxoFailure (OutputTooBigUTxO" in str(excinfo.value)
+            assert "OutputTooBigUTxO" in str(excinfo.value)
             return
 
         tx_out_mint = clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
