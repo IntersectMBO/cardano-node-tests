@@ -53,7 +53,7 @@ class RotableLog(NamedTuple):
     timestamp: float
 
 
-def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> List[RotableLog]:
+def _get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> List[RotableLog]:
     """Return list of versions of the log file (list of `RotableLog`).
 
     When the seek offset was recorded for a log file and the log file was rotated,
@@ -81,25 +81,14 @@ def get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> Li
     return logfile_records
 
 
-def add_ignore_rule(files_glob: str, regex: str, ignore_file_id: str) -> None:
-    """Add ignore rule for expected errors."""
-    cluster_env = cluster_nodes.get_cluster_env()
-    rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
-    basetemp = temptools.get_basetemp()
-
-    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"), open(
-        rules_file, "a", encoding="utf-8"
-    ) as infile:
-        infile.write(f"{files_glob};;{regex}\n")
-
-
-def get_ignore_rules() -> List[Tuple[str, str]]:
+def _get_ignore_rules(cluster_env: cluster_nodes.ClusterEnv) -> List[Tuple[str, str]]:
     """Get rules (file glob and regex) for ignored errors."""
     rules: List[Tuple[str, str]] = []
-    cluster_env = cluster_nodes.get_cluster_env()
-    basetemp = temptools.get_basetemp()
+    lock_file = (
+        temptools.get_basetemp() / f"{ERRORS_IGNORE_FILE_NAME}_{cluster_env.instance_num}.lock"
+    )
 
-    with locking.FileLockIfXdist(f"{basetemp}/ignore_rules_{cluster_env.instance_num}.lock"):
+    with locking.FileLockIfXdist(lock_file):
         for rules_file in cluster_env.state_dir.glob(f"{ERRORS_IGNORE_FILE_NAME}_*"):
             with open(rules_file, encoding="utf-8") as infile:
                 for line in infile:
@@ -109,6 +98,35 @@ def get_ignore_rules() -> List[Tuple[str, str]]:
                     rules.append((files_glob, regex.rstrip("\n")))
 
     return rules
+
+
+def _get_seek(fpath: Path) -> int:
+    with open(fpath, encoding="utf-8") as infile:
+        return int(infile.readline().strip())
+
+
+def _get_ignore_regex(
+    ignore_rules: List[Tuple[str, str]], regexes: List[str], logfile: Path
+) -> str:
+    """Combine together regex for the given log file using file specific and global ignore rules."""
+    regex_set = set(regexes)
+    for record in ignore_rules:
+        files_glob, regex = record
+        if fnmatch.filter([logfile.name], files_glob):
+            regex_set.add(regex)
+    return "|".join(regex_set)
+
+
+def add_ignore_rule(files_glob: str, regex: str, ignore_file_id: str) -> None:
+    """Add ignore rule for expected errors."""
+    cluster_env = cluster_nodes.get_cluster_env()
+    rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
+    lock_file = (
+        temptools.get_basetemp() / f"{ERRORS_IGNORE_FILE_NAME}_{cluster_env.instance_num}.lock"
+    )
+
+    with locking.FileLockIfXdist(lock_file), open(rules_file, "a", encoding="utf-8") as infile:
+        infile.write(f"{files_glob};;{regex}\n")
 
 
 @contextlib.contextmanager
@@ -143,14 +161,14 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], ignore_file_id: str) -> It
         # get list of records (file names and offsets) for given glob
         matching_files = fnmatch.filter(seek_offsets, f"{state_dir}/{files_glob}")
         for logfile in matching_files:
-            # skip if the log file is rotated log, it will be handled by `get_rotated_logs`
+            # skip if the log file is rotated log, it will be handled by `_get_rotated_logs`
             if ROTATED_RE.match(logfile):
                 continue
 
             # search for the expected error
             seek = seek_offsets.get(logfile) or 0
             line_found = False
-            for logfile_rec in get_rotated_logs(
+            for logfile_rec in _get_rotated_logs(
                 logfile=Path(logfile), seek=seek, timestamp=timestamp
             ):
                 with open(logfile_rec.logfile, encoding="utf-8") as infile:
@@ -169,85 +187,63 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], ignore_file_id: str) -> It
         raise AssertionError(errors_joined) from None
 
 
-def _get_seek(fpath: Path) -> int:
-    with open(fpath, encoding="utf-8") as infile:
-        return int(infile.readline().strip())
-
-
-def get_ignore_regex(ignore_rules: List[Tuple[str, str]], regexes: List[str], logfile: Path) -> str:
-    """Combine together regex for the given log file using file specific and global ignore rules."""
-    regex_set = set(regexes)
-    for record in ignore_rules:
-        files_glob, regex = record
-        if fnmatch.filter([logfile.name], files_glob):
-            regex_set.add(regex)
-    return "|".join(regex_set)
-
-
 def search_cluster_artifacts() -> List[Tuple[Path, str]]:
     """Search cluster artifacts for errors."""
-    ignore_rules = get_ignore_rules()
     cluster_env = cluster_nodes.get_cluster_env()
+    lock_file = temptools.get_basetemp() / f"search_artifacts_{cluster_env.instance_num}.lock"
 
-    errors = []
-    for logfile in cluster_env.state_dir.glob("*.std*"):
-        # skip if the log file is status file or rotated log
-        if logfile.name.endswith(".offset") or ROTATED_RE.match(logfile.name):
-            continue
+    with locking.FileLockIfXdist(lock_file):
+        ignore_rules = _get_ignore_rules(cluster_env=cluster_env)
 
-        # read seek offset (from where to start searching) and timestamp of last search
-        offset_file = logfile.parent / f".{logfile.name}.offset"
-        if offset_file.exists():
-            seek = _get_seek(offset_file)
-            timestamp = os.path.getmtime(offset_file)
-        else:
-            seek = 0
-            timestamp = 0.0
+        errors = []
+        for logfile in cluster_env.state_dir.glob("*.std*"):
+            # skip if the log file is status file or rotated log
+            if logfile.name.endswith(".offset") or ROTATED_RE.match(logfile.name):
+                continue
 
-        errors_ignored = get_ignore_regex(
-            ignore_rules=ignore_rules, regexes=ERRORS_IGNORED, logfile=logfile
-        )
-        errors_ignored_re = re.compile(errors_ignored)
+            # read seek offset (from where to start searching) and timestamp of last search
+            offset_file = logfile.parent / f".{logfile.name}.offset"
+            if offset_file.exists():
+                seek = _get_seek(offset_file)
+                timestamp = os.path.getmtime(offset_file)
+            else:
+                seek = 0
+                timestamp = 0.0
 
-        # record offset for the "live" log file
-        with open(offset_file, "w", encoding="utf-8") as outfile:
-            outfile.write(str(helpers.get_eof_offset(logfile)))
+            errors_ignored = _get_ignore_regex(
+                ignore_rules=ignore_rules, regexes=ERRORS_IGNORED, logfile=logfile
+            )
+            errors_ignored_re = re.compile(errors_ignored)
 
-        for logfile_rec in get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp):
-            with open(logfile_rec.logfile, encoding="utf-8") as infile:
-                infile.seek(seek)
-                for line in infile:
-                    if ERRORS_RE.search(line) and not (
-                        errors_ignored and errors_ignored_re.search(line)
-                    ):
-                        errors.append((logfile, line))
+            # record offset for the "live" log file
+            with open(offset_file, "w", encoding="utf-8") as outfile:
+                outfile.write(str(helpers.get_eof_offset(logfile)))
+
+            for logfile_rec in _get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp):
+                with open(logfile_rec.logfile, encoding="utf-8") as infile:
+                    infile.seek(seek)
+                    for line in infile:
+                        if ERRORS_RE.search(line) and not (
+                            errors_ignored and errors_ignored_re.search(line)
+                        ):
+                            errors.append((logfile, line))
 
     return errors
 
 
-def search_and_clean(ignore_file_id: str) -> List[Tuple[Path, str]]:
-    """Search cluster artifacts for errors and cleanup relevant ignore file when finished.
+def clean_ignore_rules(ignore_file_id: str) -> None:
+    """Cleanup relevant ignore rules file.
 
-    After performing the search, delete ignore file identified by `ignore_file_id` as it is no
-    longer valid.
-    Use lock, so no other `search_and_clean` can run on another worker and report the same errors.
+    Delete ignore file identified by `ignore_file_id` when it is no longer valid.
     """
     cluster_env = cluster_nodes.get_cluster_env()
-    basetemp = temptools.get_basetemp()
+    rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
+    lock_file = (
+        temptools.get_basetemp() / f"{ERRORS_IGNORE_FILE_NAME}_{cluster_env.instance_num}.lock"
+    )
 
-    errors = []
-    with locking.FileLockIfXdist(f"{basetemp}/search_clean_{cluster_env.instance_num}.lock"):
-        # search for errors in cluster logfiles
-        errors = search_cluster_artifacts()
-
-        # There's only one test running on a worker at a time. Deleting the coresponding rules
-        # file right after a test is finished is therefore safe. The effect is that the rules
-        # apply only from the time they were added (by `logfiles.add_ignore_rule`) until the end
-        # of the test.
-        rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
+    with locking.FileLockIfXdist(lock_file):
         rules_file.unlink(missing_ok=True)
-
-    return errors
 
 
 def report_artifacts_errors(errors: List[Tuple[Path, str]]) -> None:
