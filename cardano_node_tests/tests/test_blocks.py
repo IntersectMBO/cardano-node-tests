@@ -159,4 +159,9 @@ class TestLeadershipSchedule:
                 cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
                 for_next=True,
             )
+
+        # TODO: the query is currently broken
+        if "currently broken" in str(excinfo.value):
+            pytest.xfail("`query leadership-schedule` is currently broken")
+
         assert "current stake distribution is currently unstable" in str(excinfo.value)
