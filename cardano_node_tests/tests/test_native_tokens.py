@@ -1632,6 +1632,10 @@ class TestTransfer:
         assert min_value.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace = min_value.value
 
+        # TODO: `calculate_min_req_utxo` is broken in Babbage
+        if min_value.value < 999_978:
+            amount_lovelace = 2_000_000
+
         destinations = [
             *ma_destinations,
             clusterlib.TxOut(address=dst_address, amount=amount_lovelace),
@@ -1680,6 +1684,10 @@ class TestTransfer:
         ), f"Incorrect token balance for destination address `{dst_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+        # TODO: `calculate_min_req_utxo` is broken in Babbage
+        if min_value.value < 999_978:
+            pytest.xfail("`calculate_min_req_utxo` is broken in Babbage")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -1755,6 +1763,10 @@ class TestTransfer:
         assert min_value_address2.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address2 = min_value_address2.value
 
+        # TODO: `calculate_min_req_utxo` is broken in Babbage
+        if min_value_address1.value < 999_978:
+            amount_lovelace_address1 = amount_lovelace_address2 = 2_000_000
+
         destinations = [
             *ma_destinations_address1,
             clusterlib.TxOut(address=dst_address1, amount=amount_lovelace_address1),
@@ -1820,6 +1832,10 @@ class TestTransfer:
             ), f"Incorrect token #{idx} balance for destination address `{dst_address2}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+        # TODO: `calculate_min_req_utxo` is broken in Babbage
+        if min_value_address1.value < 999_978:
+            pytest.xfail("`calculate_min_req_utxo` is broken in Babbage")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
