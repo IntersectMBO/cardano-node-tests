@@ -885,6 +885,7 @@ class TestRewards:
             )
 
             LOGGER.info("Checking rewards for 8 epochs.")
+            withdrawal_past_epoch = False
             for __ in range(8):
                 # reward balance in previous epoch
                 prev_reward_rec = reward_records[-1]
@@ -906,13 +907,12 @@ class TestRewards:
                     pool_reward.stake.address
                 ).reward_account_balance
 
-                # Total reward amount received this epoch.
-                # If `reward_total < prev_reward_total`, withdrawal took place during
-                # previous epoch.
-                if reward_total > prev_reward_total:
-                    reward_per_epoch = reward_total - prev_reward_total
-                else:
+                # total reward amount received this epoch
+                if withdrawal_past_epoch:
                     reward_per_epoch = reward_total
+                else:
+                    reward_per_epoch = reward_total - prev_reward_total
+                withdrawal_past_epoch = False
 
                 # store collected rewards info
                 reward_records.append(
@@ -964,6 +964,7 @@ class TestRewards:
                             clusterlib.TxOut(address=pool_reward.stake.address, amount=-1)
                         ],
                     )
+                    withdrawal_past_epoch = True
 
                     reward_stake_info = cluster.get_stake_addr_info(pool_reward.stake.address)
                     assert reward_stake_info.address, "Reward address is not registered"
@@ -1525,6 +1526,7 @@ class TestRewards:
                 )
 
         LOGGER.info("Checking rewards for 8 epochs.")
+        withdrawal_past_epoch = False
         for __ in range(8):
             # reward balance in previous epoch
             prev_reward_rec = reward_records[-1]
@@ -1546,12 +1548,12 @@ class TestRewards:
                 delegation_out.pool_user.stake.address
             ).reward_account_balance
 
-            # Total reward amount received this epoch.
-            # If `reward_total < prev_reward_total`, withdrawal took place during previous epoch.
-            if reward_total > prev_reward_total:
-                reward_per_epoch = reward_total - prev_reward_total
-            else:
+            # total reward amount received this epoch
+            if withdrawal_past_epoch:
                 reward_per_epoch = reward_total
+            else:
+                reward_per_epoch = reward_total - prev_reward_total
+            withdrawal_past_epoch = False
 
             # current payment balance
             payment_balance = cluster.get_address_balance(delegation_out.pool_user.payment.address)
@@ -1576,6 +1578,8 @@ class TestRewards:
                     pool_user=delegation_out.pool_user,
                     name_template=f"{temp_template}_ep3",
                 )
+                withdrawal_past_epoch = True
+
                 # re-register, delegate to pool1
                 delegation_out_ep3 = delegation.delegate_stake_addr(
                     cluster_obj=cluster,
@@ -1596,6 +1600,8 @@ class TestRewards:
                     pool_user=delegation_out.pool_user,
                     name_template=f"{temp_template}_ep4",
                 )
+                withdrawal_past_epoch = True
+
                 # wait for start of reward calculation, which is at 4k/f slot
                 start_reward_calc_sec = (
                     4
