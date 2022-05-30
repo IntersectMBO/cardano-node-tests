@@ -1394,6 +1394,18 @@ class TestNotBalanced:
 
         return addrs
 
+    # TODO: affected by cardano-node/issues/3913 - can be removed once this is fixed
+    @pytest.fixture
+    def pbt_state(
+        self,
+    ) -> List[str]:
+        """Record property-based test state - dummy fixture.
+
+        We'll take advantage of the fact that fixture is executed only once for property-based test,
+        and of changeability of list data type.
+        """
+        return ["pass"]
+
     @pytest.fixture
     def pbt_highest_utxo(
         self,
@@ -1614,13 +1626,12 @@ class TestNotBalanced:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        err_str = ""
+        try:
             cluster.cli(
                 [
                     "transaction",
                     "build",
-                    "--testnet-magic",
-                    str(cluster.network_magic),
                     "--tx-in",
                     f"{pbt_highest_utxo.utxo_hash}#{pbt_highest_utxo.utxo_ix}",
                     "--change-address",
@@ -1629,11 +1640,19 @@ class TestNotBalanced:
                     f"{dst_address}+{amount}",
                     "--out-file",
                     f"{temp_template}_tx.body",
+                    *cluster.tx_era_arg,
+                    *cluster.magic_args,
                 ]
             )
-        assert "Minimum UTxO threshold not met for tx output" in str(
-            excinfo.value
-        ) or "Negative quantity" in str(excinfo.value)
+        except clusterlib.CLIError as err:
+            err_str = str(err)
+
+        if amount < 0:
+            assert "Negative quantity" in err_str, err_str
+        elif not err_str:
+            pytest.xfail("Affected by cardano-node/issues/3913")
+        else:
+            assert "Minimum UTxO threshold not met for tx output" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -1645,6 +1664,7 @@ class TestNotBalanced:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
+        pbt_state: List[str],
         amount: int,
     ):
         """Try to build a transaction with amount bellow the minimum lovelace required.
@@ -1661,36 +1681,56 @@ class TestNotBalanced:
         fee = 200_000
 
         out_file = f"{temp_template}.body"
+        build_args = [
+            "transaction",
+            "build-raw",
+            "--fee",
+            f"{fee}",
+            "--tx-in",
+            f"{pbt_highest_utxo.utxo_hash}#{pbt_highest_utxo.utxo_ix}",
+            "--tx-out",
+            f"{dst_address}+{amount}",
+            "--tx-out",
+            f"{src_address}+{pbt_highest_utxo.amount - amount - fee}",
+            *cluster.tx_era_arg,
+            "--out-file",
+            out_file,
+        ]
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "transaction",
-                    "build-raw",
-                    "--fee",
-                    f"{fee}",
-                    "--tx-in",
-                    f"{pbt_highest_utxo.utxo_hash}#{pbt_highest_utxo.utxo_ix}",
-                    "--tx-out",
-                    f"{dst_address}+{amount}",
-                    f"--tx-out={src_address}+{pbt_highest_utxo.amount - amount - fee}",
-                    "--out-file",
-                    out_file,
-                ]
-            )
+        if amount < 0:
+            with pytest.raises(clusterlib.CLIError) as excinfo_build:
+                cluster.cli(build_args)
+            err_str_build = str(excinfo_build.value)
+            assert "Negative quantity" in err_str_build, err_str_build
+            return
 
-            # create signed transaction
-            out_file_signed = cluster.sign_tx(
-                tx_body_file=out_file,
-                signing_key_files=[payment_addrs[0].skey_file],
-                tx_name=f"{temp_template}_signed",
-            )
+        cluster.cli(build_args)
 
+        # create signed transaction
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=out_file,
+            signing_key_files=[payment_addrs[0].skey_file],
+            tx_name=f"{temp_template}_signed",
+        )
+
+        err_str_submit = ""
+        try:
             # submit the signed transaction
             cluster.submit_tx(tx_file=out_file_signed, txins=[pbt_highest_utxo])
-        assert "OutputTooSmallUTxO" in str(excinfo.value) or "Negative quantity" in str(
-            excinfo.value
-        )
+        except clusterlib.CLIError as err:
+            err_str_submit = str(err)
+
+        if not err_str_submit or pbt_state[0] == "xfail":
+            # TODO: affected by cardano-node/issues/3913
+            # Hack for hypothesis trying to re-run (x)failures. First result
+            # will be xfail, and hypothesis will try to re-run the test. The
+            # second result will be a different failure, because the UTxO is
+            # already spent. This makes sure that the re-run will be also
+            # xfail.
+            pbt_state[0] = "xfail"
+            pytest.xfail("Affected by cardano-node/issues/3913")
+        else:
+            assert "OutputTooSmallUTxO" in err_str_submit, err_str_submit
 
 
 @pytest.mark.testnets
