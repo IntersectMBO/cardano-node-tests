@@ -1696,6 +1696,8 @@ class TestNotBalanced:
             "--out-file",
             out_file,
         ]
+        if VERSIONS.transaction_era < VERSIONS.ALLEGRA:
+            build_args.extend(["--invalid-hereafter", str(cluster.calculate_tx_ttl())])
 
         if amount < 0:
             with pytest.raises(clusterlib.CLIError) as excinfo_build:
@@ -2186,7 +2188,11 @@ class TestNegative:
                 txouts=destinations,
                 tx_files=tx_files,
             )
-        assert "The era of the node and the tx do not match" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert (
+            "The era of the node and the tx do not match" in err_str
+            or "HardForkEncoderDisabledEra" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
