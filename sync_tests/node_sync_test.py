@@ -339,6 +339,18 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
         json.dump(node_config_json, json_file, indent=2)
 
 
+def enable_cardano_node_tracers(node_config_filepath):
+    with open(node_config_filepath, "r") as json_file:
+        node_config_json = json.load(json_file)
+
+    node_config_json["TraceLocalHandshake"] = True
+    node_config_json["TraceErrorPolicy"] = True
+    node_config_json["TraceLocalErrorPolicy"] = True
+
+    with open(node_config_filepath, "w") as json_file:
+        json.dump(node_config_json, json_file, indent=2)
+
+
 def set_node_socket_path_env_var():
     if "windows" in platform.system().lower():
         socket_path = "\\\\.\pipe\cardano-node"
@@ -391,12 +403,12 @@ def get_testnet_value():
         return None
 
 
-def wait_for_node_to_start(tag_no):
+def wait_for_node_to_start():
     # when starting from clean state it might take ~30 secs for the cli to work
     # when starting from existing state it might take > 10 mins for the cli to work (opening db and
     # replaying the ledger)
     start_counter = time.perf_counter()
-    get_current_tip(timeout_seconds=18000)
+    get_current_tip(timeout_minutes=400)
     stop_counter = time.perf_counter()
 
     start_time_seconds = int(stop_counter - start_counter)
@@ -404,10 +416,10 @@ def wait_for_node_to_start(tag_no):
     return start_time_seconds
 
 
-def get_current_tip(timeout_seconds=10):
+def get_current_tip(timeout_minutes=10):
     cmd = CLI + " query tip " + get_testnet_value()
 
-    for i in range(timeout_seconds):
+    for i in range(timeout_minutes):
         try:
             output = (
                 subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
@@ -808,6 +820,8 @@ def main():
 
     print("Enable 'cardano node resource' monitoring")
     enable_cardano_node_resources_monitoring(env + "-config.json")
+
+    enable_cardano_node_tracers(env + "-config.json")
 
     get_node_build_files_time = get_current_date_time()
     print(f"Get node build files time:  {get_node_build_files_time}")
