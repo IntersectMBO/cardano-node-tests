@@ -234,7 +234,7 @@ class TestKES:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
     @pytest.mark.long
-    def test_opcert_future_kes_period(
+    def test_opcert_future_kes_period(  # noqa: C901
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
@@ -244,10 +244,17 @@ class TestKES:
         * generate new operational certificate with `--kes-period` in the future
         * restart the node with the new operational certificate
         * check that the pool is not producing any blocks
+        * if network era > Alonzo
+
+            - generate new operational certificate with valid `--kes-period`, but counter value +2
+              from last used operational ceritificate
+            - restart the node
+            - check that the pool is not producing any blocks
+
         * generate new operational certificate with valid `--kes-period` and restart the node
         * check that the pool is producing blocks again
         """
-        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-statements,too-many-branches
         pool_name = cluster_management.Resources.POOL2
         node_name = "pool2"
         cluster = cluster_lock_pool2
@@ -260,35 +267,49 @@ class TestKES:
         stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
 
         opcert_file: Path = pool_rec["pool_operational_cert"]
+        cold_counter_file: Path = pool_rec["cold_key_pair"].counter_file
+
+        expected_errors = [
+            (f"{node_name}.stdout", "PraosCannotForgeKeyNotUsableYet"),
+        ]
+
+        if VERSIONS.cluster_era > VERSIONS.ALONZO:
+            expected_errors.append((f"{node_name}.stdout", "CounterOverIncrementedOCERT"))
+            # In Babbage we get `CounterOverIncrementedOCERT` error if counter for new opcert
+            # is not exactly +1 from last used opcert. We'll backup the original counter
+            # file so we can use it for issuing next valid opcert.
+            cold_counter_file_orig = Path(
+                f"{cold_counter_file.stem}_orig{cold_counter_file.suffix}"
+            ).resolve()
+            shutil.copy(cold_counter_file, cold_counter_file_orig)
+
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="MuxBearerClosed|CounterOverIncrementedOCERT",
+            ignore_file_id=cluster_manager.worker_id,
+        )
+
+        # generate new operational certificate with `--kes-period` in the future
+        invalid_opcert_file = cluster.gen_node_operational_cert(
+            node_name=f"{node_name}_invalid_opcert_file",
+            kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+            cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+            cold_counter_file=cold_counter_file,
+            kes_period=cluster.get_kes_period() + 100,
+        )
+
+        kes_query_currently_broken = False
 
         with cluster_manager.restart_on_failure():
-            # generate new operational certificate with `--kes-period` in the future
-            invalid_opcert_file = cluster.gen_node_operational_cert(
-                node_name=f"{node_name}_invalid_opcert_file",
-                kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
-                cold_skey_file=pool_rec["cold_key_pair"].skey_file,
-                cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-                kes_period=cluster.get_kes_period() + 100,
-            )
-
-            logfiles.add_ignore_rule(
-                files_glob="*.stdout",
-                regex="MuxBearerClosed|CounterOverIncrementedOCERT",
-                ignore_file_id=cluster_manager.worker_id,
-            )
-
-            expected_errors = [
-                (f"{node_name}.stdout", "PraosCannotForgeKeyNotUsableYet"),
-            ]
             with logfiles.expect_errors(expected_errors, ignore_file_id=cluster_manager.worker_id):
                 # restart the node with the new operational certificate
                 shutil.copy(invalid_opcert_file, opcert_file)
                 cluster_nodes.restart_nodes([node_name])
                 cluster.wait_for_new_epoch()
 
-                LOGGER.info("Checking blocks production for 5 epochs.")
+                LOGGER.info("Checking blocks production for 4 epochs.")
                 this_epoch = -1
-                for __ in range(5):
+                for invalid_opcert_epoch in range(4):
                     _wait_epoch_chores(
                         cluster_obj=cluster, temp_template=temp_template, this_epoch=this_epoch
                     )
@@ -303,28 +324,54 @@ class TestKES:
                             stake_pool_id_dec not in blocks_made
                         ), f"The pool '{pool_name}' has produced blocks in epoch {this_epoch}"
 
-            # check kes-period-info with operational certificate with invalid `--kes-period`
-            # TODO: the query is currently broken
-            kes_query_currently_broken = False
-            try:
-                kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
-            except clusterlib.CLIError as err:
-                if "currentlyBroken" not in str(err):
-                    raise
-                kes_query_currently_broken = True
+                    if invalid_opcert_epoch == 1:
+                        # check kes-period-info with operational certificate with
+                        # invalid `--kes-period`
+                        # TODO: the query is currently broken
+                        try:
+                            kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
+                        except clusterlib.CLIError as err:
+                            if "currentlyBroken" not in str(err):
+                                raise
+                            kes_query_currently_broken = True
 
-            if not kes_query_currently_broken:
-                kes.check_kes_period_info_result(
-                    kes_output=kes_period_info,
-                    expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
-                )
+                        if not kes_query_currently_broken:
+                            kes.check_kes_period_info_result(
+                                kes_output=kes_period_info,
+                                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
+                            )
+
+                    # test the `CounterOverIncrementedOCERT` error - the counter will now be +2 from
+                    # last used opcert counter value
+                    if invalid_opcert_epoch == 2 and VERSIONS.cluster_era > VERSIONS.ALONZO:
+                        overincrement_opcert_file = cluster.gen_node_operational_cert(
+                            node_name=f"{node_name}_overincrement_opcert_file",
+                            kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+                            cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+                            cold_counter_file=cold_counter_file,
+                            kes_period=cluster.get_kes_period(),
+                        )
+                        # copy the new certificate and restart the node
+                        shutil.copy(overincrement_opcert_file, opcert_file)
+                        cluster_nodes.restart_nodes([node_name])
+
+                    if invalid_opcert_epoch == 3:
+                        # check kes-period-info with operational certificate with
+                        # invalid counter
+                        # TODO: the query is currently broken, implement once it is fixed
+                        pass
+
+            # in Babbage we'll use the original counter for issuing new valid opcert so the counter
+            # value of new valid opcert equals to counter value of the original opcert +1
+            if VERSIONS.cluster_era > VERSIONS.ALONZO:
+                shutil.copy(cold_counter_file_orig, cold_counter_file)
 
             # generate new operational certificate with valid `--kes-period`
             valid_opcert_file = cluster.gen_node_operational_cert(
                 node_name=f"{node_name}_valid_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
-                cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+                cold_counter_file=cold_counter_file,
                 kes_period=cluster.get_kes_period(),
             )
             # copy the new certificate and restart the node
@@ -332,10 +379,10 @@ class TestKES:
             cluster_nodes.restart_nodes([node_name])
             this_epoch = cluster.wait_for_new_epoch()
 
-            LOGGER.info("Checking blocks production for another 5 epochs.")
+            LOGGER.info("Checking blocks production for another 2 epochs.")
             blocks_made_db = []
             active_again_epoch = this_epoch
-            for __ in range(5):
+            for __ in range(2):
                 _wait_epoch_chores(
                     cluster_obj=cluster, temp_template=temp_template, this_epoch=this_epoch
                 )
