@@ -403,7 +403,7 @@ def get_testnet_value():
         return None
 
 
-def wait_for_node_to_start():
+def wait_for_node_to_start(tag_no):
     # when starting from clean state it might take ~30 secs for the cli to work
     # when starting from existing state it might take > 10 mins for the cli to work (opening db and
     # replaying the ledger)
@@ -821,7 +821,8 @@ def main():
     print("Enable 'cardano node resource' monitoring")
     enable_cardano_node_resources_monitoring(env + "-config.json")
 
-    enable_cardano_node_tracers(env + "-config.json")
+    # enable this only for debug purposes when more tracers need to be enabled
+    # enable_cardano_node_tracers(env + "-config.json")
 
     get_node_build_files_time = get_current_date_time()
     print(f"Get node build files time:  {get_node_build_files_time}")
