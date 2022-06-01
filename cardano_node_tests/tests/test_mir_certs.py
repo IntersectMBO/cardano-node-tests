@@ -13,6 +13,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -157,6 +158,9 @@ class TestMIRCerts:
             cluster.get_address_balance(pool_user.payment.address)
             == init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
@@ -307,6 +311,9 @@ class TestMIRCerts:
             cluster.get_address_balance(pool_user.payment.address)
             == init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
@@ -470,6 +477,9 @@ class TestMIRCerts:
             cluster.get_stake_addr_info(registered_user.stake.address).reward_account_balance
             == init_reward + amount
         ), f"Incorrect reward balance for stake address `{registered_user.stake.address}`"
+
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
