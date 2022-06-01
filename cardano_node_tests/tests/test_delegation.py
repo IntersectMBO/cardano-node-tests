@@ -14,6 +14,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
 
@@ -455,6 +456,9 @@ class TestDelegateAddr:
         assert cluster.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance, "No reward was received next epoch after undelegation"
+
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_undeleg)
 
         # check records in db-sync
         tx_db_undeleg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_undeleg)

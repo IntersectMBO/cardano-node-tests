@@ -967,6 +967,9 @@ class TestStakePool:
             == src_register_reward + cluster.get_pool_deposit()
         )
 
+        # check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
         dbsync_utils.check_pool_deregistration(
             pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
         )

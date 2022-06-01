@@ -17,6 +17,33 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+CERTIFICATES_INFORMATION = {
+    "genesis key delegation": {"VRF key hash", "delegate key hash", "genesis key hash"},
+    "MIR": {"pot", "target stake addresses", "send to treasury", "send to reserves"},
+    "stake address deregistration": {
+        "stake credential key hash",
+        "stake credential script hash",
+    },
+    "stake address registration": {"stake credential key hash", "stake credential script hash"},
+    "stake address delegation": {
+        "pool",
+        "stake credential key hash",
+        "stake credential script hash",
+    },
+    "stake pool retirement": {"epoch", "pool"},
+    "stake pool registration": {
+        "VRF key hash",
+        "cost",
+        "margin",
+        "metadata",
+        "owners (stake key hashes)",
+        "pledge",
+        "pool",
+        "relays",
+        "reward account",
+    },
+}
+
 
 def load_tx_view(tx_view: str) -> dict:
     """Load tx view output as YAML."""
@@ -182,6 +209,18 @@ def check_tx_view(  # noqa: C901
 
     if tx_raw_len_certs != loaded_len_certs:
         raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")
+
+    for certificate in tx_loaded.get("certificates") or []:
+        certificate_name = list(certificate.keys())[0]
+        certificate_fields = set(list(certificate.values())[0].keys())
+
+        if CERTIFICATES_INFORMATION.get(certificate_name) and not certificate_fields.issubset(
+            CERTIFICATES_INFORMATION[certificate_name]
+        ):
+            raise AssertionError(
+                f"The output of the certificate '{certificate_name}' doesn't have "
+                "the expected fields"
+            )
 
     # load and check transaction era
     loaded_tx_era: str = tx_loaded["era"]
