@@ -772,6 +772,68 @@ class TestBasic:
         )
         assert tx_raw_output.out_file.exists()
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
+    )
+    def test_utxo_with_datum_hash(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Create a UTxO with datum hash in a regular address and spend it.
+
+        * create a UTxO with a datum hash at the payment address
+        * check that the UTxO was created with the respective datum hash
+        * spend the UTxO (not providing the datum hash)
+        * check that the UTxO was spent
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        payment_addr_1 = payment_addrs[0].address
+        payment_addr_2 = payment_addrs[1].address
+
+        # step 1: create utxo with a datum hash
+        datum_hash = cluster.get_hash_script_data(
+            script_data_value="42",
+        )
+
+        destinations_1 = [
+            clusterlib.TxOut(address=payment_addr_2, amount=amount, datum_hash=datum_hash)
+        ]
+        tx_files_1 = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        tx_raw_output_1 = cluster.send_tx(
+            src_address=payment_addr_1,
+            tx_name=f"{temp_template}_step_1",
+            txouts=destinations_1,
+            tx_files=tx_files_1,
+        )
+
+        txid = cluster.get_txid(tx_body_file=tx_raw_output_1.out_file)
+        datum_hash_utxo = cluster.get_utxo(txin=f"{txid}#0")
+        assert datum_hash_utxo[0].datum_hash, "No datum hash"
+
+        # step 2: spend the created utxo
+        destinations_2 = [clusterlib.TxOut(address=payment_addr_1, amount=-1)]
+        tx_files_2 = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
+
+        tx_raw_output_2 = cluster.send_tx(
+            src_address=payment_addr_2,
+            tx_name=f"{temp_template}_step_2",
+            txins=datum_hash_utxo,
+            txouts=destinations_2,
+            tx_files=tx_files_2,
+        )
+
+        # check that the UTxO was spent
+        assert not cluster.get_utxo(txin=f"{txid}#0"), "UTxO not spent"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_1)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_2)
+
 
 @pytest.mark.testnets
 @pytest.mark.smoke
