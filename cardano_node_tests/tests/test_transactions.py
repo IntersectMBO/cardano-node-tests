@@ -621,7 +621,7 @@ class TestBasic:
             str(tx_raw_output.fee),
             "--out-file",
             str(tx_raw_output.out_file),
-            *cluster._prepend_flag("--tx-in", txins),
+            *helpers.prepend_flag("--tx-in", txins),
         ]
 
         cluster.cli(cli_args)
@@ -660,8 +660,8 @@ class TestBasic:
                 str(tx_raw_output.fee),
                 "--out-file",
                 str(tx_raw_output.out_file),
-                *cluster._prepend_flag("--tx-in", txins),
-                *cluster._prepend_flag("--tx-out", txouts),
+                *helpers.prepend_flag("--tx-in", txins),
+                *helpers.prepend_flag("--tx-out", txouts),
                 *cluster.tx_era_arg,
             ]
         )
@@ -712,8 +712,8 @@ class TestBasic:
                 str(tx_raw_output.invalid_hereafter),
                 "--tx-in",
                 str(txins[0]),
-                *cluster._prepend_flag("--tx-in", txins),
-                *cluster._prepend_flag("--tx-out", txouts),
+                *helpers.prepend_flag("--tx-in", txins),
+                *helpers.prepend_flag("--tx-out", txouts),
                 *cluster.tx_era_arg,
             ]
         )
@@ -765,8 +765,8 @@ class TestBasic:
                 str(payment_addrs[0].address),
                 "--tx-in",
                 str(txins[0]),
-                *cluster._prepend_flag("--tx-in", txins),
-                *cluster._prepend_flag("--tx-out", txouts),
+                *helpers.prepend_flag("--tx-in", txins),
+                *helpers.prepend_flag("--tx-out", txouts),
                 *cluster.tx_era_arg,
             ]
         )
@@ -2715,8 +2715,8 @@ class TestNegative:
                     str(tx_raw_output.invalid_hereafter),
                     "--out-file",
                     str(tx_raw_output.out_file),
-                    *cluster._prepend_flag("--tx-in", txins),
-                    *cluster._prepend_flag("--tx-out", txouts),
+                    *helpers.prepend_flag("--tx-in", txins),
+                    *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
         assert "fee must be specified" in str(excinfo.value)
@@ -2754,8 +2754,8 @@ class TestNegative:
                     str(tx_raw_output.fee),
                     "--out-file",
                     str(tx_raw_output.out_file),
-                    *cluster._prepend_flag("--tx-in", txins),
-                    *cluster._prepend_flag("--tx-out", txouts),
+                    *helpers.prepend_flag("--tx-in", txins),
+                    *helpers.prepend_flag("--tx-out", txouts),
                     *cluster.tx_era_arg,
                 ]
             )
@@ -2792,7 +2792,7 @@ class TestNegative:
                     str(tx_raw_output.fee),
                     "--out-file",
                     str(tx_raw_output.out_file),
-                    *cluster._prepend_flag("--tx-out", txouts),
+                    *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
@@ -2832,7 +2832,7 @@ class TestNegative:
                     str(pool_users[0].payment.address),
                     "--testnet-magic",
                     str(cluster.network_magic),
-                    *cluster._prepend_flag("--tx-out", txouts),
+                    *helpers.prepend_flag("--tx-out", txouts),
                     *cluster.tx_era_arg,
                 ]
             )
@@ -2871,8 +2871,8 @@ class TestNegative:
                     str(tx_raw_output.out_file),
                     "--testnet-magic",
                     str(cluster.network_magic),
-                    *cluster._prepend_flag("--tx-in", txins),
-                    *cluster._prepend_flag("--tx-out", txouts),
+                    *helpers.prepend_flag("--tx-in", txins),
+                    *helpers.prepend_flag("--tx-out", txouts),
                     *cluster.tx_era_arg,
                 ]
             )
@@ -2911,9 +2911,9 @@ class TestNegative:
                     str(tx_raw_output.out_file),
                     "--testnet-magic",
                     str(cluster.network_magic),
-                    *cluster._prepend_flag("--tx-in", txins),
-                    *cluster._prepend_flag("--tx-out", txouts),
-                    *cluster._prepend_flag(
+                    *helpers.prepend_flag("--tx-in", txins),
+                    *helpers.prepend_flag("--tx-out", txouts),
+                    *helpers.prepend_flag(
                         "--change-address",
                         [pool_users[0].payment.address, pool_users[2].payment.address],
                     ),
