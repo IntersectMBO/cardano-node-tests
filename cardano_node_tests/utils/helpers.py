@@ -5,6 +5,7 @@ import functools
 import hashlib
 import inspect
 import io
+import itertools
 import json
 import logging
 import os
@@ -18,7 +19,9 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import Iterable
 from typing import Iterator
+from typing import List
 from typing import Optional
 from typing import TypeVar
 from typing import Union
@@ -138,6 +141,23 @@ def get_rand_str(length: int = 8) -> str:
     if length < 1:
         return ""
     return "".join(random.choice(string.ascii_lowercase) for i in range(length))
+
+
+# TODO: unify with the implementation in clusterlib
+def prepend_flag(flag: str, contents: Iterable) -> List[str]:
+    """Prepend flag to every item of the sequence.
+
+    Args:
+        flag: A flag to prepend to every item of the `contents`.
+        contents: A list (iterable) of content to be prepended.
+
+    Returns:
+        List[str]: A list of flag followed by content, see below.
+
+    >>> prepend_flag(None, "--foo", [1, 2, 3])
+    ['--foo', '1', '--foo', '2', '--foo', '3']
+    """
+    return list(itertools.chain.from_iterable([flag, str(x)] for x in contents))
 
 
 def get_timestamped_rand_str(rand_str_length: int = 4) -> str:

@@ -2226,7 +2226,7 @@ class TestCLITxOutSyntax:
             str(tx_raw_output.fee),
             "--mint-script-file",
             str(tx_raw_output.mint[0].script_file),
-            *cluster._prepend_flag("--tx-in", txins_combined),
+            *helpers.prepend_flag("--tx-in", txins_combined),
             "--tx-out",
             txout_str,
             "--mint",
