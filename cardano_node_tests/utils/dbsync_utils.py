@@ -541,6 +541,7 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
     Under load it might be necessary to wait a bit and retry the query.
     """
     retry_num = retry_num if retry_num >= 0 else 0
+    response = None
 
     # first try + number of retries
     for r in range(1 + retry_num):
@@ -554,6 +555,7 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
             if r == retry_num:
                 raise
 
+    assert response is not None
     return response
 
 
