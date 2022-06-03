@@ -13,7 +13,8 @@ ORG_SLUG = "input-output-hk"
 cli_envs = ["node_cli", "dbsync_cli"]
 nightly_envs = ["node_nightly", "node_nightly_shelley_tx", "node_nightly_mary_tx",
                 "node_nightly_mary_tx_cddl", "node_nightly_p2p_cddl", "node_nightly_upgrade",
-                "dbsync_nightly"]
+                "dbsync_nightly", "node_nightly_babbage", "node_nightly_alonzo_tx_on_babbage",
+                "node_nightly_babbage_cddl"]
 DEFAULT_ERA = "alonzo"
 
 
@@ -58,6 +59,12 @@ def get_buildkite_pipeline_slug(env):
         pileline_slug = "cardano-node-tests-nightly-p2p"
     elif env == "node_nightly_upgrade":
         pileline_slug = "cardano-node-tests-nightly-upgrade"
+    elif env == "node_nightly_babbage":
+        pileline_slug = "cardano-node-tests-nightly-babbage"
+    elif env == "node_nightly_alonzo_tx_on_babbage":
+        pileline_slug = "cardano-node-tests-nightly-alonzo-tx-on-babbage"
+    elif env == "node_nightly_babbage_cddl":
+        pileline_slug = "cardano-node-tests-nightly-babbage-cddl"
     else:
         print(f"!!! ERROR: env {env} not expected - use one of: {cli_envs + nightly_envs}")
         exit(1)
