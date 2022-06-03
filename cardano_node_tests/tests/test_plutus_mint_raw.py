@@ -222,7 +222,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
         asset_name_a = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token_a = f"{policyid}.{asset_name_a}"
         asset_name_b = f"qacoinb{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
@@ -235,7 +235,7 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS,
+                script_file=plutus_common.MINTING_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_COST.per_time,
@@ -353,7 +353,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -363,7 +363,7 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS,
+                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_WITNESS_REDEEMER_COST.per_time,
@@ -472,7 +472,7 @@ class TestMinting:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
             redeemer_value = 1_000_000_000_000
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -482,7 +482,7 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS,
+                script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_TIME_RANGE_COST.per_time,
@@ -644,7 +644,7 @@ class TestMinting:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
             redeemer_value_timerange = 1_000_000_000_000
 
-        policyid_timerange = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS)
+        policyid_timerange = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
         asset_name_timerange = f"qacoint{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token_timerange = f"{policyid_timerange}.{asset_name_timerange}"
         mint_txouts_timerange = [
@@ -652,7 +652,7 @@ class TestMinting:
         ]
 
         # "anyone can mint" qacoin
-        policyid_anyone = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
+        policyid_anyone = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
         asset_name_anyone = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token_anyone = f"{policyid_anyone}.{asset_name_anyone}"
         mint_txouts_anyone = [
@@ -663,7 +663,7 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts_anyone,
-                script_file=plutus_common.MINTING_PLUTUS,
+                script_file=plutus_common.MINTING_PLUTUS_V1,
                 collaterals=collateral_utxo1,
                 execution_units=(
                     minting_cost_two.per_time,
@@ -673,7 +673,7 @@ class TestMinting:
             ),
             clusterlib.Mint(
                 txouts=mint_txouts_timerange,
-                script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS,
+                script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS_V1,
                 collaterals=collateral_utxo2,
                 execution_units=(
                     minting_time_range_cost_two.per_time,
@@ -793,7 +793,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoins"
 
-        policyid_tokenname = cluster.get_policyid(plutus_common.MINTING_TOKENNAME_PLUTUS)
+        policyid_tokenname = cluster.get_policyid(plutus_common.MINTING_TOKENNAME_PLUTUS_V1)
 
         # qacoinA
         asset_name_a_dec = f"qacoinA{clusterlib.get_rand_str(4)}"
@@ -820,14 +820,14 @@ class TestMinting:
             # even when we passed it twice.
             clusterlib.Mint(
                 txouts=mint_txouts_a,
-                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS,
+                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS_V1,
                 # execution units are too low, but it doesn't matter as they get ignored anyway
                 execution_units=(1, 1),
                 redeemer_value='"ignored_value"',
             ),
             clusterlib.Mint(
                 txouts=mint_txouts_b,
-                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS,
+                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_TOKENNAME_COST.per_time,
@@ -937,7 +937,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_TOKENNAME_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_TOKENNAME_PLUTUS_V1)
 
         # qacoinA
         asset_name_a_dec = f"qacoinA{clusterlib.get_rand_str(4)}"
@@ -957,7 +957,7 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS,
+                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_TOKENNAME_COST.per_time,
@@ -1062,7 +1062,7 @@ class TestMinting:
 
         invalid_hereafter = cluster.get_slot_no() + 1_000
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1087,7 +1087,7 @@ class TestMinting:
         plutus_mint_data_dummy = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS,
+                script_file=plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST.per_time,
@@ -1218,7 +1218,7 @@ class TestMintingNegative:
             address=issuer_addr.address,
         )
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1228,7 +1228,7 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS,
+                script_file=plutus_common.MINTING_PLUTUS_V1,
                 collaterals=[invalid_collateral_utxo],
                 execution_units=(
                     plutus_common.MINTING_COST.per_time,
@@ -1314,7 +1314,7 @@ class TestMintingNegative:
             address=issuer_addr.address,
         )
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1324,7 +1324,7 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS,
+                script_file=plutus_common.MINTING_PLUTUS_V1,
                 collaterals=[invalid_collateral_utxo],
                 execution_units=(
                     execution_cost.per_time,
@@ -1401,7 +1401,7 @@ class TestMintingNegative:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1411,7 +1411,7 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS,
+                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_WITNESS_REDEEMER_COST.per_time,
@@ -1487,7 +1487,7 @@ class TestMintingNegative:
 
         # Step 2: try to mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1497,7 +1497,7 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS,
+                script_file=plutus_common.MINTING_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 # set execution units too low - to half of the expected values
                 execution_units=(
@@ -1571,7 +1571,7 @@ class TestMintingNegative:
 
         # Step 2: try to mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1581,7 +1581,7 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS,
+                script_file=plutus_common.MINTING_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_COST.per_time,
@@ -1670,7 +1670,7 @@ class TestMintingNegative:
 
         # Step 2: try to mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1680,7 +1680,7 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS,
+                script_file=plutus_common.MINTING_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_COST.per_time,
