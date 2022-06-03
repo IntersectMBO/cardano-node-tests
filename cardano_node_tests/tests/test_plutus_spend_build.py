@@ -416,7 +416,7 @@ class TestBuildLocking:
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -498,7 +498,7 @@ class TestBuildLocking:
         )
 
         plutus_op_dummy = plutus_common.PlutusOp(
-            script_file=plutus_common.CONTEXT_EQUIVALENCE_PLUTUS,
+            script_file=plutus_common.CONTEXT_EQUIVALENCE_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=redeemer_file_dummy,
             execution_cost=plutus_common.CONTEXT_EQUIVALENCE_COST,
@@ -611,30 +611,30 @@ class TestBuildLocking:
         redeemer_value: Optional[str] = None
 
         if variant == "typed_json":
-            script_file = plutus_common.GUESSING_GAME_PLUTUS
+            script_file = plutus_common.GUESSING_GAME_PLUTUS_V1
             datum_file = plutus_common.DATUM_42_TYPED
             redeemer_file = plutus_common.REDEEMER_42_TYPED
         elif variant == "typed_cbor":
-            script_file = plutus_common.GUESSING_GAME_PLUTUS
+            script_file = plutus_common.GUESSING_GAME_PLUTUS_V1
             datum_cbor_file = plutus_common.DATUM_42_TYPED_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_TYPED_CBOR
         elif variant == "untyped_value":
-            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
+            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1
             datum_value = "42"
             redeemer_value = "42"
         elif variant == "untyped_json":
-            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
+            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1
             datum_file = plutus_common.DATUM_42
             redeemer_file = plutus_common.REDEEMER_42
         elif variant == "untyped_cbor":  # noqa: SIM106
-            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS
+            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1
             datum_cbor_file = plutus_common.DATUM_42_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR
         else:
             raise AssertionError("Unknown test variant.")
 
         execution_cost = plutus_common.GUESSING_GAME_COST
-        if script_file == plutus_common.GUESSING_GAME_UNTYPED_PLUTUS:
+        if script_file == plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1:
             execution_cost = plutus_common.GUESSING_GAME_UNTYPED_COST
 
         plutus_op = plutus_common.PlutusOp(
@@ -699,13 +699,13 @@ class TestBuildLocking:
         protocol_params = cluster.get_protocol_params()
 
         plutus_op1 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
         plutus_op2 = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
             # this is higher than `plutus_common.GUESSING_GAME_COST`, because the script
@@ -907,7 +907,7 @@ class TestBuildLocking:
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
+            script_file=plutus_common.ALWAYS_FAILS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_cost=plutus_common.ALWAYS_FAILS_COST,
@@ -960,7 +960,7 @@ class TestBuildLocking:
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
+            script_file=plutus_common.ALWAYS_FAILS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_cost=plutus_common.ALWAYS_FAILS_COST,
@@ -1019,7 +1019,7 @@ class TestBuildLocking:
         token_rand = clusterlib.get_rand_str(5)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -1100,7 +1100,7 @@ class TestBuildLocking:
         token_amount_spend = 20
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -1220,7 +1220,7 @@ class TestBuildLocking:
         # Step 1: fund the script address
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -1329,7 +1329,7 @@ class TestNegative:
         payment_addr = payment_addrs[0]
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -1395,7 +1395,7 @@ class TestNegative:
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -1471,7 +1471,7 @@ class TestNegative:
             raise AssertionError("Unknown test variant.")
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_PLUTUS_V1,
             datum_file=datum_file,
             redeemer_file=redeemer_file,
             execution_cost=plutus_common.GUESSING_GAME_COST,
@@ -1522,13 +1522,13 @@ class TestNegative:
         protocol_params = cluster.get_protocol_params()
 
         plutus_op1 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
         plutus_op2 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_FAILS_PLUTUS,
+            script_file=plutus_common.ALWAYS_FAILS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_FAILS_COST,
@@ -1658,7 +1658,7 @@ class TestNegativeRedeemer:
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
         )
@@ -1693,7 +1693,7 @@ class TestNegativeRedeemer:
                 json.dump(redeemer_content, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file) if redeemer_content else None,
             redeemer_value=None if redeemer_content else str(redeemer_value),
@@ -1745,7 +1745,7 @@ class TestNegativeRedeemer:
             json.dump(redeemer_content, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file) if redeemer_content else None,
             redeemer_value=None if redeemer_content else str(redeemer_value),
@@ -1846,7 +1846,7 @@ class TestNegativeRedeemer:
             json.dump({"bytes": redeemer_value.hex()}, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
@@ -1891,7 +1891,7 @@ class TestNegativeRedeemer:
             json.dump({"constructor": 0, "fields": [{"int": redeemer_value.hex()}]}, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
@@ -1938,7 +1938,7 @@ class TestNegativeRedeemer:
             json.dump({"int": redeemer_value.hex()}, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
@@ -1985,7 +1985,7 @@ class TestNegativeRedeemer:
             json.dump({"constructor": 0, "fields": [{"bytes": redeemer_value}]}, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
@@ -2033,7 +2033,7 @@ class TestNegativeRedeemer:
             json.dump({"bytes": redeemer_value}, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
@@ -2080,7 +2080,7 @@ class TestNegativeRedeemer:
             json.dump(f'{{"{redeemer_value}"}}', outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
@@ -2124,7 +2124,7 @@ class TestNegativeRedeemer:
             json.dump({"constructor": 0, "fields": [{redeemer_type: 42}]}, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
@@ -2170,7 +2170,7 @@ class TestNegativeRedeemer:
             json.dump({redeemer_type: 42}, outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_file=Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
@@ -2218,7 +2218,7 @@ class TestNegativeDatum:
         dst_addr = payment_addrs[1]
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -2284,7 +2284,7 @@ class TestNegativeDatum:
             json.dump(f'{{"{datum_value}"}}', outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=Path(datum_file),
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -2313,7 +2313,7 @@ class TestNegativeDatum:
         temp_template = common.get_test_id(cluster)
 
         plutus_op_1 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
@@ -2329,7 +2329,7 @@ class TestNegativeDatum:
 
         # use a wrong datum to try to unlock the funds
         plutus_op_2 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS,
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
             datum_file=plutus_common.DATUM_42,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,

@@ -7,20 +7,21 @@ from cardano_node_tests.utils import helpers
 
 DATA_DIR = Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
+SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 
-ALWAYS_SUCCEEDS_PLUTUS = PLUTUS_DIR / "always-succeeds-spending.plutus"
-ALWAYS_FAILS_PLUTUS = PLUTUS_DIR / "always-fails.plutus"
-GUESSING_GAME_PLUTUS = PLUTUS_DIR / "custom-guess-42-datum-42.plutus"
-GUESSING_GAME_UNTYPED_PLUTUS = PLUTUS_DIR / "guess-42-datum-42-txin.plutus"
-CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "context-equivalence-test.plutus"
+ALWAYS_SUCCEEDS_PLUTUS_V1 = SCRIPTS_V1_DIR / "always-succeeds-spending.plutus"
+ALWAYS_FAILS_PLUTUS_V1 = SCRIPTS_V1_DIR / "always-fails.plutus"
+GUESSING_GAME_PLUTUS_V1 = SCRIPTS_V1_DIR / "custom-guess-42-datum-42.plutus"
+GUESSING_GAME_UNTYPED_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-datum-42-txin.plutus"
+CONTEXT_EQUIVALENCE_PLUTUS_V1 = SCRIPTS_V1_DIR / "context-equivalence-test.plutus"
 
-MINTING_PLUTUS = PLUTUS_DIR / "anyone-can-mint.plutus"
-MINTING_TIME_RANGE_PLUTUS = PLUTUS_DIR / "time_range.plutus"
-MINTING_CONTEXT_EQUIVALENCE_PLUTUS = PLUTUS_DIR / "minting-context-equivalence-test.plutus"
-MINTING_WITNESS_REDEEMER_PLUTUS = PLUTUS_DIR / "witness-redeemer.plutus"
-MINTING_TOKENNAME_PLUTUS = PLUTUS_DIR / "mint-tokenname.plutus"
+MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
+MINTING_TIME_RANGE_PLUTUS_V1 = SCRIPTS_V1_DIR / "time_range.plutus"
+MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1 = SCRIPTS_V1_DIR / "minting-context-equivalence-test.plutus"
+MINTING_WITNESS_REDEEMER_PLUTUS_V1 = SCRIPTS_V1_DIR / "witness-redeemer.plutus"
+MINTING_TOKENNAME_PLUTUS_V1 = SCRIPTS_V1_DIR / "mint-tokenname.plutus"
 
-STAKE_GUESS_42_PLUTUS = PLUTUS_DIR / "guess-42-stake.plutus"
+STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
 REDEEMER_42 = PLUTUS_DIR / "42.redeemer"
 REDEEMER_42_TYPED = PLUTUS_DIR / "typed-42.redeemer"
