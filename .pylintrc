@@ -19,14 +19,12 @@ extension-pkg-whitelist=lxml,pydantic
 # --disable=W"
 #
 disable=
-    bad-continuation,
     broad-except,
     duplicate-code,
     fixme,
     protected-access,
     logging-fstring-interpolation,
     missing-docstring,
-    no-self-use,
     redefined-outer-name,
     ungrouped-imports,
     wrong-import-order,
