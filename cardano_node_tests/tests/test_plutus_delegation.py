@@ -43,7 +43,7 @@ def cluster_lock_42stake(
     tests that are running in parallel, the balances etc. don't add up.
     """
     cluster_obj = cluster_manager.get(
-        lock_resources=[str(plutus_common.STAKE_GUESS_42_PLUTUS.stem)],
+        lock_resources=[str(plutus_common.STAKE_GUESS_42_PLUTUS_V1.stem)],
         use_resources=[cluster_management.Resources.POOL3],
     )
     pool_id = delegation.get_pool_id(
@@ -65,17 +65,17 @@ def pool_user(
 
     script_stake_address = cluster.gen_stake_addr(
         addr_name=f"{test_id}_pool_user",
-        stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS,
+        stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS_V1,
     )
     payment_addr_rec = cluster.gen_payment_addr_and_keys(
         name=f"{test_id}_pool_user",
-        stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS,
+        stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS_V1,
     )
     pool_user = delegation.PoolUserScript(
         payment=payment_addr_rec,
         stake=delegation.AddressRecordScript(
             address=script_stake_address,
-            script_file=plutus_common.STAKE_GUESS_42_PLUTUS,
+            script_file=plutus_common.STAKE_GUESS_42_PLUTUS_V1,
         ),
     )
 
