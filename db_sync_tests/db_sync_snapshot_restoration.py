@@ -116,7 +116,7 @@ def print_n_last_lines_from_file(n, file_name):
 
 def get_node_archive_url(node_pr):
     cardano_node_pr=f"-pr-{node_pr}"
-    return f"https://hydra.iohk.io/job/Cardano/cardano-node{cardano_node_pr}/cardano-node-linux/latest-finished/download/1/"
+    return f"https://hydra.iohk.io/job/Cardano/cardano-node{cardano_node_pr}/linux.musl.cardano-node-linux/latest-finished/download/1/"
 
 
 def get_db_sync_archive_url(db_pr):
