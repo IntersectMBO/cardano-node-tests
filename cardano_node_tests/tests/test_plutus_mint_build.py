@@ -1116,4 +1116,4 @@ class TestBuildMintingNegative:
         else:
             pytest.xfail("ttl > 3k/f was accepted")
 
-        assert "transaction validity interval is too far in the future" in err
+        assert "TimeTranslationPastHorizon" in err, err
