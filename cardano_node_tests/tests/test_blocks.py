@@ -173,5 +173,7 @@ class TestLeadershipSchedule:
         # TODO: the query is currently broken
         if "currently broken" in err_str:
             pytest.xfail("`query leadership-schedule` is currently broken")
+        if "PastHorizon" in err_str:
+            pytest.xfail("`query leadership-schedule` is affected by cardano-node issue 4002")
 
         assert "current stake distribution is currently unstable" in err_str, err_str
