@@ -417,7 +417,10 @@ class TestKES:
             # check kes-period-info with invalid operational certificate, wrong counter and period
             kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
             kes.check_kes_period_info_result(
-                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_INVALID
+                kes_output=kes_period_info,
+                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
+                if VERSIONS.cluster_era > VERSIONS.ALONZO
+                else kes.KesScenarios.ALL_INVALID,
             )
 
     @allure.link(helpers.get_vcs_link())
