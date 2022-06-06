@@ -35,6 +35,16 @@ else:
     raise AssertionError(f"Unsupported era '{VERSIONS.cluster_era_name}'")
 
 
+pytestmark = pytest.mark.skipif(
+    not (
+        VERSIONS.cluster_era
+        == VERSIONS.transaction_era
+        == (VERSIONS.LAST_KNOWN_ERA or VERSIONS.DEFAULT_CLUSTER_ERA)
+    ),
+    reason="meant to run only with the latest or default cluster era and transaction era",
+)
+
+
 @pytest.fixture
 def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     return cluster_manager.get(lock_resources=[cluster_management.Resources.POOL2])
@@ -113,10 +123,6 @@ class TestKES:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(5)
     @pytest.mark.long
-    @pytest.mark.skipif(
-        not (VERSIONS.cluster_era == VERSIONS.transaction_era == VERSIONS.LAST_KNOWN_ERA),
-        reason="meant to run only with the latest cluster era and the latest transaction era",
-    )
     def test_expired_kes(
         self,
         cluster_kes: clusterlib.ClusterLib,
@@ -556,10 +562,6 @@ class TestKES:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-        reason="different TX eras doesn't affect this test, pointless to run",
-    )
     def test_no_kes_period_arg(
         self,
         cluster: clusterlib.ClusterLib,
