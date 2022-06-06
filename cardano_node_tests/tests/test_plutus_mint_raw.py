@@ -2,7 +2,6 @@
 import datetime
 import logging
 import shutil
-import time
 from pathlib import Path
 from typing import List
 from typing import Tuple
@@ -17,7 +16,6 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -1632,7 +1630,6 @@ class TestMintingNegative:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        worker_id: str,
         ttl: int,
     ):
         """Test minting a token with ttl too far in the future.
@@ -1721,15 +1718,12 @@ class TestMintingNegative:
             tx_name=f"{temp_template}_step2",
         )
 
-        expected_errors = [("bft1.stdout", "PastHorizon")]
-        with logfiles.expect_errors(expected_errors, ignore_file_id=worker_id):
-            err = ""
-            try:
-                cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-            except clusterlib.CLIError as exc:
-                err = str(exc)
-            else:
-                pytest.xfail("ttl > 3k/f was accepted")
+        err = ""
+        try:
+            cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        except clusterlib.CLIError as exc:
+            err = str(exc)
+        else:
+            pytest.xfail("ttl > 3k/f was accepted")
 
-            assert "MuxBearerClosed" in err
-            time.sleep(10)
+        assert "TimeTranslationPastHorizon" in err, err
