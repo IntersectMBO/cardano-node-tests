@@ -1621,7 +1621,14 @@ class TestTransfer:
             clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token),
         ]
 
-        min_value = cluster.calculate_min_req_utxo(txouts=ma_destinations)
+        # destinations with both native token and Lovelace (it doesn't matter on the amounts) for
+        # calculating minimum required Lovelace value for tx output
+        calc_destinations = [
+            *ma_destinations,
+            clusterlib.TxOut(address=dst_address, amount=2_000_000),
+        ]
+
+        min_value = cluster.calculate_min_req_utxo(txouts=calc_destinations)
         assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
         assert min_value.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace = min_value.value
@@ -1639,7 +1646,7 @@ class TestTransfer:
 
         if use_build_cmd:
             # TODO: add ADA txout for change address - see node issue #3057
-            destinations.append(clusterlib.TxOut(address=src_address, amount=amount_lovelace))
+            destinations.append(clusterlib.TxOut(address=src_address, amount=2_000_000))
 
             tx_raw_output = cluster.build_tx(
                 src_address=src_address,
@@ -1710,6 +1717,7 @@ class TestTransfer:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
+        # pylint: disable=too-many-locals
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         amount = 1_000
         rand = clusterlib.get_rand_str(5)
@@ -1747,12 +1755,23 @@ class TestTransfer:
                 clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token)
             )
 
-        min_value_address1 = cluster.calculate_min_req_utxo(txouts=ma_destinations_address1)
+        # destinations with both native token and Lovelace (it doesn't matter on the amounts) for
+        # calculating minimum required Lovelace value for tx output
+        calc_destinations_address1 = [
+            *ma_destinations_address1,
+            clusterlib.TxOut(address=dst_address1, amount=2_000_000),
+        ]
+        calc_destinations_address2 = [
+            *ma_destinations_address2,
+            clusterlib.TxOut(address=dst_address2, amount=2_000_000),
+        ]
+
+        min_value_address1 = cluster.calculate_min_req_utxo(txouts=calc_destinations_address1)
         assert min_value_address1.coin.lower() == clusterlib.DEFAULT_COIN
         assert min_value_address1.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address1 = min_value_address1.value
 
-        min_value_address2 = cluster.calculate_min_req_utxo(txouts=ma_destinations_address2)
+        min_value_address2 = cluster.calculate_min_req_utxo(txouts=calc_destinations_address2)
         assert min_value_address2.coin.lower() == clusterlib.DEFAULT_COIN
         assert min_value_address2.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address2 = min_value_address2.value
@@ -1774,11 +1793,7 @@ class TestTransfer:
 
         if use_build_cmd:
             # TODO: add ADA txout for change address
-            destinations.append(
-                clusterlib.TxOut(
-                    address=src_address, amount=amount_lovelace_address1 + amount_lovelace_address2
-                )
-            )
+            destinations.append(clusterlib.TxOut(address=src_address, amount=4_000_000))
 
             tx_raw_output = cluster.build_tx(
                 src_address=src_address,
