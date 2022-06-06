@@ -335,7 +335,7 @@ def start_node_in_cwd(env):
         p = subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=logfile)
         print("waiting for socket file to be created")
         counter = 0
-        timeout_counter = 30 * ONE_MINUTE
+        timeout_counter = 90 * ONE_MINUTE
         while not os.path.exists(f"{current_directory}/db-{env}/node.socket"):
             time.sleep(ONE_MINUTE)
             counter += ONE_MINUTE
