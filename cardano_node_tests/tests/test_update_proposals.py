@@ -18,6 +18,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.order(8)
+@pytest.mark.skipif(
+    VERSIONS.cluster_era != VERSIONS.transaction_era,
+    reason="must run with same cluster and Tx era",
+)
 @pytest.mark.long
 class TestUpdateProposals:
     """Tests for update proposals."""
@@ -93,8 +97,8 @@ class TestUpdateProposals:
             json.dump(protocol_params, fp_out, indent=4)
 
         # update Alonzo-speciffic parameters in separate update proposal
-        if VERSIONS.transaction_era >= VERSIONS.ALONZO:
-            if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+        if VERSIONS.cluster_era >= VERSIONS.ALONZO:
+            if VERSIONS.cluster_era >= VERSIONS.BABBAGE:
                 utxo_cost = clusterlib_utils.UpdateProposal(
                     arg="--utxo-cost-per-word",
                     value=8001,
@@ -170,9 +174,9 @@ class TestUpdateProposals:
             assert protocol_params["executionUnitPrices"]["priceSteps"] == 1.2
             assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
 
-            if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
-                # the resulting number will be multiple of 8, i.e. 8008
-                assert protocol_params["utxoCostPerWord"] == math.ceil(utxo_cost.value / 8) * 8
+            if VERSIONS.cluster_era >= VERSIONS.BABBAGE:
+                # the resulting number will be multiple of 8, i.e. 8000
+                assert protocol_params["utxoCostPerWord"] == math.floor(utxo_cost.value / 8) * 8
             else:
                 assert protocol_params["utxoCostPerWord"] == utxo_cost.value
 
@@ -338,7 +342,7 @@ class TestUpdateProposals:
             update_proposals=update_proposals, protocol_params=protocol_params
         )
 
-        if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+        if VERSIONS.cluster_era >= VERSIONS.BABBAGE:
             assert protocol_params["decentralization"] is None
         else:
             assert protocol_params["decentralization"] == decentralization.value
