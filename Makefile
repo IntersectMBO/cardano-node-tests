@@ -51,9 +51,11 @@ endif
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(ALLURE_DIR)
 
 .run_tests:
-# First just skip all tests so Allure has a list of runable tests. Run only if no pytest args were specified.
+# First just skip all tests so Allure has a list of runable tests. Also delete artifacts from previous runs.
+# Run only if no pytest args were specified.
 ifndef PYTEST_ARGS
 	rm -f $(ALLURE_DIR)/{*-attachment.txt,*-result.json,*-container.json}
+	rm -f $(COVERAGE_DIR)/cli_coverage_*
 	pytest -s cardano_node_tests $(MARKEXPR) --skipall --alluredir=$(ALLURE_DIR) >/dev/null
 endif
 # run tests for real and produce Allure results
