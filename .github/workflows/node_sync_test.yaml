@@ -8,12 +8,12 @@ on:
       tag_no1:
         description: tag number1 - used for initial sync, from clean state (1.33.0-rc2 (tag number) or 1.33.0 (release number - for released versions) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
         required: true
-      tag_no2:
-        description: tag number2 - used for final sync, from existing state (1.33.0-rc2 (tag number) or 1.33.0 (release number - for released versions) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
-        required: false
-        default: "None"
       hydra_eval_no1:
         description: hydra_eval_no1 - used for getting node prebuilt files for the initial sync
+        required: false
+        default: "None"
+      tag_no2:
+        description: tag number2 - used for final sync, from existing state (1.33.0-rc2 (tag number) or 1.33.0 (release number - for released versions) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
         required: false
         default: "None"
       hydra_eval_no2:

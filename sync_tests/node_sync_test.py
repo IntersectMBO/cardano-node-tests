@@ -188,15 +188,15 @@ def get_hydra_build_download_url(eval_url, os_type):
 
 
 def check_string_format(input_string):
-    if len(input_string) == 40:
+    if len(input_string) > 38:
         return "commit_sha_format"
-    elif len(input_string) == 7:
+    elif input_string.strip().isdigit():
         return "eval_url"
     else:
         return "tag_format"
 
 
-def get_and_extract_node_files(tag_no):
+def get_and_extract_node_files(pre_built_files_identifier):
     # sometimes we cannot identify the hydra eval no for a specific tag no ->
     # in such case we are starting the sync tests by specifying the hydra eval no
     # but also the tag_no (in order to add it in the database)
@@ -205,18 +205,18 @@ def get_and_extract_node_files(tag_no):
     print(f" - current_directory for extracting node files: {current_directory}")
     platform_system, platform_release, platform_version = get_os_type()
 
-    if check_string_format(tag_no) == "tag_format":
-        commit_sha = git_get_commit_sha_for_tag_no(tag_no)
-    elif check_string_format(tag_no) == "commit_sha_format":
-        commit_sha = tag_no
-    elif check_string_format(tag_no) == "eval_url":
+    if check_string_format(pre_built_files_identifier) == "tag_format":
+        commit_sha = git_get_commit_sha_for_tag_no(pre_built_files_identifier)
+    elif check_string_format(pre_built_files_identifier) == "commit_sha_format":
+        commit_sha = pre_built_files_identifier
+    elif check_string_format(pre_built_files_identifier) == "eval_url":
         commit_sha = None
     else:
-        print(f" !!! ERROR: invalid format for tag_no - {tag_no}; Expected tag_no or commit_sha.")
+        print(f" !!! ERROR: invalid format for tag_no - {pre_built_files_identifier}; Expected tag_no or commit_sha.")
         commit_sha = None
 
-    if check_string_format(tag_no) == "eval_url":
-        eval_no = tag_no
+    if check_string_format(pre_built_files_identifier) == "eval_url":
+        eval_no = pre_built_files_identifier
         eval_url = "https://hydra.iohk.io/eval/" + eval_no
     else:
         eval_url = git_get_hydra_eval_link_for_commit_sha(commit_sha)
@@ -828,8 +828,10 @@ def main():
     print(f"Get node build files time:  {get_node_build_files_time}")
     print("get the pre-built node files")
     if hydra_eval_no1 == "None":
+        print(f"Hydra eval1 is None --> Using the tag number: {tag_no1}")
         get_and_extract_node_files(tag_no1)
     else:
+        print(f"Hydra eval1 is not None --> Using the Hydra eval: {hydra_eval_no1}")
         get_and_extract_node_files(hydra_eval_no1)
 
     print("===================================================================================")
