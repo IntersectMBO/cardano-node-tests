@@ -28,6 +28,7 @@ NODE = "./cardano-node"
 CLI = "./cardano-cli"
 ROOT_TEST_PATH = ""
 NODE_LOG_FILE = "logfile.log"
+NODE_LOG_FILE_ARTIFACT = "logfile_copy.log"
 RESULTS_FILE_NAME = r"sync_results.json"
 
 
@@ -562,6 +563,29 @@ def stop_node(platform_system):
             print(f" !!! ERROR: `cardano-node` process is still active - {proc}")
 
 
+def copy_log_file_artifact(old_name, new_name):
+    os.chdir(Path(ROOT_TEST_PATH))
+    current_directory = Path.cwd()
+    print(f"current_directory: {current_directory}")
+    cmd = (
+        f"cp {old_name} {new_name}"
+    )
+
+    print(f"execute command: {cmd}")
+
+    try:
+        p = subprocess.Popen(cmd.split(" "))
+        time.sleep(10)
+        print(f" - listdir current_directory: {os.listdir(current_directory)}")
+        print(f" - listdir db: {os.listdir(current_directory / 'db')}")
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(
+            "command '{}' return with error (code {}): {}".format(
+                e.cmd, e.returncode, " ".join(str(e.output).split())
+            )
+        )
+
+
 def get_calculated_slot_no(env):
     current_time = datetime.utcnow()
     shelley_start_time = byron_start_time = current_time
@@ -969,6 +993,12 @@ def main():
     print(f"Write the test values to the {current_directory / RESULTS_FILE_NAME} file")
     with open(RESULTS_FILE_NAME, 'w') as results_file:
         json.dump(test_values_dict, results_file, indent=2)
+
+    print("Copy the logs")
+    if "linux" in platform_system.lower():
+        # sometimes uploading the artifacts on Buildkite fails because the node still writes into
+        # the log file during the upload
+        copy_log_file_artifact(NODE_LOG_FILE, NODE_LOG_FILE_ARTIFACT)
 
 
 if __name__ == "__main__":
