@@ -333,7 +333,6 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
         node_config_json = json.load(json_file)
 
     node_config_json["options"]["mapBackends"]["cardano.node.resources"] = ["KatipBK"]
-    # node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
 
     with open(node_config_filepath, "w") as json_file:
         json.dump(node_config_json, json_file, indent=2)
@@ -343,9 +342,13 @@ def enable_cardano_node_tracers(node_config_filepath):
     with open(node_config_filepath, "r") as json_file:
         node_config_json = json.load(json_file)
 
-    node_config_json["TraceLocalHandshake"] = True
-    node_config_json["TraceErrorPolicy"] = True
-    node_config_json["TraceLocalErrorPolicy"] = True
+    node_config_json["minSeverity"] = "Info"
+    # node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
+    # node_config_json["TestEnableDevelopmentHardForkEras"] = True
+
+    # node_config_json["TraceLocalHandshake"] = True
+    # node_config_json["TraceErrorPolicy"] = True
+    # node_config_json["TraceLocalErrorPolicy"] = True
 
     with open(node_config_filepath, "w") as json_file:
         json.dump(node_config_json, json_file, indent=2)
@@ -818,11 +821,12 @@ def main():
     print("get the node config files")
     get_node_config_files(env)
 
-    print("Enable 'cardano node resource' monitoring")
-    enable_cardano_node_resources_monitoring(env + "-config.json")
+    if env == "mainnet":
+        print("Enable 'cardano node resource' monitoring")
+        enable_cardano_node_resources_monitoring(env + "-config.json")
 
     # enable this only for debug purposes when more tracers need to be enabled
-    # enable_cardano_node_tracers(env + "-config.json")
+    enable_cardano_node_tracers(env + "-config.json")
 
     get_node_build_files_time = get_current_date_time()
     print(f"Get node build files time:  {get_node_build_files_time}")
