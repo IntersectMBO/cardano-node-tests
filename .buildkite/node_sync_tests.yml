@@ -10,3 +10,4 @@ steps:
     artifact_paths:
       - 'logfile_copy.log'
       - 'sync_results.json'
+      - '*-config.json'
