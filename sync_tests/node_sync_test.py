@@ -342,6 +342,7 @@ def enable_cardano_node_tracers(node_config_filepath):
     with open(node_config_filepath, "r") as json_file:
         node_config_json = json.load(json_file)
 
+    print("  -- Set 'minSeverity' = 'Info'")
     node_config_json["minSeverity"] = "Info"
     # node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
     # node_config_json["TestEnableDevelopmentHardForkEras"] = True
@@ -821,11 +822,11 @@ def main():
     print("get the node config files")
     get_node_config_files(env)
 
+    print("Enable the desired cardano node tracers")
     if env == "mainnet":
-        print("Enable 'cardano node resource' monitoring")
+        print("  - Enable 'cardano node resource' monitoring")
         enable_cardano_node_resources_monitoring(env + "-config.json")
 
-    # enable this only for debug purposes when more tracers need to be enabled
     enable_cardano_node_tracers(env + "-config.json")
 
     get_node_build_files_time = get_current_date_time()
