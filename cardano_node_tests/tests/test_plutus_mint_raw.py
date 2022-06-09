@@ -131,29 +131,17 @@ def _fund_issuer(
         ),
         *[clusterlib.TxOut(address=issuer_addr.address, amount=a) for a in collateral_amounts],
     ]
-    fee = cluster_obj.calculate_tx_fee(
+
+    tx_raw_output = cluster_obj.send_tx(
         src_address=payment_addr.address,
-        txouts=txouts,
         tx_name=f"{temp_template}_step1",
+        txouts=txouts,
         tx_files=tx_files,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add=2,
-    )
-    tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
-        txouts=txouts,
-        tx_files=tx_files,
-        fee=fee,
         # don't join 'change' and 'collateral' txouts, we need separate UTxOs
         join_txouts=False,
     )
-    tx_signed = cluster_obj.sign_tx(
-        tx_body_file=tx_raw_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_step1",
-    )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
 
     issuer_balance = cluster_obj.get_address_balance(issuer_addr.address)
     assert (
@@ -585,29 +573,17 @@ class TestMinting:
             clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost1.collateral),
             clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost2.collateral),
         ]
-        fee_step1 = cluster.calculate_tx_fee(
+
+        tx_raw_output_step1 = cluster.send_tx(
             src_address=payment_addr.address,
-            txouts=txouts_step1,
             tx_name=f"{temp_template}_step1",
+            txouts=txouts_step1,
             tx_files=tx_files_step1,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=2,
-        )
-        tx_raw_output_step1 = cluster.build_raw_tx(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step1",
-            txouts=txouts_step1,
-            tx_files=tx_files_step1,
-            fee=fee_step1,
             # don't join 'change' and 'collateral' txouts, we need separate UTxOs
             join_txouts=False,
         )
-        tx_signed_step1 = cluster.sign_tx(
-            tx_body_file=tx_raw_output_step1.out_file,
-            signing_key_files=tx_files_step1.signing_key_files,
-            tx_name=f"{temp_template}_step1",
-        )
-        cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_raw_output_step1.txins)
 
         issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
         assert (
