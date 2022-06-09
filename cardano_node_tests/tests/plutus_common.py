@@ -8,12 +8,15 @@ from cardano_node_tests.utils import helpers
 DATA_DIR = Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
+SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
 
 ALWAYS_SUCCEEDS_PLUTUS_V1 = SCRIPTS_V1_DIR / "always-succeeds-spending.plutus"
 ALWAYS_FAILS_PLUTUS_V1 = SCRIPTS_V1_DIR / "always-fails.plutus"
 GUESSING_GAME_PLUTUS_V1 = SCRIPTS_V1_DIR / "custom-guess-42-datum-42.plutus"
 GUESSING_GAME_UNTYPED_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-datum-42-txin.plutus"
 CONTEXT_EQUIVALENCE_PLUTUS_V1 = SCRIPTS_V1_DIR / "context-equivalence-test.plutus"
+
+ALWAYS_SUCCEEDS_PLUTUS_V2 = SCRIPTS_V2_DIR / "always-succeeds-spending.plutus"
 
 MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
 MINTING_TIME_RANGE_PLUTUS_V1 = SCRIPTS_V1_DIR / "time_range.plutus"
@@ -54,6 +57,8 @@ GUESSING_GAME_COST = ExecutionCost(per_time=327_365_461, per_space=870_842, fixe
 GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_034_678, per_space=11_368, fixed_cost=947)
 # TODO: fix once context equivalence tests can run again
 CONTEXT_EQUIVALENCE_COST = ExecutionCost(per_time=100_000_000, per_space=1_000_00, fixed_cost=947)
+
+ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 
 MINTING_COST = ExecutionCost(per_time=358_849_733, per_space=978_434, fixed_cost=82_329)
 MINTING_TIME_RANGE_COST = ExecutionCost(
