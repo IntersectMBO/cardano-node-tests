@@ -92,7 +92,8 @@ class Token(NamedTuple):
 
 class ScriptCost(NamedTuple):
     fee: int
-    collateral: int
+    collateral: int  # Lovelace amount > minimum UTxO value
+    min_collateral: int  # minimum needed collateral
 
 
 def check_plutus_cost(plutus_cost: List[dict], expected_cost: List[ExecutionCost]):
@@ -149,7 +150,7 @@ def compute_cost(
     )
 
     collateral_fraction = protocol_params["collateralPercentage"] / 100
-    _collateral_amount = int(fee_redeem * collateral_fraction * collateral_fraction_offset)
-    collateral_amount = _collateral_amount if _collateral_amount >= 2_000_000 else 2_000_000
+    min_collateral = int(fee_redeem * collateral_fraction * collateral_fraction_offset)
+    collateral_amount = min_collateral if min_collateral >= 2_000_000 else 2_000_000
 
-    return ScriptCost(fee=fee_redeem, collateral=collateral_amount)
+    return ScriptCost(fee=fee_redeem, collateral=collateral_amount, min_collateral=min_collateral)
