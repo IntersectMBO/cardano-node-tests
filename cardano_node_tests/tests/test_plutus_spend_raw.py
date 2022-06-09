@@ -166,28 +166,14 @@ def _fund_script(
             )
         )
 
-    fee = cluster_obj.calculate_tx_fee(
+    tx_raw_output = cluster_obj.send_tx(
         src_address=payment_addr.address,
-        txouts=txouts,
         tx_name=f"{temp_template}_step1",
+        txouts=txouts,
         tx_files=tx_files,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add=2,
     )
-    tx_raw_output = cluster_obj.build_raw_tx(
-        src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
-        txouts=txouts,
-        tx_files=tx_files,
-        fee=fee,
-    )
-    tx_signed = cluster_obj.sign_tx(
-        tx_body_file=tx_raw_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_step1",
-    )
-
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
 
     txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
 
@@ -780,29 +766,16 @@ class TestLocking:
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
-        fee_fund = cluster.calculate_tx_fee(
+
+        tx_output_fund = cluster.send_tx(
             src_address=payment_addrs[0].address,
-            txouts=txouts_fund,
             tx_name=f"{temp_template}_step1",
+            txouts=txouts_fund,
             tx_files=tx_files_fund,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=2,
-        )
-        tx_output_fund = cluster.build_raw_tx(
-            src_address=payment_addrs[0].address,
-            tx_name=f"{temp_template}_step1",
-            txouts=txouts_fund,
-            tx_files=tx_files_fund,
-            fee=fee_fund,
             join_txouts=False,
         )
-        tx_signed_fund = cluster.sign_tx(
-            tx_body_file=tx_output_fund.out_file,
-            signing_key_files=tx_files_fund.signing_key_files,
-            tx_name=f"{temp_template}_step1",
-        )
-
-        cluster.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
 
         txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#0", coins=[clusterlib.DEFAULT_COIN])
@@ -1572,29 +1545,16 @@ class TestNegative:
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
-        fee_fund = cluster.calculate_tx_fee(
+
+        tx_output_fund = cluster.send_tx(
             src_address=payment_addrs[0].address,
-            txouts=txouts_fund,
             tx_name=f"{temp_template}_step1",
+            txouts=txouts_fund,
             tx_files=tx_files_fund,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=2,
-        )
-        tx_output_fund = cluster.build_raw_tx(
-            src_address=payment_addrs[0].address,
-            tx_name=f"{temp_template}_step1",
-            txouts=txouts_fund,
-            tx_files=tx_files_fund,
-            fee=fee_fund,
             join_txouts=False,
         )
-        tx_signed_fund = cluster.sign_tx(
-            tx_body_file=tx_output_fund.out_file,
-            signing_key_files=tx_files_fund.signing_key_files,
-            tx_name=f"{temp_template}_step1",
-        )
-
-        cluster.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
 
         txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
         script_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#0", coins=[clusterlib.DEFAULT_COIN])
