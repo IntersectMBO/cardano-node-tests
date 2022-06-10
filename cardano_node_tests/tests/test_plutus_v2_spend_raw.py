@@ -62,8 +62,8 @@ class TestLockingV2:
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
-        * create a Tx output with a datum hash at the script address
-        * create a Tx output with reference datum and reference script
+        * create a Tx output with an inline datum at the script address
+        * create a Tx output with a reference script
         * check that the expected amount was locked at the script address
         * spend the locked UTxO using the reference UTxO
         * check that the expected amount was spent
@@ -93,7 +93,6 @@ class TestLockingV2:
         redeem_cost = plutus_common.compute_cost(
             execution_cost=plutus_op.execution_cost, protocol_params=protocol_params
         )
-        datum_hash = cluster.get_hash_script_data(script_data_file=plutus_op.datum_file)
 
         # create a Tx output with a datum hash at the script address
 
@@ -104,13 +103,12 @@ class TestLockingV2:
             clusterlib.TxOut(
                 address=script_address,
                 amount=amount + redeem_cost.fee + FEE_REDEEM_TXSIZE,
-                datum_hash=datum_hash,
+                inline_datum_file=plutus_op.datum_file,
             ),
-            # for reference script and inline datum
+            # for reference script
             clusterlib.TxOut(
                 address=payment_addrs[1].address,
                 amount=2_000_000,
-                inline_datum_file=plutus_op.datum_file,
                 reference_script_file=plutus_op.script_file,
             ),
             # for collateral
@@ -140,6 +138,11 @@ class TestLockingV2:
             script_utxos[0].amount == amount + redeem_cost.fee + FEE_REDEEM_TXSIZE
         ), f"Incorrect balance for script address `{script_utxos[0].address}`"
 
+        assert (
+            script_utxos[0].inline_datum_hash and script_utxos[0].inline_datum
+        ), "Inline datum not present on script UTxO"
+        assert reference_utxos[0].reference_script, "Reference script not present on reference UTxO"
+
         # Step 2: spend the "locked" UTxO
 
         # for mypy
@@ -159,7 +162,7 @@ class TestLockingV2:
                     plutus_op.execution_cost.per_time,
                     plutus_op.execution_cost.per_space,
                 ),
-                datum_file=plutus_op.datum_file,
+                inline_datum_present=True,
                 redeemer_cbor_file=plutus_op.redeemer_cbor_file,
             ),
         ]
