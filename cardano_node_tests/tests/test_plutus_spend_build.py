@@ -2265,7 +2265,11 @@ class TestNegativeDatum:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-        assert "not a Plutus script witnessed tx input" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert (
+            "not a Plutus script witnessed tx input" in err_str
+            or "points to a script hash that is not known" in err_str
+        ), err_str
 
         # check expected fees
         expected_fee_fund = 199_087
