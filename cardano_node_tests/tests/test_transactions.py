@@ -1804,9 +1804,26 @@ class TestNegative:
 
     # pylint: disable=too-many-public-methods
 
+    @pytest.fixture(scope="class")
+    def skip_not_last_era(self) -> None:
+        if VERSIONS.cluster_era == VERSIONS.LAST_KNOWN_ERA:
+            pytest.skip(
+                f"doesn't run with the latest cluster era ({VERSIONS.cluster_era_name})",
+            )
+
+    @pytest.fixture(scope="class")
+    def skip_unknown_era(self) -> None:
+        if not clusterlib_utils.cli_has(f"transaction build-raw --{VERSIONS.cluster_era_name}-era"):
+            pytest.skip(
+                f"`transaction build-raw --{VERSIONS.cluster_era_name}-era` "
+                "command is not available"
+            )
+
     @pytest.fixture
     def cluster_wrong_tx_era(
         self,
+        skip_not_last_era: None,
+        skip_unknown_era: None,
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.ClusterLib:
         # pylint: disable=unused-argument
@@ -2223,10 +2240,6 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.cluster_era == VERSIONS.LAST_KNOWN_ERA,
-        reason=f"doesn't run with the latest cluster era ({VERSIONS.cluster_era_name})",
-    )
     def test_wrong_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
