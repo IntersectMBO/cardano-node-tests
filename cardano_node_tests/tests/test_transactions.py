@@ -1805,25 +1805,25 @@ class TestNegative:
     # pylint: disable=too-many-public-methods
 
     @pytest.fixture(scope="class")
-    def skip_not_last_era(self) -> None:
+    def skip_on_last_era(self) -> None:
         if VERSIONS.cluster_era == VERSIONS.LAST_KNOWN_ERA:
             pytest.skip(
                 f"doesn't run with the latest cluster era ({VERSIONS.cluster_era_name})",
             )
 
     @pytest.fixture(scope="class")
-    def skip_unknown_era(self) -> None:
-        if not clusterlib_utils.cli_has(f"transaction build-raw --{VERSIONS.cluster_era_name}-era"):
+    def skip_unknown_last_era(self) -> None:
+        last_known_era_name = VERSIONS.MAP[VERSIONS.LAST_KNOWN_ERA]
+        if not clusterlib_utils.cli_has(f"transaction build-raw --{last_known_era_name}-era"):
             pytest.skip(
-                f"`transaction build-raw --{VERSIONS.cluster_era_name}-era` "
-                "command is not available"
+                f"`transaction build-raw --{last_known_era_name}-era` command is not available"
             )
 
     @pytest.fixture
     def cluster_wrong_tx_era(
         self,
-        skip_not_last_era: None,
-        skip_unknown_era: None,
+        skip_on_last_era: None,
+        skip_unknown_last_era: None,
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.ClusterLib:
         # pylint: disable=unused-argument
