@@ -429,10 +429,12 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
@@ -444,14 +446,14 @@ class TestLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
         script_utxos, collateral_utxos, tx_output_fund = _fund_script(
@@ -690,10 +692,12 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("plutus_v1", "mix_v1_v2"))
     def test_two_scripts_spending(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx.
 
@@ -704,16 +708,23 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
         protocol_params = cluster.get_protocol_params()
 
+        if plutus_version == "plutus_v1":
+            script_file1 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1
+            execution_cost1 = plutus_common.ALWAYS_SUCCEEDS_COST
+        else:
+            script_file1 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2
+            execution_cost1 = plutus_common.ALWAYS_SUCCEEDS_V2_COST
+
         plutus_op1 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=script_file1,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=execution_cost1,
         )
         plutus_op2 = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_PLUTUS_V1,
@@ -973,10 +984,12 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test locking a Tx output with native tokens and spending the locked UTxO.
 
@@ -987,17 +1000,17 @@ class TestLocking:
         * check that the expected amounts of Lovelace and native tokens were spent
         * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         token_rand = clusterlib.get_rand_str(5)
 
         amount = 2_000_000
         token_amount = 100
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1033,10 +1046,12 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test spending part of funds (Lovelace and native tokens) on a locked UTxO.
 
@@ -1048,7 +1063,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         __: Any  # mypy workaround
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
 
         token_rand = clusterlib.get_rand_str(5)
 
@@ -1061,10 +1076,10 @@ class TestLocking:
         fee_redeem_txsize = FEE_REDEEM_TXSIZE + 5_000
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1119,14 +1134,16 @@ class TestLocking:
             assert u.datum_hash == script_utxos[0].datum_hash
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_collaterals(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         scenario: str,
+        plutus_version: str,
     ):
         """Test dividing required collateral amount into multiple collateral UTxOs.
 
@@ -1144,7 +1161,7 @@ class TestLocking:
           when failure is expected
         * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{scenario}"
         amount = 2_000_000
 
         max_collateral_ins = cluster.get_protocol_params()["maxCollateralInputs"]
@@ -1167,10 +1184,10 @@ class TestLocking:
         dst_addr = payment_addrs[1]
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
         script_utxos, fund_collateral_utxos, __ = _fund_script(
@@ -1307,10 +1324,12 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_collateral_w_tokens(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test spending the locked UTxO while collateral contains native tokens.
 
@@ -1321,17 +1340,17 @@ class TestNegative:
         * check that the expected error was raised
         * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         token_rand = clusterlib.get_rand_str(5)
 
         amount = 2_000_000
         token_amount = 100
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
         tokens = clusterlib_utils.new_tokens(
@@ -1369,10 +1388,12 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_same_collateral_txin(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test spending the locked UTxO while using the same UTxO as collateral.
 
@@ -1384,14 +1405,14 @@ class TestNegative:
         * check that the expected error was raised
         * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_cbor_file=plutus_common.DATUM_42_CBOR,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
         script_utxos, *__ = _fund_script(
@@ -1420,10 +1441,12 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_collateral_percent(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Try to spend locked UTxO while collateral is less than required by `collateralPercentage`.
 
@@ -1436,16 +1459,17 @@ class TestNegative:
         * check that the expected error was raised
         * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
         # increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
-        execution_cost = plutus_common.ALWAYS_SUCCEEDS_COST._replace(fixed_cost=2_000_000)
+        execution_cost = plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost
+        execution_cost_increased = execution_cost._replace(fixed_cost=2_000_000)
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=execution_cost,
+            execution_cost=execution_cost_increased,
         )
 
         script_utxos, collateral_utxos, __ = _fund_script(
@@ -1472,10 +1496,12 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_two_scripts_spending_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx, one fails.
 
@@ -1486,16 +1512,16 @@ class TestNegative:
         * check that the expected error was raised
         """
         # pylint: disable=too-many-locals
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
         protocol_params = cluster.get_protocol_params()
 
         plutus_op1 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
         plutus_op2 = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_FAILS_PLUTUS_V1,
@@ -2222,10 +2248,12 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test using UTxO without datum hash in place of locked UTxO.
 
@@ -2235,17 +2263,17 @@ class TestNegativeDatum:
         * try to spend the UTxO like it was locked Plutus UTxO
         * check that the expected error was raised
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
         assert plutus_op.execution_cost  # for mypy
 
@@ -2288,17 +2316,19 @@ class TestNegativeDatum:
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings()
     @pytest.mark.testnets
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         datum_value: str,
+        plutus_version: str,
     ):
         """Test locking a Tx output with an invalid datum.
 
         Expect failure.
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -2308,10 +2338,10 @@ class TestNegativeDatum:
             json.dump(f'{{"{datum_value}"}}', outfile)
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=Path(datum_file),
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
         assert plutus_op.execution_cost  # for mypy
 
@@ -2327,26 +2357,28 @@ class TestNegativeDatum:
         assert "JSON object expected. Unexpected value" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_unlock_tx_wrong_datum(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test locking a Tx output and try to spend it with a wrong datum.
 
         Expect failure.
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
         dst_addr = payment_addrs[1]
 
         payment_addr = payment_addrs[0]
 
         plutus_op_1 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
         assert plutus_op_1.execution_cost  # for mypy
 
@@ -2361,10 +2393,10 @@ class TestNegativeDatum:
 
         # use a wrong datum to try to unlock the funds
         plutus_op_2 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
