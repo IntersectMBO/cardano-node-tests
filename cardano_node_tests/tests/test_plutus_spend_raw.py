@@ -711,7 +711,7 @@ class TestLocking:
     @pytest.mark.parametrize(
         "plutus_version",
         (
-            "v1",
+            "plutus_v1",
             pytest.param(
                 "mix_v1_v2",
                 marks=pytest.mark.skipif(
@@ -720,7 +720,6 @@ class TestLocking:
                 ),
             ),
         ),
-        ids=("plutus_v1", "plutus_v2"),
     )
     def test_two_scripts_spending(
         self,
