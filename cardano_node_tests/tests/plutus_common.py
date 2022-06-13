@@ -74,6 +74,21 @@ MINTING_WITNESS_REDEEMER_COST = ExecutionCost(
 MINTING_TOKENNAME_COST = ExecutionCost(per_time=230_732_000, per_space=539_860, fixed_cost=47_786)
 
 
+class PlutusScriptData(NamedTuple):
+    script_file: Path
+    execution_cost: ExecutionCost
+
+
+ALWAYS_SUCCEEDS = {
+    "v1": PlutusScriptData(
+        script_file=ALWAYS_SUCCEEDS_PLUTUS_V1, execution_cost=ALWAYS_SUCCEEDS_COST
+    ),
+    "v2": PlutusScriptData(
+        script_file=ALWAYS_SUCCEEDS_PLUTUS_V2, execution_cost=ALWAYS_SUCCEEDS_V2_COST
+    ),
+}
+
+
 class PlutusOp(NamedTuple):
     script_file: Path
     datum_file: Optional[Path] = None
