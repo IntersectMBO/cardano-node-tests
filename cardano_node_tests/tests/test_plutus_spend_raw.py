@@ -40,6 +40,22 @@ pytestmark = [
 ]
 
 
+param_plutus_version = pytest.mark.parametrize(
+    "plutus_version",
+    (
+        "v1",
+        pytest.param(
+            "v2",
+            marks=pytest.mark.skipif(
+                VERSIONS.transaction_era < VERSIONS.BABBAGE,
+                reason="runs only with Babbage+ TX",
+            ),
+        ),
+    ),
+    ids=("plutus_v1", "plutus_v2"),
+)
+
+
 FundTupleT = Tuple[
     List[clusterlib.UTXOData], List[clusterlib.UTXOData], List[clusterlib.AddressRecord]
 ]
@@ -429,7 +445,7 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -692,7 +708,20 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("plutus_v1", "mix_v1_v2"))
+    @pytest.mark.parametrize(
+        "plutus_version",
+        (
+            "v1",
+            pytest.param(
+                "mix_v1_v2",
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+                    reason="runs only with Babbage+ TX",
+                ),
+            ),
+        ),
+        ids=("plutus_v1", "plutus_v2"),
+    )
     def test_two_scripts_spending(
         self,
         cluster: clusterlib.ClusterLib,
@@ -984,7 +1013,7 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1046,7 +1075,7 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1137,7 +1166,7 @@ class TestLocking:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_collaterals(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1324,7 +1353,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_collateral_w_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1388,7 +1417,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_same_collateral_txin(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1441,7 +1470,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_collateral_percent(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1496,7 +1525,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_two_scripts_spending_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2248,7 +2277,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2316,7 +2345,7 @@ class TestNegativeDatum:
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings()
     @pytest.mark.testnets
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2357,7 +2386,7 @@ class TestNegativeDatum:
         assert "JSON object expected. Unexpected value" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @param_plutus_version
     def test_unlock_tx_wrong_datum(
         self,
         cluster: clusterlib.ClusterLib,
