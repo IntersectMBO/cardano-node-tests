@@ -17,6 +17,8 @@ GUESSING_GAME_UNTYPED_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-datum-42-txin.plutu
 CONTEXT_EQUIVALENCE_PLUTUS_V1 = SCRIPTS_V1_DIR / "context-equivalence-test.plutus"
 
 ALWAYS_SUCCEEDS_PLUTUS_V2 = SCRIPTS_V2_DIR / "always-succeeds-spending.plutus"
+GUESSING_GAME_PLUTUS_V2 = SCRIPTS_V2_DIR / "custom-guess-42-datum-42.plutus"
+GUESSING_GAME_UNTYPED_PLUTUS_V2 = SCRIPTS_V2_DIR / "guess-42-datum-42-txin.plutus"
 
 MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
 MINTING_TIME_RANGE_PLUTUS_V1 = SCRIPTS_V1_DIR / "time_range.plutus"
@@ -59,6 +61,8 @@ GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_034_678, per_space=11_368,
 CONTEXT_EQUIVALENCE_COST = ExecutionCost(per_time=100_000_000, per_space=1_000_00, fixed_cost=947)
 
 ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
+GUESSING_GAME_V2_COST = ExecutionCost(per_time=168_868_800, per_space=540_612, fixed_cost=43_369)
+GUESSING_GAME_UNTYPED_V2_COST = ExecutionCost(per_time=4_985_806, per_space=11_368, fixed_cost=1016)
 
 MINTING_COST = ExecutionCost(per_time=358_849_733, per_space=978_434, fixed_cost=82_329)
 MINTING_TIME_RANGE_COST = ExecutionCost(
@@ -85,6 +89,22 @@ ALWAYS_SUCCEEDS = {
     ),
     "v2": PlutusScriptData(
         script_file=ALWAYS_SUCCEEDS_PLUTUS_V2, execution_cost=ALWAYS_SUCCEEDS_V2_COST
+    ),
+}
+
+GUESSING_GAME = {
+    "v1": PlutusScriptData(script_file=GUESSING_GAME_PLUTUS_V1, execution_cost=GUESSING_GAME_COST),
+    "v2": PlutusScriptData(
+        script_file=GUESSING_GAME_PLUTUS_V2, execution_cost=GUESSING_GAME_V2_COST
+    ),
+}
+
+GUESSING_GAME_UNTYPED = {
+    "v1": PlutusScriptData(
+        script_file=GUESSING_GAME_UNTYPED_PLUTUS_V1, execution_cost=GUESSING_GAME_UNTYPED_COST
+    ),
+    "v2": PlutusScriptData(
+        script_file=GUESSING_GAME_UNTYPED_PLUTUS_V2, execution_cost=GUESSING_GAME_UNTYPED_V2_COST
     ),
 }
 
