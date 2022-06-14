@@ -348,9 +348,15 @@ def enable_cardano_node_tracers(node_config_filepath):
     # node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
     # node_config_json["TestEnableDevelopmentHardForkEras"] = True
 
-    # node_config_json["TraceLocalHandshake"] = True
-    # node_config_json["TraceErrorPolicy"] = True
-    # node_config_json["TraceLocalErrorPolicy"] = True
+    node_config_json["TraceLocalMux"] = True
+    node_config_json["TraceLocalHandshake"] = True
+    node_config_json["TraceLocalErrorPolicy"] = True
+    node_config_json["TraceErrorPolicy"] = True
+
+    node_config_json["options"]["mapSeverity"]["cardano.node.LocalMux"] = "Info"
+    node_config_json["options"]["mapSeverity"]["cardano.node.LocalHandshake"] = "Info"
+    node_config_json["options"]["mapSeverity"]["cardano.node.LocalErrorPolicy"] = "Debug"
+    node_config_json["options"]["mapSeverity"]["cardano.node.ErrorPolicy"] = "Debug"
 
     with open(node_config_filepath, "w") as json_file:
         json.dump(node_config_json, json_file, indent=2)
