@@ -621,11 +621,13 @@ class TestLocking:
             "untyped_cbor",
         ),
     )
+    @param_plutus_version
     def test_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         variant: str,
+        plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
@@ -639,7 +641,7 @@ class TestLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{variant}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{variant}"
         amount = 2_000_000
 
         datum_file: Optional[Path] = None
@@ -650,31 +652,31 @@ class TestLocking:
         redeemer_value: Optional[str] = None
 
         if variant == "typed_json":
-            script_file = plutus_common.GUESSING_GAME_PLUTUS_V1
+            script_file = plutus_common.GUESSING_GAME[plutus_version].script_file
             datum_file = plutus_common.DATUM_42_TYPED
             redeemer_file = plutus_common.REDEEMER_42_TYPED
         elif variant == "typed_cbor":
-            script_file = plutus_common.GUESSING_GAME_PLUTUS_V1
+            script_file = plutus_common.GUESSING_GAME[plutus_version].script_file
             datum_cbor_file = plutus_common.DATUM_42_TYPED_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_TYPED_CBOR
         elif variant == "untyped_value":
-            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1
+            script_file = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file
             datum_value = "42"
             redeemer_value = "42"
         elif variant == "untyped_json":
-            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1
+            script_file = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file
             datum_file = plutus_common.DATUM_42
             redeemer_file = plutus_common.REDEEMER_42
         elif variant == "untyped_cbor":  # noqa: SIM106
-            script_file = plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1
+            script_file = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file
             datum_cbor_file = plutus_common.DATUM_42_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR
         else:
             raise AssertionError("Unknown test variant.")
 
-        execution_cost = plutus_common.GUESSING_GAME_COST
-        if script_file == plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1:
-            execution_cost = plutus_common.GUESSING_GAME_UNTYPED_COST
+        execution_cost = plutus_common.GUESSING_GAME[plutus_version].execution_cost
+        if script_file == plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file:
+            execution_cost = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost
 
         plutus_op = plutus_common.PlutusOp(
             script_file=script_file,
@@ -719,6 +721,20 @@ class TestLocking:
                     reason="runs only with Babbage+ TX",
                 ),
             ),
+            pytest.param(
+                "mix_v2_v1",
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+                    reason="runs only with Babbage+ TX",
+                ),
+            ),
+            pytest.param(
+                "plutus_v2",
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+                    reason="runs only with Babbage+ TX",
+                ),
+            ),
         ),
     )
     def test_two_scripts_spending(
@@ -735,18 +751,52 @@ class TestLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals,too-many-statements
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
         protocol_params = cluster.get_protocol_params()
 
+        script_file1_v1 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1
+        execution_cost1_v1 = plutus_common.ALWAYS_SUCCEEDS_COST
+        script_file2_v1 = plutus_common.GUESSING_GAME_PLUTUS_V1
+        # this is higher than `plutus_common.GUESSING_GAME_COST`, because the script
+        # context has changed to include more stuff
+        execution_cost2_v1 = plutus_common.ExecutionCost(
+            per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
+        )
+
+        script_file1_v2 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2
+        execution_cost1_v2 = plutus_common.ALWAYS_SUCCEEDS_V2_COST
+        script_file2_v2 = plutus_common.GUESSING_GAME_PLUTUS_V2
+        execution_cost2_v2 = plutus_common.ExecutionCost(
+            per_time=208_314_784,
+            per_space=662_274,
+            fixed_cost=53_233,
+        )
+
         if plutus_version == "plutus_v1":
-            script_file1 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1
-            execution_cost1 = plutus_common.ALWAYS_SUCCEEDS_COST
+            script_file1 = script_file1_v1
+            execution_cost1 = execution_cost1_v1
+            script_file2 = script_file2_v1
+            execution_cost2 = execution_cost2_v1
+        elif plutus_version == "mix_v1_v2":
+            script_file1 = script_file1_v1
+            execution_cost1 = execution_cost1_v1
+            script_file2 = script_file2_v2
+            execution_cost2 = execution_cost2_v2
+        elif plutus_version == "mix_v2_v1":
+            script_file1 = script_file1_v2
+            execution_cost1 = execution_cost1_v2
+            script_file2 = script_file2_v1
+            execution_cost2 = execution_cost2_v1
+        elif plutus_version == "plutus_v2":
+            script_file1 = script_file1_v2
+            execution_cost1 = execution_cost1_v2
+            script_file2 = script_file2_v2
+            execution_cost2 = execution_cost2_v2
         else:
-            script_file1 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2
-            execution_cost1 = plutus_common.ALWAYS_SUCCEEDS_V2_COST
+            raise AssertionError("Unknown test variant.")
 
         plutus_op1 = plutus_common.PlutusOp(
             script_file=script_file1,
@@ -755,14 +805,10 @@ class TestLocking:
             execution_cost=execution_cost1,
         )
         plutus_op2 = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_PLUTUS_V1,
+            script_file=script_file2,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
-            # this is higher than `plutus_common.GUESSING_GAME_COST`, because the script
-            # context has changed to include more stuff
-            execution_cost=plutus_common.ExecutionCost(
-                per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
-            ),
+            execution_cost=execution_cost2,
         )
 
         # Step 1: fund the Plutus scripts
@@ -1288,11 +1334,13 @@ class TestNegative:
             "43_43",  # wrong datum and redeemer
         ),
     )
+    @param_plutus_version
     def test_invalid_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         variant: str,
+        plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
@@ -1306,7 +1354,7 @@ class TestNegative:
         * check that the amount was not transferred and collateral UTxO was not spent
         """
         __: Any  # mypy workaround
-        temp_template = f"{common.get_test_id(cluster)}_{variant}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{variant}"
         amount = 2_000_000
 
         if variant == "42_43":
@@ -1322,10 +1370,10 @@ class TestNegative:
             raise AssertionError("Unknown test variant.")
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.GUESSING_GAME_PLUTUS_V1,
+            script_file=plutus_common.GUESSING_GAME[plutus_version].script_file,
             datum_file=datum_file,
             redeemer_file=redeemer_file,
-            execution_cost=plutus_common.GUESSING_GAME_COST,
+            execution_cost=plutus_common.GUESSING_GAME[plutus_version].execution_cost,
         )
 
         script_utxos, collateral_utxos, __ = _fund_script(
@@ -1678,47 +1726,84 @@ class TestNegativeRedeemer:
     MIN_INT_VAL = -MAX_INT_VAL
     AMOUNT = 2_000_000
 
+    def _fund_script_guessing_game(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_obj: clusterlib.ClusterLib,
+        temp_template: str,
+        plutus_version: str,
+    ) -> FundTupleT:
+        """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
+        payment_addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"{temp_template}_payment_addr_{i}" for i in range(2)],
+            cluster_obj=cluster_obj,
+        )
+
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            payment_addrs[0],
+            cluster_obj=cluster_obj,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=3_000_000_000,
+        )
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
+            datum_file=plutus_common.DATUM_42,
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
+        )
+
+        script_utxos, collateral_utxos, __ = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster_obj,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=self.AMOUNT,
+        )
+
+        return script_utxos, collateral_utxos, payment_addrs
+
     @pytest.fixture
-    def fund_script_guessing_game(
+    def fund_script_guessing_game_v1(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> FundTupleT:
-        """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
             temp_template = common.get_test_id(cluster)
 
-            payment_addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"{temp_template}_payment_addr_{i}" for i in range(2)],
+            script_utxos, collateral_utxos, payment_addrs = self._fund_script_guessing_game(
+                cluster_manager=cluster_manager,
                 cluster_obj=cluster,
-            )
-
-            # fund source address
-            clusterlib_utils.fund_from_faucet(
-                payment_addrs[0],
-                cluster_obj=cluster,
-                faucet_data=cluster_manager.cache.addrs_data["user1"],
-                amount=3_000_000_000,
-            )
-
-            plutus_op = plutus_common.PlutusOp(
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
-                datum_file=plutus_common.DATUM_42,
-                execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
-            )
-
-            script_utxos, collateral_utxos, __ = _fund_script(
                 temp_template=temp_template,
-                cluster_obj=cluster,
-                payment_addr=payment_addrs[0],
-                dst_addr=payment_addrs[1],
-                plutus_op=plutus_op,
-                amount=self.AMOUNT,
+                plutus_version="v1",
             )
+            fixture_cache.value = script_utxos, collateral_utxos, payment_addrs
 
+        return script_utxos, collateral_utxos, payment_addrs
+
+    @pytest.fixture
+    def fund_script_guessing_game_v2(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> FundTupleT:
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            temp_template = common.get_test_id(cluster)
+
+            script_utxos, collateral_utxos, payment_addrs = self._fund_script_guessing_game(
+                cluster_manager=cluster_manager,
+                cluster_obj=cluster,
+                temp_template=temp_template,
+                plutus_version="v2",
+            )
             fixture_cache.value = script_utxos, collateral_utxos, payment_addrs
 
         return script_utxos, collateral_utxos, payment_addrs
@@ -1739,18 +1824,19 @@ class TestNegativeRedeemer:
         redeemer_content: str,
         dst_addr: clusterlib.AddressRecord,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
     ) -> str:
         """Try to build a Tx and expect failure."""
         redeemer_file = f"{temp_template}.redeemer"
         with open(redeemer_file, "w", encoding="utf-8") as outfile:
             outfile.write(redeemer_content)
 
+        per_time = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_time
+        per_space = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_space
+
         fee_redeem = (
-            round(
-                plutus_common.GUESSING_GAME_UNTYPED_COST.per_time * cost_per_unit.per_time
-                + plutus_common.GUESSING_GAME_UNTYPED_COST.per_space * cost_per_unit.per_space
-            )
-            + plutus_common.GUESSING_GAME_UNTYPED_COST.fixed_cost
+            round(per_time * cost_per_unit.per_time + per_space * cost_per_unit.per_space)
+            + plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.fixed_cost
         )
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
@@ -1759,11 +1845,11 @@ class TestNegativeRedeemer:
         plutus_txins = [
             clusterlib.ScriptTxIn(
                 txins=script_utxos,
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_time,
-                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_space,
+                    per_time,
+                    per_space,
                 ),
                 datum_file=plutus_common.DATUM_42,
                 redeemer_file=Path(redeemer_file),
@@ -1789,6 +1875,7 @@ class TestNegativeRedeemer:
         redeemer_value: int,
         dst_addr: clusterlib.AddressRecord,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
     ):
         """Try to spend a locked UTxO with redeemer int value that is not in allowed range."""
         redeemer_content = {}
@@ -1800,12 +1887,12 @@ class TestNegativeRedeemer:
             with open(redeemer_file, "w", encoding="utf-8") as outfile:
                 json.dump(redeemer_content, outfile)
 
+        per_time = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_time
+        per_space = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_space
+
         fee_redeem = (
-            round(
-                plutus_common.GUESSING_GAME_UNTYPED_COST.per_time * cost_per_unit.per_time
-                + plutus_common.GUESSING_GAME_UNTYPED_COST.per_space * cost_per_unit.per_space
-            )
-            + plutus_common.GUESSING_GAME_UNTYPED_COST.fixed_cost
+            round(per_time * cost_per_unit.per_time + per_space * cost_per_unit.per_space)
+            + plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.fixed_cost
         )
 
         tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
@@ -1814,11 +1901,11 @@ class TestNegativeRedeemer:
         plutus_txins = [
             clusterlib.ScriptTxIn(
                 txins=script_utxos,
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_time,
-                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_space,
+                    per_time,
+                    per_space,
                 ),
                 datum_file=plutus_common.DATUM_42,
                 redeemer_file=redeemer_file if redeemer_content else "",
@@ -1840,12 +1927,15 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_wrong_value_inside_range(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
-        redeemer_value: int,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
+        redeemer_value: int,
     ):
         """Try to spend a locked UTxO with an unexpected redeemer value.
 
@@ -1853,7 +1943,11 @@ class TestNegativeRedeemer:
         """
         hypothesis.assume(redeemer_value != 42)
 
-        temp_template = f"test_wrong_value_inside_range_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
 
@@ -1866,14 +1960,14 @@ class TestNegativeRedeemer:
             with open(redeemer_file, "w", encoding="utf-8") as outfile:
                 json.dump(redeemer_content, outfile)
 
+        per_time = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_time
+        per_space = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_space
+
         # try to spend the "locked" UTxO
 
         fee_redeem = (
-            round(
-                plutus_common.GUESSING_GAME_UNTYPED_COST.per_time * cost_per_unit.per_time
-                + plutus_common.GUESSING_GAME_UNTYPED_COST.per_space * cost_per_unit.per_space
-            )
-            + plutus_common.GUESSING_GAME_UNTYPED_COST.fixed_cost
+            round(per_time * cost_per_unit.per_time + per_space * cost_per_unit.per_space)
+            + plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.fixed_cost
         )
 
         dst_addr = payment_addrs[1]
@@ -1884,11 +1978,11 @@ class TestNegativeRedeemer:
         plutus_txins = [
             clusterlib.ScriptTxIn(
                 txins=script_utxos,
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_time,
-                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_space,
+                    per_time,
+                    per_space,
                 ),
                 datum_file=plutus_common.DATUM_42,
                 redeemer_file=redeemer_file if redeemer_content else "",
@@ -1917,18 +2011,25 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_wrong_value_bellow_range(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_value: int,
     ):
         """Try to spend a locked UTxO with a redeemer int value < minimum allowed value.
 
         Expect failure.
         """
-        temp_template = f"test_wrong_value_bellow_range_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         self._int_out_of_range(
@@ -1939,24 +2040,32 @@ class TestNegativeRedeemer:
             redeemer_value=redeemer_value,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_wrong_value_above_range(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_value: int,
     ):
         """Try to spend a locked UTxO with a redeemer int value > maximum allowed value.
 
         Expect failure.
         """
-        temp_template = f"test_wrong_value_above_range_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         self._int_out_of_range(
@@ -1967,24 +2076,32 @@ class TestNegativeRedeemer:
             redeemer_value=redeemer_value,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_wrong_type(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_value: bytes,
     ):
         """Try to spend a locked UTxO with an invalid redeemer type.
 
         Expect failure.
         """
-        temp_template = f"test_wrong_type_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
 
@@ -1994,12 +2111,12 @@ class TestNegativeRedeemer:
 
         # try to spend the "locked" UTxO
 
+        per_time = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_time
+        per_space = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_space
+
         fee_redeem = (
-            round(
-                plutus_common.GUESSING_GAME_UNTYPED_COST.per_time * cost_per_unit.per_time
-                + plutus_common.GUESSING_GAME_UNTYPED_COST.per_space * cost_per_unit.per_space
-            )
-            + plutus_common.GUESSING_GAME_UNTYPED_COST.fixed_cost
+            round(per_time * cost_per_unit.per_time + per_space * cost_per_unit.per_space)
+            + plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.fixed_cost
         )
 
         dst_addr = payment_addrs[1]
@@ -2010,11 +2127,11 @@ class TestNegativeRedeemer:
         plutus_txins = [
             clusterlib.ScriptTxIn(
                 txins=script_utxos,
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS_V1,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_time,
-                    plutus_common.GUESSING_GAME_UNTYPED_COST.per_space,
+                    per_time,
+                    per_space,
                 ),
                 datum_file=plutus_common.DATUM_42,
                 redeemer_file=Path(redeemer_file),
@@ -2043,20 +2160,28 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_json_schema_typed_int_bytes_declared(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_value: bytes,
     ):
         """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
 
         Redeemer is in typed format and the value doesn't comply to JSON schema. Expect failure.
         """
-        temp_template = f"test_json_schema_typed_int_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+
         redeemer_content = json.dumps({"constructor": 0, "fields": [{"int": redeemer_value.hex()}]})
 
         # try to build a Tx for spending the "locked" UTxO
@@ -2068,6 +2193,7 @@ class TestNegativeRedeemer:
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
         assert 'field "int" does not have the type required by the schema' in err
 
@@ -2075,18 +2201,25 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_json_schema_untyped_int_bytes_declared(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_value: bytes,
     ):
         """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
 
         Redeemer is in untyped format and the value doesn't comply to JSON schema. Expect failure.
         """
-        temp_template = f"test_json_schema_untyped_int_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({"int": redeemer_value.hex()})
@@ -2100,6 +2233,7 @@ class TestNegativeRedeemer:
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
         assert 'field "int" does not have the type required by the schema' in err
 
@@ -2107,18 +2241,25 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_json_schema_typed_bytes_int_declared(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_value: int,
     ):
         """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
 
         Redeemer is in typed format and the value doesn't comply to JSON schema. Expect failure.
         """
-        temp_template = f"test_json_schema_typed_bytes_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({"constructor": 0, "fields": [{"bytes": redeemer_value}]})
@@ -2132,6 +2273,7 @@ class TestNegativeRedeemer:
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
         assert 'field "bytes" does not have the type required by the schema' in err
 
@@ -2139,18 +2281,25 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_json_schema_untyped_bytes_int_declared(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_value: int,
     ):
         """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
 
         Redeemer is in untyped format and the value doesn't comply to JSON schema. Expect failure.
         """
-        temp_template = f"test_json_schema_untyped_bytes_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({"bytes": redeemer_value})
@@ -2164,6 +2313,7 @@ class TestNegativeRedeemer:
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
         assert 'field "bytes" does not have the type required by the schema' in err
 
@@ -2171,18 +2321,25 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.text())
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_invalid_json(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_value: str,
     ):
         """Try to build a Tx using a redeemer value that is invalid JSON.
 
         Expect failure.
         """
-        temp_template = f"test_invalid_json_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = f'{{"{redeemer_value}"}}'
@@ -2196,6 +2353,7 @@ class TestNegativeRedeemer:
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
         assert "Invalid JSON format" in err
 
@@ -2203,18 +2361,25 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_type=st.text())
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_json_schema_typed_invalid_type(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_type: str,
     ):
         """Try to build a Tx using a JSON typed schema that specifies an invalid type.
 
         Expect failure.
         """
-        temp_template = f"test_json_schema_typed_invalid_type_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({redeemer_type: 42})
@@ -2228,6 +2393,7 @@ class TestNegativeRedeemer:
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
 
         assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
@@ -2238,18 +2404,25 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_type=st.text())
     @common.hypothesis_settings()
+    @param_plutus_version
     def test_json_schema_untyped_invalid_type(
         self,
         cluster: clusterlib.ClusterLib,
-        fund_script_guessing_game: FundTupleT,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
         cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
         redeemer_type: str,
     ):
         """Try to build a Tx using a JSON untyped schema that specifies an invalid type.
 
         Expect failure.
         """
-        temp_template = f"test_json_schema_typed_invalid_type_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({redeemer_type: 42})
@@ -2263,6 +2436,7 @@ class TestNegativeRedeemer:
             redeemer_content=redeemer_content,
             dst_addr=payment_addrs[1],
             cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
         )
 
         assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
