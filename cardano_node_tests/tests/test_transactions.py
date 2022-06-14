@@ -42,7 +42,12 @@ LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
 
 MAX_LOVELACE_AMOUNT = 2**64
-MIN_LOVELACE_AMOUNT = 999_978
+
+MIN_UTXO_VALUE_ALONZO = 999_978
+MIN_UTXO_VALUE_BABBAGE = 857_690
+MIN_UTXO_VALUE = (
+    MIN_UTXO_VALUE_BABBAGE if VERSIONS.cluster_era >= VERSIONS.BABBAGE else MIN_UTXO_VALUE_ALONZO
+)
 
 ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
@@ -398,6 +403,7 @@ class TestBasic:
 
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
+        * check min UTxO value
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -426,6 +432,10 @@ class TestBasic:
         assert (
             cluster.get_address_balance(dst_address) == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{dst_address}`"
+
+        # check min UTxO value
+        min_value = cluster.calculate_min_req_utxo(txouts=destinations)
+        assert min_value.value == MIN_UTXO_VALUE
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1456,18 +1466,6 @@ class TestNotBalanced:
 
         return addrs
 
-    # TODO: affected by cardano-node/issues/3913 - can be removed once this is fixed
-    @pytest.fixture
-    def pbt_state(
-        self,
-    ) -> List[str]:
-        """Record property-based test state - dummy fixture.
-
-        We'll take advantage of the fact that fixture is executed only once for property-based test,
-        and of changeability of list data type.
-        """
-        return ["pass"]
-
     @pytest.fixture
     def pbt_highest_utxo(
         self,
@@ -1666,9 +1664,7 @@ class TestNotBalanced:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
-    @hypothesis.given(
-        amount=st.integers(max_value=MIN_LOVELACE_AMOUNT, min_value=-MAX_LOVELACE_AMOUNT)
-    )
+    @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE, min_value=-MAX_LOVELACE_AMOUNT))
     @common.hypothesis_settings()
     def test_build_transfer_amount_bellow_minimum(
         self,
@@ -1711,22 +1707,17 @@ class TestNotBalanced:
 
         if amount < 0:
             assert "Negative quantity" in err_str, err_str
-        elif not err_str:
-            pytest.xfail("Affected by cardano-node/issues/3913")
         else:
             assert "Minimum UTxO threshold not met for tx output" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(
-        amount=st.integers(max_value=MIN_LOVELACE_AMOUNT, min_value=-MAX_LOVELACE_AMOUNT)
-    )
+    @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE, min_value=-MAX_LOVELACE_AMOUNT))
     @common.hypothesis_settings()
     def test_transfer_amount_bellow_minimum(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
-        pbt_state: List[str],
         amount: int,
     ):
         """Try to build a transaction with amount bellow the minimum lovelace required.
@@ -1777,24 +1768,12 @@ class TestNotBalanced:
             tx_name=f"{temp_template}_signed",
         )
 
-        err_str_submit = ""
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo_build:
             # submit the signed transaction
             cluster.submit_tx(tx_file=out_file_signed, txins=[pbt_highest_utxo])
-        except clusterlib.CLIError as err:
-            err_str_submit = str(err)
 
-        if not err_str_submit or pbt_state[0] == "xfail":
-            # TODO: affected by cardano-node/issues/3913
-            # Hack for hypothesis trying to re-run (x)failures. First result
-            # will be xfail, and hypothesis will try to re-run the test. The
-            # second result will be a different failure, because the UTxO is
-            # already spent. This makes sure that the re-run will be also
-            # xfail.
-            pbt_state[0] = "xfail"
-            pytest.xfail("Affected by cardano-node/issues/3913")
-        else:
-            assert "OutputTooSmallUTxO" in err_str_submit, err_str_submit
+        exc_val = str(excinfo_build.value)
+        assert "OutputTooSmallUTxO" in exc_val, exc_val
 
 
 @pytest.mark.testnets
