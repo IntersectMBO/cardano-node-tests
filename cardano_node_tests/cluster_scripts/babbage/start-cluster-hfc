@@ -193,13 +193,13 @@ for i in $(seq 1 $NUM_BFT_NODES); do
   cardano_cli_log byron key keygen \
     --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key"
 
-  cardano_cli_log signing-key-address \
+  cardano_cli_log byron signing-key-address \
     --byron-formats \
     --testnet-magic "$NETWORK_MAGIC" \
     --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key" > "$STATE_CLUSTER/byron/address-$INDEX"
 
   # write Genesis addresses to files
-  cardano_cli_log signing-key-address \
+  cardano_cli_log byron signing-key-address \
     --byron-formats  \
     --testnet-magic "$NETWORK_MAGIC" \
     --secret "$STATE_CLUSTER/byron/genesis-keys.$INDEX.key" \
