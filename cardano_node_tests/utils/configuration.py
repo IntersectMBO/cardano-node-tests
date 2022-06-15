@@ -11,6 +11,7 @@ DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
 USE_CDDL = bool(os.environ.get("USE_CDDL"))  # TODO: remove once `--cddl-format` is deprecated
+SKIP_PLUTUSV2 = bool(os.environ.get("SKIP_PLUTUSV2"))  # TODO: for PlutusV2 cost model
 
 TESTNET_POOL_IDS = (
     "pool18yslg3q320jex6gsmetukxvzm7a20qd90wsll9anlkrfua38flr",

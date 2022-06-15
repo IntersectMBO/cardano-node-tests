@@ -47,8 +47,8 @@ param_plutus_version = pytest.mark.parametrize(
         pytest.param(
             "v2",
             marks=pytest.mark.skipif(
-                VERSIONS.transaction_era < VERSIONS.BABBAGE,
-                reason="runs only with Babbage+ TX",
+                VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
             ),
         ),
     ),
@@ -717,22 +717,22 @@ class TestLocking:
             pytest.param(
                 "mix_v1_v2",
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
-                    reason="runs only with Babbage+ TX",
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
                 ),
             ),
             pytest.param(
                 "mix_v2_v1",
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
-                    reason="runs only with Babbage+ TX",
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
                 ),
             ),
             pytest.param(
                 "plutus_v2",
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
-                    reason="runs only with Babbage+ TX",
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
                 ),
             ),
         ),
