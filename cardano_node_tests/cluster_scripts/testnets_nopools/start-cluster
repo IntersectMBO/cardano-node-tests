@@ -32,16 +32,11 @@ cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
 # copy and edit configuration
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
-cp "$TESTNET_CONF_DIR/genesis-byron.json" "$STATE_CLUSTER/genesis-byron.json"
-cp "$TESTNET_CONF_DIR/genesis-shelley.json" "$STATE_CLUSTER/genesis-shelley.json"
-cp "$TESTNET_CONF_DIR/genesis-alonzo.json" "$STATE_CLUSTER/genesis-alonzo.json"
+cp "$TESTNET_CONF_DIR/topology-relay1.json" "$STATE_CLUSTER"
+cp "$TESTNET_CONF_DIR"/genesis-*.json "$STATE_CLUSTER"
 ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.json"
-
-PRODUCER="$(jq '.Producers[0]' "$TESTNET_CONF_DIR"/topology-*.json)"
-jq --argjson relay "$PRODUCER" '.Producers[0] = $relay' "$SCRIPT_DIR/topology-relay1.json" \
-  > "$STATE_CLUSTER/topology-relay1.json"
 
 RELAY1_EKG="30300"
 RELAY1_PROMETHEUS="30301"
