@@ -155,6 +155,15 @@ jq -r '
 cat "$STATE_CLUSTER/shelley/genesis.json_jq" > "$STATE_CLUSTER/shelley/genesis.json"
 rm -f "$STATE_CLUSTER/shelley/genesis.json_jq"
 
+# delete PlutusV2 cost model when indicated
+if [ -n "${SKIP_PLUTUSV2:-""}" ]; then
+  jq -r '
+    del(.costModels.PlutusV2)' \
+    < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
+  cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
+  rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
+fi
+
 BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
   "$STATE_CLUSTER/byron/genesis.json")"
 SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
@@ -193,13 +202,13 @@ for i in $(seq 1 $NUM_BFT_NODES); do
   cardano_cli_log byron key keygen \
     --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key"
 
-  cardano_cli_log byron signing-key-address \
+  cardano_cli_log byron key signing-key-address \
     --byron-formats \
     --testnet-magic "$NETWORK_MAGIC" \
     --secret "$STATE_CLUSTER/byron/payment-keys.$INDEX.key" > "$STATE_CLUSTER/byron/address-$INDEX"
 
   # write Genesis addresses to files
-  cardano_cli_log byron signing-key-address \
+  cardano_cli_log byron key signing-key-address \
     --byron-formats  \
     --testnet-magic "$NETWORK_MAGIC" \
     --secret "$STATE_CLUSTER/byron/genesis-keys.$INDEX.key" \
