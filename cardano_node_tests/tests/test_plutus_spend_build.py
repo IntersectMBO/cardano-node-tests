@@ -19,6 +19,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -44,8 +45,8 @@ param_plutus_version = pytest.mark.parametrize(
         pytest.param(
             "v2",
             marks=pytest.mark.skipif(
-                VERSIONS.transaction_era < VERSIONS.BABBAGE,
-                reason="runs only with Babbage+ TX",
+                VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
             ),
         ),
     ),
@@ -701,22 +702,22 @@ class TestBuildLocking:
             pytest.param(
                 "mix_v1_v2",
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
-                    reason="runs only with Babbage+ TX",
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
                 ),
             ),
             pytest.param(
                 "mix_v2_v1",
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
-                    reason="runs only with Babbage+ TX",
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
                 ),
             ),
             pytest.param(
                 "plutus_v2",
                 marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE,
-                    reason="runs only with Babbage+ TX",
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
                 ),
             ),
         ),
