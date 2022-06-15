@@ -17,6 +17,7 @@ GUESSING_GAME_UNTYPED_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-datum-42-txin.plutu
 CONTEXT_EQUIVALENCE_PLUTUS_V1 = SCRIPTS_V1_DIR / "context-equivalence-test.plutus"
 
 ALWAYS_SUCCEEDS_PLUTUS_V2 = SCRIPTS_V2_DIR / "always-succeeds-spending.plutus"
+ALWAYS_FAILS_PLUTUS_V2 = SCRIPTS_V2_DIR / "always-fails.plutus"
 GUESSING_GAME_PLUTUS_V2 = SCRIPTS_V2_DIR / "custom-guess-42-datum-42.plutus"
 GUESSING_GAME_UNTYPED_PLUTUS_V2 = SCRIPTS_V2_DIR / "guess-42-datum-42-txin.plutus"
 
@@ -60,6 +61,7 @@ GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_034_678, per_space=11_368,
 # TODO: fix once context equivalence tests can run again
 CONTEXT_EQUIVALENCE_COST = ExecutionCost(per_time=100_000_000, per_space=1_000_00, fixed_cost=947)
 
+ALWAYS_FAILS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 GUESSING_GAME_V2_COST = ExecutionCost(per_time=168_868_800, per_space=540_612, fixed_cost=43_369)
 GUESSING_GAME_UNTYPED_V2_COST = ExecutionCost(per_time=4_985_806, per_space=11_368, fixed_cost=1016)
@@ -82,6 +84,11 @@ class PlutusScriptData(NamedTuple):
     script_file: Path
     execution_cost: ExecutionCost
 
+
+ALWAYS_FAILS = {
+    "v1": PlutusScriptData(script_file=ALWAYS_FAILS_PLUTUS_V1, execution_cost=ALWAYS_FAILS_COST),
+    "v2": PlutusScriptData(script_file=ALWAYS_FAILS_PLUTUS_V2, execution_cost=ALWAYS_FAILS_V2_COST),
+}
 
 ALWAYS_SUCCEEDS = {
     "v1": PlutusScriptData(
