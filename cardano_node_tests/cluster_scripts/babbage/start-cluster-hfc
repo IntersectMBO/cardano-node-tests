@@ -155,6 +155,15 @@ jq -r '
 cat "$STATE_CLUSTER/shelley/genesis.json_jq" > "$STATE_CLUSTER/shelley/genesis.json"
 rm -f "$STATE_CLUSTER/shelley/genesis.json_jq"
 
+# delete PlutusV2 cost model when indicated
+if [ -n "${SKIP_PLUTUSV2:-""}" ]; then
+  jq -r '
+    del(.costModels.PlutusV2)' \
+    < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
+  cat "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq" > "$STATE_CLUSTER/shelley/genesis.alonzo.json"
+  rm -f "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
+fi
+
 BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
   "$STATE_CLUSTER/byron/genesis.json")"
 SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
