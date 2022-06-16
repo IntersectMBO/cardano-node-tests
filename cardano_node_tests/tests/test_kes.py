@@ -17,6 +17,7 @@ from cardano_node_tests.tests import kes
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
@@ -33,6 +34,9 @@ elif VERSIONS.cluster_era == VERSIONS.BABBAGE:
     NUM_OF_EPOCHS = 7
 else:
     raise AssertionError(f"Unsupported era '{VERSIONS.cluster_era_name}'")
+
+if configuration.UPDATE_COST_MODEL and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
+    NUM_OF_EPOCHS += 1
 
 
 pytestmark = pytest.mark.skipif(
