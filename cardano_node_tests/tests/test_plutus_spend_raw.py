@@ -762,9 +762,14 @@ class TestLocking:
         script_file2_v1 = plutus_common.GUESSING_GAME_PLUTUS_V1
         # this is higher than `plutus_common.GUESSING_GAME_COST`, because the script
         # context has changed to include more stuff
-        execution_cost2_v1 = plutus_common.ExecutionCost(
-            per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
-        )
+        if configuration.ALONZO_COST_MODEL or VERSIONS.cluster_era == VERSIONS.ALONZO:
+            execution_cost2_v1 = plutus_common.ExecutionCost(
+                per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
+            )
+        else:
+            execution_cost2_v1 = plutus_common.ExecutionCost(
+                per_time=280_668_068, per_space=1_031_312, fixed_cost=79_743
+            )
 
         script_file1_v2 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2
         execution_cost1_v2 = plutus_common.ALWAYS_SUCCEEDS_V2_COST
