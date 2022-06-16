@@ -271,6 +271,10 @@ class TestnetScripts(ScriptsTypes):
                 shutil.copy(infile, dest_file)
                 continue
 
+            if "topology" in fname:
+                shutil.copy(infile, dest_file)
+                continue
+
             with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
