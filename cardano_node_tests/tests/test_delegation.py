@@ -106,7 +106,7 @@ class TestDelegateAddr:
         cluster, pool_id = cluster_and_pool
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -162,7 +162,7 @@ class TestDelegateAddr:
         cluster = cluster_use_pool1
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -229,7 +229,7 @@ class TestDelegateAddr:
 
         pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -369,7 +369,7 @@ class TestDelegateAddr:
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -645,7 +645,7 @@ class TestDelegateAddr:
             stake_pool_id=pool_id,
         )
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
         init_epoch = cluster.get_epoch()
 
         # delegate and deregister stake address in single TX
