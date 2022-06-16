@@ -3,7 +3,9 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 DATA_DIR = Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
@@ -54,9 +56,9 @@ class ExecutionCost(NamedTuple):
 
 # scripts execution cost for Txs with single UTxO input and single Plutus script
 ALWAYS_FAILS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
-ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
-GUESSING_GAME_COST = ExecutionCost(per_time=327_365_461, per_space=870_842, fixed_cost=73_851)
-GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_034_678, per_space=11_368, fixed_cost=947)
+ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=368_100, per_space=1_700, fixed_cost=125)
+GUESSING_GAME_COST = ExecutionCost(per_time=236_715_138, per_space=870_842, fixed_cost=67_315)
+GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_985_806, per_space=11_368, fixed_cost=1_016)
 # TODO: fix once context equivalence tests can run again
 CONTEXT_EQUIVALENCE_COST = ExecutionCost(per_time=100_000_000, per_space=1_000_00, fixed_cost=947)
 
@@ -64,18 +66,32 @@ ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed
 GUESSING_GAME_V2_COST = ExecutionCost(per_time=168_868_800, per_space=540_612, fixed_cost=43_369)
 GUESSING_GAME_UNTYPED_V2_COST = ExecutionCost(per_time=4_985_806, per_space=11_368, fixed_cost=1016)
 
-MINTING_COST = ExecutionCost(per_time=358_849_733, per_space=978_434, fixed_cost=82_329)
+MINTING_COST = ExecutionCost(per_time=259_868_784, per_space=978_434, fixed_cost=74_960)
 MINTING_TIME_RANGE_COST = ExecutionCost(
-    per_time=379_793_656, per_space=1_044_064, fixed_cost=87_626
+    per_time=277_239_670, per_space=1_044_064, fixed_cost=80_232
 )
 # TODO: fix once context equivalence tests can run again
 MINTING_CONTEXT_EQUIVALENCE_COST = ExecutionCost(
     per_time=358_849_733, per_space=978_434, fixed_cost=82_329
 )
 MINTING_WITNESS_REDEEMER_COST = ExecutionCost(
-    per_time=369_725_712, per_space=1_013_630, fixed_cost=85_144
+    per_time=261_056_789, per_space=1_013_630, fixed_cost=75_278
 )
 MINTING_TOKENNAME_COST = ExecutionCost(per_time=230_732_000, per_space=539_860, fixed_cost=47_786)
+
+
+# TODO: cost in old Alonzo cost model
+if configuration.ALONZO_COST_MODEL or VERSIONS.cluster_era == VERSIONS.ALONZO:
+    ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
+    GUESSING_GAME_COST = ExecutionCost(per_time=327_365_461, per_space=870_842, fixed_cost=73_851)
+    GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_034_678, per_space=11_368, fixed_cost=947)
+    MINTING_COST = ExecutionCost(per_time=358_849_733, per_space=978_434, fixed_cost=82_329)
+    MINTING_TIME_RANGE_COST = ExecutionCost(
+        per_time=379_793_656, per_space=1_044_064, fixed_cost=87_626
+    )
+    MINTING_WITNESS_REDEEMER_COST = ExecutionCost(
+        per_time=369_725_712, per_space=1_013_630, fixed_cost=85_144
+    )
 
 
 class PlutusScriptData(NamedTuple):

@@ -622,6 +622,7 @@ class TestBuildLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
+        __: Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{variant}"
 
         datum_file: Optional[Path] = None
@@ -677,7 +678,7 @@ class TestBuildLocking:
             plutus_op=plutus_op,
         )
 
-        _build_spend_locked_txin(
+        __, __, plutus_cost = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -691,6 +692,11 @@ class TestBuildLocking:
         # check expected fees
         expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[execution_cost],
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -752,9 +758,14 @@ class TestBuildLocking:
         script_file2_v1 = plutus_common.GUESSING_GAME_PLUTUS_V1
         # this is higher than `plutus_common.GUESSING_GAME_COST`, because the script
         # context has changed to include more stuff
-        execution_cost2_v1 = plutus_common.ExecutionCost(
-            per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
-        )
+        if configuration.ALONZO_COST_MODEL or VERSIONS.cluster_era == VERSIONS.ALONZO:
+            execution_cost2_v1 = plutus_common.ExecutionCost(
+                per_time=388_458_303, per_space=1_031_312, fixed_cost=87_515
+            )
+        else:
+            execution_cost2_v1 = plutus_common.ExecutionCost(
+                per_time=280_668_068, per_space=1_031_312, fixed_cost=79_743
+            )
 
         script_file1_v2 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2
         execution_cost1_v2 = plutus_common.ALWAYS_SUCCEEDS_V2_COST
