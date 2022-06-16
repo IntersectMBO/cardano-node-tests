@@ -335,7 +335,7 @@ class TestDelegateAddr:
 
         # Step 2: register and delegate
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
