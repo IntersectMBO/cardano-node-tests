@@ -14,6 +14,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -543,12 +544,20 @@ class TestMinting:
 
         # this is higher than `plutus_common.MINTING*_COST`, because the script context has changed
         # to include more stuff
-        minting_cost_two = plutus_common.ExecutionCost(
-            per_time=408_545_501, per_space=1_126_016, fixed_cost=94_428
-        )
-        minting_time_range_cost_two = plutus_common.ExecutionCost(
-            per_time=427_707_230, per_space=1_188_952, fixed_cost=99_441
-        )
+        if configuration.ALONZO_COST_MODEL or VERSIONS.cluster_era == VERSIONS.ALONZO:
+            minting_cost_two = plutus_common.ExecutionCost(
+                per_time=408_545_501, per_space=1_126_016, fixed_cost=94_428
+            )
+            minting_time_range_cost_two = plutus_common.ExecutionCost(
+                per_time=427_707_230, per_space=1_188_952, fixed_cost=99_441
+            )
+        else:
+            minting_cost_two = plutus_common.ExecutionCost(
+                per_time=297_744_405, per_space=1_126_016, fixed_cost=86_439
+            )
+            minting_time_range_cost_two = plutus_common.ExecutionCost(
+                per_time=312_830_204, per_space=1_188_952, fixed_cost=91_158
+            )
 
         protocol_params = cluster.get_protocol_params()
         minting_cost1 = plutus_common.compute_cost(
