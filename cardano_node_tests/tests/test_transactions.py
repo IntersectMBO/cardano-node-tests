@@ -1439,6 +1439,43 @@ class TestManyUTXOs:
 class TestNotBalanced:
     """Tests for not balanced transactions."""
 
+    def _build_transfer_amount_bellow_minimum(
+        self,
+        cluster: clusterlib.ClusterLib,
+        temp_template: str,
+        payment_addrs: List[clusterlib.AddressRecord],
+        pbt_highest_utxo: clusterlib.UTXOData,
+        amount: int,
+    ):
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        err_str = ""
+        try:
+            cluster.cli(
+                [
+                    "transaction",
+                    "build",
+                    "--tx-in",
+                    f"{pbt_highest_utxo.utxo_hash}#{pbt_highest_utxo.utxo_ix}",
+                    "--change-address",
+                    src_address,
+                    "--tx-out",
+                    f"{dst_address}+{amount}",
+                    "--out-file",
+                    f"{temp_template}_tx.body",
+                    *cluster.tx_era_arg,
+                    *cluster.magic_args,
+                ]
+            )
+        except clusterlib.CLIError as err:
+            err_str = str(err)
+
+        if amount < 0:
+            assert "Negative quantity" in err_str, err_str
+        else:
+            assert "Minimum UTxO threshold not met for tx output" in err_str, err_str
+
     @pytest.fixture
     def payment_addrs(
         self,
@@ -1664,8 +1701,8 @@ class TestNotBalanced:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
-    @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE, min_value=-MAX_LOVELACE_AMOUNT))
-    @common.hypothesis_settings()
+    @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE, min_value=0))
+    @common.hypothesis_settings(max_examples=200)
     def test_build_transfer_amount_bellow_minimum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1680,39 +1717,44 @@ class TestNotBalanced:
         Expect failure.
         """
         temp_template = f"{common.get_test_id(cluster)}_{amount}"
-
-        src_address = payment_addrs[0].address
-        dst_address = payment_addrs[1].address
-
-        err_str = ""
-        try:
-            cluster.cli(
-                [
-                    "transaction",
-                    "build",
-                    "--tx-in",
-                    f"{pbt_highest_utxo.utxo_hash}#{pbt_highest_utxo.utxo_ix}",
-                    "--change-address",
-                    src_address,
-                    "--tx-out",
-                    f"{dst_address}+{amount}",
-                    "--out-file",
-                    f"{temp_template}_tx.body",
-                    *cluster.tx_era_arg,
-                    *cluster.magic_args,
-                ]
-            )
-        except clusterlib.CLIError as err:
-            err_str = str(err)
-
-        if amount < 0:
-            assert "Negative quantity" in err_str, err_str
-        else:
-            assert "Minimum UTxO threshold not met for tx output" in err_str, err_str
+        self._build_transfer_amount_bellow_minimum(
+            cluster=cluster,
+            temp_template=temp_template,
+            payment_addrs=payment_addrs,
+            pbt_highest_utxo=pbt_highest_utxo,
+            amount=amount,
+        )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE, min_value=-MAX_LOVELACE_AMOUNT))
-    @common.hypothesis_settings()
+    @hypothesis.given(amount=st.integers(max_value=-1, min_value=-MAX_LOVELACE_AMOUNT))
+    @common.hypothesis_settings(max_examples=300)
+    def test_build_transfer_negative_amount(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        pbt_highest_utxo: clusterlib.UTXOData,
+        amount: int,
+    ):
+        """Try to build a transaction with negative Lovelace amount.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+        self._build_transfer_amount_bellow_minimum(
+            cluster=cluster,
+            temp_template=temp_template,
+            payment_addrs=payment_addrs,
+            pbt_highest_utxo=pbt_highest_utxo,
+            amount=amount,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    # TODO: `MIN_UTXO_VALUE - 10_000` because of issue
+    # https://github.com/input-output-hk/cardano-node/issues/4061
+    @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE - 10_000, min_value=0))
+    @common.hypothesis_settings(max_examples=400)
     def test_transfer_amount_bellow_minimum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1752,13 +1794,6 @@ class TestNotBalanced:
         if VERSIONS.transaction_era < VERSIONS.ALLEGRA:
             build_args.extend(["--invalid-hereafter", str(cluster.calculate_tx_ttl())])
 
-        if amount < 0:
-            with pytest.raises(clusterlib.CLIError) as excinfo_build:
-                cluster.cli(build_args)
-            err_str_build = str(excinfo_build.value)
-            assert "Negative quantity" in err_str_build, err_str_build
-            return
-
         cluster.cli(build_args)
 
         # create signed transaction
@@ -1774,6 +1809,53 @@ class TestNotBalanced:
 
         exc_val = str(excinfo_build.value)
         assert "OutputTooSmallUTxO" in exc_val, exc_val
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(amount=st.integers(max_value=-1, min_value=-MAX_LOVELACE_AMOUNT))
+    @common.hypothesis_settings(max_examples=500)
+    def test_transfer_negative_amount(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        pbt_highest_utxo: clusterlib.UTXOData,
+        amount: int,
+    ):
+        """Try to build a transaction with negative Lovelace amount.
+
+        Uses `cardano-cli transaction build-raw` command for building the transactions.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        fee = 200_000
+
+        out_file = f"{temp_template}.body"
+        build_args = [
+            "transaction",
+            "build-raw",
+            "--fee",
+            f"{fee}",
+            "--tx-in",
+            f"{pbt_highest_utxo.utxo_hash}#{pbt_highest_utxo.utxo_ix}",
+            "--tx-out",
+            f"{dst_address}+{amount}",
+            "--tx-out",
+            f"{src_address}+{pbt_highest_utxo.amount - amount - fee}",
+            *cluster.tx_era_arg,
+            "--out-file",
+            out_file,
+        ]
+        if VERSIONS.transaction_era < VERSIONS.ALLEGRA:
+            build_args.extend(["--invalid-hereafter", str(cluster.calculate_tx_ttl())])
+
+        with pytest.raises(clusterlib.CLIError) as excinfo_build:
+            cluster.cli(build_args)
+        err_str_build = str(excinfo_build.value)
+        assert "Negative quantity" in err_str_build, err_str_build
 
 
 @pytest.mark.testnets
