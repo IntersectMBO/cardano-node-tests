@@ -7,7 +7,6 @@ from typing import NamedTuple
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
-from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 
@@ -32,12 +31,12 @@ class PytestTest(NamedTuple):
         return bool(self.test_function)
 
 
-@helpers.callonce
-def hypothesis_settings() -> Any:
+def hypothesis_settings(max_examples: int = 100) -> Any:
     # pylint: disable=import-outside-toplevel
     import hypothesis
 
     return hypothesis.settings(
+        max_examples=max_examples,
         deadline=None,
         suppress_health_check=(
             hypothesis.HealthCheck.too_slow,
