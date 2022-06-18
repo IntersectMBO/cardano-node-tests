@@ -1620,9 +1620,13 @@ class TestMintingNegative:
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
+
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        assert "The budget was overspent" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert (
+            "The budget was overspent" in err_str or "due to overspending the budget" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
