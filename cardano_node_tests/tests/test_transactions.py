@@ -1726,6 +1726,7 @@ class TestNotBalanced:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
     @hypothesis.given(amount=st.integers(max_value=-1, min_value=-MAX_LOVELACE_AMOUNT))
     @common.hypothesis_settings(max_examples=300)
     def test_build_transfer_negative_amount(
