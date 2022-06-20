@@ -453,7 +453,7 @@ def get_current_tip(timeout_minutes=10):
             return output_json["epoch"], int(output_json["block"]), output_json["hash"], \
                    int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
         except subprocess.CalledProcessError as e:
-            print(f" === Waiting 60s before retrying to get the tip again - {i}")
+            print(f" === {get_current_date_time()} - Waiting 60s before retrying to get the tip again - {i}")
             print(
                 f"     !!!ERROR: command {e.cmd} return with error (code {e.returncode}): {' '.join(str(e.output).split())}")
             if "Invalid argument" in str(e.output):
@@ -505,7 +505,7 @@ def start_node_windows(env, tag_no):
             count += 1
             if count > count_timeout:
                 print(
-                    f"!!! ERROR: waited {count_timeout} seconds and the DB folder was not created yet")
+                    f"!!! {get_current_date_time()} - ERROR: waited {count_timeout} seconds and the DB folder was not created yet")
                 exit(1)
 
         print(f"DB folder was created after {count} seconds")
