@@ -6,6 +6,8 @@ import logging
 import shutil
 import time
 from pathlib import Path
+from typing import Any
+from typing import Tuple
 
 import allure
 import pytest
@@ -106,19 +108,33 @@ def cluster_kes(
     )
 
 
-def _wait_epoch_chores(cluster_obj: clusterlib.ClusterLib, temp_template: str, this_epoch: int):
-    if cluster_obj.get_epoch() == this_epoch:
-        LOGGER.info(f"{datetime.datetime.now()}: Waiting for next epoch.")
-        cluster_obj.wait_for_new_epoch()
+def _check_block_production(
+    cluster_obj: clusterlib.ClusterLib, temp_template: str, pool_id_dec: str, in_epoch: int
+) -> Tuple[int, bool]:
+    epoch = cluster_obj.get_epoch()
+    if epoch < in_epoch:
+        new_epochs = in_epoch - epoch
+        LOGGER.info(f"{datetime.datetime.now()}: Waiting for {new_epochs} new epoch(s).")
+        cluster_obj.wait_for_new_epoch(new_epochs=new_epochs)
 
     LOGGER.info(f"{datetime.datetime.now()}: Waiting for the end of current epoch.")
     clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster_obj, start=-19, stop=-15)
 
-    # save ledger state
+    epoch = cluster_obj.get_epoch()
+
+    ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster_obj)
+
     clusterlib_utils.save_ledger_state(
         cluster_obj=cluster_obj,
-        state_name=f"{temp_template}_{cluster_obj.get_epoch()}",
+        state_name=f"{temp_template}_{epoch}",
+        ledger_state=ledger_state,
     )
+
+    # check if the pool is minting any blocks
+    blocks_made = ledger_state["blocksCurrent"] or {}
+    is_minting = pool_id_dec in blocks_made
+
+    return epoch, is_minting
 
 
 class TestKES:
@@ -184,24 +200,24 @@ class TestKES:
         # search for expected errors only in log file corresponding to pool with expired KES
         expected_errors = [(f"{expire_node_name}.stdout", err) for err in expected_err_regexes]
 
-        this_epoch = -1
         with logfiles.expect_errors(expected_errors, ignore_file_id=worker_id):
             LOGGER.info(
                 f"{datetime.datetime.now()}: Waiting for {expire_timeout} sec for KES expiration."
             )
             time.sleep(expire_timeout)
+            LOGGER.info(f"{datetime.datetime.now()}: KES expired (?); tip: '{cluster.get_tip()}'.")
 
-            _wait_epoch_chores(
-                cluster_obj=cluster, temp_template=temp_template, this_epoch=this_epoch
+            this_epoch, is_minting = _check_block_production(
+                cluster_obj=cluster,
+                temp_template=temp_template,
+                pool_id_dec=expire_pool_id_dec,
+                in_epoch=cluster.get_epoch() + 1,
             )
-            this_epoch = cluster.get_epoch()
 
-            # check that the pool is not producing any blocks
-            blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)["blocksCurrent"]
-            if blocks_made:
-                assert (
-                    expire_pool_id_dec not in blocks_made
-                ), f"The pool '{expire_pool_name}' has minted blocks in epoch {this_epoch}"
+            # check that the pool is not minting any blocks
+            assert (
+                not is_minting
+            ), f"The pool '{expire_pool_name}' has minted blocks in epoch {this_epoch}"
 
             # refresh opcerts one more time
             _refresh_opcerts()
@@ -253,18 +269,19 @@ class TestKES:
 
         * generate new operational certificate with `--kes-period` in the future
         * restart the node with the new operational certificate
-        * check that the pool is not producing any blocks
+        * check that the pool is not minting any blocks
         * if network era > Alonzo
 
             - generate new operational certificate with valid `--kes-period`, but counter value +2
               from last used operational ceritificate
             - restart the node
-            - check that the pool is not producing any blocks
+            - check that the pool is not minting any blocks
 
         * generate new operational certificate with valid `--kes-period` and restart the node
-        * check that the pool is producing blocks again
+        * check that the pool is minting blocks again
         """
         # pylint: disable=too-many-statements,too-many-branches
+        __: Any  # mypy workaround
         pool_name = cluster_management.Resources.POOL2
         node_name = "pool2"
         cluster = cluster_lock_pool2
@@ -273,8 +290,8 @@ class TestKES:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         node_cold = pool_rec["cold_key_pair"]
-        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
-        stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
+        pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+        pool_id_dec = helpers.decode_bech32(pool_id)
 
         opcert_file: Path = pool_rec["pool_operational_cert"]
         cold_counter_file: Path = pool_rec["cold_key_pair"].counter_file
@@ -315,24 +332,21 @@ class TestKES:
                 # restart the node with the new operational certificate
                 shutil.copy(invalid_opcert_file, opcert_file)
                 cluster_nodes.restart_nodes([node_name])
-                cluster.wait_for_new_epoch()
 
                 LOGGER.info("Checking blocks production for 4 epochs.")
-                this_epoch = -1
+                this_epoch = cluster.get_epoch()
                 for invalid_opcert_epoch in range(4):
-                    _wait_epoch_chores(
-                        cluster_obj=cluster, temp_template=temp_template, this_epoch=this_epoch
+                    this_epoch, is_minting = _check_block_production(
+                        cluster_obj=cluster,
+                        temp_template=temp_template,
+                        pool_id_dec=pool_id_dec,
+                        in_epoch=this_epoch + 1,
                     )
-                    this_epoch = cluster.get_epoch()
 
-                    # check that the pool is not producing any blocks
-                    blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)[
-                        "blocksCurrent"
-                    ]
-                    if blocks_made:
-                        assert (
-                            stake_pool_id_dec not in blocks_made
-                        ), f"The pool '{pool_name}' has produced blocks in epoch {this_epoch}"
+                    # check that the pool is not minting any blocks
+                    assert (
+                        not is_minting
+                    ), f"The pool '{pool_name}' has minted blocks in epoch {this_epoch}"
 
                     if invalid_opcert_epoch == 1:
                         # check kes-period-info with operational certificate with
@@ -387,27 +401,25 @@ class TestKES:
             # copy the new certificate and restart the node
             shutil.copy(valid_opcert_file, opcert_file)
             cluster_nodes.restart_nodes([node_name])
-            this_epoch = cluster.wait_for_new_epoch()
 
             LOGGER.info("Checking blocks production for another 2 epochs.")
             blocks_made_db = []
-            active_again_epoch = this_epoch
+            updated_epoch = cluster.get_epoch()
+            this_epoch = updated_epoch
             for __ in range(2):
-                _wait_epoch_chores(
-                    cluster_obj=cluster, temp_template=temp_template, this_epoch=this_epoch
+                this_epoch, is_minting = _check_block_production(
+                    cluster_obj=cluster,
+                    temp_template=temp_template,
+                    pool_id_dec=pool_id_dec,
+                    in_epoch=this_epoch + 1,
                 )
-                this_epoch = cluster.get_epoch()
 
-                # check that the pool is producing blocks
-                blocks_made = clusterlib_utils.get_ledger_state(cluster_obj=cluster)[
-                    "blocksCurrent"
-                ]
-                blocks_made_db.append(stake_pool_id_dec in blocks_made)
+                # check that the pool is minting blocks
+                blocks_made_db.append(is_minting)
 
-            assert any(blocks_made_db), (
-                f"The pool '{pool_name}' has not produced any blocks "
-                f"since epoch {active_again_epoch}"
-            )
+            assert any(
+                blocks_made_db
+            ), f"The pool '{pool_name}' has not produced any blocks since epoch {updated_epoch}"
 
         if kes_query_currently_broken:
             pytest.xfail("`query kes-period-info` is currently broken")
@@ -448,6 +460,7 @@ class TestKES:
         * check `kes-period-info` with the old (replaced) operational certificate
         """
         # pylint: disable=too-many-statements
+        __: Any  # mypy workaround
         pool_name = cluster_management.Resources.POOL2
         node_name = "pool2"
         cluster = cluster_lock_pool2
@@ -456,8 +469,8 @@ class TestKES:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         node_cold = pool_rec["cold_key_pair"]
-        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
-        stake_pool_id_dec = helpers.decode_bech32(stake_pool_id)
+        pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+        pool_id_dec = helpers.decode_bech32(pool_id)
 
         opcert_file = pool_rec["pool_operational_cert"]
         opcert_file_old = shutil.copy(opcert_file, f"{opcert_file}_old")
@@ -511,37 +524,20 @@ class TestKES:
             # start the node with the new operational certificate
             cluster_nodes.start_nodes([node_name])
 
-            # make sure we are not at the very end of an epoch so we still have time for
-            # the first block production check
-            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-18)
-
-            LOGGER.info("Checking blocks production for 5 epochs.")
+            LOGGER.info("Checking blocks production for 2 epochs.")
             blocks_made_db = []
-            this_epoch = -1
             updated_epoch = cluster.get_epoch()
-            for __ in range(5):
-                # wait for next epoch
-                if cluster.get_epoch() == this_epoch:
-                    cluster.wait_for_new_epoch()
-
-                # wait for the end of the epoch
-                clusterlib_utils.wait_for_epoch_interval(
-                    cluster_obj=cluster, start=-19, stop=-15, force_epoch=True
-                )
-                this_epoch = cluster.get_epoch()
-
-                ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
-
-                # save ledger state
-                clusterlib_utils.save_ledger_state(
+            this_epoch = updated_epoch
+            for __ in range(2):
+                this_epoch, is_minting = _check_block_production(
                     cluster_obj=cluster,
-                    state_name=f"{temp_template}_{this_epoch}",
-                    ledger_state=ledger_state,
+                    temp_template=temp_template,
+                    pool_id_dec=pool_id_dec,
+                    in_epoch=this_epoch + 1,
                 )
 
                 # check that the pool is minting blocks
-                blocks_made = ledger_state["blocksCurrent"]
-                blocks_made_db.append(stake_pool_id_dec in blocks_made)
+                blocks_made_db.append(is_minting)
 
             assert any(
                 blocks_made_db
