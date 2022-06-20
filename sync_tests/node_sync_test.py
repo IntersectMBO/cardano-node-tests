@@ -631,7 +631,7 @@ def wait_for_node_to_sync(env):
     if syncProgress is not None:
         while syncProgress < 100:
             if count % 60 == 0:
-                print(f"actual_era  : {actual_era} "
+                print(f"{get_current_date_time()} - actual_era  : {actual_era} "
                       f" - actual_epoch: {actual_epoch} "
                       f" - actual_block: {actual_block} "
                       f" - actual_slot : {actual_slot} "
