@@ -134,3 +134,4 @@ jobs:
             cardano_node_tests/logfile.log
             cardano_node_tests/sync_results.json
             cardano_node_tests/${{ matrix.env }}-config.json
+            cardano_node_tests/${{ matrix.env }}-topology.json

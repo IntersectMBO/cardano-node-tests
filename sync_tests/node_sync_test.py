@@ -348,6 +348,7 @@ def enable_cardano_node_tracers(node_config_filepath):
     # node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
     node_config_json["TestEnableDevelopmentHardForkEras"] = True
 
+    node_config_json["EnableP2P"] = False
     node_config_json["TraceLocalMux"] = True
     node_config_json["TraceLocalHandshake"] = True
     node_config_json["TraceLocalErrorPolicy"] = True
@@ -657,7 +658,7 @@ def wait_for_node_to_sync(env):
     else:
         while actual_slot <= last_slot_no:
             if count % 60 == 0:
-                print(f"actual_era  : {actual_era} "
+                print(f"{get_current_date_time()} - actual_eraa  : {actual_era} "
                       f" - actual_epoch: {actual_epoch} "
                       f" - actual_block: {actual_block} "
                       f" - actual_slot : {actual_slot} "
