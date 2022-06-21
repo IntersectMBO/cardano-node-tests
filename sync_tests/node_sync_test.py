@@ -458,6 +458,7 @@ def get_current_tip(timeout_minutes=10):
             print(
                 f"     !!!ERROR: command {e.cmd} return with error (code {e.returncode}): {' '.join(str(e.output).split())}")
             if "Invalid argument" in str(e.output):
+                print(f" -- exiting on - {e.output}")
                 exit(1)
             pass
         time.sleep(60)
