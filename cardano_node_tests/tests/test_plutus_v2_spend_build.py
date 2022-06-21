@@ -261,7 +261,6 @@ class TestBuildLocking:
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
-            change_address=payment_addrs[0].address,
         )
 
         tx_signed = cluster.sign_tx(
@@ -393,7 +392,6 @@ class TestNegativeInlineDatum:
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
-                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert (
@@ -490,7 +488,6 @@ class TestNegativeInlineDatum:
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
-            change_address=payment_addrs[0].address,
         )
 
         tx_signed = cluster.sign_tx(
@@ -651,7 +648,6 @@ class TestReferenceScripts:
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
-            change_address=payment_addrs[0].address,
         )
 
         tx_signed = cluster.sign_tx(
@@ -795,7 +791,6 @@ class TestReferenceScripts:
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
-            change_address=payment_addrs[0].address,
         )
 
         tx_signed = cluster.sign_tx(
@@ -943,7 +938,6 @@ class TestReferenceScripts:
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
-            change_address=payment_addrs[0].address,
         )
 
         tx_signed = cluster.sign_tx(
@@ -1138,7 +1132,6 @@ class TestNegativeReferenceScripts:
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
-                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert "The Plutus script evaluation failed" in err_str, err_str
@@ -1209,7 +1202,6 @@ class TestNegativeReferenceScripts:
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
-                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert "ReferenceInputsNotSupported" in err_str, err_str
@@ -1347,7 +1339,6 @@ class TestNegativeReferenceScripts:
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
-                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert "ReferenceInputsNotSupported" in err_str, err_str
