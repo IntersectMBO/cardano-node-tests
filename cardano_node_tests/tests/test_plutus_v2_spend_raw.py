@@ -988,6 +988,81 @@ class TestReferenceScripts:
             and len(cluster.get_utxo(txin=script_utxo2)) == 0
         ), f"Script addresses utxo was not spent `{script_utxo1}` and `{script_utxo2}`"
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("script_type", ("simple", "plutus_v1", "plutus_v2"))
+    def test_spend_reference_script(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        script_type: str,
+    ):
+        """Test spend a UTxO that holds a reference script.
+
+        * create the Tx output with the reference script
+        * check that the expected amount was transferred
+        * spend the UTxO
+        * check that the UTxO was spent
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{script_type}"
+        amount = 2_000_000
+
+        if script_type.startswith("plutus"):
+            plutus_version = script_type.split("_")[-1]
+            script_file = plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
+        else:
+            keyhash = cluster.get_payment_vkey_hash(payment_addrs[0].vkey_file)
+            script_content = {"keyHash": keyhash, "type": "sig"}
+            script_file = Path(f"{temp_template}.script")
+            with open(script_file, "w", encoding="utf-8") as out_json:
+                json.dump(script_content, out_json)
+
+        # create a Tx output with the reference script
+
+        tx_files_step1 = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file],
+        )
+
+        txouts_step1 = [
+            clusterlib.TxOut(
+                address=payment_addrs[1].address,
+                amount=amount,
+                reference_script_file=script_file,
+            )
+        ]
+
+        tx_raw_output_step1 = cluster.send_tx(
+            src_address=payment_addrs[0].address,
+            tx_name=f"{temp_template}_step1",
+            txouts=txouts_step1,
+            tx_files=tx_files_step1,
+        )
+
+        txid = cluster.get_txid(tx_body_file=tx_raw_output_step1.out_file)
+        reference_txin = f"{txid}#0"
+        reference_utxo = cluster.get_utxo(txin=reference_txin)
+
+        assert reference_utxo[0].amount == amount, "Incorrect amount transferred"
+
+        # spend the Tx output with the reference script
+        src_addr = payment_addrs[1]
+        dst_addr = payment_addrs[0]
+
+        txouts_step2 = [clusterlib.TxOut(address=dst_addr.address, amount=-1)]
+        tx_files_step2 = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+
+        cluster.send_tx(
+            src_address=payment_addrs[1].address,
+            tx_name=f"{temp_template}_step1",
+            txins=reference_utxo,
+            txouts=txouts_step2,
+            tx_files=tx_files_step2,
+        )
+
+        # check that reference script UTxO was spent
+        assert not cluster.get_utxo(
+            txin=reference_txin
+        ), f"Reference script UTxO was not spent '{reference_txin}`"
+
 
 @pytest.mark.testnets
 class TestNegativeReferenceScripts:
