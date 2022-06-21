@@ -272,11 +272,11 @@ class TestBuildLocking:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address utxo was spent
+        # check that script address UTxO was spent
         script_utxo = f"{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"
         assert (
             len(cluster.get_utxo(txin=script_utxo)) == 0
-        ), f"Script address utxo was not spent `{script_utxo}`"
+        ), f"Script address UTxO was not spent `{script_utxo}`"
 
         # check that the value of fee and collaterals are lower when using a reference script
         if use_reference_script:
@@ -520,7 +520,7 @@ class TestReferenceScripts:
         * create the Tx outputs with an inline datum at the script address
         * create the Tx outputs with the reference scripts
         * spend the locked UTxOs using the reference UTxOs
-        * check that the UtxOs were correctly spent
+        * check that the UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -659,13 +659,13 @@ class TestReferenceScripts:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address utxo was spent
+        # check that script address UTxO was spent
         script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
         script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
         assert (
             len(cluster.get_utxo(txin=script_utxo1)) == 0
             and len(cluster.get_utxo(txin=script_utxo2)) == 0
-        ), f"Script addresses utxo was not spent `{script_utxo1}` and `{script_utxo2}`"
+        ), f"Script addresses UTxO was not spent `{script_utxo1}` and `{script_utxo2}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_reference_same_script(
@@ -678,7 +678,7 @@ class TestReferenceScripts:
         * create the Tx outputs with an inline datum at the script address
         * create the Tx output with the reference script
         * spend the locked UTxOs using the reference UTxO
-        * check that the UtxOs were correctly spent
+        * check that the UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -802,13 +802,13 @@ class TestReferenceScripts:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address utxo was spent
+        # check that script address UTxO was spent
         script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
         script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
         assert (
             len(cluster.get_utxo(txin=script_utxo1)) == 0
             and len(cluster.get_utxo(txin=script_utxo2)) == 0
-        ), f"Script addresses utxo was not spent `{script_utxo1}` and `{script_utxo2}`"
+        ), f"Script addresses UTxO was not spent `{script_utxo1}` and `{script_utxo2}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_mix_reference_attached_script(
@@ -821,7 +821,7 @@ class TestReferenceScripts:
         * create the Tx output with an attached script
         * create the Tx output with the reference script
         * spend the locked UTxOs
-        * check that the UtxOs were correctly spent
+        * check that the UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -833,7 +833,7 @@ class TestReferenceScripts:
         assert plutus_op1.datum_file and plutus_op2.datum_file
         assert plutus_op1.redeemer_cbor_file and plutus_op2.redeemer_cbor_file
 
-        # create the necessary UtxOs
+        # create the necessary UTxOs
 
         script_fund = 100_000_000
 
@@ -949,13 +949,13 @@ class TestReferenceScripts:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address UtxOs were spent
+        # check that script address UTxOs were spent
         script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
         script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
         assert (
             len(cluster.get_utxo(txin=script_utxo1)) == 0
             and len(cluster.get_utxo(txin=script_utxo2)) == 0
-        ), f"Script addresses utxo was not spent `{script_utxo1}` and `{script_utxo2}`"
+        ), f"Script addresses UTxO was not spent `{script_utxo1}` and `{script_utxo2}`"
 
 
 @pytest.mark.testnets
@@ -1217,7 +1217,7 @@ class TestNegativeReferenceScripts:
         * create the Tx output with an attached V1 script
         * create the Tx output with the reference V2 script
         * spend the locked UTxOs
-        * check that the UtxOs were correctly spent
+        * check that the UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
 
