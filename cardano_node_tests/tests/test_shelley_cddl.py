@@ -40,16 +40,11 @@ class TestShelleyCDDL:
         if cluster.use_cddl:
             pytest.skip("runs only when `cluster.use_cddl == False`")
 
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                f"addr_shelley_cddl_ci{cluster_manager.cluster_instance_num}_0",
-                f"addr_shelley_cddl_ci{cluster_manager.cluster_instance_num}_1",
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
+        addrs = clusterlib_utils.create_payment_addr_records(
+            f"addr_shelley_cddl_ci{cluster_manager.cluster_instance_num}_0",
+            f"addr_shelley_cddl_ci{cluster_manager.cluster_instance_num}_1",
+            cluster_obj=cluster,
+        )
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -60,7 +55,6 @@ class TestShelleyCDDL:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     def test_shelley_cddl(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -72,7 +66,7 @@ class TestShelleyCDDL:
 
         # amount value -1 means all available funds
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         fee = cluster.calculate_tx_fee(
             src_address=src_address,
@@ -94,13 +88,24 @@ class TestShelleyCDDL:
         finally:
             cluster.use_cddl = orig_cddl_value
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        err = ""
+        try:
             cluster.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
             )
-        if "TextEnvelope error" in str(excinfo.value):
+        except clusterlib.CLIError as exc:
+            err = str(exc)
+
+        if "TextEnvelope error" in err:
             pytest.xfail("TextEnvelope error")
-        else:
-            pytest.fail(f"Unexpected error:\n{excinfo.value}")
+        elif err:
+            pytest.fail(f"Unexpected error:\n{err}")
+
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
