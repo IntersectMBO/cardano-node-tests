@@ -348,18 +348,18 @@ def enable_cardano_node_tracers(node_config_filepath):
     # node_config_json["TestEnableDevelopmentNetworkProtocols"] = True
     node_config_json["TestEnableDevelopmentHardForkEras"] = True
 
-    node_config_json["EnableP2P"] = False
-    node_config_json["TraceLocalMux"] = True
-    node_config_json["TraceLocalHandshake"] = True
-    node_config_json["TraceLocalErrorPolicy"] = True
-    node_config_json["TraceErrorPolicy"] = True
+    # node_config_json["EnableP2P"] = False
+    # node_config_json["TraceLocalMux"] = True
+    # node_config_json["TraceLocalHandshake"] = True
+    # node_config_json["TraceLocalErrorPolicy"] = True
+    # node_config_json["TraceErrorPolicy"] = True
 
-    if "mapSeverity" not in node_config_json["options"]:
-        node_config_json["options"]["mapSeverity"] = {}
-    node_config_json["options"]["mapSeverity"]["cardano.node.LocalMux"] = "Info"
-    node_config_json["options"]["mapSeverity"]["cardano.node.LocalHandshake"] = "Info"
-    node_config_json["options"]["mapSeverity"]["cardano.node.LocalErrorPolicy"] = "Debug"
-    node_config_json["options"]["mapSeverity"]["cardano.node.ErrorPolicy"] = "Debug"
+    # if "mapSeverity" not in node_config_json["options"]:
+    #     node_config_json["options"]["mapSeverity"] = {}
+    # node_config_json["options"]["mapSeverity"]["cardano.node.LocalMux"] = "Info"
+    # node_config_json["options"]["mapSeverity"]["cardano.node.LocalHandshake"] = "Info"
+    # node_config_json["options"]["mapSeverity"]["cardano.node.LocalErrorPolicy"] = "Debug"
+    # node_config_json["options"]["mapSeverity"]["cardano.node.ErrorPolicy"] = "Debug"
 
     print(json.dumps(node_config_json, indent=2))
 
