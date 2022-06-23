@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# controlling environment variables:
+# DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
+# ENABLE_P2P - if set, local cluster will use P2P
+# SKIP_PLUTUSV2 - if set, PlutusV2 cost model will not be present in alonzo genesis
+# UPDATE_COST_MODEL - if set, PlutusV2 cost model will be made available through update proposal
+
 set -euo pipefail
 sets="$-"
 
@@ -94,11 +100,20 @@ mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync}
 cd "$STATE_CLUSTER/.."
 
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
-cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/genesis*.spec.json "$STATE_CLUSTER/shelley/"
+
+if [ -n "${ENABLE_P2P:-""}" ]; then
+  # use P2P topology files
+  for tconf in "$SCRIPT_DIR"/p2p-topology-*.json; do
+    tfname="${tconf##*/p2p-}"
+    cp "$tconf" "${STATE_CLUSTER}/${tfname}"
+  done
+else
+  cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
+fi
 
 # enable db-sync service
 if [ -n "${DBSYNC_REPO:-""}" ]; then
@@ -178,6 +193,24 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
     '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
     "$conf" > "$STATE_CLUSTER/$fname"
+
+  # enable P2P
+  if [ -n "${ENABLE_P2P:-""}" ]; then
+    jq \
+      '.EnableP2P = true
+      | .MaxConcurrencyBulkSync = 2
+      | .MaxConcurrencyDeadline = 4
+      | .TargetNumberOfRootPeers = 100
+      | .TargetNumberOfKnownPeers = 100
+      | .TargetNumberOfEstablishedPeers = 50
+      | .TargetNumberOfActivePeers = 20
+      | .TestEnableDevelopmentNetworkProtocols = true
+      | .TraceBlockFetchClient = true
+      | .TraceChainSyncClient = true' \
+      "$STATE_CLUSTER/$fname" > "$STATE_CLUSTER/${fname}_jq"
+    cat "$STATE_CLUSTER/${fname}_jq" > "$STATE_CLUSTER/$fname"
+    rm -f "$STATE_CLUSTER/${fname}_jq"
+  fi
 done
 
 for i in $(seq 1 $NUM_BFT_NODES); do
