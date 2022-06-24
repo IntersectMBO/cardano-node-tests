@@ -74,20 +74,11 @@ class TestLeadershipSchedule:
             queried_epoch = cluster.get_epoch() + 1
 
         # query leadership schedule for selected pool
-        # TODO: the query is currently broken
-        query_currently_broken = False
-        try:
-            leadership_schedule = cluster.get_leadership_schedule(
-                vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
-                cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
-                for_next=for_epoch != "current",
-            )
-        except clusterlib.CLIError as err:
-            if "currently broken" not in str(err):
-                raise
-            query_currently_broken = True
-        if query_currently_broken:
-            pytest.xfail("`query leadership-schedule` is currently broken")
+        leadership_schedule = cluster.get_leadership_schedule(
+            vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
+            cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
+            for_next=for_epoch != "current",
+        )
 
         # wait for epoch that comes after the queried epoch
         cluster.wait_for_new_epoch(new_epochs=1 if for_epoch == "current" else 2)
@@ -170,9 +161,6 @@ class TestLeadershipSchedule:
             )
         err_str = str(excinfo.value)
 
-        # TODO: the query is currently broken
-        if "currently broken" in err_str:
-            pytest.xfail("`query leadership-schedule` is currently broken")
         if "PastHorizon" in err_str:
             pytest.xfail("`query leadership-schedule` is affected by cardano-node issue 4002")
 
