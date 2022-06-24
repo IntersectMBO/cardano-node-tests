@@ -170,6 +170,35 @@ def _fund_script(
     return script_utxos, collateral_utxos, reference_utxo, tx_raw_output
 
 
+def _build_reference_txin(
+    temp_template: str,
+    cluster: clusterlib.ClusterLib,
+    amount: int,
+    payment_addr: clusterlib.AddressRecord,
+    dst_addr: clusterlib.AddressRecord,
+) -> List[clusterlib.UTXOData]:
+    """Create a basic txin to use as readonly reference input.
+
+    Uses `cardano-cli transaction build-raw` command for building the transaction.
+    """
+    txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+    tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+    tx_raw_output = cluster.send_tx(
+        src_address=payment_addr.address,
+        tx_name=f"{temp_template}_step1",
+        txouts=txouts,
+        tx_files=tx_files,
+    )
+
+    txid = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
+
+    reference_txin = cluster.get_utxo(txin=f"{txid}#0")
+    assert reference_txin, "UTxO not created"
+
+    return reference_txin
+
+
 @pytest.mark.testnets
 class TestLockingV2:
     """Tests for Tx output locking using Plutus V2 smart contracts."""
@@ -1481,6 +1510,399 @@ class TestNegativeReferenceScripts:
             cluster.submit_tx(
                 tx_file=tx_signed_redeem,
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
+            )
+        err_str = str(excinfo.value)
+        assert "ReferenceInputsNotSupported" in err_str, err_str
+
+
+@pytest.mark.testnets
+class TestReadonlyReferenceInputs:
+    """Tests for Tx with readonly reference inputs."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("reference_input_scenario", ("single", "duplicated"))
+    def test_use_reference_input(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        reference_input_scenario: str,
+    ):
+        """Test use a reference input when unlock some funds.
+
+        * create the necessary Tx outputs
+        * use a reference input and spend the locked UTxO
+        * check that the reference input was not spent
+        """
+        __: Any  # mypy workaround
+        temp_template = f"{common.get_test_id(cluster)}_{reference_input_scenario}"
+
+        amount = 2_000_000
+
+        plutus_op = PLUTUS_OP_ALWAYS_SUCCEEDS
+
+        # for mypy
+        assert plutus_op.execution_cost
+        assert plutus_op.datum_file
+        assert plutus_op.redeemer_cbor_file
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+        )
+
+        # create the necessary Tx outputs
+
+        script_utxos, collateral_utxos, __, __ = _fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=2_000_000,
+            redeem_cost=redeem_cost,
+        )
+
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            amount=amount,
+        )
+
+        #  spend the "locked" UTxO
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_op.script_file,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_op.execution_cost.per_time,
+                    plutus_op.execution_cost.per_space,
+                ),
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file,
+                datum_file=plutus_op.datum_file,
+            )
+        ]
+
+        tx_files_redeem = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[1].skey_file],
+        )
+        txouts_redeem = [
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=amount),
+        ]
+
+        if reference_input_scenario == "single":
+            readonly_reference_txins = reference_input
+        else:
+            readonly_reference_txins = reference_input * 2
+
+        cluster.send_tx(
+            src_address=payment_addrs[0].address,
+            tx_name=f"{temp_template}_step2_tx.body",
+            txouts=txouts_redeem,
+            readonly_reference_txins=readonly_reference_txins,
+            tx_files=tx_files_redeem,
+            fee=redeem_cost.fee + FEE_REDEEM_TXSIZE,
+            join_txouts=False,
+            script_txins=plutus_txins,
+        )
+
+        # check that the reference input was not spent
+        reference_input_utxo = cluster.get_utxo(
+            txin=f"{reference_input[0].utxo_hash}#{reference_input[0].utxo_ix}"
+        )
+
+        assert (
+            reference_input_utxo[0].amount == amount
+        ), f"The reference input was spent `{reference_input_utxo}`"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_same_input_as_reference_input(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test use a reference input that is also a regular input of the same transaction.
+
+        * create the necessary Tx outputs
+        * use a reference input that is also a regular input and spend the locked UTxO
+        * check that the input was spent
+        """
+        __: Any  # mypy workaround
+        temp_template = common.get_test_id(cluster)
+
+        amount = 2_000_000
+
+        plutus_op = PLUTUS_OP_ALWAYS_SUCCEEDS
+
+        # for mypy
+        assert plutus_op.execution_cost
+        assert plutus_op.datum_file
+        assert plutus_op.redeemer_cbor_file
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+        )
+
+        # create the necessary Tx outputs
+
+        script_utxos, collateral_utxos, __, __ = _fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=2_000_000,
+            redeem_cost=redeem_cost,
+        )
+
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            amount=amount,
+        )
+
+        #  spend the "locked" UTxO
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_op.script_file,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_op.execution_cost.per_time,
+                    plutus_op.execution_cost.per_space,
+                ),
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file,
+                datum_file=plutus_op.datum_file,
+            )
+        ]
+
+        tx_files_redeem = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[1].skey_file],
+        )
+        txouts_redeem = [
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=amount),
+        ]
+
+        cluster.send_tx(
+            src_address=payment_addrs[0].address,
+            tx_name=f"{temp_template}_step2_tx.body",
+            txins=reference_input,
+            txouts=txouts_redeem,
+            readonly_reference_txins=reference_input,
+            tx_files=tx_files_redeem,
+            fee=redeem_cost.fee + FEE_REDEEM_TXSIZE,
+            join_txouts=False,
+            script_txins=plutus_txins,
+        )
+
+        # check that the reference input was spent
+        reference_input_utxo = cluster.get_utxo(
+            txin=f"{reference_input[0].utxo_hash}#{reference_input[0].utxo_ix}"
+        )
+
+        assert (
+            not reference_input_utxo
+        ), f"The reference input was not spent `{reference_input_utxo}`"
+
+        # TODO check command 'transaction view' bug on cardano-node 4045
+
+
+@pytest.mark.testnets
+class TestNegativeReadonlyReferenceInputs:
+    """Tests for Tx with readonly reference inputs that are expected to fail."""
+
+    @allure.link(helpers.get_vcs_link())
+    def test_reference_spent_output(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test use a reference input that was already spent.
+
+        Expect failure
+        """
+        __: Any  # mypy workaround
+        temp_template = common.get_test_id(cluster)
+
+        amount = 2_000_000
+
+        plutus_op = PLUTUS_OP_ALWAYS_SUCCEEDS
+
+        # for mypy
+        assert plutus_op.execution_cost
+        assert plutus_op.datum_file
+        assert plutus_op.redeemer_cbor_file
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+        )
+
+        # create the necessary Tx outputs
+
+        script_utxos, collateral_utxos, __, __ = _fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=amount,
+            redeem_cost=redeem_cost,
+        )
+
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            amount=amount,
+        )
+
+        reference_utxo = f"{reference_input[0].utxo_hash}#{reference_input[0].utxo_ix}"
+
+        #  spend the output that will be used as reference input
+
+        cluster.send_tx(
+            src_address=payment_addrs[0].address,
+            tx_name=f"{temp_template}_spend_reference_input_tx.body",
+            txins=reference_input,
+            txouts=[clusterlib.TxOut(address=payment_addrs[0].address, amount=-1)],
+            tx_files=clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file]),
+        )
+
+        # check that the input used also as reference was spent
+        reference_input_utxo = cluster.get_utxo(txin=reference_utxo)
+
+        assert not reference_input_utxo, f"The reference input was not spent `{reference_utxo}`"
+
+        #  spend the "locked" UTxO
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_op.script_file,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_op.execution_cost.per_time,
+                    plutus_op.execution_cost.per_space,
+                ),
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file,
+                datum_file=plutus_op.datum_file,
+            )
+        ]
+
+        tx_files_redeem = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[1].skey_file],
+        )
+        txouts_redeem = [
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=amount),
+        ]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=f"{temp_template}_step2_tx.body",
+                txouts=txouts_redeem,
+                readonly_reference_txins=reference_input,
+                tx_files=tx_files_redeem,
+                fee=redeem_cost.fee + FEE_REDEEM_TXSIZE,
+                join_txouts=False,
+                script_txins=plutus_txins,
+            )
+        err_str = str(excinfo.value)
+        # TODO improve error message cardano-node 4012
+        assert (
+            "TranslationLogicMissingInput (TxIn (TxId "
+            f'{{_unTxId = SafeHash "{reference_input[0].utxo_hash}"}})' in err_str
+        ), err_str
+
+    @allure.link(helpers.get_vcs_link())
+    def test_v1_script_with_reference_input(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test use a reference input with a v1 Plutus script.
+
+        Expect failure
+        """
+        __: Any  # mypy workaround
+        temp_template = common.get_test_id(cluster)
+
+        amount = 2_000_000
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+        )
+
+        # for mypy
+        assert plutus_op.execution_cost
+        assert plutus_op.datum_file
+        assert plutus_op.redeemer_cbor_file
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+        )
+
+        # create the necessary Tx outputs
+
+        script_utxos, collateral_utxos, __, __ = _fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=amount,
+            redeem_cost=redeem_cost,
+        )
+
+        # create the reference input
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            amount=amount,
+        )
+
+        #  spend the "locked" UTxO
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_op.script_file,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_op.execution_cost.per_time,
+                    plutus_op.execution_cost.per_space,
+                ),
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file,
+                datum_file=plutus_op.datum_file,
+            )
+        ]
+
+        tx_files_redeem = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[1].skey_file],
+        )
+        txouts_redeem = [
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+        ]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=f"{temp_template}_step2_tx.body",
+                txouts=txouts_redeem,
+                tx_files=tx_files_redeem,
+                fee=redeem_cost.fee + FEE_REDEEM_TXSIZE,
+                readonly_reference_txins=reference_input,
+                join_txouts=False,
+                script_txins=plutus_txins,
             )
         err_str = str(excinfo.value)
         assert "ReferenceInputsNotSupported" in err_str, err_str
