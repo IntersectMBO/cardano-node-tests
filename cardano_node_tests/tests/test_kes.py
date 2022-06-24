@@ -402,11 +402,10 @@ class TestKES:
             shutil.copy(valid_opcert_file, opcert_file)
             cluster_nodes.restart_nodes([node_name])
 
-            LOGGER.info("Checking blocks production for another 2 epochs.")
-            blocks_made_db = []
+            LOGGER.info("Checking blocks production for up to 3 epochs.")
             updated_epoch = cluster.get_epoch()
             this_epoch = updated_epoch
-            for __ in range(2):
+            for __ in range(3):
                 this_epoch, is_minting = _check_block_production(
                     cluster_obj=cluster,
                     temp_template=temp_template,
@@ -415,11 +414,12 @@ class TestKES:
                 )
 
                 # check that the pool is minting blocks
-                blocks_made_db.append(is_minting)
-
-            assert any(
-                blocks_made_db
-            ), f"The pool '{pool_name}' has not produced any blocks since epoch {updated_epoch}"
+                if is_minting:
+                    break
+            else:
+                raise AssertionError(
+                    f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}."
+                )
 
         if kes_query_currently_broken:
             pytest.xfail("`query kes-period-info` is currently broken")
@@ -524,11 +524,10 @@ class TestKES:
             # start the node with the new operational certificate
             cluster_nodes.start_nodes([node_name])
 
-            LOGGER.info("Checking blocks production for 2 epochs.")
-            blocks_made_db = []
+            LOGGER.info("Checking blocks production for up to 3 epochs.")
             updated_epoch = cluster.get_epoch()
             this_epoch = updated_epoch
-            for __ in range(2):
+            for __ in range(3):
                 this_epoch, is_minting = _check_block_production(
                     cluster_obj=cluster,
                     temp_template=temp_template,
@@ -537,11 +536,12 @@ class TestKES:
                 )
 
                 # check that the pool is minting blocks
-                blocks_made_db.append(is_minting)
-
-            assert any(
-                blocks_made_db
-            ), f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}"
+                if is_minting:
+                    break
+            else:
+                raise AssertionError(
+                    f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}."
+                )
 
         if kes_query_currently_broken:
             pytest.xfail("`query kes-period-info` is currently broken")
