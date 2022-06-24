@@ -46,6 +46,13 @@ PLUTUS_OP_ALWAYS_SUCCEEDS = plutus_common.PlutusOp(
     execution_cost=plutus_common.ALWAYS_SUCCEEDS["v2"].execution_cost,
 )
 
+PLUTUS_OP_GUESSING_GAME = plutus_common.PlutusOp(
+    script_file=plutus_common.GUESSING_GAME["v2"].script_file,
+    datum_file=plutus_common.DATUM_42_TYPED,
+    redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
+    execution_cost=plutus_common.GUESSING_GAME["v2"].execution_cost,
+)
+
 PLUTUS_OP_GUESSING_GAME_UNTYPED = plutus_common.PlutusOp(
     script_file=plutus_common.GUESSING_GAME_UNTYPED["v2"].script_file,
     datum_file=plutus_common.DATUM_42,
@@ -146,7 +153,7 @@ def _build_fund_script(
         txouts.append(
             clusterlib.TxOut(
                 address=dst_addr.address,
-                amount=2_000_000,
+                amount=10_000_000,
                 reference_script_file=plutus_op.script_file,
             )
         )
@@ -211,7 +218,7 @@ class TestBuildLocking:
         __: Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
 
-        plutus_op = PLUTUS_OP_GUESSING_GAME_UNTYPED
+        plutus_op = PLUTUS_OP_GUESSING_GAME
 
         # for mypy
         assert plutus_op.execution_cost
@@ -220,7 +227,7 @@ class TestBuildLocking:
 
         # create a Tx output with an inline datum at the script address
 
-        script_utxos, collateral_utxos, reference_utxo, __ = _build_fund_script(
+        script_utxos, collateral_utxos, reference_utxo, tx_output_fund = _build_fund_script(
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
@@ -265,6 +272,14 @@ class TestBuildLocking:
             script_txins=plutus_txins,
         )
 
+        plutus_cost = cluster.calculate_plutus_script_cost(
+            src_address=payment_addrs[0].address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_redeem,
+            txouts=txouts_redeem,
+            script_txins=plutus_txins,
+        )
+
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
@@ -285,12 +300,23 @@ class TestBuildLocking:
             txin=f"{reference_utxo.utxo_hash}#{reference_utxo.utxo_ix}"
         ), "Reference input was spent"
 
-        # check that the value of fee and collaterals are lower when using a reference script
+        # check expected fees
         if use_reference_script:
-            fee_without_reference_script = 176417
-            assert (
-                tx_output_redeem.fee < fee_without_reference_script
-            ), "The fee when using reference script in higher than without"
+            expected_fee_fund = 258_913
+            expected_fee_redeem = 213_889
+        else:
+            expected_fee_fund = 167_965
+            expected_fee_redeem = 293_393
+
+        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert helpers.is_in_interval(tx_output_redeem.fee, expected_fee_redeem, frac=0.15)
+
+        assert PLUTUS_OP_GUESSING_GAME.execution_cost  # for mypy
+        plutus_common.check_plutus_cost(
+            plutus_cost=plutus_cost,
+            expected_cost=[PLUTUS_OP_GUESSING_GAME.execution_cost],
+            frac=0.2,
+        )
 
 
 @pytest.mark.testnets
