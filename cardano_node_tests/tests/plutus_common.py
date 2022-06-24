@@ -164,7 +164,9 @@ class ScriptCost(NamedTuple):
     min_collateral: int  # minimum needed collateral
 
 
-def check_plutus_cost(plutus_cost: List[dict], expected_cost: List[ExecutionCost]):
+def check_plutus_cost(
+    plutus_cost: List[dict], expected_cost: List[ExecutionCost], frac: float = 0.15
+):
     """Check plutus transaction cost.
 
     units: the time is in picoseconds and the space is in bytes.
@@ -184,11 +186,11 @@ def check_plutus_cost(plutus_cost: List[dict], expected_cost: List[ExecutionCost
         tx_space = costs["executionUnits"]["memory"]
         lovelace_cost = costs["lovelaceCost"]
 
-        if not helpers.is_in_interval(tx_time, expected_values.per_time, frac=0.15):
+        if not helpers.is_in_interval(tx_time, expected_values.per_time, frac=frac):
             errors.append(f"time: {tx_time} vs {expected_values.per_time}")
-        if not helpers.is_in_interval(tx_space, expected_values.per_space, frac=0.15):
+        if not helpers.is_in_interval(tx_space, expected_values.per_space, frac=frac):
             errors.append(f"space: {tx_space} vs {expected_values.per_space}")
-        if not helpers.is_in_interval(lovelace_cost, expected_values.fixed_cost, frac=0.15):
+        if not helpers.is_in_interval(lovelace_cost, expected_values.fixed_cost, frac=frac):
             errors.append(f"fixed cost: {lovelace_cost} vs {expected_values.fixed_cost}")
 
     if errors:
