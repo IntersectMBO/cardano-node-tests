@@ -90,12 +90,12 @@ def _build_fund_script(
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
     plutus_op: plutus_common.PlutusOp,
-    use_reference_script: Optional[bool] = False,
-    use_inline_datum: Optional[bool] = True,
+    use_reference_script: bool = False,
+    use_inline_datum: bool = True,
 ) -> Tuple[
     List[clusterlib.UTXOData],
     List[clusterlib.UTXOData],
-    List[clusterlib.UTXOData],
+    Optional[clusterlib.UTXOData],
     clusterlib.TxRawOutput,
 ]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO and reference script.
@@ -174,14 +174,15 @@ def _build_fund_script(
     collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
     assert collateral_utxos, "No collateral UTxO"
 
-    reference_utxos = []
+    reference_utxo = None
     if use_reference_script:
         reference_utxos = cluster.get_utxo(txin=f"{txid}#3")
         assert reference_utxos, "No reference script UTxO"
+        reference_utxo = reference_utxos[0]
 
     dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
-    return script_utxos, collateral_utxos, reference_utxos, tx_output
+    return script_utxos, collateral_utxos, reference_utxo, tx_output
 
 
 @pytest.mark.testnets
@@ -219,7 +220,7 @@ class TestBuildLocking:
 
         # create a Tx output with an inline datum at the script address
 
-        script_utxos, collateral_utxos, reference_utxos, __ = _build_fund_script(
+        script_utxos, collateral_utxos, reference_utxo, __ = _build_fund_script(
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
@@ -228,6 +229,7 @@ class TestBuildLocking:
             use_inline_datum=use_inline_datum,
             use_reference_script=use_reference_script,
         )
+        assert reference_utxo or not use_reference_script, "No reference script UTxO"
 
         #  spend the "locked" UTxO
 
@@ -235,7 +237,7 @@ class TestBuildLocking:
             clusterlib.ScriptTxIn(
                 txins=script_utxos,
                 script_file=plutus_op.script_file if not use_reference_script else "",
-                reference_txin=reference_utxos[0] if use_reference_script else None,
+                reference_txin=reference_utxo if use_reference_script else None,
                 reference_type=clusterlib.ScriptTypes.PLUTUS_V2 if use_reference_script else "",
                 collaterals=collateral_utxos,
                 execution_units=(
@@ -274,9 +276,14 @@ class TestBuildLocking:
 
         # check that script address UTxO was spent
         script_utxo = f"{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"
-        assert (
-            len(cluster.get_utxo(txin=script_utxo)) == 0
+        assert not cluster.get_utxo(
+            txin=script_utxo
         ), f"Script address UTxO was not spent `{script_utxo}`"
+
+        # check that reference UTxO was NOT spent
+        assert not reference_utxo or cluster.get_utxo(
+            txin=f"{reference_utxo.utxo_hash}#{reference_utxo.utxo_ix}"
+        ), "Reference input was spent"
 
         # check that the value of fee and collaterals are lower when using a reference script
         if use_reference_script:
@@ -659,13 +666,12 @@ class TestReferenceScripts:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address UTxO was spent
+        # check that script address UTxOs were spent
         script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
         script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
-        assert (
-            len(cluster.get_utxo(txin=script_utxo1)) == 0
-            and len(cluster.get_utxo(txin=script_utxo2)) == 0
-        ), f"Script addresses UTxO was not spent `{script_utxo1}` and `{script_utxo2}`"
+        assert not (
+            cluster.get_utxo(txin=script_utxo1) or cluster.get_utxo(txin=script_utxo2)
+        ), f"Script address UTxOs were NOT spent - `{script_utxo1}` and `{script_utxo2}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_reference_same_script(
@@ -802,13 +808,12 @@ class TestReferenceScripts:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address UTxO was spent
+        # check that script address UTxOs were spent
         script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
         script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
-        assert (
-            len(cluster.get_utxo(txin=script_utxo1)) == 0
-            and len(cluster.get_utxo(txin=script_utxo2)) == 0
-        ), f"Script addresses UTxO was not spent `{script_utxo1}` and `{script_utxo2}`"
+        assert not (
+            cluster.get_utxo(txin=script_utxo1) or cluster.get_utxo(txin=script_utxo2)
+        ), f"Script address UTxOs were NOT spent - `{script_utxo1}` and `{script_utxo2}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_mix_reference_attached_script(
@@ -952,10 +957,9 @@ class TestReferenceScripts:
         # check that script address UTxOs were spent
         script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
         script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
-        assert (
-            len(cluster.get_utxo(txin=script_utxo1)) == 0
-            and len(cluster.get_utxo(txin=script_utxo2)) == 0
-        ), f"Script addresses UTxO was not spent `{script_utxo1}` and `{script_utxo2}`"
+        assert not (
+            cluster.get_utxo(txin=script_utxo1) or cluster.get_utxo(txin=script_utxo2)
+        ), f"Script address UTxOs were NOT spent - `{script_utxo1}` and `{script_utxo2}`"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("script_type", ("simple", "plutus_v1", "plutus_v2"))
@@ -1251,7 +1255,7 @@ class TestNegativeReferenceScripts:
 
         # create a Tx output with an inline datum at the script address
 
-        script_utxos, collateral_utxos, reference_utxos, __ = _build_fund_script(
+        script_utxos, collateral_utxos, reference_utxo, __ = _build_fund_script(
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
@@ -1259,13 +1263,14 @@ class TestNegativeReferenceScripts:
             plutus_op=plutus_op,
             use_reference_script=True,
         )
+        assert reference_utxo, "No reference script UTxO"
 
         #  spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
                 txins=script_utxos,
-                reference_txin=reference_utxos[0],
+                reference_txin=reference_utxo,
                 reference_type=clusterlib.ScriptTypes.PLUTUS_V2,
                 collaterals=collateral_utxos,
                 execution_units=(
