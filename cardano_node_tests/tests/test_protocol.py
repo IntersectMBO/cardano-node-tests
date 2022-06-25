@@ -56,7 +56,18 @@ class TestProtocol:
     def test_protocol_state_keys(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-state`."""
         common.get_test_id(cluster)
-        protocol_state = cluster.get_protocol_state()
+
+        # TODO: the query is currently broken
+        query_currently_broken = False
+        try:
+            protocol_state = cluster.get_protocol_state()
+        except clusterlib.CLIError as err:
+            if "currentlyBroken" not in str(err):
+                raise
+            query_currently_broken = True
+        if query_currently_broken:
+            pytest.xfail("`query protocol-state` is currently broken - cardano-node issue #3883")
+
         assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
