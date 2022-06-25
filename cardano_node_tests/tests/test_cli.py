@@ -170,10 +170,7 @@ class TestCLI:
         assert utxo_out == expected_out
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-        reason="different TX eras doesn't affect this test",
-    )
+    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
     @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""

@@ -14,7 +14,6 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,11 +32,8 @@ class TestLedgerState:
     """Basic tests for ledger state."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-        reason="different TX eras doesn't affect this test, pointless to run",
-    )
     @pytest.mark.order(-1)
+    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_stake_snapshot(self, cluster: clusterlib.ClusterLib):  # noqa: C901
