@@ -6,6 +6,7 @@ import pytest
 import requests
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import model_ekg
@@ -125,10 +126,7 @@ class TestPrometheus:
         assert metrics_keys == self.EXPECTED_METRICS, "Metrics differ"
 
 
-@pytest.mark.skipif(
-    VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-    reason="different TX eras doesn't affect this test, pointless to run",
-)
+@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
 class TestEKG:
     """EKG metrics tests."""
 

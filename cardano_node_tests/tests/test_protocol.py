@@ -8,7 +8,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -43,12 +42,9 @@ PROTOCOL_PARAM_KEYS = (
 )
 
 
+@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
 @pytest.mark.testnets
 @pytest.mark.smoke
-@pytest.mark.skipif(
-    VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-    reason="different TX eras doesn't affect this test, pointless to run",
-)
 class TestProtocol:
     """Basic tests for protocol."""
 

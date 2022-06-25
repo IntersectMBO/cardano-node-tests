@@ -18,6 +18,12 @@ BUILD_SKIP_MSG = (
     f"and TX era '{VERSIONS.transaction_era_name}'"
 )
 
+SAME_ERAS = (
+    VERSIONS.cluster_era >= VERSIONS.DEFAULT_CLUSTER_ERA
+    and VERSIONS.transaction_era == VERSIONS.cluster_era
+)
+ERAS_SKIP_MSG = "meant to run with default era or higher, where cluster era == Tx era"
+
 
 class PytestTest(NamedTuple):
     test_function: str
