@@ -16,7 +16,6 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -114,10 +113,7 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
 
 
 @pytest.mark.order(5)
-@pytest.mark.skipif(
-    VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-    reason="different TX eras doesn't affect this test, pointless to run",
-)
+@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
 @pytest.mark.long
 class TestBasic:
     """Basic tests for node configuration."""
