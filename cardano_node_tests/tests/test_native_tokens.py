@@ -2177,7 +2177,7 @@ class TestCLITxOutSyntax:
             address=token_mint_addr.address, coins=[token]
         ), "The token already exists"
 
-        # Build transaction body. The `tx_raw_output` will be used as blueprint for assembling
+        # Build transaction body. The `tx_raw_blueprint` will be used as blueprint for assembling
         # CLI arguments for `transaction build`.
         tx_files = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file],
@@ -2199,7 +2199,7 @@ class TestCLITxOutSyntax:
             mint=mint,
             tx_files=tx_files,
         )
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_blueprint = cluster.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
             # token minting and burning in the same TX
@@ -2208,15 +2208,15 @@ class TestCLITxOutSyntax:
             fee=fee,
         )
 
-        # assemble CLI arguments for `transaction build` using data from `tx_raw_output`
+        # assemble CLI arguments for `transaction build` using data from `tx_raw_blueprint`
 
-        assert tx_raw_output.txins
-        assert tx_raw_output.txouts
-        assert tx_raw_output.mint
+        assert tx_raw_blueprint.txins
+        assert tx_raw_blueprint.txouts
+        assert tx_raw_blueprint.mint
 
         # test syntax for multi-asset values and txouts, see
         # https://github.com/input-output-hk/cardano-node/pull/2072
-        coin_txouts = [f"{t.amount} {t.coin}" for t in tx_raw_output.txouts]
+        coin_txouts = [f"{t.amount} {t.coin}" for t in tx_raw_blueprint.txouts]
         txout_parts = [
             "-7000",
             "8500",
@@ -2226,21 +2226,21 @@ class TestCLITxOutSyntax:
             *coin_txouts,
         ]
         txout_joined = "+".join(txout_parts)
-        txout_str = f"{tx_raw_output.txouts[0].address}+{txout_joined}"
+        txout_str = f"{tx_raw_blueprint.txouts[0].address}+{txout_joined}"
 
-        txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in tx_raw_output.txins]
-        mint_str = "+".join(f"{x.amount} {x.coin}" for x in tx_raw_output.mint[0].txouts)
+        txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in tx_raw_blueprint.txins]
+        mint_str = "+".join(f"{x.amount} {x.coin}" for x in tx_raw_blueprint.mint[0].txouts)
         out_file = (
-            tx_raw_output.out_file.parent
-            / f"{tx_raw_output.out_file.stem}_assembled{tx_raw_output.out_file.suffix}"
+            tx_raw_blueprint.out_file.parent
+            / f"{tx_raw_blueprint.out_file.stem}_assembled{tx_raw_blueprint.out_file.suffix}"
         )
         build_raw_args = [
             "transaction",
             "build-raw",
             "--fee",
-            str(tx_raw_output.fee),
+            str(tx_raw_blueprint.fee),
             "--mint-script-file",
-            str(tx_raw_output.mint[0].script_file),
+            str(tx_raw_blueprint.mint[0].script_file),
             *helpers.prepend_flag("--tx-in", txins_combined),
             "--tx-out",
             txout_str,
@@ -2260,6 +2260,8 @@ class TestCLITxOutSyntax:
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_mint_burn",
         )
+
+        tx_raw_output = tx_raw_blueprint._replace(out_file=out_file)
 
         # submit signed transaction
         cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
