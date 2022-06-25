@@ -2125,12 +2125,9 @@ class TestNegative:
         assert "the number exceeds the max bound" in str(excinfo.value)
 
 
+@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
 @pytest.mark.testnets
 @pytest.mark.smoke
-@pytest.mark.skipif(
-    VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-    reason="runs only with default TX era",
-)
 class TestCLITxOutSyntax:
     """Tests of syntax for specifying muti-asset values and txouts."""
 
