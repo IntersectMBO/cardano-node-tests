@@ -53,7 +53,14 @@ class TestLedgerState:
         if len(stake_pool_ids) > 200:
             pytest.skip("Skipping on this testnet, there's too many pools.")
 
-        ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+        # TODO: xfail for node issue #3859
+        try:
+            ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+        except AssertionError as err:
+            if "Invalid numeric literal at line" in str(err):
+                pytest.xfail("expected JSON, got CBOR - see node issue #3859")
+            raise
+
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,
             state_name=temp_template,
