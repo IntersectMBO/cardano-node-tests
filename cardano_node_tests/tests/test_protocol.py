@@ -8,11 +8,22 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 
-PROTOCOL_STATE_KEYS = ("csLabNonce", "csProtocol", "csTickn")
+PROTOCOL_STATE_KEYS_ALONZO = ("chainDepState", "lastSlot")
+PROTOCOL_STATE_KEYS_ALONZO_DEP_STATE = ("csLabNonce", "csProtocol", "csTickn")
+PROTOCOL_STATE_KEYS = (
+    "candidateNonce",
+    "epochNonce",
+    "evolvingNonce",
+    "labNonce",
+    "lastEpochBlockNonce",
+    "lastSlot",
+    "oCertCounters",
+)
 PROTOCOL_PARAM_KEYS = (
     "collateralPercentage",
     "costModels",
@@ -64,7 +75,14 @@ class TestProtocol:
         if query_currently_broken:
             pytest.xfail("`query protocol-state` is currently broken - cardano-node issue #3883")
 
-        assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
+        if VERSIONS.cluster_era == VERSIONS.ALONZO:
+            assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS_ALONZO
+            assert (
+                tuple(sorted(protocol_state["chainDepState"]))
+                == PROTOCOL_STATE_KEYS_ALONZO_DEP_STATE
+            )
+        elif VERSIONS.cluster_era > VERSIONS.ALONZO:
+            assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.xfail
