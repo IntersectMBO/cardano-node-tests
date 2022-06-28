@@ -98,14 +98,20 @@ class TestProtocol:
             assert protocol_state_keys == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xfail
     def test_protocol_state_outfile(self, cluster: clusterlib.ClusterLib):
         """Check output file produced by `query protocol-state`."""
         common.get_test_id(cluster)
-        protocol_state: dict = json.loads(
-            cluster.query_cli(["protocol-state", "--out-file", "/dev/stdout"])
-        )
-        assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
+        try:
+            protocol_state: dict = json.loads(
+                cluster.query_cli(["protocol-state", "--out-file", "/dev/stdout"])
+            )
+        except UnicodeDecodeError as err:
+            if "invalid start byte" in str(err):
+                pytest.xfail(
+                    "`query protocol-state --out-file` dumps binary data - cardano-node issue #2461"
+                )
+            raise
+        assert set(protocol_state) == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
     def test_protocol_params(self, cluster: clusterlib.ClusterLib):
