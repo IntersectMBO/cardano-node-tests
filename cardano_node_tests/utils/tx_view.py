@@ -112,6 +112,24 @@ def _check_collateral_inputs(
     return collateral_strings == set(expected_collateral)
 
 
+def _check_reference_inputs(
+    tx_raw_output: clusterlib.TxRawOutput, expected_reference_inputs: List[str]
+) -> bool:
+    """Check reference inputs of tx_view."""
+    reference_scripts = [
+        s.reference_txin for s in tx_raw_output.script_txins if getattr(s, "reference_txin", None)
+    ]
+
+    all_reference_inputs: List[Any] = [
+        *(tx_raw_output.readonly_reference_txins or []),
+        *(reference_scripts or []),
+    ]
+
+    reference_strings = {f"{r.utxo_hash}#{r.utxo_ix}" for r in all_reference_inputs}
+
+    return reference_strings == set(expected_reference_inputs)
+
+
 def check_tx_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
 ) -> dict:
@@ -242,5 +260,12 @@ def check_tx_view(  # noqa: C901
         tx_raw_output=tx_raw_output, expected_collateral=tx_loaded["collateral inputs"]
     ):
         raise AssertionError("collateral inputs are not the expected")
+
+    # check reference inputs, this is only available on Babbage+ TX
+    if loaded_tx_version >= VERSIONS.BABBAGE and not _check_reference_inputs(
+        tx_raw_output=tx_raw_output,
+        expected_reference_inputs=tx_loaded.get("reference inputs") or [],
+    ):
+        raise AssertionError("reference inputs are not the expected")
 
     return tx_loaded
