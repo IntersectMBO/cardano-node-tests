@@ -81,12 +81,16 @@ class TestProtocol:
         if query_currently_broken:
             pytest.xfail("`query protocol-state` is currently broken - cardano-node issue #3883")
 
+        protocol_state_keys = set(protocol_state)
+
         if VERSIONS.cluster_era == VERSIONS.ALONZO:
-            assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS_ALONZO
-            assert (
-                tuple(sorted(protocol_state["chainDepState"]))
-                == PROTOCOL_STATE_KEYS_ALONZO_DEP_STATE
-            )
+            # node v1.35.x+
+            if "chainDepState" in protocol_state_keys:
+                assert protocol_state_keys == PROTOCOL_STATE_KEYS_ALONZO
+                assert set(protocol_state["chainDepState"]) == PROTOCOL_STATE_KEYS_ALONZO_DEP_STATE
+            # node < v1.35.x
+            else:
+                assert protocol_state_keys == PROTOCOL_STATE_KEYS_ALONZO_DEP_STATE
         elif VERSIONS.cluster_era > VERSIONS.ALONZO:
             assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
 
