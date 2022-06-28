@@ -840,7 +840,7 @@ class TestBuildMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -850,7 +850,7 @@ class TestBuildMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 redeemer_file=redeemer_file,
             )
@@ -1001,7 +1001,7 @@ class TestBuildMintingNegative:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1011,7 +1011,7 @@ class TestBuildMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 redeemer_file=plutus_common.DATUM_WITNESS_GOLDEN_NORMAL,
             )
