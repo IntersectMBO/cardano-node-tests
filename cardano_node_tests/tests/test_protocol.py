@@ -74,16 +74,15 @@ class TestProtocol:
         with open(f"{temp_template}_protocol_state.out", "w", encoding="utf-8") as fp_out:
             fp_out.write(protocol_state_raw)
 
-        # TODO: the query is currently broken
-        query_currently_broken = False
+        # TODO: the query is broken on 1.35.0-rc4
         try:
             protocol_state: dict = json.loads(protocol_state_raw)
         except clusterlib.CLIError as err:
-            if "currentlyBroken" not in str(err):
-                raise
-            query_currently_broken = True
-        if query_currently_broken:
-            pytest.xfail("`query protocol-state` is currently broken - cardano-node issue #3883")
+            if "currentlyBroken" in str(err):
+                pytest.xfail(
+                    "`query protocol-state` is currently broken - cardano-node issue #3883"
+                )
+            raise
 
         protocol_state_keys = set(protocol_state)
 
