@@ -41,7 +41,7 @@ then
 	echo "Running on Fedora"
 	yum update -y
 	yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
-	yum install systemd-devel ncurses-devel ncurses-compat-libs openssl-devel lmdb-devel -y
+	yum install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
 elif [[ $(cat /etc/os-release) == *"ubuntu"* ]]
 then
 	echo "Running on Ubuntu"
@@ -149,7 +149,7 @@ fi
 
 case $GIT_OBJECT_TYPE in
 	tag)
-		if [[ $(git tag) != *"$GIT_OBJECT" ]]
+		if [[ $(git tag) != *"$GIT_OBJECT"* ]]
 		then
 			>&2 echo "$(git tag) does not contain $GIT_OBJECT"
 			exit 1
