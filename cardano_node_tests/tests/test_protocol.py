@@ -62,12 +62,18 @@ class TestProtocol:
     @allure.link(helpers.get_vcs_link())
     def test_protocol_state_keys(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-state`."""
-        common.get_test_id(cluster)
+        temp_template = common.get_test_id(cluster)
+
+        # The query dumps CBOR instead of JSON in some circumstances. We'll save the output
+        # for later.
+        protocol_state_raw = cluster.query_cli(["protocol-state"])
+        with open(f"{temp_template}_protocol_state.out", "w", encoding="utf-8") as fp_out:
+            fp_out.write(protocol_state_raw)
 
         # TODO: the query is currently broken
         query_currently_broken = False
         try:
-            protocol_state = cluster.get_protocol_state()
+            protocol_state: dict = json.loads(protocol_state_raw)
         except clusterlib.CLIError as err:
             if "currentlyBroken" not in str(err):
                 raise
