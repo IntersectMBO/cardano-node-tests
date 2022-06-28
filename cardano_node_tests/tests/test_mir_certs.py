@@ -935,7 +935,7 @@ class TestMIRCerts:
         * (optional) check transaction in db-sync
         """
         # pylint: disable=too-many-branches
-        temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}"
+        temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}_{addr_history}"
         cluster = cluster_pots
 
         if fund_src == self.TREASURY:

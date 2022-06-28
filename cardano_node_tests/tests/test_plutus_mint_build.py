@@ -804,7 +804,8 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{key}"
+
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
