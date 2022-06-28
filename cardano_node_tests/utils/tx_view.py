@@ -91,7 +91,7 @@ def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
 
 
 def _check_collateral_inputs(
-    tx_raw_output: clusterlib.TxRawOutput, expected_collateral: list
+    tx_raw_output: clusterlib.TxRawOutput, expected_collateral: List[str]
 ) -> bool:
     """Check collateral inputs of tx_view."""
     all_collateral_locations: List[Any] = [
@@ -239,7 +239,7 @@ def check_tx_view(  # noqa: C901
 
     # check collateral inputs, this is only available on Alonzo+ TX
     if loaded_tx_version >= VERSIONS.ALONZO and not _check_collateral_inputs(
-        tx_raw_output, tx_loaded["collateral inputs"]
+        tx_raw_output=tx_raw_output, expected_collateral=tx_loaded["collateral inputs"]
     ):
         raise AssertionError("collateral inputs are not the expected")
 
