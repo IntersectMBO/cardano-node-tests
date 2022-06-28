@@ -13,43 +13,47 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-PROTOCOL_STATE_KEYS_ALONZO = ("chainDepState", "lastSlot")
-PROTOCOL_STATE_KEYS_ALONZO_DEP_STATE = ("csLabNonce", "csProtocol", "csTickn")
-PROTOCOL_STATE_KEYS = (
-    "candidateNonce",
-    "epochNonce",
-    "evolvingNonce",
-    "labNonce",
-    "lastEpochBlockNonce",
-    "lastSlot",
-    "oCertCounters",
+PROTOCOL_STATE_KEYS_ALONZO = frozenset(("chainDepState", "lastSlot"))
+PROTOCOL_STATE_KEYS_ALONZO_DEP_STATE = frozenset(("csLabNonce", "csProtocol", "csTickn"))
+PROTOCOL_STATE_KEYS = frozenset(
+    (
+        "candidateNonce",
+        "epochNonce",
+        "evolvingNonce",
+        "labNonce",
+        "lastEpochBlockNonce",
+        "lastSlot",
+        "oCertCounters",
+    )
 )
-PROTOCOL_PARAM_KEYS = (
-    "collateralPercentage",
-    "costModels",
-    "decentralization",
-    "executionUnitPrices",
-    "extraPraosEntropy",
-    "maxBlockBodySize",
-    "maxBlockExecutionUnits",
-    "maxBlockHeaderSize",
-    "maxCollateralInputs",
-    "maxTxExecutionUnits",
-    "maxTxSize",
-    "maxValueSize",
-    "minPoolCost",
-    "minUTxOValue",
-    "monetaryExpansion",
-    "poolPledgeInfluence",
-    "poolRetireMaxEpoch",
-    "protocolVersion",
-    "stakeAddressDeposit",
-    "stakePoolDeposit",
-    "stakePoolTargetNum",
-    "treasuryCut",
-    "txFeeFixed",
-    "txFeePerByte",
-    "utxoCostPerWord",
+PROTOCOL_PARAM_KEYS = frozenset(
+    (
+        "collateralPercentage",
+        "costModels",
+        "decentralization",
+        "executionUnitPrices",
+        "extraPraosEntropy",
+        "maxBlockBodySize",
+        "maxBlockExecutionUnits",
+        "maxBlockHeaderSize",
+        "maxCollateralInputs",
+        "maxTxExecutionUnits",
+        "maxTxSize",
+        "maxValueSize",
+        "minPoolCost",
+        "minUTxOValue",
+        "monetaryExpansion",
+        "poolPledgeInfluence",
+        "poolRetireMaxEpoch",
+        "protocolVersion",
+        "stakeAddressDeposit",
+        "stakePoolDeposit",
+        "stakePoolTargetNum",
+        "treasuryCut",
+        "txFeeFixed",
+        "txFeePerByte",
+        "utxoCostPerWord",
+    )
 )
 
 
@@ -92,7 +96,7 @@ class TestProtocol:
             else:
                 assert protocol_state_keys == PROTOCOL_STATE_KEYS_ALONZO_DEP_STATE
         elif VERSIONS.cluster_era > VERSIONS.ALONZO:
-            assert tuple(sorted(protocol_state)) == PROTOCOL_STATE_KEYS
+            assert protocol_state_keys == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.xfail
@@ -109,4 +113,4 @@ class TestProtocol:
         """Check output of `query protocol-parameters`."""
         common.get_test_id(cluster)
         protocol_params = cluster.get_protocol_params()
-        assert tuple(sorted(protocol_params.keys())) == PROTOCOL_PARAM_KEYS
+        assert set(protocol_params) == PROTOCOL_PARAM_KEYS
