@@ -99,6 +99,10 @@ def _build_fund_script(
     plutus_op: plutus_common.PlutusOp,
     use_reference_script: bool = False,
     use_inline_datum: bool = True,
+    collateral_amount: Optional[int] = None,
+    tokens_collateral: Optional[
+        List[plutus_common.Token]
+    ] = None,  # tokens must already be in `payment_addr`
 ) -> Tuple[
     List[clusterlib.UTXOData],
     List[clusterlib.UTXOData],
@@ -109,6 +113,8 @@ def _build_fund_script(
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
+    # pylint: disable=too-many-arguments
+
     # for mypy
     assert plutus_op.execution_cost
 
@@ -146,7 +152,9 @@ def _build_fund_script(
             ),
         ),
         # for collateral
-        clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
+        clusterlib.TxOut(
+            address=dst_addr.address, amount=collateral_amount or redeem_cost.collateral
+        ),
     ]
 
     if use_reference_script:
@@ -158,13 +166,22 @@ def _build_fund_script(
             )
         )
 
+    for token in tokens_collateral or []:
+        txouts.append(
+            clusterlib.TxOut(
+                address=dst_addr.address,
+                amount=token.amount,
+                coin=token.coin,
+            )
+        )
+
     tx_output = cluster.build_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step1",
         tx_files=tx_files,
         txouts=txouts,
         fee_buffer=2_000_000,
-        join_txouts=False,
+        join_txouts=bool(tokens_collateral),
     )
     tx_signed = cluster.sign_tx(
         tx_body_file=tx_output.out_file,
@@ -1887,3 +1904,246 @@ class TestNegativeReadonlyReferenceInputs:
             )
         err_str = str(excinfo.value)
         assert "ReferenceInputsNotSupported" in err_str, err_str
+
+
+@pytest.mark.testnets
+class TestCollateralOutput:
+    """Tests for Tx output locking using Plutus with collateral output."""
+
+    def _build_spend_locked_txin(
+        self,
+        temp_template: str,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        dst_addr: clusterlib.AddressRecord,
+        script_utxos: List[clusterlib.UTXOData],
+        collateral_utxos: List[clusterlib.UTXOData],
+        plutus_op: plutus_common.PlutusOp,
+        total_collateral_amount: Optional[int] = None,
+        return_collateral_txouts: clusterlib.OptionalTxOuts = (),
+    ) -> clusterlib.TxRawOutput:
+        # for mypy
+        assert plutus_op.execution_cost
+        assert plutus_op.redeemer_cbor_file
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_op.script_file,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_op.execution_cost.per_time,
+                    plutus_op.execution_cost.per_space,
+                ),
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file,
+                inline_datum_present=True,
+            )
+        ]
+
+        tx_files_redeem = clusterlib.TxFiles(
+            signing_key_files=[dst_addr.skey_file],
+        )
+        txouts_redeem = [
+            clusterlib.TxOut(address=dst_addr.address, amount=2_000_000),
+        ]
+
+        tx_output_redeem = cluster.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_redeem,
+            txouts=txouts_redeem,
+            script_txins=plutus_txins,
+            return_collateral_txouts=return_collateral_txouts,
+            total_collateral_amount=total_collateral_amount,
+            change_address=payment_addr.address,
+            script_valid=False,
+        )
+
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output_redeem.out_file,
+            signing_key_files=tx_files_redeem.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
+
+        return tx_output_redeem
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_return_collateral",
+        (True, False),
+        ids=("using_return_collateral", "without_return_collateral"),
+    )
+    @pytest.mark.parametrize(
+        "use_total_collateral",
+        (True, False),
+        ids=("using_total_collateral", "without_total_collateral"),
+    )
+    def test_with_total_return_collateral(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_return_collateral: bool,
+        use_total_collateral: bool,
+        request: FixtureRequest,
+    ):
+        """Test failing script with combination of total and return collateral set.
+
+        * fund the script address and create a UTxO for collateral
+        * spend the locked UTxO
+        * check that the expected amount of collateral was spent
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        plutus_op = PLUTUS_OP_ALWAYS_FAILS
+
+        # for mypy
+        assert plutus_op.execution_cost
+        assert plutus_op.datum_file
+        assert plutus_op.redeemer_cbor_file
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+        )
+
+        # fund the script address and create a UTxO for collateral
+
+        total_collateral_amount = redeem_cost.collateral
+        amount_for_collateral = (
+            redeem_cost.collateral * 4 if use_return_collateral else total_collateral_amount
+        )
+
+        script_utxos, collateral_utxos, *__ = _build_fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addr,
+            dst_addr=dst_addr,
+            plutus_op=plutus_op,
+            collateral_amount=amount_for_collateral,
+        )
+
+        dst_init_balance = cluster.get_address_balance(dst_addr.address)
+
+        #  spend the "locked" UTxO
+
+        return_collateral_txouts = [
+            clusterlib.TxOut(
+                dst_addr.address, amount=amount_for_collateral - total_collateral_amount
+            )
+        ]
+
+        self._build_spend_locked_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addr,
+            dst_addr=dst_addr,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op,
+            total_collateral_amount=total_collateral_amount if use_total_collateral else None,
+            return_collateral_txouts=return_collateral_txouts if use_return_collateral else (),
+        )
+
+        # check that the right amount of collateral was taken
+        dst_balance = cluster.get_address_balance(dst_addr.address)
+        assert (
+            dst_balance == dst_init_balance - total_collateral_amount
+        ), f"Collateral was NOT spent from `{dst_addr.address}` correctly"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_collateral_with_tokens(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Test failing script using collaterals with tokens.
+
+        * create the token
+        * fund the script address and create a UTxO for collateral
+        * spend the locked UTxO
+        * check that the expected amount of collateral was spent
+        """
+        temp_template = common.get_test_id(cluster)
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        plutus_op = PLUTUS_OP_ALWAYS_FAILS
+
+        # for mypy
+        assert plutus_op.execution_cost
+        assert plutus_op.datum_file
+        assert plutus_op.redeemer_cbor_file
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+        )
+
+        token_amount = 100
+        amount_for_collateral = redeem_cost.collateral * 4
+        return_collateral_amount = amount_for_collateral - redeem_cost.collateral
+
+        # create the token
+        token_rand = clusterlib.get_rand_str(5)
+        token = clusterlib_utils.new_tokens(
+            *[f"qacoin{token_rand}".encode("utf-8").hex()],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{token_rand}",
+            token_mint_addr=payment_addr,
+            issuer_addr=payment_addr,
+            amount=token_amount,
+        )
+        tokens_rec = [plutus_common.Token(coin=token[0].token, amount=token[0].amount)]
+
+        # fund the script address and create a UTxO for collateral
+
+        script_utxos, collateral_utxos, *__ = _build_fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addr,
+            dst_addr=dst_addr,
+            plutus_op=plutus_op,
+            collateral_amount=amount_for_collateral,
+            tokens_collateral=tokens_rec,
+        )
+
+        #  spend the "locked" UTxO
+
+        txouts_return_collateral = [
+            clusterlib.TxOut(
+                address=dst_addr.address,
+                amount=return_collateral_amount,
+            ),
+            clusterlib.TxOut(
+                address=dst_addr.address, amount=token_amount, coin=tokens_rec[0].coin
+            ),
+        ]
+
+        tx_output_redeem = self._build_spend_locked_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addr,
+            dst_addr=dst_addr,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op,
+            total_collateral_amount=redeem_cost.collateral,
+            return_collateral_txouts=txouts_return_collateral,
+        )
+
+        # check that the right amount of collateral was spent and that the tokens were returned
+
+        txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
+        return_col_utxos = cluster.get_utxo(txin=f"{txid_redeem}#2")
+        assert return_col_utxos, "Return collateral UTxO was not created"
+
+        return_col_utxos_lovelace = [
+            u for u in return_col_utxos if u.coin == clusterlib.DEFAULT_COIN
+        ]
+        assert (
+            return_col_utxos_lovelace[0].amount == return_collateral_amount
+        ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
+
+        return_col_utxos_token = [u for u in return_col_utxos if u.coin == tokens_rec[0].coin]
+        assert (
+            return_col_utxos_token[0].amount == tokens_rec[0].amount
+        ), f"Incorrect token balance for collateral return address `{dst_addr.address}`"
