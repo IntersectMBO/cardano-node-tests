@@ -447,17 +447,22 @@ class TestLobsterChallenge:
             vote_utxos = cluster.get_utxo(txin=f"{txid_vote}#1")
 
             # check expected balances
-            utxos_lovelace = [u for u in vote_utxos if u.coin == clusterlib.DEFAULT_COIN][0]
+            try:
+                utxos_lovelace = [u for u in vote_utxos if u.coin == clusterlib.DEFAULT_COIN][0]
+                utxo_votes_token = [u for u in vote_utxos if u.coin == votes_token][0]
+                utxo_counter_token = [u for u in vote_utxos if u.coin == counter_token][0]
+            except IndexError:
+                LOGGER.error(f"Unexpected vote UTxOs: {vote_utxos}")
+                raise
+
             assert (
                 utxos_lovelace.amount == lovelace_vote_amount
             ), f"Incorrect Lovelace balance for script address `{script_address}`"
 
-            utxo_votes_token = [u for u in vote_utxos if u.coin == votes_token][0]
             assert (
                 utxo_votes_token.amount == vote_num
             ), f"Incorrect LobsterVotes token balance for script address `{script_address}`"
 
-            utxo_counter_token = [u for u in vote_utxos if u.coin == counter_token][0]
             assert (
                 utxo_counter_token.amount == vote_counter
             ), f"Incorrect LobsterCounter token balance for script address `{script_address}`"
