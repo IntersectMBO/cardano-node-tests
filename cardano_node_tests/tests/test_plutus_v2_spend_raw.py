@@ -318,14 +318,13 @@ class TestLockingV2:
         ), f"Incorrect balance for destination address `{payment_addrs[1].address}`"
 
         # check that script address UTxO was spent
-        script_utxo = f"{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"
         assert not cluster.get_utxo(
-            txin=script_utxo
-        ), f"Script address UTxO was not spent `{script_utxo}`"
+            utxo=script_utxos[0]
+        ), f"Script address UTxO was not spent `{script_utxos[0]}`"
 
         # check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.get_utxo(
-            txin=f"{reference_utxo.utxo_hash}#{reference_utxo.utxo_ix}"
+            utxo=reference_utxo
         ), "Reference input was spent"
 
 
@@ -740,11 +739,9 @@ class TestReferenceScripts:
         )
 
         # check that script address UTxOs were spent
-        script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
-        script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
         assert not (
-            cluster.get_utxo(txin=script_utxo1) or cluster.get_utxo(txin=script_utxo2)
-        ), f"Script address UTxOs were NOT spent - `{script_utxo1}` and `{script_utxo2}`"
+            cluster.get_utxo(utxo=script_utxos1[0]) or cluster.get_utxo(utxo=script_utxos2[0])
+        ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_reference_same_script(
@@ -881,11 +878,9 @@ class TestReferenceScripts:
         )
 
         # check that script address UTxOs were spent
-        script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
-        script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
         assert not (
-            cluster.get_utxo(txin=script_utxo1) or cluster.get_utxo(txin=script_utxo2)
-        ), f"Script address UTxOs were NOT spent - `{script_utxo1}` and `{script_utxo2}`"
+            cluster.get_utxo(utxo=script_utxos1[0]) or cluster.get_utxo(utxo=script_utxos2[0])
+        ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_mix_reference_attached_script(
@@ -1026,11 +1021,9 @@ class TestReferenceScripts:
         )
 
         # check that script address UTxOs were spent
-        script_utxo1 = f"{script_utxos1[0].utxo_hash}#{script_utxos1[0].utxo_ix}"
-        script_utxo2 = f"{script_utxos2[0].utxo_hash}#{script_utxos2[0].utxo_ix}"
         assert not (
-            cluster.get_utxo(txin=script_utxo1) or cluster.get_utxo(txin=script_utxo2)
-        ), f"Script address UTxOs were NOT spent - `{script_utxo1}` and `{script_utxo2}`"
+            cluster.get_utxo(utxo=script_utxos1[0]) or cluster.get_utxo(utxo=script_utxos2[0])
+        ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("script_type", ("simple", "plutus_v1", "plutus_v2"))
@@ -1626,12 +1619,9 @@ class TestReadonlyReferenceInputs:
         )
 
         # check that the reference input was not spent
-        reference_input_utxo = cluster.get_utxo(
-            txin=f"{reference_input[0].utxo_hash}#{reference_input[0].utxo_ix}"
-        )
-
+        reference_input_utxo = cluster.get_utxo(utxo=reference_input[0])
         assert (
-            reference_input_utxo[0].amount == amount
+            clusterlib.calculate_utxos_balance(utxos=reference_input_utxo) == amount
         ), f"The reference input was spent `{reference_input_utxo}`"
 
     @allure.link(helpers.get_vcs_link())
@@ -1718,10 +1708,7 @@ class TestReadonlyReferenceInputs:
         )
 
         # check that the reference input was spent
-        reference_input_utxo = cluster.get_utxo(
-            txin=f"{reference_input[0].utxo_hash}#{reference_input[0].utxo_ix}"
-        )
-
+        reference_input_utxo = cluster.get_utxo(utxo=reference_input[0])
         assert (
             not reference_input_utxo
         ), f"The reference input was not spent `{reference_input_utxo}`"
@@ -2167,14 +2154,11 @@ class TestCollateralOutput:
         return_col_utxos = cluster.get_utxo(txin=f"{txid_redeem}#{len(txouts_redeem)}")
         assert return_col_utxos, "Return collateral UTxO was not created"
 
-        return_col_utxos_lovelace = [
-            u for u in return_col_utxos if u.coin == clusterlib.DEFAULT_COIN
-        ]
         assert (
-            return_col_utxos_lovelace[0].amount == return_collateral_amount
+            clusterlib.calculate_utxos_balance(utxos=return_col_utxos) == return_collateral_amount
         ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
 
-        return_col_utxos_token = [u for u in return_col_utxos if u.coin == tokens_rec[0].coin]
         assert (
-            return_col_utxos_token[0].amount == tokens_rec[0].amount
+            clusterlib.calculate_utxos_balance(utxos=return_col_utxos, coin=tokens_rec[0].coin)
+            == tokens_rec[0].amount
         ), f"Incorrect token balance for collateral return address `{dst_addr.address}`"
