@@ -1999,10 +1999,10 @@ class TestCollateralOutput:
 
         # fund the script address and create a UTxO for collateral
 
-        total_collateral_amount = redeem_cost.collateral
         amount_for_collateral = (
-            redeem_cost.collateral * 4 if use_return_collateral else total_collateral_amount
+            redeem_cost.collateral * 4 if use_return_collateral else redeem_cost.collateral
         )
+        return_collateral_amount = amount_for_collateral - redeem_cost.collateral
 
         script_utxos, collateral_utxos, *__ = _build_fund_script(
             temp_template=temp_template,
@@ -2018,12 +2018,10 @@ class TestCollateralOutput:
         #  spend the "locked" UTxO
 
         return_collateral_txouts = [
-            clusterlib.TxOut(
-                dst_addr.address, amount=amount_for_collateral - total_collateral_amount
-            )
+            clusterlib.TxOut(dst_addr.address, amount=return_collateral_amount)
         ]
 
-        self._build_spend_locked_txin(
+        tx_output_redeem = self._build_spend_locked_txin(
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addr,
@@ -2031,15 +2029,27 @@ class TestCollateralOutput:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            total_collateral_amount=total_collateral_amount if use_total_collateral else None,
+            total_collateral_amount=redeem_cost.collateral if use_total_collateral else None,
             return_collateral_txouts=return_collateral_txouts if use_return_collateral else (),
         )
 
         # check that the right amount of collateral was taken
         dst_balance = cluster.get_address_balance(dst_addr.address)
         assert (
-            dst_balance == dst_init_balance - total_collateral_amount
+            dst_balance == dst_init_balance - redeem_cost.collateral
         ), f"Collateral was NOT spent from `{dst_addr.address}` correctly"
+
+        if use_return_collateral:
+            txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
+            return_col_utxos = cluster.get_utxo(
+                txin=f"{txid_redeem}#{len(tx_output_redeem.txouts) + 1}"
+            )
+            assert return_col_utxos, "Return collateral UTxO was not created"
+
+            assert (
+                clusterlib.calculate_utxos_balance(utxos=return_col_utxos)
+                == return_collateral_amount
+            ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_collateral_with_tokens(

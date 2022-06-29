@@ -1918,12 +1918,12 @@ class TestCollateralOutput:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
-        "return_collateral",
+        "use_return_collateral",
         (True, False),
         ids=("using_return_collateral", "without_return_collateral"),
     )
     @pytest.mark.parametrize(
-        "total_collateral",
+        "use_total_collateral",
         (True, False),
         ids=("using_total_collateral", "without_total_collateral"),
     )
@@ -1931,8 +1931,8 @@ class TestCollateralOutput:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        return_collateral: bool,
-        total_collateral: bool,
+        use_return_collateral: bool,
+        use_total_collateral: bool,
         request: FixtureRequest,
     ):
         """Test failing script with combination of total and return collateral set.
@@ -1957,10 +1957,10 @@ class TestCollateralOutput:
         )
 
         amount = 2_000_000
-        total_collateral_amount = redeem_cost.collateral
         amount_for_collateral = (
-            redeem_cost.collateral * 4 if return_collateral else total_collateral_amount
+            redeem_cost.collateral * 4 if use_return_collateral else redeem_cost.collateral
         )
+        return_collateral_amount = amount_for_collateral - redeem_cost.collateral
 
         # fund the script address and create a UTxO for collateral
 
@@ -2003,7 +2003,7 @@ class TestCollateralOutput:
         txouts_return_collateral = [
             clusterlib.TxOut(
                 address=dst_addr.address,
-                amount=amount_for_collateral - total_collateral_amount,
+                amount=return_collateral_amount,
             ),
         ]
 
@@ -2014,8 +2014,8 @@ class TestCollateralOutput:
             fee=redeem_cost.fee + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
             script_valid=False,
-            return_collateral_txouts=txouts_return_collateral if return_collateral else (),
-            total_collateral_amount=total_collateral_amount if total_collateral else None,
+            return_collateral_txouts=txouts_return_collateral if use_return_collateral else (),
+            total_collateral_amount=redeem_cost.collateral if use_total_collateral else None,
         )
         tx_signed_redeem = cluster.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
@@ -2031,8 +2031,18 @@ class TestCollateralOutput:
         # check that the right amount of collateral was spent
         dst_balance = cluster.get_address_balance(dst_addr.address)
         assert (
-            dst_balance == dst_init_balance - total_collateral_amount
+            dst_balance == dst_init_balance - redeem_cost.collateral
         ), "The collateral amount charged was wrong `{collateral_utxos[0].address}`"
+
+        if use_return_collateral:
+            txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
+            return_col_utxos = cluster.get_utxo(txin=f"{txid_redeem}#{len(txouts_redeem)}")
+            assert return_col_utxos, "Return collateral UTxO was not created"
+
+            assert (
+                clusterlib.calculate_utxos_balance(utxos=return_col_utxos)
+                == return_collateral_amount
+            ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_collateral_with_tokens(
