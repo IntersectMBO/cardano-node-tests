@@ -5,6 +5,7 @@ from typing import Tuple
 
 import allure
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
@@ -134,7 +135,8 @@ class TestNegativeCollateralOutput:
         token_amount = 5
 
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_COST, protocol_params=cluster.get_protocol_params()
+            execution_cost=plutus_common.MINTING_V2_COST,
+            protocol_params=cluster.get_protocol_params(),
         )
 
         # Step 1: fund the token issuer
@@ -157,7 +159,7 @@ class TestNegativeCollateralOutput:
             address=issuer_addr.address,
         )
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V2)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -167,7 +169,7 @@ class TestNegativeCollateralOutput:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_common.MINTING_PLUTUS_V2,
                 collaterals=[collateral_utxo],
                 execution_units=(
                     plutus_common.MINTING_COST.per_time,
@@ -214,3 +216,107 @@ class TestNegativeCollateralOutput:
             cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         err_str = str(excinfo.value)
         assert "InsufficientCollateral" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "with_return_collateral",
+        (True, False),
+        ids=("with_return_collateral", "without_return_collateral"),
+    )
+    def test_minting_with_unbalanced_total_collateral(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        with_return_collateral: bool,
+        request: FixtureRequest,
+    ):
+        """Test minting a token with a Plutus script with unbalanced total collateral.
+
+        Expect failure.
+        """
+        # pylint: disable=too-many-locals
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_V2_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
+
+        # Step 1: fund the token issuer
+
+        mint_utxos, *__ = _fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=lovelace_amount,
+        )
+
+        # Step 2: mint the "qacoin"
+
+        collateral_utxo = clusterlib.UTXOData(
+            utxo_hash=mint_utxos[0].utxo_hash,
+            utxo_ix=1,
+            amount=minting_cost.collateral,
+            address=issuer_addr.address,
+        )
+
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V2)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_common.MINTING_PLUTUS_V2,
+                collaterals=[collateral_utxo],
+                execution_units=(
+                    plutus_common.MINTING_COST.per_time,
+                    plutus_common.MINTING_COST.per_space,
+                ),
+                redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+
+        return_collateral_txouts = [
+            clusterlib.TxOut(payment_addr.address, amount=minting_cost.collateral)
+        ]
+
+        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txins=mint_utxos,
+            return_collateral_txouts=return_collateral_txouts if with_return_collateral else (),
+            total_collateral_amount=minting_cost.collateral // 2,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            tx_files=tx_files_step2,
+            fee=minting_cost.fee + FEE_MINT_TXSIZE,
+        )
+        tx_signed_step2 = cluster.sign_tx(
+            tx_body_file=tx_raw_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        # it should NOT be possible to mint with an unbalanced total collateral
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        err_str = str(excinfo.value)
+        assert "IncorrectTotalCollateralField" in err_str, err_str
