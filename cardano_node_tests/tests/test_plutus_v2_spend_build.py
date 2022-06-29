@@ -1122,6 +1122,95 @@ class TestReferenceScripts:
             txin=reference_txin
         ), f"Reference script utxo was not spent '{reference_txin}`"
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    def test_spend_regular_utxo_and_reference_script(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
+        request: FixtureRequest,
+    ):
+        """Test spend an UTxO and use a reference a script on the same transaction.
+
+        * create the reference script UTxO with the 'ALWAYS_FAILS' script to have confidence that
+         the script was not being executed
+        * spend a regular UTxO and reference the script at the same transaction
+        * check that the destination UTxO have the right balance
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        amount = 2_000_000
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_FAILS[plutus_version].script_file,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_FAILS[plutus_version].execution_cost,
+        )
+
+        # Step 1: create the reference script UTxO
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file],
+        )
+
+        txouts_step1 = [
+            clusterlib.TxOut(
+                address=dst_addr.address,
+                amount=amount,
+                reference_script_file=plutus_op.script_file,
+            )
+        ]
+
+        tx_output_step1 = cluster.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step1",
+            tx_files=tx_files,
+            txouts=txouts_step1,
+        )
+        tx_signed_step1 = cluster.sign_tx(
+            tx_body_file=tx_output_step1.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_step1",
+        )
+        cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
+
+        txid = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
+        reference_script = cluster.get_utxo(txin=f"{txid}#1")
+        assert getattr(reference_script[0], "reference_script", None), "No reference script UTxO"
+
+        #  Step 2: spend an UTxO and reference the script
+
+        txouts_step2 = [
+            clusterlib.TxOut(
+                address=dst_addr.address,
+                amount=amount,
+            )
+        ]
+
+        tx_output_step2 = cluster.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files,
+            txouts=txouts_step2,
+            readonly_reference_txins=reference_script,
+        )
+        tx_signed_step2 = cluster.sign_tx(
+            tx_body_file=tx_output_step2.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+        cluster.submit_tx(tx_file=tx_signed_step2, txins=tx_output_step2.txins)
+
+        txid = cluster.get_txid(tx_body_file=tx_output_step2.out_file)
+        new_utxo = cluster.get_utxo(txin=f"{txid}#1")
+        utxo_balance = clusterlib.calculate_utxos_balance(utxos=new_utxo)
+        assert utxo_balance == amount, f"Incorrect balance for destination UTxO `{new_utxo}`"
+
 
 @pytest.mark.testnets
 class TestNegativeReferenceScripts:
