@@ -31,6 +31,22 @@ pytestmark = [
     pytest.mark.smoke,
 ]
 
+
+param_plutus_version = pytest.mark.parametrize(
+    "plutus_version",
+    (
+        "v1",
+        pytest.param(
+            "v2",
+            marks=pytest.mark.skipif(
+                VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
+            ),
+        ),
+    ),
+    ids=("plutus_v1", "plutus_v2"),
+)
+
 # approx. fee for Tx size
 FEE_MINT_TXSIZE = 400_000
 
@@ -166,10 +182,12 @@ class TestMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @param_plutus_version
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test minting two tokens with a single Plutus script.
 
@@ -180,7 +198,8 @@ class TestMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -188,8 +207,11 @@ class TestMinting:
         token_amount = 5
         fee_txsize = 600_000
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_COST, protocol_params=cluster.get_protocol_params()
+            execution_cost=plutus_v_record.execution_cost,
+            protocol_params=cluster.get_protocol_params(),
         )
 
         # Step 1: fund the token issuer
@@ -209,7 +231,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_v_record.script_file)
         asset_name_a = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token_a = f"{policyid}.{asset_name_a}"
         asset_name_b = f"qacoinb{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
@@ -222,11 +244,11 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_COST.per_time,
-                    plutus_common.MINTING_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             )
@@ -521,10 +543,24 @@ class TestMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize(
+        "plutus_version",
+        (
+            "plutus_v1",
+            pytest.param(
+                "mix_v2_v1",
+                marks=pytest.mark.skipif(
+                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
+                ),
+            ),
+        ),
+    )
     def test_two_scripts_minting(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test minting two tokens with two different Plutus scripts.
 
@@ -536,36 +572,55 @@ class TestMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
         lovelace_amount = 2_000_000
         token_amount = 5
 
+        script_file1_v1 = plutus_common.MINTING_PLUTUS_V1
+        script_file1_v2 = plutus_common.MINTING_PLUTUS_V2
+
         # this is higher than `plutus_common.MINTING*_COST`, because the script context has changed
         # to include more stuff
         if configuration.ALONZO_COST_MODEL or VERSIONS.cluster_era == VERSIONS.ALONZO:
-            minting_cost_two = plutus_common.ExecutionCost(
+            minting_cost1_v1 = plutus_common.ExecutionCost(
                 per_time=408_545_501, per_space=1_126_016, fixed_cost=94_428
             )
-            minting_time_range_cost_two = plutus_common.ExecutionCost(
+            minting_cost2_v1 = plutus_common.ExecutionCost(
                 per_time=427_707_230, per_space=1_188_952, fixed_cost=99_441
             )
         else:
-            minting_cost_two = plutus_common.ExecutionCost(
+            minting_cost1_v1 = plutus_common.ExecutionCost(
                 per_time=297_744_405, per_space=1_126_016, fixed_cost=86_439
             )
-            minting_time_range_cost_two = plutus_common.ExecutionCost(
+            minting_cost2_v1 = plutus_common.ExecutionCost(
                 per_time=312_830_204, per_space=1_188_952, fixed_cost=91_158
             )
 
+        minting_cost1_v2 = plutus_common.ExecutionCost(
+            per_time=185_595_199, per_space=595_446, fixed_cost=47_739
+        )
+
+        if plutus_version == "plutus_v1":
+            script_file1 = script_file1_v1
+            execution_cost1 = minting_cost1_v1
+        elif plutus_version == "mix_v2_v1":
+            script_file1 = script_file1_v2
+            execution_cost1 = minting_cost1_v2
+        else:
+            raise AssertionError("Unknown test variant.")
+
+        script_file2 = plutus_common.MINTING_TIME_RANGE_PLUTUS_V1
+
         protocol_params = cluster.get_protocol_params()
         minting_cost1 = plutus_common.compute_cost(
-            execution_cost=minting_cost_two, protocol_params=protocol_params
+            execution_cost=execution_cost1, protocol_params=protocol_params
         )
         minting_cost2 = plutus_common.compute_cost(
-            execution_cost=minting_time_range_cost_two, protocol_params=protocol_params
+            execution_cost=minting_cost2_v1, protocol_params=protocol_params
         )
 
         fee_step2_total = minting_cost1.fee + minting_cost2.fee + FEE_MINT_TXSIZE
@@ -614,7 +669,15 @@ class TestMinting:
 
         slot_step2 = cluster.get_slot_no()
 
-        # "time range" qacoin
+        # "anyone can mint" qacoin
+        policyid1 = cluster.get_policyid(script_file1)
+        asset_name1 = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token1 = f"{policyid1}.{asset_name1}"
+        mint_txouts1 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token1)
+        ]
+
+        # "timerange" qacoin
         slots_offset = 200
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
@@ -628,40 +691,32 @@ class TestMinting:
             # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
             redeemer_value_timerange = 1_000_000_000_000
 
-        policyid_timerange = cluster.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
-        asset_name_timerange = f"qacoint{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
-        token_timerange = f"{policyid_timerange}.{asset_name_timerange}"
-        mint_txouts_timerange = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_timerange)
-        ]
-
-        # "anyone can mint" qacoin
-        policyid_anyone = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
-        asset_name_anyone = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
-        token_anyone = f"{policyid_anyone}.{asset_name_anyone}"
-        mint_txouts_anyone = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_anyone)
+        policyid2 = cluster.get_policyid(script_file2)
+        asset_name2 = f"qacoint{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token2 = f"{policyid2}.{asset_name2}"
+        mint_txouts2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token2)
         ]
 
         # mint the tokens
         plutus_mint_data = [
             clusterlib.Mint(
-                txouts=mint_txouts_anyone,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                txouts=mint_txouts1,
+                script_file=script_file1,
                 collaterals=collateral_utxo1,
                 execution_units=(
-                    minting_cost_two.per_time,
-                    minting_cost_two.per_space,
+                    execution_cost1.per_time,
+                    execution_cost1.per_space,
                 ),
                 redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             ),
             clusterlib.Mint(
-                txouts=mint_txouts_timerange,
-                script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS_V1,
+                txouts=mint_txouts2,
+                script_file=script_file2,
                 collaterals=collateral_utxo2,
                 execution_units=(
-                    minting_time_range_cost_two.per_time,
-                    minting_time_range_cost_two.per_space,
+                    minting_cost2_v1.per_time,
+                    minting_cost2_v1.per_space,
                 ),
                 redeemer_value=str(redeemer_value_timerange),
             ),
@@ -672,8 +727,8 @@ class TestMinting:
         )
         txouts_step2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint_txouts_timerange,
-            *mint_txouts_anyone,
+            *mint_txouts1,
+            *mint_txouts2,
         ]
         tx_raw_output_step2 = cluster.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
@@ -700,17 +755,15 @@ class TestMinting:
             + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo_timerange = cluster.get_utxo(
-            address=issuer_addr.address, coins=[token_timerange]
-        )
+        token_utxo1 = cluster.get_utxo(address=issuer_addr.address, coins=[token1])
         assert (
-            token_utxo_timerange and token_utxo_timerange[0].amount == token_amount
-        ), "The 'timerange' token was not minted"
-
-        token_utxo_anyone = cluster.get_utxo(address=issuer_addr.address, coins=[token_anyone])
-        assert (
-            token_utxo_anyone and token_utxo_anyone[0].amount == token_amount
+            token_utxo1 and token_utxo1[0].amount == token_amount
         ), "The 'anyone' token was not minted"
+
+        token_utxo2 = cluster.get_utxo(address=issuer_addr.address, coins=[token2])
+        assert (
+            token_utxo2 and token_utxo2[0].amount == token_amount
+        ), "The 'timerange' token was not minted"
 
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -1243,8 +1296,12 @@ class TestMintingNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @param_plutus_version
     def test_low_budget(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test minting a token when budget is too low.
 
@@ -1257,15 +1314,18 @@ class TestMintingNegative:
         * check that the minting failed because the budget was overspent
         """
         # pylint: disable=too-many-locals
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
         lovelace_amount = 2_000_000
         token_amount = 5
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.get_protocol_params(),
         )
 
@@ -1282,7 +1342,7 @@ class TestMintingNegative:
 
         # Step 2: try to mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1292,12 +1352,12 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 # set execution units too low - to half of the expected values
                 execution_units=(
-                    plutus_common.MINTING_COST.per_time // 2,
-                    plutus_common.MINTING_COST.per_space // 2,
+                    plutus_v_record.execution_cost.per_time // 2,
+                    plutus_v_record.execution_cost.per_space // 2,
                 ),
                 redeemer_file=plutus_common.DATUM_42,
             )
@@ -1333,8 +1393,12 @@ class TestMintingNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @param_plutus_version
     def test_low_fee(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test minting a token when fee is set too low.
 
@@ -1345,15 +1409,18 @@ class TestMintingNegative:
         * try to mint a token using a Plutus script when fee is set lower than is the computed fee
         * check that minting failed because the fee amount was too low
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
         lovelace_amount = 2_000_000
         token_amount = 5
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.get_protocol_params(),
         )
 
@@ -1370,7 +1437,7 @@ class TestMintingNegative:
 
         # Step 2: try to mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1380,11 +1447,11 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_COST.per_time,
-                    plutus_common.MINTING_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_file=plutus_common.DATUM_42,
             )
@@ -1427,11 +1494,13 @@ class TestMintingNegative:
         "ttl",
         (3_000, 10_000, 100_000, 1000_000, -1),
     )
+    @param_plutus_version
     def test_past_horizon(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         ttl: int,
+        plutus_version: str,
     ):
         """Test minting a token with ttl too far in the future.
 
@@ -1442,7 +1511,8 @@ class TestMintingNegative:
         * try to mint a token using a Plutus script when ttl is set too far in the future
         * check that minting failed because of 'PastHorizon' failure
         """
-        temp_template = f"{common.get_test_id(cluster)}_{ttl}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{ttl}"
+
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -1450,8 +1520,11 @@ class TestMintingNegative:
         token_amount = 5
         fee_txsize = 600_000
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_COST, protocol_params=cluster.get_protocol_params()
+            execution_cost=plutus_v_record.execution_cost,
+            protocol_params=cluster.get_protocol_params(),
         )
 
         # Step 1: fund the token issuer
@@ -1468,7 +1541,7 @@ class TestMintingNegative:
 
         # Step 2: try to mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1478,11 +1551,11 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_COST.per_time,
-                    plutus_common.MINTING_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             )
@@ -1535,8 +1608,12 @@ class TestNegativeCollateral:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @param_plutus_version
     def test_minting_with_invalid_collaterals(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test minting a token with a Plutus script with invalid collaterals.
 
@@ -1548,15 +1625,18 @@ class TestNegativeCollateral:
         * check that the minting failed because no valid collateral was provided
         """
         # pylint: disable=too-many-locals
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
         lovelace_amount = 2_000_000
         token_amount = 5
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.get_protocol_params(),
         )
 
@@ -1580,7 +1660,7 @@ class TestNegativeCollateral:
             address=issuer_addr.address,
         )
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1590,11 +1670,11 @@ class TestNegativeCollateral:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=[invalid_collateral_utxo],
                 execution_units=(
-                    plutus_common.MINTING_COST.per_time,
-                    plutus_common.MINTING_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             )
@@ -1628,8 +1708,12 @@ class TestNegativeCollateral:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @param_plutus_version
     def test_minting_with_insufficient_collateral(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test minting a token with a Plutus script with insufficient collateral.
 
@@ -1641,7 +1725,8 @@ class TestNegativeCollateral:
         * check that the minting failed because a collateral with insufficient funds was provided
         """
         # pylint: disable=too-many-locals
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -1649,8 +1734,10 @@ class TestNegativeCollateral:
         collateral_amount = 2_000_000
         token_amount = 5
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         # increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
-        execution_cost = plutus_common.MINTING_COST._replace(fixed_cost=2_000_000)
+        execution_cost = plutus_v_record.execution_cost._replace(fixed_cost=2_000_000)
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=execution_cost, protocol_params=cluster.get_protocol_params()
@@ -1676,7 +1763,7 @@ class TestNegativeCollateral:
             address=issuer_addr.address,
         )
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V1)
+        policyid = cluster.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -1686,7 +1773,7 @@ class TestNegativeCollateral:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=[invalid_collateral_utxo],
                 execution_units=(
                     execution_cost.per_time,
