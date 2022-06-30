@@ -155,6 +155,7 @@ class TestKES:
         * check KES period info command with operational certificates with a valid KES
         """
         cluster = cluster_kes
+        kes_period_info_errors_list = []
         temp_template = common.get_test_id(cluster)
 
         expire_timeout = 200
@@ -225,19 +226,31 @@ class TestKES:
         kes_info_expired = cluster.get_kes_period_info(
             opcert_file=expire_pool_rec["pool_operational_cert"]
         )
-        kes.check_kes_period_info_result(
-            kes_output=kes_info_expired, expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
+        kes_period_info_errors_list.append(
+            kes.check_kes_period_info_result(
+                kes_output=kes_info_expired,
+                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
+                check_id="1",
+            )
         )
 
         # check kes-period-info with valid operational certificates
-        for n in refreshed_nodes:
+        for idx, n in enumerate(refreshed_nodes):
             refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
             kes_info_valid = cluster.get_kes_period_info(
                 opcert_file=refreshed_pool_rec["pool_operational_cert"]
             )
-            kes.check_kes_period_info_result(
-                kes_output=kes_info_valid, expected_scenario=kes.KesScenarios.ALL_VALID
+            kes_period_info_errors_list.append(
+                kes.check_kes_period_info_result(
+                    kes_output=kes_info_valid,
+                    expected_scenario=kes.KesScenarios.ALL_VALID,
+                    check_id=str(2 + idx),
+                )
             )
+
+        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
+        if err_joined:
+            raise AssertionError(f"Errors present on kes-period-info command: {err_joined}.")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
@@ -255,7 +268,7 @@ class TestKES:
         * if network era > Alonzo
 
             - generate new operational certificate with valid `--kes-period`, but counter value +2
-              from last used operational ceritificate
+              from last used operational certificate
             - restart the node
             - check that the pool is not minting any blocks
 
@@ -264,6 +277,7 @@ class TestKES:
         """
         # pylint: disable=too-many-statements,too-many-branches
         __: Any  # mypy workaround
+        kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL2
         node_name = "pool2"
         cluster = cluster_lock_pool2
@@ -332,9 +346,12 @@ class TestKES:
                         # check kes-period-info with operational certificate with
                         # invalid `--kes-period`
                         kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
-                        kes.check_kes_period_info_result(
-                            kes_output=kes_period_info,
-                            expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
+                        kes_period_info_errors_list.append(
+                            kes.check_kes_period_info_result(
+                                kes_output=kes_period_info,
+                                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
+                                check_id="1",
+                            )
                         )
 
                     # test the `CounterOverIncrementedOCERT` error - the counter will now be +2 from
@@ -351,11 +368,26 @@ class TestKES:
                         shutil.copy(overincrement_opcert_file, opcert_file)
                         cluster_nodes.restart_nodes([node_name])
 
+                        kes_period_info = cluster.get_kes_period_info(overincrement_opcert_file)
+                        kes_period_info_errors_list.append(
+                            kes.check_kes_period_info_result(
+                                kes_output=kes_period_info,
+                                expected_scenario=kes.KesScenarios.INVALID_COUNTERS,
+                                check_id="2",
+                            )
+                        )
+
                     if invalid_opcert_epoch == 3:
                         # check kes-period-info with operational certificate with
-                        # invalid counter
-                        # TODO: the query is currently broken, implement once it is fixed
-                        pass
+                        # invalid kes-period
+                        kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
+                        kes_period_info_errors_list.append(
+                            kes.check_kes_period_info_result(
+                                kes_output=kes_period_info,
+                                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
+                                check_id="3",
+                            )
+                        )
 
             # in Babbage we'll use the original counter for issuing new valid opcert so the counter
             # value of new valid opcert equals to counter value of the original opcert +1
@@ -395,18 +427,36 @@ class TestKES:
 
         # check kes-period-info with valid operational certificate
         kes_period_info = cluster.get_kes_period_info(valid_opcert_file)
-        kes.check_kes_period_info_result(
-            kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+        kes_period_info_errors_list.append(
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info,
+                expected_scenario=kes.KesScenarios.ALL_VALID,
+                check_id="4",
+            )
         )
 
-        # check kes-period-info with invalid operational certificate, wrong counter and period
+        # check kes-period-info with operational certificate with invalid counter and kes-period
         kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
-        kes.check_kes_period_info_result(
-            kes_output=kes_period_info,
-            expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
-            if VERSIONS.cluster_era > VERSIONS.ALONZO
-            else kes.KesScenarios.ALL_INVALID,
+        kes_period_info_errors_list.append(
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info,
+                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
+                if VERSIONS.cluster_era > VERSIONS.ALONZO
+                else kes.KesScenarios.ALL_INVALID,
+                check_id="5",
+            )
         )
+
+        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
+        if err_joined:
+            if (
+                VERSIONS.cluster_era > VERSIONS.ALONZO
+                and len(kes_period_info_errors_list) == 1
+                and "check '2'" in err_joined
+            ):
+                pytest.xfail("See cardano-node issue #4114")
+            else:
+                raise AssertionError(f"Errors present on kes-period-info command: {err_joined}.")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
@@ -430,6 +480,7 @@ class TestKES:
         """
         # pylint: disable=too-many-statements
         __: Any  # mypy workaround
+        kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL2
         node_name = "pool2"
         cluster = cluster_lock_pool2
@@ -469,16 +520,25 @@ class TestKES:
 
             # check kes-period-info while the pool is not minting blocks
             kes_period_info_new = cluster.get_kes_period_info(opcert_file)
-            kes.check_kes_period_info_result(
-                kes_output=kes_period_info_new, expected_scenario=kes.KesScenarios.ALL_VALID
+            kes_period_info_errors_list.append(
+                kes.check_kes_period_info_result(
+                    kes_output=kes_period_info_new,
+                    expected_scenario=kes.KesScenarios.ALL_VALID,
+                    check_id="1",
+                )
             )
             kes_period_info_old = cluster.get_kes_period_info(opcert_file_old)
-            kes.check_kes_period_info_result(
-                kes_output=kes_period_info_old, expected_scenario=kes.KesScenarios.ALL_VALID
+            kes_period_info_errors_list.append(
+                kes.check_kes_period_info_result(
+                    kes_output=kes_period_info_old,
+                    expected_scenario=kes.KesScenarios.ALL_VALID,
+                    check_id="2",
+                )
             )
-            assert (
+            kes_period_info_errors_list.append(
                 kes_period_info_new["metrics"]["qKesNodeStateOperationalCertificateNumber"]
-                == kes_period_info_old["metrics"]["qKesNodeStateOperationalCertificateNumber"]
+                != kes_period_info_old["metrics"]["qKesNodeStateOperationalCertificateNumber"]
+                or ""
             )
 
             # start the node with the new operational certificate
@@ -506,20 +566,33 @@ class TestKES:
         # check that metrics reported by kes-period-info got updated once the pool started
         # minting blocks again
         kes_period_info_updated = cluster.get_kes_period_info(opcert_file)
-        kes.check_kes_period_info_result(
-            kes_output=kes_period_info_updated, expected_scenario=kes.KesScenarios.ALL_VALID
+        kes_period_info_errors_list.append(
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info_updated,
+                expected_scenario=kes.KesScenarios.ALL_VALID,
+                check_id="3",
+            )
         )
-        assert (
+
+        kes_period_info_errors_list.append(
             kes_period_info_updated["metrics"]["qKesNodeStateOperationalCertificateNumber"]
-            != kes_period_info_old["metrics"]["qKesNodeStateOperationalCertificateNumber"]
+            == kes_period_info_old["metrics"]["qKesNodeStateOperationalCertificateNumber"]
+            or ""
         )
 
         # check kes-period-info with operational certificate with a wrong counter
         kes_period_info_invalid = cluster.get_kes_period_info(opcert_file_old)
-        kes.check_kes_period_info_result(
-            kes_output=kes_period_info_invalid,
-            expected_scenario=kes.KesScenarios.INVALID_COUNTERS,
+        kes_period_info_errors_list.append(
+            kes.check_kes_period_info_result(
+                kes_output=kes_period_info_invalid,
+                expected_scenario=kes.KesScenarios.INVALID_COUNTERS,
+                check_id="4",
+            )
         )
+
+        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
+        if err_joined:
+            raise AssertionError(f"Errors present on kes-period-info command: {err_joined}.")
 
     @allure.link(helpers.get_vcs_link())
     def test_no_kes_period_arg(
