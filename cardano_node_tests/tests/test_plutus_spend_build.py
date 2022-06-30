@@ -1,5 +1,4 @@
 """Tests for spending with Plutus using `transaction build`."""
-import functools
 import json
 import logging
 import shutil
@@ -185,37 +184,26 @@ def _build_fund_script(
     script_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
     assert script_utxos, "No script UTxO"
 
-    script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
-    script_lovelace_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_lovelace, 0)
     assert (
-        script_lovelace_balance == script_fund
+        clusterlib.calculate_utxos_balance(utxos=script_utxos) == script_fund
     ), f"Incorrect balance for script address `{script_address}`"
 
     collateral_utxos = cluster_obj.get_utxo(txin=f"{txid}#2")
     assert collateral_utxos, "No collateral UTxO"
 
-    collateral_utxos_lovelace = [u for u in collateral_utxos if u.coin == clusterlib.DEFAULT_COIN]
-    collateral_lovelace_balance = functools.reduce(
-        lambda x, y: x + y.amount, collateral_utxos_lovelace, 0
-    )
     assert (
-        collateral_lovelace_balance == redeem_cost.collateral
+        clusterlib.calculate_utxos_balance(utxos=collateral_utxos) == redeem_cost.collateral
     ), f"Incorrect balance for collateral address `{dst_addr.address}`"
 
     for token in stokens:
-        script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
-        script_token_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_token, 0)
         assert (
-            script_token_balance == token.amount
+            clusterlib.calculate_utxos_balance(utxos=script_utxos, coin=token.coin) == token.amount
         ), f"Incorrect token balance for script address `{script_address}`"
 
     for token in ctokens:
-        collateral_utxos_token = [u for u in collateral_utxos if u.coin == token.coin]
-        collateral_token_balance = functools.reduce(
-            lambda x, y: x + y.amount, collateral_utxos_token, 0
-        )
         assert (
-            collateral_token_balance == token.amount
+            clusterlib.calculate_utxos_balance(utxos=collateral_utxos, coin=token.coin)
+            == token.amount
         ), f"Incorrect token balance for address `{dst_addr.address}`"
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
@@ -283,8 +271,9 @@ def _build_spend_locked_txin(  # noqa: C901
             clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
         )
         # append change
-        script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
-        script_token_balance = functools.reduce(lambda x, y: x + y.amount, script_utxos_token, 0)
+        script_token_balance = clusterlib.calculate_utxos_balance(
+            utxos=script_utxos, coin=token.coin
+        )
         if script_token_balance > token.amount:
             lovelace_change_needed = True
             txouts.append(
@@ -353,7 +342,7 @@ def _build_spend_locked_txin(  # noqa: C901
 
         for u in script_utxos_lovelace:
             assert cluster_obj.get_utxo(
-                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+                utxo=u, coins=[clusterlib.DEFAULT_COIN]
             ), f"Inputs were unexpectedly spent for `{u.address}`"
 
         return "", tx_output, []
@@ -382,14 +371,14 @@ def _build_spend_locked_txin(  # noqa: C901
 
     for u in script_utxos_lovelace:
         assert not cluster_obj.get_utxo(
-            txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+            utxo=u, coins=[clusterlib.DEFAULT_COIN]
         ), f"Inputs were NOT spent for `{u.address}`"
 
     for token in spent_tokens:
         script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
         for u in script_utxos_token:
             assert not cluster_obj.get_utxo(
-                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[token.coin]
+                utxo=u, coins=[token.coin]
             ), f"Token inputs were NOT spent for `{u.address}`"
 
     # check tx view
@@ -957,7 +946,7 @@ class TestBuildLocking:
         ]
         for u in script_utxos_lovelace:
             assert not cluster.get_utxo(
-                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+                utxo=u, coins=[clusterlib.DEFAULT_COIN]
             ), f"Inputs were NOT spent for `{u.address}`"
 
         # check expected fees
@@ -1260,16 +1249,10 @@ class TestBuildLocking:
         build_change_utxos = cluster.get_utxo(txin=f"{txid_spend}#0")
 
         # Lovelace balance on original script UTxOs
-        script_lovelace_utxos = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
-        script_lovelace_balance = functools.reduce(
-            lambda x, y: x + y.amount, script_lovelace_utxos, 0
-        )
+        script_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=script_utxos)
         # Lovelace balance on change UTxOs
-        change_lovelace_utxos = [
-            u for u in [*change_utxos, *build_change_utxos] if u.coin == clusterlib.DEFAULT_COIN
-        ]
-        change_lovelace_balance = functools.reduce(
-            lambda x, y: x + y.amount, change_lovelace_utxos, 0
+        change_lovelace_balance = clusterlib.calculate_utxos_balance(
+            utxos=[*change_utxos, *build_change_utxos]
         )
 
         assert (
@@ -1396,7 +1379,7 @@ class TestBuildLocking:
 
         for u in script_utxos:
             assert not cluster.get_utxo(
-                txin=f"{u.utxo_hash}#{u.utxo_ix}", coins=[clusterlib.DEFAULT_COIN]
+                utxo=u, coins=[clusterlib.DEFAULT_COIN]
             ), f"Inputs were NOT spent for `{script_address}`"
 
         # check expected fees
