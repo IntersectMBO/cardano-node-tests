@@ -238,12 +238,13 @@ class TestBuildMinting:
             reference_utxo.amount if reference_utxo else 0
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
+        # TODO: query single UTxO
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
         # check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.get_utxo(
-            txin=f"{reference_utxo.utxo_hash}#{reference_utxo.utxo_ix}"
+            utxo=reference_utxo
         ), "Reference UTxO was spent"
 
         # check expected fees

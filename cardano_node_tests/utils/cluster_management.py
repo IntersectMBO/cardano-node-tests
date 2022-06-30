@@ -801,7 +801,7 @@ class _ClusterGetter:
             raise RuntimeError("All clusters are dead, cannot run.")
 
     def _init_restart(self, cget_status: ClusterGetStatus) -> bool:
-        """Initialize restart on this cluster instance."""
+        """Initialize restart of this cluster instance on this worker."""
         # restart already initialized
         if cget_status.restart_here:
             return True
@@ -825,7 +825,7 @@ class _ClusterGetter:
         # Cluster restart will be performed by this worker.
         # By setting `restart_here`, we make sure this worker continue on this cluster instance
         # after restart is finished. It is important because the `start_cmd` used for starting the
-        # cluster instance might be specific to the test.
+        # cluster instance might be specific for the test.
         cget_status.restart_here = True
         cget_status.selected_instance = cget_status.instance_num
 
