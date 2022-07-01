@@ -21,7 +21,7 @@ on:
         required: false
         default: "None"
       node_start_arguments:
-        description: extra arguments to be used when starting the node ("--a1","--a2 21","--a3 xc za")
+        description: extra arguments to be used when starting the node (--a1 --a2 21)
         required: false
         default: "None"
 

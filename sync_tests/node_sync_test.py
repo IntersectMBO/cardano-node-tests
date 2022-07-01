@@ -1040,7 +1040,7 @@ if __name__ == "__main__":
         help="the environment on which to run the tests - shelley_qa, testnet, staging or mainnet.",
     )
     parser.add_argument(
-        "-a", "--node_start_arguments", help="arguments to be passed when starting the node",
+        "-a", "--node_start_arguments", nargs='+', help="arguments to be passed when starting the node",
     )
 
     args = parser.parse_args()
