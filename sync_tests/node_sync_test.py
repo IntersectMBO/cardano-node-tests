@@ -1021,7 +1021,7 @@ def main():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Execute basic sync test\n\n")
+    parser = argparse.ArgumentParser(description="Run Cardano Node sync test\n\n")
 
     parser.add_argument(
         "-t1", "--node_tag_no1", help="node tag number1 - used for initial sync, from clean state"
@@ -1040,8 +1040,7 @@ if __name__ == "__main__":
         help="the environment on which to run the tests - shelley_qa, testnet, staging or mainnet.",
     )
     parser.add_argument(
-        "-a", "--node_start_arguments",
-        help="arguments to be passed when starting the node",
+        "-a", "--node_start_arguments", help="arguments to be passed when starting the node",
     )
 
     args = parser.parse_args()

@@ -119,7 +119,7 @@ jobs:
         run: |
           cd cardano_node_tests
           echo "current branch2: $(git branch --show-current)"
-          python sync_tests/node_sync_test.py -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -e1 "${{ github.event.inputs.hydra_eval_no1 }}" -e2 "${{ github.event.inputs.hydra_eval_no2 }}" -e ${{ matrix.env }} -a ${{ github.event.inputs.node_start_arguments }}
+          python sync_tests/node_sync_test.py -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -e1 "${{ github.event.inputs.hydra_eval_no1 }}" -e2 "${{ github.event.inputs.hydra_eval_no2 }}" -e ${{ matrix.env }} -a "${{ github.event.inputs.node_start_arguments }}"
       - name: write the test results into the database
         env:
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
