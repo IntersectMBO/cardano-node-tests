@@ -115,7 +115,7 @@ def get_epoch_start_datetime_from_explorer(env, epoch_no):
             count += 1
             if count > 10:
                 print(f"!!! ERROR: Not able to get start time for epoch {epoch_no} on {env} after 10 tries")
-                exit(1)
+                return None
         return res.json()['data']['epochs'][0]['startedAt']
     else:
         print(f"status_code: {status_code}")
@@ -123,4 +123,4 @@ def get_epoch_start_datetime_from_explorer(env, epoch_no):
         print(
             f"!!! ERROR: status_code =! 200 when getting start time for epoch {epoch_no} on {env}")
         print(f"     - The Explorer might be down - {url}")
-        exit(1)
+        return None
