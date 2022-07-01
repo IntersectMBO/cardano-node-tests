@@ -1181,7 +1181,7 @@ class TestReferenceScripts:
 
         txid = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
         reference_script = cluster.get_utxo(txin=f"{txid}#1")
-        assert getattr(reference_script[0], "reference_script", None), "No reference script UTxO"
+        assert reference_script[0].reference_script, "No reference script UTxO"
 
         #  Step 2: spend an UTxO and reference the script
 
