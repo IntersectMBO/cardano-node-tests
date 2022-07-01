@@ -164,23 +164,23 @@ def get_hydra_build_download_url(eval_url, os_type):
 
         if os_type.lower() == "windows":
             if "cardano-node-win64" in build_jData.get("job"):
-                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"build_jData: {build_jData}")
                 print(f"  -- cardano_node_pr: {build_jData.get('jobset')}")
+                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"  -- job_name: {job_name}")
                 return f"https://hydra.iohk.io/build/{build_no}/download/1/{job_name}"
         elif os_type.lower() == "linux":
             if "cardano-node-linux" in build_jData.get("job"):
-                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"build_jData: {build_jData}")
                 print(f"  -- cardano_node_pr: {build_jData.get('jobset')}")
+                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"  -- job_name: {job_name}")
                 return f"https://hydra.iohk.io/build/{build_no}/download/1/{job_name}"
         elif os_type.lower() == "macos":
             if "cardano-node-macos" in build_jData.get("job"):
-                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"build_jData: {build_jData}")
                 print(f"  -- cardano_node_pr: {build_jData.get('jobset')}")
+                job_name = build_jData.get('buildproducts').get('1').get('name')
                 print(f"  -- job_name: {job_name}")
                 return f"https://hydra.iohk.io/build/{build_no}/download/1/{job_name}"
 
@@ -846,7 +846,7 @@ def main():
     tag_no2 = str(vars(args)["node_tag_no2"]).strip()
     hydra_eval_no1 = str(vars(args)["hydra_eval_no1"]).strip()
     hydra_eval_no2 = str(vars(args)["hydra_eval_no2"]).strip()
-    node_start_arguments = str(vars(args)["node_start_arguments"]).strip()
+    node_start_arguments = vars(args)["node_start_arguments"]
     print(f"node_tag_no1: {tag_no1}")
     print(f"node_tag_no2: {tag_no2}")
     print(f"hydra_eval_no1: {hydra_eval_no1}")
