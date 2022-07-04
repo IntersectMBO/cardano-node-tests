@@ -898,7 +898,7 @@ class TestRewards:
 
                 # wait before recording reward
                 clusterlib_utils.wait_for_epoch_interval(
-                    cluster_obj=cluster, start=10, stop=30, force_epoch=True
+                    cluster_obj=cluster, start=10, stop=50, force_epoch=True
                 )
                 this_epoch = cluster.get_epoch()
 
@@ -1539,7 +1539,7 @@ class TestRewards:
 
             # wait before recording reward
             clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=5, stop=35, force_epoch=True
+                cluster_obj=cluster, start=10, stop=50, force_epoch=True
             )
             this_epoch = cluster.get_epoch()
 
