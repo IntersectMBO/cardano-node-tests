@@ -18,8 +18,9 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
 
+pytestmark = pytest.mark.smoke
 
-@pytest.mark.smoke
+
 class TestCLI:
     """Tests for cardano-cli."""
 
