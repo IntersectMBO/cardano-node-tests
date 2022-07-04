@@ -70,12 +70,14 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
     @pytest.mark.testnets
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
-        reason="supposed to run on testnet",
-    )
     def test_testnet_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on testnets."""
+        cluster_type = cluster_nodes.get_cluster_type()
+        if cluster_type.type == cluster_nodes.ClusterType.LOCAL:
+            pytest.skip("supposed to run on testnet")
+        if cluster_type.testnet_type == cluster_nodes.Testnets.testnet:  # type: ignore
+            pytest.skip("too expensive to run on the official Testnet")
+
         common.get_test_id(cluster)
 
         magic_args = " ".join(cluster.magic_args)
