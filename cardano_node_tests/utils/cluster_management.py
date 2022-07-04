@@ -54,6 +54,7 @@ class Resources:
     POOL3 = "node-pool3"
     RESERVES = "reserves"
     TREASURY = "treasury"
+    PERF = "performance"
 
 
 CLUSTER_LOCK = ".cluster.lock"

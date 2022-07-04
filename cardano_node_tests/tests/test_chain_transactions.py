@@ -19,30 +19,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture
-def payment_addr(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster: clusterlib.ClusterLib,
-) -> clusterlib.AddressRecord:
-    """Create new payment address."""
-    amount = 205_000_000
-
-    addr = clusterlib_utils.create_payment_addr_records(
-        f"chain_tx_addr_ci{cluster_manager.cluster_instance_num}",
-        cluster_obj=cluster,
-    )[0]
-
-    # fund source address
-    clusterlib_utils.fund_from_faucet(
-        addr,
-        cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=amount,
-    )
-
-    return addr
-
-
 def _gen_signed_tx(
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
@@ -89,6 +65,36 @@ def _gen_signed_tx(
 
 
 class TestTxChaining:
+    @pytest.fixture
+    def cluster(self, cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
+        return cluster_manager.get(
+            lock_resources=[cluster_management.Resources.PERF],
+        )
+
+    @pytest.fixture
+    def payment_addr(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> clusterlib.AddressRecord:
+        """Create new payment address."""
+        amount = 205_000_000
+
+        addr = clusterlib_utils.create_payment_addr_records(
+            f"chain_tx_addr_ci{cluster_manager.cluster_instance_num}",
+            cluster_obj=cluster,
+        )[0]
+
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            addr,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=amount,
+        )
+
+        return addr
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_tx_chaining(
