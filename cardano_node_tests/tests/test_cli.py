@@ -2,6 +2,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import List
 
 import allure
 import pytest
@@ -17,8 +18,9 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
 
+pytestmark = pytest.mark.smoke
 
-@pytest.mark.smoke
+
 class TestCLI:
     """Tests for cardano-cli."""
 
@@ -28,11 +30,8 @@ class TestCLI:
     TX_OUT = DATA_DIR / "test_tx_metadata_both_tx.out"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
     @pytest.mark.testnets
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-        reason="different TX eras doesn't affect this test",
-    )
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check the default protocol mode - command works even without specifying protocol mode."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:
@@ -51,10 +50,7 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-        reason="different TX eras doesn't affect this test",
-    )
+    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on local cluster."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:
@@ -72,10 +68,8 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-        reason="different TX eras doesn't affect this test",
-    )
+    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+    @pytest.mark.testnets
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
         reason="supposed to run on testnet",
@@ -345,3 +339,65 @@ class TestKey:
             )
 
         assert "TextEnvelope type error:  Expected one of:" in str(excinfo.value)
+
+
+@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+class TestAdvancedQueries:
+    """Basic sanity tests for advanced cardano-cli query commands.
+
+    The `query leadership-schedule` is handled by more complex tests `TestLeadershipSchedule`
+    as it requires complex setup.
+    For `query protocol-state` see `test_protocol_state_keys` smoke test.
+    """
+
+    @pytest.fixture
+    def pool_ids(self, cluster: clusterlib.ClusterLib) -> List[str]:
+        stake_pool_ids = cluster.get_stake_pools()
+        if not stake_pool_ids:
+            pytest.skip("No stake pools are available.")
+        return stake_pool_ids
+
+    @allure.link(helpers.get_vcs_link())
+    def test_ledger_state(self, cluster: clusterlib.ClusterLib):
+        """Test `query stake-snapshot`."""
+        try:
+            ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+        except AssertionError as err:
+            if "Invalid numeric literal at line" in str(err):
+                pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
+            raise
+
+        assert "lastEpoch" in ledger_state
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_stake_snapshot(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
+        """Test `query stake-snapshot`."""
+        try:
+            stake_snapshot = cluster.get_stake_snapshot(stake_pool_id=pool_ids[0])
+        except BaseException as err:
+            if "JSONDecodeError" in str(err):
+                pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
+            raise
+
+        assert {
+            "activeStakeGo",
+            "activeStakeMark",
+            "activeStakeSet",
+            "poolStakeGo",
+            "poolStakeMark",
+            "poolStakeSet",
+        }.issubset(stake_snapshot)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
+        """Test `query pool-params`."""
+        try:
+            pool_params = cluster.get_pool_params(stake_pool_id=pool_ids[0])
+        except BaseException as err:
+            if "JSONDecodeError" in str(err):
+                pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
+            raise
+
+        assert hasattr(pool_params, "retiring")
