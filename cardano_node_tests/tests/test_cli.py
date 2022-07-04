@@ -2,6 +2,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import List
 
 import allure
 import pytest
@@ -343,7 +344,9 @@ class TestKey:
 class TestAdvancedQueries:
     """Basic sanity tests for advanced cardano-cli query commands.
 
-    The `query leadership-schedule` is handled by more complex test as it requires complex setup.
+    The `query leadership-schedule` is handled by more complex tests `TestLeadershipSchedule`
+    as it requires complex setup.
+    For `query protocol-state` see `test_protocol_state_keys` smoke test.
     """
 
     @pytest.fixture
@@ -364,19 +367,6 @@ class TestAdvancedQueries:
             raise
 
         assert "lastEpoch" in ledger_state
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_protocol_state(self, cluster: clusterlib.ClusterLib):
-        """Test `query protocol-state`."""
-        try:
-            protocol_state = cluster.get_protocol_state()
-        except AssertionError as err:
-            if "Invalid numeric literal at line" in str(err):
-                pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
-            raise
-
-        assert "lastSlot" in protocol_state
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
