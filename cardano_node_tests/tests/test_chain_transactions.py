@@ -1,6 +1,7 @@
 """Tests for transactions chaining."""
 import logging
 import time
+from pathlib import Path
 from typing import Tuple
 
 import allure
@@ -18,42 +19,15 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture
-def payment_addr(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster: clusterlib.ClusterLib,
-) -> clusterlib.AddressRecord:
-    """Create new payment address."""
-    amount = 205_000_000
-
-    addr = clusterlib_utils.create_payment_addr_records(
-        f"chain_tx_addr_ci{cluster_manager.cluster_instance_num}",
-        cluster_obj=cluster,
-    )[0]
-
-    # fund source address
-    clusterlib_utils.fund_from_faucet(
-        addr,
-        cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=amount,
-    )
-
-    return addr
-
-
-def _submit_no_wait(
+def _gen_signed_tx(
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     txin: clusterlib.UTXOData,
     out_addr: clusterlib.AddressRecord,
     tx_name: str,
     fee: int,
-) -> Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput]:
-    """Submit a Tx without waiting for it to appear on ledger.
-
-    Return Tx output in a format that can be used as input for next Tx.
-    """
+) -> Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, Path]:
+    """Generate Tx and return Tx output in a format that can be used as input for next Tx."""
     send_amount = txin.amount - fee
     out_file = f"{tx_name}_tx.body"
 
@@ -72,12 +46,11 @@ def _submit_no_wait(
         if VERSIONS.transaction_era < VERSIONS.ALLEGRA
         else None,
     )
-    tx_signed_file = cluster_obj.sign_tx(
+    tx_file = cluster_obj.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         tx_name=tx_name,
         signing_key_files=tx_files.signing_key_files,
     )
-    cluster_obj.submit_tx_bare(tx_file=tx_signed_file)
 
     # transform output of this Tx (`TxOut`) to input for next Tx (`UTXOData`)
     txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
@@ -88,10 +61,40 @@ def _submit_no_wait(
         address=out_addr.address,
     )
 
-    return out_utxo, tx_raw_output
+    return out_utxo, tx_raw_output, tx_file
 
 
 class TestTxChaining:
+    @pytest.fixture
+    def cluster(self, cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
+        return cluster_manager.get(
+            lock_resources=[cluster_management.Resources.PERF],
+        )
+
+    @pytest.fixture
+    def payment_addr(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> clusterlib.AddressRecord:
+        """Create new payment address."""
+        amount = 205_000_000
+
+        addr = clusterlib_utils.create_payment_addr_records(
+            f"chain_tx_addr_ci{cluster_manager.cluster_instance_num}",
+            cluster_obj=cluster,
+        )[0]
+
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            addr,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=amount,
+        )
+
+        return addr
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_tx_chaining(
@@ -117,34 +120,36 @@ class TestTxChaining:
             init_utxo.amount - (fee * iterations) >= min_utxo_value
         ), f"Not enough funds to do {iterations} iterations"
 
+        # generate signed Txs
+        generated_txs = []
         tx_raw_outputs = []
-        txin = next_txin = verified_txin = init_utxo
+        txin = init_utxo
+        for idx in range(1, iterations + 1):
+            txin, tx_raw_output, tx_file = _gen_signed_tx(
+                cluster_obj=cluster,
+                payment_addr=payment_addr,
+                txin=txin,
+                out_addr=payment_addr,
+                tx_name=f"{temp_template}_{idx:04d}",
+                fee=fee,
+            )
+            generated_txs.append(tx_file)
+            tx_raw_outputs.append(tx_raw_output)
 
         # submit Txs one by one without waiting for them to appear on ledger
-        for idx in range(1, iterations + 1):
-            try:
-                next_txin, tx_raw_output = _submit_no_wait(
-                    cluster_obj=cluster,
-                    payment_addr=payment_addr,
-                    txin=txin,
-                    out_addr=payment_addr,
-                    tx_name=f"{temp_template}_{idx:04d}",
-                    fee=fee,
-                )
-            except clusterlib.CLIError as err:
-                # The "BadInputsUTxO" error can happen when the previous transaction has not made
-                # it to mempool, so Tx input for this transaction doesn't exist. In that case,
-                # revert `txin` to the output of last successful transaction.
-                if "BadInputsUTxO" not in str(err):
-                    raise
-                txin = verified_txin
-                continue
-
-            verified_txin, txin = txin, next_txin
-            tx_raw_outputs.append(tx_raw_output)
+        for tx_file in generated_txs:
+            cluster.submit_tx_bare(tx_file=tx_file)
 
         if configuration.HAS_DBSYNC:
             # wait a bit for all Txs to appear in db-sync
             time.sleep(5)
-            for t in tx_raw_outputs:
-                dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=t)
+
+            check_tx_outs = [
+                dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=t) for t in tx_raw_outputs
+            ]
+
+            block_ids = [r.block_id for r in check_tx_outs if r]
+            assert block_ids == sorted(block_ids), "Block IDs of Txs are not ordered"
+
+            how_many_blocks = block_ids[-1] - block_ids[0]
+            assert how_many_blocks < iterations // 80, "Expected more chained Txs per block"
