@@ -33,7 +33,7 @@ node_start_arguments1=$6
 node_start_arguments2=$7
 
 echo " ==== start sync test"
-python ./sync_tests/node_sync_test.py -t1 "$tag_no1" -t2 "$tag_no2" -e "$desired_env" -e1 "$hydra_eval_no1" -e2 "$hydra_eval_no2" -a1="$node_start_arguments1 -a2="$node_start_arguments2"
+python ./sync_tests/node_sync_test.py -t1 "$tag_no1" -t2 "$tag_no2" -e "$desired_env" -e1 "$hydra_eval_no1" -e2 "$hydra_eval_no2" -a1="$node_start_arguments1" -a2="$node_start_arguments2"
 
 echo " ==== write sync test values into the db"
 python ./sync_tests/node_write_sync_values_to_db.py -e "$desired_env"
