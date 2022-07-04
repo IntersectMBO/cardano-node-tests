@@ -1258,6 +1258,12 @@ class TestManyUTXOs:
     """Test transaction with many UTxOs and small amounts of Lovelace."""
 
     @pytest.fixture
+    def cluster(self, cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
+        return cluster_manager.get(
+            lock_resources=[cluster_management.Resources.PERF],
+        )
+
+    @pytest.fixture
     def payment_addrs(
         self,
         cluster_manager: cluster_management.ClusterManager,
