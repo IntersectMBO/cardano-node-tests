@@ -488,13 +488,16 @@ def get_node_version():
 def start_node_windows(env, tag_no, node_start_arguments):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
+    start_args = ""
+    if node_start_arguments is not None:
+        start_args = ' '.join(node_start_arguments)
     cmd = (
         f"{NODE} run --topology {env}-topology.json "
         f"--database-path {Path(ROOT_TEST_PATH) / 'db'} "
         f"--host-addr 0.0.0.0 "
         f"--port 3000 "
         f"--config {env}-config.json "
-        f"--socket-path ./db/node.socket {' '.join(node_start_arguments)}"
+        f"--socket-path ./db/node.socket {start_args}"
     )
 
     logfile = open(NODE_LOG_FILE, "w+")
@@ -528,13 +531,16 @@ def start_node_unix(env, tag_no, node_start_arguments):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
+    start_args = ""
+    if node_start_arguments is not None:
+        start_args = ' '.join(node_start_arguments)
     cmd = (
         f"{NODE} run --topology {env}-topology.json "
         f"--database-path {Path(ROOT_TEST_PATH) / 'db'} "
         f"--host-addr 0.0.0.0 "
         f"--port 3000 "
         f"--config {env}-config.json "
-        f"--socket-path ./db/node.socket {' '.join(node_start_arguments)}"
+        f"--socket-path ./db/node.socket {start_args}"
     )
 
     logfile = open(NODE_LOG_FILE, "w+")
@@ -846,12 +852,14 @@ def main():
     tag_no2 = str(vars(args)["node_tag_no2"]).strip()
     hydra_eval_no1 = str(vars(args)["hydra_eval_no1"]).strip()
     hydra_eval_no2 = str(vars(args)["hydra_eval_no2"]).strip()
-    node_start_arguments = vars(args)["node_start_arguments"]
+    node_start_arguments1 = vars(args)["node_start_arguments1"]
+    node_start_arguments2 = vars(args)["node_start_arguments2"]
     print(f"node_tag_no1: {tag_no1}")
     print(f"node_tag_no2: {tag_no2}")
     print(f"hydra_eval_no1: {hydra_eval_no1}")
     print(f"hydra_eval_no2: {hydra_eval_no2}")
-    print(f"node_start_arguments: {node_start_arguments}")
+    print(f"node_start_arguments1: {node_start_arguments1}")
+    print(f"node_start_arguments2: {node_start_arguments2}")
 
     platform_system, platform_release, platform_version = get_os_type()
     print(f"platform: {platform_system, platform_release, platform_version}")
@@ -894,9 +902,9 @@ def main():
     print(f"   ======================= Start node using tag_no1: {tag_no1} ====================")
     start_sync_time1 = get_current_date_time()
     if "linux" in platform_system.lower() or "darwin" in platform_system.lower():
-        secs_to_start1 = start_node_unix(env, tag_no1, node_start_arguments)
+        secs_to_start1 = start_node_unix(env, tag_no1, node_start_arguments1)
     elif "windows" in platform_system.lower():
-        secs_to_start1 = start_node_windows(env, tag_no1, node_start_arguments)
+        secs_to_start1 = start_node_windows(env, tag_no1, node_start_arguments1)
 
     print(" - waiting for the node to sync")
     sync_time_seconds1, last_slot_no1, latest_chunk_no1, era_details_dict1, epoch_details_dict1 = wait_for_node_to_sync(env)
@@ -940,9 +948,9 @@ def main():
         print(f"   ================ Start node using tag_no2: {tag_no2} ====================")
         start_sync_time2 = get_current_date_time()
         if "linux" in platform_system.lower() or "darwin" in platform_system.lower():
-            secs_to_start2 = start_node_unix(env, tag_no2)
+            secs_to_start2 = start_node_unix(env, tag_no2, node_start_arguments2)
         elif "windows" in platform_system.lower():
-            secs_to_start2 = start_node_windows(env, tag_no2)
+            secs_to_start2 = start_node_windows(env, tag_no2, node_start_arguments2)
 
         print(f" - waiting for the node to sync - using tag_no2: {tag_no2}")
         sync_time_seconds2, last_slot_no2, latest_chunk_no2, era_details_dict2, epoch_details_dict2 = wait_for_node_to_sync(env)
@@ -1040,8 +1048,12 @@ if __name__ == "__main__":
         help="the environment on which to run the tests - shelley_qa, testnet, staging or mainnet.",
     )
     parser.add_argument(
-        "-a", "--node_start_arguments", nargs='+', type=str,
-        help="arguments to be passed when starting the node",
+        "-a1", "--node_start_arguments1", nargs='+', type=str,
+        help="arguments to be passed when starting the node from clean state (first tag_no)",
+    )
+    parser.add_argument(
+        "-a2", "--node_start_arguments2", nargs='+', type=str,
+        help="arguments to be passed when starting the node from existing state (second tag_no)",
     )
 
     args = parser.parse_args()
