@@ -488,9 +488,9 @@ def get_node_version():
 def start_node_windows(env, tag_no, node_start_arguments):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
-    start_args = ""
-    if node_start_arguments is not None:
-        start_args = ' '.join(node_start_arguments)
+    start_args = ' '.join(node_start_arguments)
+    if "None" in start_args:
+        start_args = ""
     cmd = (
         f"{NODE} run --topology {env}-topology.json "
         f"--database-path {Path(ROOT_TEST_PATH) / 'db'} "
@@ -531,9 +531,9 @@ def start_node_unix(env, tag_no, node_start_arguments):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
-    start_args = ""
-    if node_start_arguments is not None:
-        start_args = ' '.join(node_start_arguments)
+    start_args = ' '.join(node_start_arguments)
+    if "None" in start_args:
+        start_args = ""
     cmd = (
         f"{NODE} run --topology {env}-topology.json "
         f"--database-path {Path(ROOT_TEST_PATH) / 'db'} "
