@@ -496,9 +496,9 @@ def start_node_windows(env, tag_no, node_start_arguments):
         f"--database-path {Path(ROOT_TEST_PATH) / 'db'} "
         f"--host-addr 0.0.0.0 "
         f"--port 3000 "
-        f"--config {env}-config.json "
-        f"--socket-path ./db/node.socket {start_args}"
-    )
+        f"--socket-path ./db/node.socket "
+        f"--config {env}-config.json {start_args}"
+    ).strip()
 
     logfile = open(NODE_LOG_FILE, "w+")
     print(f"cmd: {cmd}")
@@ -539,9 +539,9 @@ def start_node_unix(env, tag_no, node_start_arguments):
         f"--database-path {Path(ROOT_TEST_PATH) / 'db'} "
         f"--host-addr 0.0.0.0 "
         f"--port 3000 "
-        f"--config {env}-config.json "
-        f"--socket-path ./db/node.socket {start_args}"
-    )
+        f"--socket-path ./db/node.socket "
+        f"--config {env}-config.json {start_args}"
+    ).strip()
 
     logfile = open(NODE_LOG_FILE, "w+")
     print(f"start node cmd: {cmd}")
