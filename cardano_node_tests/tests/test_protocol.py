@@ -80,10 +80,8 @@ class TestProtocol:
             # TODO: the query is broken on 1.35.0-rc4
             if "currentlyBroken" in str(err):
                 pytest.xfail("`query protocol-state` is currently broken - see node issue #3883")
-        except BaseException as err:
-            if "JSONDecodeError" in str(err):
-                pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
-            raise
+        except json.decoder.JSONDecodeError as err:
+            pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
 
         protocol_state_keys = set(protocol_state)
 

@@ -377,10 +377,8 @@ class TestAdvancedQueries:
         """Test `query stake-snapshot`."""
         try:
             stake_snapshot = cluster.get_stake_snapshot(stake_pool_id=pool_ids[0])
-        except BaseException as err:
-            if "JSONDecodeError" in str(err):
-                pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
-            raise
+        except json.decoder.JSONDecodeError as err:
+            pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
 
         assert {
             "activeStakeGo",
@@ -397,9 +395,7 @@ class TestAdvancedQueries:
         """Test `query pool-params`."""
         try:
             pool_params = cluster.get_pool_params(stake_pool_id=pool_ids[0])
-        except BaseException as err:
-            if "JSONDecodeError" in str(err):
-                pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
-            raise
+        except json.decoder.JSONDecodeError as err:
+            pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
 
         assert hasattr(pool_params, "retiring")
