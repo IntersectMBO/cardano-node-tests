@@ -372,6 +372,90 @@ class TestBuildLocking:
 
 
 @pytest.mark.testnets
+class TestInlineDatum:
+    """Tests for Tx output with inline datum."""
+
+    @allure.link(helpers.get_vcs_link())
+    def test_check_inline_datum_cost(self, cluster: clusterlib.ClusterLib):
+        """Check that the min UTxO value with an inline datum depends on the size of the datum.
+
+        * calculate the min UTxO value with a small datum, using both inline and hash
+        * calculate the min UTxO value with a big datum, using both inline and hash
+        * check that the min UTxO value with an inline datum depends on datum size
+        """
+        temp_template = common.get_test_id(cluster)
+
+        plutus_op = PLUTUS_OP_ALWAYS_SUCCEEDS
+        assert plutus_op.datum_file
+
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=plutus_op.script_file
+        )
+
+        # small datum
+
+        txouts_with_small_inline_datum = [
+            clusterlib.TxOut(
+                address=script_address,
+                amount=2_000_000,
+                inline_datum_file=plutus_op.datum_file,
+            )
+        ]
+
+        min_utxo_small_inline_datum = cluster.calculate_min_req_utxo(
+            txouts=txouts_with_small_inline_datum
+        )
+
+        small_datum_hash = cluster.get_hash_script_data(script_data_file=plutus_op.datum_file)
+
+        txouts_with_small_datum_hash = [
+            clusterlib.TxOut(
+                address=script_address,
+                amount=2_000_000,
+                datum_hash=small_datum_hash,
+            )
+        ]
+
+        min_utxo_small_datum_hash = cluster.calculate_min_req_utxo(
+            txouts=txouts_with_small_datum_hash
+        )
+
+        # big datum
+
+        txouts_with_big_inline_datum = [
+            clusterlib.TxOut(
+                address=script_address,
+                amount=2_000_000,
+                inline_datum_file=plutus_common.DATUM_BIG,
+            )
+        ]
+
+        min_utxo_big_inline_datum = cluster.calculate_min_req_utxo(
+            txouts=txouts_with_big_inline_datum
+        )
+
+        big_datum_hash = cluster.get_hash_script_data(script_data_file=plutus_common.DATUM_BIG)
+
+        txouts_with_big_datum_hash = [
+            clusterlib.TxOut(
+                address=script_address,
+                amount=2_000_000,
+                datum_hash=big_datum_hash,
+            )
+        ]
+
+        min_utxo_big_datum_hash = cluster.calculate_min_req_utxo(txouts=txouts_with_big_datum_hash)
+
+        # check that the min UTxO value with an inline datum depends on the size of the datum
+
+        assert (
+            min_utxo_small_inline_datum < min_utxo_small_datum_hash
+            and min_utxo_big_inline_datum > min_utxo_big_datum_hash
+            and min_utxo_big_inline_datum > min_utxo_small_inline_datum
+        ), "The min UTxO value doesn't correspond to the inline datum size"
+
+
+@pytest.mark.testnets
 class TestNegativeInlineDatum:
     """Tests for Tx output with inline datum that are expected to fail."""
 
