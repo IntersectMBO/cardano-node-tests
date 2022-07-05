@@ -152,4 +152,4 @@ class TestTxChaining:
             assert block_ids == sorted(block_ids), "Block IDs of Txs are not ordered"
 
             how_many_blocks = block_ids[-1] - block_ids[0]
-            assert how_many_blocks < iterations // 80, "Expected more chained Txs per block"
+            assert how_many_blocks < iterations // 30, "Expected more chained Txs per block"
