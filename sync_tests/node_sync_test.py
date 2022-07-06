@@ -493,10 +493,10 @@ def start_node_windows(env, tag_no, node_start_arguments):
         start_args = ""
     cmd = (
         f"{NODE} run --topology {env}-topology.json "
-        f"--database-path {Path(ROOT_TEST_PATH) / 'db'} "
+        f"--database-path db "
         f"--host-addr 0.0.0.0 "
         f"--port 3000 "
-        f"--socket-path ./db/node.socket "
+        f"--socket-path \\\\.\pipe\cardano-node "
         f"--config {env}-config.json {start_args}"
     ).strip()
 
@@ -547,7 +547,7 @@ def start_node_unix(env, tag_no, node_start_arguments):
     print(f"start node cmd: {cmd}")
 
     try:
-        p = subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=logfile)
+        p = subprocess.Popen(cmd, stdout=logfile, stderr=logfile)
         print("waiting for db folder to be created")
         count = 0
         count_timeout = 299
