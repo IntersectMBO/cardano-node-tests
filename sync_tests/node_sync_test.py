@@ -535,19 +535,16 @@ def start_node_unix(env, tag_no, node_start_arguments):
     if "None" in start_args:
         start_args = ""
     cmd = (
-        f"{NODE} run --topology {env}-topology.json "
-        f"--database-path {Path(ROOT_TEST_PATH) / 'db'} "
-        f"--host-addr 0.0.0.0 "
-        f"--port 3000 "
-        f"--socket-path ./db/node.socket "
-        f"--config {env}-config.json {start_args}"
+        f"{NODE} run --topology {env}-topology.json --database-path "
+        f"{Path(ROOT_TEST_PATH) / 'db'} "
+        f"--host-addr 0.0.0.0 --port 3000 --config "
+        f"{env}-config.json --socket-path ./db/node.socket {start_args}"
     ).strip()
-
     logfile = open(NODE_LOG_FILE, "w+")
     print(f"start node cmd: {cmd}")
 
     try:
-        p = subprocess.Popen(cmd, stdout=logfile, stderr=logfile)
+        p = subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=logfile)
         print("waiting for db folder to be created")
         count = 0
         count_timeout = 299
