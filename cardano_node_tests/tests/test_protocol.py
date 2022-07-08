@@ -106,6 +106,10 @@ class TestProtocol:
             protocol_state: dict = json.loads(
                 cluster.query_cli(["protocol-state", "--out-file", "/dev/stdout"])
             )
+        except clusterlib.CLIError as err:
+            # TODO: the query is broken on 1.35.0-rc4
+            if "currentlyBroken" in str(err):
+                pytest.xfail("`query protocol-state` is currently broken - see node issue #3883")
         except UnicodeDecodeError as err:
             if "invalid start byte" in str(err):
                 pytest.xfail(
