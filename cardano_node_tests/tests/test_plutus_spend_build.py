@@ -1075,6 +1075,7 @@ class TestBuildLocking:
         except clusterlib.CLIError as err:
             err_str = str(err)
 
+        # TODO: broken on node 1.35.0 and 1.35.1
         if "ScriptWitnessIndexTxIn 0 is missing from the execution units" in err_str:
             pytest.xfail("See cardano-node issue #4013")
 
