@@ -1,12 +1,14 @@
 """Tests for protocol state and protocol parameters."""
 import json
 import logging
+from typing import FrozenSet
 
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -55,6 +57,7 @@ PROTOCOL_PARAM_KEYS = frozenset(
         "utxoCostPerWord",
     )
 )
+PROTOCOL_PARAM_KEYS_1_35_2 = frozenset(("utxoCostPerByte",))
 
 
 @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
@@ -123,4 +126,9 @@ class TestProtocol:
         """Check output of `query protocol-parameters`."""
         common.get_test_id(cluster)
         protocol_params = cluster.get_protocol_params()
-        assert set(protocol_params) == PROTOCOL_PARAM_KEYS
+
+        union_with: FrozenSet[str] = frozenset()
+        if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
+            union_with = PROTOCOL_PARAM_KEYS_1_35_2
+
+        assert set(protocol_params) == PROTOCOL_PARAM_KEYS.union(union_with)
