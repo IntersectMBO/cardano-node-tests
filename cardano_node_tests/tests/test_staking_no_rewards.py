@@ -2,6 +2,7 @@
 import logging
 from pathlib import Path
 from typing import Any
+from typing import List
 
 import allure
 import pytest
@@ -717,6 +718,7 @@ class TestNoRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals
         __: Any  # mypy workaround
+        kes_period_info_errors_list: List[str] = []
         pool_name = cluster_management.Resources.POOL2
         cluster = cluster_lock_pool2
 
@@ -824,8 +826,12 @@ class TestNoRewards:
 
             # check command kes-period-info case: de-register pool
             kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes.check_kes_period_info_result(
-                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+            kes_period_info_errors_list.append(
+                kes.check_kes_period_info_result(
+                    kes_output=kes_period_info,
+                    expected_scenario=kes.KesScenarios.ALL_VALID,
+                    check_id="1",
+                )
             )
 
             # check that the balance for source address was correctly updated
@@ -872,8 +878,12 @@ class TestNoRewards:
             # check command kes-period-info case: re-register pool, check without
             # waiting to take effect
             kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes.check_kes_period_info_result(
-                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+            kes_period_info_errors_list.append(
+                kes.check_kes_period_info_result(
+                    kes_output=kes_period_info,
+                    expected_scenario=kes.KesScenarios.ALL_VALID,
+                    check_id="2",
+                )
             )
 
             # check that the balance for source address was correctly updated and that the
@@ -896,8 +906,12 @@ class TestNoRewards:
 
             # check command kes-period-info case: re-register pool
             kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes.check_kes_period_info_result(
-                kes_output=kes_period_info, expected_scenario=kes.KesScenarios.ALL_VALID
+            kes_period_info_errors_list.append(
+                kes.check_kes_period_info_result(
+                    kes_output=kes_period_info,
+                    expected_scenario=kes.KesScenarios.ALL_VALID,
+                    check_id="3",
+                )
             )
 
             # wait before checking delegation and rewards
@@ -924,3 +938,7 @@ class TestNoRewards:
         assert (
             owner_payment_balance >= pool_data.pool_pledge
         ), f"Pledge is not met for pool '{pool_name}'!"
+
+        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
+        if err_joined:
+            raise AssertionError(f"Errors present on kes-period-info command: {err_joined}.")
