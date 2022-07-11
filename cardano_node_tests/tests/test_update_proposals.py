@@ -1,7 +1,6 @@
 """Tests for update proposals."""
 import json
 import logging
-import math
 import time
 
 import allure
@@ -96,11 +95,11 @@ class TestUpdateProposals:
         with open(f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8") as fp_out:
             json.dump(protocol_params, fp_out, indent=4)
 
-        # update Alonzo-speciffic parameters in separate update proposal
+        # update >= Alonzo-specific parameters in separate update proposal
         if VERSIONS.cluster_era >= VERSIONS.ALONZO:
             if VERSIONS.cluster_era >= VERSIONS.BABBAGE:
                 utxo_cost = clusterlib_utils.UpdateProposal(
-                    arg="--utxo-cost-per-word",
+                    arg="--utxo-cost-per-byte",
                     value=8001,
                     name="",  # needs custom check
                 )
@@ -175,8 +174,7 @@ class TestUpdateProposals:
             assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
 
             if VERSIONS.cluster_era >= VERSIONS.BABBAGE:
-                # the resulting number will be multiple of 8, i.e. 8000
-                assert protocol_params["utxoCostPerWord"] == math.floor(utxo_cost.value / 8) * 8
+                assert protocol_params["utxoCostPerByte"] == utxo_cost.value
             else:
                 assert protocol_params["utxoCostPerWord"] == utxo_cost.value
 

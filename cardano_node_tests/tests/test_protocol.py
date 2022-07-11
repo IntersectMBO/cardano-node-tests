@@ -53,6 +53,7 @@ PROTOCOL_PARAM_KEYS = frozenset(
         "txFeeFixed",
         "txFeePerByte",
         "utxoCostPerWord",
+        "utxoCostPerByte",
     )
 )
 
