@@ -2025,17 +2025,25 @@ class TestCollateralOutput:
             clusterlib.TxOut(address=dst_addr.address, amount=2_000_000),
         ]
 
-        tx_output_redeem = cluster.build_tx(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
-            tx_files=tx_files_redeem,
-            txouts=txouts_redeem,
-            script_txins=plutus_txins,
-            return_collateral_txouts=return_collateral_txouts,
-            total_collateral_amount=total_collateral_amount,
-            change_address=payment_addr.address,
-            script_valid=False,
-        )
+        err_str = ""
+        try:
+            tx_output_redeem = cluster.build_tx(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_step2",
+                tx_files=tx_files_redeem,
+                txouts=txouts_redeem,
+                script_txins=plutus_txins,
+                return_collateral_txouts=return_collateral_txouts,
+                total_collateral_amount=total_collateral_amount,
+                change_address=payment_addr.address,
+                script_valid=False,
+            )
+        except clusterlib.CLIError as err:
+            err_str = str(err)
+
+        # TODO: broken on node 1.35.0 and 1.35.1
+        if "ScriptWitnessIndexTxIn 0 is missing from the execution units" in err_str:
+            pytest.xfail("See cardano-node issue #4013")
 
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
