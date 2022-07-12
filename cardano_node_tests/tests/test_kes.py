@@ -447,11 +447,13 @@ class TestKES:
             )
         )
 
-        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
+        clean_errors_list = [e for e in kes_period_info_errors_list if e]
+        err_joined = "\n".join(clean_errors_list)
+
         if err_joined:
             if (
                 VERSIONS.cluster_era > VERSIONS.ALONZO
-                and len(kes_period_info_errors_list) == 1
+                and len(clean_errors_list) == 1
                 and "check '2'" in err_joined
             ):
                 pytest.xfail("See cardano-node issue #4114")
