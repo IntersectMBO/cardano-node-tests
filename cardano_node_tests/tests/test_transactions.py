@@ -35,6 +35,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -50,6 +51,21 @@ MIN_UTXO_VALUE = (
 )
 
 ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
+
+
+param_submit_method = pytest.mark.parametrize(
+    "submit_method",
+    (
+        "submit_cli",
+        pytest.param(
+            "submit_api",
+            marks=pytest.mark.skipif(
+                not submit_api.has_submit_api(),
+                reason="`cardano-submit-api` is not available",
+            ),
+        ),
+    ),
+)
 
 
 def _get_raw_tx_values(
@@ -130,6 +146,29 @@ class TestBasic:
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            *addrs,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+        return addrs
+
+    @pytest.fixture
+    def payment_addrs_disposable(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create 2 new payment addresses."""
+        temp_template = common.get_test_id(cluster)
+
+        addrs = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_addr_0",
+            f"{temp_template}_addr_1",
+            cluster_obj=cluster,
+        )
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
@@ -330,9 +369,13 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
+    @param_submit_method
     @pytest.mark.dbsync
     def test_transfer_all_funds(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs_disposable: List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Send ALL funds from one payment address to another.
 
@@ -341,17 +384,17 @@ class TestBasic:
         * check that balance for source address is 0 Lovelace
         * check output of the `transaction view` command
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
 
-        src_address = payment_addrs[1].address
-        dst_address = payment_addrs[0].address
+        src_address = payment_addrs_disposable[1].address
+        dst_address = payment_addrs_disposable[0].address
 
         src_init_balance = cluster.get_address_balance(src_address)
         dst_init_balance = cluster.get_address_balance(dst_address)
 
         # amount value -1 means all available funds
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[1].skey_file])
 
         fee = cluster.calculate_tx_fee(
             src_address=src_address,
@@ -371,7 +414,12 @@ class TestBasic:
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+
+        if submit_method == "submit_cli":
+            cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        else:
+            submit_api.submit_tx(tx_file=out_file_signed)
+            clusterlib_utils.check_txin_spent(cluster_obj=cluster, txins=tx_raw_output.txins)
 
         assert (
             cluster.get_address_balance(src_address) == 0
