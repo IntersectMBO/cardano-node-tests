@@ -100,8 +100,10 @@ mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync}
 cd "$STATE_CLUSTER/.."
 
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
+cp "$SCRIPT_DIR"/cardano-submit-api "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/submit-api-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/genesis*.spec.json "$STATE_CLUSTER/shelley/"
 
@@ -129,6 +131,20 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
 command=$SCRIPT_DIR/run_dbsync.sh
 stderr_logfile=./$STATE_CLUSTER_NAME/dbsync.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/dbsync.stdout
+autostart=false
+autorestart=false
+startsecs=3
+EoF
+fi
+
+# enable cardano-submit-api service
+if type cardano-submit-api >/dev/null; then
+  cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
+
+[program:submit_api]
+command=$SCRIPT_DIR/cardano-submit-api
+stderr_logfile=./$STATE_CLUSTER_NAME/submit_api.stderr
+stdout_logfile=./$STATE_CLUSTER_NAME/submit_api.stdout
 autostart=false
 autorestart=false
 startsecs=3
@@ -884,6 +900,12 @@ sleep "$NEXT_EPOCH_SLEEP_RESTART"
 #
 
 wait_for_epoch "$((ALONZO_EPOCH + 1))"
+
+# start cardano-submit-api
+if type cardano-submit-api >/dev/null; then
+  echo "Starting cardano-submit-api"
+  supervisorctl start submit_api
+fi
 
 cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
