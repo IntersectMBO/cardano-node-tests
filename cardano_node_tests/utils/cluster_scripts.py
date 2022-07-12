@@ -36,6 +36,7 @@ class InstancePorts(NamedTuple):
     pool1: int
     pool2: int
     pool3: int
+    submit_api: int
     supervisor: int
     ekg_bft1: int
     ekg_relay1: int
@@ -99,6 +100,7 @@ class LocalScripts(ScriptsTypes):
             pool1=base + 2,
             pool2=base + 3,
             pool3=base + 4,
+            submit_api=base + 9,
             supervisor=12001 + instance_num,
             ekg_bft1=metrics_base,
             ekg_relay1=0,
@@ -147,6 +149,7 @@ class LocalScripts(ScriptsTypes):
             # replace node port number strings, omitting the last digit
             new_content = new_content.replace("3000", str(instance_ports.base // 10))
             new_content = new_content.replace("9001", str(instance_ports.supervisor))
+            new_content = new_content.replace("8090", str(instance_ports.submit_api))
             new_content = new_content.replace(
                 "supervisorctl ", f"supervisorctl -s http://127.0.0.1:{instance_ports.supervisor} "
             )
@@ -195,7 +198,13 @@ class LocalScripts(ScriptsTypes):
 class TestnetScripts(ScriptsTypes):
     """Testnet cluster scripts (full cardano mode)."""
 
-    TESTNET_GLOBS = ("config*.json", "genesis-*.json", "topology-*.json", "dbsync-config.*")
+    TESTNET_GLOBS = (
+        "config*.json",
+        "genesis-*.json",
+        "topology-*.json",
+        "dbsync-config.*",
+        "submit-api-config.*",
+    )
     BOOTSTRAP_CONF = "testnet_conf"
 
     def __init__(self) -> None:
@@ -216,6 +225,7 @@ class TestnetScripts(ScriptsTypes):
             pool1=base + 4,
             pool2=base + 5,
             pool3=0,
+            submit_api=base + 9,
             supervisor=12001 + instance_num,
             ekg_bft1=0,
             ekg_relay1=metrics_base,
@@ -284,6 +294,7 @@ class TestnetScripts(ScriptsTypes):
             # reconfigure metrics ports
             new_content = new_content.replace("3030", str(instance_ports.ekg_relay1 // 10))
             new_content = new_content.replace("9001", str(instance_ports.supervisor))
+            new_content = new_content.replace("8090", str(instance_ports.submit_api))
             new_content = new_content.replace(
                 "supervisorctl ", f"supervisorctl -s http://127.0.0.1:{instance_ports.supervisor} "
             )
@@ -370,6 +381,7 @@ class TestnetNopoolsScripts(TestnetScripts):
             pool1=0,
             pool2=0,
             pool3=0,
+            submit_api=base + 9,
             supervisor=12001 + instance_num,
             ekg_bft1=0,
             ekg_relay1=metrics_base,
