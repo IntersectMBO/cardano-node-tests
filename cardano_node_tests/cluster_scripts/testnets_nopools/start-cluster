@@ -31,6 +31,7 @@ cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
 
 # copy and edit configuration
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
+cp "$SCRIPT_DIR"/cardano-submit-api "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 cp "$TESTNET_CONF_DIR/topology-relay1.json" "$STATE_CLUSTER"
 cp "$TESTNET_CONF_DIR"/genesis-*.json "$STATE_CLUSTER"
@@ -64,6 +65,25 @@ command=$SCRIPT_DIR/run_dbsync.sh
 stderr_logfile=./$state_cluster_name/dbsync.stderr
 stdout_logfile=./$state_cluster_name/dbsync.stdout
 autostart=false
+autorestart=false
+startsecs=3
+EoF
+fi
+
+# enable cardano-submit-api service
+if type cardano-submit-api >/dev/null && [ -e "$TESTNET_CONF_DIR/submit-api-config.yaml" ]; then
+  # copy cardano-submit-api config file
+  cp "$TESTNET_CONF_DIR/submit-api-config.yaml" "$STATE_CLUSTER/submit-api-config.yaml"
+
+  cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
+
+[program:submit_api]
+command=$SCRIPT_DIR/cardano-submit-api
+stderr_logfile=./$state_cluster_name/submit_api.stderr
+stdout_logfile=./$state_cluster_name/submit_api.stdout
+autostart=false
+autorestart=false
+startsecs=3
 EoF
 fi
 
@@ -119,6 +139,13 @@ for _ in {1..600}; do
   sleep 5
 done
 
+# start cardano-submit-api
+if type cardano-submit-api >/dev/null && [ -e "$STATE_CLUSTER/submit-api-config.yaml" ]; then
+  echo "Starting cardano-submit-api"
+  supervisorctl start submit_api
+fi
+
+# start db-sync
 if [ -n "${DBSYNC_REPO:-""}" ]; then
   echo "Starting db-sync"
   supervisorctl start dbsync

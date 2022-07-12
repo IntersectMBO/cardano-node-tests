@@ -1009,3 +1009,14 @@ def cli_has(command: str) -> bool:
 
     cmd_err = err_str.split(":", maxsplit=1)[1].strip()
     return not cmd_err.startswith("Invalid")
+
+
+def check_txin_spent(
+    cluster_obj: clusterlib.ClusterLib, txins: List[clusterlib.UTXOData], wait_blocks: int = 2
+) -> None:
+    """Check that txin was spent after waiting for several new blocks."""
+    cluster_obj.wait_for_new_block(wait_blocks)
+    utxo_data = cluster_obj.get_utxo(utxo=txins[0])
+
+    if utxo_data:
+        raise AssertionError(f"The txin '{txins[0]}` was not spent.")

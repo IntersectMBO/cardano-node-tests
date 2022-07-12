@@ -12,6 +12,7 @@ import os
 import random
 import shutil
 import signal
+import socket
 import string
 import subprocess
 import time
@@ -284,3 +285,11 @@ def touch(file: Path) -> None:
     """Do the same as unix `touch` command."""
     with open(file, "a", encoding="utf-8"):
         pass
+
+
+def is_port_open(host: str, port: int) -> bool:
+    """Check if port is open."""
+    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        if sock.connect_ex((host, port)) == 0:
+            return True
+    return False
