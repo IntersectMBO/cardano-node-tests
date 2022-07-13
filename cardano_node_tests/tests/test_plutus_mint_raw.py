@@ -1097,7 +1097,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        invalid_hereafter = cluster.get_slot_no() + 1_000
+        invalid_hereafter = cluster.get_slot_no() + 200
 
         policyid = cluster.get_policyid(plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
@@ -1118,7 +1118,7 @@ class TestMinting:
         # we can generate a tx and then derive the correct redeemer
         redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
         clusterlib_utils.create_script_context(
-            cluster_obj=cluster, redeemer_file=redeemer_file_dummy
+            cluster_obj=cluster, plutus_version=1, redeemer_file=redeemer_file_dummy
         )
 
         plutus_mint_data_dummy = [
@@ -1159,7 +1159,10 @@ class TestMinting:
 
         try:
             clusterlib_utils.create_script_context(
-                cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
+                cluster_obj=cluster,
+                plutus_version=1,
+                redeemer_file=redeemer_file,
+                tx_file=tx_file_dummy,
             )
         except AssertionError as err:
             err_msg = str(err)
