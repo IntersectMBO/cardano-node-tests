@@ -524,7 +524,7 @@ class TestLocking:
         # we can generate a tx and then derive the correct redeemer
         redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
         clusterlib_utils.create_script_context(
-            cluster_obj=cluster, redeemer_file=redeemer_file_dummy
+            cluster_obj=cluster, plutus_version=1, redeemer_file=redeemer_file_dummy
         )
 
         plutus_op_dummy = plutus_common.PlutusOp(
@@ -545,7 +545,7 @@ class TestLocking:
             deposit_amount=deposit_amount,
         )
 
-        invalid_hereafter = cluster.get_slot_no() + 1_000
+        invalid_hereafter = cluster.get_slot_no() + 200
 
         __, tx_output_dummy = _spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
@@ -569,7 +569,10 @@ class TestLocking:
 
         try:
             clusterlib_utils.create_script_context(
-                cluster_obj=cluster, redeemer_file=redeemer_file, tx_file=tx_file_dummy
+                cluster_obj=cluster,
+                plutus_version=1,
+                redeemer_file=redeemer_file,
+                tx_file=tx_file_dummy,
             )
         except AssertionError as err:
             err_msg = str(err)
