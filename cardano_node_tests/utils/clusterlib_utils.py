@@ -974,34 +974,48 @@ def utxodata2txout(utxodata: clusterlib.UTXOData) -> clusterlib.TxOut:
 
 
 def create_script_context(
-    cluster_obj: clusterlib.ClusterLib, redeemer_file: Path, tx_file: Optional[Path] = None
+    cluster_obj: clusterlib.ClusterLib,
+    plutus_version: int,
+    redeemer_file: Path,
+    tx_file: Optional[Path] = None,
 ) -> None:
-    """Run the `create-script-context` command (available in plutus-examples)."""
+    """Run the `create-script-context` command (available in plutus-apps)."""
+    version_args = []
+    # TODO: remove once `--plutus-*` args are in main branch
+    if tool_has("create-script-context --plutus-v1"):
+        if plutus_version == 1:
+            version_args = ["--plutus-v1"]
+        elif plutus_version == 2:
+            version_args = ["--plutus-v2"]
+        else:
+            raise AssertionError(f"Unknown plutus version: {plutus_version}")
+
     if tx_file:
         cmd_args = [
             "create-script-context",
             "--generate-tx",
             str(tx_file),
-            "--out-file",
-            str(redeemer_file),
+            *version_args,
             f"--{cluster_obj.protocol}-mode",
             *cluster_obj.magic_args,
+            "--out-file",
+            str(redeemer_file),
         ]
     else:
-        cmd_args = ["create-script-context", "--out-file", str(redeemer_file)]
+        cmd_args = ["create-script-context", *version_args, "--out-file", str(redeemer_file)]
 
     helpers.run_command(cmd_args)
     assert redeemer_file.exists()
 
 
-def cli_has(command: str) -> bool:
-    """Check if a cardano-cli subcommand or argument is available.
+def tool_has(command: str) -> bool:
+    """Check if a tool has a subcommand or argument available.
 
-    E.g. `cli_has("query leadership-schedule --next")`
+    E.g. `tool_has_arg("create-script-context --plutus-v1")`
     """
     err_str = ""
     try:
-        helpers.run_command(f"cardano-cli {command}")
+        helpers.run_command(command)
     except AssertionError as err:
         err_str = str(err)
     else:
@@ -1009,6 +1023,15 @@ def cli_has(command: str) -> bool:
 
     cmd_err = err_str.split(":", maxsplit=1)[1].strip()
     return not cmd_err.startswith("Invalid")
+
+
+def cli_has(command: str) -> bool:
+    """Check if a cardano-cli subcommand or argument is available.
+
+    E.g. `cli_has("query leadership-schedule --next")`
+    """
+    full_command = f"cardano-cli {command}"
+    return tool_has(full_command)
 
 
 def check_txin_spent(
