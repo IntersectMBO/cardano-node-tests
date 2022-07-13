@@ -3,12 +3,22 @@ import binascii
 import json
 import shutil
 from pathlib import Path
+from typing import NamedTuple
 
 import requests
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
+
+
+class SubmitApiError(Exception):
+    pass
+
+
+class SubmitApiOut(NamedTuple):
+    txid: str
+    response: requests.Response
 
 
 @helpers.callonce
@@ -54,7 +64,7 @@ def post_cbor(cbor_file: FileType, url: str) -> requests.Response:
     return response
 
 
-def submit_tx(tx_file: FileType) -> requests.Response:
+def submit_tx(tx_file: FileType) -> SubmitApiOut:
     """Submit a signed Tx using `cardano-submit-api` service."""
     cbor_file = tx2cbor(tx_file=tx_file)
 
@@ -67,5 +77,14 @@ def submit_tx(tx_file: FileType) -> requests.Response:
     url = f"http://localhost:{submit_api_port}/api/submit/tx"
 
     response = post_cbor(cbor_file=cbor_file, url=url)
+    if not response:
+        raise SubmitApiError(
+            f"Failed to submit the tx.\n"
+            f"  status: {response.status_code}\n"
+            f"  reason: {response.reason}\n"
+            f"  error: {response.text}"
+        )
 
-    return response
+    out = SubmitApiOut(txid=response.json(), response=response)
+
+    return out
