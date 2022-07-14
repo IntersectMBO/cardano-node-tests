@@ -249,7 +249,7 @@ class TestBasic:
             ), f"Unexpected balance for source address `{src_address}` in db-sync"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.dbsync
     def test_build_transfer_funds(
         self,
@@ -300,7 +300,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.dbsync
     def test_build_no_change(
         self,
@@ -790,7 +790,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_multiple_same_txins(
         self,
         cluster: clusterlib.ClusterLib,
@@ -831,10 +831,8 @@ class TestBasic:
         assert tx_raw_output.out_file.exists()
 
     @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_PLUTUS_UNUSABLE
     @pytest.mark.dbsync
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO, reason="runs only with Alonzo+ TX"
-    )
     def test_utxo_with_datum_hash(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1158,10 +1156,7 @@ class TestMultiInOut:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1194,10 +1189,7 @@ class TestMultiInOut:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1230,10 +1222,7 @@ class TestMultiInOut:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1266,10 +1255,7 @@ class TestMultiInOut:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1667,7 +1653,7 @@ class TestNotBalanced:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(transfer_add=st.integers(min_value=0, max_value=MAX_LOVELACE_AMOUNT))
     @common.hypothesis_settings()
     def test_build_transfer_unavailable_funds(
@@ -1798,7 +1784,7 @@ class TestNotBalanced:
             assert "out of bounds" in exc_val or "exceeds the max bound" in exc_val
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE, min_value=0))
     @common.hypothesis_settings(max_examples=200)
     def test_build_transfer_amount_bellow_minimum(
@@ -1824,7 +1810,7 @@ class TestNotBalanced:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(amount=st.integers(max_value=-1, min_value=-MAX_LOVELACE_AMOUNT))
     @common.hypothesis_settings(max_examples=300)
     def test_build_transfer_negative_amount(
@@ -2374,10 +2360,7 @@ class TestNegative:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -2403,10 +2386,7 @@ class TestNegative:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -2445,7 +2425,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings()
     def test_build_send_funds_to_invalid_address(
@@ -2482,7 +2462,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings()
     def test_build_send_funds_to_invalid_length_address(
@@ -2521,7 +2501,7 @@ class TestNegative:
         self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
@@ -2560,7 +2540,7 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings()
     def test_build_send_funds_from_invalid_address(
@@ -2597,7 +2577,7 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings()
     def test_build_send_funds_from_invalid_length_address(
@@ -2636,7 +2616,7 @@ class TestNegative:
         self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
@@ -2659,7 +2639,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings()
     def test_build_send_funds_invalid_change_address(
@@ -2680,7 +2660,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
@@ -2703,7 +2683,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings()
     def test_build_send_funds_invalid_length_change_address(
@@ -2728,10 +2708,7 @@ class TestNegative:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -2767,10 +2744,7 @@ class TestNegative:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -2829,7 +2803,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings()
     def test_build_invalid_lenght_utxo_hash(
@@ -2973,7 +2947,7 @@ class TestNegative:
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_missing_tx_in(
         self,
         cluster: clusterlib.ClusterLib,
@@ -3014,7 +2988,7 @@ class TestNegative:
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_missing_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -3054,7 +3028,7 @@ class TestNegative:
         assert re.search(r"Missing:.* --change-address ADDRESS", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_multiple_change_addresses(
         self,
         cluster: clusterlib.ClusterLib,
@@ -3233,7 +3207,7 @@ class TestMetadata:
         assert "The JSON metadata top level must be a map" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -3284,7 +3258,7 @@ class TestMetadata:
         assert "Failed reading: satisfy" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -3335,7 +3309,7 @@ class TestMetadata:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -3403,7 +3377,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.dbsync
     def test_build_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -3491,7 +3465,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.dbsync
     def test_build_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -3590,7 +3564,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.dbsync
     def test_build_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord

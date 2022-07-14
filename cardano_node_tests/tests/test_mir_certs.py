@@ -185,7 +185,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_transfer_to_treasury(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -338,7 +338,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     def test_build_transfer_to_reserves(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -497,7 +497,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+    @common.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_build_pay_stake_addr_from(
         self,

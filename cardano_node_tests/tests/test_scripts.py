@@ -186,10 +186,7 @@ class TestBasic:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -249,10 +246,7 @@ class TestBasic:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -348,10 +342,7 @@ class TestBasic:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -423,10 +414,7 @@ class TestBasic:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -501,10 +489,7 @@ class TestBasic:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -947,10 +932,7 @@ class TestTimeLocking:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1024,10 +1006,7 @@ class TestTimeLocking:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1099,10 +1078,7 @@ class TestTimeLocking:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1188,10 +1164,7 @@ class TestTimeLocking:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1261,10 +1234,7 @@ class TestTimeLocking:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1350,10 +1320,7 @@ class TestTimeLocking:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1463,10 +1430,7 @@ class TestAuxiliaryScripts:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1535,10 +1499,7 @@ class TestAuxiliaryScripts:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1608,10 +1569,7 @@ class TestAuxiliaryScripts:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1672,10 +1630,7 @@ class TestAuxiliaryScripts:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1755,10 +1710,7 @@ class TestIncrementalSigning:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
