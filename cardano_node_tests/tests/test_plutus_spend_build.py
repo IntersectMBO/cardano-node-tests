@@ -34,16 +34,6 @@ pytestmark = [
 ]
 
 
-param_plutus_version = pytest.mark.parametrize(
-    "plutus_version",
-    (
-        "v1",
-        pytest.param("v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-    ),
-    ids=("plutus_v1", "plutus_v2"),
-)
-
-
 @pytest.fixture
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
@@ -391,7 +381,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -583,7 +573,7 @@ class TestBuildLocking:
         "variant",
         ("typed_json", "typed_cbor", "untyped_value", "untyped_json", "untyped_cbor"),
     )
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1066,7 +1056,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1144,7 +1134,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1260,7 +1250,7 @@ class TestBuildLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_collateral_is_txin(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1377,7 +1367,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_collateral_w_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1446,7 +1436,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_same_collateral_txin(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1510,7 +1500,7 @@ class TestNegative:
             "43_43",  # wrong datum and redeemer
         ),
     )
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_invalid_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1576,7 +1566,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_two_scripts_spending_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1824,7 +1814,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_inside_range(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1883,7 +1873,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_above_range(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1919,7 +1909,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_bellow_range(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1954,7 +1944,7 @@ class TestNegativeRedeemer:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     @common.hypothesis_settings()
     def test_wrong_type(
         self,
@@ -2006,7 +1996,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_int_bytes_declared(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2060,7 +2050,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_int_bytes_declared(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2114,7 +2104,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_bytes_int_declared(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2169,7 +2159,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_bytes_int_declared(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2224,7 +2214,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.text())
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_invalid_json(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2275,7 +2265,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_type=st.text())
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_invalid_type(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2328,7 +2318,7 @@ class TestNegativeRedeemer:
     @pytest.mark.testnets
     @hypothesis.given(redeemer_type=st.text())
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_invalid_type(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2383,7 +2373,7 @@ class TestNegativeDatum:
     """Tests for Tx output locking using Plutus smart contracts with wrong datum."""
 
     @allure.link(helpers.get_vcs_link())
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2458,7 +2448,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings()
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2494,7 +2484,7 @@ class TestNegativeDatum:
         assert "JSON object expected. Unexpected value" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_unlock_tx_wrong_datum(
         self,
         cluster: clusterlib.ClusterLib,

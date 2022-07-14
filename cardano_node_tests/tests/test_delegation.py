@@ -78,14 +78,7 @@ class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     @pytest.mark.smoke
     def test_delegate_using_pool_id(
@@ -126,14 +119,7 @@ class TestDelegateAddr:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     @pytest.mark.smoke
     @pytest.mark.skipif(
@@ -469,14 +455,7 @@ class TestDelegateAddr:
             assert this_epoch in db_reward_epochs
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     @pytest.mark.smoke
     def test_addr_registration_deregistration(
@@ -557,14 +536,7 @@ class TestDelegateAddr:
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     @pytest.mark.smoke
     def test_addr_delegation_deregistration(
@@ -682,14 +654,7 @@ class TestDelegateAddr:
             assert pool_id == tx_db_deleg.stake_delegation[0].pool_id
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     @pytest.mark.smoke
     def test_addr_registration_certificate_order(
@@ -911,14 +876,7 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_delegate_unknown_addr(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
@@ -973,14 +931,7 @@ class TestNegative:
         assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_delegate_deregistered_addr(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
@@ -1067,14 +1018,7 @@ class TestNegative:
         assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_deregister_not_registered_addr(
         self,
         cluster: clusterlib.ClusterLib,

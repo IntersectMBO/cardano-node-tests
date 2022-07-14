@@ -154,15 +154,8 @@ class TestMinting:
     """Tests for minting and burning tokens."""
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
     @pytest.mark.dbsync
     def test_minting_and_burning_witnesses(
         self,
@@ -841,14 +834,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_minting_and_partial_burning(
         self,
@@ -1032,14 +1018,7 @@ class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_valid_policy_after(
         self,
@@ -1127,14 +1106,7 @@ class TestPolicies:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_valid_policy_before(
         self,
@@ -1558,15 +1530,8 @@ class TestTransfer:
         return new_token
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("amount", (1, 10, 200, 2_000, 100_000))
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
     @pytest.mark.dbsync
     def test_transfer_tokens(
         self,
@@ -1666,14 +1631,7 @@ class TestTransfer:
             pytest.xfail("`calculate_min_req_utxo` is broken in Babbage")
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
         self,
@@ -1819,14 +1777,7 @@ class TestTransfer:
             pytest.xfail("`calculate_min_req_utxo` is broken in Babbage")
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
         reason="runs only on local cluster",
@@ -1881,14 +1832,7 @@ class TestTransfer:
         token_amount=st.integers(min_value=NEW_TOKENS_NUM + 1, max_value=MAX_TOKEN_AMOUNT)
     )
     @common.hypothesis_settings()
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_transfer_invalid_token_amount(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2088,7 +2032,7 @@ class TestNegative:
         assert "the number exceeds the max bound" in str(excinfo.value)
 
 
-@common.SKIPIF_BAD_ERA
+@common.SKIPIF_WRONG_ERA
 @pytest.mark.testnets
 @pytest.mark.smoke
 class TestCLITxOutSyntax:
