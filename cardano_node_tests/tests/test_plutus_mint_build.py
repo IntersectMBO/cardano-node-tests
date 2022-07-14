@@ -31,16 +31,6 @@ pytestmark = [
 ]
 
 
-param_plutus_version = pytest.mark.parametrize(
-    "plutus_version",
-    (
-        "v1",
-        pytest.param("v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-    ),
-    ids=("plutus_v1", "plutus_v2"),
-)
-
-
 @pytest.fixture
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
@@ -128,7 +118,7 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_minting_one_token(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1096,7 +1086,7 @@ class TestBuildMintingNegative:
         "ttl",
         (3_000, 10_000, 100_000, 1000_000, -1),
     )
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_past_horizon(
         self,
         cluster: clusterlib.ClusterLib,
