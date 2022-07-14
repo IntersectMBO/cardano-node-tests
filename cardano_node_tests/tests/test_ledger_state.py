@@ -33,7 +33,7 @@ class TestLedgerState:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(-1)
-    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+    @common.SKIPIF_BAD_ERA
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_stake_snapshot(self, cluster: clusterlib.ClusterLib):  # noqa: C901

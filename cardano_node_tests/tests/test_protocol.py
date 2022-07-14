@@ -60,7 +60,7 @@ PROTOCOL_PARAM_KEYS = frozenset(
 PROTOCOL_PARAM_KEYS_1_35_2 = frozenset(("utxoCostPerByte",))
 
 
-@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+@common.SKIPIF_BAD_ERA
 @pytest.mark.testnets
 @pytest.mark.smoke
 class TestProtocol:

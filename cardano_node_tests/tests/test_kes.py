@@ -41,7 +41,7 @@ if configuration.UPDATE_COST_MODEL and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
     NUM_OF_EPOCHS += 1
 
 
-pytestmark = pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+pytestmark = common.SKIPIF_BAD_ERA
 
 
 @pytest.fixture

@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 # skip all tests if Tx era < babbage
 pytestmark = [
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
+    common.SKIPIF_BUILD_UNUSABLE,
     pytest.mark.smoke,
 ]
 
