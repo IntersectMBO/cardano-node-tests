@@ -10,7 +10,6 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import model_ekg
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -42,10 +41,7 @@ def get_ekg_metrics(port: int) -> requests.Response:
     return response
 
 
-@pytest.mark.skipif(
-    VERSIONS.transaction_era != VERSIONS.DEFAULT_TX_ERA,
-    reason="different TX eras doesn't affect this test, pointless to run",
-)
+@common.SKIPIF_BAD_ERA
 class TestPrometheus:
     """Prometheus metrics tests."""
 
@@ -126,7 +122,7 @@ class TestPrometheus:
         assert metrics_keys == self.EXPECTED_METRICS, "Metrics differ"
 
 
-@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+@common.SKIPIF_BAD_ERA
 class TestEKG:
     """EKG metrics tests."""
 

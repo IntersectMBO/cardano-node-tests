@@ -31,10 +31,7 @@ LOGGER = logging.getLogger(__name__)
 
 # skip all tests if Tx era < alonzo
 pytestmark = [
-    pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    ),
+    common.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.smoke,
 ]
 
