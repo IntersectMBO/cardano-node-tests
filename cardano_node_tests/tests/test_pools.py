@@ -631,14 +631,7 @@ class TestStakePool:
     """General tests for stake pools."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_stake_pool_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -703,14 +696,7 @@ class TestStakePool:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=pool_creation_out.tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_stake_pool_not_avail_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -772,15 +758,8 @@ class TestStakePool:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("no_of_addr", [1, 3])
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("no_of_addr", (1, 3))
     def test_create_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -830,14 +809,7 @@ class TestStakePool:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_deregister_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1256,14 +1228,7 @@ class TestStakePool:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_update_stake_pool_metadata(
         self,
@@ -1387,14 +1352,7 @@ class TestStakePool:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_update_stake_pool_parameters(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -2086,14 +2044,7 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_pool_deregistration_not_registered(
         self,
         cluster: clusterlib.ClusterLib,

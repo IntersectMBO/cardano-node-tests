@@ -29,15 +29,6 @@ pytestmark = [
 ]
 
 
-param_plutus_version = pytest.mark.parametrize(
-    "plutus_version",
-    (
-        "v1",
-        pytest.param("v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-    ),
-    ids=("plutus_v1", "plutus_v2"),
-)
-
 # approx. fee for Tx size
 FEE_MINT_TXSIZE = 400_000
 
@@ -173,7 +164,7 @@ class TestMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1284,7 +1275,7 @@ class TestMintingNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_low_budget(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1381,7 +1372,7 @@ class TestMintingNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_low_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1482,7 +1473,7 @@ class TestMintingNegative:
         "ttl",
         (3_000, 10_000, 100_000, 1000_000, -1),
     )
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_past_horizon(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1596,7 +1587,7 @@ class TestNegativeCollateral:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_minting_with_invalid_collaterals(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1696,7 +1687,7 @@ class TestNegativeCollateral:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @param_plutus_version
+    @common.PARAM_PLUTUS_VERSION
     def test_minting_with_insufficient_collateral(
         self,
         cluster: clusterlib.ClusterLib,

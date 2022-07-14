@@ -41,7 +41,7 @@ def get_ekg_metrics(port: int) -> requests.Response:
     return response
 
 
-@common.SKIPIF_BAD_ERA
+@common.SKIPIF_WRONG_ERA
 class TestPrometheus:
     """Prometheus metrics tests."""
 
@@ -122,7 +122,7 @@ class TestPrometheus:
         assert metrics_keys == self.EXPECTED_METRICS, "Metrics differ"
 
 
-@common.SKIPIF_BAD_ERA
+@common.SKIPIF_WRONG_ERA
 class TestEKG:
     """EKG metrics tests."""
 

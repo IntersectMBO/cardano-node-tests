@@ -182,14 +182,7 @@ class TestBasic:
         assert len(script_address) == len(payment_addrs[0].address)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_multisig_all(
         self,
@@ -242,14 +235,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_multisig_any(
         self,
@@ -338,14 +324,7 @@ class TestBasic:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_multisig_atleast(
         self,
@@ -410,14 +389,7 @@ class TestBasic:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_normal_tx_to_script_addr(
         self,
@@ -485,14 +457,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_normal_tx_from_script_addr(
         self,
@@ -928,14 +893,7 @@ class TestTimeLocking:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_script_after(
         self,
@@ -1002,14 +960,7 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_script_before(
         self,
@@ -1074,14 +1025,7 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_before_past(
         self,
@@ -1160,14 +1104,7 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_before_future(
         self,
@@ -1230,14 +1167,7 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_after_future(
         self,
@@ -1316,14 +1246,7 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_after_past(
         self,
@@ -1426,14 +1349,7 @@ class TestAuxiliaryScripts:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_tx_script_metadata_json(
         self,
@@ -1495,14 +1411,7 @@ class TestAuxiliaryScripts:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_tx_script_metadata_cbor(
         self,
@@ -1565,14 +1474,7 @@ class TestAuxiliaryScripts:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_tx_script_no_metadata(
         self,
@@ -1626,14 +1528,7 @@ class TestAuxiliaryScripts:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_tx_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1706,14 +1601,7 @@ class TestIncrementalSigning:
         VERSIONS.transaction_era < VERSIONS.MARY,
         reason="runs only with Mary+ TX",
     )
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
     @pytest.mark.dbsync
     def test_incremental_signing(
