@@ -982,7 +982,7 @@ def create_script_context(
     """Run the `create-script-context` command (available in plutus-apps)."""
     version_args = []
     # TODO: remove once `--plutus-*` args are in main branch
-    if tool_has("create-script-context --plutus-v1"):
+    if helpers.tool_has("create-script-context --plutus-v1"):
         if plutus_version == 1:
             version_args = ["--plutus-v1"]
         elif plutus_version == 2:
@@ -1008,30 +1008,13 @@ def create_script_context(
     assert redeemer_file.exists()
 
 
-def tool_has(command: str) -> bool:
-    """Check if a tool has a subcommand or argument available.
-
-    E.g. `tool_has_arg("create-script-context --plutus-v1")`
-    """
-    err_str = ""
-    try:
-        helpers.run_command(command)
-    except AssertionError as err:
-        err_str = str(err)
-    else:
-        return True
-
-    cmd_err = err_str.split(":", maxsplit=1)[1].strip()
-    return not cmd_err.startswith("Invalid")
-
-
 def cli_has(command: str) -> bool:
     """Check if a cardano-cli subcommand or argument is available.
 
     E.g. `cli_has("query leadership-schedule --next")`
     """
     full_command = f"cardano-cli {command}"
-    return tool_has(full_command)
+    return helpers.tool_has(full_command)
 
 
 def check_txin_spent(
