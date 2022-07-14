@@ -1151,15 +1151,8 @@ class TestMultiInOut:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_1_addr(
         self,
@@ -1184,15 +1177,8 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
     @pytest.mark.dbsync
     def test_transaction_to_1_addr_from_10_addrs(
         self,
@@ -1217,15 +1203,8 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
@@ -1250,15 +1229,8 @@ class TestMultiInOut:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
     @pytest.mark.dbsync
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
@@ -2356,14 +2328,7 @@ class TestNegative:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_send_funds_to_reward_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2382,14 +2347,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_send_funds_to_utxo_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2704,14 +2662,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_nonexistent_utxo_ix(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2740,14 +2691,7 @@ class TestNegative:
         assert expected_msg in err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_build_cmd",
-        (
-            False,
-            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
-        ),
-        ids=("build_raw", "build"),
-    )
+    @common.PARAM_USE_BUILD_CMD
     def test_nonexistent_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,

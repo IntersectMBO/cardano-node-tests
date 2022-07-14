@@ -24,7 +24,7 @@ SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
     ),
 )
 
-SKIPIF_BAD_ERA = pytest.mark.skipif(
+SKIPIF_WRONG_ERA = pytest.mark.skipif(
     not (
         VERSIONS.cluster_era >= VERSIONS.DEFAULT_CLUSTER_ERA
         and VERSIONS.transaction_era == VERSIONS.cluster_era
@@ -42,9 +42,30 @@ SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
     reason="Plutus is available only in Alonzo+ eras",
 )
 
+
 SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
     reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
+)
+
+
+# common parametrization
+PARAM_USE_BUILD_CMD = pytest.mark.parametrize(
+    "use_build_cmd",
+    (
+        False,
+        pytest.param(True, marks=SKIPIF_BUILD_UNUSABLE),
+    ),
+    ids=("build_raw", "build"),
+)
+
+PARAM_PLUTUS_VERSION = pytest.mark.parametrize(
+    "plutus_version",
+    (
+        "v1",
+        pytest.param("v2", marks=SKIPIF_PLUTUSV2_UNUSABLE),
+    ),
+    ids=("plutus_v1", "plutus_v2"),
 )
 
 
