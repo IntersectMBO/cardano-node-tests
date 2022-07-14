@@ -199,6 +199,9 @@ class BlockDBRow(NamedTuple):
     epoch_slot_no: Optional[int]
     block_no: Optional[int]
     previous_id: Optional[int]
+    tx_count: Optional[int]
+    proto_major: Optional[int]
+    proto_minor: Optional[int]
     pool_id: str
 
 
@@ -589,7 +592,7 @@ def query_blocks(
     query = (
         "SELECT"
         " block.id, block.epoch_no, block.slot_no, block.epoch_slot_no, block.block_no,"
-        " block.previous_id,"
+        " block.previous_id, block.tx_count, block.proto_major, block.proto_minor,"
         " pool_hash.view "
         "FROM block "
         "INNER JOIN slot_leader ON slot_leader.id = block.slot_leader_id "
