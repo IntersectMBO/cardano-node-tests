@@ -19,21 +19,12 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.BABBAGE,
-        reason="runs only with Babbage+ TX",
-    ),
-    pytest.mark.skipif(
-        bool(configuration.SKIP_PLUTUSV2),
-        reason="needs PlutusV2 cost model",
-    ),
+    common.SKIPIF_PLUTUSV2_UNUSABLE,
     pytest.mark.smoke,
 ]
 

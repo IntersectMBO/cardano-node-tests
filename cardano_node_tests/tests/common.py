@@ -4,9 +4,11 @@ from pathlib import Path
 from typing import Any
 from typing import NamedTuple
 
+import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.versions import VERSIONS
 
 
@@ -16,6 +18,12 @@ BUILD_USABLE = (
 BUILD_SKIP_MSG = (
     f"cannot use `build` with cluster era '{VERSIONS.cluster_era_name}' "
     f"and TX era '{VERSIONS.transaction_era_name}'"
+)
+
+
+SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
+    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
 )
 
 SAME_ERAS = (
