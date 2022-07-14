@@ -1,5 +1,6 @@
 """Checks for `transaction view` CLI command."""
 import itertools
+import json
 import logging
 import re
 from typing import Any
@@ -134,6 +135,23 @@ def _check_reference_inputs(
     reference_strings = {f"{r.utxo_hash}#{r.utxo_ix}" for r in reference_txins_combined}
 
     return reference_strings == set(expected_reference_inputs)
+
+
+def _check_inline_datums(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> bool:
+    """Check inline datums of tx_view."""
+    raw_inline_datums = []
+
+    for out in tx_raw_output.txouts:
+        if out.inline_datum_file:
+            with open(out.inline_datum_file, encoding="utf-8") as json_datum:
+                raw_inline_datums.append(json.load(json_datum))
+
+        if out.inline_datum_value:
+            raw_inline_datums.append(out.inline_datum_value)
+
+    tx_datums = [out.get("datum") for out in tx_loaded.get("outputs", []) if out.get("datum")]
+
+    return all(item in tx_datums for item in raw_inline_datums) if raw_inline_datums else True
 
 
 def check_tx_view(  # noqa: C901
@@ -273,5 +291,12 @@ def check_tx_view(  # noqa: C901
         expected_reference_inputs=tx_loaded.get("reference inputs") or [],
     ):
         raise AssertionError("reference inputs are not the expected")
+
+    # check inline datum, this is only available on Babbage+ TX
+    if loaded_tx_version >= VERSIONS.BABBAGE and not _check_inline_datums(
+        tx_raw_output=tx_raw_output,
+        tx_loaded=tx_loaded,
+    ):
+        raise AssertionError("inline datums are not the expected")
 
     return tx_loaded

@@ -21,6 +21,7 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
 
@@ -197,6 +198,21 @@ def _build_fund_script(
         reference_utxo = reference_utxos[0]
 
     dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+
+    # check if inline datum is returned by 'query utxo'
+    if use_inline_datum:
+        if plutus_op.datum_file:
+            with open(plutus_op.datum_file, encoding="utf-8") as json_datum:
+                expected_datum = json.load(json_datum)
+        else:
+            expected_datum = plutus_op.datum_value
+
+        assert (
+            script_utxos[0].inline_datum == expected_datum
+        ), "The inline datum returned by 'query utxo' is different than the expected"
+
+    # check "transaction view"
+    tx_view.check_tx_view(cluster, tx_output)
 
     return script_utxos, collateral_utxos, reference_utxo, tx_output
 
