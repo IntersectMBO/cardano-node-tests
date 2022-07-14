@@ -20,6 +20,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1674,7 +1675,7 @@ class TestReadonlyReferenceInputs:
         else:
             readonly_reference_txins = reference_input * 2
 
-        cluster.send_tx(
+        tx_raw_output = cluster.send_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2_tx.body",
             txouts=txouts_redeem,
@@ -1690,6 +1691,9 @@ class TestReadonlyReferenceInputs:
         assert (
             clusterlib.calculate_utxos_balance(utxos=reference_input_utxo) == amount
         ), f"The reference input was spent `{reference_input_utxo}`"
+
+        # check that the reference input is present on 'transaction view'
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
     def test_same_input_as_reference_input(
