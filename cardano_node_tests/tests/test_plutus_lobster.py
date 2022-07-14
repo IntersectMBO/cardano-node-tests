@@ -18,16 +18,12 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 # skip all tests if Tx era < alonzo
 pytestmark = [
-    pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
-        reason="runs only with Alonzo+ TX",
-    ),
+    common.SKIPIF_PLUTUS_UNUSABLE,
 ]
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -247,7 +243,7 @@ def _deploy_lobster_nft(
     return script_address, deployed_token_utxos, tx_output
 
 
-@pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+@common.SKIPIF_BUILD_UNUSABLE
 class TestLobsterChallenge:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

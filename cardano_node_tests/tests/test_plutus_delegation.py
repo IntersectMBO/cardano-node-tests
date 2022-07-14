@@ -22,15 +22,11 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 # skip all tests if Tx era < alonzo
-pytestmark = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALONZO,
-    reason="runs only with Alonzo+ TX",
-)
+pytestmark = common.SKIPIF_PLUTUS_UNUSABLE
 
 
 @pytest.fixture
@@ -259,7 +255,7 @@ def deregister_stake_addr(
 # don't run these tests on testnets as a stake address corresponding to the Plutus script
 # might be already in use
 @pytest.mark.order(8)
-@pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG)
+@common.SKIPIF_BUILD_UNUSABLE
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 

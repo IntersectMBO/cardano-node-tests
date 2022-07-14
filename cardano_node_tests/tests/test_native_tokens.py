@@ -25,7 +25,6 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 MAX_TOKEN_AMOUNT = 2**64
@@ -148,12 +147,9 @@ def multisig_script_policyid(
     return multisig_script, policyid
 
 
+@common.SKIPIF_TOKENS_UNUSABLE
 @pytest.mark.testnets
 @pytest.mark.smoke
-@pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY,
-    reason="runs only with Mary+ TX",
-)
 class TestMinting:
     """Tests for minting and burning tokens."""
 
@@ -163,10 +159,7 @@ class TestMinting:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -852,10 +845,7 @@ class TestMinting:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1035,12 +1025,9 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
 
+@common.SKIPIF_TOKENS_UNUSABLE
 @pytest.mark.testnets
 @pytest.mark.smoke
-@pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY,
-    reason="runs only with Mary+ TX",
-)
 class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
 
@@ -1049,10 +1036,7 @@ class TestPolicies:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1147,10 +1131,7 @@ class TestPolicies:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1510,12 +1491,9 @@ class TestPolicies:
             assert not token_utxo, "The token was minted unexpectedly"
 
 
+@common.SKIPIF_TOKENS_UNUSABLE
 @pytest.mark.testnets
 @pytest.mark.smoke
-@pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY,
-    reason="runs only with Mary+ TX",
-)
 class TestTransfer:
     """Tests for transfering tokens."""
 
@@ -1585,10 +1563,7 @@ class TestTransfer:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1695,10 +1670,7 @@ class TestTransfer:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1851,10 +1823,7 @@ class TestTransfer:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1916,10 +1885,7 @@ class TestTransfer:
         "use_build_cmd",
         (
             False,
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(not common.BUILD_USABLE, reason=common.BUILD_SKIP_MSG),
-            ),
+            pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE),
         ),
         ids=("build_raw", "build"),
     )
@@ -1986,12 +1952,9 @@ class TestTransfer:
             assert "ValueNotConservedUTxO" in str(excinfo.value)
 
 
+@common.SKIPIF_TOKENS_UNUSABLE
 @pytest.mark.testnets
 @pytest.mark.smoke
-@pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY,
-    reason="runs only with Mary+ TX",
-)
 class TestNegative:
     """Negative tests for minting tokens."""
 
@@ -2125,7 +2088,7 @@ class TestNegative:
         assert "the number exceeds the max bound" in str(excinfo.value)
 
 
-@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+@common.SKIPIF_BAD_ERA
 @pytest.mark.testnets
 @pytest.mark.smoke
 class TestCLITxOutSyntax:

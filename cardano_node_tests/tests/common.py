@@ -12,25 +12,40 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.versions import VERSIONS
 
 
-BUILD_USABLE = (
-    VERSIONS.transaction_era >= VERSIONS.MARY and VERSIONS.transaction_era == VERSIONS.cluster_era
-)
-BUILD_SKIP_MSG = (
-    f"cannot use `build` with cluster era '{VERSIONS.cluster_era_name}' "
-    f"and TX era '{VERSIONS.transaction_era_name}'"
+# common `skipif`s
+SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
+    not (
+        VERSIONS.transaction_era >= VERSIONS.MARY
+        and VERSIONS.transaction_era == VERSIONS.cluster_era
+    ),
+    reason=(
+        f"cannot use `build` with cluster era '{VERSIONS.cluster_era_name}' "
+        f"and TX era '{VERSIONS.transaction_era_name}'"
+    ),
 )
 
+SKIPIF_BAD_ERA = pytest.mark.skipif(
+    not (
+        VERSIONS.cluster_era >= VERSIONS.DEFAULT_CLUSTER_ERA
+        and VERSIONS.transaction_era == VERSIONS.cluster_era
+    ),
+    reason="meant to run with default era or higher, where cluster era == Tx era",
+)
+
+SKIPIF_TOKENS_UNUSABLE = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.MARY,
+    reason="native tokens are available only in Mary+ eras",
+)
+
+SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.ALONZO,
+    reason="Plutus is available only in Alonzo+ eras",
+)
 
 SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
     reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
 )
-
-SAME_ERAS = (
-    VERSIONS.cluster_era >= VERSIONS.DEFAULT_CLUSTER_ERA
-    and VERSIONS.transaction_era == VERSIONS.cluster_era
-)
-ERAS_SKIP_MSG = "meant to run with default era or higher, where cluster era == Tx era"
 
 
 class PytestTest(NamedTuple):

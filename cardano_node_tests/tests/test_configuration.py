@@ -113,7 +113,7 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
 
 
 @pytest.mark.order(5)
-@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+@common.SKIPIF_BAD_ERA
 @pytest.mark.long
 class TestBasic:
     """Basic tests for node configuration."""

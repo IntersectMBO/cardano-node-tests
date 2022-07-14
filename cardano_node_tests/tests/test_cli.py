@@ -30,7 +30,7 @@ class TestCLI:
     TX_OUT = DATA_DIR / "test_tx_metadata_both_tx.out"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+    @common.SKIPIF_BAD_ERA
     @pytest.mark.testnets
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check the default protocol mode - command works even without specifying protocol mode."""
@@ -50,7 +50,7 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+    @common.SKIPIF_BAD_ERA
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on local cluster."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:
@@ -68,7 +68,7 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+    @common.SKIPIF_BAD_ERA
     @pytest.mark.testnets
     def test_testnet_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on testnets."""
@@ -166,7 +166,7 @@ class TestCLI:
         assert utxo_out == expected_out
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+    @common.SKIPIF_BAD_ERA
     @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
@@ -343,7 +343,7 @@ class TestKey:
         assert "TextEnvelope type error:  Expected one of:" in str(excinfo.value)
 
 
-@pytest.mark.skipif(not common.SAME_ERAS, reason=common.ERAS_SKIP_MSG)
+@common.SKIPIF_BAD_ERA
 class TestAdvancedQueries:
     """Basic sanity tests for advanced cardano-cli query commands.
 
