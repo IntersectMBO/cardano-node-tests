@@ -43,13 +43,7 @@ param_plutus_version = pytest.mark.parametrize(
     "plutus_version",
     (
         "v1",
-        pytest.param(
-            "v2",
-            marks=pytest.mark.skipif(
-                VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
-                reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
-            ),
-        ),
+        pytest.param("v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
     ),
     ids=("plutus_v1", "plutus_v2"),
 )
@@ -706,27 +700,9 @@ class TestLocking:
         "plutus_version",
         (
             "plutus_v1",
-            pytest.param(
-                "mix_v1_v2",
-                marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
-                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
-                ),
-            ),
-            pytest.param(
-                "mix_v2_v1",
-                marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
-                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
-                ),
-            ),
-            pytest.param(
-                "plutus_v2",
-                marks=pytest.mark.skipif(
-                    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
-                    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
-                ),
-            ),
+            pytest.param("mix_v1_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v2_v1", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("plutus_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
         ),
     )
     def test_two_scripts_spending(
