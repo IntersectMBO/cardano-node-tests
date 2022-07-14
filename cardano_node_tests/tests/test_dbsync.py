@@ -8,6 +8,7 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -194,3 +195,12 @@ class TestDBSync:
                 "last `block_no` value is different than expected; "
                 f"{block_no} not in ({rec.block_no}, {rec.block_no - 1}, {rec.block_no + 1})"
             )
+
+        # if cardano-node knows about Babbage and network is in Alonzo or higher era, check that
+        # the highest known protocol major version matches the expected value
+        if VERSIONS.cluster_era >= VERSIONS.ALONZO and clusterlib_utils.cli_has(
+            "transaction build --babbage-era"
+        ):
+            assert (
+                rec.proto_major == 7
+            ), f"Highest known protocol major version is {rec.proto_major}, should be 7."
