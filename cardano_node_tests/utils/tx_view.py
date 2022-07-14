@@ -95,14 +95,14 @@ def _check_collateral_inputs(
 ) -> bool:
     """Check collateral inputs of tx_view."""
     all_collateral_locations: List[Any] = [
-        *(tx_raw_output.mint or []),
-        *(tx_raw_output.script_txins or []),
-        *(tx_raw_output.script_withdrawals or []),
-        *(tx_raw_output.complex_certs or []),
+        *(tx_raw_output.script_txins or ()),
+        *(tx_raw_output.script_withdrawals or ()),
+        *(tx_raw_output.complex_certs or ()),
+        *(tx_raw_output.mint or ()),
     ]
 
     _collateral_ins_nested = [
-        r.collaterals for r in all_collateral_locations if hasattr(r, "collaterals")
+        r.collaterals for r in all_collateral_locations if getattr(r, "collaterals", None)
     ]
 
     collateral_ins = list(itertools.chain.from_iterable(_collateral_ins_nested))
@@ -116,16 +116,22 @@ def _check_reference_inputs(
     tx_raw_output: clusterlib.TxRawOutput, expected_reference_inputs: List[str]
 ) -> bool:
     """Check reference inputs of tx_view."""
-    reference_scripts = [
-        s.reference_txin for s in tx_raw_output.script_txins if getattr(s, "reference_txin", None)
+    reference_txin_locations = [
+        *(tx_raw_output.script_txins or ()),
+        *(tx_raw_output.script_withdrawals or ()),
+        *(tx_raw_output.complex_certs or ()),
+        *(tx_raw_output.mint or ()),
+    ]
+    reference_txins = [
+        s.reference_txin for s in reference_txin_locations if getattr(s, "reference_txin", None)
     ]
 
-    all_reference_inputs: List[Any] = [
+    reference_txins_combined: List[Any] = [
         *(tx_raw_output.readonly_reference_txins or []),
-        *(reference_scripts or []),
+        *reference_txins,
     ]
 
-    reference_strings = {f"{r.utxo_hash}#{r.utxo_ix}" for r in all_reference_inputs}
+    reference_strings = {f"{r.utxo_hash}#{r.utxo_ix}" for r in reference_txins_combined}
 
     return reference_strings == set(expected_reference_inputs)
 
