@@ -138,7 +138,7 @@ EoF
 fi
 
 # enable cardano-submit-api service
-if type cardano-submit-api >/dev/null; then
+if type cardano-submit-api >/dev/null 2>&1; then
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:submit_api]
@@ -902,7 +902,7 @@ sleep "$NEXT_EPOCH_SLEEP_RESTART"
 wait_for_epoch "$((ALONZO_EPOCH + 1))"
 
 # start cardano-submit-api
-if type cardano-submit-api >/dev/null; then
+if type cardano-submit-api >/dev/null 2>&1; then
   echo "Starting cardano-submit-api"
   supervisorctl start submit_api
 fi

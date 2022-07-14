@@ -71,7 +71,7 @@ EoF
 fi
 
 # enable cardano-submit-api service
-if type cardano-submit-api >/dev/null && [ -e "$TESTNET_CONF_DIR/submit-api-config.yaml" ]; then
+if type cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api-config.yaml" ]; then
   # copy cardano-submit-api config file
   cp "$TESTNET_CONF_DIR/submit-api-config.yaml" "$STATE_CLUSTER/submit-api-config.yaml"
 
@@ -140,7 +140,7 @@ for _ in {1..600}; do
 done
 
 # start cardano-submit-api
-if type cardano-submit-api >/dev/null && [ -e "$STATE_CLUSTER/submit-api-config.yaml" ]; then
+if type cardano-submit-api >/dev/null 2>&1 && [ -e "$STATE_CLUSTER/submit-api-config.yaml" ]; then
   echo "Starting cardano-submit-api"
   supervisorctl start submit_api
 fi
