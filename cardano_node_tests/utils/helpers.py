@@ -293,3 +293,20 @@ def is_port_open(host: str, port: int) -> bool:
         if sock.connect_ex((host, port)) == 0:
             return True
     return False
+
+
+def tool_has(command: str) -> bool:
+    """Check if a tool has a subcommand or argument available.
+
+    E.g. `tool_has_arg("create-script-context --plutus-v1")`
+    """
+    err_str = ""
+    try:
+        run_command(command)
+    except AssertionError as err:
+        err_str = str(err)
+    else:
+        return True
+
+    cmd_err = err_str.split(":", maxsplit=1)[1].strip()
+    return not cmd_err.startswith("Invalid")
