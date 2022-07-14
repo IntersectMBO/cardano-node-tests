@@ -199,12 +199,18 @@ def _build_reference_txin(
     cluster: clusterlib.ClusterLib,
     amount: int,
     payment_addr: clusterlib.AddressRecord,
-    dst_addr: clusterlib.AddressRecord,
+    dst_addr: Optional[clusterlib.AddressRecord] = None,
 ) -> List[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 
     Uses `cardano-cli transaction build-raw` command for building the transaction.
     """
+    if not dst_addr:
+        dst_addr = clusterlib_utils.create_payment_addr_records(
+            *[f"{temp_template}_readonly_input"],
+            cluster_obj=cluster,
+        )[0]
+
     txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
@@ -1668,7 +1674,6 @@ class TestReadonlyReferenceInputs:
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
-            dst_addr=payment_addrs[1],
             amount=amount,
         )
 
