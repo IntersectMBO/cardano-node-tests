@@ -315,6 +315,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.tx_out_value),
                 address=str(query_row.tx_out_addr),
+                datum_hash=query_row.tx_out_data_hash.hex() if query_row.tx_out_data_hash else "",
             )
             utxo_out.append(out_rec)
 
@@ -662,6 +663,28 @@ def _compare_redeemers(
                 )
 
 
+def _sanitize_txout(
+    cluster_obj: clusterlib.ClusterLib, txout: clusterlib.TxOut
+) -> clusterlib.TxOut:
+    """Transform txout so it can be compared to data from db-sync."""
+    datum_hash = clusterlib_utils.datum_hash_from_txout(cluster_obj=cluster_obj, txout=txout)
+
+    new_txout = txout._replace(
+        datum_hash=datum_hash,
+        datum_hash_file="",
+        datum_hash_cbor_file="",
+        datum_hash_value="",
+        datum_embed_file="",
+        datum_embed_cbor_file="",
+        datum_embed_value="",
+        inline_datum_file="",
+        inline_datum_cbor_file="",
+        inline_datum_value="",
+        reference_script_file="",
+    )
+    return new_txout
+
+
 def check_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
 ) -> Optional[TxRecord]:
@@ -672,9 +695,14 @@ def check_tx(
     txhash = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
     response = get_tx_record_retry(txhash=txhash, retry_num=retry_num)
 
+    tx_txouts = {_sanitize_txout(cluster_obj=cluster_obj, txout=r) for r in tx_raw_output.txouts}
+    db_txouts = {clusterlib_utils.utxodata2txout(r) for r in response.txouts}
+
     # we don't have complete info about the transaction when `build` command
     # was used, so we'll skip some of the checks
-    if not tx_raw_output.change_address:
+    if tx_raw_output.change_address:
+        assert tx_txouts.issubset(db_txouts), f"TX outputs not subset: ({tx_txouts} vs {db_txouts})"
+    else:
         txouts_amount = clusterlib_utils.get_amount(tx_raw_output.txouts)
         assert (
             response.out_sum == txouts_amount
@@ -689,9 +717,6 @@ def check_tx(
             len_db_txouts == len_out_txouts
         ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts})"
 
-        # cannot get datum hash from db-sync, we need to strip it from tx data as well
-        tx_txouts = sorted(r._replace(datum_hash="") for r in tx_raw_output.txouts)
-        db_txouts = sorted(clusterlib_utils.utxodata2txout(r) for r in response.txouts)
         assert tx_txouts == db_txouts, f"TX outputs don't match ({tx_txouts} != {db_txouts})"
 
     assert response.invalid_before == tx_raw_output.invalid_before, (
