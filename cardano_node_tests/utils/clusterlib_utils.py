@@ -970,7 +970,42 @@ def load_tx_metadata(tx_body_file: Path) -> TxMetadata:
 
 def utxodata2txout(utxodata: clusterlib.UTXOData) -> clusterlib.TxOut:
     """Convert `clusterlib.UTXOData` to `clusterlib.TxOut`."""
-    return clusterlib.TxOut(address=utxodata.address, amount=utxodata.amount, coin=utxodata.coin)
+    return clusterlib.TxOut(
+        address=utxodata.address,
+        amount=utxodata.amount,
+        coin=utxodata.coin,
+        datum_hash=utxodata.datum_hash,
+    )
+
+
+def datum_hash_from_txout(cluster_obj: clusterlib.ClusterLib, txout: clusterlib.TxOut) -> str:
+    """Return datum hash from `clusterlib.TxOut`."""
+    datum_hash = txout.datum_hash
+
+    if datum_hash:
+        return datum_hash
+
+    script_data_file = (
+        txout.datum_hash_file or txout.datum_embed_file or txout.inline_datum_file or ""
+    )
+    script_data_cbor_file = (
+        txout.datum_hash_cbor_file
+        or txout.datum_embed_cbor_file
+        or txout.inline_datum_cbor_file
+        or ""
+    )
+    script_data_value = (
+        txout.datum_hash_value or txout.datum_embed_value or txout.inline_datum_value or ""
+    )
+
+    if script_data_file or script_data_cbor_file or script_data_value:
+        datum_hash = cluster_obj.get_hash_script_data(
+            script_data_file=script_data_file,
+            script_data_cbor_file=script_data_cbor_file,
+            script_data_value=script_data_value,
+        )
+
+    return datum_hash
 
 
 def create_script_context(
