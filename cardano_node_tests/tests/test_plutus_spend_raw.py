@@ -14,6 +14,7 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
@@ -105,6 +106,7 @@ def _fund_script(
         List[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
     collateral_fraction_offset: float = 1.0,
+    embed_datum: bool = False,
 ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
     # pylint: disable=too-many-locals,too-many-arguments
@@ -128,30 +130,22 @@ def _fund_script(
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
     )
-    datum_hash = cluster_obj.get_hash_script_data(
-        script_data_file=plutus_op.datum_file if plutus_op.datum_file else None,
-        script_data_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else None,
-        script_data_value=plutus_op.datum_value if plutus_op.datum_value else "",
+
+    script_txout = plutus_common.txout_factory(
+        address=script_address,
+        amount=amount + redeem_cost.fee + fee_txsize + deposit_amount,
+        plutus_op=plutus_op,
+        embed_datum=embed_datum,
     )
+
     txouts = [
-        clusterlib.TxOut(
-            address=script_address,
-            amount=amount + redeem_cost.fee + fee_txsize + deposit_amount,
-            datum_hash=datum_hash,
-        ),
+        script_txout,
         # for collateral
         clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
     ]
 
     for token in stokens:
-        txouts.append(
-            clusterlib.TxOut(
-                address=script_address,
-                amount=token.amount,
-                coin=token.coin,
-                datum_hash=datum_hash,
-            )
-        )
+        txouts.append(script_txout._replace(amount=token.amount, coin=token.coin))
 
     for token in ctokens:
         txouts.append(
@@ -388,6 +382,9 @@ def _check_pretty_utxo(
     )
 
     cluster_era = VERSIONS.cluster_era_name.title()
+    datum_hash = clusterlib_utils.datum_hash_from_txout(
+        cluster_obj=cluster_obj, txout=tx_raw_output.txouts[0]
+    )
     expected_out = [
         "TxHash",
         "TxIx",
@@ -400,7 +397,7 @@ def _check_pretty_utxo(
         "+",
         "TxOutDatumHash",
         f"ScriptDataIn{cluster_era}Era",
-        f'"{tx_raw_output.txouts[0].datum_hash}"',
+        f'"{datum_hash}"',
     ]
 
     if utxo_out != expected_out:
@@ -584,6 +581,7 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.parametrize("embed_datum", (True, False), ids=("embedded_datum", "datum"))
     @pytest.mark.parametrize(
         "variant",
         (
@@ -599,6 +597,8 @@ class TestLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
+        embed_datum: bool,
         variant: str,
         plutus_version: str,
     ):
@@ -614,7 +614,7 @@ class TestLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{variant}"
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
         amount = 2_000_000
 
         datum_file: Optional[Path] = None
@@ -669,6 +669,7 @@ class TestLocking:
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             amount=amount,
+            embed_datum=embed_datum,
         )
         _spend_locked_txin(
             temp_template=temp_template,

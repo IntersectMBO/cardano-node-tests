@@ -3,8 +3,11 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 
+from cardano_clusterlib import clusterlib
+
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.types import FileType
 from cardano_node_tests.utils.versions import VERSIONS
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -225,3 +228,52 @@ def compute_cost(
     collateral_amount = min_collateral if min_collateral >= 2_000_000 else 2_000_000
 
     return ScriptCost(fee=fee_redeem, collateral=collateral_amount, min_collateral=min_collateral)
+
+
+def txout_factory(
+    address: str,
+    amount: int,
+    plutus_op: PlutusOp,
+    coin: str = clusterlib.DEFAULT_COIN,
+    embed_datum: bool = False,
+    inline_datum: bool = False,
+) -> clusterlib.TxOut:
+    """Create `TxOut` object."""
+    datum_hash_file: FileType = ""
+    datum_hash_cbor_file: FileType = ""
+    datum_hash_value = ""
+    datum_embed_file: FileType = ""
+    datum_embed_cbor_file: FileType = ""
+    datum_embed_value = ""
+    inline_datum_file: FileType = ""
+    inline_datum_cbor_file: FileType = ""
+    inline_datum_value = ""
+
+    if embed_datum:
+        datum_embed_file = plutus_op.datum_file or ""
+        datum_embed_cbor_file = plutus_op.datum_cbor_file or ""
+        datum_embed_value = plutus_op.datum_value or ""
+    elif inline_datum:
+        inline_datum_file = plutus_op.datum_file or ""
+        inline_datum_cbor_file = plutus_op.datum_cbor_file or ""
+        inline_datum_value = plutus_op.datum_value or ""
+    else:
+        datum_hash_file = plutus_op.datum_file or ""
+        datum_hash_cbor_file = plutus_op.datum_cbor_file or ""
+        datum_hash_value = plutus_op.datum_value or ""
+
+    txout = clusterlib.TxOut(
+        address=address,
+        amount=amount,
+        coin=coin,
+        datum_hash_file=datum_hash_file,
+        datum_hash_cbor_file=datum_hash_cbor_file,
+        datum_hash_value=datum_hash_value,
+        datum_embed_file=datum_embed_file,
+        datum_embed_cbor_file=datum_embed_cbor_file,
+        datum_embed_value=datum_embed_value,
+        inline_datum_file=inline_datum_file,
+        inline_datum_cbor_file=inline_datum_cbor_file,
+        inline_datum_value=inline_datum_value,
+    )
+    return txout
