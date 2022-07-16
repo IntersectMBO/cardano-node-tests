@@ -2,10 +2,10 @@
 
 buildPythonPackage rec {
   pname = "cardano-clusterlib";
-  version = "0.3.0rc8";
+  version = "0.3.0rc9";
   src = fetchPypi {
     inherit pname version;
-    sha256 = "9erauFqdzCvlg+QZ+vDpLB5RjjGMq0bGutyic+sIcT0=";
+    sha256 = "C4BfVASODWkHCyHimsFxKNUvN24E46arrE54OihgHLw=";
   };
   doCheck = false;
   nativeBuildInputs = [ setuptools_scm ];
