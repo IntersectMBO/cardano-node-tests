@@ -828,11 +828,11 @@ class TestBuildLocking:
 
         cluster.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
 
-        txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#1", coins=[clusterlib.DEFAULT_COIN])
-        script_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#2", coins=[clusterlib.DEFAULT_COIN])
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#3")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#4")
+        fund_utxos = cluster.get_utxo(tx_raw_output=tx_output_fund)
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)
 
         assert script_utxos1 and script_utxos2, "No script UTxOs"
         assert collateral_utxos1 and collateral_utxos2, "No collateral UTxOs"

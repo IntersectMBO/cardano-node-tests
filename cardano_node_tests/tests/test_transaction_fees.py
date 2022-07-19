@@ -138,9 +138,6 @@ class TestFee:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         fee = (
@@ -163,13 +160,13 @@ class TestFee:
 
         assert tx_raw_output.fee == fee, "The actual fee doesn't match the specified fee"
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
 

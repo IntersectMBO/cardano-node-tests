@@ -121,8 +121,6 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 10_000_000_000_000
 
-        init_balance = cluster.get_address_balance(pool_user.payment.address)
-
         mir_cert = cluster.gen_mir_cert_to_treasury(transfer=amount, tx_name=temp_template)
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -154,9 +152,10 @@ class TestMIRCerts:
             tx_files=tx_files,
         )
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(pool_user.payment.address)
-            == init_balance - tx_raw_output.fee
+            clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         # check `transaction view` command
@@ -201,8 +200,6 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 10_000_000_000_000
 
-        init_balance = cluster.get_address_balance(pool_user.payment.address)
-
         mir_cert = cluster.gen_mir_cert_to_treasury(transfer=amount, tx_name=temp_template)
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -232,8 +229,10 @@ class TestMIRCerts:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
         assert (
-            cluster.get_address_balance(pool_user.payment.address) < init_balance
+            clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
@@ -274,8 +273,6 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 1_000_000_000_000
 
-        init_balance = cluster.get_address_balance(pool_user.payment.address)
-
         mir_cert = cluster.gen_mir_cert_to_rewards(transfer=amount, tx_name=temp_template)
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -307,9 +304,10 @@ class TestMIRCerts:
             tx_files=tx_files,
         )
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(pool_user.payment.address)
-            == init_balance - tx_raw_output.fee
+            clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         # check `transaction view` command
@@ -354,8 +352,6 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 1_000_000_000_000
 
-        init_balance = cluster.get_address_balance(pool_user.payment.address)
-
         mir_cert = cluster.gen_mir_cert_to_rewards(transfer=amount, tx_name=temp_template)
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -385,8 +381,10 @@ class TestMIRCerts:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
         assert (
-            cluster.get_address_balance(pool_user.payment.address) < init_balance
+            clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
@@ -435,7 +433,6 @@ class TestMIRCerts:
         init_reward = cluster.get_stake_addr_info(
             registered_user.stake.address
         ).reward_account_balance
-        init_balance = cluster.get_address_balance(registered_user.payment.address)
 
         mir_cert = cluster.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
@@ -466,9 +463,12 @@ class TestMIRCerts:
             tx_files=tx_files,
         )
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(registered_user.payment.address)
-            == init_balance - tx_raw_output.fee
+            clusterlib.filter_utxos(utxos=out_utxos, address=registered_user.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{registered_user.payment.address}`"
 
         cluster.wait_for_new_epoch()
@@ -523,7 +523,6 @@ class TestMIRCerts:
         init_reward = cluster.get_stake_addr_info(
             registered_user.stake.address
         ).reward_account_balance
-        init_balance = cluster.get_address_balance(registered_user.payment.address)
 
         mir_cert = cluster.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
@@ -563,8 +562,12 @@ class TestMIRCerts:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
         assert (
-            cluster.get_address_balance(registered_user.payment.address) < init_balance
+            clusterlib.filter_utxos(utxos=out_utxos, address=registered_user.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
         ), f"Incorrect balance for source address `{registered_user.payment.address}`"
 
         cluster.wait_for_new_epoch()
@@ -745,7 +748,6 @@ class TestMIRCerts:
         init_reward_u1 = cluster.get_stake_addr_info(
             registered_users[1].stake.address
         ).reward_account_balance
-        init_balance = cluster.get_address_balance(registered_users[0].payment.address)
 
         mir_cert_treasury_u0 = cluster.gen_mir_cert_stake_addr(
             stake_addr=registered_users[0].stake.address,
@@ -798,9 +800,12 @@ class TestMIRCerts:
             tx_files=tx_files,
         )
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(registered_users[0].payment.address)
-            == init_balance - tx_raw_output.fee
+            clusterlib.filter_utxos(utxos=out_utxos, address=registered_users[0].payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{registered_users[0].payment.address}`"
 
         cluster.wait_for_new_epoch()
@@ -875,8 +880,6 @@ class TestMIRCerts:
         amount = 30_000_000_000_000_000
         registered_user = registered_users[0]
 
-        init_balance = cluster.get_address_balance(registered_user.payment.address)
-
         mir_cert = cluster.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
@@ -902,10 +905,6 @@ class TestMIRCerts:
                 tx_files=tx_files,
             )
         assert "InsufficientForInstantaneousRewardsDELEG" in str(excinfo.value)
-
-        assert (
-            cluster.get_address_balance(registered_user.payment.address) == init_balance
-        ), f"Incorrect balance for source address `{registered_user.payment.address}`"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

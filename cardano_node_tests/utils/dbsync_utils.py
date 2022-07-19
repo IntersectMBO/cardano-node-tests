@@ -704,7 +704,7 @@ def check_tx(
     if tx_raw_output.change_address:
         assert tx_txouts.issubset(db_txouts), f"TX outputs not subset: ({tx_txouts} vs {db_txouts})"
     else:
-        txouts_amount = clusterlib_utils.get_amount(tx_raw_output.txouts)
+        txouts_amount = clusterlib.calculate_utxos_balance(tx_raw_output.txouts)
         assert (
             response.out_sum == txouts_amount
         ), f"Sum of TX amounts doesn't match ({response.out_sum} != {txouts_amount})"
