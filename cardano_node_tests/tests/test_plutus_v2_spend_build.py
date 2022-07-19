@@ -671,22 +671,31 @@ class TestReferenceScripts:
     """Tests for Tx output locking using Plutus smart contracts with reference scripts."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_same_script", (True, False), ids=("same_script", "multiple_script")
+    )
     def test_reference_multiple_script(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        use_same_script: bool,
+        request: FixtureRequest,
     ):
-        """Test locking two Tx output with different V2 reference script and spending it.
+        """Test locking two Tx output with a V2 reference script and spending it.
 
         * create the Tx outputs with an inline datum at the script address
         * create the Tx outputs with the reference scripts
         * spend the locked UTxOs using the reference UTxOs
         * check that the UTxOs were correctly spent
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
 
         plutus_op1 = PLUTUS_OP_ALWAYS_SUCCEEDS
-        plutus_op2 = PLUTUS_OP_GUESSING_GAME_UNTYPED
+
+        if use_same_script:
+            plutus_op2 = PLUTUS_OP_GUESSING_GAME_UNTYPED
+        else:
+            plutus_op2 = PLUTUS_OP_ALWAYS_SUCCEEDS
 
         # for mypy
         assert plutus_op1.execution_cost and plutus_op2.execution_cost
