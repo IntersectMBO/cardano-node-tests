@@ -912,16 +912,6 @@ def wait_for_epoch_interval(
         raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s.")
 
 
-def get_amount(
-    records: Union[List[clusterlib.UTXOData], List[clusterlib.TxOut]],
-    coin: str = clusterlib.DEFAULT_COIN,
-) -> int:
-    """Get sum of amounts from all records."""
-    filtered_amounts = [r.amount for r in records if r.coin == coin]
-    amount = sum(filtered_amounts)
-    return amount
-
-
 def load_body_metadata(tx_body_file: Path) -> Any:
     """Load metadata from file containing transaction body."""
     with open(tx_body_file, encoding="utf-8") as body_fp:
@@ -1052,12 +1042,14 @@ def cli_has(command: str) -> bool:
     return helpers.tool_has(full_command)
 
 
-def check_txin_spent(
+def check_txins_spent(
     cluster_obj: clusterlib.ClusterLib, txins: List[clusterlib.UTXOData], wait_blocks: int = 2
 ) -> None:
-    """Check that txin was spent after waiting for several new blocks."""
-    cluster_obj.wait_for_new_block(wait_blocks)
-    utxo_data = cluster_obj.get_utxo(utxo=txins[0])
+    """Check that txins were spent."""
+    if wait_blocks > 0:
+        cluster_obj.wait_for_new_block(wait_blocks)
+
+    utxo_data = cluster_obj.get_utxo(utxo=txins)
 
     if utxo_data:
-        raise AssertionError(f"The txin '{txins[0]}` was not spent.")
+        raise AssertionError(f"Some txins were not spent: {txins}")

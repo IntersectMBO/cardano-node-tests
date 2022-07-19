@@ -182,17 +182,17 @@ def _build_fund_script(
     )
     cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-    txid = cluster.get_txid(tx_body_file=tx_output.out_file)
+    out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
 
-    script_utxos = cluster.get_utxo(txin=f"{txid}#1")
+    script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=1)
     assert script_utxos, "No script UTxO"
 
-    collateral_utxos = cluster.get_utxo(txin=f"{txid}#2")
+    collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=2)
     assert collateral_utxos, "No collateral UTxO"
 
     reference_utxo = None
     if use_reference_script:
-        reference_utxos = cluster.get_utxo(txin=f"{txid}#3")
+        reference_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=3)
         assert reference_utxos, "No reference script UTxO"
         reference_utxo = reference_utxos[0]
 
@@ -759,13 +759,13 @@ class TestReferenceScripts:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        txid = cluster.get_txid(tx_body_file=tx_output.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid}#1")
-        script_utxos2 = cluster.get_utxo(txin=f"{txid}#2")
-        reference_utxo1 = cluster.get_utxo(txin=f"{txid}#3")[0]
-        reference_utxo2 = cluster.get_utxo(txin=f"{txid}#4")[0]
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid}#5")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid}#6")
+        fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
+        reference_utxo1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
+        reference_utxo2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=6)
 
         #  spend the "locked" UTxO
 
@@ -900,12 +900,12 @@ class TestReferenceScripts:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        txid = cluster.get_txid(tx_body_file=tx_output.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid}#1")
-        script_utxos2 = cluster.get_utxo(txin=f"{txid}#2")
-        reference_utxo = cluster.get_utxo(txin=f"{txid}#3")[0]
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid}#4")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid}#5")
+        fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
+        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
 
         #  spend the "locked" UTxO
 
@@ -1049,12 +1049,12 @@ class TestReferenceScripts:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        txid = cluster.get_txid(tx_body_file=tx_output.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid}#1")
-        script_utxos2 = cluster.get_utxo(txin=f"{txid}#2")
-        reference_utxo = cluster.get_utxo(txin=f"{txid}#3")[0]
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid}#4")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid}#5")
+        fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
+        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
 
         #  spend the "locked" UTxOs
 
@@ -1411,13 +1411,13 @@ class TestNegativeReferenceScripts:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        txid = cluster.get_txid(tx_body_file=tx_output.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid}#1")
-        script_utxos2 = cluster.get_utxo(txin=f"{txid}#2")
-        reference_utxo1 = cluster.get_utxo(txin=f"{txid}#3")[0]
-        reference_utxo2 = cluster.get_utxo(txin=f"{txid}#4")[0]
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid}#5")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid}#6")
+        fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
+        reference_utxo1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
+        reference_utxo2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=6)
 
         #  spend the "locked" UTxO
 
@@ -1625,12 +1625,12 @@ class TestNegativeReferenceScripts:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        txid = cluster.get_txid(tx_body_file=tx_output.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid}#1")
-        script_utxos2 = cluster.get_utxo(txin=f"{txid}#2")
-        reference_utxo = cluster.get_utxo(txin=f"{txid}#3")[0]
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid}#4")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid}#5")
+        fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
+        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
 
         #  spend the "locked" UTxO
 
