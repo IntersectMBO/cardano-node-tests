@@ -219,9 +219,6 @@ class TestBasic:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
@@ -232,13 +229,13 @@ class TestBasic:
             tx_files=tx_files,
         )
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -269,9 +266,6 @@ class TestBasic:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
         txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
@@ -289,12 +283,13 @@ class TestBasic:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
         assert (
-            cluster.get_address_balance(src_address) == src_init_balance - amount - tx_output.fee
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - amount - tx_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
@@ -325,7 +320,6 @@ class TestBasic:
         dst_address = payment_addrs_no_change[1].address
 
         src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
         txouts_init = [clusterlib.TxOut(address=dst_address, amount=src_init_balance)]
@@ -358,12 +352,14 @@ class TestBasic:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        assert (
-            cluster.get_address_balance(src_address) == 0
-        ), f"Incorrect balance for source address `{src_address}`"
+        clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=tx_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        assert not clusterlib.filter_utxos(
+            utxos=out_utxos, address=src_address
+        ), f"Incorrect balance for source address `{src_address}`"
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
@@ -388,9 +384,6 @@ class TestBasic:
 
         src_address = payment_addrs_disposable[1].address
         dst_address = payment_addrs_disposable[0].address
-
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
 
         # amount value -1 means all available funds
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
@@ -419,15 +412,15 @@ class TestBasic:
             cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
         else:
             submit_api.submit_tx(tx_file=out_file_signed)
-            clusterlib_utils.check_txin_spent(cluster_obj=cluster, txins=tx_raw_output.txins)
+            cluster.wait_for_new_block(2)
 
-        assert (
-            cluster.get_address_balance(src_address) == 0
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        assert not clusterlib.filter_utxos(
+            utxos=out_utxos, address=src_address
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address)
-            == dst_init_balance + src_init_balance - tx_raw_output.fee
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         # check `transaction view` command
@@ -459,9 +452,6 @@ class TestBasic:
         src_address = payment_addrs[0].address
         dst_address = "addr_test1vpst87uzwafqkxumyf446zr2jsyn44cfpu9fe8yqanyuh6glj2hkl"
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
@@ -472,13 +462,13 @@ class TestBasic:
             tx_files=tx_files,
         )
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         # check min UTxO value
@@ -548,9 +538,6 @@ class TestBasic:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
         # use extra signing key
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file]
@@ -562,13 +549,13 @@ class TestBasic:
             src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
         )
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -590,9 +577,6 @@ class TestBasic:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
         # use extra signing key
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file, payment_addrs[0].skey_file]
@@ -604,13 +588,13 @@ class TestBasic:
             src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
         )
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -647,9 +631,6 @@ class TestBasic:
         )
 
         assert not tx_raw_output.txouts, "Transaction has unexpected txouts"
-        assert (
-            cluster.get_address_balance(src_record.address) == 0
-        ), f"Incorrect balance for source address `{src_record.address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -699,8 +680,6 @@ class TestBasic:
         temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
 
-        init_balance = cluster.get_address_balance(src_address)
-
         tx_raw_template = _get_raw_tx_values(
             cluster_obj=cluster,
             tx_name=temp_template,
@@ -731,8 +710,10 @@ class TestBasic:
         )
         cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address) == init_balance - tx_raw_output.fee
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -747,8 +728,6 @@ class TestBasic:
         """Try to build a transaction with multiple identical txins."""
         temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
-
-        init_balance = cluster.get_address_balance(src_address)
 
         tx_raw_output = _get_raw_tx_values(
             cluster_obj=cluster,
@@ -783,8 +762,10 @@ class TestBasic:
         )
         cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address) == init_balance - tx_raw_output.fee
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -1028,15 +1009,6 @@ class TestMultiInOut:
                 tx_files=fund_tx_files,
             )
 
-        # record initial balances
-        src_init_balance = cluster_obj.get_address_balance(src_address)
-        from_init_total_balance = functools.reduce(
-            lambda x, y: x + y,
-            (cluster_obj.get_address_balance(r.address) for r in from_addr_recs),
-            0,
-        )
-        dst_init_balances = {addr: cluster_obj.get_address_balance(addr) for addr in dst_addresses}
-
         # create TX data
         _txins = [cluster_obj.get_utxo(address=r.address) for r in from_addr_recs]
         # flatten the list of lists that is _txins
@@ -1071,28 +1043,18 @@ class TestMultiInOut:
             )
 
         # check balances
-        from_final_balance = functools.reduce(
-            lambda x, y: x + y,
-            (cluster_obj.get_address_balance(r.address) for r in from_addr_recs),
-            0,
-        )
-        src_final_balance = cluster_obj.get_address_balance(src_address)
-
-        assert (
-            from_final_balance == 0
-        ), f"The output addresses should have no balance, they have {from_final_balance}"
-
-        assert (
-            src_final_balance
-            == src_init_balance
-            + from_init_total_balance
-            - tx_raw_output.fee
-            - amount * len(dst_addresses)
+        out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_raw_output)
+        assert clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[
+            0
+        ].amount == clusterlib.calculate_utxos_balance(
+            tx_raw_output.txins
+        ) - tx_raw_output.fee - amount * len(
+            dst_addresses
         ), f"Incorrect balance for source address `{src_address}`"
 
         for addr in dst_addresses:
             assert (
-                cluster_obj.get_address_balance(addr) == dst_init_balances[addr] + amount
+                clusterlib.filter_utxos(utxos=out_utxos, address=addr)[0].amount == amount
             ), f"Incorrect balance for destination address `{addr}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
@@ -1421,9 +1383,6 @@ class TestManyUTXOs:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[many_utxos[0].skey_file])
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
         # sort UTxOs by amount
         utxos_sorted = sorted(cluster.get_utxo(address=src_address), key=lambda x: x.amount)
 
@@ -1478,13 +1437,13 @@ class TestManyUTXOs:
         )
         cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -2160,9 +2119,6 @@ class TestNegative:
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
-
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
@@ -2189,13 +2145,13 @@ class TestNegative:
         # submit a transaction for the first time
         cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - len(destinations) * amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-
         assert (
-            cluster.get_address_balance(dst_address) == dst_init_balance + amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         # it should NOT be possible to submit a transaction twice
@@ -3650,9 +3606,6 @@ class TestMetadata:
             src_address=src_record.address, tx_name=temp_template, tx_files=tx_files, fee=fee
         )
         assert not tx_raw_output.txouts, "Transaction has unexpected txouts"
-        assert (
-            cluster.get_address_balance(src_record.address) == 0
-        ), f"Incorrect balance for source address `{src_record.address}`"
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
         # dump it as JSON, so keys are converted to strings
