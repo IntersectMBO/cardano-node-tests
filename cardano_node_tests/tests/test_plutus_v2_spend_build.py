@@ -21,6 +21,7 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1785,7 +1786,8 @@ class TestReadonlyReferenceInputs:
             clusterlib.calculate_utxos_balance(utxos=reference_input_utxo) == reference_input_amount
         ), f"The reference input was spent `{reference_input_utxo}`"
 
-        # TODO check command 'transaction view' bug on cardano-node 4045
+        # check that the reference input is present on 'transaction view'
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
     def test_same_input_as_reference_input(
