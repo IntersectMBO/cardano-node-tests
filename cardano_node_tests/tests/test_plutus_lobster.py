@@ -68,8 +68,6 @@ def _fund_issuer(
     collateral_amount: int,
 ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund the token issuer."""
-    issuer_init_balance = cluster_obj.get_address_balance(issuer_addr.address)
-
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
     )
@@ -96,18 +94,16 @@ def _fund_issuer(
     )
     cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-    issuer_balance = cluster_obj.get_address_balance(issuer_addr.address)
+    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    out_issuer_utxos = clusterlib.filter_utxos(
+        utxos=out_utxos, address=issuer_addr.address, coin=clusterlib.DEFAULT_COIN
+    )
     assert (
-        issuer_balance == issuer_init_balance + amount + collateral_amount
+        clusterlib.calculate_utxos_balance(out_issuer_utxos) == amount + collateral_amount
     ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_output.out_file)
-    mint_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
-    collateral_utxos = [
-        clusterlib.UTXOData(
-            utxo_hash=txid, utxo_ix=2, amount=collateral_amount, address=issuer_addr.address
-        )
-    ]
+    mint_utxos = [out_issuer_utxos[0]]
+    collateral_utxos = [out_issuer_utxos[1]]
 
     return mint_utxos, collateral_utxos, tx_output
 
@@ -165,18 +161,22 @@ def _mint_lobster_nft(
     )
     cluster_obj.submit_tx(tx_file=tx_signed, txins=mint_utxos)
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_output.out_file)
-    token_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
+    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    lovelace_utxos = clusterlib.filter_utxos(
+        utxos=out_utxos, address=issuer_addr.address, coin=clusterlib.DEFAULT_COIN
+    )
+    token_utxos = clusterlib.filter_utxos(
+        utxos=out_utxos, address=issuer_addr.address, coin=lobster_nft_token
+    )
 
     # check expected balances
-    token_utxo_lovelace = [u for u in token_utxos if u.coin == clusterlib.DEFAULT_COIN][0]
     assert (
-        token_utxo_lovelace.amount == lovelace_amount
+        # skip change UTxO
+        clusterlib.calculate_utxos_balance(lovelace_utxos[1:])
+        == lovelace_amount
     ), f"Incorrect Lovelace balance for token issuer address `{issuer_addr.address}`"
-
-    token_utxo_lobster = [u for u in token_utxos if u.coin == lobster_nft_token][0]
     assert (
-        token_utxo_lobster.amount == nft_amount
+        clusterlib.calculate_utxos_balance(token_utxos, coin=lobster_nft_token) == nft_amount
     ), f"Incorrect token balance for token issuer address `{issuer_addr.address}`"
 
     return lobster_nft_token, token_utxos, tx_output
@@ -226,21 +226,23 @@ def _deploy_lobster_nft(
     )
     cluster_obj.submit_tx(tx_file=tx_signed, txins=token_utxos)
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_output.out_file)
-    deployed_token_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
+    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    lovelace_utxos = clusterlib.filter_utxos(
+        utxos=out_utxos, address=script_address, coin=clusterlib.DEFAULT_COIN
+    )
+    token_utxos = clusterlib.filter_utxos(
+        utxos=out_utxos, address=script_address, coin=lobster_nft_token
+    )
 
     # check expected balances
-    token_utxo_lovelace = [u for u in deployed_token_utxos if u.coin == clusterlib.DEFAULT_COIN][0]
     assert (
-        token_utxo_lovelace.amount == lovelace_amount
-    ), f"Incorrect Lovelace balance for script address address `{script_address}`"
-
-    token_utxo_lobster = [u for u in deployed_token_utxos if u.coin == lobster_nft_token][0]
+        clusterlib.calculate_utxos_balance(lovelace_utxos) == lovelace_amount
+    ), f"Incorrect Lovelace balance for token issuer address `{script_address}`"
     assert (
-        token_utxo_lobster.amount == nft_amount
+        clusterlib.calculate_utxos_balance(token_utxos, coin=lobster_nft_token) == nft_amount
     ), f"Incorrect token balance for token issuer address `{script_address}`"
 
-    return script_address, deployed_token_utxos, tx_output
+    return script_address, token_utxos, tx_output
 
 
 @common.SKIPIF_BUILD_UNUSABLE
