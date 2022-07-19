@@ -331,6 +331,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
                 amount=int(query_row.ma_tx_out_quantity or 0),
                 address=str(query_row.tx_out_addr),
                 coin=coin,
+                datum_hash=query_row.tx_out_data_hash.hex() if query_row.tx_out_data_hash else "",
             )
             ma_utxo_out.append(ma_rec)
 
