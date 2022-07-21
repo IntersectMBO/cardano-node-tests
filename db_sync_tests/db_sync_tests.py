@@ -49,6 +49,7 @@ PERF_STATS_ARCHIVE = 'db_sync_perf_stats.zip'
 
 ONE_MINUTE = 60
 
+
 def get_environment():
     return vars(args)["environment"]
 
@@ -70,7 +71,10 @@ def get_db_sync_branch():
 
 
 def get_db_sync_start_options():
-    return str(vars(args)["db_sync_start_options"]).strip()
+    options = str(vars(args)["db_sync_start_options"]).strip()
+    if options == "--none":
+        return ''
+    return options
 
 
 def get_db_sync_version_from_gh_action():
@@ -535,7 +539,9 @@ def main():
     db_branch = get_db_sync_branch()
     print(f"DB sync branch: {db_branch}")
 
-    db_sync_version_from_gh_action = get_db_sync_version_from_gh_action()
+    db_start_options = get_db_sync_start_options()
+
+    db_sync_version_from_gh_action = get_db_sync_version_from_gh_action() + " " + db_start_options
     print(f"DB sync version: {db_sync_version_from_gh_action}")
 
     # cardano-node setup
@@ -625,6 +631,10 @@ def main():
 
 
 if __name__ == "__main__":
+
+    def hyphenated(string):
+        return '--' + string
+
     parser = argparse.ArgumentParser(description="Execute basic sync test\n\n")
 
     parser.add_argument(
@@ -643,7 +653,7 @@ if __name__ == "__main__":
         "-dv", "--db_sync_version_gh_action", help="db-sync version - 12.0.0-rc2 (tag number) or 12.0.2 (release number - for released versions) or 12.0.2_PR2124 (for not released and not tagged runs with a specific db_sync PR/version)"
     )
     parser.add_argument(
-        "-dsa", "--db_sync_start_options", help="db-sync start arguments: --disable-ledger, --disable-cache, --disable-epoch"
+        "-dsa", "--db_sync_start_options", type=hyphenated, help="db-sync start arguments: --disable-ledger, --disable-cache, --disable-epoch"
     )
     parser.add_argument(
         "-e",

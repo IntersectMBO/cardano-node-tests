@@ -2,6 +2,7 @@
 #! nix-shell -i bash --keep LOG_FILEPATH --keep ENVIRONMENT --keep DB_SYNC_START_ARGS --keep POSTGRES_DIR --keep PGUSER -p glibcLocales postgresql lsof procps
 # shellcheck shell=bash
 
+
 cd cardano-db-sync
 
 export PGPASSFILE=config/pgpass-$ENVIRONMENT
