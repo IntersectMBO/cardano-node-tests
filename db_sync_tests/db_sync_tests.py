@@ -69,6 +69,10 @@ def get_db_sync_branch():
     return str(vars(args)["db_sync_branch"]).strip()
 
 
+def get_db_sync_start_options():
+    return str(vars(args)["db_sync_start_options"]).strip()
+
+
 def get_db_sync_version_from_gh_action():
     return str(vars(args)["db_sync_version_gh_action"]).strip()
 
@@ -320,6 +324,7 @@ def setup_postgres():
 def start_db_sync():
     current_directory = os.getcwd()
     os.chdir(ROOT_TEST_PATH)
+    export_env_var("DB_SYNC_START_ARGS", get_db_sync_start_options())
     export_env_var("ENVIRONMENT", get_environment())
     export_env_var("LOG_FILEPATH", DB_SYNC_LOG_FILE_PATH)
 
@@ -636,6 +641,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-dv", "--db_sync_version_gh_action", help="db-sync version - 12.0.0-rc2 (tag number) or 12.0.2 (release number - for released versions) or 12.0.2_PR2124 (for not released and not tagged runs with a specific db_sync PR/version)"
+    )
+    parser.add_argument(
+        "-dsa", "--db_sync_start_options", help="db-sync start arguments: --disable-ledger, --disable-cache, --disable-epoch"
     )
     parser.add_argument(
         "-e",
