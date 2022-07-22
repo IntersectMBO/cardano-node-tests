@@ -7,10 +7,12 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any
+from typing import List
 from typing import Tuple
 
 import allure
 import pytest
+import requests
 from _pytest.tmpdir import TempdirFactory
 from cardano_clusterlib import clusterlib
 
@@ -101,8 +103,26 @@ def cluster_kes(
     )
 
 
+def _get_forge_stats(pool_num: int) -> List[str]:
+    instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
+        cluster_nodes.get_instance_num()
+    )
+    port = getattr(instance_ports, f"prometheus_pool{pool_num}")
+
+    response = requests.get(f"http://localhost:{port}/metrics")
+    assert response, f"Request failed, status code {response.status_code}"
+
+    forge_lines = [line for line in response.text.split("\n") if "Forge" in line]
+
+    return forge_lines
+
+
 def _check_block_production(
-    cluster_obj: clusterlib.ClusterLib, temp_template: str, pool_id_dec: str, in_epoch: int
+    cluster_obj: clusterlib.ClusterLib,
+    temp_template: str,
+    pool_id_dec: str,
+    pool_num: int,
+    in_epoch: int,
 ) -> Tuple[int, bool]:
     epoch = cluster_obj.get_epoch()
     if epoch < in_epoch:
@@ -122,6 +142,12 @@ def _check_block_production(
         state_name=f"{temp_template}_{epoch}",
         ledger_state=ledger_state,
     )
+
+    forge_stats = _get_forge_stats(pool_num=pool_num)
+    with open(
+        f"{temp_template}_{epoch}_pool{pool_num}_forge_stats.txt", "w", encoding="utf-8"
+    ) as fp_out:
+        fp_out.write("\n".join(forge_stats))
 
     # check if the pool is minting any blocks
     blocks_made = ledger_state["blocksCurrent"] or {}
@@ -160,6 +186,7 @@ class TestKES:
 
         expire_timeout = 200
         expire_node_name = "pool1"
+        expire_pool_num = 1
         expire_pool_name = f"node-{expire_node_name}"
         expire_pool_rec = cluster_manager.cache.addrs_data[expire_pool_name]
         expire_pool_id = cluster.get_stake_pool_id(expire_pool_rec["cold_key_pair"].vkey_file)
@@ -205,6 +232,7 @@ class TestKES:
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 pool_id_dec=expire_pool_id_dec,
+                pool_num=expire_pool_num,
                 in_epoch=cluster.get_epoch() + 1,
             )
 
@@ -279,6 +307,7 @@ class TestKES:
         __: Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL2
+        pool_num = 2
         node_name = "pool2"
         cluster = cluster_lock_pool2
 
@@ -334,6 +363,7 @@ class TestKES:
                         cluster_obj=cluster,
                         temp_template=temp_template,
                         pool_id_dec=pool_id_dec,
+                        pool_num=pool_num,
                         in_epoch=this_epoch + 1,
                     )
 
@@ -414,6 +444,7 @@ class TestKES:
                     cluster_obj=cluster,
                     temp_template=temp_template,
                     pool_id_dec=pool_id_dec,
+                    pool_num=pool_num,
                     in_epoch=this_epoch + 1,
                 )
 
@@ -484,6 +515,7 @@ class TestKES:
         __: Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL2
+        pool_num = 2
         node_name = "pool2"
         cluster = cluster_lock_pool2
 
@@ -554,6 +586,7 @@ class TestKES:
                     cluster_obj=cluster,
                     temp_template=temp_template,
                     pool_id_dec=pool_id_dec,
+                    pool_num=pool_num,
                     in_epoch=this_epoch + 1,
                 )
 
