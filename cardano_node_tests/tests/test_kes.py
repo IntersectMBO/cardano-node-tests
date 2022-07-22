@@ -452,10 +452,10 @@ class TestKES:
             shutil.copy(valid_opcert_file, opcert_file)
             cluster_nodes.restart_nodes([node_name])
 
-            LOGGER.info("Checking blocks production for up to 3 epochs.")
+            LOGGER.info("Checking blocks production for up to 6 epochs.")
             updated_epoch = cluster.get_epoch()
             this_epoch = updated_epoch
-            for __ in range(3):
+            for __ in range(6):
                 this_epoch, is_minting = _check_block_production(
                     cluster_obj=cluster,
                     temp_template=temp_template,
@@ -594,10 +594,10 @@ class TestKES:
             # start the node with the new operational certificate
             cluster_nodes.start_nodes([node_name])
 
-            LOGGER.info("Checking blocks production for up to 3 epochs.")
+            LOGGER.info("Checking blocks production for up to 6 epochs.")
             updated_epoch = cluster.get_epoch()
             this_epoch = updated_epoch
-            for __ in range(3):
+            for __ in range(6):
                 this_epoch, is_minting = _check_block_production(
                     cluster_obj=cluster,
                     temp_template=temp_template,
