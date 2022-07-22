@@ -1105,6 +1105,14 @@ class TestReferenceScripts:
             script_txins=plutus_txins,
         )
 
+        plutus_cost = cluster.calculate_plutus_script_cost(
+            src_address=payment_addrs[0].address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_redeem,
+            txouts=txouts_redeem,
+            script_txins=plutus_txins,
+        )
+
         tx_signed = cluster.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
@@ -1118,6 +1126,12 @@ class TestReferenceScripts:
         assert not (
             cluster.get_utxo(utxo=script_utxos1[0]) or cluster.get_utxo(utxo=script_utxos2[0])
         ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
+
+        # check that the script hash is included for all scripts
+        for script in plutus_cost:
+            assert script.get(
+                "scriptHash"
+            ), "Missing script hash on calculate-plutus-script-cost result"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("script_type", ("simple", "plutus_v1", "plutus_v2"))
