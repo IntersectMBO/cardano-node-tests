@@ -13,10 +13,14 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
+CLI_COVERAGE_ARG = "--cli-coverage-dir"
+ARTIFACTS_BASE_DIR_ARG = "--artifacts-base-dir"
+CLUSTER_INSTANCE_ID_FILENAME = "cluster_instance_id.log"
+
 
 def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> Optional[Path]:
     """Save CLI coverage info."""
-    cli_coverage_dir = pytest_config.getoption("--cli-coverage-dir")
+    cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
         return None
 
@@ -29,7 +33,7 @@ def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config)
 
 def save_start_script_coverage(log_file: Path, pytest_config: Config) -> Optional[Path]:
     """Save info about CLI commands executed by cluster start script."""
-    cli_coverage_dir = pytest_config.getoption("--cli-coverage-dir")
+    cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and log_file.exists()):
         return None
 
@@ -44,7 +48,7 @@ def save_start_script_coverage(log_file: Path, pytest_config: Config) -> Optiona
 def save_cluster_artifacts(save_dir: Path, state_dir: Path) -> None:
     """Save cluster artifacts (logs, certs, etc.)."""
     dir_rand_str = ""
-    cluster_instance_id_log = state_dir / "cluster_instance_id.log"
+    cluster_instance_id_log = state_dir / CLUSTER_INSTANCE_ID_FILENAME
     if cluster_instance_id_log.exists():
         with open(cluster_instance_id_log, encoding="utf-8") as fp_in:
             dir_rand_str = fp_in.read().strip()
@@ -78,7 +82,7 @@ def save_cluster_artifacts(save_dir: Path, state_dir: Path) -> None:
 
 def copy_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
     """Copy collected tests and cluster artifacts to artifacts dir."""
-    artifacts_base_dir = pytest_config.getoption("--artifacts-base-dir")
+    artifacts_base_dir = pytest_config.getoption(ARTIFACTS_BASE_DIR_ARG)
     if not artifacts_base_dir:
         return
 

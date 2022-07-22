@@ -481,7 +481,9 @@ class _ClusterGetter:
         # generate ID for the new cluster instance so it is possible to match log entries with
         # cluster instance files saved as artifacts
         cluster_instance_id = helpers.get_rand_str(8)
-        with open(state_dir / "cluster_instance_id.log", "w", encoding="utf-8") as fp_out:
+        with open(
+            state_dir / artifacts.CLUSTER_INSTANCE_ID_FILENAME, "w", encoding="utf-8"
+        ) as fp_out:
             fp_out.write(cluster_instance_id)
         self.cm._log(
             f"c{self.cm.cluster_instance_num}: started cluster instance '{cluster_instance_id}'"
