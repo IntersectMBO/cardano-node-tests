@@ -354,6 +354,11 @@ class ClusterManager:
             # remove file that indicates that a test is running on the worker
             (self.instance_dir / f"{TEST_RUNNING_GLOB}_{self.worker_id}").unlink(missing_ok=True)
 
+            # log how many tests keep running on the cluster instance
+            num_tests_running = len(list(self.instance_dir.glob(f"{TEST_RUNNING_GLOB}_*")))
+            if num_tests_running:
+                self._log(f"c{self._cluster_instance_num}: {num_tests_running} running tests")
+
         if errors:
             logfiles.report_artifacts_errors(errors)
 
