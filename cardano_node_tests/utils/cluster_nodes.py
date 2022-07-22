@@ -284,18 +284,22 @@ def get_cluster_type() -> ClusterType:
     return LocalCluster()
 
 
-def get_cardano_node_socket_path(instance_num: int) -> Path:
+def get_cardano_node_socket_path(instance_num: int, socket_file_name: str = "") -> Path:
     """Return path to socket file in the given cluster instance."""
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
+    socket_file_name = socket_file_name or configuration.STARTUP_CARDANO_NODE_SOCKET_PATH.name
     state_cluster_dirname = f"{STATE_CLUSTER}{instance_num}"
-    state_cluster = socket_path.parent.parent / state_cluster_dirname
-    new_socket_path = state_cluster / socket_path.name
+    state_cluster = (
+        configuration.STARTUP_CARDANO_NODE_SOCKET_PATH.parent.parent / state_cluster_dirname
+    )
+    new_socket_path = state_cluster / socket_file_name
     return new_socket_path
 
 
-def set_cluster_env(instance_num: int) -> None:
+def set_cluster_env(instance_num: int, socket_file_name: str = "") -> None:
     """Set env variables for the given cluster instance."""
-    socket_path = get_cardano_node_socket_path(instance_num)
+    socket_path = get_cardano_node_socket_path(
+        instance_num=instance_num, socket_file_name=socket_file_name
+    )
     os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
 
     os.environ["PGPASSFILE"] = str(socket_path.parent / "pgpass")
