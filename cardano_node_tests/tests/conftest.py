@@ -33,14 +33,14 @@ workermanage.NodeManager.EXIT_TIMEOUT = 30
 
 def pytest_addoption(parser: Any) -> None:
     parser.addoption(
-        "--cli-coverage-dir",
+        artifacts.CLI_COVERAGE_ARG,
         action="store",
         type=helpers.check_dir_arg,
         default="",
         help="Path to directory for storing coverage info",
     )
     parser.addoption(
-        "--artifacts-base-dir",
+        artifacts.ARTIFACTS_BASE_DIR_ARG,
         action="store",
         type=helpers.check_dir_arg,
         default="",
@@ -218,7 +218,7 @@ def testenv_setup_teardown(
 
             if configuration.DEV_CLUSTER_RUNNING:
                 # save cluster artifacts
-                artifacts_base_dir = request.config.getoption("--artifacts-base-dir")
+                artifacts_base_dir = request.config.getoption(artifacts.ARTIFACTS_BASE_DIR_ARG)
                 if artifacts_base_dir:
                     state_dir = cluster_nodes.get_cluster_env().state_dir
                     artifacts.save_cluster_artifacts(save_dir=pytest_root_tmp, state_dir=state_dir)
