@@ -196,6 +196,11 @@ class TestKES:
         # the pools keep minting blocks
         refreshed_nodes = ["pool2", "pool3"]
 
+        # use socket of pool2 for this test - once bft1 KES expires, bft1 stops syncing
+        cluster_nodes.set_cluster_env(
+            instance_num=cluster_nodes.get_instance_num(), socket_file_name="pool2.socket"
+        )
+
         def _refresh_opcerts():
             for n in refreshed_nodes:
                 refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
@@ -216,6 +221,17 @@ class TestKES:
         logfiles.add_ignore_rule(
             files_glob="bft1.stdout",
             regex="|".join(expected_err_regexes),
+            ignore_file_id=worker_id,
+        )
+        logfiles.add_ignore_rule(
+            files_glob="bft1.stdout",
+            regex="TraceNoLedgerView",
+            ignore_file_id=worker_id,
+        )
+        # ignore `TraceNoLedgerView` in pool1 node log file as well
+        logfiles.add_ignore_rule(
+            files_glob="pool1.stdout",
+            regex="TraceNoLedgerView",
             ignore_file_id=worker_id,
         )
         # search for expected errors only in log file corresponding to pool with expired KES

@@ -25,9 +25,10 @@ TESTNET_POOL_IDS = (
 )
 
 # resolve CARDANO_NODE_SOCKET_PATH
-os.environ["CARDANO_NODE_SOCKET_PATH"] = str(
+STARTUP_CARDANO_NODE_SOCKET_PATH = (
     Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
 )
+os.environ["CARDANO_NODE_SOCKET_PATH"] = str(STARTUP_CARDANO_NODE_SOCKET_PATH)
 
 # resolve SCHEDULING_LOG
 SCHEDULING_LOG: Union[str, Path] = os.environ.get("SCHEDULING_LOG") or ""
