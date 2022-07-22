@@ -43,10 +43,22 @@ def save_start_script_coverage(log_file: Path, pytest_config: Config) -> Optiona
 
 def save_cluster_artifacts(save_dir: Path, state_dir: Path) -> None:
     """Save cluster artifacts (logs, certs, etc.)."""
-    destdir = save_dir / "cluster_artifacts" / f"{state_dir.name}_{helpers.get_rand_str(8)}"
+    dir_rand_str = ""
+    cluster_instance_id_log = state_dir / "cluster_instance_id.log"
+    if cluster_instance_id_log.exists():
+        with open(cluster_instance_id_log, encoding="utf-8") as fp_in:
+            dir_rand_str = fp_in.read().strip()
+    dir_rand_str = dir_rand_str or helpers.get_rand_str(8)
+
+    destdir = save_dir / "cluster_artifacts" / f"{state_dir.name}_{dir_rand_str}"
     destdir.mkdir(parents=True)
 
-    files_list = [*state_dir.glob("*.std*"), *state_dir.glob("*.json"), *state_dir.glob("*.log")]
+    files_list = [
+        *state_dir.glob("*.stdout"),
+        *state_dir.glob("*.stderr"),
+        *state_dir.glob("*.json"),
+        *state_dir.glob("*.log"),
+    ]
     dirs_to_copy = ("nodes", "shelley")
 
     for fpath in files_list:
