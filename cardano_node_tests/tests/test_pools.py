@@ -33,6 +33,7 @@ from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
+DEREG_BUFFER_SEC = 30
 
 
 @pytest.fixture(scope="module")
@@ -371,7 +372,7 @@ def _create_register_pool(
 
     # deregister stake pool
     def _deregister():
-        depoch = 1 if cluster_obj.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
+        depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         with helpers.change_cwd(temp_dir):
             cluster_obj.deregister_stake_pool(
                 pool_owners=pool_owners,
@@ -484,7 +485,7 @@ def _create_register_pool_delegate_stake_tx(
 
     # deregister stake pool
     def _deregister():
-        depoch = 1 if cluster_obj.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
+        depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         with helpers.change_cwd(temp_dir):
             cluster_obj.deregister_stake_pool(
                 pool_owners=pool_owners,
@@ -1044,7 +1045,7 @@ class TestStakePool:
 
         # deregister stake pool
         def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
@@ -1188,7 +1189,7 @@ class TestStakePool:
 
         # deregister stake pool
         def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
@@ -1568,7 +1569,7 @@ class TestStakePool:
 
         # deregister stake pool
         def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
