@@ -8,6 +8,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -67,6 +68,21 @@ PARAM_PLUTUS_VERSION = pytest.mark.parametrize(
     ),
     ids=("plutus_v1", "plutus_v2"),
 )
+
+
+# intervals for `wait_for_epoch_interval` (negative values are counted from the end of an epoch)
+if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL:
+    # time buffer at the end of an epoch, enough to do something that takes several transactions
+    EPOCH_STOP_SEC_BUFFER = -40
+    # time when all ledger state info is available for the current epoch
+    EPOCH_START_SEC_LEDGER_STATE = -19
+    # time buffer at the end of an epoch after getting ledger state info
+    EPOCH_STOP_SEC_LEDGER_STATE = -15
+else:
+    # we can be more generous on testnets
+    EPOCH_STOP_SEC_BUFFER = -200
+    EPOCH_START_SEC_LEDGER_STATE = -300
+    EPOCH_STOP_SEC_LEDGER_STATE = -200
 
 
 class PytestTest(NamedTuple):

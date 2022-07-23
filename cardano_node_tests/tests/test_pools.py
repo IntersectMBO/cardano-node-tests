@@ -33,7 +33,6 @@ from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
-DEREG_BUFFER_SEC = 30
 
 
 @pytest.fixture(scope="module")
@@ -372,7 +371,7 @@ def _create_register_pool(
 
     # deregister stake pool
     def _deregister():
-        depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        depoch = 1 if cluster_obj.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
         with helpers.change_cwd(temp_dir):
             cluster_obj.deregister_stake_pool(
                 pool_owners=pool_owners,
@@ -485,7 +484,7 @@ def _create_register_pool_delegate_stake_tx(
 
     # deregister stake pool
     def _deregister():
-        depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        depoch = 1 if cluster_obj.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
         with helpers.change_cwd(temp_dir):
             cluster_obj.deregister_stake_pool(
                 pool_owners=pool_owners,
@@ -879,7 +878,7 @@ class TestStakePool:
 
         # deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         depoch = cluster.get_epoch() + 1
         if use_build_cmd:
@@ -998,7 +997,7 @@ class TestStakePool:
 
         # deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         depoch = cluster.get_epoch() + 1
         cluster.deregister_stake_pool(
@@ -1045,7 +1044,7 @@ class TestStakePool:
 
         # deregister stake pool
         def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            depoch = 1 if cluster.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
@@ -1154,7 +1153,7 @@ class TestStakePool:
 
         # deregister stake pool in epoch + 2
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         depoch = cluster.get_epoch() + 2
         cluster.deregister_stake_pool(
@@ -1189,7 +1188,7 @@ class TestStakePool:
 
         # deregister stake pool
         def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            depoch = 1 if cluster.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
@@ -1311,7 +1310,7 @@ class TestStakePool:
 
         # make sure the update doesn't happen close to epoch boundary
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=10, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
         # update the pool metadata by resubmitting the pool registration certificate
@@ -1424,7 +1423,7 @@ class TestStakePool:
 
         # make sure the update doesn't happen close to epoch boundary
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=10, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
         # update the pool parameters by resubmitting the pool registration certificate
@@ -1569,7 +1568,7 @@ class TestStakePool:
 
         # deregister stake pool
         def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            depoch = 1 if cluster.time_to_epoch_end() >= common.EPOCH_STOP_SEC_BUFFER else 2
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.deregister_stake_pool(
                     pool_owners=pool_owners,
@@ -1656,7 +1655,7 @@ class TestStakePool:
 
         # create pool deregistration cert
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=-DEREG_BUFFER_SEC
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,

@@ -331,7 +331,9 @@ class TestDelegateAddr:
 
         # Step 2: register and delegate
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -369,7 +371,9 @@ class TestDelegateAddr:
             reward_error = f"User of pool '{pool_id}' hasn't received any rewards."
 
         # make sure we have enough time to finish deregistration in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
 
         # submit deregistration certificate and withdraw rewards
         tx_raw_deregister_out = deregister_stake_addr(
