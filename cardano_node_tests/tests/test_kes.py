@@ -131,7 +131,11 @@ def _check_block_production(
         cluster_obj.wait_for_new_epoch(new_epochs=new_epochs)
 
     LOGGER.info(f"{datetime.datetime.now()}: Waiting for the end of current epoch.")
-    clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster_obj, start=-19, stop=-15)
+    clusterlib_utils.wait_for_epoch_interval(
+        cluster_obj=cluster_obj,
+        start=common.EPOCH_START_SEC_LEDGER_STATE,
+        stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
+    )
 
     epoch = cluster_obj.get_epoch()
 
