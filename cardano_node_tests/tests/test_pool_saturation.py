@@ -160,7 +160,9 @@ class TestPoolSaturation:
         pool_records: Dict[int, PoolRecord] = {}
 
         # make sure we have enough time to finish the delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificates and delegate to pools
@@ -242,7 +244,7 @@ class TestPoolSaturation:
 
             # sleep till the end of epoch
             clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=-50, stop=-40, force_epoch=True
+                cluster_obj=cluster, start=-50, stop=common.EPOCH_STOP_SEC_BUFFER, force_epoch=True
             )
             this_epoch = cluster.get_epoch()
 

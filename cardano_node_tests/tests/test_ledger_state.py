@@ -11,7 +11,6 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -42,10 +41,9 @@ class TestLedgerState:
         temp_template = common.get_test_id(cluster)
 
         # make sure the queries can be finished in single epoch
-        stop = (
-            20 if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL else 200
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-stop)
 
         stake_pool_ids = cluster.get_stake_pools()
         if not stake_pool_ids:

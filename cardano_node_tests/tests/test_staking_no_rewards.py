@@ -59,7 +59,9 @@ class TestNoRewards:
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
         )
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -82,7 +84,9 @@ class TestNoRewards:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish the pool update in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
 
         # load and update original pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
@@ -208,7 +212,9 @@ class TestNoRewards:
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
         )
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -231,7 +237,9 @@ class TestNoRewards:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to withdraw the pledge in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
 
         # load pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
@@ -366,7 +374,9 @@ class TestNoRewards:
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
         )
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -389,7 +399,9 @@ class TestNoRewards:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish deregistration in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
 
         # deregister stake address - owner's stake is lower than pledge
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -545,7 +557,9 @@ class TestNoRewards:
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
         )
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-20)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -568,7 +582,9 @@ class TestNoRewards:
             pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish deregistration in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
 
         # withdraw pool rewards to payment address
         # use `transaction build` if possible
@@ -738,7 +754,9 @@ class TestNoRewards:
             pytest.skip(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish reward address deregistration in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
 
         # withdraw pool rewards to payment address
         cluster.withdraw_reward(
@@ -794,7 +812,9 @@ class TestNoRewards:
             )
 
             # make sure we have enough time to finish pool deregistration in one epoch
-            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            )
 
             src_dereg_balance = cluster.get_address_balance(pool_owner.payment.address)
             stake_acount_balance = cluster.get_stake_addr_info(

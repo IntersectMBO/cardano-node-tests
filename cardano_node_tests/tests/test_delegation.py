@@ -96,7 +96,9 @@ class TestDelegateAddr:
         cluster, pool_id = cluster_and_pool
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -142,7 +144,9 @@ class TestDelegateAddr:
         cluster = cluster_use_pool1
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -209,7 +213,9 @@ class TestDelegateAddr:
 
         pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -256,7 +262,9 @@ class TestDelegateAddr:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish deregistration in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
 
         # files for deregistering stake address
         stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
@@ -349,7 +357,9 @@ class TestDelegateAddr:
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # submit registration certificate and delegate to pool
@@ -385,7 +395,9 @@ class TestDelegateAddr:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
 
         # make sure we have enough time to finish deregistration in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
 
         # files for deregistering / re-registering stake address
         stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
@@ -605,7 +617,9 @@ class TestDelegateAddr:
             stake_pool_id=pool_id,
         )
 
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=5, stop=-40)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.get_epoch()
 
         # delegate and deregister stake address in single TX
