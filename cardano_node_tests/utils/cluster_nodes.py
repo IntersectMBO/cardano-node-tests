@@ -9,6 +9,7 @@ from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Set
 from typing import Union
 
 from cardano_clusterlib import clusterlib
@@ -58,6 +59,8 @@ class ClusterType:
     TESTNET_NOPOOLS = "testnet_nopools"
     test_addr_records = ("user1",)
 
+    NODES: Set[str] = set()
+
     def __init__(self) -> None:
         self.type = "unknown"
         self.cluster_scripts = cluster_scripts.ScriptsTypes()
@@ -77,6 +80,8 @@ class ClusterType:
 
 class LocalCluster(ClusterType):
     """Local cluster type (full cardano mode)."""
+
+    NODES = {"bft1", "pool1", "pool2", "pool3"}
 
     def __init__(self) -> None:
         super().__init__()
@@ -172,6 +177,8 @@ class TestnetCluster(ClusterType):
         1506203091: {"type": Testnets.mainnet, "shelley_start": "2020-07-29T21:44:51Z"},
     }
 
+    NODES = {"relay1", "pool1", "pool2"}
+
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET
@@ -265,6 +272,8 @@ class TestnetCluster(ClusterType):
 
 class TestnetNopoolsCluster(TestnetCluster):
     """Testnet cluster type (full cardano mode)."""
+
+    NODES = {"relay1"}
 
     def __init__(self) -> None:
         super().__init__()

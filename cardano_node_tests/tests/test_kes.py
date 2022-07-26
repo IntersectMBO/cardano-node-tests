@@ -472,6 +472,11 @@ class TestKES:
                 if is_minting:
                     break
             else:
+                common.fail_on_fork(
+                    cluster_manager=cluster_manager,
+                    cluster_obj=cluster,
+                    temp_template=temp_template,
+                )
                 raise AssertionError(
                     f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}."
                 )
@@ -614,6 +619,11 @@ class TestKES:
                 if is_minting:
                     break
             else:
+                common.fail_on_fork(
+                    cluster_manager=cluster_manager,
+                    cluster_obj=cluster,
+                    temp_template=temp_template,
+                )
                 raise AssertionError(
                     f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}."
                 )

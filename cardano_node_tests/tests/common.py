@@ -1,16 +1,23 @@
+import logging
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any
 from typing import NamedTuple
+from typing import Set
+from typing import Tuple
 
 import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.versions import VERSIONS
+
+LOGGER = logging.getLogger(__name__)
 
 
 # common `skipif`s
@@ -149,3 +156,81 @@ def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
     cm._log(f"c{cm.cluster_instance_num}: got ID `{test_id}` for `{curr_test.full}`")
 
     return test_id
+
+
+def detect_fork(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_obj: clusterlib.ClusterLib,
+    temp_template: str,
+) -> Tuple[Set[str], Set[str]]:
+    """Detect if one or more nodes have forked blockchain or is out of sync."""
+    forked_nodes: Set[str] = set()
+    unsynced_nodes: Set[str] = set()
+
+    known_nodes = cluster_nodes.get_cluster_type().NODES
+    if len(known_nodes) <= 1:
+        LOGGER.warning("WARNING: Not enough nodes available to detect forks, skipping the check.")
+        return forked_nodes, unsynced_nodes
+
+    instance_num = cluster_nodes.get_instance_num()
+
+    # create a UTxO
+    payment_rec = cluster_obj.gen_payment_addr_and_keys(
+        name=temp_template,
+    )
+    tx_raw_output = clusterlib_utils.fund_from_faucet(
+        payment_rec,
+        cluster_obj=cluster_obj,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        amount=2_000_000,
+    )
+    assert tx_raw_output
+    utxos = cluster_obj.get_utxo(tx_raw_output=tx_raw_output)
+
+    # check if all nodes know about the UTxO
+    for node in known_nodes:
+        # set 'CARDANO_NODE_SOCKET_PATH' to point to socket of the selected node
+        cluster_nodes.set_cluster_env(instance_num=instance_num, socket_file_name=f"{node}.socket")
+
+        for __ in range(5):
+            if float(cluster_obj.get_tip()["syncProgress"]) == 100:
+                break
+            time.sleep(1)
+        else:
+            unsynced_nodes.add(node)
+            continue
+
+        if not cluster_obj.get_utxo(utxo=utxos):
+            forked_nodes.add(node)
+
+    # restore 'CARDANO_NODE_SOCKET_PATH' to original value
+    cluster_nodes.set_cluster_env(instance_num=instance_num)
+
+    # forked nodes are the ones that differ from the majority of nodes
+    if forked_nodes and len(forked_nodes) > (len(known_nodes) // 2):
+        forked_nodes = known_nodes - forked_nodes
+
+    return forked_nodes, unsynced_nodes
+
+
+def fail_on_fork(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_obj: clusterlib.ClusterLib,
+    temp_template: str,
+) -> None:
+    """Fail if one or more nodes have forked blockchain or is out of sync."""
+    forked_nodes, unsynced_nodes = detect_fork(
+        cluster_manager=cluster_manager, cluster_obj=cluster_obj, temp_template=temp_template
+    )
+
+    err_msg = []
+
+    if forked_nodes:
+        err_msg.append(f"Following nodes appear to have forked blockchain: {sorted(forked_nodes)}")
+    if unsynced_nodes:
+        err_msg.append(f"Following nodes appear to be out of sync: {sorted(unsynced_nodes)}")
+
+    if err_msg:
+        # the local cluster needs to be restarted before it is usable again
+        cluster_manager.set_needs_restart()
+        raise AssertionError("\n".join(err_msg))
