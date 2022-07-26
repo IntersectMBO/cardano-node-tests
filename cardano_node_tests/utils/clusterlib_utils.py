@@ -180,7 +180,7 @@ def fund_from_faucet(
     tx_name: Optional[str] = None,
     destination_dir: FileType = ".",
     force: bool = False,
-) -> None:
+) -> Optional[clusterlib.TxRawOutput]:
     """Send `amount` from faucet addr to all `dst_addrs`."""
     # get payment AddressRecord out of PoolUser
     dst_addr_records: List[clusterlib.AddressRecord] = [
@@ -195,7 +195,7 @@ def fund_from_faucet(
         if force or cluster_obj.get_address_balance(d.address) < a
     ]
     if not fund_dst:
-        return
+        return None
 
     src_address = faucet_data["payment"].address
     with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{src_address}.lock"):
@@ -203,13 +203,15 @@ def fund_from_faucet(
         tx_name = f"{tx_name}_funding"
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])
 
-        cluster_obj.send_funds(
+        tx_raw_output = cluster_obj.send_funds(
             src_address=src_address,
             destinations=fund_dst,
             tx_name=tx_name,
             tx_files=fund_tx_files,
             destination_dir=destination_dir,
         )
+
+    return tx_raw_output
 
 
 def create_payment_addr_records(
