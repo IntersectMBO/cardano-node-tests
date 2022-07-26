@@ -1992,6 +1992,48 @@ class TestNegativeReadonlyReferenceInputs:
         err_str = str(excinfo.value)
         assert "ReferenceInputsNotSupported" in err_str, err_str
 
+    @allure.link(helpers.get_vcs_link())
+    def test_reference_input_without_spend_anything(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test using a read-only reference input without spending any UTxO.
+
+        Expect failure
+        """
+        temp_template = common.get_test_id(cluster)
+        reference_input_amount = 2_000_000
+
+        # create the necessary Tx outputs
+
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            amount=reference_input_amount,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "build-raw",
+                    "--babbage-era",
+                    "--fee",
+                    f"{200_000}",
+                    "--read-only-tx-in-reference",
+                    f"{reference_input[0].utxo_hash}#{reference_input[0].utxo_ix}",
+                    "--tx-out",
+                    f"{payment_addrs[1].address}+{2_000_000}",
+                    "--out-file",
+                    f"{temp_template}_tx.body",
+                ]
+            )
+        err_str = str(excinfo.value)
+        assert "Missing: (--tx-in TX-IN)" in err_str, err_str
+
 
 @pytest.mark.testnets
 class TestCollateralOutput:
