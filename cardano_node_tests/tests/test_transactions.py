@@ -42,7 +42,9 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
 
-MAX_LOVELACE_AMOUNT = 2**64
+# TODO: see https://github.com/input-output-hk/cardano-node/issues/2555
+# the value should be 2**64
+MAX_LOVELACE_AMOUNT = 2**64 - 1
 
 MIN_UTXO_VALUE_ALONZO = 999_978
 MIN_UTXO_VALUE_BABBAGE = 857_690
@@ -1585,8 +1587,9 @@ class TestNotBalanced:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(transfer_add=st.integers(min_value=0, max_value=MAX_LOVELACE_AMOUNT))
-    @common.hypothesis_settings()
+    @hypothesis.given(transfer_add=st.integers(min_value=1, max_value=MAX_LOVELACE_AMOUNT // 2))
+    @hypothesis.example(transfer_add=1)
+    @common.hypothesis_settings(100)
     def test_build_transfer_unavailable_funds(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1607,10 +1610,9 @@ class TestNotBalanced:
 
         # use only the UTxO with the highest amount
         txins = [pbt_highest_utxo]
+        amount = min(MAX_LOVELACE_AMOUNT, pbt_highest_utxo.amount + transfer_add)
         # try to transfer whole balance
-        txouts = [
-            clusterlib.TxOut(address=dst_address, amount=pbt_highest_utxo.amount + transfer_add),
-        ]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.build_tx(
@@ -1620,11 +1622,14 @@ class TestNotBalanced:
                 txouts=txouts,
                 tx_files=tx_files,
             )
-        assert "The net balance of the transaction is negative" in str(excinfo.value)
+        exc_val = str(excinfo.value)
+        assert "The net balance of the transaction is negative" in exc_val, exc_val
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(change_amount=st.integers(min_value=2_000_000, max_value=MAX_LOVELACE_AMOUNT))
-    @common.hypothesis_settings()
+    @hypothesis.example(change_amount=2_000_000)
+    @hypothesis.example(change_amount=MAX_LOVELACE_AMOUNT)
+    @common.hypothesis_settings(300)
     def test_wrong_balance(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1675,11 +1680,15 @@ class TestNotBalanced:
         # it should NOT be possible to submit an unbalanced transaction
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx_bare(out_file_signed)
-        assert "ValueNotConservedUTxO" in str(excinfo.value)
+        exc_val = str(excinfo.value)
+        # TODO: see https://github.com/input-output-hk/cardano-node/issues/2555
+        assert "ValueNotConservedUTxO" in exc_val or "DeserialiseFailure" in exc_val, exc_val
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(change_amount=st.integers(min_value=MAX_LOVELACE_AMOUNT + 1))
-    @common.hypothesis_settings()
+    @hypothesis.example(change_amount=2_000_000)
+    @hypothesis.example(change_amount=MAX_LOVELACE_AMOUNT + 1)
+    @common.hypothesis_settings(300)
     def test_out_of_bounds_amount(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1712,11 +1721,15 @@ class TestNotBalanced:
             )
         except clusterlib.CLIError as exc:
             exc_val = str(exc)
-            assert "out of bounds" in exc_val or "exceeds the max bound" in exc_val
+            assert "out of bounds" in exc_val or "exceeds the max bound" in exc_val, exc_val
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE, min_value=0))
+    # TODO: `MIN_UTXO_VALUE - 10_000` because of issue
+    # https://github.com/input-output-hk/cardano-node/issues/4061
+    @hypothesis.given(amount=st.integers(min_value=0, max_value=MIN_UTXO_VALUE - 10_000))
+    @hypothesis.example(amount=0)
+    @hypothesis.example(amount=MIN_UTXO_VALUE - 10_000)
     @common.hypothesis_settings(max_examples=200)
     def test_build_transfer_amount_bellow_minimum(
         self,
@@ -1742,7 +1755,9 @@ class TestNotBalanced:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(amount=st.integers(max_value=-1, min_value=-MAX_LOVELACE_AMOUNT))
+    @hypothesis.given(amount=st.integers(min_value=-MAX_LOVELACE_AMOUNT, max_value=-1))
+    @hypothesis.example(amount=-MAX_LOVELACE_AMOUNT)
+    @hypothesis.example(amount=-1)
     @common.hypothesis_settings(max_examples=300)
     def test_build_transfer_negative_amount(
         self,
@@ -1769,7 +1784,9 @@ class TestNotBalanced:
     @allure.link(helpers.get_vcs_link())
     # TODO: `MIN_UTXO_VALUE - 10_000` because of issue
     # https://github.com/input-output-hk/cardano-node/issues/4061
-    @hypothesis.given(amount=st.integers(max_value=MIN_UTXO_VALUE - 10_000, min_value=0))
+    @hypothesis.given(amount=st.integers(min_value=0, max_value=MIN_UTXO_VALUE - 10_000))
+    @hypothesis.example(amount=0)
+    @hypothesis.example(amount=MIN_UTXO_VALUE - 10_000)
     @common.hypothesis_settings(max_examples=400)
     def test_transfer_amount_bellow_minimum(
         self,
@@ -1827,7 +1844,9 @@ class TestNotBalanced:
         assert "OutputTooSmallUTxO" in exc_val, exc_val
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(amount=st.integers(max_value=-1, min_value=-MAX_LOVELACE_AMOUNT))
+    @hypothesis.given(amount=st.integers(min_value=-MAX_LOVELACE_AMOUNT, max_value=-1))
+    @hypothesis.example(amount=-1)
+    @hypothesis.example(amount=-MAX_LOVELACE_AMOUNT)
     @common.hypothesis_settings(max_examples=500)
     def test_transfer_negative_amount(
         self,
@@ -1860,7 +1879,7 @@ class TestNotBalanced:
             "--tx-out",
             f"{dst_address}+{amount}",
             "--tx-out",
-            f"{src_address}+{pbt_highest_utxo.amount - amount - fee}",
+            f"{src_address}+2000000",
             *cluster.tx_era_arg,
             "--out-file",
             out_file,
@@ -2324,7 +2343,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_send_funds_to_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2341,7 +2360,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_to_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2361,7 +2380,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_send_funds_to_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2378,7 +2397,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_to_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2400,7 +2419,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_send_funds_to_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2419,7 +2438,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_to_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2439,7 +2458,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_send_funds_from_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2456,7 +2475,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_from_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2476,7 +2495,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_send_funds_from_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2493,7 +2512,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_from_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2515,7 +2534,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_send_funds_from_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2534,7 +2553,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_from_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2555,7 +2574,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_invalid_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2578,7 +2597,7 @@ class TestNegative:
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_invalid_chars_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2599,7 +2618,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_send_funds_invalid_length_change_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2678,7 +2697,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_invalid_lenght_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2705,7 +2724,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(300)
     def test_build_invalid_lenght_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
