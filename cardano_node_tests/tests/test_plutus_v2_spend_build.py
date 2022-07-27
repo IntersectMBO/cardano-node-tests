@@ -2324,8 +2324,10 @@ class TestCollateralOutput:
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
+        protocol_params = cluster.get_protocol_params()
+
         redeem_cost = plutus_common.compute_cost(
-            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+            execution_cost=plutus_op.execution_cost, protocol_params=protocol_params
         )
 
         # fund the script address and create a UTxO for collateral
@@ -2344,6 +2346,7 @@ class TestCollateralOutput:
             collateral_amount=amount_for_collateral,
         )
 
+        payment_init_balance = cluster.get_address_balance(payment_addr.address)
         dst_init_balance = cluster.get_address_balance(dst_addr.address)
 
         #  spend the "locked" UTxO
@@ -2370,17 +2373,30 @@ class TestCollateralOutput:
             dst_balance == dst_init_balance - redeem_cost.collateral
         ), f"Collateral was NOT spent from `{dst_addr.address}` correctly"
 
-        if use_return_collateral:
+        if use_return_collateral or not use_total_collateral:
             txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
             return_col_utxos = cluster.get_utxo(
                 txin=f"{txid_redeem}#{len(tx_output_redeem.txouts) + 1}"
             )
             assert return_col_utxos, "Return collateral UTxO was not created"
 
-            assert (
-                clusterlib.calculate_utxos_balance(utxos=return_col_utxos)
-                == return_collateral_amount
-            ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
+            change_amount = clusterlib.calculate_utxos_balance(utxos=return_col_utxos)
+
+            if use_return_collateral:
+                assert (
+                    change_amount == return_collateral_amount
+                ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
+            else:
+                # check that the collateral amount charged is according to 'collateralPercentage'
+                collateral_charged = amount_for_collateral - change_amount
+                assert collateral_charged == round(
+                    tx_output_redeem.fee * protocol_params["collateralPercentage"] / 100
+                ), "The collateral amount charged is not the expected"
+
+                payment_balance = cluster.get_address_balance(payment_addr.address)
+                assert payment_balance == payment_init_balance + clusterlib.calculate_utxos_balance(
+                    utxos=return_col_utxos
+                ), f"Incorrect balance for change address `{payment_addr.address}`"
 
     @allure.link(helpers.get_vcs_link())
     def test_collateral_with_tokens(
