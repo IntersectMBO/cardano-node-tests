@@ -91,10 +91,10 @@ def _load_coins_data(coins_data: Union[dict, str]) -> List[Tuple[int, str]]:
     return [*loaded_data, *assets_data]
 
 
-def _check_collateral_inputs(
-    tx_raw_output: clusterlib.TxRawOutput, expected_collateral: List[str]
-) -> bool:
+def _check_collateral_inputs(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> None:
     """Check collateral inputs of tx_view."""
+    view_collateral = set(tx_loaded.get("collateral inputs") or [])
+
     all_collateral_locations: List[Any] = [
         *(tx_raw_output.script_txins or ()),
         *(tx_raw_output.script_withdrawals or ()),
@@ -110,13 +110,15 @@ def _check_collateral_inputs(
 
     collateral_strings = {f"{c.utxo_hash}#{c.utxo_ix}" for c in collateral_ins}
 
-    return collateral_strings == set(expected_collateral)
+    assert (
+        collateral_strings == view_collateral
+    ), f"Unexpected collateral inputs: {collateral_strings} vs {view_collateral}"
 
 
-def _check_reference_inputs(
-    tx_raw_output: clusterlib.TxRawOutput, expected_reference_inputs: List[str]
-) -> bool:
-    """Check reference inputs of tx_view."""
+def _check_reference_inputs(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> None:
+    """Check reference inputs in tx_view."""
+    view_reference_inputs = set(tx_loaded.get("reference inputs") or [])
+
     reference_txin_locations = [
         *(tx_raw_output.script_txins or ()),
         *(tx_raw_output.script_withdrawals or ()),
@@ -134,11 +136,13 @@ def _check_reference_inputs(
 
     reference_strings = {f"{r.utxo_hash}#{r.utxo_ix}" for r in reference_txins_combined}
 
-    return reference_strings == set(expected_reference_inputs)
+    assert (
+        reference_strings == view_reference_inputs
+    ), f"Unexpected reference inputs: {reference_strings} vs {view_reference_inputs}"
 
 
-def _check_inline_datums(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> bool:
-    """Check inline datums of tx_view."""
+def _check_inline_datums(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> None:
+    """Check inline datums in tx_view."""
     raw_inline_datums = []
 
     for out in tx_raw_output.txouts:
@@ -149,9 +153,13 @@ def _check_inline_datums(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict)
         if out.inline_datum_value:
             raw_inline_datums.append(out.inline_datum_value)
 
-    tx_datums = [out.get("datum") for out in tx_loaded.get("outputs", []) if out.get("datum")]
+    if not raw_inline_datums:
+        return
 
-    return all(item in tx_datums for item in raw_inline_datums) if raw_inline_datums else True
+    view_datums = [out.get("datum") for out in tx_loaded.get("outputs", []) if out.get("datum")]
+    not_present = [i for i in raw_inline_datums if i not in view_datums]
+
+    assert not not_present, f"Inline datums missing in tx view:\n{not_present}"
 
 
 def check_tx_view(  # noqa: C901
@@ -160,7 +168,13 @@ def check_tx_view(  # noqa: C901
     """Check output of the `transaction view` command."""
     # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 
-    tx_view_raw = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
+    # TODO: see https://github.com/input-output-hk/cardano-node/issues/4039
+    try:
+        tx_view_raw = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
+    except clusterlib.CLIError as exc:
+        if "TODO: Babbage" in str(exc):
+            return {}
+
     tx_loaded: dict = load_tx_view(tx_view=tx_view_raw)
 
     # check inputs
@@ -276,27 +290,19 @@ def check_tx_view(  # noqa: C901
 
     if loaded_tx_version != output_tx_version:
         raise AssertionError(
-            f"transaction era is not the expected: {loaded_tx_version} != {output_tx_version}"
+            f"Unexpected transaction era: {loaded_tx_version} != {output_tx_version}"
         )
 
     # check collateral inputs, this is only available on Alonzo+ TX
-    if loaded_tx_version >= VERSIONS.ALONZO and not _check_collateral_inputs(
-        tx_raw_output=tx_raw_output, expected_collateral=tx_loaded["collateral inputs"]
-    ):
-        raise AssertionError("collateral inputs are not the expected")
+    if loaded_tx_version >= VERSIONS.ALONZO:
+        _check_collateral_inputs(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
 
-    # check reference inputs, this is only available on Babbage+ TX
-    if loaded_tx_version >= VERSIONS.BABBAGE and not _check_reference_inputs(
-        tx_raw_output=tx_raw_output,
-        expected_reference_inputs=tx_loaded.get("reference inputs") or [],
-    ):
-        raise AssertionError("reference inputs are not the expected")
+    # check reference inputs, this is only available on Babbage+ TX on node version 1.35.3+
+    if loaded_tx_version >= VERSIONS.BABBAGE and "reference inputs" in tx_loaded:
+        _check_reference_inputs(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
 
     # check inline datum, this is only available on Babbage+ TX
-    if loaded_tx_version >= VERSIONS.BABBAGE and not _check_inline_datums(
-        tx_raw_output=tx_raw_output,
-        tx_loaded=tx_loaded,
-    ):
-        raise AssertionError("inline datums are not the expected")
+    if loaded_tx_version >= VERSIONS.BABBAGE:
+        _check_inline_datums(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
 
     return tx_loaded
