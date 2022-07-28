@@ -89,8 +89,18 @@ fi
 
 # create scripts for cluster starting / stopping
 printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
-printf "#!/bin/sh\n\nsupervisord --config %s/supervisor.conf" "$STATE_CLUSTER" \
-  > "$STATE_CLUSTER/supervisord_start"
+printf "#!/bin/sh\n\nsupervisorctl \"\$@\"" > "$STATE_CLUSTER/supervisorctl"
+cat > "$STATE_CLUSTER/supervisord_start" <<EoF
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
+
+cd "\$SCRIPT_DIR/.."
+
+supervisord --config "\$SCRIPT_DIR/supervisor.conf"
+EoF
 cat > "$STATE_CLUSTER/supervisord_stop" <<EoF
 #!/usr/bin/env bash
 
@@ -105,7 +115,7 @@ if [ -f "\$SCRIPT_DIR/supervisord.pid" ]; then
   rm -f "\$SCRIPT_DIR/supervisord.pid"
 fi
 EoF
-chmod u+x "$STATE_CLUSTER"/{supervisorctl_st*,supervisord_*}
+chmod u+x "$STATE_CLUSTER"/{supervisorctl*,supervisord_*}
 
 # copy db
 cp -r "$TESTNET_DIR/relay1-db" "$STATE_CLUSTER/db-relay1"
