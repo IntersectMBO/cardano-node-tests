@@ -917,6 +917,67 @@ class TestBasic:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
+    @allure.link(helpers.get_vcs_link())
+    def test_query_mempool_txin(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test that is possible to query txin of a transaction that is still in mempool."""
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        src_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+
+        fee = cluster.calculate_tx_fee(
+            src_address=src_addr.address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+        )
+        tx_raw_output = cluster.build_raw_tx(
+            src_address=src_addr.address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+        )
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        tx_resubmitted = False
+        txin_queried = False
+
+        for r in range(5):
+            tx_resubmitted = False
+            try:
+                cluster.submit_tx_bare(tx_file=out_file_signed)
+            except clusterlib.CLIError as exc:
+                if r == 0 or "(BadInputsUTxO" not in str(exc):
+                    raise
+                tx_resubmitted = True
+
+            # if the Tx is only in mempool, its txins can still be queried
+            txin_queried = bool(cluster.get_utxo(utxo=tx_raw_output.txins[0]))
+
+            if tx_resubmitted or not txin_queried:
+                break
+
+        # make sure the txin is removed from mempool so it cannot be selected by other tests
+        cluster.wait_for_new_block(new_blocks=2)
+
+        assert tx_resubmitted, "Failed to re-submit the Tx"
+
+        if not txin_queried:
+            pytest.skip("the Tx was removed from mempool before running `query utxo`")
+
 
 @pytest.mark.testnets
 @pytest.mark.smoke
