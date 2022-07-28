@@ -316,6 +316,9 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
                 amount=int(query_row.tx_out_value),
                 address=str(query_row.tx_out_addr),
                 datum_hash=query_row.tx_out_data_hash.hex() if query_row.tx_out_data_hash else "",
+                inline_datum_hash=query_row.tx_out_inline_datum_hash.hex()
+                if query_row.tx_out_inline_datum_hash
+                else "",
             )
             utxo_out.append(out_rec)
 
@@ -690,6 +693,7 @@ def check_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
 ) -> Optional[TxRecord]:
     """Check a transaction in db-sync."""
+    # pylint: disable=too-many-statements,too-many-locals
     if not configuration.HAS_DBSYNC:
         return None
 
@@ -797,6 +801,27 @@ def check_tx(
 
     redeemer_fees = functools.reduce(lambda x, y: x + y.fee, response.redeemers, 0)
     assert tx_raw_output.fee > redeemer_fees, "Combined redeemer fees are >= than total TX fee"
+
+    # compare dbsync inline datum and datum hashes
+
+    raw_db_inline_datum_hash = {
+        tx_out.inline_datum_hash for tx_out in response.txouts if tx_out.inline_datum_hash
+    }
+    raw_db_datum_hash = {tx_out.datum_hash for tx_out in response.txouts if tx_out.datum_hash}
+
+    if raw_db_inline_datum_hash:
+        assert raw_db_inline_datum_hash == raw_db_datum_hash, (
+            "Datum hash and inline datum hash returned by dbsync don't "
+            f"match ({raw_db_inline_datum_hash} != {raw_db_datum_hash})"
+        )
+
+    # compare datum hashes
+
+    tx_datum_hash = {tx_out.datum_hash for tx_out in tx_txouts if tx_out.datum_hash}
+    db_datum_hash = {tx_out.datum_hash for tx_out in db_txouts if tx_out.datum_hash}
+    assert (
+        tx_datum_hash == db_datum_hash
+    ), f"Tx datum hashes don't match ({tx_datum_hash} != {db_datum_hash})"
 
     return response
 
