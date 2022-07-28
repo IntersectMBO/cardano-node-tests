@@ -21,6 +21,9 @@ if [ "$1" = "step1" ]; then
   "$CLUSTER_SCRIPTS_DIR"/stop-cluster-hfc
   # start local cluster
   "$CLUSTER_SCRIPTS_DIR"/start-cluster-hfc || exit 6
+  # print path to cardano-node binary
+  pool1_pid="$(supervisorctl -s http://127.0.0.1:12001 pid nodes:pool1)"
+  ls -l "/proc/$pool1_pid/exe"
   # run smoke tests
   pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step1.html --self-contained-html
   retval="$?"
@@ -34,6 +37,9 @@ if [ "$1" = "step1" ]; then
 elif [ "$1" = "step2" ]; then
   # restart local cluster nodes with binaries from new cluster-node version
   "$STATE_CLUSTER"/supervisorctl_restart_nodes
+  # print path to cardano-node binary
+  pool1_pid="$(supervisorctl -s http://127.0.0.1:12001 pid nodes:pool1)"
+  ls -l "/proc/$pool1_pid/exe"
   # run smoke tests
   pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step2.html --self-contained-html
   retval="$?"

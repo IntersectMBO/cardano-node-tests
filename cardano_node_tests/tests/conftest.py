@@ -64,6 +64,7 @@ def pytest_configure(config: Any) -> None:
     ] = f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
     config._metadata["CARDANO_NODE_SOCKET_PATH"] = os.environ.get("CARDANO_NODE_SOCKET_PATH")
     config._metadata["cardano-cli exe"] = shutil.which("cardano-cli") or ""
+    config._metadata["cardano-node exe"] = shutil.which("cardano-node") or ""
 
     config._metadata["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
     if configuration.HAS_DBSYNC:
