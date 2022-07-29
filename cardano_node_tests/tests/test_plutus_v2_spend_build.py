@@ -1897,6 +1897,80 @@ class TestReadonlyReferenceInputs:
 
         # TODO check command 'transaction view' bug on cardano-node 4045
 
+    @allure.link(helpers.get_vcs_link())
+    def test_use_same_reference_input_multiple_times(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_manager: cluster_management.ClusterManager,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test 2 transactions using the same reference input in the same block.
+
+        * create the UTxO that will be used as readonly reference input
+        * create the transactions using the same readonly reference input
+        * submit both transactions
+        * check that the readonly reference input was not spent
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        # fund payment address
+        clusterlib_utils.fund_from_faucet(
+            payment_addrs[1],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        # create the reference input
+
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            amount=amount,
+        )
+
+        #  build 2 tx using the same readonly reference input
+
+        tx_address_combinations = [
+            {"payment_addr": payment_addrs[0], "dst_addr": payment_addrs[1]},
+            {"payment_addr": payment_addrs[1], "dst_addr": payment_addrs[0]},
+        ]
+
+        tx_to_submit = []
+        txins = []
+
+        for addr in tx_address_combinations:
+            txouts = [clusterlib.TxOut(address=addr["dst_addr"].address, amount=amount)]
+            tx_files = clusterlib.TxFiles(signing_key_files=[addr["payment_addr"].skey_file])
+
+            tx_output = cluster.build_tx(
+                src_address=addr["payment_addr"].address,
+                tx_name=f"{temp_template}_{addr['payment_addr'].address}_tx",
+                tx_files=tx_files,
+                txouts=txouts,
+                readonly_reference_txins=reference_input,
+            )
+
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=f"{temp_template}_{addr['payment_addr'].address}_signed",
+            )
+
+            tx_to_submit.append(tx_signed)
+
+            txins += tx_output.txins
+
+        for tx_signed in tx_to_submit:
+            cluster.submit_tx_bare(tx_file=tx_signed)
+
+        clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=txins)
+
+        # check that the reference input was not spent
+        assert cluster.get_utxo(utxo=reference_input[0])
+
 
 @pytest.mark.testnets
 class TestNegativeReadonlyReferenceInputs:
