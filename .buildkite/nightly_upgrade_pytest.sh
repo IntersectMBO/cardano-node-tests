@@ -22,7 +22,7 @@ if [ "$1" = "step1" ]; then
   # start local cluster
   "$CLUSTER_SCRIPTS_DIR"/start-cluster-hfc || exit 6
   # print path to cardano-node binary
-  pool1_pid="$(supervisorctl -s http://127.0.0.1:12001 pid nodes:pool1)"
+  pool1_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool1)"
   ls -l "/proc/$pool1_pid/exe"
   # run smoke tests
   pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step1.html --self-contained-html
@@ -35,10 +35,17 @@ if [ "$1" = "step1" ]; then
 #
 
 elif [ "$1" = "step2" ]; then
-  # restart local cluster nodes with binaries from new cluster-node version
-  "$STATE_CLUSTER"/supervisorctl_restart_nodes
+  # Restart local cluster nodes with binaries from new cluster-node version.
+  # It is necessary to restart supervisord with new environment.
+  "$STATE_CLUSTER"/supervisord_stop
+  sleep 3
+  "$STATE_CLUSTER"/supervisord_start || exit 6
+  sleep 5
+  "$STATE_CLUSTER"/supervisorctl start all
+  sleep 5
+  "$STATE_CLUSTER"/supervisorctl status
   # print path to cardano-node binary
-  pool1_pid="$(supervisorctl -s http://127.0.0.1:12001 pid nodes:pool1)"
+  pool1_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool1)"
   ls -l "/proc/$pool1_pid/exe"
   # run smoke tests
   pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step2.html --self-contained-html
