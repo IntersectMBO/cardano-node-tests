@@ -19,6 +19,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
 
@@ -175,6 +176,8 @@ def _fund_script(
         reference_utxos = cluster.get_utxo(txin=f"{txid}#2")
         assert reference_utxos, "No reference script UTxO"
         reference_utxo = reference_utxos[0]
+
+    dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     # check if inline datum is returned by 'query utxo'
     if use_inline_datum:

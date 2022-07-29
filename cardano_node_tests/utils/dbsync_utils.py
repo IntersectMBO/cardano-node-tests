@@ -316,6 +316,9 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
                 amount=int(query_row.tx_out_value),
                 address=str(query_row.tx_out_addr),
                 datum_hash=query_row.tx_out_data_hash.hex() if query_row.tx_out_data_hash else "",
+                inline_datum_hash=query_row.tx_out_inline_datum_hash.hex()
+                if query_row.tx_out_inline_datum_hash
+                else "",
             )
             utxo_out.append(out_rec)
 
@@ -686,10 +689,17 @@ def _sanitize_txout(
     return new_txout
 
 
+def _txout_has_inline_datum(txout: clusterlib.TxOut) -> bool:
+    if txout.inline_datum_cbor_file or txout.inline_datum_file or txout.inline_datum_value:
+        return True
+    return False
+
+
 def check_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
 ) -> Optional[TxRecord]:
     """Check a transaction in db-sync."""
+    # pylint: disable=too-many-statements,too-many-locals
     if not configuration.HAS_DBSYNC:
         return None
 
@@ -797,6 +807,31 @@ def check_tx(
 
     redeemer_fees = functools.reduce(lambda x, y: x + y.fee, response.redeemers, 0)
     assert tx_raw_output.fee > redeemer_fees, "Combined redeemer fees are >= than total TX fee"
+
+    # compare datum hash and inline datum hash in db-sync
+    wrong_db_datum_hashes = [
+        tx_out
+        for tx_out in response.txouts
+        if tx_out.inline_datum_hash and tx_out.inline_datum_hash != tx_out.datum_hash
+    ]
+
+    assert not wrong_db_datum_hashes, (
+        "Datum hash and inline datum hash returned by dbsync don't match for following records:\n"
+        f"{wrong_db_datum_hashes}"
+    )
+
+    # compare inline datums
+    tx_txouts_inline_datums = {
+        _sanitize_txout(cluster_obj=cluster_obj, txout=r)
+        for r in tx_raw_output.txouts
+        if _txout_has_inline_datum(r)
+    }
+    db_txouts_inline_datums = {
+        clusterlib_utils.utxodata2txout(r) for r in response.txouts if r.inline_datum_hash
+    }
+    assert (
+        tx_txouts_inline_datums == db_txouts_inline_datums
+    ), f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
 
     return response
 
