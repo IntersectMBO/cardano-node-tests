@@ -689,6 +689,12 @@ def _sanitize_txout(
     return new_txout
 
 
+def _txout_has_inline_datum(txout: clusterlib.TxOut) -> bool:
+    if txout.inline_datum_cbor_file or txout.inline_datum_file or txout.inline_datum_value:
+        return True
+    return False
+
+
 def check_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
 ) -> Optional[TxRecord]:
@@ -802,26 +808,30 @@ def check_tx(
     redeemer_fees = functools.reduce(lambda x, y: x + y.fee, response.redeemers, 0)
     assert tx_raw_output.fee > redeemer_fees, "Combined redeemer fees are >= than total TX fee"
 
-    # compare dbsync inline datum and datum hashes
+    # compare datum hash and inline datum hash in db-sync
+    wrong_db_datum_hashes = [
+        tx_out
+        for tx_out in response.txouts
+        if tx_out.inline_datum_hash and tx_out.inline_datum_hash != tx_out.datum_hash
+    ]
 
-    raw_db_inline_datum_hash = {
-        tx_out.inline_datum_hash for tx_out in response.txouts if tx_out.inline_datum_hash
+    assert not wrong_db_datum_hashes, (
+        "Datum hash and inline datum hash returned by dbsync don't match for following records:\n"
+        f"{wrong_db_datum_hashes}"
+    )
+
+    # compare inline datums
+    tx_txouts_inline_datums = {
+        _sanitize_txout(cluster_obj=cluster_obj, txout=r)
+        for r in tx_raw_output.txouts
+        if _txout_has_inline_datum(r)
     }
-    raw_db_datum_hash = {tx_out.datum_hash for tx_out in response.txouts if tx_out.datum_hash}
-
-    if raw_db_inline_datum_hash:
-        assert raw_db_inline_datum_hash == raw_db_datum_hash, (
-            "Datum hash and inline datum hash returned by dbsync don't "
-            f"match ({raw_db_inline_datum_hash} != {raw_db_datum_hash})"
-        )
-
-    # compare datum hashes
-
-    tx_datum_hash = {tx_out.datum_hash for tx_out in tx_txouts if tx_out.datum_hash}
-    db_datum_hash = {tx_out.datum_hash for tx_out in db_txouts if tx_out.datum_hash}
+    db_txouts_inline_datums = {
+        clusterlib_utils.utxodata2txout(r) for r in response.txouts if r.inline_datum_hash
+    }
     assert (
-        tx_datum_hash == db_datum_hash
-    ), f"Tx datum hashes don't match ({tx_datum_hash} != {db_datum_hash})"
+        tx_txouts_inline_datums == db_txouts_inline_datums
+    ), f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
 
     return response
 
