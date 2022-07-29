@@ -228,11 +228,7 @@ def _build_reference_txin(
 
     Uses `cardano-cli transaction build` command for building the transaction.
     """
-    if not dst_addr:
-        dst_addr = clusterlib_utils.create_payment_addr_records(
-            *[f"{temp_template}_readonly_input"],
-            cluster_obj=cluster,
-        )[0]
+    dst_addr = dst_addr or cluster.gen_payment_addr_and_keys(name=f"{temp_template}_readonly_input")
 
     txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
