@@ -709,10 +709,16 @@ def check_tx(
     tx_txouts = {_sanitize_txout(cluster_obj=cluster_obj, txout=r) for r in tx_raw_output.txouts}
     db_txouts = {clusterlib_utils.utxodata2txout(r) for r in response.txouts}
 
+    len_db_txouts, len_out_txouts = len(response.txouts), len(tx_raw_output.txouts)
+
     # we don't have complete info about the transaction when `build` command
-    # was used, so we'll skip some of the checks
+    # was used (change txout, fee in older node versions), so we'll skip some of the checks
     if tx_raw_output.change_address:
         assert tx_txouts.issubset(db_txouts), f"TX outputs not subset: ({tx_txouts} vs {db_txouts})"
+        assert len_db_txouts in (
+            len_out_txouts,  # when there's no change txout
+            len_out_txouts + 1,  # when there's a change txout
+        ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts} (+1))"
     else:
         txouts_amount = clusterlib.calculate_utxos_balance(tx_raw_output.txouts)
         assert (
@@ -720,15 +726,15 @@ def check_tx(
         ), f"Sum of TX amounts doesn't match ({response.out_sum} != {txouts_amount})"
 
         assert (
-            response.fee == tx_raw_output.fee
-        ), f"TX fee doesn't match ({response.fee} != {tx_raw_output.fee})"
-
-        len_db_txouts, len_out_txouts = len(response.txouts), len(tx_raw_output.txouts)
-        assert (
             len_db_txouts == len_out_txouts
         ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts})"
 
         assert tx_txouts == db_txouts, f"TX outputs don't match ({tx_txouts} != {db_txouts})"
+
+    assert response.fee in (
+        tx_raw_output.fee,
+        -1,  # unknown fee is set to -1
+    ), f"TX fee doesn't match ({response.fee} != {tx_raw_output.fee})"
 
     assert response.invalid_before == tx_raw_output.invalid_before, (
         "TX invalid_before doesn't match "
@@ -850,7 +856,7 @@ def check_pool_deregistration(pool_id: str, retiring_epoch: int) -> Optional[Poo
 
     assert (
         retiring_epoch == db_pool_data.retiring_epoch
-    ), f"Mismatch in epoch values: {retiring_epoch} VS {db_pool_data.retiring_epoch}"
+    ), f"Mismatch in epoch values: {retiring_epoch} vs {db_pool_data.retiring_epoch}"
 
     return db_pool_data
 
