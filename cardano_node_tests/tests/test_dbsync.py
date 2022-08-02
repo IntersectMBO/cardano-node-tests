@@ -200,11 +200,11 @@ class TestDBSync:
         # the highest known protocol major version matches the expected value
         if (
             rec
-            and rec.proto_major
             and VERSIONS.cluster_era >= VERSIONS.ALONZO
-            and rec.proto_major != 7
             and clusterlib_utils.cli_has("transaction build --babbage-era")
+            and not (rec.proto_major == 7 and rec.proto_minor == 2)
         ):
-            raise AssertionError(
-                f"Highest known protocol major version is {rec.proto_major}, should be 7."
+            pytest.xfail(
+                f"protocol major version: {rec.proto_major}; "
+                f"protocol minor version: {rec.proto_minor}"
             )
