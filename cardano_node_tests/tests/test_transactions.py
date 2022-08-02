@@ -1478,17 +1478,18 @@ class TestManyUTXOs:
                 break
 
         # build, sign and submit the transaction
-        txins_filtered, txouts_balanced = cluster.get_tx_ins_outs(
+        data_for_build = clusterlib.collect_data_for_build(
+            clusterlib_obj=cluster,
             src_address=src_address,
-            tx_files=tx_files,
             txins=txins_optimized,
             txouts=destinations,
             fee=fee,
+            tx_files=tx_files,
         )
         tx_raw_output = cluster.build_raw_tx_bare(
             out_file=f"{temp_template}_tx.body",
-            txins=txins_filtered,
-            txouts=txouts_balanced,
+            txins=data_for_build.txins,
+            txouts=data_for_build.txouts,
             tx_files=tx_files,
             fee=fee,
             ttl=ttl,
