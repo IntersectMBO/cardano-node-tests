@@ -43,10 +43,6 @@ def multisig_tx(
     use_build_cmd: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
-    # record initial balances
-    src_init_balance = cluster_obj.get_address_balance(src_address)
-    dst_init_balance = cluster_obj.get_address_balance(dst_address)
-
     # create TX body
     script_txins = (
         # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
@@ -75,7 +71,8 @@ def multisig_tx(
             tx_name=temp_template,
             txouts=destinations,
             script_txins=script_txins,
-            ttl=ttl,
+            invalid_hereafter=invalid_hereafter or ttl,
+            invalid_before=invalid_before,
             witness_count_add=witness_count,
         )
         tx_raw_output = cluster_obj.build_raw_tx(
@@ -85,7 +82,7 @@ def multisig_tx(
             script_txins=script_txins,
             fee=fee,
             ttl=ttl,
-            invalid_hereafter=invalid_hereafter,
+            invalid_hereafter=invalid_hereafter or ttl,
             invalid_before=invalid_before,
         )
 
@@ -110,13 +107,13 @@ def multisig_tx(
     cluster_obj.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
     # check final balances
+    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_raw_output)
     assert (
-        cluster_obj.get_address_balance(src_address)
-        == src_init_balance - amount - tx_raw_output.fee
+        clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+        == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
     ), f"Incorrect balance for source address `{src_address}`"
-
     assert (
-        cluster_obj.get_address_balance(dst_address) == dst_init_balance + amount
+        clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
     ), f"Incorrect balance for script address `{dst_address}`"
 
     return tx_raw_output
