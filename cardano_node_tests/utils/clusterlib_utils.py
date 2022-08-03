@@ -981,8 +981,8 @@ def load_tx_metadata(tx_body_file: Path) -> TxMetadata:
     return TxMetadata(metadata=metadata, aux_data=aux_data)
 
 
-def utxodata2txout(utxodata: clusterlib.UTXOData) -> clusterlib.TxOut:
-    """Convert `clusterlib.UTXOData` to `clusterlib.TxOut`."""
+def utxodata2txout(utxodata: clusterlib.UTXODbsyncData) -> clusterlib.TxOut:
+    """Convert `clusterlib.UTXODbsyncData` to `clusterlib.TxOut`."""
     return clusterlib.TxOut(
         address=utxodata.address,
         amount=utxodata.amount,
