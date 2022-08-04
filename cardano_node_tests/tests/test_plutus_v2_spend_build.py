@@ -1819,6 +1819,9 @@ class TestReadonlyReferenceInputs:
         # check that the reference input is present on 'transaction view'
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
+        # check reference input on dbsync
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+
     @allure.link(helpers.get_vcs_link())
     def test_same_input_as_reference_input(
         self,
