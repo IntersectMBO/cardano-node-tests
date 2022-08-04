@@ -50,6 +50,7 @@ DATUM_43_TYPED = PLUTUS_DIR / "typed-43.datum"
 DATUM_WITNESS_GOLDEN_NORMAL = PLUTUS_DIR / "witness_golden_normal.datum"
 DATUM_WITNESS_GOLDEN_EXTENDED = PLUTUS_DIR / "witness_golden_extended.datum"
 DATUM_BIG = PLUTUS_DIR / "big.datum"
+DATUM_FINITE_TYPED_CBOR = PLUTUS_DIR / "typed-finite.datum.cbor"
 
 SIGNING_KEY_GOLDEN = DATA_DIR / "golden_normal.skey"
 SIGNING_KEY_GOLDEN_EXTENDED = DATA_DIR / "golden_extended.skey"
