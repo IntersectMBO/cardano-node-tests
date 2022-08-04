@@ -767,14 +767,17 @@ def check_tx(
         tx_mint_by_token == db_mint_txouts
     ), f"MA minting outputs don't match ({tx_mint_by_token} != {db_mint_txouts})"
 
-    len_db_withdrawals = len(response.withdrawals)
-    len_out_withdrawals = len(tx_raw_output.withdrawals)
-    assert (
-        len_db_withdrawals == len_out_withdrawals
-    ), f"Number of TX withdrawals doesn't match ({len_db_withdrawals} != {len_out_withdrawals})"
-
-    tx_withdrawals = sorted(tx_raw_output.withdrawals)
+    tx_withdrawals = sorted(
+        [*tx_raw_output.withdrawals, *[s.txout for s in tx_raw_output.script_withdrawals]]
+    )
     db_withdrawals = sorted(response.withdrawals)
+    len_tx_withdrawals = len(tx_withdrawals)
+    len_db_withdrawals = len(db_mint_txouts)
+
+    assert (
+        len_db_withdrawals == len_tx_withdrawals
+    ), f"Number of TX withdrawals doesn't match ({len_db_withdrawals} != {len_tx_withdrawals})"
+
     assert (
         tx_withdrawals == db_withdrawals
     ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"

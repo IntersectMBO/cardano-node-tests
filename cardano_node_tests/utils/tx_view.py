@@ -250,8 +250,12 @@ def check_tx_view(  # noqa: C901
             withdrawal_amount = int(withdrawal["amount"].split()[0] or 0)
             loaded_withdrawals.add((withdrawal_key, withdrawal_amount))
 
+    tx_raw_withdrawals_encoded = [
+        *tx_raw_output.withdrawals,
+        *[s.txout for s in tx_raw_output.script_withdrawals],
+    ]
     tx_raw_withdrawals = {
-        (helpers.decode_bech32(r.address)[2:], r.amount) for r in tx_raw_output.withdrawals
+        (helpers.decode_bech32(r.address)[2:], r.amount) for r in tx_raw_withdrawals_encoded
     }
 
     if tx_raw_withdrawals != loaded_withdrawals:
