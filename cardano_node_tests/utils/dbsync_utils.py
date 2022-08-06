@@ -772,7 +772,7 @@ def check_tx(
     )
     db_withdrawals = sorted(response.withdrawals)
     len_tx_withdrawals = len(tx_withdrawals)
-    len_db_withdrawals = len(db_mint_txouts)
+    len_db_withdrawals = len(db_withdrawals)
 
     assert (
         len_db_withdrawals == len_tx_withdrawals
