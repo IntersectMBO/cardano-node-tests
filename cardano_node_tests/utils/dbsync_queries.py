@@ -208,6 +208,14 @@ class BlockDBRow(NamedTuple):
     pool_id: str
 
 
+class DatumDBRow(NamedTuple):
+    id: int
+    datum_hash: memoryview
+    tx_id: int
+    value: dict
+    bytes: memoryview
+
+
 class SchemaVersionStages(NamedTuple):
     one: int
     two: int
@@ -624,3 +632,12 @@ def query_table_names() -> List[str]:
         results: List[Tuple[str]] = cur.fetchall()
         table_names = [r[0] for r in results]
         return table_names
+
+
+def query_datum(datum_hash: str) -> Generator[DatumDBRow, None, None]:
+    """Query datum record in db-sync."""
+    query = "SELECT id, hash, tx_id, value, bytes FROM datum WHERE hash = %s;"
+
+    with execute(query=query, vars=(rf"\x{datum_hash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield DatumDBRow(*result)
