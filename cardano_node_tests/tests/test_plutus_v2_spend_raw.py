@@ -19,6 +19,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -121,11 +122,19 @@ def _fund_script(
             inline_datum_value=(
                 plutus_op.datum_value if plutus_op.datum_value and use_inline_datum else ""
             ),
+            inline_datum_cbor_file=(
+                plutus_op.datum_cbor_file if plutus_op.datum_cbor_file and use_inline_datum else ""
+            ),
             datum_hash_file=(
                 plutus_op.datum_file if plutus_op.datum_file and not use_inline_datum else ""
             ),
             datum_hash_value=(
                 plutus_op.datum_value if plutus_op.datum_value and not use_inline_datum else ""
+            ),
+            datum_hash_cbor_file=(
+                plutus_op.datum_cbor_file
+                if plutus_op.datum_cbor_file and not use_inline_datum
+                else ""
             ),
         ),
         # for collateral
@@ -181,14 +190,15 @@ def _fund_script(
 
     # check if inline datum is returned by 'query utxo'
     if use_inline_datum:
+        expected_datum = None
         if plutus_op.datum_file:
             with open(plutus_op.datum_file, encoding="utf-8") as json_datum:
                 expected_datum = json.load(json_datum)
-        else:
+        elif plutus_op.datum_value:
             expected_datum = plutus_op.datum_value
 
         assert (
-            script_utxos[0].inline_datum == expected_datum
+            expected_datum is None or script_utxos[0].inline_datum == expected_datum
         ), "The inline datum returned by 'query utxo' is different than the expected"
 
     # check "transaction view"
@@ -338,6 +348,68 @@ class TestLockingV2:
         assert not reference_utxo or cluster.get_utxo(
             utxo=reference_utxo
         ), "Reference input was spent"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.needs_dbsync
+    def test_datum_bytes_in_dbsync(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test that datum bytes in db-sync corresponds to original datum.
+
+        * create a Tx output with an inline datum at the script address
+        * double-check that the UTxO datum hash corresponds to the datum CBOR file
+        * check that datum bytes in db-sync corresponds to the original datum
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2,
+            datum_cbor_file=plutus_common.DATUM_FINITE_TYPED_CBOR,
+            redeemer_cbor_file=plutus_common.DATUM_FINITE_TYPED_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
+        )
+        assert plutus_op.execution_cost  # for mypy
+
+        redeem_cost = plutus_common.compute_cost(
+            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+        )
+
+        # create a Tx output with an inline datum at the script address
+        script_utxos, *__ = _fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=amount,
+            redeem_cost=redeem_cost,
+            use_inline_datum=True,
+        )
+        script_utxo = script_utxos[0]
+
+        # double-check that the UTxO datum hash corresponds to the datum CBOR file
+        datum_hash = cluster.get_hash_script_data(
+            script_data_cbor_file=plutus_common.DATUM_FINITE_TYPED_CBOR
+        )
+        assert datum_hash == script_utxo.inline_datum_hash, "Unexpected datum hash"
+
+        # check that datum bytes in db-sync corresponds to the original datum
+        with open(plutus_common.DATUM_FINITE_TYPED_CBOR, "rb") as in_fp:
+            orig_cbor_bin = in_fp.read()
+            orig_cbor_hex = orig_cbor_bin.hex()
+
+        datum_db_response = list(
+            dbsync_queries.query_datum(datum_hash=script_utxo.inline_datum_hash)
+        )
+        db_cbor_hex = datum_db_response[0].bytes.hex()
+
+        # see https://github.com/input-output-hk/cardano-db-sync/issues/1214
+        assert (
+            db_cbor_hex == orig_cbor_hex
+        ), "Datum bytes in db-sync doesn't correspond to the original datum"
 
 
 @pytest.mark.testnets
