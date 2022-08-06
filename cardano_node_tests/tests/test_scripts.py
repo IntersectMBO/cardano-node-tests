@@ -3,12 +3,15 @@
 * multisig
 * time locking
 * auxiliary scripts
+* reference UTxO
 """
+import json
 import logging
 import random
 from pathlib import Path
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 import allure
 import pytest
@@ -43,10 +46,6 @@ def multisig_tx(
     use_build_cmd: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
-    # record initial balances
-    src_init_balance = cluster_obj.get_address_balance(src_address)
-    dst_init_balance = cluster_obj.get_address_balance(dst_address)
-
     # create TX body
     script_txins = (
         # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
@@ -75,7 +74,8 @@ def multisig_tx(
             tx_name=temp_template,
             txouts=destinations,
             script_txins=script_txins,
-            ttl=ttl,
+            invalid_hereafter=invalid_hereafter or ttl,
+            invalid_before=invalid_before,
             witness_count_add=witness_count,
         )
         tx_raw_output = cluster_obj.build_raw_tx(
@@ -85,7 +85,7 @@ def multisig_tx(
             script_txins=script_txins,
             fee=fee,
             ttl=ttl,
-            invalid_hereafter=invalid_hereafter,
+            invalid_hereafter=invalid_hereafter or ttl,
             invalid_before=invalid_before,
         )
 
@@ -110,16 +110,58 @@ def multisig_tx(
     cluster_obj.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
     # check final balances
+    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_raw_output)
     assert (
-        cluster_obj.get_address_balance(src_address)
-        == src_init_balance - amount - tx_raw_output.fee
+        clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+        == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
     ), f"Incorrect balance for source address `{src_address}`"
-
     assert (
-        cluster_obj.get_address_balance(dst_address) == dst_init_balance + amount
+        clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
     ), f"Incorrect balance for script address `{dst_address}`"
 
     return tx_raw_output
+
+
+def _create_reference_utxo(
+    temp_template: str,
+    cluster_obj: clusterlib.ClusterLib,
+    payment_addr: clusterlib.AddressRecord,
+    dst_addr: clusterlib.AddressRecord,
+    script_file: Path,
+    amount: int,
+) -> Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput]:
+    """Create a reference script UTxO with Simple Script."""
+    # pylint: disable=too-many-arguments
+    tx_files = clusterlib.TxFiles(
+        signing_key_files=[payment_addr.skey_file],
+    )
+
+    txouts = [
+        clusterlib.TxOut(
+            address=dst_addr.address,
+            amount=amount,
+            reference_script_file=script_file,
+        )
+    ]
+
+    tx_raw_output = cluster_obj.send_tx(
+        src_address=payment_addr.address,
+        tx_name=f"{temp_template}_step1",
+        txouts=txouts,
+        tx_files=tx_files,
+        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+        witness_count_add=2,
+    )
+
+    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+
+    reference_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
+    assert reference_utxos, "No reference script UTxO"
+    reference_utxo = reference_utxos[0]
+
+    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
+
+    return reference_utxo, tx_raw_output
 
 
 @pytest.mark.testnets
@@ -1747,3 +1789,185 @@ class TestIncrementalSigning:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
+
+@pytest.mark.testnets
+@pytest.mark.smoke
+@pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+    reason="runs only with Babbage+ TX",
+)
+class TestReferenceUTxO:
+    """Tests for Simple Scripts V1 and V2 on reference UTxOs."""
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[f"multi_addr_ref_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(5)],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=100_000_000,
+        )
+
+        return addrs
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
+    @pytest.mark.dbsync
+    def test_script_reference_utxo(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        script_version: str,
+    ):
+        """Send funds from script address where script is on reference UTxO."""
+        temp_template = f"{common.get_test_id(cluster)}_{script_version}_{use_build_cmd}"
+        src_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        fund_amount = 4_500_000
+        amount = 2_000_000
+
+        # create multisig script
+        if script_version == "simple_v1":
+            invalid_before = None
+            invalid_hereafter = None
+
+            reference_type = clusterlib.ScriptTypes.SIMPLE_V1
+            script_type_str = "SimpleScriptV1"
+
+            multisig_script = Path(f"{temp_template}_multisig.script")
+            script_content = {
+                "keyHash": cluster.get_payment_vkey_hash(dst_addr.vkey_file),
+                "type": "sig",
+            }
+            with open(multisig_script, "w", encoding="utf-8") as fp_out:
+                json.dump(script_content, fp_out, indent=4)
+        else:
+            invalid_before = 100
+            invalid_hereafter = cluster.get_slot_no() + 1_000
+
+            reference_type = clusterlib.ScriptTypes.SIMPLE_V2
+            script_type_str = "SimpleScriptV2"
+
+            multisig_script = cluster.build_multisig_script(
+                script_name=temp_template,
+                script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
+                payment_vkey_files=[p.vkey_file for p in payment_addrs],
+                slot=invalid_before,
+                slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+            )
+
+        # create reference UTxO
+        reference_utxo, __ = _create_reference_utxo(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=src_addr,
+            dst_addr=dst_addr,
+            script_file=multisig_script,
+            amount=4_000_000,
+        )
+        assert reference_utxo.reference_script
+
+        # create script address
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # send funds to script address
+        tx_out_to = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=src_addr.address,
+            dst_address=script_address,
+            amount=fund_amount,
+            payment_skey_files=[src_addr.skey_file],
+            use_build_cmd=use_build_cmd,
+        )
+
+        # send funds from script address
+        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[dst_addr.skey_file],
+        )
+        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        script_txins = [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
+        script_txins = [
+            clusterlib.ScriptTxIn(
+                txins=[],
+                reference_txin=reference_utxo,
+                reference_type=reference_type,
+            )
+        ]
+
+        if use_build_cmd:
+            tx_out_from = cluster.build_tx(
+                src_address=script_address,
+                tx_name=f"{temp_template}_from",
+                txouts=destinations,
+                script_txins=script_txins,
+                fee_buffer=2_000_000,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+                witness_override=2,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_out_from.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=f"{temp_template}_from",
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_out_from.txins)
+        else:
+            tx_out_from = cluster.send_tx(
+                src_address=script_address,
+                tx_name=f"{temp_template}_from",
+                txouts=destinations,
+                script_txins=script_txins,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+            )
+
+        # check final balances
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_out_from)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=script_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_out_from.txins) - tx_out_from.fee - amount
+        ), f"Incorrect balance for script address `{script_address}`"
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        # check that reference UTxO was NOT spent
+        assert cluster.get_utxo(utxo=reference_utxo), "Reference input was spent"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        # TODO: check reference script in db-sync (the `tx_out_from`)
+
+        # check expected script type
+        # TODO: moved the check to the end of the test because of XFAIL
+        if (
+            script_type_str == "SimpleScriptV1"
+            and reference_utxo.reference_script["script"]["type"] == "SimpleScriptV2"
+        ):
+            pytest.xfail("Reported 'SimpleScriptV2', see node issue #4261")
+        assert reference_utxo.reference_script["script"]["type"] == script_type_str
