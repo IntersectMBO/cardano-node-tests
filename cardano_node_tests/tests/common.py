@@ -116,7 +116,7 @@ def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
     # after the start of a test, so the log entry can be used for determining
     # time of the test start
     cm: cluster_management.ClusterManager = cluster_obj._cluster_manager  # type: ignore
-    cm._log(f"c{cm.cluster_instance_num}: got ID `{test_id}` for `{curr_test.full}`")
+    cm._log(f"c{cm.cluster_instance_num}: got ID `{test_id}` for '{curr_test.full}'")
 
     return test_id
 

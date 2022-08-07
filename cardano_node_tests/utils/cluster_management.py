@@ -318,7 +318,8 @@ class ClusterManager:
         if self._cluster_instance_num == -1:
             return
 
-        self._log(f"c{self._cluster_instance_num}: called `on_test_stop`")
+        current_test = os.environ.get("PYTEST_CURRENT_TEST") or ""
+        self._log(f"c{self._cluster_instance_num}: called `on_test_stop` for '{current_test}'")
 
         # search for errors in cluster logfiles
         errors = logfiles.search_cluster_artifacts()
