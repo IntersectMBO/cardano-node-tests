@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
 
-testnet_magic="$(<./state-cluster/db-bft1/protocolMagicId)"
+testnet_magic="$(<./state-cluster/db-relay1/protocolMagicId)"
 
 echo "Starting cardano-submit-api: cardano-submit-api"
   echo "--config ./state-cluster/submit-api-config.yaml"
-  echo "--socket-path ./state-cluster/bft1.socket"
+  echo "--socket-path ./state-cluster/relay1.socket"
   echo "--listen-address 127.0.0.1"
   echo "--port 8090"
   echo --testnet-magic "$testnet_magic"
 echo "..or, once again, in a single line:"
-echo cardano-submit-api --config ./state-cluster/submit-api-config.yaml --socket-path ./state-cluster/bft1.socket --listen-address 127.0.0.1 --port 8090 --testnet-magic "$testnet_magic"
+echo cardano-submit-api --config ./state-cluster/submit-api-config.yaml --socket-path ./state-cluster/relay1.socket --listen-address 127.0.0.1 --port 8090 --testnet-magic "$testnet_magic"
 
 
-exec cardano-submit-api --config ./state-cluster/submit-api-config.yaml --socket-path ./state-cluster/bft1.socket --listen-address 127.0.0.1 --port 8090 --testnet-magic "$testnet_magic"
+exec cardano-submit-api --config ./state-cluster/submit-api-config.yaml --socket-path ./state-cluster/relay1.socket --listen-address 127.0.0.1 --port 8090 --testnet-magic "$testnet_magic"
