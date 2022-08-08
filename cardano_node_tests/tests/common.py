@@ -18,14 +18,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 # common `skipif`s
+_BLD_SKIP_REASON = ""
+if VERSIONS.transaction_era <= VERSIONS.ALLEGRA:
+    _BLD_SKIP_REASON = "node issue #4286"
+elif VERSIONS.transaction_era == VERSIONS.MARY:
+    _BLD_SKIP_REASON = "node issue #4287"
 SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
-    not (
-        VERSIONS.transaction_era >= VERSIONS.MARY
-        and VERSIONS.transaction_era == VERSIONS.cluster_era
-    ),
+    bool(_BLD_SKIP_REASON),
     reason=(
-        f"cannot use `build` with cluster era '{VERSIONS.cluster_era_name}' "
-        f"and TX era '{VERSIONS.transaction_era_name}'"
+        f"cannot use `build` with Tx era '{VERSIONS.transaction_era_name}', "
+        f"see {_BLD_SKIP_REASON}"
     ),
 )
 
