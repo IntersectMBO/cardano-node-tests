@@ -90,6 +90,7 @@ def issuers_addrs(
     # fund source addresses
     clusterlib_utils.fund_from_faucet(
         addrs[0],
+        addrs[-1],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
         amount=9000_000_000,
@@ -2243,3 +2244,180 @@ class TestCLITxOutSyntax:
         ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+
+@pytest.mark.testnets
+@pytest.mark.smoke
+@pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+    reason="runs only with Babbage+ TX",
+)
+class TestReferenceUTxO:
+    """Tests for Simple Scripts V1 and V2 on reference UTxOs."""
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
+    @pytest.mark.dbsync
+    def test_script_reference_utxo(
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        script_version: str,
+    ):
+        """Test minting and burning a token using reference script.
+
+        Mint and burn token in the same transaction
+        Sign transactions using skeys.
+
+        * create a Simple Script
+        * create a reference UTxO with the script
+        * specify amount to mint and amount to burn in the same transaction
+        * check that the expected amount was minted (to_mint_amount - to_burn_amount)
+        * check fees in Lovelace
+        * (optional) check transactions in db-sync
+        """
+        # pylint: disable=too-many-locals
+        expected_fee = 188821
+
+        temp_template = f"{common.get_test_id(cluster)}_{script_version}_{use_build_cmd}"
+
+        asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
+        asset_name = asset_name_dec.encode("utf-8").hex()
+        amount = 5
+        burn_amount = amount - 1
+
+        token_mint_addr = issuers_addrs[0]
+        issuer_addr = issuers_addrs[1]
+
+        # create simple script
+        if script_version == "simple_v1":
+            invalid_before = None
+            invalid_hereafter = None
+
+            reference_type = clusterlib.ScriptTypes.SIMPLE_V1
+
+            keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+            script_content = {"keyHash": keyhash, "type": "sig"}
+            script = Path(f"{temp_template}.script")
+            with open(script, "w", encoding="utf-8") as out_json:
+                json.dump(script_content, out_json)
+        else:
+            invalid_before = 100
+            invalid_hereafter = cluster.get_slot_no() + 1_000
+
+            reference_type = clusterlib.ScriptTypes.SIMPLE_V2
+
+            payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+            script = cluster.build_multisig_script(
+                script_name=temp_template,
+                script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
+                payment_vkey_files=payment_vkey_files[1:],
+                slot=invalid_before,
+                slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+            )
+
+        policyid = cluster.get_policyid(script)
+        token = f"{policyid}.{asset_name}"
+
+        assert not cluster.get_utxo(
+            address=token_mint_addr.address, coins=[token]
+        ), "The token already exists"
+
+        # create reference UTxO
+        reference_utxo, tx_out_reference = clusterlib_utils.create_reference_utxo(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=issuers_addrs[-1],
+            dst_addr=issuer_addr,
+            script_file=script,
+            amount=4_000_000,
+        )
+        assert reference_utxo.reference_script
+
+        # build and sign a transaction
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file],
+        )
+        mint = [
+            clusterlib.Mint(
+                txouts=[
+                    clusterlib.TxOut(address=token_mint_addr.address, amount=amount, coin=token),
+                    clusterlib.TxOut(
+                        address=token_mint_addr.address, amount=-burn_amount, coin=token
+                    ),
+                ],
+                reference_txin=reference_utxo,
+                reference_type=reference_type,
+                policyid=policyid,
+            ),
+        ]
+
+        txouts = [
+            clusterlib.TxOut(address=token_mint_addr.address, amount=2_000_000),
+            clusterlib.TxOut(
+                address=token_mint_addr.address, amount=amount - burn_amount, coin=token
+            ),
+        ]
+
+        if use_build_cmd:
+            tx_raw_output = cluster.build_tx(
+                src_address=token_mint_addr.address,
+                tx_name=temp_template,
+                txouts=txouts,
+                fee_buffer=2_000_000,
+                mint=mint,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+                witness_override=2,
+            )
+        else:
+            fee = cluster.calculate_tx_fee(
+                src_address=token_mint_addr.address,
+                tx_name=f"{temp_template}_mint_burn",
+                txouts=txouts,
+                mint=mint,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+                # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+                witness_count_add=2,
+            )
+            tx_raw_output = cluster.build_raw_tx(
+                src_address=token_mint_addr.address,
+                tx_name=f"{temp_template}_mint_burn",
+                txouts=txouts,
+                # token minting and burning in the same TX
+                mint=mint,
+                tx_files=tx_files,
+                fee=fee,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+            )
+
+        out_file_signed = cluster.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_mint_burn",
+        )
+
+        # submit signed transaction
+        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+
+        token_utxo = cluster.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
+        assert (
+            token_utxo and token_utxo[0].amount == amount - burn_amount
+        ), "The token was not minted / burned"
+
+        # check that reference UTxO was NOT spent
+        assert cluster.get_utxo(utxo=reference_utxo), "Reference input was spent"
+
+        # check expected fees
+        assert helpers.is_in_interval(
+            tx_raw_output.fee, expected_fee, frac=0.15
+        ), "TX fee doesn't fit the expected interval"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
+        # TODO: check reference script in db-sync (the `tx_raw_output`)
