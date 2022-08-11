@@ -1055,3 +1055,44 @@ def check_txins_spent(
 
     if utxo_data:
         raise AssertionError(f"Some txins were not spent: {txins}")
+
+
+def create_reference_utxo(
+    temp_template: str,
+    cluster_obj: clusterlib.ClusterLib,
+    payment_addr: clusterlib.AddressRecord,
+    dst_addr: clusterlib.AddressRecord,
+    script_file: Path,
+    amount: int,
+) -> Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput]:
+    """Create a reference script UTxO."""
+    # pylint: disable=too-many-arguments
+    tx_files = clusterlib.TxFiles(
+        signing_key_files=[payment_addr.skey_file],
+    )
+
+    txouts = [
+        clusterlib.TxOut(
+            address=dst_addr.address,
+            amount=amount,
+            reference_script_file=script_file,
+        )
+    ]
+
+    tx_raw_output = cluster_obj.send_tx(
+        src_address=payment_addr.address,
+        tx_name=f"{temp_template}_reference_utxo",
+        txouts=txouts,
+        tx_files=tx_files,
+        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+        witness_count_add=2,
+        join_txouts=False,
+    )
+
+    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+
+    reference_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
+    assert reference_utxos, "No reference script UTxO"
+    reference_utxo = reference_utxos[0]
+
+    return reference_utxo, tx_raw_output
