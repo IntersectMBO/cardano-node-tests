@@ -1,4 +1,5 @@
 """Tests for spending with Plutus V2 using `transaction build-raw`."""
+import binascii
 import json
 import logging
 import string
@@ -360,6 +361,7 @@ class TestLockingV2:
 
         * create a Tx output with an inline datum at the script address
         * double-check that the UTxO datum hash corresponds to the datum CBOR file
+        * check that datum from db-sync produces the original datum hash
         * check that datum bytes in db-sync corresponds to the original datum
         """
         temp_template = common.get_test_id(cluster)
@@ -396,15 +398,25 @@ class TestLockingV2:
         )
         assert datum_hash == script_utxo.inline_datum_hash, "Unexpected datum hash"
 
+        datum_db_response = list(
+            dbsync_queries.query_datum(datum_hash=script_utxo.inline_datum_hash)
+        )
+
+        # check that datum from db-sync produces the original datum hash
+        db_cbor_hex = datum_db_response[0].bytes.hex()
+        db_cbor_bin = binascii.unhexlify(db_cbor_hex)
+        db_cbor_file = f"{temp_template}_db_datum.cbor"
+        with open(db_cbor_file, "wb") as out_fp:
+            out_fp.write(db_cbor_bin)
+        db_datum_hash = cluster.get_hash_script_data(script_data_cbor_file=db_cbor_file)
+        assert (
+            db_datum_hash == datum_hash
+        ), "Datum hash of bytes in db-sync doesn't correspond to the original datum hash"
+
         # check that datum bytes in db-sync corresponds to the original datum
         with open(plutus_common.DATUM_FINITE_TYPED_CBOR, "rb") as in_fp:
             orig_cbor_bin = in_fp.read()
             orig_cbor_hex = orig_cbor_bin.hex()
-
-        datum_db_response = list(
-            dbsync_queries.query_datum(datum_hash=script_utxo.inline_datum_hash)
-        )
-        db_cbor_hex = datum_db_response[0].bytes.hex()
 
         # see https://github.com/input-output-hk/cardano-db-sync/issues/1214
         assert (
