@@ -8,6 +8,7 @@
 import itertools
 import json
 import logging
+import re
 from pathlib import Path
 from typing import List
 from typing import Tuple
@@ -25,6 +26,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 MAX_TOKEN_AMOUNT = 2**64
@@ -1549,6 +1551,7 @@ class TestTransfer:
         * (optional) check transactions in db-sync
         """
         temp_template = f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}"
+        xfail_msgs = []
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -1573,10 +1576,6 @@ class TestTransfer:
         assert min_value.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace = min_value.value
 
-        # TODO: `calculate_min_req_utxo` is broken in Babbage
-        if min_value.value < 999_978:
-            amount_lovelace = 2_000_000
-
         destinations = [
             *ma_destinations,
             clusterlib.TxOut(address=dst_address, amount=amount_lovelace),
@@ -1587,6 +1586,40 @@ class TestTransfer:
         if use_build_cmd:
             # TODO: add ADA txout for change address - see node issue #3057
             destinations.append(clusterlib.TxOut(address=src_address, amount=2_000_000))
+
+            # TODO: see node issue #4297
+            if (
+                VERSIONS.cluster_era == VERSIONS.BABBAGE
+                and VERSIONS.transaction_era == VERSIONS.ALONZO
+            ):
+                err_str = ""
+                try:
+                    cluster.build_tx(
+                        src_address=src_address,
+                        tx_name=temp_template,
+                        txouts=destinations,
+                        fee_buffer=2_000_000,
+                        tx_files=tx_files,
+                    )
+                except clusterlib.CLIError as err:
+                    err_str = str(err)
+                    if "Minimum required UTxO:" not in err_str:
+                        raise
+                    xfail_msgs.append(
+                        "`transaction build` min required UTxO calculation is broken, "
+                        "see node issue #4297"
+                    )
+
+                min_reported_utxo = re.search(  # type: ignore
+                    "Minimum required UTxO: Lovelace ([0-9]+)", err_str
+                ).group(1)
+                amount_lovelace = int(min_reported_utxo)
+
+                destinations = [
+                    *ma_destinations,
+                    clusterlib.TxOut(address=dst_address, amount=amount_lovelace),
+                    clusterlib.TxOut(address=src_address, amount=2_000_000),
+                ]
 
             tx_raw_output = cluster.build_tx(
                 src_address=src_address,
@@ -1626,9 +1659,8 @@ class TestTransfer:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
-        # TODO: `calculate_min_req_utxo` is broken in Babbage
-        if min_value.value < 999_978:
-            pytest.xfail("`calculate_min_req_utxo` is broken in Babbage")
+        if xfail_msgs:
+            pytest.xfail("\n".join(xfail_msgs))
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -1647,10 +1679,11 @@ class TestTransfer:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals,too-many-statements
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         amount = 1_000
         rand = clusterlib.get_rand_str(5)
+        xfail_msgs = []
 
         new_tokens = clusterlib_utils.new_tokens(
             *[f"couttscoin{rand}{i}".encode("utf-8").hex() for i in range(5)],
@@ -1706,10 +1739,6 @@ class TestTransfer:
         assert min_value_address2.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address2 = min_value_address2.value
 
-        # TODO: `calculate_min_req_utxo` is broken in Babbage
-        if min_value_address1.value < 999_978:
-            amount_lovelace_address1 = amount_lovelace_address2 = 2_000_000
-
         destinations = [
             *ma_destinations_address1,
             clusterlib.TxOut(address=dst_address1, amount=amount_lovelace_address1),
@@ -1724,6 +1753,42 @@ class TestTransfer:
         if use_build_cmd:
             # TODO: add ADA txout for change address
             destinations.append(clusterlib.TxOut(address=src_address, amount=4_000_000))
+
+            # TODO: see node issue #4297
+            if (
+                VERSIONS.cluster_era == VERSIONS.BABBAGE
+                and VERSIONS.transaction_era == VERSIONS.ALONZO
+            ):
+                err_str = ""
+                try:
+                    cluster.build_tx(
+                        src_address=src_address,
+                        tx_name=temp_template,
+                        txouts=destinations,
+                        fee_buffer=2_000_000,
+                        tx_files=tx_files,
+                    )
+                except clusterlib.CLIError as err:
+                    err_str = str(err)
+                    if "Minimum required UTxO:" not in err_str:
+                        raise
+                    xfail_msgs.append(
+                        "`transaction build` min required UTxO calculation is broken, "
+                        "see node issue #4297"
+                    )
+
+                min_reported_utxo = re.search(  # type: ignore
+                    "Minimum required UTxO: Lovelace ([0-9]+)", err_str
+                ).group(1)
+                amount_lovelace_address1 = amount_lovelace_address2 = int(min_reported_utxo)
+
+                destinations = [
+                    *ma_destinations_address1,
+                    clusterlib.TxOut(address=dst_address1, amount=amount_lovelace_address1),
+                    *ma_destinations_address2,
+                    clusterlib.TxOut(address=dst_address2, amount=amount_lovelace_address2),
+                    clusterlib.TxOut(address=src_address, amount=4_000_000),
+                ]
 
             tx_raw_output = cluster.build_tx(
                 src_address=src_address,
@@ -1772,9 +1837,8 @@ class TestTransfer:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
-        # TODO: `calculate_min_req_utxo` is broken in Babbage
-        if min_value_address1.value < 999_978:
-            pytest.xfail("`calculate_min_req_utxo` is broken in Babbage")
+        if xfail_msgs:
+            pytest.xfail("\n".join(xfail_msgs))
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
