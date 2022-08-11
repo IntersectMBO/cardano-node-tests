@@ -11,7 +11,6 @@ import random
 from pathlib import Path
 from typing import List
 from typing import Optional
-from typing import Tuple
 
 import allure
 import pytest
@@ -120,48 +119,6 @@ def multisig_tx(
     ), f"Incorrect balance for script address `{dst_address}`"
 
     return tx_raw_output
-
-
-def _create_reference_utxo(
-    temp_template: str,
-    cluster_obj: clusterlib.ClusterLib,
-    payment_addr: clusterlib.AddressRecord,
-    dst_addr: clusterlib.AddressRecord,
-    script_file: Path,
-    amount: int,
-) -> Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput]:
-    """Create a reference script UTxO with Simple Script."""
-    # pylint: disable=too-many-arguments
-    tx_files = clusterlib.TxFiles(
-        signing_key_files=[payment_addr.skey_file],
-    )
-
-    txouts = [
-        clusterlib.TxOut(
-            address=dst_addr.address,
-            amount=amount,
-            reference_script_file=script_file,
-        )
-    ]
-
-    tx_raw_output = cluster_obj.send_tx(
-        src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
-        txouts=txouts,
-        tx_files=tx_files,
-        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=2,
-    )
-
-    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
-
-    reference_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
-    assert reference_utxos, "No reference script UTxO"
-    reference_utxo = reference_utxos[0]
-
-    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
-
-    return reference_utxo, tx_raw_output
 
 
 @pytest.mark.testnets
@@ -1877,7 +1834,7 @@ class TestReferenceUTxO:
             )
 
         # create reference UTxO
-        reference_utxo, __ = _create_reference_utxo(
+        reference_utxo, tx_out_reference = clusterlib_utils.create_reference_utxo(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=src_addr,
@@ -1960,6 +1917,7 @@ class TestReferenceUTxO:
         # check that reference UTxO was NOT spent
         assert cluster.get_utxo(utxo=reference_utxo), "Reference input was spent"
 
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         # TODO: check reference script in db-sync (the `tx_out_from`)
 
