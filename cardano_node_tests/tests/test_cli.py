@@ -175,12 +175,12 @@ class TestCLI:
         tx_body = cluster.view_tx(tx_body_file=self.TX_BODY_FILE)
         tx = cluster.view_tx(tx_file=self.TX_FILE)
 
-        if "reference inputs:" in tx_body:
+        if "return collateral:" in tx_body:
             with open(self.TX_BODY_OUT, encoding="utf-8") as infile:
                 tx_body_view_out = infile.read()
             assert tx_body == tx_body_view_out.strip()
 
-        if "reference inputs:" in tx:
+        if "return collateral:" in tx:
             with open(self.TX_OUT, encoding="utf-8") as infile:
                 tx_view_out = infile.read()
             assert tx == tx_view_out.strip()
