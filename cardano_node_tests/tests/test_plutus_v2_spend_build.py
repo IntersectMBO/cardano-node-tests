@@ -1942,7 +1942,6 @@ class TestReadonlyReferenceInputs:
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
-            dst_addr=payment_addrs[1],
             amount=amount,
         )
 
@@ -2028,7 +2027,6 @@ class TestNegativeReadonlyReferenceInputs:
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
-            dst_addr=payment_addrs[1],
             amount=reference_input_amount,
         )
 
@@ -2135,7 +2133,6 @@ class TestNegativeReadonlyReferenceInputs:
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
-            dst_addr=payment_addrs[1],
             amount=2_000_000,
         )
 
@@ -2191,7 +2188,6 @@ class TestNegativeReadonlyReferenceInputs:
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
-            dst_addr=payment_addrs[1],
             amount=reference_input_amount,
         )
 
