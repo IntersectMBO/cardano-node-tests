@@ -4,6 +4,7 @@ import contextlib
 import itertools
 import json
 import logging
+import math
 import time
 from pathlib import Path
 from typing import Any
@@ -496,18 +497,21 @@ def mint_or_burn_witness(
         for t in new_tokens
     ]
 
-    if use_build_cmd:
-        mint_txouts = [
-            clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
-            for t in new_tokens
-        ]
+    mint_txouts = [
+        clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+        for t in new_tokens
+        if t.amount >= 0
+    ]
+    txouts = []
+    if mint_txouts:
+        # meet the minimum required UTxO value
+        lovelace_amount = 2_000_000 + math.ceil(len(mint_txouts) / 8) * 1_000_000
         txouts = [
-            # meet the minimum required UTxO value
-            clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=2000_000),
-            # leave out token burning records
-            *[t for t in mint_txouts if t.amount > 0],
+            clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=lovelace_amount),
+            *mint_txouts,
         ]
 
+    if use_build_cmd:
         tx_raw_output = cluster_obj.build_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
@@ -522,6 +526,7 @@ def mint_or_burn_witness(
         fee = cluster_obj.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
+            txouts=txouts,
             mint=mint,
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=len(signing_key_files),
@@ -529,6 +534,7 @@ def mint_or_burn_witness(
         tx_raw_output = cluster_obj.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
+            txouts=txouts,
             mint=mint,
             fee=fee,
             invalid_hereafter=invalid_hereafter,
@@ -607,9 +613,23 @@ def mint_or_burn_sign(
         )
         for t in new_tokens
     ]
+    mint_txouts = [
+        clusterlib.TxOut(address=t.token_mint_addr.address, amount=t.amount, coin=t.token)
+        for t in new_tokens
+        if t.amount >= 0
+    ]
+    txouts = []
+    if mint_txouts:
+        # meet the minimum required UTxO value
+        lovelace_amount = 2_000_000 + math.ceil(len(mint_txouts) / 8) * 1_000_000
+        txouts = [
+            clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
     fee = cluster_obj.calculate_tx_fee(
         src_address=token_mint_addr.address,
         tx_name=temp_template,
+        txouts=txouts,
         mint=mint,
         tx_files=tx_files,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
@@ -618,6 +638,7 @@ def mint_or_burn_sign(
     tx_raw_output = cluster_obj.build_raw_tx(
         src_address=token_mint_addr.address,
         tx_name=temp_template,
+        txouts=txouts,
         mint=mint,
         tx_files=tx_files,
         fee=fee,
