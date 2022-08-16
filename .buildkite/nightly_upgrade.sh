@@ -29,10 +29,10 @@ export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10
 set +e
 # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
 nix-shell --run './.buildkite/nightly_upgrade_pytest.sh step1'
-retval_first="$?"
+retval="$?"
 
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
-[ "$retval_first" -le 1 ] || exit "$retval_first"
+[ "$retval" -le 1 ] || exit "$retval"
 
 # update cardano-node to specified branch and/or revision, or to the latest available revision
 if [ -n "${UPGRADE_REVISION:-""}" ]; then
@@ -46,7 +46,17 @@ cat nix/sources.json
 
 # update cluster nodes, run smoke tests
 nix-shell --run './.buildkite/nightly_upgrade_pytest.sh step2'
-retval_second="$?"
+retval="$?"
+
+# retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
+[ "$retval" -le 1 ] || exit "$retval"
+
+# update to Babbage, run smoke tests
+nix-shell --run './.buildkite/nightly_upgrade_pytest.sh step3'
+retval="$?"
+
+# teardown cluster
+nix-shell --run './.buildkite/nightly_upgrade_pytest.sh finish'
 
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
@@ -63,4 +73,4 @@ echo
 echo "Dir content:"
 ls -1a
 
-exit "$retval_second"
+exit "$retval"

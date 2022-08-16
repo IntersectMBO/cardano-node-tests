@@ -12,6 +12,7 @@ steps:
       - 'cli_coverage.json'
       - 'testrun-report-step1.html'
       - 'testrun-report-step2.html'
+      - 'testrun-report-step3.html'
       - 'scheduling.log.xz'
       - 'errors_all.log'
       - 'testing_artifacts.tar.xz'
