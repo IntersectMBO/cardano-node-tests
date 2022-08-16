@@ -47,6 +47,26 @@ elif [ "$1" = "step2" ]; then
   # print path to cardano-node binary
   pool1_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool1)"
   ls -l "/proc/$pool1_pid/exe"
+
+  # waiting for node to start
+  for _ in {1..10}; do
+    if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
+      break
+    fi
+    sleep 5
+  done
+  [ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start node" >&2; exit 1; }  # assert
+
+  # waiting to make sure the chain is synced
+  NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+  for _ in {1..10}; do
+    sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.syncProgress')"
+    if [ "$sync_progress" = "100.00" ]; then
+      break
+    fi
+    sleep 5
+  done
+
   # run smoke tests
   pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step2.html --self-contained-html
   retval="$?"
