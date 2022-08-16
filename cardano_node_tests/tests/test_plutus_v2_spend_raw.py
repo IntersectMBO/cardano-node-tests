@@ -1946,6 +1946,7 @@ class TestNegativeReadonlyReferenceInputs:
             temp_template=temp_template,
             cluster=cluster,
             payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
             amount=amount,
         )
 
