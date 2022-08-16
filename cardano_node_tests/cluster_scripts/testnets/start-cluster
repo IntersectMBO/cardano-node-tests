@@ -247,12 +247,12 @@ supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
 echo "Waiting until replay is finished"
 sleep 10
-while tail -n 10 "$STATE_CLUSTER/relay1.stdout" | grep -q "replay progress"; do
+while tail -n 10 "$STATE_CLUSTER/relay1.stdout" | grep -E -q "replay progress|IPSubscriptionTarget"; do
   sleep 10
 done
 
 echo "waiting for node to start" >> "$STATE_CLUSTER/start-cluster.log"
-for _ in {1..5}; do
+for _ in {1..10}; do
   if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
     break
   fi
@@ -264,14 +264,12 @@ echo "node started" >> "$STATE_CLUSTER/start-cluster.log"
 
 echo "Waiting to make sure the chain is synced"
 echo "waiting for chain to sync" >> "$STATE_CLUSTER/start-cluster.log"
-while :; do
-  start_slot="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot')"
-  sleep 30
-  end_slot="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot')"
-  if [ "$start_slot" -ne "$end_slot" ] && [ "$((end_slot - start_slot))" -lt 100 ]; then
+for _ in {1..600}; do
+  sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.syncProgress')"
+  if [ "$sync_progress" = "100.00" ]; then
     break
   fi
-  sleep 5
+  sleep 30
 done
 echo "chain synced" >> "$STATE_CLUSTER/start-cluster.log"
 
