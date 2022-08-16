@@ -140,13 +140,11 @@ done
 echo "Waiting to make sure the chain is synced"
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
 for _ in {1..600}; do
-  start_slot="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot')"
-  sleep 30
-  end_slot="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.slot')"
-  if [ "$start_slot" -ne "$end_slot" ] && [ "$((end_slot - start_slot))" -lt 100 ]; then
+  sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.syncProgress')"
+  if [ "$sync_progress" = "100.00" ]; then
     break
   fi
-  sleep 5
+  sleep 30
 done
 
 # start cardano-submit-api
