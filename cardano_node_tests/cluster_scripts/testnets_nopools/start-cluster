@@ -140,12 +140,13 @@ done
 echo "Waiting to make sure the chain is synced"
 NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
 for _ in {1..600}; do
-  sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.syncProgress')"
+  sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
   if [ "$sync_progress" = "100.00" ]; then
     break
   fi
   sleep 30
 done
+[ "$sync_progress" = "100.00" ] || { echo "Failed to sync the realy node, line $LINENO" >&2; exit 1; }  # assert
 
 # start cardano-submit-api
 if type cardano-submit-api >/dev/null 2>&1 && [ -e "$STATE_CLUSTER/submit-api-config.yaml" ]; then
