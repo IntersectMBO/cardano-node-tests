@@ -265,12 +265,13 @@ echo "node started" >> "$STATE_CLUSTER/start-cluster.log"
 echo "Waiting to make sure the chain is synced"
 echo "waiting for chain to sync" >> "$STATE_CLUSTER/start-cluster.log"
 for _ in {1..600}; do
-  sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.syncProgress')"
+  sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
   if [ "$sync_progress" = "100.00" ]; then
     break
   fi
   sleep 30
 done
+[ "$sync_progress" = "100.00" ] || { echo "Failed to sync the realy node, line $LINENO" >&2; exit 1; }  # assert
 echo "chain synced" >> "$STATE_CLUSTER/start-cluster.log"
 
 echo "Transfering funds to pool owners, registering pools and delegations"
