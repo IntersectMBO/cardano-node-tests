@@ -981,16 +981,6 @@ def load_tx_metadata(tx_body_file: Path) -> TxMetadata:
     return TxMetadata(metadata=metadata, aux_data=aux_data)
 
 
-def utxodata2txout(utxodata: clusterlib.UTXODbsyncData) -> clusterlib.TxOut:
-    """Convert `clusterlib.UTXODbsyncData` to `clusterlib.TxOut`."""
-    return clusterlib.TxOut(
-        address=utxodata.address,
-        amount=utxodata.amount,
-        coin=utxodata.coin,
-        datum_hash=utxodata.datum_hash,
-    )
-
-
 def datum_hash_from_txout(cluster_obj: clusterlib.ClusterLib, txout: clusterlib.TxOut) -> str:
     """Return datum hash from `clusterlib.TxOut`."""
     datum_hash = txout.datum_hash

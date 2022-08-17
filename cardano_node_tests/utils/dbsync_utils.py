@@ -63,6 +63,18 @@ class RewardRecord(NamedTuple):
 class UTxORecord(NamedTuple):
     utxo_hash: str
     utxo_ix: int
+    amount: int
+    address: str
+    coin: str = clusterlib.DEFAULT_COIN
+    decoded_coin: str = ""
+    datum_hash: str = ""
+    inline_datum_hash: str = ""
+    reference_script_hash: str = ""
+
+
+class GetUTxORecord(NamedTuple):
+    utxo_hash: str
+    utxo_ix: int
     has_script: bool
     amount: int
     data_hash: str
@@ -72,7 +84,7 @@ class PaymentAddrRecord(NamedTuple):
     payment_address: str
     stake_address: Optional[str]
     amount_sum: int
-    utxos: List[UTxORecord]
+    utxos: List[GetUTxORecord]
 
     def __bool__(self) -> bool:
         return self.amount_sum > 0
@@ -126,8 +138,8 @@ class TxRecord(NamedTuple):
     invalid_before: Optional[int]
     invalid_hereafter: Optional[int]
     txins: List[clusterlib.UTXOData]
-    txouts: List[clusterlib.UTXODbsyncData]
-    mint: List[clusterlib.UTXODbsyncData]
+    txouts: List[UTxORecord]
+    mint: List[UTxORecord]
     collaterals: List[clusterlib.UTXOData]
     reference_inputs: List[clusterlib.UTXOData]
     scripts: List[ScriptRecord]
@@ -148,10 +160,20 @@ class TxRecord(NamedTuple):
 
 
 class TxPrelimRecord(NamedTuple):
-    utxo_out: List[clusterlib.UTXODbsyncData]
-    ma_utxo_out: List[clusterlib.UTXODbsyncData]
-    mint_utxo_out: List[clusterlib.UTXODbsyncData]
+    utxo_out: List[UTxORecord]
+    ma_utxo_out: List[UTxORecord]
+    mint_utxo_out: List[UTxORecord]
     last_row: dbsync_queries.TxDBRow
+
+
+def utxodata2txout(utxodata: UTxORecord) -> clusterlib.TxOut:
+    """Convert `UTxORecord` to `clusterlib.TxOut`."""
+    return clusterlib.TxOut(
+        address=utxodata.address,
+        amount=utxodata.amount,
+        coin=utxodata.coin,
+        datum_hash=utxodata.datum_hash,
+    )
 
 
 def get_address_reward(address: str, epoch_from: int = 0, epoch_to: int = 99999999) -> RewardRecord:
@@ -212,7 +234,7 @@ def get_utxo(address: str) -> PaymentAddrRecord:
     utxos = []
     for db_row in dbsync_queries.query_utxo(address=address):
         utxos.append(
-            UTxORecord(
+            GetUTxORecord(
                 utxo_hash=db_row.tx_hash.hex(),
                 utxo_ix=db_row.utxo_ix,
                 has_script=db_row.has_script,
@@ -294,11 +316,11 @@ def get_pool_data(pool_id_bech32: str) -> Optional[PoolDataRecord]:
 
 def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
     """Get first batch of transaction data from db-sync."""
-    utxo_out: List[clusterlib.UTXODbsyncData] = []
+    utxo_out: List[UTxORecord] = []
     seen_tx_out_ids = set()
-    ma_utxo_out: List[clusterlib.UTXODbsyncData] = []
+    ma_utxo_out: List[UTxORecord] = []
     seen_ma_tx_out_ids = set()
-    mint_utxo_out: List[clusterlib.UTXODbsyncData] = []
+    mint_utxo_out: List[UTxORecord] = []
     seen_ma_tx_mint_ids = set()
     tx_id = -1
 
@@ -311,7 +333,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:
             seen_tx_out_ids.add(query_row.tx_out_id)
-            out_rec = clusterlib.UTXODbsyncData(
+            out_rec = UTxORecord(
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.tx_out_value),
@@ -329,7 +351,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
             asset_name = query_row.ma_tx_out_name.hex() if query_row.ma_tx_out_name else None
             policyid = query_row.ma_tx_out_policy.hex() if query_row.ma_tx_out_policy else ""
             coin = f"{policyid}.{asset_name}" if asset_name else policyid
-            ma_rec = clusterlib.UTXODbsyncData(
+            ma_rec = UTxORecord(
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.ma_tx_out_quantity or 0),
@@ -345,7 +367,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
             asset_name = query_row.ma_tx_mint_name.hex() if query_row.ma_tx_mint_name else None
             policyid = query_row.ma_tx_mint_policy.hex() if query_row.ma_tx_mint_policy else ""
             coin = f"{policyid}.{asset_name}" if asset_name else policyid
-            mint_rec = clusterlib.UTXODbsyncData(
+            mint_rec = UTxORecord(
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.ma_tx_mint_quantity or 0),
@@ -721,7 +743,7 @@ def check_tx(
     response = get_tx_record_retry(txhash=txhash, retry_num=retry_num)
 
     tx_txouts = {_sanitize_txout(cluster_obj=cluster_obj, txout=r) for r in tx_raw_output.txouts}
-    db_txouts = {clusterlib_utils.utxodata2txout(r) for r in response.txouts}
+    db_txouts = {utxodata2txout(r) for r in response.txouts}
 
     len_db_txouts, len_out_txouts = len(response.txouts), len(tx_raw_output.txouts)
 
@@ -776,7 +798,7 @@ def check_tx(
         len_db_mint == len_out_mint
     ), f"Number of MA minting doesn't match ({len_db_mint} != {len_out_mint})"
 
-    db_mint_txouts = sorted(clusterlib_utils.utxodata2txout(r) for r in response.mint)
+    db_mint_txouts = sorted(utxodata2txout(r) for r in response.mint)
     assert (
         tx_mint_by_token == db_mint_txouts
     ), f"MA minting outputs don't match ({tx_mint_by_token} != {db_mint_txouts})"
@@ -849,9 +871,7 @@ def check_tx(
         for r in tx_raw_output.txouts
         if _txout_has_inline_datum(r)
     }
-    db_txouts_inline_datums = {
-        clusterlib_utils.utxodata2txout(r) for r in response.txouts if r.inline_datum_hash
-    }
+    db_txouts_inline_datums = {utxodata2txout(r) for r in response.txouts if r.inline_datum_hash}
     assert (
         tx_txouts_inline_datums == db_txouts_inline_datums
     ), f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
