@@ -129,6 +129,7 @@ class TxRecord(NamedTuple):
     txouts: List[clusterlib.UTXOData]
     mint: List[clusterlib.UTXOData]
     collaterals: List[clusterlib.UTXOData]
+    reference_inputs: List[clusterlib.UTXOData]
     scripts: List[ScriptRecord]
     redeemers: List[RedeemerRecord]
     metadata: List[MetadataRecord]
@@ -482,6 +483,18 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
             for r in dbsync_queries.query_collateral_tx_ins(txhash=txhash)
         ]
 
+    reference_inputs = []
+    if txdata.last_row.reference_input_count:
+        reference_inputs = [
+            clusterlib.UTXOData(
+                utxo_hash=r.tx_hash.hex(),
+                utxo_ix=int(r.utxo_ix),
+                amount=int(r.value),
+                address=str(r.address),
+            )
+            for r in dbsync_queries.query_reference_tx_ins(txhash=txhash)
+        ]
+
     scripts = []
     if txdata.last_row.script_count:
         scripts = [
@@ -525,6 +538,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
         txouts=[*txdata.utxo_out, *txdata.ma_utxo_out],
         mint=txdata.mint_utxo_out,
         collaterals=collaterals,
+        reference_inputs=reference_inputs,
         scripts=scripts,
         redeemers=redeemers,
         metadata=metadata,
@@ -841,6 +855,23 @@ def check_tx(
     assert (
         tx_txouts_inline_datums == db_txouts_inline_datums
     ), f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
+
+    # compare readonly reference inputs
+    txins_utxos_reference_inputs = {
+        *[f"{r.utxo_hash}#{r.utxo_ix}" for r in tx_raw_output.readonly_reference_txins if r],
+        *[
+            f"{r.reference_txin.utxo_hash}#{r.reference_txin.utxo_ix}"
+            for r in tx_raw_output.script_txins
+            if r.reference_txin
+        ],
+    }
+    db_utxos_reference_inputs = {
+        f"{r.utxo_hash}#{r.utxo_ix}" for r in response.reference_inputs if r
+    }
+    assert txins_utxos_reference_inputs == db_utxos_reference_inputs, (
+        "Reference inputs don't match "
+        f"({txins_utxos_reference_inputs} != {db_utxos_reference_inputs})"
+    )
 
     return response
 

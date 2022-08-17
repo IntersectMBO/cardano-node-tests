@@ -1721,6 +1721,7 @@ class TestReadonlyReferenceInputs:
     """Tests for Tx with readonly reference inputs."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.parametrize("reference_input_scenario", ("single", "duplicated"))
     def test_use_reference_input(
         self,
@@ -1733,6 +1734,7 @@ class TestReadonlyReferenceInputs:
         * create the necessary Tx outputs
         * use a reference input and spend the locked UTxO
         * check that the reference input was not spent
+        * (optional) check transactions in db-sync
         """
         __: Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -1816,8 +1818,10 @@ class TestReadonlyReferenceInputs:
             clusterlib.calculate_utxos_balance(utxos=reference_input_utxo) == reference_input_amount
         ), f"The reference input was spent `{reference_input_utxo}`"
 
-        # check that the reference input is present on 'transaction view'
+        # check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
     def test_same_input_as_reference_input(
