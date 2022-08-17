@@ -138,15 +138,7 @@ class TxInDBRow(NamedTuple):
     ma_tx_out_quantity: Optional[decimal.Decimal]
 
 
-class CollateralTxInDBRow(NamedTuple):
-    tx_out_id: int
-    utxo_ix: int
-    address: str
-    value: decimal.Decimal
-    tx_hash: memoryview
-
-
-class ReferenceTxInDBRow(NamedTuple):
+class TxInNoMADBRow(NamedTuple):
     tx_out_id: int
     utxo_ix: int
     address: str
@@ -333,7 +325,7 @@ def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
             yield TxInDBRow(*result)
 
 
-def query_collateral_tx_ins(txhash: str) -> Generator[CollateralTxInDBRow, None, None]:
+def query_collateral_tx_ins(txhash: str) -> Generator[TxInNoMADBRow, None, None]:
     """Query transaction collateral txins in db-sync."""
     query = (
         "SELECT"
@@ -349,10 +341,10 @@ def query_collateral_tx_ins(txhash: str) -> Generator[CollateralTxInDBRow, None,
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
-            yield CollateralTxInDBRow(*result)
+            yield TxInNoMADBRow(*result)
 
 
-def query_reference_tx_ins(txhash: str) -> Generator[ReferenceTxInDBRow, None, None]:
+def query_reference_tx_ins(txhash: str) -> Generator[TxInNoMADBRow, None, None]:
     """Query transaction reference txins in db-sync."""
     query = (
         "SELECT "
@@ -368,7 +360,7 @@ def query_reference_tx_ins(txhash: str) -> Generator[ReferenceTxInDBRow, None, N
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
-            yield ReferenceTxInDBRow(*result)
+            yield TxInNoMADBRow(*result)
 
 
 def query_plutus_scripts(txhash: str) -> Generator[ScriptDBRow, None, None]:

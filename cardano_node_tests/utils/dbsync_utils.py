@@ -857,7 +857,6 @@ def check_tx(
     ), f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
 
     # compare readonly reference inputs
-
     txins_utxos_reference_inputs = {
         *[f"{r.utxo_hash}#{r.utxo_ix}" for r in tx_raw_output.readonly_reference_txins if r],
         *[
@@ -866,11 +865,9 @@ def check_tx(
             if r.reference_txin
         ],
     }
-
     db_utxos_reference_inputs = {
         f"{r.utxo_hash}#{r.utxo_ix}" for r in response.reference_inputs if r
     }
-
     assert txins_utxos_reference_inputs == db_utxos_reference_inputs, (
         "Reference inputs don't match "
         f"({txins_utxos_reference_inputs} != {db_utxos_reference_inputs})"
