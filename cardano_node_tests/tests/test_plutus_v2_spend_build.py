@@ -2324,8 +2324,10 @@ class TestCollateralOutput:
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
+        protocol_params = cluster.get_protocol_params()
+
         redeem_cost = plutus_common.compute_cost(
-            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+            execution_cost=plutus_op.execution_cost, protocol_params=protocol_params
         )
 
         # fund the script address and create a UTxO for collateral
@@ -2343,8 +2345,6 @@ class TestCollateralOutput:
             plutus_op=plutus_op,
             collateral_amount=amount_for_collateral,
         )
-
-        dst_init_balance = cluster.get_address_balance(dst_addr.address)
 
         #  spend the "locked" UTxO
 
@@ -2364,23 +2364,44 @@ class TestCollateralOutput:
             return_collateral_txouts=return_collateral_txouts if use_return_collateral else (),
         )
 
-        # check that the right amount of collateral was taken
-        dst_balance = cluster.get_address_balance(dst_addr.address)
-        assert (
-            dst_balance == dst_init_balance - redeem_cost.collateral
-        ), f"Collateral was NOT spent from `{dst_addr.address}` correctly"
+        # check that collateral was taken
+        assert not cluster.get_utxo(utxo=collateral_utxos), "Collateral was NOT spent"
+
+        txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
+        return_collateral_utxos = cluster.get_utxo(
+            txin=f"{txid_redeem}#{len(tx_output_redeem.txouts) + 1}"
+        )
+
+        # when total collateral amount is specified, it is necessary to specify also return
+        # collateral `TxOut`
+        if use_total_collateral and not use_return_collateral:
+            assert not return_collateral_utxos, "Return collateral UTxO was unexpectedly created"
+            return
+
+        # check that correct return collateral UTxO was created
+        assert return_collateral_utxos, "Return collateral UTxO was NOT created"
+
+        returned_collateral_amount = clusterlib.calculate_utxos_balance(
+            utxos=return_collateral_utxos
+        )
 
         if use_return_collateral:
-            txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
-            return_col_utxos = cluster.get_utxo(
-                txin=f"{txid_redeem}#{len(tx_output_redeem.txouts) + 1}"
-            )
-            assert return_col_utxos, "Return collateral UTxO was not created"
+            assert (
+                returned_collateral_amount == return_collateral_amount
+            ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
+            assert (
+                return_collateral_txouts[0].address == return_collateral_utxos[0].address
+            ), "Return collateral address doesn't match the specified address"
+        else:
+            # check that the collateral amount charged corresponds to 'collateralPercentage'
+            collateral_charged = amount_for_collateral - returned_collateral_amount
+            assert collateral_charged == round(
+                tx_output_redeem.fee * protocol_params["collateralPercentage"] / 100
+            ), "The collateral amount charged is not the expected amount"
 
             assert (
-                clusterlib.calculate_utxos_balance(utxos=return_col_utxos)
-                == return_collateral_amount
-            ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
+                payment_addr.address == return_collateral_utxos[0].address
+            ), "Return collateral address doesn't match change address"
 
     @allure.link(helpers.get_vcs_link())
     def test_collateral_with_tokens(
