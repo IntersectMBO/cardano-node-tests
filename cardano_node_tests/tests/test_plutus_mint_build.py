@@ -102,11 +102,15 @@ def _fund_issuer(
         issuer_balance == issuer_init_balance + amount + minting_cost.collateral
     ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_output.out_file)
-    mint_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
+    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
+
+    mint_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
+
+    txid = out_utxos[0].utxo_hash
     collateral_utxos = [
         clusterlib.UTXOData(utxo_hash=txid, utxo_ix=idx, amount=a, address=issuer_addr.address)
-        for idx, a in enumerate(collateral_amounts, start=2)
+        for idx, a in enumerate(collateral_amounts, start=utxo_ix_offset + 1)
     ]
 
     return mint_utxos, collateral_utxos, tx_output
@@ -459,8 +463,6 @@ class TestBuildMinting:
             execution_cost=minting_cost2_v2, protocol_params=protocol_params
         )
 
-        issuer_init_balance = cluster.get_address_balance(issuer_addr.address)
-
         # Step 1: fund the token issuer
 
         tx_files_step1 = clusterlib.TxFiles(
@@ -488,21 +490,28 @@ class TestBuildMinting:
         )
         cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
 
-        issuer_step1_balance = cluster.get_address_balance(issuer_addr.address)
+        out_utxos_step1 = cluster.get_utxo(tx_raw_output=tx_output_step1)
+
+        issuer_utxos_step1 = clusterlib.filter_utxos(
+            utxos=out_utxos_step1, address=issuer_addr.address
+        )
         assert (
-            issuer_step1_balance
-            == issuer_init_balance
-            + script_fund
-            + minting_cost1.collateral
-            + minting_cost2.collateral
+            clusterlib.calculate_utxos_balance(utxos=issuer_utxos_step1)
+            == script_fund + minting_cost1.collateral + minting_cost2.collateral
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
         # Step 2: mint the "qacoins"
 
-        txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
-        mint_utxos = cluster.get_utxo(txin=f"{txid_step1}#1")
-        collateral_utxo1 = cluster.get_utxo(txin=f"{txid_step1}#2")
-        collateral_utxo2 = cluster.get_utxo(txin=f"{txid_step1}#3")
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=out_utxos_step1, txouts=tx_output_step1.txouts
+        )
+        mint_utxos = clusterlib.filter_utxos(utxos=out_utxos_step1, utxo_ix=utxo_ix_offset)
+        collateral_utxo1 = clusterlib.filter_utxos(
+            utxos=out_utxos_step1, utxo_ix=utxo_ix_offset + 1
+        )
+        collateral_utxo2 = clusterlib.filter_utxos(
+            utxos=out_utxos_step1, utxo_ix=utxo_ix_offset + 2
+        )
 
         slot_step2 = cluster.get_slot_no()
 
@@ -587,20 +596,25 @@ class TestBuildMinting:
         )
         cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
 
+        out_utxos_step2 = cluster.get_utxo(tx_raw_output=tx_output_step2)
+
+        issuer_utxos_step2 = clusterlib.filter_utxos(
+            utxos=out_utxos_step2, address=issuer_addr.address
+        )
         assert (
-            cluster.get_address_balance(issuer_addr.address)
-            == issuer_init_balance
-            + minting_cost1.collateral
-            + minting_cost2.collateral
-            + lovelace_amount
+            clusterlib.calculate_utxos_balance(utxos=issuer_utxos_step2) == lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo1 = cluster.get_utxo(address=issuer_addr.address, coins=[token1])
+        token_utxo1 = clusterlib.filter_utxos(
+            utxos=out_utxos_step2, address=issuer_addr.address, coin=token1
+        )
         assert (
             token_utxo1 and token_utxo1[0].amount == token_amount
         ), "The 'anyone' token was not minted"
 
-        token_utxo2 = cluster.get_utxo(address=issuer_addr.address, coins=[token2])
+        token_utxo2 = clusterlib.filter_utxos(
+            utxos=out_utxos_step2, address=issuer_addr.address, coin=token2
+        )
         assert (
             token_utxo2 and token_utxo2[0].amount == token_amount
         ), "The 'timerange' token was not minted"

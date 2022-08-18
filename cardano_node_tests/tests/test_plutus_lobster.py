@@ -441,8 +441,11 @@ class TestLobsterChallenge:
 
             tx_outputs_all.append(tx_output_vote)
 
-            txid_vote = cluster.get_txid(tx_body_file=tx_output_vote.out_file)
-            vote_utxos = cluster.get_utxo(txin=f"{txid_vote}#1")
+            out_utxos_vote = cluster.get_utxo(tx_raw_output=tx_output_vote)
+            utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+                utxos=out_utxos_vote, txouts=tx_output_vote.txouts
+            )
+            vote_utxos = clusterlib.filter_utxos(utxos=out_utxos_vote, utxo_ix=utxo_ix_offset)
 
             # check expected balances
             try:
