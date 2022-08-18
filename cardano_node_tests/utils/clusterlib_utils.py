@@ -1107,3 +1107,21 @@ def create_reference_utxo(
     reference_utxo = reference_utxos[0]
 
     return reference_utxo, tx_raw_output
+
+
+def get_utxo_ix_offset(utxos: List[clusterlib.UTXOData], txouts: List[clusterlib.TxOut]) -> int:
+    """Get offset of index of the first user-defined txout.
+
+    Change txout created by `transaction build` used to be UTxO with index 0, now it is the last
+    UTxO. This functgion exists for backwards compatibility with the old behavior.
+    """
+    if not (txouts and utxos):
+        return 0
+
+    first_txout = txouts[0]
+    filtered_utxos = clusterlib.filter_utxos(
+        utxos=utxos, amount=first_txout.amount, address=first_txout.address, coin=first_txout.coin
+    )
+    if not filtered_utxos:
+        return 0
+    return filtered_utxos[0].utxo_ix

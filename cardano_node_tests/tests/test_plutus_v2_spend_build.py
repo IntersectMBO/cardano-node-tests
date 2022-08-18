@@ -184,16 +184,17 @@ def _build_fund_script(
     cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
     out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+    utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
 
-    script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=1)
+    script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
     assert script_utxos, "No script UTxO"
 
-    collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=2)
+    collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
     assert collateral_utxos, "No collateral UTxO"
 
     reference_utxo = None
     if use_reference_script:
-        reference_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=3)
+        reference_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 2)
         assert reference_utxos, "No reference script UTxO"
         reference_utxo = reference_utxos[0]
 
@@ -247,9 +248,10 @@ def _build_reference_txin(
     )
     cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-    txid = cluster.get_txid(tx_body_file=tx_output.out_file)
+    out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+    utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
 
-    reference_txin = cluster.get_utxo(txin=f"{txid}#1")
+    reference_txin = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
     assert reference_txin, "UTxO not created"
 
     return reference_txin
@@ -787,12 +789,15 @@ class TestReferenceScripts:
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
-        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
-        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
-        reference_utxo1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
-        reference_utxo2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)[0]
-        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
-        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=6)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=fund_utxos, txouts=tx_output.txouts
+        )
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 1)
+        reference_utxo1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 2)[0]
+        reference_utxo2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 5)
 
         #  spend the "locked" UTxO
 
@@ -928,11 +933,14 @@ class TestReferenceScripts:
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
-        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
-        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
-        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
-        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)
-        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=fund_utxos, txouts=tx_output.txouts
+        )
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 1)
+        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 2)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
 
         #  spend the "locked" UTxO
 
@@ -1077,11 +1085,14 @@ class TestReferenceScripts:
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
-        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
-        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
-        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
-        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)
-        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=fund_utxos, txouts=tx_output.txouts
+        )
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 1)
+        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 2)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
 
         #  spend the "locked" UTxOs
 
@@ -1205,9 +1216,11 @@ class TestReferenceScripts:
         )
         cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
 
-        txid = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
-        reference_txin = f"{txid}#1"
-        reference_utxo = cluster.get_utxo(txin=reference_txin)
+        out_utxos_step1 = cluster.get_utxo(tx_raw_output=tx_output_step1)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=out_utxos_step1, txouts=tx_output_step1.txouts
+        )
+        reference_utxo = clusterlib.filter_utxos(utxos=out_utxos_step1, utxo_ix=utxo_ix_offset)
 
         assert reference_utxo[0].amount == amount, "Incorrect amount transferred"
 
@@ -1235,9 +1248,7 @@ class TestReferenceScripts:
         cluster.submit_tx(tx_file=tx_signed_step2, txins=tx_output_step2.txins)
 
         # check that reference script utxo was spent
-        assert not cluster.get_utxo(
-            txin=reference_txin
-        ), f"Reference script utxo was not spent '{reference_txin}`"
+        assert not cluster.get_utxo(utxo=reference_utxo), "Reference script utxo was NOT spent"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
@@ -1296,8 +1307,11 @@ class TestReferenceScripts:
         )
         cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
 
-        txid = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
-        reference_script = cluster.get_utxo(txin=f"{txid}#1")
+        out_utxos_step1 = cluster.get_utxo(tx_raw_output=tx_output_step1)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=out_utxos_step1, txouts=tx_output_step1.txouts
+        )
+        reference_script = clusterlib.filter_utxos(utxos=out_utxos_step1, utxo_ix=utxo_ix_offset)
         assert reference_script[0].reference_script, "No reference script UTxO"
 
         #  Step 2: spend an UTxO and reference the script
@@ -1323,8 +1337,8 @@ class TestReferenceScripts:
         )
         cluster.submit_tx(tx_file=tx_signed_step2, txins=tx_output_step2.txins)
 
-        txid = cluster.get_txid(tx_body_file=tx_output_step2.out_file)
-        new_utxo = cluster.get_utxo(txin=f"{txid}#1")
+        out_utxos_step2 = cluster.get_utxo(tx_raw_output=tx_output_step2)
+        new_utxo = clusterlib.filter_utxos(utxos=out_utxos_step2, utxo_ix=utxo_ix_offset)
         utxo_balance = clusterlib.calculate_utxos_balance(utxos=new_utxo)
         assert utxo_balance == amount, f"Incorrect balance for destination UTxO `{new_utxo}`"
 
@@ -1453,12 +1467,15 @@ class TestNegativeReferenceScripts:
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
-        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
-        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
-        reference_utxo1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
-        reference_utxo2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)[0]
-        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
-        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=6)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=fund_utxos, txouts=tx_output.txouts
+        )
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 1)
+        reference_utxo1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 2)[0]
+        reference_utxo2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 5)
 
         #  spend the "locked" UTxO
 
@@ -1667,11 +1684,14 @@ class TestNegativeReferenceScripts:
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         fund_utxos = cluster.get_utxo(tx_raw_output=tx_output)
-        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
-        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
-        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)[0]
-        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)
-        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=5)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=fund_utxos, txouts=tx_output.txouts
+        )
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 1)
+        reference_utxo = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 2)[0]
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
 
         #  spend the "locked" UTxO
 
@@ -2253,17 +2273,24 @@ class TestCollateralOutput:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[dst_addr.skey_file],
+            signing_key_files=[payment_addr.skey_file, dst_addr.skey_file],
         )
         txouts_redeem = [
             clusterlib.TxOut(address=dst_addr.address, amount=2_000_000),
         ]
+        # include any payment txin
+        txins = [
+            r
+            for r in cluster.get_utxo(address=payment_addr.address, coins=[clusterlib.DEFAULT_COIN])
+            if not (r.datum_hash or r.inline_datum_hash)
+        ][:1]
 
         err_str = ""
         try:
             tx_output_redeem = cluster.build_tx(
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_step2",
+                txins=txins,
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
@@ -2367,10 +2394,11 @@ class TestCollateralOutput:
         # check that collateral was taken
         assert not cluster.get_utxo(utxo=collateral_utxos), "Collateral was NOT spent"
 
-        txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
-        return_collateral_utxos = cluster.get_utxo(
-            txin=f"{txid_redeem}#{len(tx_output_redeem.txouts) + 1}"
-        )
+        # check that input UTxOs were not spent
+        assert cluster.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
+        assert cluster.get_utxo(utxo=script_utxos), "Script UTxO was spent"
+
+        return_collateral_utxos = cluster.get_utxo(tx_raw_output=tx_output_redeem)
 
         # when total collateral amount is specified, it is necessary to specify also return
         # collateral `TxOut`
@@ -2380,6 +2408,16 @@ class TestCollateralOutput:
 
         # check that correct return collateral UTxO was created
         assert return_collateral_utxos, "Return collateral UTxO was NOT created"
+
+        # check that return collateral is the only output and that the index matches
+        out_utxos_ix = {r.utxo_ix for r in return_collateral_utxos}
+        assert len(out_utxos_ix) == 1, "There are other outputs other than return collateral"
+        # TODO: the index of change can be either 0 (in old node versions) or `txouts_count`,
+        # that affects index of return collateral UTxO
+        assert return_collateral_utxos[0].utxo_ix in (
+            tx_output_redeem.txouts_count,
+            tx_output_redeem.txouts_count + 1,
+        )
 
         returned_collateral_amount = clusterlib.calculate_utxos_balance(
             utxos=return_collateral_utxos
@@ -2481,17 +2519,37 @@ class TestCollateralOutput:
             return_collateral_txouts=txouts_return_collateral,
         )
 
+        # check that collateral was taken
+        assert not cluster.get_utxo(utxo=collateral_utxos), "Collateral was NOT spent"
+
+        # check that input UTxOs were not spent
+        assert cluster.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
+        assert cluster.get_utxo(utxo=script_utxos), "Script UTxO was spent"
+
         # check that the right amount of collateral was spent and that the tokens were returned
 
-        txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
-        return_col_utxos = cluster.get_utxo(txin=f"{txid_redeem}#2")
-        assert return_col_utxos, "Return collateral UTxO was not created"
+        return_collateral_utxos = cluster.get_utxo(tx_raw_output=tx_output_redeem)
+
+        assert return_collateral_utxos, "Return collateral UTxO was not created"
+
+        # check that return collateral is the only output and that the index matches
+        out_utxos_ix = {r.utxo_ix for r in return_collateral_utxos}
+        assert len(out_utxos_ix) == 1, "There are other outputs other than return collateral"
+        # TODO: the index of change can be either 0 (in old node versions) or `txouts_count`,
+        # that affects index of return collateral UTxO
+        assert return_collateral_utxos[0].utxo_ix in (
+            tx_output_redeem.txouts_count,
+            tx_output_redeem.txouts_count + 1,
+        )
 
         assert (
-            clusterlib.calculate_utxos_balance(utxos=return_col_utxos) == return_collateral_amount
+            clusterlib.calculate_utxos_balance(utxos=return_collateral_utxos)
+            == return_collateral_amount
         ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
 
         assert (
-            clusterlib.calculate_utxos_balance(utxos=return_col_utxos, coin=tokens_rec[0].coin)
+            clusterlib.calculate_utxos_balance(
+                utxos=return_collateral_utxos, coin=tokens_rec[0].coin
+            )
             == tokens_rec[0].amount
         ), f"Incorrect token balance for collateral return address `{dst_addr.address}`"
