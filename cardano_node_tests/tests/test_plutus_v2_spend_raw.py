@@ -2260,7 +2260,9 @@ class TestCollateralOutput:
 
         if use_return_collateral:
             txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
-            return_col_utxos = cluster.get_utxo(txin=f"{txid_redeem}#{len(txouts_redeem)}")
+            return_col_utxos = cluster.get_utxo(
+                txin=f"{txid_redeem}#{tx_output_redeem.txouts_count}"
+            )
             assert return_col_utxos, "Return collateral UTxO was not created"
 
             assert (
@@ -2385,7 +2387,7 @@ class TestCollateralOutput:
         # check that the right amount of collateral was spent and that the tokens were returned
 
         txid_redeem = cluster.get_txid(tx_body_file=tx_output_redeem.out_file)
-        return_col_utxos = cluster.get_utxo(txin=f"{txid_redeem}#{len(txouts_redeem)}")
+        return_col_utxos = cluster.get_utxo(txin=f"{txid_redeem}#{tx_output_redeem.txouts_count}")
         assert return_col_utxos, "Return collateral UTxO was not created"
 
         assert (

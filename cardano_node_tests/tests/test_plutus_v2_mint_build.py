@@ -63,8 +63,6 @@ def _fund_issuer(
     clusterlib.TxRawOutput,
 ]:
     """Fund the token issuer."""
-    issuer_init_balance = cluster_obj.get_address_balance(issuer_addr.address)
-
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
     )
@@ -105,18 +103,21 @@ def _fund_issuer(
     )
     cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-    issuer_balance = cluster_obj.get_address_balance(issuer_addr.address)
+    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
+
+    issuer_utxos = clusterlib.filter_utxos(utxos=out_utxos, address=issuer_addr.address)
     assert (
-        issuer_balance == issuer_init_balance + amount + minting_cost.collateral + reference_amount
+        clusterlib.calculate_utxos_balance(utxos=issuer_utxos)
+        == amount + minting_cost.collateral + reference_amount
     ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_output.out_file)
-    mint_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
-    collateral_utxos = cluster_obj.get_utxo(txin=f"{txid}#2")
+    mint_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
+    collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
 
     reference_utxo = None
     if reference_script:
-        reference_utxos = cluster_obj.get_utxo(txin=f"{txid}#3")
+        reference_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 2)
         assert reference_utxos, "No reference script UTxO"
         reference_utxo = reference_utxos[0]
 
