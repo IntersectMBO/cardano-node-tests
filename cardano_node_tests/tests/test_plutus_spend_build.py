@@ -160,16 +160,17 @@ def _build_fund_script(
     )
     cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_output.out_file)
+    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
 
-    script_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
+    script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
     assert script_utxos, "No script UTxO"
 
     assert (
         clusterlib.calculate_utxos_balance(utxos=script_utxos) == script_fund
     ), f"Incorrect balance for script address `{script_address}`"
 
-    collateral_utxos = cluster_obj.get_utxo(txin=f"{txid}#2")
+    collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
     assert collateral_utxos, "No collateral UTxO"
 
     assert (
@@ -829,10 +830,13 @@ class TestBuildLocking:
         cluster.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
 
         fund_utxos = cluster.get_utxo(tx_raw_output=tx_output_fund)
-        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=1)
-        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=2)
-        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=3)
-        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=4)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=fund_utxos, txouts=tx_output_fund.txouts
+        )
+        script_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset)
+        script_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 1)
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 2)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)
 
         assert script_utxos1 and script_utxos2, "No script UTxOs"
         assert collateral_utxos1 and collateral_utxos2, "No collateral UTxOs"
@@ -1208,18 +1212,24 @@ class TestBuildLocking:
         # with appropriate datum hash were created
 
         assert tx_output_spend
-        txid_spend = cluster.get_txid(tx_body_file=tx_output_spend.out_file)
+
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output_spend)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=out_utxos, txouts=tx_output_spend.txouts
+        )
+
         # UTxO we created for tokens and minimum required Lovelace
-        change_utxos = cluster.get_utxo(txin=f"{txid_spend}#2")
+        change_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
         # UTxO that was created by `build` command for rest of the Lovelace change (this will not
         # have the script's datum
-        build_change_utxos = cluster.get_utxo(txin=f"{txid_spend}#0")
+        # TODO: change UTxO used to be first, now it's last
+        build_change_utxo = out_utxos[0] if utxo_ix_offset else out_utxos[-1]
 
         # Lovelace balance on original script UTxOs
         script_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=script_utxos)
         # Lovelace balance on change UTxOs
         change_lovelace_balance = clusterlib.calculate_utxos_balance(
-            utxos=[*change_utxos, *build_change_utxos]
+            utxos=[*change_utxos, build_change_utxo]
         )
 
         assert (
@@ -1657,11 +1667,19 @@ class TestNegative:
 
         cluster.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
 
-        txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#1", coins=[clusterlib.DEFAULT_COIN])
-        script_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#2", coins=[clusterlib.DEFAULT_COIN])
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#3")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#4")
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output_fund)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=out_utxos, txouts=tx_output_fund.txouts
+        )
+
+        script_utxos1 = clusterlib.filter_utxos(
+            utxos=out_utxos, utxo_ix=utxo_ix_offset, coin=clusterlib.DEFAULT_COIN
+        )
+        script_utxos2 = clusterlib.filter_utxos(
+            utxos=out_utxos, utxo_ix=utxo_ix_offset + 1, coin=clusterlib.DEFAULT_COIN
+        )
+        collateral_utxos1 = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 2)
+        collateral_utxos2 = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 3)
 
         # Step 2: spend the "locked" UTxOs
 
@@ -2420,9 +2438,13 @@ class TestNegativeDatum:
             join_txouts=False,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output_fund)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=out_utxos, txouts=tx_output_fund.txouts
+        )
+
+        script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
+        collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _build_spend_locked_txin(

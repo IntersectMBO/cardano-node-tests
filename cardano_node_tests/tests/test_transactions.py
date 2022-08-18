@@ -111,6 +111,7 @@ def _get_raw_tx_values(
     return clusterlib.TxRawOutput(
         txins=txins,
         txouts=txouts,
+        txouts_count=1,
         tx_files=tx_files,
         out_file=out_file,
         fee=fee,
