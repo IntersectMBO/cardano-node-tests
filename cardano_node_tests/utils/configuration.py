@@ -11,6 +11,7 @@ DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
 USE_CDDL = bool(os.environ.get("USE_CDDL"))  # TODO: remove once `--cddl-format` is deprecated
+ENABLE_P2P = bool(os.environ.get("ENABLE_P2P"))
 
 # TODO: for PlutusV2 cost model, used also in startup scripts as `if [ -n "$VAR" ]...`
 SKIP_PLUTUSV2 = (os.environ.get("SKIP_PLUTUSV2") or "") != ""
