@@ -162,9 +162,44 @@ def _check_inline_datums(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict)
     assert not not_present, f"Inline datums missing in tx view:\n{not_present}"
 
 
+def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> None:
+    """Check return collateral in tx_view."""
+    collateral_inputs = tx_loaded.get("collateral inputs") or []
+    if not collateral_inputs:
+        return
+
+    if tx_raw_output.total_collateral_amount:
+        assert tx_raw_output.total_collateral_amount == tx_loaded.get(
+            "total collateral"
+        ), "Return collateral total collateral mismatch"
+
+    # automatic return collateral works only with `transaction build`
+    if not (tx_raw_output.return_collateral_txouts or tx_raw_output.change_address):
+        return
+
+    return_collateral = tx_loaded.get("return collateral") or {}
+    assert return_collateral, "No return collateral in tx view"
+
+    assert "lovelace" in return_collateral.get(
+        "amount", {}
+    ), "Return collateral doesn't have lovelace amount"
+
+    if tx_raw_output.return_collateral_txouts:
+        assert tx_raw_output.return_collateral_txouts[0].amount == return_collateral.get(
+            "amount", {}
+        ).get("lovelace"), "Return collateral amount mismatch"
+        return_collateral_address = tx_raw_output.return_collateral_txouts[0].address
+    else:
+        return_collateral_address = tx_raw_output.change_address
+
+    assert return_collateral_address == return_collateral.get(
+        "address"
+    ), "Return collateral address mismatch"
+
+
 def check_tx_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
-) -> dict:
+) -> Dict[str, Any]:
     """Check output of the `transaction view` command."""
     # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 
@@ -175,7 +210,7 @@ def check_tx_view(  # noqa: C901
         if "TODO: Babbage" in str(exc):
             return {}
 
-    tx_loaded: dict = load_tx_view(tx_view=tx_view_raw)
+    tx_loaded: Dict[str, Any] = load_tx_view(tx_view=tx_view_raw)
 
     # check inputs
     loaded_txins = set(tx_loaded.get("inputs") or [])
@@ -308,5 +343,9 @@ def check_tx_view(  # noqa: C901
     # check inline datum, this is only available on Babbage+ TX
     if loaded_tx_version >= VERSIONS.BABBAGE:
         _check_inline_datums(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
+
+    # check return collateral, this is only available on Babbage+ TX on node version 1.35.3+
+    if loaded_tx_version >= VERSIONS.BABBAGE and "return collateral" in tx_loaded:
+        _check_return_collateral(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
 
     return tx_loaded

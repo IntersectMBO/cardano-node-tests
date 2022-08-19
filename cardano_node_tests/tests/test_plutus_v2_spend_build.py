@@ -213,7 +213,7 @@ def _build_fund_script(
         ), "The inline datum returned by 'query utxo' is different than the expected"
 
     # check "transaction view"
-    tx_view.check_tx_view(cluster, tx_output)
+    tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
 
     return script_utxos, collateral_utxos, reference_utxo, tx_output
 
@@ -1838,7 +1838,7 @@ class TestReadonlyReferenceInputs:
             clusterlib.calculate_utxos_balance(utxos=reference_input_utxo) == reference_input_amount
         ), f"The reference input was spent `{reference_input_utxo}`"
 
-        # check tx view
+        # check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
@@ -2441,6 +2441,9 @@ class TestCollateralOutput:
                 payment_addr.address == return_collateral_utxos[0].address
             ), "Return collateral address doesn't match change address"
 
+        # check "transaction view"
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+
     @allure.link(helpers.get_vcs_link())
     def test_collateral_with_tokens(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
@@ -2553,3 +2556,12 @@ class TestCollateralOutput:
             )
             == tokens_rec[0].amount
         ), f"Incorrect token balance for collateral return address `{dst_addr.address}`"
+
+        # check "transaction view"
+        tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+        policyid, asset_name = token[0].token.split(".")
+        tx_view_policy_key = f"policy {policyid}"
+        tx_view_token_rec = tx_view_out["return collateral"]["amount"][tx_view_policy_key]
+        tx_view_asset_key = next(iter(tx_view_token_rec))
+        assert asset_name in tx_view_asset_key, "Token is missing from tx view return collateral"
+        assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"
