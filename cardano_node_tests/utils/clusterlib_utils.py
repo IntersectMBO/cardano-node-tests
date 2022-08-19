@@ -1113,7 +1113,7 @@ def get_utxo_ix_offset(utxos: List[clusterlib.UTXOData], txouts: List[clusterlib
     """Get offset of index of the first user-defined txout.
 
     Change txout created by `transaction build` used to be UTxO with index 0, now it is the last
-    UTxO. This functgion exists for backwards compatibility with the old behavior.
+    UTxO. This function exists for backwards compatibility with the old behavior.
     """
     if not (txouts and utxos):
         return 0
