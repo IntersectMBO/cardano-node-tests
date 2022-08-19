@@ -170,10 +170,14 @@ def _mint_lobster_nft(
     )
 
     # check expected balances
+
+    # Skip change UTxO. Change txout created by `transaction build` used to be UTxO with index 0,
+    # now it is the last UTxO.
+    utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
+    utxos_without_change = lovelace_utxos[1:] if utxo_ix_offset else lovelace_utxos[:-1]
+
     assert (
-        # skip change UTxO
-        clusterlib.calculate_utxos_balance(lovelace_utxos[1:])
-        == lovelace_amount
+        clusterlib.calculate_utxos_balance(utxos_without_change) == lovelace_amount
     ), f"Incorrect Lovelace balance for token issuer address `{issuer_addr.address}`"
     assert (
         clusterlib.calculate_utxos_balance(token_utxos, coin=lobster_nft_token) == nft_amount
