@@ -203,7 +203,7 @@ def _fund_script(
         ), "The inline datum returned by 'query utxo' is different than the expected"
 
     # check "transaction view"
-    tx_view.check_tx_view(cluster, tx_raw_output)
+    tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     return script_utxos, collateral_utxos, reference_utxo, tx_raw_output
 
@@ -2270,6 +2270,9 @@ class TestCollateralOutput:
                 == return_collateral_amount
             ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
 
+        # check "transaction view"
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+
     @allure.link(helpers.get_vcs_link())
     def test_collateral_with_tokens(
         self,
@@ -2283,6 +2286,7 @@ class TestCollateralOutput:
         * spend the locked UTxO
         * check that the expected amount of collateral was spent
         """
+        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -2398,3 +2402,12 @@ class TestCollateralOutput:
             clusterlib.calculate_utxos_balance(utxos=return_col_utxos, coin=tokens_rec[0].coin)
             == tokens_rec[0].amount
         ), f"Incorrect token balance for collateral return address `{dst_addr.address}`"
+
+        # check "transaction view"
+        tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+        policyid, asset_name = token[0].token.split(".")
+        tx_view_policy_key = f"policy {policyid}"
+        tx_view_token_rec = tx_view_out["return collateral"]["amount"][tx_view_policy_key]
+        tx_view_asset_key = next(iter(tx_view_token_rec))
+        assert asset_name in tx_view_asset_key, "Token is missing from tx view return collateral"
+        assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"
