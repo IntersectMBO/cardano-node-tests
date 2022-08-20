@@ -481,7 +481,7 @@ class TestKES:
                 except AssertionError as exc:
                     if (
                         "forked blockchain" in str(exc)
-                        and VERSIONS.transaction_era == VERSIONS.BABBAGE
+                        and VERSIONS.transaction_era >= VERSIONS.ALONZO
                         and configuration.ENABLE_P2P
                     ):
                         pytest.xfail(str(exc))
@@ -638,7 +638,7 @@ class TestKES:
                 except AssertionError as exc:
                     if (
                         "forked blockchain" in str(exc)
-                        and VERSIONS.transaction_era == VERSIONS.BABBAGE
+                        and VERSIONS.transaction_era >= VERSIONS.ALONZO
                         and configuration.ENABLE_P2P
                     ):
                         pytest.xfail(str(exc))
