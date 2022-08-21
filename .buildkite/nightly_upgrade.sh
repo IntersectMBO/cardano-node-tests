@@ -15,9 +15,12 @@ mkdir -p "$ARTIFACTS_DIR" "$COVERAGE_DIR"
 
 BASE_REVISION="${BASE_REVISION:-1.34.1}"
 
+# shellcheck disable=SC1090,SC1091
+. "$REPODIR/.buildkite/niv_update_func.sh"
+
 # update cardano-node to specified revision
-niv update
-niv update cardano-node --rev "$BASE_REVISION"
+niv_update
+niv_update cardano-node --rev "$BASE_REVISION"
 cat nix/sources.json
 
 export WORKDIR="/scratch/workdir"
@@ -36,11 +39,11 @@ retval="$?"
 
 # update cardano-node to specified branch and/or revision, or to the latest available revision
 if [ -n "${UPGRADE_REVISION:-""}" ]; then
-  niv update cardano-node --rev "$UPGRADE_REVISION"
+  niv_update cardano-node --rev "$UPGRADE_REVISION"
 elif [ -n "${UPGRADE_BRANCH:-""}" ]; then
-  niv update cardano-node --branch "$UPGRADE_BRANCH"
+  niv_update cardano-node --branch "$UPGRADE_BRANCH"
 else
-  niv update cardano-node
+  niv_update cardano-node
 fi
 cat nix/sources.json
 
