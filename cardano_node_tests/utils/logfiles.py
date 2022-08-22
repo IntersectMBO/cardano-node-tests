@@ -41,6 +41,8 @@ ERRORS_IGNORED = [
     "TrInboundGovernorError AsyncCancelled",
     # harmless when whole network is shutting down
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
+    # TODO: see node issue #4369
+    "MAIN THREAD FAILED",
 ]
 if VERSIONS.cluster_era >= VERSIONS.ALONZO:
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
