@@ -482,7 +482,10 @@ class TestKES:
                     if (
                         "forked blockchain" in str(exc)
                         and VERSIONS.transaction_era >= VERSIONS.ALONZO
-                        and configuration.ENABLE_P2P
+                        and (
+                            configuration.ENABLE_P2P  # on Babbage
+                            or configuration.SCRIPTS_DIRNAME == "alonzo_p2p"  # on Alonzo
+                        )
                     ):
                         pytest.xfail(str(exc))
                     raise
@@ -639,7 +642,10 @@ class TestKES:
                     if (
                         "forked blockchain" in str(exc)
                         and VERSIONS.transaction_era >= VERSIONS.ALONZO
-                        and configuration.ENABLE_P2P
+                        and (
+                            configuration.ENABLE_P2P  # on Babbage
+                            or configuration.SCRIPTS_DIRNAME == "alonzo_p2p"  # on Alonzo
+                        )
                     ):
                         pytest.xfail(str(exc))
                     raise
