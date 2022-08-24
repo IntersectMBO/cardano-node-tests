@@ -165,6 +165,7 @@ def _mint_lobster_nft(
     lovelace_utxos = clusterlib.filter_utxos(
         utxos=out_utxos, address=issuer_addr.address, coin=clusterlib.DEFAULT_COIN
     )
+    lovelace_utxos_sorted = sorted(lovelace_utxos, key=lambda x: x.utxo_ix)
     token_utxos = clusterlib.filter_utxos(
         utxos=out_utxos, address=issuer_addr.address, coin=lobster_nft_token
     )
@@ -174,7 +175,9 @@ def _mint_lobster_nft(
     # Skip change UTxO. Change txout created by `transaction build` used to be UTxO with index 0,
     # now it is the last UTxO.
     utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
-    utxos_without_change = lovelace_utxos[1:] if utxo_ix_offset else lovelace_utxos[:-1]
+    utxos_without_change = (
+        lovelace_utxos_sorted[1:] if utxo_ix_offset else lovelace_utxos_sorted[:-1]
+    )
 
     assert (
         clusterlib.calculate_utxos_balance(utxos_without_change) == lovelace_amount
