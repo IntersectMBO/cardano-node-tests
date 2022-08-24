@@ -1882,7 +1882,9 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
-    @common.hypothesis_settings()
+    @hypothesis.example(redeemer_value=MIN_INT_VAL)
+    @hypothesis.example(redeemer_value=MAX_INT_VAL)
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_inside_range(
         self,
@@ -1966,7 +1968,8 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
-    @common.hypothesis_settings()
+    @hypothesis.example(redeemer_value=MIN_INT_VAL - 1)
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_bellow_range(
         self,
@@ -2001,7 +2004,8 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
-    @common.hypothesis_settings()
+    @hypothesis.example(redeemer_value=MAX_INT_VAL + 1)
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_above_range(
         self,
@@ -2035,8 +2039,8 @@ class TestNegativeRedeemer:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.binary())
-    @common.hypothesis_settings()
+    @hypothesis.given(redeemer_value=st.binary(max_size=64))
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_type(
         self,
@@ -2112,8 +2116,9 @@ class TestNegativeRedeemer:
         assert "ValidationTagMismatch (IsValid True)" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.binary())
-    @common.hypothesis_settings()
+    @hypothesis.given(redeemer_value=st.binary(max_size=64))
+    @common.hypothesis_settings(max_examples=200)
+    @common.PARAM_PLUTUS_VERSION
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_int_bytes_declared(
         self,
@@ -2152,8 +2157,8 @@ class TestNegativeRedeemer:
         assert 'field "int" does not have the type required by the schema' in err, err
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.binary())
-    @common.hypothesis_settings()
+    @hypothesis.given(redeemer_value=st.binary(max_size=64))
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_int_bytes_declared(
         self,
@@ -2192,7 +2197,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_bytes_int_declared(
         self,
@@ -2227,11 +2232,11 @@ class TestNegativeRedeemer:
             cost_per_unit=cost_per_unit,
             plutus_version=plutus_version,
         )
-        assert 'field "bytes" does not have the type required by the schema' in err
+        assert 'field "bytes" does not have the type required by the schema' in err, err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_bytes_int_declared(
         self,
@@ -2270,7 +2275,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.text())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_invalid_json(
         self,
@@ -2309,7 +2314,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_type=st.text())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_invalid_type(
         self,
@@ -2351,7 +2356,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_type=st.text())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_invalid_type(
         self,
@@ -2465,7 +2470,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_lock_tx_invalid_datum(
         self,
