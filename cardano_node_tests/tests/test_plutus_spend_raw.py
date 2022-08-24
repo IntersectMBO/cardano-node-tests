@@ -962,7 +962,7 @@ class TestLocking:
             amount=amount,
             expect_failure=True,
         )
-        assert "PlutusFailure" in err
+        assert "PlutusFailure" in err, err
 
         # wait a bit so there's some time for error messages to appear in log file
         time.sleep(1 if cluster.network_magic == configuration.NETWORK_MAGIC_LOCAL else 5)
@@ -1260,7 +1260,8 @@ class TestLocking:
                     plutus_op=plutus_op,
                     amount=amount,
                 )
-            assert exp_err in str(excinfo.value)
+            err_str = str(excinfo.value)
+            assert exp_err in err_str, err_str
         else:
             _spend_locked_txin(
                 temp_template=temp_template,
@@ -1348,7 +1349,7 @@ class TestNegative:
             expect_failure=True,
         )
 
-        assert "ValidationTagMismatch (IsValid True)" in err
+        assert "ValidationTagMismatch (IsValid True)" in err, err
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1411,7 +1412,9 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-        assert "CollateralContainsNonADA" in str(excinfo.value)
+
+        err_str = str(excinfo.value)
+        assert "CollateralContainsNonADA" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1462,8 +1465,8 @@ class TestNegative:
                 amount=amount,
             )
         err_str = str(excinfo.value)
-        assert "cardano-cli transaction submit" in err_str
-        assert "ScriptsNotPaidUTxO" in err_str
+        assert "cardano-cli transaction submit" in err_str, err_str
+        assert "ScriptsNotPaidUTxO" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1474,7 +1477,7 @@ class TestNegative:
         payment_addrs: List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
-        """Try to spend locked UTxO while collateral is less than required by `collateralPercentage`.
+        """Try to spend locked UTxO while collateral is less than required.
 
         Expect failure.
 
@@ -1518,7 +1521,9 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-        assert "InsufficientCollateral" in str(excinfo.value)
+
+        err_str = str(excinfo.value)
+        assert "InsufficientCollateral" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -1664,7 +1669,9 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx_bare(tx_file=tx_signed_redeem)
-        assert rf"ScriptHash \"{script2_hash}\") fails" in str(excinfo.value)
+
+        err_str = str(excinfo.value)
+        assert rf"ScriptHash \"{script2_hash}\") fails" in err_str, err_str
 
 
 @pytest.mark.testnets
@@ -1870,7 +1877,8 @@ class TestNegativeRedeemer:
                 fee=fee_redeem + FEE_REDEEM_TXSIZE,
                 script_txins=plutus_txins,
             )
-        assert "Value out of range within the script data" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "Value out of range within the script data" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
@@ -1953,7 +1961,8 @@ class TestNegativeRedeemer:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx_bare(tx_file=tx_signed)
 
-        assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ValidationTagMismatch (IsValid True)" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
@@ -2099,7 +2108,8 @@ class TestNegativeRedeemer:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx_bare(tx_file=tx_signed)
 
-        assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ValidationTagMismatch (IsValid True)" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary())
@@ -2139,7 +2149,7 @@ class TestNegativeRedeemer:
             cost_per_unit=cost_per_unit,
             plutus_version=plutus_version,
         )
-        assert 'field "int" does not have the type required by the schema' in err
+        assert 'field "int" does not have the type required by the schema' in err, err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary())
@@ -2178,7 +2188,7 @@ class TestNegativeRedeemer:
             cost_per_unit=cost_per_unit,
             plutus_version=plutus_version,
         )
-        assert 'field "int" does not have the type required by the schema' in err
+        assert 'field "int" does not have the type required by the schema' in err, err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
@@ -2256,7 +2266,7 @@ class TestNegativeRedeemer:
             cost_per_unit=cost_per_unit,
             plutus_version=plutus_version,
         )
-        assert 'field "bytes" does not have the type required by the schema' in err
+        assert 'field "bytes" does not have the type required by the schema' in err, err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.text())
@@ -2295,7 +2305,7 @@ class TestNegativeRedeemer:
             cost_per_unit=cost_per_unit,
             plutus_version=plutus_version,
         )
-        assert "Invalid JSON format" in err
+        assert "Invalid JSON format" in err, err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_type=st.text())
@@ -2335,9 +2345,9 @@ class TestNegativeRedeemer:
             plutus_version=plutus_version,
         )
 
-        assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
-            err
-        )
+        assert (
+            'Expected a single field named "int", "bytes", "string", "list" or "map".' in err
+        ), err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_type=st.text())
@@ -2377,9 +2387,9 @@ class TestNegativeRedeemer:
             plutus_version=plutus_version,
         )
 
-        assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
-            err
-        )
+        assert (
+            'Expected a single field named "int", "bytes", "string", "list" or "map".' in err
+        ), err
 
 
 @pytest.mark.testnets
@@ -2449,7 +2459,9 @@ class TestNegativeDatum:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-        assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
+
+        err_str = str(excinfo.value)
+        assert "NonOutputSupplimentaryDatums" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
@@ -2492,7 +2504,9 @@ class TestNegativeDatum:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-        assert "JSON object expected. Unexpected value" in str(excinfo.value)
+
+        err_str = str(excinfo.value)
+        assert "JSON object expected. Unexpected value" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -2547,4 +2561,6 @@ class TestNegativeDatum:
                 plutus_op=plutus_op_2,
                 amount=amount,
             )
-        assert "NonOutputSupplimentaryDatums" in str(excinfo.value)
+
+        err_str = str(excinfo.value)
+        assert "NonOutputSupplimentaryDatums" in err_str, err_str
