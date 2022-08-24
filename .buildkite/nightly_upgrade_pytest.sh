@@ -25,12 +25,15 @@ if [ "$1" = "step1" ]; then
   # start local cluster
   "$CLUSTER_SCRIPTS_DIR"/start-cluster-hfc || exit 6
 
-  # print path to cardano-node binary
+  # get path to cardano-node binary
   pool1_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool1)"
-  ls -l "/proc/$pool1_pid/exe"
+  node_path_step1="$(readlink -f "/proc/$pool1_pid/exe")"
+
+  # backup the original cardano-node binary
+  ln -s "$node_path_step1" "$STATE_CLUSTER"/cardano-node-step1
 
   # run smoke tests
-  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step1.html --self-contained-html
+  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step1.html --self-contained-html
   retval="$?"
 
   # stop local cluster if tests failed unexpectedly
@@ -43,6 +46,10 @@ if [ "$1" = "step1" ]; then
 elif [ "$1" = "step2" ]; then
   export UPGRADE_TESTS_STEP=2
 
+  # run pool3 with the original cardano-node binary
+  cp -a "$STATE_CLUSTER"/cardano-node-pool3 "$STATE_CLUSTER"/cardano-node-pool3.orig
+  sed -i 's/exec cardano-node run/exec .\/state-cluster0\/cardano-node-step1 run/' "$STATE_CLUSTER"/cardano-node-pool3
+
   # Restart local cluster nodes with binaries from new cluster-node version.
   # It is necessary to restart supervisord with new environment.
   "$STATE_CLUSTER"/supervisord_stop
@@ -53,9 +60,11 @@ elif [ "$1" = "step2" ]; then
   sleep 5
   "$STATE_CLUSTER"/supervisorctl status
 
-  # print path to cardano-node binary
+  # print path to cardano-node binaries
   pool1_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool1)"
   ls -l "/proc/$pool1_pid/exe"
+  pool3_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool3)"
+  ls -l "/proc/$pool3_pid/exe"
 
   # waiting for node to start
   for _ in {1..10}; do
@@ -81,7 +90,7 @@ elif [ "$1" = "step2" ]; then
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
 
   # run smoke tests
-  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step2.html --self-contained-html
+  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step2.html --self-contained-html
   retval="$?"
 
   # stop local cluster if tests failed unexpectedly
@@ -95,6 +104,20 @@ elif [ "$1" = "step2" ]; then
 elif [ "$1" = "step3" ]; then
   export UPGRADE_TESTS_STEP=3
 
+  # restart pool3 with upgraded cardano-node binary
+  cp -a "$STATE_CLUSTER"/cardano-node-pool3.orig "$STATE_CLUSTER"/cardano-node-pool3
+  "$STATE_CLUSTER"/supervisorctl restart nodes:pool3
+  sleep 5
+
+  # print path to cardano-node binaries
+  pool1_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool1)"
+  ls -l "/proc/$pool1_pid/exe"
+  pool3_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool3)"
+  ls -l "/proc/$pool3_pid/exe"
+
+  # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
+
   # update to Babbage
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_to_babbage
   retval="$?"
@@ -103,7 +126,7 @@ elif [ "$1" = "step3" ]; then
   # run smoke tests
   export CLUSTER_ERA="babbage"
   export TX_ERA="babbage"
-  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step3.html --self-contained-html
+  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step3.html --self-contained-html
   retval="$?"
 
 #
