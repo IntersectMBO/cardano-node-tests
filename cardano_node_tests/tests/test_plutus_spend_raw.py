@@ -406,12 +406,12 @@ def _check_pretty_utxo(
     return err
 
 
+@pytest.mark.testnets
 class TestLocking:
     """Tests for Tx output locking using Plutus smart contracts."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_txout_locking(
         self,
@@ -469,7 +469,6 @@ class TestLocking:
         reason="cannot find `create-script-context` on the PATH",
     )
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     def test_context_equivalance(
         self,
         cluster: clusterlib.ClusterLib,
@@ -580,7 +579,6 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @pytest.mark.parametrize("embed_datum", (True, False), ids=("embedded_datum", "datum"))
     @pytest.mark.parametrize(
         "variant",
@@ -683,7 +681,6 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @pytest.mark.parametrize(
         "plutus_version",
         (
@@ -914,7 +911,6 @@ class TestLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     def test_always_fails(
         self,
         cluster: clusterlib.ClusterLib,
@@ -972,7 +968,6 @@ class TestLocking:
         time.sleep(1 if cluster.network_magic == configuration.NETWORK_MAGIC_LOCAL else 5)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     def test_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1018,7 +1013,6 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_txout_token_locking(
         self,
@@ -1080,7 +1074,6 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_partial_spending(
         self,
@@ -1170,7 +1163,6 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
     @common.PARAM_PLUTUS_VERSION
     def test_collaterals(
@@ -1360,7 +1352,6 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_collateral_w_tokens(
         self,
@@ -1424,7 +1415,6 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_same_collateral_txin(
         self,
@@ -1477,7 +1467,6 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_collateral_percent(
         self,
@@ -1532,7 +1521,6 @@ class TestNegative:
         assert "InsufficientCollateral" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_two_scripts_spending_one_fail(
         self,
@@ -1885,7 +1873,6 @@ class TestNegativeRedeemer:
         assert "Value out of range within the script data" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -1969,7 +1956,6 @@ class TestNegativeRedeemer:
         assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2005,7 +1991,6 @@ class TestNegativeRedeemer:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2041,7 +2026,6 @@ class TestNegativeRedeemer:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2118,7 +2102,6 @@ class TestNegativeRedeemer:
         assert "ValidationTagMismatch (IsValid True)" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2159,7 +2142,6 @@ class TestNegativeRedeemer:
         assert 'field "int" does not have the type required by the schema' in err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.binary())
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2199,7 +2181,6 @@ class TestNegativeRedeemer:
         assert 'field "int" does not have the type required by the schema' in err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2239,7 +2220,6 @@ class TestNegativeRedeemer:
         assert 'field "bytes" does not have the type required by the schema' in err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2279,7 +2259,6 @@ class TestNegativeRedeemer:
         assert 'field "bytes" does not have the type required by the schema' in err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_value=st.text())
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2319,7 +2298,6 @@ class TestNegativeRedeemer:
         assert "Invalid JSON format" in err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_type=st.text())
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2362,7 +2340,6 @@ class TestNegativeRedeemer:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(redeemer_type=st.text())
     @common.hypothesis_settings()
     @common.PARAM_PLUTUS_VERSION
@@ -2410,7 +2387,6 @@ class TestNegativeDatum:
     """Tests for Tx output locking using Plutus smart contracts with wrong datum."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_no_datum_txout(
         self,
@@ -2478,7 +2454,6 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings()
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS_VERSION
     def test_lock_tx_invalid_datum(
         self,
