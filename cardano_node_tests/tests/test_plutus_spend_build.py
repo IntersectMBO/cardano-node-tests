@@ -2022,6 +2022,57 @@ class TestNegativeRedeemer:
         assert "Script debugging logs: Incorrect datum. Expected 42." in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(redeemer_value=st.binary(min_size=65))
+    @common.hypothesis_settings(max_examples=200)
+    @common.PARAM_PLUTUS_VERSION
+    def test_too_big(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
+        plutus_version: str,
+        redeemer_value: bytes,
+    ):
+        """Try to spend a locked UTxO using redeemer that is too big.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
+
+        script_utxos, collateral_utxos = fund_script_guessing_game
+
+        redeemer_file = f"{temp_template}.redeemer"
+        with open(redeemer_file, "w", encoding="utf-8") as outfile:
+            json.dump({"constructor": 0, "fields": [{"bytes": redeemer_value.hex()}]}, outfile)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
+            datum_file=plutus_common.DATUM_42,
+            redeemer_file=Path(redeemer_file),
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=self.AMOUNT,
+            )
+
+        err_str = str(excinfo.value)
+        assert "must consist of at most 64 bytes" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
@@ -2571,3 +2622,43 @@ class TestNegativeDatum:
         assert (
             "The Plutus script witness has the wrong datum (according to the UTxO)." in err_str
         ), err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(datum_value=st.binary(min_size=65))
+    @common.hypothesis_settings(max_examples=200)
+    @common.PARAM_PLUTUS_VERSION
+    def test_too_big(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        datum_value: bytes,
+        plutus_version: str,
+    ):
+        """Try to lock a UTxO with datum that is too big.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        datum_file = f"{temp_template}.datum"
+        with open(datum_file, "w", encoding="utf-8") as outfile:
+            json.dump({"constructor": 0, "fields": [{"bytes": datum_value.hex()}]}, outfile)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
+            datum_file=Path(datum_file),
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _build_fund_script(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+            )
+
+        err_str = str(excinfo.value)
+        assert "must consist of at most 64 bytes" in err_str, err_str
