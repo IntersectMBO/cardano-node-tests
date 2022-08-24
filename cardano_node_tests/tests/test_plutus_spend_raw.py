@@ -206,6 +206,7 @@ def _spend_locked_txin(  # noqa: C901
     plutus_op: plutus_common.PlutusOp,
     amount: int,
     fee_txsize: int = FEE_REDEEM_TXSIZE,
+    txins: clusterlib.OptionalUTXOData = (),
     tx_files: Optional[clusterlib.TxFiles] = None,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
@@ -229,7 +230,9 @@ def _spend_locked_txin(  # noqa: C901
     )
 
     script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
-    script_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=script_utxos_lovelace)
+    script_lovelace_balance = clusterlib.calculate_utxos_balance(
+        utxos=[*script_utxos_lovelace, *txins]
+    )
 
     # spend the "locked" UTxO
 
@@ -247,6 +250,7 @@ def _spend_locked_txin(  # noqa: C901
             redeemer_value=plutus_op.redeemer_value if plutus_op.redeemer_value else "",
         )
     ]
+
     tx_files = tx_files._replace(
         signing_key_files=list({*tx_files.signing_key_files, dst_addr.skey_file}),
     )
@@ -283,6 +287,7 @@ def _spend_locked_txin(  # noqa: C901
 
     tx_raw_output = cluster_obj.build_raw_tx_bare(
         out_file=f"{temp_template}_step2_tx.body",
+        txins=txins,
         txouts=txouts,
         tx_files=tx_files,
         fee=redeem_cost.fee + fee_txsize,
@@ -1000,6 +1005,17 @@ class TestLocking:
             plutus_op=plutus_op,
             amount=amount,
         )
+
+        # include any payment txin
+        txins = [
+            r
+            for r in cluster.get_utxo(
+                address=payment_addrs[0].address, coins=[clusterlib.DEFAULT_COIN]
+            )
+            if not (r.datum_hash or r.inline_datum_hash)
+        ][:1]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
         _spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -1008,6 +1024,8 @@ class TestLocking:
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
             amount=amount,
+            txins=txins,
+            tx_files=tx_files,
             script_valid=False,
         )
 

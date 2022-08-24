@@ -203,6 +203,7 @@ def _build_spend_locked_txin(  # noqa: C901
     plutus_op: plutus_common.PlutusOp,
     amount: int,
     deposit_amount: int = 0,
+    txins: clusterlib.OptionalUTXOData = (),
     tx_files: Optional[clusterlib.TxFiles] = None,
     invalid_hereafter: Optional[int] = None,
     invalid_before: Optional[int] = None,
@@ -283,6 +284,7 @@ def _build_spend_locked_txin(  # noqa: C901
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_step2",
                 tx_files=tx_files,
+                txins=txins,
                 txouts=txouts,
                 script_txins=plutus_txins,
                 change_address=payment_addr.address,
@@ -293,6 +295,7 @@ def _build_spend_locked_txin(  # noqa: C901
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step2",
         tx_files=tx_files,
+        txins=txins,
         txouts=txouts,
         script_txins=plutus_txins,
         change_address=payment_addr.address,
@@ -1024,7 +1027,16 @@ class TestBuildLocking:
             plutus_op=plutus_op,
         )
 
-        err_str = ""
+        # include any payment txin
+        txins = [
+            r
+            for r in cluster.get_utxo(
+                address=payment_addrs[0].address, coins=[clusterlib.DEFAULT_COIN]
+            )
+            if not (r.datum_hash or r.inline_datum_hash)
+        ][:1]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
         try:
             __, tx_output, __ = _build_spend_locked_txin(
                 temp_template=temp_template,
@@ -1035,14 +1047,16 @@ class TestBuildLocking:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=2_000_000,
+                txins=txins,
+                tx_files=tx_files,
                 script_valid=False,
             )
         except clusterlib.CLIError as err:
-            err_str = str(err)
-
-        # TODO: broken on node 1.35.0 and 1.35.1
-        if "ScriptWitnessIndexTxIn 0 is missing from the execution units" in err_str:
-            pytest.xfail("See cardano-node issue #4013")
+            # TODO: broken on node 1.35.0 and 1.35.1
+            if "ScriptWitnessIndexTxIn 0 is missing from the execution units" in str(err):
+                pytest.xfail("See cardano-node issue #4013")
+            else:
+                raise
 
         # check expected fees
         expected_fee_fund = 168_845
