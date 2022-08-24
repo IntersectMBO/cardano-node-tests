@@ -983,7 +983,7 @@ class TestBuildLocking:
             amount=2_000_000,
             expect_failure=True,
         )
-        assert "The Plutus script evaluation failed" in err
+        assert "The Plutus script evaluation failed" in err, err
 
         # check expected fees
         expected_fee_fund = 168_845
@@ -1483,7 +1483,9 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=2_000_000,
             )
-        assert "Expected key witnessed collateral" in str(excinfo.value)
+
+        err_str = str(excinfo.value)
+        assert "Expected key witnessed collateral" in err_str, err_str
 
         # check expected fees
         expected_fee_fund = 168_845
@@ -1561,7 +1563,8 @@ class TestNegative:
                 amount=2_000_000,
             )
 
-        assert "The Plutus script evaluation failed" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "The Plutus script evaluation failed" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -1579,6 +1582,7 @@ class TestNegative:
         * try to spend the locked UTxOs
         * check that the expected error was raised
         """
+        # pylint: disable=too-many-locals
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 50_000_000
 
@@ -1707,7 +1711,8 @@ class TestNegative:
                 change_address=payment_addrs[0].address,
             )
 
-        assert "The Plutus script evaluation failed" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "The Plutus script evaluation failed" in err_str, err_str
 
 
 @pytest.mark.testnets
@@ -1814,7 +1819,8 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
-        assert "Value out of range within the script data" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "Value out of range within the script data" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
@@ -1872,7 +1878,8 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
-        assert "The Plutus script evaluation failed" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "The Plutus script evaluation failed" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
@@ -2043,9 +2050,10 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
-        assert 'The value in the field "int" does not have the type required by the schema.' in str(
-            excinfo.value
-        )
+        err_str = str(excinfo.value)
+        assert (
+            'The value in the field "int" does not have the type required by the schema.' in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary())
@@ -2096,9 +2104,10 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
-        assert 'The value in the field "int" does not have the type required by the schema.' in str(
-            excinfo.value
-        )
+        err_str = str(excinfo.value)
+        assert (
+            'The value in the field "int" does not have the type required by the schema.' in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
@@ -2149,10 +2158,11 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
+        err_str = str(excinfo.value)
         assert (
             'The value in the field "bytes" does not have the type required by the schema.'
-            in str(excinfo.value)
-        )
+            in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
@@ -2203,10 +2213,11 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
+        err_str = str(excinfo.value)
         assert (
             'The value in the field "bytes" does not have the type required by the schema.'
-            in str(excinfo.value)
-        )
+            in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.text())
@@ -2256,7 +2267,8 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
-        assert "JSON object expected. Unexpected value" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "JSON object expected. Unexpected value" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_type=st.text())
@@ -2306,9 +2318,10 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
-        assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
-            excinfo.value
-        )
+        err_str = str(excinfo.value)
+        assert (
+            'Expected a single field named "int", "bytes", "string", "list" or "map".' in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_type=st.text())
@@ -2358,9 +2371,10 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
-        assert 'Expected a single field named "int", "bytes", "string", "list" or "map".' in str(
-            excinfo.value
-        )
+        err_str = str(excinfo.value)
+        assert (
+            'Expected a single field named "int", "bytes", "string", "list" or "map".' in err_str
+        ), err_str
 
 
 @pytest.mark.testnets
@@ -2480,7 +2494,9 @@ class TestNegativeDatum:
                 dst_addr=payment_addrs[1],
                 plutus_op=plutus_op,
             )
-        assert "JSON object expected. Unexpected value" in str(excinfo.value)
+
+        err_str = str(excinfo.value)
+        assert "JSON object expected. Unexpected value" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -2530,6 +2546,8 @@ class TestNegativeDatum:
                 plutus_op=plutus_op_2,
                 amount=2_000_000,
             )
-        assert "The Plutus script witness has the wrong datum (according to the UTxO)." in str(
-            excinfo.value
-        )
+
+        err_str = str(excinfo.value)
+        assert (
+            "The Plutus script witness has the wrong datum (according to the UTxO)." in err_str
+        ), err_str
