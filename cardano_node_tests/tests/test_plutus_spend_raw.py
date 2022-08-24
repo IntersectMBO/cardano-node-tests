@@ -2134,9 +2134,50 @@ class TestNegativeRedeemer:
         assert "ValidationTagMismatch (IsValid True)" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.binary(max_size=64))
+    @hypothesis.given(redeemer_value=st.binary(min_size=65))
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    def test_too_big(
+        self,
+        cluster: clusterlib.ClusterLib,
+        fund_script_guessing_game_v1: FundTupleT,
+        fund_script_guessing_game_v2: FundTupleT,
+        cost_per_unit: plutus_common.ExecutionCost,
+        plutus_version: str,
+        redeemer_value: bytes,
+    ):
+        """Try to spend a locked UTxO using redeemer that is too big.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        fund_script_guessing_game = (
+            fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
+        )
+
+        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+
+        redeemer_content = json.dumps(
+            {"constructor": 0, "fields": [{"bytes": redeemer_value.hex()}]}
+        )
+
+        # try to build a Tx for spending the "locked" UTxO
+        err = self._failed_tx_build(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            redeemer_content=redeemer_content,
+            dst_addr=payment_addrs[1],
+            cost_per_unit=cost_per_unit,
+            plutus_version=plutus_version,
+        )
+        assert "must consist of at most 64 bytes" in err, err
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(redeemer_value=st.binary(max_size=64))
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_int_bytes_declared(
         self,
@@ -2587,3 +2628,48 @@ class TestNegativeDatum:
 
         err_str = str(excinfo.value)
         assert "NonOutputSupplimentaryDatums" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(datum_value=st.binary(min_size=65))
+    @common.hypothesis_settings(max_examples=200)
+    @common.PARAM_PLUTUS_VERSION
+    def test_too_big(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        datum_value: bytes,
+        plutus_version: str,
+    ):
+        """Try to lock a UTxO with datum that is too big.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        amount = 2_000_000
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        datum_file = f"{temp_template}.datum"
+        with open(datum_file, "w", encoding="utf-8") as outfile:
+            json.dump({"constructor": 0, "fields": [{"bytes": datum_value.hex()}]}, outfile)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
+            datum_file=Path(datum_file),
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
+        )
+        assert plutus_op.execution_cost  # for mypy
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _fund_script(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addr,
+                dst_addr=dst_addr,
+                plutus_op=plutus_op,
+                amount=amount,
+            )
+
+        err_str = str(excinfo.value)
+        assert "must consist of at most 64 bytes" in err_str, err_str
