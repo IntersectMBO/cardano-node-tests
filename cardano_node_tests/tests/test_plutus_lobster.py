@@ -165,6 +165,7 @@ def _mint_lobster_nft(
     lovelace_utxos = clusterlib.filter_utxos(
         utxos=out_utxos, address=issuer_addr.address, coin=clusterlib.DEFAULT_COIN
     )
+    lovelace_utxos_sorted = sorted(lovelace_utxos, key=lambda x: x.utxo_ix)
     token_utxos = clusterlib.filter_utxos(
         utxos=out_utxos, address=issuer_addr.address, coin=lobster_nft_token
     )
@@ -174,7 +175,9 @@ def _mint_lobster_nft(
     # Skip change UTxO. Change txout created by `transaction build` used to be UTxO with index 0,
     # now it is the last UTxO.
     utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
-    utxos_without_change = lovelace_utxos[1:] if utxo_ix_offset else lovelace_utxos[:-1]
+    utxos_without_change = (
+        lovelace_utxos_sorted[1:] if utxo_ix_offset else lovelace_utxos_sorted[:-1]
+    )
 
     assert (
         clusterlib.calculate_utxos_balance(utxos_without_change) == lovelace_amount
@@ -189,6 +192,7 @@ def _mint_lobster_nft(
 def _deploy_lobster_nft(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
+    payment_addr: clusterlib.AddressRecord,
     issuer_addr: clusterlib.AddressRecord,
     token_utxos: List[clusterlib.UTXOData],
     lobster_nft_token: str,
@@ -201,7 +205,7 @@ def _deploy_lobster_nft(
     )
 
     tx_files = clusterlib.TxFiles(
-        signing_key_files=[issuer_addr.skey_file],
+        signing_key_files=[payment_addr.skey_file, issuer_addr.skey_file],
     )
     txouts = [
         clusterlib.TxOut(
@@ -215,9 +219,9 @@ def _deploy_lobster_nft(
         ),
     ]
 
-    funds_txin = cluster_obj.get_utxo_with_highest_amount(address=issuer_addr.address)
+    funds_txin = cluster_obj.get_utxo_with_highest_amount(address=payment_addr.address)
     tx_output = cluster_obj.build_tx(
-        src_address=issuer_addr.address,
+        src_address=payment_addr.address,
         tx_name=f"{temp_template}_deploy_nft",
         tx_files=tx_files,
         txins=[*token_utxos, funds_txin],
@@ -311,6 +315,7 @@ class TestLobsterChallenge:
         script_address, token_utxos_step3, tx_output_step3 = _deploy_lobster_nft(
             cluster_obj=cluster,
             temp_template=temp_template,
+            payment_addr=payment_addr,
             issuer_addr=issuer_addr,
             token_utxos=token_utxos_step2,
             lobster_nft_token=lobster_nft_token,
