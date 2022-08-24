@@ -1428,7 +1428,8 @@ class TestNegative:
                 amount=2_000_000,
             )
 
-        assert "CollateralContainsNonADA" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "CollateralContainsNonADA" in err_str, err_str
 
         # check expected fees
         expected_fee_fund = 173597
@@ -1824,7 +1825,9 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
-    @common.hypothesis_settings()
+    @hypothesis.example(redeemer_value=MIN_INT_VAL)
+    @hypothesis.example(redeemer_value=MAX_INT_VAL)
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_inside_range(
         self,
@@ -1883,7 +1886,8 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
-    @common.hypothesis_settings()
+    @hypothesis.example(redeemer_value=MAX_INT_VAL + 1)
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_above_range(
         self,
@@ -1918,7 +1922,8 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
-    @common.hypothesis_settings()
+    @hypothesis.example(redeemer_value=MIN_INT_VAL - 1)
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_bellow_range(
         self,
@@ -1952,9 +1957,9 @@ class TestNegativeRedeemer:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.binary())
+    @hypothesis.given(redeemer_value=st.binary(max_size=64))
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
-    @common.hypothesis_settings()
     def test_wrong_type(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1999,11 +2004,12 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
             )
 
-        assert "Script debugging logs: Incorrect datum. Expected 42." in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "Script debugging logs: Incorrect datum. Expected 42." in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.binary())
-    @common.hypothesis_settings()
+    @hypothesis.given(redeemer_value=st.binary(max_size=64))
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_int_bytes_declared(
         self,
@@ -2056,8 +2062,8 @@ class TestNegativeRedeemer:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.binary())
-    @common.hypothesis_settings()
+    @hypothesis.given(redeemer_value=st.binary(max_size=64))
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_int_bytes_declared(
         self,
@@ -2111,7 +2117,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_bytes_int_declared(
         self,
@@ -2166,7 +2172,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_bytes_int_declared(
         self,
@@ -2221,7 +2227,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.text())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_invalid_json(
         self,
@@ -2272,7 +2278,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_type=st.text())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_typed_invalid_type(
         self,
@@ -2325,7 +2331,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_type=st.text())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_json_schema_untyped_invalid_type(
         self,
@@ -2460,7 +2466,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_lock_tx_invalid_datum(
         self,
