@@ -7,6 +7,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any
+from typing import Generator
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -15,6 +16,7 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
@@ -434,6 +436,49 @@ def _check_pretty_utxo(
         err = f"Pretty UTxO output doesn't match expected output:\n{utxo_out}\nvs\n{expected_out}"
 
     return err
+
+
+def _withdrawal_script_address(
+    cluster: clusterlib.ClusterLib,
+    collateral_utxos: List[clusterlib.UTXOData],
+    dst_addr: clusterlib.AddressRecord,
+    plutus_op: plutus_common.PlutusOp,
+    script_utxos: List[clusterlib.UTXOData],
+    tokens: Optional[List[plutus_common.Token]] = None,
+):
+    # for mypy
+    assert plutus_op.execution_cost and plutus_op.execution_cost.per_space
+
+    plutus_txins = [
+        clusterlib.ScriptTxIn(
+            txins=script_utxos,
+            script_file=plutus_op.script_file,
+            collaterals=collateral_utxos,
+            execution_units=(plutus_op.execution_cost.per_time, plutus_op.execution_cost.per_space),
+            datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
+            datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
+            datum_value=plutus_op.datum_value if plutus_op.datum_value else "",
+            redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
+            redeemer_cbor_file=plutus_op.redeemer_cbor_file if plutus_op.redeemer_cbor_file else "",
+            redeemer_value=plutus_op.redeemer_value if plutus_op.redeemer_value else "",
+        )
+    ]
+
+    txouts = [clusterlib.TxOut(address=dst_addr.address, amount=-1)]
+
+    for token in tokens or []:
+        txouts.append(
+            clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
+        )
+
+    cluster.send_tx(
+        src_address=script_utxos[0].address,
+        tx_name="test",
+        script_txins=plutus_txins,
+        txouts=txouts,
+        tx_files=clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file]),
+        verify_tx=False,
+    )
 
 
 class TestLocking:
@@ -1063,6 +1108,7 @@ class TestLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
     ):
         """Test spending part of funds (Lovelace and native tokens) on a locked UTxO.
 
@@ -1132,6 +1178,25 @@ class TestLocking:
 
         txid_spend = cluster.get_txid(tx_body_file=tx_output_spend.out_file)
         change_utxos = cluster.get_utxo(txin=f"{txid_spend}#1")
+
+        # withdrawal script address
+        def _withdrawal_finalizer():
+            unspent_tokens = [
+                plutus_common.Token(coin=t.token, amount=token_amount_fund - token_amount_spend)
+                for t in tokens
+            ]
+
+            _withdrawal_script_address(
+                cluster=cluster,
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+                collateral_utxos=collateral_utxos,
+                script_utxos=change_utxos,
+                tokens=unspent_tokens,
+            )
+
+        # add the finalizer
+        request.addfinalizer(_withdrawal_finalizer)
 
         # check that the expected amounts of Lovelace and native tokens were spent and change UTxOs
         # with appropriate datum hash were created
@@ -1273,6 +1338,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
         variant: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
@@ -1290,6 +1356,35 @@ class TestNegative:
         temp_template = f"{common.get_test_id(cluster)}_{variant}"
         amount = 2_000_000
 
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_PLUTUS,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_file=plutus_common.REDEEMER_42_TYPED,
+            execution_cost=plutus_common.GUESSING_GAME_COST,
+        )
+
+        script_utxos, collateral_utxos, __ = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=amount,
+        )
+
+        # withdrawal script address
+        def _withdrawal_finalizer():
+            _withdrawal_script_address(
+                cluster=cluster,
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+                collateral_utxos=collateral_utxos,
+                script_utxos=script_utxos,
+            )
+
+        # add the finalizer
+        request.addfinalizer(_withdrawal_finalizer)
+
         if variant == "42_43":
             datum_file = plutus_common.DATUM_42_TYPED
             redeemer_file = plutus_common.REDEEMER_43_TYPED
@@ -1302,33 +1397,25 @@ class TestNegative:
         else:
             raise AssertionError("Unknown test variant.")
 
-        plutus_op = plutus_common.PlutusOp(
+        plutus_op_variant = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_PLUTUS,
             datum_file=datum_file,
             redeemer_file=redeemer_file,
             execution_cost=plutus_common.GUESSING_GAME_COST,
         )
 
-        script_utxos, collateral_utxos, __ = _fund_script(
-            temp_template=temp_template,
-            cluster_obj=cluster,
-            payment_addr=payment_addrs[0],
-            dst_addr=payment_addrs[1],
-            plutus_op=plutus_op,
-            amount=amount,
-        )
         err, __ = _spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
-            plutus_op=plutus_op,
+            plutus_op=plutus_op_variant,
             amount=amount,
             expect_failure=True,
         )
 
-        assert "ValidationTagMismatch (IsValid True)" in err
+        assert "ValidationTagMismatch (IsValid True)" in err or "MissingRequiredDatums" in err
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -1337,6 +1424,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
     ):
         """Test spending the locked UTxO while collateral contains native tokens.
 
@@ -1380,6 +1468,39 @@ class TestNegative:
             tokens_collateral=tokens_rec,
         )
 
+        # withdrawal script address
+        def _withdrawal_finalizer():
+            redeem_cost = plutus_common.compute_cost(
+                execution_cost=plutus_op.execution_cost,
+                protocol_params=cluster.get_protocol_params(),
+            )
+
+            destinations = [
+                clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost.collateral)
+            ]
+            tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+            tx_raw_output = cluster.send_funds(
+                src_address=payment_addrs[0].address,
+                destinations=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
+
+            txid_collateral = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
+            collateral_utxos_without_tokens = cluster.get_utxo(txin=f"{txid_collateral}#0")
+
+            _withdrawal_script_address(
+                cluster=cluster,
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+                collateral_utxos=collateral_utxos_without_tokens,
+                script_utxos=script_utxos,
+            )
+
+        # add the finalizer
+        request.addfinalizer(_withdrawal_finalizer)
+
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _spend_locked_txin(
                 temp_template=temp_template,
@@ -1399,6 +1520,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
     ):
         """Test spending the locked UTxO while using the same UTxO as collateral.
 
@@ -1420,7 +1542,7 @@ class TestNegative:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        script_utxos, *__ = _fund_script(
+        script_utxos, collateral_utxos, __ = _fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -1428,6 +1550,19 @@ class TestNegative:
             plutus_op=plutus_op,
             amount=amount,
         )
+
+        # withdrawal script address
+        def _withdrawal_finalizer():
+            _withdrawal_script_address(
+                cluster=cluster,
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+                collateral_utxos=collateral_utxos,
+                script_utxos=script_utxos,
+            )
+
+        # add the finalizer
+        request.addfinalizer(_withdrawal_finalizer)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _spend_locked_txin(
@@ -1450,6 +1585,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
     ):
         """Try to spend locked UTxO while collateral is less than required by `collateralPercentage`.
 
@@ -1484,6 +1620,41 @@ class TestNegative:
             collateral_fraction_offset=0.9,
         )
 
+        # withdrawal script address
+        def _withdrawal_finalizer():
+            redeem_cost = plutus_common.compute_cost(
+                execution_cost=plutus_op.execution_cost,
+                protocol_params=cluster.get_protocol_params(),
+            )
+
+            destinations = [
+                clusterlib.TxOut(
+                    address=payment_addrs[1].address, amount=redeem_cost.collateral * 2
+                )
+            ]
+            tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+            tx_raw_output = cluster.send_funds(
+                src_address=payment_addrs[0].address,
+                destinations=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
+
+            txid_collateral = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
+            collateral_utxos_right_value = cluster.get_utxo(txin=f"{txid_collateral}#0")
+
+            _withdrawal_script_address(
+                cluster=cluster,
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+                collateral_utxos=collateral_utxos_right_value,
+                script_utxos=script_utxos,
+            )
+
+        # add the finalizer
+        request.addfinalizer(_withdrawal_finalizer)
+
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _spend_locked_txin(
                 temp_template=temp_template,
@@ -1502,6 +1673,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx, one fails.
 
@@ -1601,6 +1773,19 @@ class TestNegative:
         collateral_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#2")
         collateral_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#3")
 
+        # withdrawal script address
+        def _withdrawal_finalizer():
+            _withdrawal_script_address(
+                cluster=cluster,
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op1,
+                collateral_utxos=collateral_utxos1,
+                script_utxos=script_utxos1,
+            )
+
+        # add the finalizer
+        request.addfinalizer(_withdrawal_finalizer)
+
         # Step 2: spend the "locked" UTxOs
 
         assert plutus_op1.datum_file and plutus_op2.datum_file
@@ -1668,45 +1853,56 @@ class TestNegativeRedeemer:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> FundTupleT:
+    ) -> Generator[FundTupleT, None, None]:
         """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+        temp_template = common.get_test_id(cluster)
 
-            temp_template = common.get_test_id(cluster)
+        payment_addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"{temp_template}_payment_addr_{i}" for i in range(2)],
+            cluster_obj=cluster,
+        )
 
-            payment_addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"{temp_template}_payment_addr_{i}" for i in range(2)],
-                cluster_obj=cluster,
-            )
+        # fund source address
+        clusterlib_utils.fund_from_faucet(
+            payment_addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=3_000_000_000,
+        )
 
-            # fund source address
-            clusterlib_utils.fund_from_faucet(
-                payment_addrs[0],
-                cluster_obj=cluster,
-                faucet_data=cluster_manager.cache.addrs_data["user1"],
-                amount=3_000_000_000,
-            )
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            datum_file=plutus_common.DATUM_42,
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
+        )
 
-            plutus_op = plutus_common.PlutusOp(
-                script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
-                datum_file=plutus_common.DATUM_42,
-                execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
-            )
+        script_utxos, collateral_utxos, __ = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=self.AMOUNT,
+        )
 
-            script_utxos, collateral_utxos, __ = _fund_script(
-                temp_template=temp_template,
-                cluster_obj=cluster,
-                payment_addr=payment_addrs[0],
-                dst_addr=payment_addrs[1],
-                plutus_op=plutus_op,
-                amount=self.AMOUNT,
-            )
+        yield script_utxos, collateral_utxos, payment_addrs
 
-            fixture_cache.value = script_utxos, collateral_utxos, payment_addrs
+        # withdrawal script address
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME_UNTYPED_PLUTUS,
+            datum_file=plutus_common.DATUM_42,
+            redeemer_value="42",
+            execution_cost=plutus_common.GUESSING_GAME_UNTYPED_COST,
+        )
 
-        return script_utxos, collateral_utxos, payment_addrs
+        # withdrawal script address
+        _withdrawal_script_address(
+            cluster=cluster,
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            collateral_utxos=collateral_utxos,
+            script_utxos=script_utxos,
+        )
 
     @pytest.fixture
     def cost_per_unit(
@@ -2370,6 +2566,7 @@ class TestNegativeDatum:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        request: FixtureRequest,
     ):
         """Test locking a Tx output and try to spend it with a wrong datum.
 
@@ -2397,6 +2594,21 @@ class TestNegativeDatum:
             plutus_op=plutus_op_1,
             amount=amount,
         )
+
+        # withdrawal script address
+        def _withdrawal_script_address():
+            _spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op_1,
+                amount=amount,
+            )
+
+        # add the finalizer
+        request.addfinalizer(_withdrawal_script_address)
 
         # use a wrong datum to try to unlock the funds
         plutus_op_2 = plutus_common.PlutusOp(
