@@ -16,6 +16,7 @@ pkgs.mkShell {
   buildInputs = [
     python-with-my-packages
     pkgs.postgresql
+    pkgs.wget
     pkgs.buildkite-agent
   ];
   shellHook = ''

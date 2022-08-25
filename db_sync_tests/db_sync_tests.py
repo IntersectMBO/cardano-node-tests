@@ -165,12 +165,18 @@ def emergency_upload_artifacts():
 
 
 def get_node_config_files(env):
-    base_url = "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-    urllib.request.urlretrieve(base_url + env + "-config.json",env + "-config.json",)
-    urllib.request.urlretrieve(base_url + env + "-byron-genesis.json", env + "-byron-genesis.json",)
-    urllib.request.urlretrieve(base_url + env + "-shelley-genesis.json", env + "-shelley-genesis.json",)
-    urllib.request.urlretrieve(base_url + env + "-alonzo-genesis.json", env + "-alonzo-genesis.json",)
-    urllib.request.urlretrieve(base_url + env + "-topology.json", env + "-topology.json",)
+    #base_url = "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
+    #urllib.request.urlretrieve(base_url + env + "-config.json",env + "-config.json",)
+    #urllib.request.urlretrieve(base_url + env + "-byron-genesis.json", env + "-byron-genesis.json",)
+    #urllib.request.urlretrieve(base_url + env + "-shelley-genesis.json", env + "-shelley-genesis.json",)
+    #urllib.request.urlretrieve(base_url + env + "-alonzo-genesis.json", env + "-alonzo-genesis.json",)
+    #urllib.request.urlretrieve(base_url + env + "-topology.json", env + "-topology.json",)
+    base_url = "https://book.world.dev.cardano.org/environments/"
+    urllib.request.urlretrieve(base_url + env + "/config.json", env + "-config.json",)
+    urllib.request.urlretrieve(base_url + env + "/byron-genesis.json", "byron-genesis.json",)
+    urllib.request.urlretrieve(base_url + env + "/shelley-genesis.json", "shelley-genesis.json",)
+    urllib.request.urlretrieve(base_url + env + "/alonzo-genesis.json", "alonzo-genesis.json",)
+    urllib.request.urlretrieve(base_url + env + "/topology.json", env + "-topology.json",)
 
 
 def set_node_socket_path_env_var_in_cwd():
@@ -185,12 +191,14 @@ def get_testnet_value():
     env = vars(args)["environment"]
     if env == "mainnet":
         return "--mainnet"
-    elif env == "testnet":
-        return "--testnet-magic 1097911063"
+    if env == "preprod":
+        return "--testnet-magic 1"
+    if env == "preview":
+        return "--testnet-magic 2"
+    elif env == "shelley-qa":
+        return "--testnet-magic 3"
     elif env == "staging":
         return "--testnet-magic 633343913"
-    elif env == "shelley_qa":
-        return "--testnet-magic 3"
     else:
         return None
 
@@ -228,13 +236,23 @@ def get_node_tip(timeout_minutes=20):
             os.chdir(current_directory)
             if output_json["epoch"] is not None:
                 output_json["epoch"] = int(output_json["epoch"])
+            if "block" not in output_json:
+                output_json["block"] = None
+            else:
+                output_json["block"] = int(output_json["block"])
+            if "hash" not in output_json:
+                output_json["hash"] = None
+            if "slot" not in output_json:
+                output_json["slot"] = None
+            else:
+                output_json["slot"] = int(output_json["slot"])
             if "syncProgress" not in output_json:
                 output_json["syncProgress"] = None
             else:
                 output_json["syncProgress"] = float(output_json["syncProgress"])
 
-            return output_json["epoch"], int(output_json["block"]), output_json["hash"], \
-                   int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
+            return output_json["epoch"], output_json["block"], output_json["hash"], \
+                   output_json["slot"], output_json["era"].lower(), output_json["syncProgress"]
         except subprocess.CalledProcessError as e:
             print(f" === Waiting 60s before retrying to get the tip again - {i}")
             print(f"     !!!ERROR: command {e.cmd} return with error (code {e.returncode}): {' '.join(str(e.output).split())}")

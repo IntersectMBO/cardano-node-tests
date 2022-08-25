@@ -36,7 +36,7 @@ def create_table(table_sql_query):
 
 def drop_table(table_name):
     conn = create_connection()
-    sql_query = f"DROP TABLE {table_name};"
+    sql_query = f"DROP TABLE `{table_name}`;"
     try:
         cur = conn.cursor()
         cur.execute(sql_query)
@@ -54,7 +54,7 @@ def get_column_names_from_table(table_name):
     print(f"Getting the column names from table: {table_name}")
 
     conn = create_connection()
-    sql_query = f"select * from {table_name}"
+    sql_query = f"select * from `{table_name}`"
     print(f"  -- sql_query: {sql_query}")
     try:
         cur = conn.cursor()
@@ -73,7 +73,7 @@ def add_column_to_table(table_name, column_name, column_type):
     print(f"Adding column {column_name} with type {column_type} to {table_name} table")
 
     conn = create_connection()
-    sql_query = f"alter table {table_name} add column {column_name} {column_type}"
+    sql_query = f"alter table `{table_name}` add column {column_name} {column_type}"
     print(f"  -- sql_query: {sql_query}")
     try:
         cur = conn.cursor()
@@ -92,7 +92,7 @@ def add_single_row_into_db(table_name, col_names_list, col_values_list):
     col_names = ','.join(col_names_list)
     col_spaces = ','.join(['%s'] * len(col_names_list))
     conn = create_connection()
-    sql_query = f"INSERT INTO {table_name} (%s) values(%s)" % (col_names, col_spaces)
+    sql_query = f"INSERT INTO `{table_name}` (%s) values(%s)" % (col_names, col_spaces)
     print(f"  -- sql_query: {sql_query}")
     try:
         cur = conn.cursor()
@@ -116,7 +116,7 @@ def add_bulk_rows_into_db(table_name, col_names_list, col_values_list):
     col_names = ','.join(col_names_list)
     col_spaces = ','.join(['%s'] * len(col_names_list))
     conn = create_connection()
-    sql_query = f"INSERT INTO {table_name} (%s) values (%s)" % (col_names, col_spaces)
+    sql_query = f"INSERT INTO `{table_name}` (%s) values (%s)" % (col_names, col_spaces)
     print(f"  -- sql_query: {sql_query}")
     try:
         cur = conn.cursor()
@@ -138,7 +138,7 @@ def get_last_row_no(table_name):
     print(f"Getting the no of rows from table: {table_name}")
 
     conn = create_connection()
-    sql_query = f"SELECT count(*) FROM {table_name};"
+    sql_query = f"SELECT count(*) FROM `{table_name}`;"
     print(f"  -- sql_query: {sql_query}")
     try:
         cur = conn.cursor()
@@ -160,7 +160,7 @@ def get_identifier_last_run_from_table(table_name):
         return table_name + "_0"
     else:
         conn = create_connection()
-        sql_query = f"SELECT identifier FROM {table_name} " \
+        sql_query = f"SELECT identifier FROM `{table_name}` " \
                     f"ORDER BY LPAD(LOWER(identifier), 500,0) DESC LIMIT 1;"
         print(f"  -- sql_query: {sql_query}")
         try:
@@ -183,7 +183,7 @@ def get_last_epoch_no_from_table(table_name):
         return 0
     else:
         conn = create_connection()
-        sql_query = f"SELECT MAX(epoch_no) FROM {table_name};;"
+        sql_query = f"SELECT MAX(epoch_no) FROM `{table_name}`;;"
         print(f"  -- sql_query: {sql_query}")
         try:
             cur = conn.cursor()
@@ -202,7 +202,7 @@ def get_column_values(table_name, column_name):
     print(f"Getting {column_name} column values from table {table_name}")
 
     conn = create_connection()
-    sql_query = f"SELECT {column_name} FROM {table_name};"
+    sql_query = f"SELECT {column_name} FROM `{table_name}`;"
     try:
         cur = conn.cursor()
         cur.execute(sql_query)
@@ -218,7 +218,7 @@ def get_column_values(table_name, column_name):
 def delete_all_rows_from_table(table_name):
     print(f"Deleting all entries from table: {table_name}")
     conn = create_connection()
-    sql_query = f"TRUNCATE TABLE {table_name}"
+    sql_query = f"TRUNCATE TABLE `{table_name}`"
     print(f"  -- sql_query: {sql_query}")
     initial_rows_no = get_last_row_no(table_name)
     try:
@@ -242,7 +242,7 @@ def delete_record(table_name, column_name, delete_value):
     print(f"Deleting {column_name} = {delete_value} from {table_name} table")
 
     conn = create_connection()
-    sql_query = f"DELETE from {table_name} where {column_name}=\"{delete_value}\""
+    sql_query = f"DELETE from `{table_name}` where {column_name}=\"{delete_value}\""
     print(f"  -- sql_query: {sql_query}")
     try:
         cur = conn.cursor()
