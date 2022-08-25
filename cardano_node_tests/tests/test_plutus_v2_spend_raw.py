@@ -266,7 +266,7 @@ class TestLockingV2:
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
         amount = 2_000_000
 
-        plutus_op = PLUTUS_OP_ALWAYS_SUCCEEDS
+        plutus_op = PLUTUS_OP_GUESSING_GAME_UNTYPED
 
         # for mypy
         assert plutus_op.execution_cost
@@ -323,6 +323,15 @@ class TestLockingV2:
             fee=redeem_cost.fee + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
         )
+
+        fee = cluster.estimate_fee(
+            txbody_file=tx_output_redeem.out_file,
+            # +1 as possibly one more input will be needed for the fee amount
+            txin_count=len(tx_output_redeem.txins) + 1,
+            txout_count=len(tx_output_redeem.txouts),
+            witness_count=len(tx_files_redeem.signing_key_files),
+        )
+
         tx_signed_redeem = cluster.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
@@ -349,6 +358,11 @@ class TestLockingV2:
         assert not reference_utxo or cluster.get_utxo(
             utxo=reference_utxo
         ), "Reference input was spent"
+
+        # check expected fees
+        expected_fee_redeem = 175_753 if use_reference_script else 179_493
+
+        assert helpers.is_in_interval(fee, expected_fee_redeem, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.needs_dbsync
