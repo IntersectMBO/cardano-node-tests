@@ -7,6 +7,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any
+from typing import Dict
 from typing import List
 from typing import Tuple
 
@@ -112,7 +113,7 @@ def _get_forge_stats(pool_num: int) -> List[str]:
     response = requests.get(f"http://localhost:{port}/metrics", timeout=10)
     assert response, f"Request failed, status code {response.status_code}"
 
-    forge_lines = [line for line in response.text.split("\n") if "Forge" in line]
+    forge_lines = [line for line in response.text.strip().split("\n") if "Forge" in line]
 
     return forge_lines
 
@@ -205,18 +206,25 @@ class TestKES:
             instance_num=cluster_nodes.get_instance_num(), socket_file_name="pool2.socket"
         )
 
-        def _refresh_opcerts():
+        def _refresh_opcerts() -> Dict[str, int]:
+            refreshed_nodes_kes_period = {}
+
             for n in refreshed_nodes:
                 refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
+                kes_period = cluster.get_kes_period()
+
                 refreshed_opcert_file = cluster.gen_node_operational_cert(
                     node_name=f"{n}_refreshed_opcert",
                     kes_vkey_file=refreshed_pool_rec["kes_key_pair"].vkey_file,
                     cold_skey_file=refreshed_pool_rec["cold_key_pair"].skey_file,
                     cold_counter_file=refreshed_pool_rec["cold_key_pair"].counter_file,
-                    kes_period=cluster.get_kes_period(),
+                    kes_period=kes_period,
                 )
                 shutil.copy(refreshed_opcert_file, refreshed_pool_rec["pool_operational_cert"])
+                refreshed_nodes_kes_period[n] = kes_period
+
             cluster_nodes.restart_nodes(refreshed_nodes)
+            return refreshed_nodes_kes_period
 
         _refresh_opcerts()
 
@@ -262,7 +270,7 @@ class TestKES:
             ), f"The pool '{expire_pool_name}' has minted blocks in epoch {this_epoch}"
 
             # refresh opcerts one more time
-            _refresh_opcerts()
+            refreshed_nodes_kes_period = _refresh_opcerts()
 
             LOGGER.info(
                 f"{datetime.datetime.now()}: Waiting 120 secs to make sure the expected errors "
@@ -274,11 +282,13 @@ class TestKES:
         kes_info_expired = cluster.get_kes_period_info(
             opcert_file=expire_pool_rec["pool_operational_cert"]
         )
-        kes_period_info_errors_list.append(
+        kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
+                cluster_obj=cluster,
                 kes_output=kes_info_expired,
                 expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
                 check_id="1",
+                pool_num=expire_pool_num,
             )
         )
 
@@ -288,22 +298,28 @@ class TestKES:
             kes_info_valid = cluster.get_kes_period_info(
                 opcert_file=refreshed_pool_rec["pool_operational_cert"]
             )
-            kes_period_info_errors_list.append(
+            kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
+                    cluster_obj=cluster,
                     kes_output=kes_info_valid,
                     expected_scenario=kes.KesScenarios.ALL_VALID,
                     check_id=str(2 + idx),
+                    expected_start_kes=refreshed_nodes_kes_period[n],
                 )
             )
 
         err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
         if err_joined:
-            raise AssertionError(f"Errors present on kes-period-info command: {err_joined}.")
+            xfails = kes.get_xfails(errors=kes_period_info_errors_list)
+            if xfails:
+                pytest.xfail(" ".join(xfails))
+            else:
+                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
     @pytest.mark.long
-    def test_opcert_future_kes_period(  # noqa: C901
+    def test_opcert_invalid_kes_period(  # noqa: C901
         self,
         cluster_lock_pool2: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
@@ -323,7 +339,7 @@ class TestKES:
         * generate new operational certificate with valid `--kes-period` and restart the node
         * check that the pool is minting blocks again
         """
-        # pylint: disable=too-many-statements,too-many-branches
+        # pylint: disable=too-many-statements,too-many-branches,too-many-locals
         __: Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL2
@@ -362,12 +378,13 @@ class TestKES:
         )
 
         # generate new operational certificate with `--kes-period` in the future
+        invalid_kes_period = cluster.get_kes_period() + 100
         invalid_opcert_file = cluster.gen_node_operational_cert(
             node_name=f"{node_name}_invalid_opcert_file",
             kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
             cold_skey_file=pool_rec["cold_key_pair"].skey_file,
             cold_counter_file=cold_counter_file,
-            kes_period=cluster.get_kes_period() + 100,
+            kes_period=invalid_kes_period,
         )
 
         with cluster_manager.restart_on_failure():
@@ -396,34 +413,41 @@ class TestKES:
                         # check kes-period-info with operational certificate with
                         # invalid `--kes-period`
                         kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
-                        kes_period_info_errors_list.append(
+                        kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
+                                cluster_obj=cluster,
                                 kes_output=kes_period_info,
                                 expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
                                 check_id="1",
+                                expected_start_kes=invalid_kes_period,
+                                pool_num=pool_num,
                             )
                         )
 
                     # test the `CounterOverIncrementedOCERT` error - the counter will now be +2 from
                     # last used opcert counter value
                     if invalid_opcert_epoch == 2 and VERSIONS.cluster_era > VERSIONS.ALONZO:
+                        overincrement_kes_period = cluster.get_kes_period()
                         overincrement_opcert_file = cluster.gen_node_operational_cert(
                             node_name=f"{node_name}_overincrement_opcert_file",
                             kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                             cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                             cold_counter_file=cold_counter_file,
-                            kes_period=cluster.get_kes_period(),
+                            kes_period=overincrement_kes_period,
                         )
                         # copy the new certificate and restart the node
                         shutil.copy(overincrement_opcert_file, opcert_file)
                         cluster_nodes.restart_nodes([node_name])
 
                         kes_period_info = cluster.get_kes_period_info(overincrement_opcert_file)
-                        kes_period_info_errors_list.append(
+                        kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
+                                cluster_obj=cluster,
                                 kes_output=kes_period_info,
                                 expected_scenario=kes.KesScenarios.INVALID_COUNTERS,
                                 check_id="2",
+                                expected_start_kes=overincrement_kes_period,
+                                pool_num=pool_num,
                             )
                         )
 
@@ -431,11 +455,14 @@ class TestKES:
                         # check kes-period-info with operational certificate with
                         # invalid kes-period
                         kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
-                        kes_period_info_errors_list.append(
+                        kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
+                                cluster_obj=cluster,
                                 kes_output=kes_period_info,
                                 expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
                                 check_id="3",
+                                expected_start_kes=invalid_kes_period,
+                                pool_num=pool_num,
                             )
                         )
 
@@ -445,12 +472,13 @@ class TestKES:
                 shutil.copy(cold_counter_file_orig, cold_counter_file)
 
             # generate new operational certificate with valid `--kes-period`
+            valid_kes_period = cluster.get_kes_period()
             valid_opcert_file = cluster.gen_node_operational_cert(
                 node_name=f"{node_name}_valid_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=cold_counter_file,
-                kes_period=cluster.get_kes_period(),
+                kes_period=valid_kes_period,
             )
             # copy the new certificate and restart the node
             shutil.copy(valid_opcert_file, opcert_file)
@@ -496,38 +524,39 @@ class TestKES:
 
         # check kes-period-info with valid operational certificate
         kes_period_info = cluster.get_kes_period_info(valid_opcert_file)
-        kes_period_info_errors_list.append(
+        kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
+                cluster_obj=cluster,
                 kes_output=kes_period_info,
                 expected_scenario=kes.KesScenarios.ALL_VALID,
                 check_id="4",
+                expected_start_kes=valid_kes_period,
+                pool_num=pool_num,
             )
         )
 
         # check kes-period-info with operational certificate with invalid counter and kes-period
         kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
-        kes_period_info_errors_list.append(
+        kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
+                cluster_obj=cluster,
                 kes_output=kes_period_info,
                 expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
                 if VERSIONS.cluster_era > VERSIONS.ALONZO
                 else kes.KesScenarios.ALL_INVALID,
                 check_id="5",
+                expected_start_kes=invalid_kes_period,
+                pool_num=pool_num,
             )
         )
 
-        clean_errors_list = [e for e in kes_period_info_errors_list if e]
-        err_joined = "\n".join(clean_errors_list)
-
+        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
         if err_joined:
-            if (
-                VERSIONS.cluster_era > VERSIONS.ALONZO
-                and len(clean_errors_list) == 1
-                and "check '2'" in err_joined
-            ):
-                pytest.xfail("See cardano-node issue #4114")
+            xfails = kes.get_xfails(errors=kes_period_info_errors_list)
+            if xfails:
+                pytest.xfail(" ".join(xfails))
             else:
-                raise AssertionError(f"Errors present on kes-period-info command: {err_joined}.")
+                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
@@ -549,7 +578,7 @@ class TestKES:
           minting blocks again
         * check `kes-period-info` with the old (replaced) operational certificate
         """
-        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-statements,too-many-locals
         __: Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL2
@@ -569,12 +598,13 @@ class TestKES:
 
         with cluster_manager.restart_on_failure():
             # generate new operational certificate with valid `--kes-period`
+            new_kes_period = cluster.get_kes_period()
             new_opcert_file = cluster.gen_node_operational_cert(
                 node_name=f"{node_name}_new_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
                 cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-                kes_period=cluster.get_kes_period(),
+                kes_period=new_kes_period,
             )
 
             # copy new operational certificate to the node
@@ -592,26 +622,34 @@ class TestKES:
 
             # check kes-period-info while the pool is not minting blocks
             kes_period_info_new = cluster.get_kes_period_info(opcert_file)
-            kes_period_info_errors_list.append(
+            kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
+                    cluster_obj=cluster,
                     kes_output=kes_period_info_new,
                     expected_scenario=kes.KesScenarios.ALL_VALID,
                     check_id="1",
+                    expected_start_kes=new_kes_period,
                 )
             )
             kes_period_info_old = cluster.get_kes_period_info(opcert_file_old)
-            kes_period_info_errors_list.append(
+            kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
+                    cluster_obj=cluster,
                     kes_output=kes_period_info_old,
                     expected_scenario=kes.KesScenarios.ALL_VALID,
                     check_id="2",
                 )
             )
-            kes_period_info_errors_list.append(
-                kes_period_info_new["metrics"]["qKesNodeStateOperationalCertificateNumber"]
-                != kes_period_info_old["metrics"]["qKesNodeStateOperationalCertificateNumber"]
-                or ""
-            )
+            new_opcert_num = kes_period_info_new["metrics"][
+                "qKesNodeStateOperationalCertificateNumber"
+            ]
+            old_opcert_num = kes_period_info_old["metrics"][
+                "qKesNodeStateOperationalCertificateNumber"
+            ]
+            if new_opcert_num != old_opcert_num:
+                kes_period_info_errors_list.append(
+                    f"New and old opcert counters don't match: {new_opcert_num} vs {old_opcert_num}"
+                )
 
             # start the node with the new operational certificate
             cluster_nodes.start_nodes([node_name])
@@ -657,33 +695,45 @@ class TestKES:
         # check that metrics reported by kes-period-info got updated once the pool started
         # minting blocks again
         kes_period_info_updated = cluster.get_kes_period_info(opcert_file)
-        kes_period_info_errors_list.append(
+        kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
+                cluster_obj=cluster,
                 kes_output=kes_period_info_updated,
                 expected_scenario=kes.KesScenarios.ALL_VALID,
                 check_id="3",
+                expected_start_kes=new_kes_period,
+                pool_num=pool_num,
             )
         )
 
-        kes_period_info_errors_list.append(
-            kes_period_info_updated["metrics"]["qKesNodeStateOperationalCertificateNumber"]
-            == kes_period_info_old["metrics"]["qKesNodeStateOperationalCertificateNumber"]
-            or ""
-        )
+        updated_opcert_num = kes_period_info_updated["metrics"][
+            "qKesNodeStateOperationalCertificateNumber"
+        ]
+        old_opcert_num = kes_period_info_old["metrics"]["qKesNodeStateOperationalCertificateNumber"]
+        if updated_opcert_num == old_opcert_num:
+            kes_period_info_errors_list.append(
+                f"Both updated and old opcert counters have same value '{old_opcert_num}'"
+            )
 
         # check kes-period-info with operational certificate with a wrong counter
         kes_period_info_invalid = cluster.get_kes_period_info(opcert_file_old)
-        kes_period_info_errors_list.append(
+        kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
+                cluster_obj=cluster,
                 kes_output=kes_period_info_invalid,
                 expected_scenario=kes.KesScenarios.INVALID_COUNTERS,
                 check_id="4",
+                pool_num=pool_num,
             )
         )
 
         err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
         if err_joined:
-            raise AssertionError(f"Errors present on kes-period-info command: {err_joined}.")
+            xfails = kes.get_xfails(errors=kes_period_info_errors_list)
+            if xfails:
+                pytest.xfail(" ".join(xfails))
+            else:
+                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
 
     @allure.link(helpers.get_vcs_link())
     def test_no_kes_period_arg(
