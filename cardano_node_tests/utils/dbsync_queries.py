@@ -61,6 +61,7 @@ class TxDBRow(NamedTuple):
     tx_out_value: decimal.Decimal
     tx_out_data_hash: Optional[memoryview]
     tx_out_inline_datum_hash: Optional[memoryview]
+    tx_out_reference_script_hash: Optional[memoryview]
     metadata_count: int
     reserve_count: int
     treasury_count: int
@@ -274,7 +275,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
         " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
         " tx.invalid_before, tx.invalid_hereafter,"
         " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.address_has_script,"
-        " tx_out.value, tx_out.data_hash, datum.hash,"
+        " tx_out.value, tx_out.data_hash, datum.hash, script.hash,"
         " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
         " (SELECT COUNT(id) FROM reserve WHERE tx_id=tx.id) AS reserve_count,"
         " (SELECT COUNT(id) FROM treasury WHERE tx_id=tx.id) AS treasury_count,"
@@ -296,6 +297,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
         "LEFT JOIN multi_asset join_ma_out ON ma_tx_out.ident = join_ma_out.id "
         "LEFT JOIN multi_asset join_ma_mint ON ma_tx_mint.ident = join_ma_mint.id "
         "LEFT JOIN datum ON tx_out.inline_datum_id = datum.id "
+        "LEFT JOIN script ON tx_out.reference_script_id = script.id "
         "WHERE tx.hash = %s;"
     )
 
