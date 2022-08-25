@@ -338,6 +338,7 @@ class TestLobsterChallenge:
         # that in automated test, we will just check that the final counter
         # value matches the expected counter value.
         expected_counter_val = (io_random_seed + _votes_sum) % names_num
+        LOGGER.info(f"Final counter value: {expected_counter_val}")
         votes.append(expected_counter_val)
 
         # Step 5: vote
@@ -457,12 +458,17 @@ class TestLobsterChallenge:
             vote_utxos = clusterlib.filter_utxos(utxos=out_utxos_vote, utxo_ix=utxo_ix_offset)
 
             # check expected balances
+            utxo_counter_tokens = [u for u in vote_utxos if u.coin == counter_token]
+            utxo_counter_token = None
             try:
                 utxos_lovelace = [u for u in vote_utxos if u.coin == clusterlib.DEFAULT_COIN][0]
                 utxo_votes_token = [u for u in vote_utxos if u.coin == votes_token][0]
-                utxo_counter_token = [u for u in vote_utxos if u.coin == counter_token][0]
+                # when `vote_counter` is not 0 (that can happen for final vote), there needs to be
+                # a counter token
+                if vote_counter:
+                    utxo_counter_token = utxo_counter_tokens[0]
             except IndexError:
-                LOGGER.error(f"Unexpected vote UTxOs: {vote_utxos}")
+                LOGGER.error(f"Unexpected vote UTxOs in vote number {vote_num}: {vote_utxos}")
                 raise
 
             assert (
@@ -474,12 +480,18 @@ class TestLobsterChallenge:
             ), f"Incorrect LobsterVotes token balance for script address `{script_address}`"
 
             assert (
-                utxo_counter_token.amount == vote_counter
+                utxo_counter_token is None or utxo_counter_token.amount == vote_counter
             ), f"Incorrect LobsterCounter token balance for script address `{script_address}`"
 
-        assert (
-            utxo_counter_token and utxo_counter_token.amount == expected_counter_val
-        ), "Final balance of LobsterCounter token doesn't match the expected balance"
+        # final counter value can be 0
+        if expected_counter_val == 0:
+            assert (
+                not utxo_counter_tokens
+            ), "No LobsterCounter token expected when final counter value is 0"
+        else:
+            assert (
+                utxo_counter_token and utxo_counter_token.amount == expected_counter_val
+            ), "Final balance of LobsterCounter token doesn't match the expected balance"
 
         # check transactions in db-sync
         for tx_out_rec in tx_outputs_all:
