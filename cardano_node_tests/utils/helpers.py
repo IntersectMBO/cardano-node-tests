@@ -34,7 +34,7 @@ LOGGER = logging.getLogger(__name__)
 
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 
-TCallable = TypeVar("TCallable", bound=Callable)
+TCallable = TypeVar("TCallable", bound=Callable)  # pylint: disable=invalid-name
 
 
 def callonce(func: TCallable) -> TCallable:

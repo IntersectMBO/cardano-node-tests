@@ -1594,9 +1594,9 @@ class TestTransfer:
                         "see node issue #4297"
                     )
 
-                min_reported_utxo = re.search(  # type: ignore
-                    "Minimum required UTxO: Lovelace ([0-9]+)", err_str
-                ).group(1)
+                _min_reported_utxo = re.search("Minimum required UTxO: Lovelace ([0-9]+)", err_str)
+                assert _min_reported_utxo
+                min_reported_utxo = _min_reported_utxo.group(1)
                 amount_lovelace = int(min_reported_utxo)
 
                 destinations = [
@@ -1762,9 +1762,9 @@ class TestTransfer:
                         "see node issue #4297"
                     )
 
-                min_reported_utxo = re.search(  # type: ignore
-                    "Minimum required UTxO: Lovelace ([0-9]+)", err_str
-                ).group(1)
+                _min_reported_utxo = re.search("Minimum required UTxO: Lovelace ([0-9]+)", err_str)
+                assert _min_reported_utxo
+                min_reported_utxo = _min_reported_utxo.group(1)
                 amount_lovelace_address1 = amount_lovelace_address2 = int(min_reported_utxo)
 
                 destinations = [
