@@ -109,7 +109,7 @@ def _get_forge_stats(pool_num: int) -> List[str]:
     )
     port = getattr(instance_ports, f"prometheus_pool{pool_num}")
 
-    response = requests.get(f"http://localhost:{port}/metrics")
+    response = requests.get(f"http://localhost:{port}/metrics", timeout=10)
     assert response, f"Request failed, status code {response.status_code}"
 
     forge_lines = [line for line in response.text.split("\n") if "Forge" in line]

@@ -27,15 +27,14 @@ def wait_epochs(cluster: clusterlib.ClusterLib):
 
 
 def get_prometheus_metrics(port: int) -> requests.Response:
-    response = requests.get(f"http://localhost:{port}/metrics")
+    response = requests.get(f"http://localhost:{port}/metrics", timeout=10)
     assert response, f"Request failed, status code {response.status_code}"
     return response
 
 
 def get_ekg_metrics(port: int) -> requests.Response:
     response = requests.get(
-        f"http://localhost:{port}/",
-        headers={"Accept": "application/json"},
+        f"http://localhost:{port}/", headers={"Accept": "application/json"}, timeout=10
     )
     assert response, f"Request failed, status code {response.status_code}"
     return response
