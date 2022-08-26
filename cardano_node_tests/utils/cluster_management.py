@@ -19,7 +19,7 @@ from typing import Optional
 
 import pytest
 from _pytest.config import Config
-from _pytest.tmpdir import TempdirFactory
+from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import artifacts
@@ -162,7 +162,7 @@ class ClusterManager:
         return cls.manager_cache
 
     def __init__(
-        self, tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config
+        self, tmp_path_factory: TempPathFactory, worker_id: str, pytest_config: Config
     ) -> None:
         self.cluster_obj: Optional[clusterlib.ClusterLib] = None
         self.worker_id = worker_id

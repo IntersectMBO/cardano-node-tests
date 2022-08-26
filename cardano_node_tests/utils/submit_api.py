@@ -60,7 +60,7 @@ def post_cbor(cbor_file: FileType, url: str) -> requests.Response:
     headers = {"Content-Type": "application/cbor"}
     with open(cbor_file, "rb") as in_fp:
         cbor_binary = in_fp.read()
-        response = requests.post(url, headers=headers, data=cbor_binary)
+        response = requests.post(url, headers=headers, data=cbor_binary, timeout=10)
     return response
 
 
