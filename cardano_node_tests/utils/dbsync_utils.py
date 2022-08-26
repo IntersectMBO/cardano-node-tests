@@ -342,6 +342,9 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
                 inline_datum_hash=query_row.tx_out_inline_datum_hash.hex()
                 if query_row.tx_out_inline_datum_hash
                 else "",
+                reference_script_hash=query_row.tx_out_reference_script_hash.hex()
+                if query_row.tx_out_reference_script_hash
+                else "",
             )
             utxo_out.append(out_rec)
 
@@ -891,6 +894,22 @@ def check_tx(
     assert txins_utxos_reference_inputs == db_utxos_reference_inputs, (
         "Reference inputs don't match "
         f"({txins_utxos_reference_inputs} != {db_utxos_reference_inputs})"
+    )
+
+    # check reference scripts
+    tx_reference_script_hashes = {
+        cluster_obj.get_policyid(script_file=r.reference_script_file)
+        for r in tx_raw_output.txouts
+        if r.reference_script_file
+    }
+
+    db_reference_script_hashes = {
+        r.reference_script_hash for r in response.txouts if r.reference_script_hash
+    }
+
+    assert tx_reference_script_hashes == db_reference_script_hashes, (
+        "Reference scripts don't match "
+        f"({tx_reference_script_hashes} != {db_reference_script_hashes})"
     )
 
     return response
