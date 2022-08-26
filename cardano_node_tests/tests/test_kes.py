@@ -13,7 +13,7 @@ from typing import Tuple
 import allure
 import pytest
 import requests
-from _pytest.tmpdir import TempdirFactory
+from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
@@ -52,7 +52,7 @@ def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> cl
 
 
 @pytest.fixture(scope="module")
-def short_kes_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
+def short_kes_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
     """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""
     shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)
     max_kes_evolutions = 10

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import allure
 import pytest
-from _pytest.tmpdir import TempdirFactory
+from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
@@ -21,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
+def epoch_length_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
     """Update *epochLength* to 1200."""
     shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)
 
@@ -50,7 +50,7 @@ def epoch_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
 
 
 @pytest.fixture(scope="module")
-def slot_length_start_cluster(tmp_path_factory: TempdirFactory) -> Path:
+def slot_length_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
     """Update *slotLength* to 0.3."""
     shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)
 

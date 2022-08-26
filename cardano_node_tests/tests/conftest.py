@@ -10,7 +10,7 @@ from typing import Generator
 import pytest
 from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
-from _pytest.tmpdir import TempdirFactory
+from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 from xdist import workermanage
 
@@ -129,7 +129,7 @@ def pytest_collection_modifyitems(config: Any, items: list) -> None:
 
 
 @pytest.fixture(scope="session")
-def change_dir(tmp_path_factory: TempdirFactory) -> None:
+def change_dir(tmp_path_factory: TempPathFactory) -> None:
     """Change CWD to temp directory before running tests."""
     tmp_path = temptools.get_pytest_worker_tmp(tmp_path_factory)
     os.chdir(tmp_path)
@@ -144,7 +144,7 @@ def close_dbconn() -> Generator[None, None, None]:
 
 
 def _stop_all_cluster_instances(
-    tmp_path_factory: TempdirFactory, worker_id: str, pytest_config: Config
+    tmp_path_factory: TempPathFactory, worker_id: str, pytest_config: Config
 ) -> None:
     """Stop all cluster instances after all tests are finished."""
     cluster_manager_obj = cluster_management.ClusterManager(
@@ -191,7 +191,7 @@ def _save_env_for_allure(pytest_config: Config) -> None:
 
 @pytest.fixture(scope="session")
 def testenv_setup_teardown(
-    tmp_path_factory: TempdirFactory, worker_id: str, request: FixtureRequest
+    tmp_path_factory: TempPathFactory, worker_id: str, request: FixtureRequest
 ) -> Generator[None, None, None]:
     pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
 
@@ -243,7 +243,7 @@ def session_autouse(change_dir: Any, close_dbconn: Any, testenv_setup_teardown: 
 
 
 @pytest.fixture(scope="module")
-def testfile_temp_dir(tmp_path_factory: TempdirFactory) -> Path:
+def testfile_temp_dir(tmp_path_factory: TempPathFactory) -> Path:
     """Return a temporary dir for storing test artifacts.
 
     The dir is specific to a single test file.
@@ -279,7 +279,7 @@ def function_autouse(cd_testfile_temp_dir: Generator[Path, None, None]) -> None:
 
 @pytest.fixture
 def cluster_manager(
-    tmp_path_factory: TempdirFactory,
+    tmp_path_factory: TempPathFactory,
     worker_id: str,
     request: FixtureRequest,
 ) -> Generator[cluster_management.ClusterManager, None, None]:
