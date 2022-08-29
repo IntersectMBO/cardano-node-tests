@@ -107,7 +107,7 @@ elif [ "$1" = "step3" ]; then
   # restart pool3 with upgraded cardano-node binary
   cp -a "$STATE_CLUSTER"/cardano-node-pool3.orig "$STATE_CLUSTER"/cardano-node-pool3
   "$STATE_CLUSTER"/supervisorctl restart nodes:pool3
-  sleep 5
+  sleep 10
 
   # print path to cardano-node binaries
   pool1_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool1)"
