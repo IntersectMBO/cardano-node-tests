@@ -36,15 +36,13 @@ def withdraw_reward(
     )
 
     LOGGER.info(f"Withdrawing rewards for '{stake_addr_record.address}'")
-    try:
+    with contextlib.suppress(clusterlib.CLIError):
         cluster_obj.send_tx(
             src_address=dst_address,
             tx_name=f"rf_{name_template}_reward_withdrawal",
             tx_files=tx_files_withdrawal,
             withdrawals=[clusterlib.TxOut(address=stake_addr_record.address, amount=-1)],
         )
-    except clusterlib.CLIError:
-        return
 
 
 def deregister_stake_addr(
@@ -61,14 +59,12 @@ def deregister_stake_addr(
     )
 
     LOGGER.info(f"Deregistering stake address '{pool_user.stake.address}'")
-    try:
+    with contextlib.suppress(clusterlib.CLIError):
         cluster_obj.send_tx(
             src_address=pool_user.payment.address,
             tx_name=f"{name_template}_dereg_stake_addr",
             tx_files=tx_files_deregister,
         )
-    except clusterlib.CLIError:
-        return
 
 
 def return_funds_to_faucet(
