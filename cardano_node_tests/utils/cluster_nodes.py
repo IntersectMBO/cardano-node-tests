@@ -90,13 +90,29 @@ class LocalCluster(ClusterType):
         self.cluster_scripts = cluster_scripts.LocalScripts()
 
     def _get_slots_offset(self, state_dir: Path) -> int:
-        """Get offset of blocks from Byron era vs current configuration."""
-        # unlike in `TestnetCluster`, don't cache slots offset value, we might
-        # test different configurations of slot length etc.
+        """Get offset of blocks from Byron era vs current configuration.
+
+        Unlike in `TestnetCluster`, don't cache slots offset value, we might
+        test different configurations of slot length etc.
+        """
+        with open(state_dir / "config-pool1.json", encoding="utf-8") as in_fp:
+            config_json = json.load(in_fp)
+
+        shelley_hf_epoch = config_json.get("TestShelleyHardForkAtEpoch")
+
+        # if the testnet wasn't HF to Shelley in config, assume there was single Byron epoch
+        byron_epochs = int(shelley_hf_epoch) if shelley_hf_epoch is not None else 1
+
+        # no slots offset if the testnet was started in Shelley-based era
+        if byron_epochs == 0:
+            return 0
+
         offset = slots_offset.get_slots_offset(
             genesis_byron=state_dir / "byron" / "genesis.json",
             genesis_shelley=state_dir / "shelley" / "genesis.json",
+            byron_epochs=byron_epochs,
         )
+
         return offset
 
     def get_cluster_obj(
