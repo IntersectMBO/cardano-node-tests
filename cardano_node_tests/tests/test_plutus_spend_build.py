@@ -1221,7 +1221,6 @@ class TestBuildLocking:
         assert tx_output_spend
 
         out_utxos = cluster.get_utxo(tx_raw_output=tx_output_spend)
-        out_utxos_sorted = sorted(out_utxos, key=lambda x: x.utxo_ix)
         utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
             utxos=out_utxos, txouts=tx_output_spend.txouts
         )
@@ -1229,9 +1228,9 @@ class TestBuildLocking:
         # UTxO we created for tokens and minimum required Lovelace
         change_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
         # UTxO that was created by `build` command for rest of the Lovelace change (this will not
-        # have the script's datum
+        # have the script's datum)
         # TODO: change UTxO used to be first, now it's last
-        build_change_utxo = out_utxos_sorted[0] if utxo_ix_offset else out_utxos_sorted[-1]
+        build_change_utxo = out_utxos[0] if utxo_ix_offset else out_utxos[-1]
 
         # Lovelace balance on original script UTxOs
         script_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=script_utxos)
