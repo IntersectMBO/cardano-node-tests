@@ -736,6 +736,7 @@ class TestNoRewards:
         __: Any  # mypy workaround
         kes_period_info_errors_list: List[str] = []
         pool_name = cluster_management.Resources.POOL2
+        pool_num = 2
         cluster = cluster_lock_pool2
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -846,11 +847,13 @@ class TestNoRewards:
 
             # check command kes-period-info case: de-register pool
             kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes_period_info_errors_list.append(
+            kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
+                    cluster_obj=cluster,
                     kes_output=kes_period_info,
                     expected_scenario=kes.KesScenarios.ALL_VALID,
                     check_id="1",
+                    pool_num=pool_num,
                 )
             )
 
@@ -898,11 +901,13 @@ class TestNoRewards:
             # check command kes-period-info case: re-register pool, check without
             # waiting to take effect
             kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes_period_info_errors_list.append(
+            kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
+                    cluster_obj=cluster,
                     kes_output=kes_period_info,
                     expected_scenario=kes.KesScenarios.ALL_VALID,
                     check_id="2",
+                    pool_num=pool_num,
                 )
             )
 
@@ -926,11 +931,13 @@ class TestNoRewards:
 
             # check command kes-period-info case: re-register pool
             kes_period_info = cluster.get_kes_period_info(pool_opcert_file)
-            kes_period_info_errors_list.append(
+            kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
+                    cluster_obj=cluster,
                     kes_output=kes_period_info,
                     expected_scenario=kes.KesScenarios.ALL_VALID,
                     check_id="3",
+                    pool_num=pool_num,
                 )
             )
 
@@ -961,4 +968,8 @@ class TestNoRewards:
 
         err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
         if err_joined:
-            raise AssertionError(f"Errors present on kes-period-info command: {err_joined}.")
+            xfails = kes.get_xfails(errors=kes_period_info_errors_list)
+            if xfails:
+                pytest.xfail(" ".join(xfails))
+            else:
+                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
