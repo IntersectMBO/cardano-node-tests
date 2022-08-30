@@ -48,6 +48,7 @@ class Testnets:
     shelley_qa = "shelley_qa"
     testnet = "testnet"
     staging = "staging"
+    preprod = "preprod"
     mainnet = "mainnet"
 
 
@@ -89,13 +90,29 @@ class LocalCluster(ClusterType):
         self.cluster_scripts = cluster_scripts.LocalScripts()
 
     def _get_slots_offset(self, state_dir: Path) -> int:
-        """Get offset of blocks from Byron era vs current configuration."""
-        # unlike in `TestnetCluster`, don't cache slots offset value, we might
-        # test different configurations of slot length etc.
+        """Get offset of blocks from Byron era vs current configuration.
+
+        Unlike in `TestnetCluster`, don't cache slots offset value, we might
+        test different configurations of slot length etc.
+        """
+        with open(state_dir / "config-pool1.json", encoding="utf-8") as in_fp:
+            config_json = json.load(in_fp)
+
+        shelley_hf_epoch = config_json.get("TestShelleyHardForkAtEpoch")
+
+        # if the testnet wasn't HF to Shelley in config, assume there was single Byron epoch
+        byron_epochs = int(shelley_hf_epoch) if shelley_hf_epoch is not None else 1
+
+        # no slots offset if the testnet was started in Shelley-based era
+        if byron_epochs == 0:
+            return 0
+
         offset = slots_offset.get_slots_offset(
             genesis_byron=state_dir / "byron" / "genesis.json",
             genesis_shelley=state_dir / "shelley" / "genesis.json",
+            byron_epochs=byron_epochs,
         )
+
         return offset
 
     def get_cluster_obj(
@@ -170,11 +187,12 @@ class LocalCluster(ClusterType):
 class TestnetCluster(ClusterType):
     """Testnet cluster type (full cardano mode)."""
 
-    TESTNETS = {
+    TESTNETS: Dict[int, dict] = {
         1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"},
         1563999616: {"type": Testnets.testnet, "shelley_start": "2020-07-28T20:20:16Z"},
         1506450213: {"type": Testnets.staging, "shelley_start": "2020-08-01T18:23:33Z"},
         1506203091: {"type": Testnets.mainnet, "shelley_start": "2020-07-29T21:44:51Z"},
+        1654041600: {"type": Testnets.preprod, "byron_epochs": 4},
     }
 
     NODES = {"relay1", "pool1", "pool2"}
@@ -219,8 +237,10 @@ class TestnetCluster(ClusterType):
             byron_dict = json.load(in_json)
         start_timestamp: int = byron_dict["startTime"]
 
-        shelley_start: str = self.TESTNETS.get(start_timestamp, {}).get("shelley_start", "")
-        if not shelley_start:
+        testnet_dict: Dict[str, Any] = self.TESTNETS.get(start_timestamp) or {}
+        shelley_start: str = testnet_dict.get("shelley_start") or ""
+        byron_epochs: int = testnet_dict.get("byron_epochs") or 0
+        if not (shelley_start or byron_epochs):
             self._slots_offset = 0
             return 0
 
@@ -228,6 +248,7 @@ class TestnetCluster(ClusterType):
             genesis_byron=genesis_byron,
             genesis_shelley=genesis_shelley,
             shelley_start=shelley_start,
+            byron_epochs=byron_epochs,
         )
 
         self._slots_offset = offset
