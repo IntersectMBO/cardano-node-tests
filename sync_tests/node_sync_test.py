@@ -416,6 +416,10 @@ def get_testnet_value():
         return "--testnet-magic 633343913"
     elif env == "shelley_qa":
         return "--testnet-magic 3"
+    elif env == "preview":
+        return "--testnet-magic 2"
+    elif env == "preprod":
+        return "--testnet-magic 1"
     else:
         return None
 
@@ -622,6 +626,13 @@ def get_calculated_slot_no(env):
     elif env == "shelley_qa":
         byron_start_time = datetime.strptime("2020-08-17 13:00:00", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-08-17 17:00:00", "%Y-%m-%d %H:%M:%S")
+    elif env == "preprod":
+        byron_start_time = datetime.strptime("2022-06-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+        shelley_start_time = datetime.strptime("2022-06-21 00:00:00", "%Y-%m-%d %H:%M:%S")
+    elif env == "preview":
+        # this env was started directly in Alonzo
+        byron_start_time = None
+        shelley_start_time = None
 
     last_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20 +
                        date_diff_in_seconds(current_time, shelley_start_time))
@@ -1042,7 +1053,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-e", "--environment",
-        help="the environment on which to run the tests - shelley_qa, testnet, staging or mainnet.",
+        help="the environment on which to run the tests - shelley_qa, testnet, staging, mainnet, preview, preprod",
     )
     parser.add_argument(
         "-a1", "--node_start_arguments1", nargs='+', type=str,

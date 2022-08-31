@@ -1,5 +1,5 @@
 steps:
-  - label: 'run the cardano node sync test on Mainnet and Testnet using a Linux machine'
+  - label: 'run the cardano node sync test on Mainnet using a Linux machine'
     commands:
       - './.buildkite/node_sync_tests.sh $tag_no1 $tag_no2 $hydra_eval_no1 $hydra_eval_no2 $env $node_start_arguments1 $node_start_arguments2'
     branches: "sync_tests"
