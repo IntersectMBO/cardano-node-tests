@@ -297,20 +297,25 @@ def delete_node_files():
 
 def get_node_config_files(env):
     os.chdir(Path(ROOT_TEST_PATH))
+    print("Getting the config.json file...")
     urllib.request.urlretrieve(
         "https://book.world.dev.cardano.org/environments/" + env + "/config.json"
     )
+    print("Getting the topology.json file...")
     urllib.request.urlretrieve(
         "https://book.world.dev.cardano.org/environments/" + env + "/topology.json"
     )
+    print("Getting the byron-genesis.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/preview/" + env + "/byron-genesis.json"
+        "https://book.world.dev.cardano.org/environments/" + env + "/byron-genesis.json"
     )
+    print("Getting the shelley-genesis.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/preview/" + env + "/shelley-genesis.json"
+        "https://book.world.dev.cardano.org/environments/" + env + "/shelley-genesis.json"
     )
+    print("Getting the alonzo-genesis.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/preview/" + env + "/alonzo-genesis.json"
+        "https://book.world.dev.cardano.org/environments/" + env + "/alonzo-genesis.json"
     )
 
 
