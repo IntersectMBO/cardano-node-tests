@@ -298,34 +298,19 @@ def delete_node_files():
 def get_node_config_files(env):
     os.chdir(Path(ROOT_TEST_PATH))
     urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-config.json",
-        env + "-config.json",
+        "https://book.world.dev.cardano.org/environments/" + env + "config.json"
     )
     urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-byron-genesis.json",
-        env + "-byron-genesis.json",
+        "https://book.world.dev.cardano.org/environments/" + env + "topology.json"
     )
     urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-shelley-genesis.json",
-        env + "-shelley-genesis.json",
+        "https://book.world.dev.cardano.org/environments/preview/" + "byron-genesis.json"
     )
     urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-alonzo-genesis.json",
-        env + "-alonzo-genesis.json",
+        "https://book.world.dev.cardano.org/environments/preview/" + "shelley-genesis.json"
     )
     urllib.request.urlretrieve(
-        "https://hydra.iohk.io/job/Cardano/iohk-nix/cardano-deployment/latest-finished/download/1/"
-        + env
-        + "-topology.json",
-        env + "-topology.json",
+        "https://book.world.dev.cardano.org/environments/preview/" + "alonzo-genesis.json"
     )
 
 
@@ -496,12 +481,12 @@ def start_node_windows(env, tag_no, node_start_arguments):
     if "None" in start_args:
         start_args = ""
     cmd = (
-        f"{NODE} run --topology {env}-topology.json "
+        f"{NODE} run --topology topology.json "
         f"--database-path db "
         f"--host-addr 0.0.0.0 "
         f"--port 3000 "
         f"--socket-path \\\\.\pipe\cardano-node "
-        f"--config {env}-config.json {start_args}"
+        f"--config config.json {start_args}"
     ).strip()
 
     logfile = open(NODE_LOG_FILE, "w+")
@@ -539,10 +524,10 @@ def start_node_unix(env, tag_no, node_start_arguments):
     if "None" in start_args:
         start_args = ""
     cmd = (
-        f"{NODE} run --topology {env}-topology.json --database-path "
+        f"{NODE} run --topology topology.json --database-path "
         f"{Path(ROOT_TEST_PATH) / 'db'} "
         f"--host-addr 0.0.0.0 --port 3000 --config "
-        f"{env}-config.json --socket-path ./db/node.socket {start_args}"
+        f"config.json --socket-path ./db/node.socket {start_args}"
     ).strip()
     logfile = open(NODE_LOG_FILE, "w+")
     print(f"start node cmd: {cmd}")
