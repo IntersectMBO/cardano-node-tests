@@ -460,7 +460,10 @@ def get_current_tip(timeout_minutes=10):
                 output_json["syncProgress"] = int(float(output_json["syncProgress"]))
 
             if "block" not in output_json:
-                print(f"output_json: {output_json}")
+                print(f"!!!! output_json: {output_json}")
+                output_json["block"] = 0
+                output_json["slot"] = 0
+                output_json["hash"] = 0
 
             return output_json["epoch"], int(output_json["block"]), output_json["hash"], \
                    int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
