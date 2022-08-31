@@ -375,7 +375,7 @@ def get_epoch_no_d_zero():
         return 121
     elif env == "staging":
         return None
-    elif env == "shelley_qa":
+    elif env == "shelley-qa":
         return 2554
     else:
         return None
@@ -390,7 +390,7 @@ def get_start_slot_no_d_zero():
         return 21902400
     elif env == "staging":
         return None
-    elif env == "shelley_qa":
+    elif env == "shelley-qa":
         return 18375135
     else:
         return None
@@ -404,7 +404,7 @@ def get_testnet_value():
         return "--testnet-magic 1097911063"
     elif env == "staging":
         return "--testnet-magic 633343913"
-    elif env == "shelley_qa":
+    elif env == "shelley-qa":
         return "--testnet-magic 3"
     elif env == "preview":
         return "--testnet-magic 2"
@@ -613,7 +613,7 @@ def get_calculated_slot_no(env):
     elif env == "mainnet":
         byron_start_time = datetime.strptime("2017-09-23 21:44:51", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-07-29 21:44:51", "%Y-%m-%d %H:%M:%S")
-    elif env == "shelley_qa":
+    elif env == "shelley-qa":
         byron_start_time = datetime.strptime("2020-08-17 13:00:00", "%Y-%m-%d %H:%M:%S")
         shelley_start_time = datetime.strptime("2020-08-17 17:00:00", "%Y-%m-%d %H:%M:%S")
     elif env == "preprod":
@@ -760,8 +760,10 @@ def get_no_of_slots_in_era(env, era_name, no_of_epochs_in_era):
 
     if era_name.lower() == "byron":
         slot_length_secs = 20
-    if env == "shelley_qa":
+    if env == "shelley-qa":
         epoch_length_slots = 7200
+    if env == "preview":
+        epoch_length_slots = 86400
 
     epoch_length_secs = int(epoch_length_slots / slot_length_secs)
 
@@ -874,9 +876,9 @@ def main():
     print("Enable the desired cardano node tracers")
     if env == "mainnet":
         print("  - Enable 'cardano node resource' monitoring")
-        enable_cardano_node_resources_monitoring(env + "-config.json")
+        enable_cardano_node_resources_monitoring("config.json")
 
-    enable_cardano_node_tracers(env + "-config.json")
+    enable_cardano_node_tracers("config.json")
 
     get_node_build_files_time = get_current_date_time()
     print(f"Get node build files time:  {get_node_build_files_time}")
@@ -1043,7 +1045,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-e", "--environment",
-        help="the environment on which to run the tests - shelley_qa, testnet, staging, mainnet, preview, preprod",
+        help="the environment on which to run the tests - shelley-qa, testnet, staging, mainnet, preview, preprod",
     )
     parser.add_argument(
         "-a1", "--node_start_arguments1", nargs='+', type=str,

@@ -65,7 +65,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        env: [shelley_qa, staging, preview, preprod]
+        env: [shelley-qa, staging, preview, preprod]
         branch:
           - sync_tests
       fail-fast: false
