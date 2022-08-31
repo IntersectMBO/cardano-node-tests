@@ -300,23 +300,23 @@ def get_node_config_files(env):
     print(f"current_directory: {current_directory}")
     print("Getting the config.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/config.json"
+        "https://book.world.dev.cardano.org/environments/" + env + "/config.json", "config.json, "
     )
     print("Getting the topology.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/topology.json"
+        "https://book.world.dev.cardano.org/environments/" + env + "/topology.json", "topology.json",
     )
     print("Getting the byron-genesis.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/byron-genesis.json"
+        "https://book.world.dev.cardano.org/environments/" + env + "/byron-genesis.json", "byron-genesis.json",
     )
     print("Getting the shelley-genesis.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/shelley-genesis.json"
+        "https://book.world.dev.cardano.org/environments/" + env + "/shelley-genesis.json", "shelley-genesis.json",
     )
     print("Getting the alonzo-genesis.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/alonzo-genesis.json"
+        "https://book.world.dev.cardano.org/environments/" + env + "/alonzo-genesis.json", "alonzo-genesis.json",
     )
 
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
