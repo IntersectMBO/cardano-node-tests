@@ -459,6 +459,9 @@ def get_current_tip(timeout_minutes=10):
             else:
                 output_json["syncProgress"] = int(float(output_json["syncProgress"]))
 
+            if "block" not in output_json:
+                print(f"output_json: {output_json}")
+
             return output_json["epoch"], int(output_json["block"]), output_json["hash"], \
                    int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
         except subprocess.CalledProcessError as e:

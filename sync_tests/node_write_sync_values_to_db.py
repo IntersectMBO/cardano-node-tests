@@ -123,7 +123,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Add sync test values into database\n\n")
 
     parser.add_argument("-e", "--environment",
-                        help="The environment on which to run the tests - shelley_qa, testnet, staging or mainnet.")
+                        help="The environment on which to run the tests - shelley-qa, testnet, staging, mainnet, preprod, preview")
 
     args = parser.parse_args()
 

@@ -24,14 +24,14 @@ def get_epoch_start_datetime_from_explorer(env, epoch_no):
         url = STAGING_EXPLORER_URL
     elif env == "testnet":
         url = TESTNET_EXPLORER_URL
-    elif env == "shelley_qa":
+    elif env == "shelley-qa":
         url = SHELLEY_QA_EXPLORER_URL
     elif env == "preprod":
         url = PREPROD_EXPLORER_URL
     elif env == "preview":
         url = PREVIEW_EXPLORER_URL
     else:
-        print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
+        print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley-qa, "
               f"testnet, staging, mainnet, preview, preprod")
         exit(1)
     if url is not None:
@@ -75,14 +75,14 @@ def get_epoch_start_datetime_from_explorer(env, epoch_no):
 #         url = STAGING_EXPLORER_URL
 #     elif env == "testnet":
 #         url = TESTNET_EXPLORER_URL
-#     elif env == "shelley_qa":
+#     elif env == "shelley-qa":
 #         url = SHELLEY_QA_EXPLORER_URL
 #     # elif env == "preprod":
 #     #     url = PREPROD_EXPLORER_URL
 #     # elif env == "preview":
 #     #     url = PREVIEW_EXPLORER_URL
 #     else:
-#         print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
+#         print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley-qa, "
 #               f"testnet, staging, mainnet, preprod, preview")
 #         exit(1)
 #
@@ -111,14 +111,14 @@ def get_epoch_start_datetime_from_explorer(env, epoch_no):
 #         url = STAGING_EXPLORER_URL
 #     elif env == "testnet":
 #         url = TESTNET_EXPLORER_URL
-#     elif env == "shelley_qa":
+#     elif env == "shelley-qa":
 #         url = SHELLEY_QA_EXPLORER_URL
 #     elif env == "preprod":
 #         url = PREPROD_EXPLORER_URL
 #     elif env == "preview":
 #         url = PREVIEW_EXPLORER_URL
 #     else:
-#         print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley_qa, "
+#         print(f"!!! ERROR: the provided 'env' is not supported. Please use one of: shelley-qa, "
 #               f"testnet, staging, mainnet, preprod, preview")
 #         exit(1)
 #

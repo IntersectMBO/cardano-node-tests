@@ -34,6 +34,23 @@ def create_table(table_sql_query):
             conn.close()
 
 
+def create_table_based_on_another_table_structure(existing_table_name, new_table_name):
+    print(f"Creating new table - {new_table_name} based on the structure of existing table - {existing_table_name}")
+
+    conn = create_connection()
+    sql_query = f"CREATE TABLE {new_table_name} LIKE {existing_table_name};"
+    print(sql_query)
+    try:
+        cur = conn.cursor()
+        cur.execute(sql_query)
+    except Exception as e:
+        print(f"!!! ERROR: Failed create new table {new_table_name} based on {existing_table_name} --> {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
 def drop_table(table_name):
     conn = create_connection()
     sql_query = f"DROP TABLE {table_name};"
