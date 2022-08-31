@@ -297,6 +297,7 @@ def delete_node_files():
 
 def get_node_config_files(env):
     os.chdir(Path(ROOT_TEST_PATH))
+    current_directory = Path.cwd()
     print("Getting the config.json file...")
     urllib.request.urlretrieve(
         "https://book.world.dev.cardano.org/environments/" + env + "/config.json"
@@ -318,8 +319,14 @@ def get_node_config_files(env):
         "https://book.world.dev.cardano.org/environments/" + env + "/alonzo-genesis.json"
     )
 
+    print(f" - listdir current_directory: {os.listdir(current_directory)}")
+
 
 def enable_cardano_node_resources_monitoring(node_config_filepath):
+    os.chdir(Path(ROOT_TEST_PATH))
+    current_directory = Path.cwd()
+    print(f" - listdir current_directory: {os.listdir(current_directory)}")
+
     with open(node_config_filepath, "r") as json_file:
         node_config_json = json.load(json_file)
 
@@ -330,6 +337,10 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
 
 
 def enable_cardano_node_tracers(node_config_filepath):
+    os.chdir(Path(ROOT_TEST_PATH))
+    current_directory = Path.cwd()
+    print(f" - listdir current_directory: {os.listdir(current_directory)}")
+
     with open(node_config_filepath, "r") as json_file:
         node_config_json = json.load(json_file)
 
