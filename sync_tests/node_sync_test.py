@@ -300,7 +300,7 @@ def get_node_config_files(env):
     print(f"current_directory: {current_directory}")
     print("Getting the config.json file...")
     urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/config.json", "config.json, "
+        "https://book.world.dev.cardano.org/environments/" + env + "/config.json", "config.json",
     )
     print("Getting the topology.json file...")
     urllib.request.urlretrieve(
