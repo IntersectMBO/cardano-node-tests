@@ -289,7 +289,6 @@ def get_and_extract_windows_files(download_url):
 
 
 def delete_node_files():
-    os.chdir(Path(ROOT_TEST_PATH))
     for p in Path(".").glob("cardano-*"):
         print(f" === deleting file: {p}")
         p.unlink(missing_ok=True)
@@ -298,6 +297,7 @@ def delete_node_files():
 def get_node_config_files(env):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
+    print(f"current_directory: {current_directory}")
     print("Getting the config.json file...")
     urllib.request.urlretrieve(
         "https://book.world.dev.cardano.org/environments/" + env + "/config.json"
@@ -325,6 +325,7 @@ def get_node_config_files(env):
 def enable_cardano_node_resources_monitoring(node_config_filepath):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
+    print(f"current_directory: {current_directory}")
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
     with open(node_config_filepath, "r") as json_file:
@@ -339,6 +340,7 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
 def enable_cardano_node_tracers(node_config_filepath):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
+    print(f"current_directory: {current_directory}")
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
     with open(node_config_filepath, "r") as json_file:
