@@ -14,6 +14,9 @@ RESULTS_FILE_NAME = r"sync_results.json"
 
 def main():
     env = vars(args)["environment"]
+    if "-" in env:
+        env = f"`{env}`"
+    print(f" !!! env: {env}")
 
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
