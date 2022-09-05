@@ -205,7 +205,7 @@ class TestBuildMinting:
             txouts=txouts_step2,
             mint=plutus_mint_data,
         )
-        plutus_cost = cluster.calculate_plutus_script_cost(
+        plutus_costs = cluster.calculate_plutus_script_cost(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
@@ -235,9 +235,9 @@ class TestBuildMinting:
         expected_fee_step2 = 350_000
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[plutus_v_record.execution_cost],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[plutus_v_record.execution_cost],
         )
 
         # check tx_view
@@ -338,7 +338,7 @@ class TestBuildMinting:
             invalid_before=slot_step2 - slots_offset,
             invalid_hereafter=slot_step2 + slots_offset,
         )
-        plutus_cost = cluster.calculate_plutus_script_cost(
+        plutus_costs = cluster.calculate_plutus_script_cost(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
@@ -370,9 +370,9 @@ class TestBuildMinting:
         expected_fee_step2 = 411_175
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[plutus_common.MINTING_TIME_RANGE_COST],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[plutus_common.MINTING_TIME_RANGE_COST],
         )
 
         # check tx_view
@@ -579,7 +579,7 @@ class TestBuildMinting:
             invalid_before=slot_step2 - slots_offset,
             invalid_hereafter=slot_step2 + slots_offset,
         )
-        plutus_cost = cluster.calculate_plutus_script_cost(
+        plutus_costs = cluster.calculate_plutus_script_cost(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
@@ -626,9 +626,9 @@ class TestBuildMinting:
         expected_fee_step2 = 633_269
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[execution_cost1, minting_cost2_v2],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[execution_cost1, minting_cost2_v2],
         )
 
         # check tx_view
@@ -779,7 +779,7 @@ class TestBuildMinting:
         )
 
         # calculate cost of Plutus script
-        plutus_cost_step2 = cluster.calculate_plutus_script_cost(
+        plutus_costs_step2 = cluster.calculate_plutus_script_cost(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
@@ -806,9 +806,9 @@ class TestBuildMinting:
         token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost_step2,
-            expected_cost=[plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs_step2,
+            expected_costs=[plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST],
         )
 
         # check tx_view
@@ -821,7 +821,7 @@ class TestBuildMinting:
         # compare cost of Plutus script with data from db-sync
         if tx_db_record_step2:
             dbsync_utils.check_plutus_costs(
-                redeemer_records=tx_db_record_step2.redeemers, cost_records=plutus_cost_step2
+                redeemer_records=tx_db_record_step2.redeemers, cost_records=plutus_costs_step2
             )
 
     @allure.link(helpers.get_vcs_link())
@@ -921,7 +921,7 @@ class TestBuildMinting:
             mint=plutus_mint_data,
             required_signers=[signing_key_golden],
         )
-        plutus_cost = cluster.calculate_plutus_script_cost(
+        plutus_costs = cluster.calculate_plutus_script_cost(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
@@ -958,9 +958,9 @@ class TestBuildMinting:
         expected_fee_step2 = 372_438
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[plutus_common.MINTING_WITNESS_REDEEMER_COST],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[plutus_common.MINTING_WITNESS_REDEEMER_COST],
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
