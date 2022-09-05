@@ -324,14 +324,6 @@ class TestLockingV2:
             script_txins=plutus_txins,
         )
 
-        fee = cluster.estimate_fee(
-            txbody_file=tx_output_redeem.out_file,
-            # +1 as possibly one more input will be needed for the fee amount
-            txin_count=len(tx_output_redeem.txins) + 1,
-            txout_count=len(tx_output_redeem.txouts),
-            witness_count=len(tx_files_redeem.signing_key_files),
-        )
-
         tx_signed_redeem = cluster.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
@@ -360,7 +352,19 @@ class TestLockingV2:
         ), "Reference input was spent"
 
         # check expected fees
-        expected_fee_redeem = 175_753 if use_reference_script else 179_493
+        expected_fee_redeem = 176_024 if use_reference_script else 179_764
+
+        fee = (
+            # for tx size
+            cluster.estimate_fee(
+                txbody_file=tx_output_redeem.out_file,
+                txin_count=len(tx_output_redeem.txins),
+                txout_count=len(tx_output_redeem.txouts),
+                witness_count=len(tx_files_redeem.signing_key_files),
+            )
+            # for script execution
+            + redeem_cost.fee
+        )
 
         assert helpers.is_in_interval(fee, expected_fee_redeem, frac=0.15)
 
