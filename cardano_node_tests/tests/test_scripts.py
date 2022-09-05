@@ -739,7 +739,8 @@ class TestNegative:
                 payment_skey_files=payment_skey_files[:-1],
                 multisig_script=multisig_script,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -790,7 +791,8 @@ class TestNegative:
                 payment_skey_files=[payment_skey_files[-1]],
                 multisig_script=multisig_script,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -846,7 +848,8 @@ class TestNegative:
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
                 )
-            assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+            err_str = str(excinfo.value)
+            assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1041,7 +1044,8 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        before_slot = cluster.get_slot_no() - 1
+        last_slot_no = cluster.get_slot_no()
+        before_slot = last_slot_no - 1
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -1082,7 +1086,8 @@ class TestTimeLocking:
                 invalid_hereafter=before_slot,
                 use_build_cmd=use_build_cmd,
             )
-        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
         # send funds from script address - invalid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1095,10 +1100,11 @@ class TestTimeLocking:
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
-                invalid_hereafter=before_slot + 1,
+                invalid_hereafter=last_slot_no + 1_000,
                 use_build_cmd=use_build_cmd,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1161,7 +1167,8 @@ class TestTimeLocking:
                 invalid_hereafter=before_slot + 1,
                 use_build_cmd=use_build_cmd,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1224,7 +1231,8 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot + 100,
                 use_build_cmd=use_build_cmd,
             )
-        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
         # send funds from script address - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1240,7 +1248,8 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot,
                 use_build_cmd=use_build_cmd,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1304,7 +1313,8 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot,
                 use_build_cmd=use_build_cmd,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1558,7 +1568,8 @@ class TestAuxiliaryScripts:
                 cluster.build_raw_tx(
                     src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
                 )
-        assert 'Error in $: key "type" not found' in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert 'Error in $: key "type" not found' in err_str, err_str
 
 
 @pytest.mark.testnets
@@ -1929,3 +1940,395 @@ class TestReferenceUTxO:
         ):
             pytest.xfail("Reported 'SimpleScriptV2', see node issue #4261")
         assert reference_utxo.reference_script["script"]["type"] == script_type_str
+
+
+@pytest.mark.testnets
+@pytest.mark.smoke
+@pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+    reason="runs only with Allegra+ TX",
+)
+class TestNested:
+    """Tests for nested scripts."""
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[
+                    f"multi_addr_nested_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(20)
+                ],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addrs
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("type_top", ("all", "any"))
+    @pytest.mark.parametrize("type_nested", ("all", "any"))
+    @pytest.mark.dbsync
+    def test_nested_script(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        type_top: str,
+        type_nested: str,
+        use_build_cmd: bool,
+    ):
+        """Check that it is possible to spend using a script with nested rules."""
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{type_top}_{type_nested}"
+
+        dst_addr1 = payment_addrs[1]
+        dst_addr2 = payment_addrs[2]
+        dst_addr3 = payment_addrs[3]
+
+        # create multisig script
+        multisig_script = Path(f"{temp_template}_multisig.script")
+        script_content = {
+            "type": type_top,
+            "scripts": [
+                {"type": "sig", "keyHash": cluster.get_payment_vkey_hash(dst_addr1.vkey_file)},
+                {
+                    "type": type_nested,
+                    "scripts": [
+                        {"type": "after", "slot": 100},
+                        {
+                            "type": "sig",
+                            "keyHash": cluster.get_payment_vkey_hash(dst_addr2.vkey_file),
+                        },
+                        {
+                            "type": "sig",
+                            "keyHash": cluster.get_payment_vkey_hash(dst_addr3.vkey_file),
+                        },
+                    ],
+                },
+            ],
+        }
+        with open(multisig_script, "w", encoding="utf-8") as fp_out:
+            json.dump(script_content, fp_out, indent=4)
+
+        # create script address
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # send funds to script address
+        tx_out_to = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=4_000_000,
+            payment_skey_files=[payment_addrs[0].skey_file],
+            use_build_cmd=use_build_cmd,
+        )
+
+        # we don't need to include any signatures for the nested "any" case, meeting the slot range
+        # is enough
+        payment_skey_files = []
+        if type_nested == "all":
+            payment_skey_files = [dst_addr2.skey_file, dst_addr3.skey_file]
+        if type_top == "all":
+            payment_skey_files.append(dst_addr1.skey_file)
+        # There need to be at least one skey file, even for the any-any case, where the contition
+        # is already met due to valid slot range. See cardano-node issue #3835.
+        if not payment_skey_files:
+            payment_skey_files.append(dst_addr2.skey_file)
+
+        # fund script address
+        invalid_hereafter = cluster.get_slot_no() + 1_000
+        tx_out_from = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_from",
+            src_address=script_address,
+            dst_address=payment_addrs[0].address,
+            amount=2_000_000,
+            payment_skey_files=payment_skey_files,
+            multisig_script=multisig_script,
+            invalid_before=100,
+            invalid_hereafter=invalid_hereafter,
+            use_build_cmd=use_build_cmd,
+        )
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.dbsync
+    def test_nested_optional_all(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+    ):
+        """Check that it is possible to not meet conditions in nested "all" rule."""
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+
+        dst_addr1 = payment_addrs[1]
+
+        # create multisig script
+        multisig_script = Path(f"{temp_template}_multisig.script")
+        script_content = {
+            "type": "any",
+            "scripts": [
+                {"type": "sig", "keyHash": cluster.get_payment_vkey_hash(dst_addr1.vkey_file)},
+                {
+                    "type": "all",
+                    "scripts": [
+                        {"type": "after", "slot": 100},
+                        *[
+                            {
+                                "type": "sig",
+                                "keyHash": cluster.get_payment_vkey_hash(r.vkey_file),
+                            }
+                            for r in payment_addrs[2:]
+                        ],
+                    ],
+                },
+            ],
+        }
+        with open(multisig_script, "w", encoding="utf-8") as fp_out:
+            json.dump(script_content, fp_out, indent=4)
+
+        # create script address
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # send funds to script address
+        tx_out_to = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=4_000_000,
+            payment_skey_files=[payment_addrs[0].skey_file],
+            use_build_cmd=use_build_cmd,
+        )
+
+        # fund script address
+        tx_out_from = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_from",
+            src_address=script_address,
+            dst_address=payment_addrs[0].address,
+            amount=2_000_000,
+            payment_skey_files=[dst_addr1.skey_file],
+            multisig_script=multisig_script,
+            use_build_cmd=use_build_cmd,
+        )
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize(
+        "scenario", ("all1", "all2", "all3", "all4", "all5", "all6", "any1", "any2", "any3", "any4")
+    )
+    @pytest.mark.dbsync
+    def test_invalid(  # noqa: C901
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        scenario: str,
+        use_build_cmd: bool,
+    ):
+        """Test scenarios where it's NOT possible to spend from a script address."""
+        # pylint: disable=too-many-statements
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{scenario}"
+
+        dst_addr1 = payment_addrs[1]
+        dst_addr2 = payment_addrs[2]
+        dst_addr3 = payment_addrs[3]
+
+        last_slot_no = cluster.get_slot_no()
+
+        if scenario == "all1":
+            type_top = "all"
+            type_nested = "any"
+            invalid_before = 10
+            invalid_hereafter = last_slot_no + 1_000
+            # `dst_addr1.skey_file` is needed and missing
+            payment_skey_files = [dst_addr2.skey_file]
+            script_top: List[dict] = []
+            script_nested: List[dict] = [{"type": "after", "slot": invalid_before}]
+            expected_err = "ScriptWitnessNotValidatingUTXOW"
+        elif scenario == "all2":
+            type_top = "all"
+            type_nested = "any"
+            payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
+            # valid interval is in the future
+            invalid_hereafter = last_slot_no + 1_000
+            invalid_before = invalid_hereafter - 100
+            script_top = []
+            script_nested = [{"type": "after", "slot": invalid_before}]
+            expected_err = "OutsideValidityIntervalUTxO"
+        elif scenario == "all3":
+            type_top = "all"
+            type_nested = "any"
+            payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
+            # valid interval is in the past
+            invalid_hereafter = last_slot_no - 10
+            invalid_before = 10
+            script_top = []
+            script_nested = [{"type": "before", "slot": invalid_hereafter}]
+            expected_err = "OutsideValidityIntervalUTxO"
+        elif scenario == "all4":
+            type_top = "all"
+            type_nested = "all"
+            invalid_before = 10
+            invalid_hereafter = last_slot_no + 1_000
+            # `dst_addr3.skey_file` is needed and missing
+            payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
+            script_top = []
+            script_nested = [{"type": "after", "slot": invalid_before}]
+            expected_err = "ScriptWitnessNotValidatingUTXOW"
+        elif scenario == "all5":
+            type_top = "all"
+            type_nested = "any"
+            payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
+            invalid_before = 10
+            invalid_hereafter = last_slot_no + 1_000
+            # conflicting intervals
+            script_top = [{"type": "before", "slot": invalid_before + 10}]
+            script_nested = [{"type": "after", "slot": invalid_before + 11}]
+            expected_err = "ScriptWitnessNotValidatingUTXOW"
+        elif scenario == "all6":
+            type_top = "all"
+            type_nested = "any"
+            invalid_before = 10
+            invalid_hereafter = last_slot_no + 1_000
+            payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
+            # valid interval is in the past
+            script_top = [{"type": "before", "slot": last_slot_no - 100}]
+            script_nested = []
+            expected_err = "ScriptWitnessNotValidatingUTXOW"
+        elif scenario == "any1":
+            type_top = "any"
+            type_nested = "all"
+            invalid_before = 10
+            invalid_hereafter = last_slot_no + 1_000
+            # none of the "ANY" conditions are met:
+            #  `dst_addr1.skey_file` is missing
+            #  nested "ALL" condition is not met - `dst_addr3.skey_file` is missing
+            payment_skey_files = [dst_addr2.skey_file]
+            script_top = []
+            script_nested = [{"type": "after", "slot": invalid_before}]
+            expected_err = "ScriptWitnessNotValidatingUTXOW"
+        elif scenario == "any2":
+            type_top = "any"
+            type_nested = "all"
+            payment_skey_files = [dst_addr2.skey_file]
+            # valid interval is in the future
+            invalid_hereafter = last_slot_no + 1_000
+            invalid_before = last_slot_no + 200
+            script_top = [{"type": "after", "slot": invalid_before}]
+            script_nested = []
+            expected_err = "OutsideValidityIntervalUTxO"
+        elif scenario == "any3":
+            type_top = "any"
+            type_nested = "all"
+            invalid_before = 10
+            invalid_hereafter = last_slot_no + 1_000
+            payment_skey_files = [dst_addr2.skey_file, dst_addr3.skey_file]
+            # none of the "ANY" conditions are met:
+            #  `dst_addr1.skey_file` is missing
+            #  nested "ALL" condition is not met - the valid interval is in the past
+            script_top = []
+            script_nested = [{"type": "before", "slot": last_slot_no - 100}]
+            expected_err = "ScriptWitnessNotValidatingUTXOW"
+        elif scenario == "any4":
+            type_top = "any"
+            type_nested = "all"
+            invalid_before = 10
+            invalid_hereafter = last_slot_no + 1_000
+            # none of the "ANY" conditions are met:
+            #  `dst_addr1.skey_file` is missing
+            #  valid interval is in the past
+            #  nested "ALL" condition is not met - `dst_addr3.skey_file` is missing
+            payment_skey_files = [dst_addr2.skey_file]
+            script_top = [{"type": "before", "slot": last_slot_no - 100}]
+            script_nested = []
+            expected_err = "ScriptWitnessNotValidatingUTXOW"
+        else:
+            raise AssertionError(f"Unknown scenario: {scenario}")
+
+        # create multisig script
+        multisig_script = Path(f"{temp_template}_multisig.script")
+        script_content = {
+            "type": type_top,
+            "scripts": [
+                {"type": "sig", "keyHash": cluster.get_payment_vkey_hash(dst_addr1.vkey_file)},
+                *script_top,
+                {
+                    "type": type_nested,
+                    "scripts": [
+                        *script_nested,
+                        {
+                            "type": "sig",
+                            "keyHash": cluster.get_payment_vkey_hash(dst_addr2.vkey_file),
+                        },
+                        {
+                            "type": "sig",
+                            "keyHash": cluster.get_payment_vkey_hash(dst_addr3.vkey_file),
+                        },
+                    ],
+                },
+            ],
+        }
+        with open(multisig_script, "w", encoding="utf-8") as fp_out:
+            json.dump(script_content, fp_out, indent=4)
+
+        # create script address
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # fund script address
+        tx_raw_output = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=4_000_000,
+            payment_skey_files=[payment_addrs[0].skey_file],
+            use_build_cmd=use_build_cmd,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from_fail",
+                src_address=script_address,
+                dst_address=payment_addrs[0].address,
+                amount=1_500_000,
+                payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
+                invalid_before=invalid_before,
+                invalid_hereafter=invalid_hereafter,
+                use_build_cmd=use_build_cmd,
+            )
+        err_str = str(excinfo.value)
+        assert expected_err in err_str, err_str
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
