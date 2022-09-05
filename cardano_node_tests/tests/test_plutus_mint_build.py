@@ -820,8 +820,8 @@ class TestBuildMinting:
         )
         # compare cost of Plutus script with data from db-sync
         if tx_db_record_step2:
-            dbsync_utils.check_plutus_cost(
-                redeemer_record=tx_db_record_step2.redeemers[0], cost_record=plutus_cost_step2[0]
+            dbsync_utils.check_plutus_costs(
+                redeemer_records=tx_db_record_step2.redeemers, cost_records=plutus_cost_step2
             )
 
     @allure.link(helpers.get_vcs_link())
