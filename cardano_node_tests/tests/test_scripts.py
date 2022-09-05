@@ -739,7 +739,8 @@ class TestNegative:
                 payment_skey_files=payment_skey_files[:-1],
                 multisig_script=multisig_script,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -790,7 +791,8 @@ class TestNegative:
                 payment_skey_files=[payment_skey_files[-1]],
                 multisig_script=multisig_script,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -846,7 +848,8 @@ class TestNegative:
                     payment_skey_files=random.sample(payment_skey_files, k=num_of_skeys),
                     multisig_script=multisig_script,
                 )
-            assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+            err_str = str(excinfo.value)
+            assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1041,7 +1044,8 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        before_slot = cluster.get_slot_no() - 1
+        last_slot_no = cluster.get_slot_no()
+        before_slot = last_slot_no - 1
 
         # create multisig script
         multisig_script = cluster.build_multisig_script(
@@ -1082,7 +1086,8 @@ class TestTimeLocking:
                 invalid_hereafter=before_slot,
                 use_build_cmd=use_build_cmd,
             )
-        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
         # send funds from script address - invalid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1095,10 +1100,11 @@ class TestTimeLocking:
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
-                invalid_hereafter=before_slot + 1,
+                invalid_hereafter=last_slot_no + 1_000,
                 use_build_cmd=use_build_cmd,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1161,7 +1167,8 @@ class TestTimeLocking:
                 invalid_hereafter=before_slot + 1,
                 use_build_cmd=use_build_cmd,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1224,7 +1231,8 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot + 100,
                 use_build_cmd=use_build_cmd,
             )
-        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
         # send funds from script address - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1240,7 +1248,8 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot,
                 use_build_cmd=use_build_cmd,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1304,7 +1313,8 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot,
                 use_build_cmd=use_build_cmd,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1558,7 +1568,8 @@ class TestAuxiliaryScripts:
                 cluster.build_raw_tx(
                     src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
                 )
-        assert 'Error in $: key "type" not found' in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert 'Error in $: key "type" not found' in err_str, err_str
 
 
 @pytest.mark.testnets
