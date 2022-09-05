@@ -333,7 +333,7 @@ def _build_spend_locked_txin(  # noqa: C901
         return "", tx_output, []
 
     # calculate cost of Plutus script
-    plutus_cost = cluster_obj.calculate_plutus_script_cost(
+    plutus_costs = cluster_obj.calculate_plutus_script_cost(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step2",
         tx_files=tx_files,
@@ -373,10 +373,10 @@ def _build_spend_locked_txin(  # noqa: C901
     # compare cost of Plutus script with data from db-sync
     if tx_db_record:
         dbsync_utils.check_plutus_costs(
-            redeemer_records=tx_db_record.redeemers, cost_records=plutus_cost
+            redeemer_records=tx_db_record.redeemers, cost_records=plutus_costs
         )
 
-    return "", tx_output, plutus_cost
+    return "", tx_output, plutus_costs
 
 
 @pytest.mark.testnets
@@ -423,7 +423,7 @@ class TestBuildLocking:
             plutus_op=plutus_op,
         )
 
-        __, tx_output, plutus_cost = _build_spend_locked_txin(
+        __, tx_output, plutus_costs = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -441,9 +441,9 @@ class TestBuildLocking:
         expected_fee = 170_782
         assert tx_output and helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost],
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -653,7 +653,7 @@ class TestBuildLocking:
             plutus_op=plutus_op,
         )
 
-        __, __, plutus_cost = _build_spend_locked_txin(
+        __, __, plutus_costs = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -668,9 +668,9 @@ class TestBuildLocking:
         expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[execution_cost],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[execution_cost],
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -885,7 +885,7 @@ class TestBuildLocking:
         )
 
         # calculate cost of Plutus script
-        plutus_cost = cluster.calculate_plutus_script_cost(
+        plutus_costs = cluster.calculate_plutus_script_cost(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_redeem,
@@ -923,9 +923,9 @@ class TestBuildLocking:
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
         assert helpers.is_in_interval(tx_output_redeem.fee, expected_fee_redeem, frac=0.15)
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[execution_cost1, execution_cost2],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[execution_cost1, execution_cost2],
         )
 
         # check tx view
@@ -937,7 +937,7 @@ class TestBuildLocking:
         )
         if tx_redeem_record:
             dbsync_utils.check_plutus_costs(
-                redeemer_records=tx_redeem_record.redeemers, cost_records=plutus_cost
+                redeemer_records=tx_redeem_record.redeemers, cost_records=plutus_costs
             )
 
     @allure.link(helpers.get_vcs_link())
@@ -1117,7 +1117,7 @@ class TestBuildLocking:
             tokens=tokens_rec,
         )
 
-        __, tx_output_spend, plutus_cost = _build_spend_locked_txin(
+        __, tx_output_spend, plutus_costs = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -1138,9 +1138,9 @@ class TestBuildLocking:
             tx_output_spend.fee, expected_fee, frac=0.15
         )
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost],
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1203,7 +1203,7 @@ class TestBuildLocking:
             plutus_common.Token(coin=t.token, amount=token_amount_spend) for t in tokens
         ]
 
-        __, tx_output_spend, plutus_cost = _build_spend_locked_txin(
+        __, tx_output_spend, plutus_costs = _build_spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
@@ -1259,9 +1259,9 @@ class TestBuildLocking:
             tx_output_spend.fee, expected_fee, frac=0.15
         )
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost],
         )
 
     @allure.link(helpers.get_vcs_link())

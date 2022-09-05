@@ -169,8 +169,8 @@ class ScriptCost(NamedTuple):
     min_collateral: int  # minimum needed collateral
 
 
-def check_plutus_cost(
-    plutus_cost: List[dict], expected_cost: List[ExecutionCost], frac: float = 0.15
+def check_plutus_costs(
+    plutus_costs: List[dict], expected_costs: List[ExecutionCost], frac: float = 0.15
 ):
     """Check plutus transaction cost.
 
@@ -178,12 +178,12 @@ def check_plutus_cost(
     """
     # sort records by total cost
     sorted_plutus = sorted(
-        plutus_cost,
+        plutus_costs,
         key=lambda x: x["executionUnits"]["memory"]  # type: ignore
         + x["executionUnits"]["steps"]
         + x["lovelaceCost"],
     )
-    sorted_expected = sorted(expected_cost, key=lambda x: x.per_space + x.per_time + x.fixed_cost)
+    sorted_expected = sorted(expected_costs, key=lambda x: x.per_space + x.per_time + x.fixed_cost)
 
     errors = []
     for costs, expected_values in zip(sorted_plutus, sorted_expected):

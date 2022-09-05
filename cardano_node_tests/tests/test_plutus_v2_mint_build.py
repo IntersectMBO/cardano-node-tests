@@ -214,7 +214,7 @@ class TestBuildMinting:
             txouts=txouts_step2,
             mint=plutus_mint_data,
         )
-        plutus_cost = cluster.calculate_plutus_script_cost(
+        plutus_costs = cluster.calculate_plutus_script_cost(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
@@ -257,9 +257,9 @@ class TestBuildMinting:
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[expected_cost],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[expected_cost],
         )
 
 

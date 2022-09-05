@@ -133,7 +133,7 @@ def delegate_stake_addr(
         witness_override=len(tx_files.signing_key_files),
     )
     # calculate cost of Plutus script
-    plutus_cost = cluster_obj.calculate_plutus_script_cost(
+    plutus_costs = cluster_obj.calculate_plutus_script_cost(
         src_address=pool_user.payment.address,
         tx_name=f"{temp_template}_reg_deleg",
         txins=txins,
@@ -161,7 +161,7 @@ def delegate_stake_addr(
     assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
     assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
-    return tx_raw_output, plutus_cost
+    return tx_raw_output, plutus_costs
 
 
 def deregister_stake_addr(
@@ -209,7 +209,7 @@ def deregister_stake_addr(
         witness_override=len(tx_files.signing_key_files),
     )
     # calculate cost of Plutus script
-    plutus_cost = cluster_obj.calculate_plutus_script_cost(
+    plutus_costs = cluster_obj.calculate_plutus_script_cost(
         src_address=pool_user.payment.address,
         tx_name=f"{temp_template}_dereg_withdraw",
         txins=txins,
@@ -246,7 +246,7 @@ def deregister_stake_addr(
 
         # compare cost of Plutus script with data from db-sync
         dbsync_utils.check_plutus_costs(
-            redeemer_records=tx_db_dereg.redeemers, cost_records=plutus_cost
+            redeemer_records=tx_db_dereg.redeemers, cost_records=plutus_costs
         )
 
     return tx_raw_output

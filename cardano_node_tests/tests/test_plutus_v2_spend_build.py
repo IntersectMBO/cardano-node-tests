@@ -337,7 +337,7 @@ class TestBuildLocking:
             script_txins=plutus_txins,
         )
 
-        plutus_cost = cluster.calculate_plutus_script_cost(
+        plutus_costs = cluster.calculate_plutus_script_cost(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_redeem,
@@ -376,9 +376,9 @@ class TestBuildLocking:
         assert helpers.is_in_interval(tx_output_redeem.fee, expected_fee_redeem, frac=0.15)
 
         assert PLUTUS_OP_GUESSING_GAME.execution_cost  # for mypy
-        plutus_common.check_plutus_cost(
-            plutus_cost=plutus_cost,
-            expected_cost=[PLUTUS_OP_GUESSING_GAME.execution_cost],
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[PLUTUS_OP_GUESSING_GAME.execution_cost],
             frac=0.2,
         )
 
@@ -1133,7 +1133,7 @@ class TestReferenceScripts:
             script_txins=plutus_txins,
         )
 
-        plutus_cost = cluster.calculate_plutus_script_cost(
+        plutus_costs = cluster.calculate_plutus_script_cost(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_redeem,
@@ -1156,7 +1156,7 @@ class TestReferenceScripts:
         ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
         # check that the script hash is included for all scripts
-        for script in plutus_cost:
+        for script in plutus_costs:
             assert script.get(
                 "scriptHash"
             ), "Missing script hash on calculate-plutus-script-cost result"
