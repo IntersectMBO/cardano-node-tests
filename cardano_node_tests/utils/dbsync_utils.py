@@ -1019,7 +1019,7 @@ def check_pool_data(ledger_pool_data: dict, pool_id: str) -> Optional[PoolDataRe
     return db_pool_data
 
 
-def check_plutus_cost(redeemer_record: RedeemerRecord, cost_record: dict) -> None:
+def check_plutus_cost(redeemer_record: RedeemerRecord, cost_record: Dict[str, Any]) -> None:
     """Compare cost of Plutus script with data from db-sync."""
     errors = []
     if redeemer_record.unit_steps != cost_record["executionUnits"]["steps"]:
@@ -1039,21 +1039,35 @@ def check_plutus_cost(redeemer_record: RedeemerRecord, cost_record: dict) -> Non
         raise AssertionError("\n".join(errors))
 
 
-def check_plutus_costs(redeemer_records: List[RedeemerRecord], cost_records: List[dict]) -> None:
+def check_plutus_costs(
+    redeemer_records: List[RedeemerRecord], cost_records: List[Dict[str, Any]]
+) -> None:
     """Compare cost of multiple Plutus scripts with data from db-sync."""
-    db_by_hash = {r.script_hash: r for r in redeemer_records}
-    cost_by_hash = {r["scriptHash"]: r for r in cost_records}
+    # sort records first by total cost, second by hash
+    sorted_costs = sorted(
+        cost_records,
+        key=lambda x: (
+            x["executionUnits"]["memory"]  # type: ignore
+            + x["executionUnits"]["steps"]
+            + x["lovelaceCost"],
+            x["scriptHash"],
+        ),
+    )
+    sorted_db = sorted(
+        redeemer_records, key=lambda x: (x.unit_mem + x.unit_steps + x.fee, x.script_hash)
+    )
 
-    if set(db_by_hash) != set(cost_by_hash):
-        raise AssertionError(f"Script hashes don't match: {set(db_by_hash)} vs {set(cost_by_hash)}")
+    if len(sorted_costs) != len(sorted_db):
+        raise AssertionError(
+            f"Number of cost records is different:\n{sorted_costs}\nvs\n{sorted_db}"
+        )
 
     errors = []
-    for db_hash, db_rec in db_by_hash.items():
-        cost_rec = cost_by_hash[db_hash]
+    for db_record, cost_record in zip(sorted_db, sorted_costs):
         try:
-            check_plutus_cost(redeemer_record=db_rec, cost_record=cost_rec)
+            check_plutus_cost(redeemer_record=db_record, cost_record=cost_record)
         except AssertionError as err:
-            errors.append(f"{db_hash}:\n{err}")
+            errors.append(f"{db_record.script_hash}:\n{err}")
 
     if errors:
         raise AssertionError("\n".join(errors))
