@@ -9,6 +9,7 @@ from typing import Tuple
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from cardano_clusterlib import clusterlib_helpers
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
@@ -1470,27 +1471,27 @@ class TestMintingNegative:
         reason="runs only with Babbage+ TX",
     )
     @pytest.mark.parametrize(
-        "ttl",
-        (3_000, 10_000, 100_000, 1000_000, -1),
+        "ttl_offset",
+        (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
     @common.PARAM_PLUTUS_VERSION
     def test_past_horizon(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        ttl: int,
+        ttl_offset: int,
         plutus_version: str,
     ):
         """Test minting a token with ttl too far in the future.
 
-        Expect failure.
-
         * fund the token issuer and create a UTxO for collateral
         * check that the expected amount was transferred to token issuer's address
-        * try to mint a token using a Plutus script when ttl is set too far in the future
-        * check that minting failed because of 'PastHorizon' failure
+        * try to mint a token using a Plutus script when ttl is set far in the future
+        * check that minting failed because of 'PastHorizon' failure when ttl is too far
+          in the future
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{ttl}"
+        # pylint: disable=too-many-locals
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{ttl_offset}"
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -1548,14 +1549,32 @@ class TestMintingNegative:
             *mint_txouts,
         ]
 
-        # ttl == -1 means we'll use 3k/f + 100 slots for ttl
-        if ttl == -1:
-            ttl = (
-                round(3 * cluster.genesis["securityParam"] / cluster.genesis["activeSlotsCoeff"])
-                + 100
-            )
+        # calculate 3k/f
+        offset_3kf = round(
+            3 * cluster.genesis["securityParam"] / cluster.genesis["activeSlotsCoeff"]
+        )
+
+        # use 3k/f + `epoch_length` slots for ttl - this will not meet the `expect_pass` condition
+        if ttl_offset == -1:
+            ttl_offset = offset_3kf + cluster.epoch_length
+        # use 3k/f - 100 slots for ttl - this will meet the `expect_pass` condition
+        elif ttl_offset == -2:
+            ttl_offset = offset_3kf - 100
 
         cluster.wait_for_new_block()
+
+        last_slot_init = cluster.get_slot_no()
+        slot_no_3kf = last_slot_init + offset_3kf
+        invalid_hereafter = last_slot_init + ttl_offset
+
+        ttl_epoch_info = clusterlib_helpers.get_epoch_for_slot(
+            cluster_obj=cluster, slot_no=invalid_hereafter
+        )
+
+        # the TTL will pass if it's in epoch 'e' and the slot of the latest applied block + 3k/f
+        # is greater than the first slot of 'e'
+        expect_pass = slot_no_3kf >= ttl_epoch_info.first_slot
+
         tx_raw_output_step2 = cluster.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txins=mint_utxos,
@@ -1563,7 +1582,7 @@ class TestMintingNegative:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=minting_cost.fee + fee_txsize,
-            invalid_hereafter=cluster.get_slot_no() + ttl,
+            invalid_hereafter=invalid_hereafter,
         )
         tx_signed_step2 = cluster.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
@@ -1576,10 +1595,22 @@ class TestMintingNegative:
             cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         except clusterlib.CLIError as exc:
             err = str(exc)
-        else:
-            pytest.xfail("ttl > 3k/f was accepted")
 
-        assert "TimeTranslationPastHorizon" in err, err
+        last_slot_diff = cluster.get_slot_no() - last_slot_init
+        expect_pass_finish = slot_no_3kf + last_slot_diff >= ttl_epoch_info.first_slot
+        if expect_pass != expect_pass_finish:
+            # we have hit a boundary and it is hard to say if the test should have passed or not
+            assert not err or "TimeTranslationPastHorizon" in err, err
+            pytest.skip("Boundary hit, skipping")
+            return
+
+        if err:
+            assert not expect_pass, f"Valid TTL (offset {ttl_offset} slots) was rejected"
+            assert "TimeTranslationPastHorizon" in err, err
+        else:
+            assert (
+                expect_pass
+            ), f"TTL too far in the future (offset {ttl_offset} slots) was accepted"
 
 
 class TestNegativeCollateral:
