@@ -9,6 +9,7 @@ from typing import Tuple
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from cardano_clusterlib import clusterlib_helpers
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
@@ -1183,6 +1184,153 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.BABBAGE,
+        reason="runs only with Babbage+ TX",
+    )
+    @pytest.mark.parametrize(
+        "ttl_offset",
+        (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
+    )
+    @common.PARAM_PLUTUS_VERSION
+    def test_ttl_horizon(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        ttl_offset: int,
+        plutus_version: str,
+    ):
+        """Test minting a token with ttl far in the future.
+
+        * fund the token issuer and create a UTxO for collateral
+        * check that the expected amount was transferred to token issuer's address
+        * try to mint a token using a Plutus script when ttl is set far in the future
+        * check that minting failed because of 'PastHorizon' failure when ttl is too far
+          in the future
+        """
+        # pylint: disable=too-many-locals
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{ttl_offset}"
+
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+        fee_txsize = 600_000
+
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_v_record.execution_cost,
+            protocol_params=cluster.get_protocol_params(),
+        )
+
+        # Step 1: fund the token issuer
+
+        mint_utxos, collateral_utxos, __ = _fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=lovelace_amount,
+            fee_txsize=fee_txsize,
+        )
+
+        # Step 2: try to mint the "qacoin"
+
+        policyid = cluster.get_policyid(plutus_v_record.script_file)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token),
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_v_record.script_file,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
+                ),
+                redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+
+        # calculate 3k/f
+        offset_3kf = round(
+            3 * cluster.genesis["securityParam"] / cluster.genesis["activeSlotsCoeff"]
+        )
+
+        # use 3k/f + `epoch_length` slots for ttl - this will not meet the `expect_pass` condition
+        if ttl_offset == -1:
+            ttl_offset = offset_3kf + cluster.epoch_length
+        # use 3k/f - 100 slots for ttl - this will meet the `expect_pass` condition
+        elif ttl_offset == -2:
+            ttl_offset = offset_3kf - 100
+
+        cluster.wait_for_new_block()
+
+        last_slot_init = cluster.get_slot_no()
+        slot_no_3kf = last_slot_init + offset_3kf
+        invalid_hereafter = last_slot_init + ttl_offset
+
+        ttl_epoch_info = clusterlib_helpers.get_epoch_for_slot(
+            cluster_obj=cluster, slot_no=invalid_hereafter
+        )
+
+        # the TTL will pass if it's in epoch 'e' and the slot of the latest applied block + 3k/f
+        # is greater than the first slot of 'e'
+        expect_pass = slot_no_3kf >= ttl_epoch_info.first_slot
+
+        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            tx_files=tx_files_step2,
+            fee=minting_cost.fee + fee_txsize,
+            invalid_hereafter=invalid_hereafter,
+        )
+        tx_signed_step2 = cluster.sign_tx(
+            tx_body_file=tx_raw_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        err = ""
+        try:
+            cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        except clusterlib.CLIError as exc:
+            err = str(exc)
+
+        last_slot_diff = cluster.get_slot_no() - last_slot_init
+        expect_pass_finish = slot_no_3kf + last_slot_diff >= ttl_epoch_info.first_slot
+        if expect_pass != expect_pass_finish:
+            # we have hit a boundary and it is hard to say if the test should have passed or not
+            assert not err or "TimeTranslationPastHorizon" in err, err
+            pytest.skip("Boundary hit, skipping")
+            return
+
+        if err:
+            assert not expect_pass, f"Valid TTL (offset {ttl_offset} slots) was rejected"
+            assert "TimeTranslationPastHorizon" in err, err
+        else:
+            assert (
+                expect_pass
+            ), f"TTL too far in the future (offset {ttl_offset} slots) was accepted"
+
 
 class TestMintingNegative:
     """Tests for minting with Plutus using `transaction build-raw` that are expected to fail."""
@@ -1463,123 +1611,6 @@ class TestMintingNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         assert "FeeTooSmallUTxO" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.BABBAGE,
-        reason="runs only with Babbage+ TX",
-    )
-    @pytest.mark.parametrize(
-        "ttl",
-        (3_000, 10_000, 100_000, 1000_000, -1),
-    )
-    @common.PARAM_PLUTUS_VERSION
-    def test_past_horizon(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        ttl: int,
-        plutus_version: str,
-    ):
-        """Test minting a token with ttl too far in the future.
-
-        Expect failure.
-
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint a token using a Plutus script when ttl is set too far in the future
-        * check that minting failed because of 'PastHorizon' failure
-        """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{ttl}"
-
-        payment_addr = payment_addrs[0]
-        issuer_addr = payment_addrs[1]
-
-        lovelace_amount = 2_000_000
-        token_amount = 5
-        fee_txsize = 600_000
-
-        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
-
-        minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_v_record.execution_cost,
-            protocol_params=cluster.get_protocol_params(),
-        )
-
-        # Step 1: fund the token issuer
-
-        mint_utxos, collateral_utxos, __ = _fund_issuer(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            payment_addr=payment_addr,
-            issuer_addr=issuer_addr,
-            minting_cost=minting_cost,
-            amount=lovelace_amount,
-            fee_txsize=fee_txsize,
-        )
-
-        # Step 2: try to mint the "qacoin"
-
-        policyid = cluster.get_policyid(plutus_v_record.script_file)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
-        token = f"{policyid}.{asset_name}"
-        mint_txouts = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token),
-        ]
-
-        plutus_mint_data = [
-            clusterlib.Mint(
-                txouts=mint_txouts,
-                script_file=plutus_v_record.script_file,
-                collaterals=collateral_utxos,
-                execution_units=(
-                    plutus_v_record.execution_cost.per_time,
-                    plutus_v_record.execution_cost.per_space,
-                ),
-                redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            )
-        ]
-
-        tx_files_step2 = clusterlib.TxFiles(
-            signing_key_files=[issuer_addr.skey_file],
-        )
-        txouts_step2 = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint_txouts,
-        ]
-
-        # ttl == -1 means we'll use 3k/f + 100 slots for ttl
-        if ttl == -1:
-            ttl = (
-                round(3 * cluster.genesis["securityParam"] / cluster.genesis["activeSlotsCoeff"])
-                + 100
-            )
-
-        cluster.wait_for_new_block()
-        tx_raw_output_step2 = cluster.build_raw_tx_bare(
-            out_file=f"{temp_template}_step2_tx.body",
-            txins=mint_utxos,
-            txouts=txouts_step2,
-            mint=plutus_mint_data,
-            tx_files=tx_files_step2,
-            fee=minting_cost.fee + fee_txsize,
-            invalid_hereafter=cluster.get_slot_no() + ttl,
-        )
-        tx_signed_step2 = cluster.sign_tx(
-            tx_body_file=tx_raw_output_step2.out_file,
-            signing_key_files=tx_files_step2.signing_key_files,
-            tx_name=f"{temp_template}_step2",
-        )
-
-        err = ""
-        try:
-            cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        except clusterlib.CLIError as exc:
-            err = str(exc)
-        else:
-            pytest.xfail("ttl > 3k/f was accepted")
-
-        assert "TimeTranslationPastHorizon" in err, err
 
 
 class TestNegativeCollateral:
