@@ -1157,9 +1157,9 @@ class TestReferenceScripts:
         payment_addrs: List[clusterlib.AddressRecord],
         script_type: str,
     ):
-        """Test spend a UTxO that holds a reference script.
+        """Test spending a UTxO that holds a reference script.
 
-        * create the Tx output with the reference script
+        * create a Tx output with reference script (reference script UTxO)
         * check that the expected amount was transferred
         * spend the UTxO
         * check that the UTxO was spent

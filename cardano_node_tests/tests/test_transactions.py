@@ -914,7 +914,7 @@ class TestBasic:
         )
 
         # it should be possible to submit a transaction with ttl far in the future
-        cluster.submit_tx(out_file_signed, txins=tx_raw_output.txins)
+        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 

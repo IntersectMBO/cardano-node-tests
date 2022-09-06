@@ -1941,6 +1941,105 @@ class TestReferenceUTxO:
             pytest.xfail("Reported 'SimpleScriptV2', see node issue #4261")
         assert reference_utxo.reference_script["script"]["type"] == script_type_str
 
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
+    @pytest.mark.dbsync
+    def test_spend_reference_script(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        script_version: str,
+    ):
+        """Test spending a UTxO that holds a reference script.
+
+        * create a Tx output with reference script (reference script UTxO)
+        * spend the reference UTxO
+        * check that the UTxO was spent
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{script_version}_{use_build_cmd}"
+        src_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        amount = 2_000_000
+
+        # create multisig script
+        if script_version == "simple_v1":
+            invalid_before = None
+            invalid_hereafter = None
+
+            multisig_script = Path(f"{temp_template}_multisig.script")
+            script_content = {
+                "keyHash": cluster.get_payment_vkey_hash(dst_addr.vkey_file),
+                "type": "sig",
+            }
+            with open(multisig_script, "w", encoding="utf-8") as fp_out:
+                json.dump(script_content, fp_out, indent=4)
+        else:
+            invalid_before = 100
+            invalid_hereafter = cluster.get_slot_no() + 1_000
+
+            multisig_script = cluster.build_multisig_script(
+                script_name=temp_template,
+                script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
+                payment_vkey_files=[p.vkey_file for p in payment_addrs],
+                slot=invalid_before,
+                slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+            )
+
+        # create reference UTxO
+        reference_utxo, tx_out_reference = clusterlib_utils.create_reference_utxo(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=src_addr,
+            dst_addr=dst_addr,
+            script_file=multisig_script,
+            amount=5_000_000,
+        )
+        assert reference_utxo.reference_script
+
+        # spend the reference UTxO
+        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[dst_addr.skey_file],
+        )
+
+        if use_build_cmd:
+            tx_out_spend = cluster.build_tx(
+                src_address=dst_addr.address,
+                tx_name=f"{temp_template}_spend",
+                txins=[reference_utxo],
+                txouts=destinations,
+                fee_buffer=2_000_000,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+                witness_override=2,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_out_spend.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=f"{temp_template}_spend",
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_out_spend.txins)
+        else:
+            tx_out_spend = cluster.send_tx(
+                src_address=dst_addr.address,
+                tx_name=f"{temp_template}_spend",
+                txins=[reference_utxo],
+                txouts=destinations,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+            )
+
+        # check that the reference UTxO was spent
+        assert not cluster.get_utxo(utxo=reference_utxo), "Reference input was NOT spent"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
+        # TODO: check reference script in db-sync (the `tx_out_spend`)
+
 
 @pytest.mark.testnets
 @pytest.mark.smoke
