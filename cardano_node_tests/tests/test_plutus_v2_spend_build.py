@@ -1163,11 +1163,13 @@ class TestReferenceScripts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @pytest.mark.parametrize("address_type", ("shelley", "byron"))
     def test_spend_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         plutus_version: str,
+        address_type: str,
     ):
         """Test spending a UTxO that holds a reference script.
 
@@ -1176,17 +1178,25 @@ class TestReferenceScripts:
         * spend the UTxO
         * check that the UTxO was spent
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{address_type}"
         amount = 2_000_000
 
         script_file = plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
+        payment_addr = payment_addrs[0]
+
+        reference_addr = payment_addrs[1]
+        if address_type == "byron":
+            # create reference UTxO on Byron address
+            reference_addr = clusterlib_utils.gen_byron_addr(
+                cluster_obj=cluster, name_template=temp_template
+            )
 
         # create a Tx output with the reference script
         reference_utxo, __ = clusterlib_utils.create_reference_utxo(
             temp_template=temp_template,
             cluster_obj=cluster,
-            payment_addr=payment_addrs[0],
-            dst_addr=payment_addrs[1],
+            payment_addr=payment_addr,
+            dst_addr=reference_addr,
             script_file=script_file,
             amount=amount,
         )
@@ -1194,18 +1204,16 @@ class TestReferenceScripts:
         assert reference_utxo.amount == amount, "Incorrect amount transferred"
 
         # spend the Tx output with the reference script
-        src_addr = payment_addrs[1]
-        dst_addr = payment_addrs[0]
-
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=-1)]
-        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+        txouts = [clusterlib.TxOut(address=payment_addr.address, amount=-1)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[reference_addr.skey_file])
 
         tx_output = cluster.build_tx(
-            src_address=src_addr.address,
+            src_address=payment_addr.address,
             tx_name=temp_template,
             txins=[reference_utxo],
             tx_files=tx_files,
             txouts=txouts,
+            witness_override=2,
         )
 
         tx_signed = cluster.sign_tx(
