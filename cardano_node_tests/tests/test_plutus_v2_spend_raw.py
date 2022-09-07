@@ -1150,12 +1150,12 @@ class TestReferenceScripts:
         ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("script_type", ("simple", "plutus_v1", "plutus_v2"))
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     def test_spend_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        script_type: str,
+        plutus_version: str,
     ):
         """Test spending a UTxO that holds a reference script.
 
@@ -1164,65 +1164,42 @@ class TestReferenceScripts:
         * spend the UTxO
         * check that the UTxO was spent
         """
-        temp_template = f"{common.get_test_id(cluster)}_{script_type}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
-        if script_type.startswith("plutus"):
-            plutus_version = script_type.split("_")[-1]
-            script_file = plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
-        else:
-            keyhash = cluster.get_payment_vkey_hash(payment_addrs[0].vkey_file)
-            script_content = {"keyHash": keyhash, "type": "sig"}
-            script_file = Path(f"{temp_template}.script")
-            with open(script_file, "w", encoding="utf-8") as out_json:
-                json.dump(script_content, out_json)
+        script_file = plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
 
         # create a Tx output with the reference script
-
-        tx_files_step1 = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[0].skey_file],
+        reference_utxo, __ = clusterlib_utils.create_reference_utxo(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            script_file=script_file,
+            amount=amount,
         )
-
-        txouts_step1 = [
-            clusterlib.TxOut(
-                address=payment_addrs[1].address,
-                amount=amount,
-                reference_script_file=script_file,
-            )
-        ]
-
-        tx_raw_output_step1 = cluster.send_tx(
-            src_address=payment_addrs[0].address,
-            tx_name=f"{temp_template}_step1",
-            txouts=txouts_step1,
-            tx_files=tx_files_step1,
-        )
-
-        txid = cluster.get_txid(tx_body_file=tx_raw_output_step1.out_file)
-        reference_txin = f"{txid}#0"
-        reference_utxo = cluster.get_utxo(txin=reference_txin)
-
-        assert reference_utxo[0].amount == amount, "Incorrect amount transferred"
+        assert reference_utxo.reference_script, "Reference script is missing"
+        assert reference_utxo.amount == amount, "Incorrect amount transferred"
 
         # spend the Tx output with the reference script
         src_addr = payment_addrs[1]
         dst_addr = payment_addrs[0]
 
-        txouts_step2 = [clusterlib.TxOut(address=dst_addr.address, amount=-1)]
-        tx_files_step2 = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=-1)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
         cluster.send_tx(
             src_address=payment_addrs[1].address,
-            tx_name=f"{temp_template}_step1",
-            txins=reference_utxo,
-            txouts=txouts_step2,
-            tx_files=tx_files_step2,
+            tx_name=f"{temp_template}_spend",
+            txins=[reference_utxo],
+            txouts=txouts,
+            tx_files=tx_files,
         )
 
         # check that reference script UTxO was spent
         assert not cluster.get_utxo(
-            txin=reference_txin
-        ), f"Reference script UTxO was not spent '{reference_txin}`"
+            utxo=reference_utxo
+        ), f"Reference script UTxO was NOT spent: '{reference_utxo}`"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
@@ -1330,7 +1307,7 @@ class TestReferenceScripts:
         )
 
         assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"
-        assert reference_utxo.reference_script, "No reference script UTxO"
+        assert reference_utxo.reference_script, "Reference script is missing"
 
 
 @pytest.mark.testnets
@@ -1808,7 +1785,7 @@ class TestNegativeReferenceScripts:
             amount=2_000_000,
         )
         assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"
-        assert reference_utxo.reference_script, "No reference script UTxO"
+        assert reference_utxo.reference_script, "Reference script is missing"
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
