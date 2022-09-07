@@ -1125,3 +1125,50 @@ def get_utxo_ix_offset(utxos: List[clusterlib.UTXOData], txouts: List[clusterlib
     if not filtered_utxos:
         return 0
     return filtered_utxos[0].utxo_ix
+
+
+def gen_byron_addr(
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    destination_dir: FileType = ".",
+) -> clusterlib.AddressRecord:
+    """Generate a Byron address and keys."""
+    destination_dir = Path(destination_dir).expanduser().resolve()
+
+    secret_file = destination_dir / f"{name_template}_byron_orig.key"
+    skey_file = destination_dir / f"{name_template}_byron.skey"
+
+    # generate Byron key
+    cluster_obj.cli(
+        [
+            "byron",
+            "key",
+            "keygen",
+            "--secret",
+            str(secret_file),
+        ]
+    )
+    assert secret_file.exists()
+
+    # generate Shelley address and keys out of the Byron key
+    cluster_obj.cli(
+        [
+            "key",
+            "convert-byron-key",
+            "--byron-signing-key-file",
+            str(secret_file),
+            "--out-file",
+            str(skey_file),
+            "--byron-payment-key-type",
+        ]
+    )
+    assert skey_file.exists()
+
+    vkey_file = cluster_obj.gen_verification_key(
+        key_name=f"{name_template}_byron", signing_key_file=skey_file
+    )
+    address = cluster_obj.gen_payment_addr(
+        addr_name=f"{name_template}_byron", payment_vkey_file=vkey_file
+    )
+
+    return clusterlib.AddressRecord(address=address, vkey_file=vkey_file, skey_file=skey_file)

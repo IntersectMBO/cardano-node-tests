@@ -554,7 +554,7 @@ class TestKES:
         if err_joined:
             xfails = kes.get_xfails(errors=kes_period_info_errors_list)
             if xfails:
-                pytest.xfail(" ".join(xfails))
+                pytest.xfail("; ".join(xfails))
             else:
                 raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
 
