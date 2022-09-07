@@ -2035,7 +2035,9 @@ class TestReferenceUTxO:
             )
 
         # check that the reference UTxO was spent
-        assert not cluster.get_utxo(utxo=reference_utxo), "Reference input was NOT spent"
+        assert not cluster.get_utxo(
+            utxo=reference_utxo
+        ), f"Reference script UTxO was NOT spent: '{reference_utxo}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         # TODO: check reference script in db-sync (the `tx_out_spend`)
