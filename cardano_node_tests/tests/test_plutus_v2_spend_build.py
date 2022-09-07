@@ -1735,6 +1735,87 @@ class TestNegativeReferenceScripts:
         err_str = str(excinfo.value)
         assert "ReferenceInputsNotSupported" in err_str, err_str
 
+    @allure.link(helpers.get_vcs_link())
+    def test_lock_byron_reference_script(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test locking a Tx output with a Plutus V2 reference script on Byron address.
+
+        Expect failure.
+        """
+        __: Any  # mypy workaround
+        temp_template = common.get_test_id(cluster)
+
+        plutus_op = PLUTUS_OP_ALWAYS_SUCCEEDS
+
+        # for mypy
+        assert plutus_op.execution_cost
+        assert plutus_op.datum_file
+        assert plutus_op.redeemer_cbor_file
+
+        # create a Tx output with an inline datum at the script address
+
+        script_utxos, collateral_utxos, *__ = _build_fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            use_reference_script=False,
+        )
+
+        # create reference UTxO on Byron address
+        byron_addr = clusterlib_utils.gen_byron_addr(
+            cluster_obj=cluster, name_template=temp_template
+        )
+        reference_utxo, __ = clusterlib_utils.create_reference_utxo(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=byron_addr,
+            script_file=plutus_op.script_file,
+            amount=2_000_000,
+        )
+        assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"
+        assert reference_utxo.reference_script, "No reference script UTxO"
+
+        #  spend the "locked" UTxO
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                reference_txin=reference_utxo,
+                reference_type=clusterlib.ScriptTypes.PLUTUS_V2,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_op.execution_cost.per_time,
+                    plutus_op.execution_cost.per_space,
+                ),
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file,
+                inline_datum_present=True,
+            )
+        ]
+
+        tx_files_redeem = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[1].skey_file],
+        )
+        txouts_redeem = [
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+        ]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.build_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=f"{temp_template}_step2",
+                tx_files=tx_files_redeem,
+                txouts=txouts_redeem,
+                script_txins=plutus_txins,
+            )
+        err_str = str(excinfo.value)
+        assert "ByronTxOutInContext" in err_str, err_str
+
 
 @pytest.mark.testnets
 class TestReadonlyReferenceInputs:
