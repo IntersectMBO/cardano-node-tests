@@ -1236,7 +1236,7 @@ class TestReferenceScripts:
         """Test spend an UTxO and use a reference a script on the same transaction.
 
         * create the reference script UTxO with the 'ALWAYS_FAILS' script to have confidence that
-         the script was not being executed
+          the script was not being executed
         * spend a regular UTxO and reference the script at the same transaction
         * check that the destination UTxO have the right balance
         """
@@ -1299,6 +1299,38 @@ class TestReferenceScripts:
         new_utxo = cluster.get_utxo(txin=f"{txid}#0")
         utxo_balance = clusterlib.calculate_utxos_balance(utxos=new_utxo)
         assert utxo_balance == amount, f"Incorrect balance for destination UTxO `{new_utxo}`"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_reference_script_byron_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test creating reference script UTxO on Byron address.
+
+        * create a Byron address
+        * create a reference script UTxO on Byron address with the 'ALWAYS_FAILS' script to have
+          confidence that the script was not being executed
+        """
+        temp_template = common.get_test_id(cluster)
+        script_file = plutus_common.ALWAYS_FAILS_PLUTUS_V2
+
+        byron_addr = clusterlib_utils.gen_byron_addr(
+            cluster_obj=cluster, name_template=temp_template
+        )
+
+        # create reference UTxO
+        reference_utxo, __ = clusterlib_utils.create_reference_utxo(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=byron_addr,
+            script_file=script_file,
+            amount=2_000_000,
+        )
+
+        assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"
+        assert reference_utxo.reference_script, "No reference script UTxO"
 
 
 @pytest.mark.testnets
