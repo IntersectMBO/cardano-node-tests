@@ -28,7 +28,6 @@ LOGGER = logging.getLogger(__name__)
 
 # skip all tests if Tx era < alonzo
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
     common.SKIPIF_BUILD_UNUSABLE,
     pytest.mark.smoke,
 ]
@@ -188,7 +187,8 @@ def _build_fund_script(
             == token.amount
         ), f"Incorrect token balance for address `{dst_addr.address}`"
 
-    dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
+    if VERSIONS.transaction_era >= VERSIONS.ALONZO:
+        dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     return script_utxos, collateral_utxos, tx_output
 
@@ -379,6 +379,7 @@ def _build_spend_locked_txin(  # noqa: C901
     return "", tx_output, plutus_costs
 
 
+@common.SKIPIF_PLUTUS_UNUSABLE
 @pytest.mark.testnets
 class TestBuildLocking:
     """Tests for Tx output locking using Plutus smart contracts and `transaction build`."""
@@ -1376,6 +1377,7 @@ class TestBuildLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
 
+@common.SKIPIF_PLUTUS_UNUSABLE
 @pytest.mark.testnets
 class TestNegative:
     """Tests for Tx output locking using Plutus smart contracts that are expected to fail."""
@@ -1730,6 +1732,7 @@ class TestNegative:
         assert "The Plutus script evaluation failed" in err_str, err_str
 
 
+@common.SKIPIF_PLUTUS_UNUSABLE
 @pytest.mark.testnets
 class TestNegativeRedeemer:
     """Tests for Tx output locking using Plutus smart contracts with wrong redeemer."""
@@ -2448,6 +2451,7 @@ class TestNegativeRedeemer:
         ), err_str
 
 
+@common.SKIPIF_PLUTUS_UNUSABLE
 @pytest.mark.testnets
 class TestNegativeDatum:
     """Tests for Tx output locking using Plutus smart contracts with wrong datum."""
@@ -2662,3 +2666,59 @@ class TestNegativeDatum:
 
         err_str = str(excinfo.value)
         assert "must consist of at most 64 bytes" in err_str, err_str
+
+
+@pytest.mark.testnets
+class TestCompatibility:
+    """Tests for checking compatibility with previous Tx eras."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era > VERSIONS.ALONZO,
+        reason="runs only with Tx era <= Alonzo",
+    )
+    @pytest.mark.dbsync
+    def test_plutusv2_old_tx_era(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test spending a UTxO locked with PlutusV2 script using old Tx era.
+
+        Expect failure.
+
+        * try to spend the locked UTxO
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS["v2"].script_file,
+            datum_cbor_file=plutus_common.DATUM_42_TYPED_CBOR,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS["v2"].execution_cost,
+        )
+
+        script_utxos, collateral_utxos, __ = _build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=2_000_000,
+            )
+
+        err_str = str(excinfo.value)
+        assert "PlutusScriptV2 is not supported" in err_str, err_str
