@@ -36,6 +36,8 @@ MINTING_PLUTUS_V2 = SCRIPTS_V2_DIR / "anyone-can-mint.plutus"
 
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
+STAKE_PLUTUS_V2 = SCRIPTS_V2_DIR / "stake-script.plutus"
+
 REDEEMER_42 = PLUTUS_DIR / "42.redeemer"
 REDEEMER_42_TYPED = PLUTUS_DIR / "typed-42.redeemer"
 REDEEMER_42_CBOR = PLUTUS_DIR / "42.redeemer.cbor"
