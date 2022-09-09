@@ -318,7 +318,6 @@ class TestDelegateAddr:
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_deleg),
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_withdraw),
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_dereg),
-            clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_dereg),
             # for delegation
             clusterlib.TxOut(address=pool_user.payment.address, amount=deleg_fund),
             # for deregistration
@@ -353,15 +352,20 @@ class TestDelegateAddr:
         )
         cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
 
-        txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
-        collateral_deleg = cluster.get_utxo(txin=f"{txid_step1}#1")
-        collateral_withdraw = cluster.get_utxo(txin=f"{txid_step1}#2")
-        collateral_dereg = cluster.get_utxo(txin=f"{txid_step1}#3")
-        deleg_utxos = cluster.get_utxo(txin=f"{txid_step1}#4")
-        dereg_utxos = cluster.get_utxo(txin=f"{txid_step1}#5")
+        step1_utxos = cluster.get_utxo(tx_raw_output=tx_output_step1)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=step1_utxos, txouts=tx_output_step1.txouts
+        )
+        collateral_deleg = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset)
+        collateral_withdraw = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 1)
+        collateral_dereg = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 2)
+        deleg_utxos = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 3)
+        dereg_utxos = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 4)
 
         reference_script_utxos = (
-            cluster.get_utxo(txin=f"{txid_step1}#6") if plutus_version == "v2" else None
+            clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 5)
+            if plutus_version == "v2"
+            else None
         )
 
         # Step 2: register and delegate
