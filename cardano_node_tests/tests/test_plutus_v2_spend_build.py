@@ -22,12 +22,12 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 # skip all tests if Tx era < babbage
 pytestmark = [
-    common.SKIPIF_PLUTUSV2_UNUSABLE,
     common.SKIPIF_BUILD_UNUSABLE,
     pytest.mark.smoke,
 ]
@@ -198,19 +198,20 @@ def _build_fund_script(
         assert reference_utxos, "No reference script UTxO"
         reference_utxo = reference_utxos[0]
 
-    dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+    if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
-    # check if inline datum is returned by 'query utxo'
-    if use_inline_datum:
-        if plutus_op.datum_file:
-            with open(plutus_op.datum_file, encoding="utf-8") as json_datum:
-                expected_datum = json.load(json_datum)
-        else:
-            expected_datum = plutus_op.datum_value
+        # check if inline datum is returned by 'query utxo'
+        if use_inline_datum:
+            if plutus_op.datum_file:
+                with open(plutus_op.datum_file, encoding="utf-8") as json_datum:
+                    expected_datum = json.load(json_datum)
+            else:
+                expected_datum = plutus_op.datum_value
 
-        assert (
-            script_utxos[0].inline_datum == expected_datum
-        ), "The inline datum returned by 'query utxo' is different than the expected"
+            assert (
+                script_utxos[0].inline_datum == expected_datum
+            ), "The inline datum returned by 'query utxo' is different than the expected"
 
     # check "transaction view"
     tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
@@ -257,6 +258,7 @@ def _build_reference_txin(
     return reference_txin
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestBuildLocking:
     """Tests for Tx output locking using Plutus V2 functionalities and `transaction build`."""
@@ -383,6 +385,7 @@ class TestBuildLocking:
         )
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestInlineDatum:
     """Tests for Tx output with inline datum."""
@@ -467,6 +470,7 @@ class TestInlineDatum:
         ), "The min UTxO value doesn't correspond to the inline datum size"
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestNegativeInlineDatum:
     """Tests for Tx output with inline datum that are expected to fail."""
@@ -686,6 +690,7 @@ class TestNegativeInlineDatum:
         assert "NonOutputSupplimentaryDatums" in err_str, err_str
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestReferenceScripts:
     """Tests for Tx output locking using Plutus smart contracts with reference scripts."""
@@ -1322,6 +1327,7 @@ class TestReferenceScripts:
         assert utxo_balance == amount, f"Incorrect balance for destination UTxO `{new_utxo}`"
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestNegativeReferenceScripts:
     """Tests for Tx output with reference scripts that are expected to fail."""
@@ -1796,6 +1802,7 @@ class TestNegativeReferenceScripts:
         assert "ByronTxOutInContext" in err_str, err_str
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestReadonlyReferenceInputs:
     """Tests for Tx with readonly reference inputs."""
@@ -2070,6 +2077,7 @@ class TestReadonlyReferenceInputs:
         assert cluster.get_utxo(utxo=reference_input[0])
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestNegativeReadonlyReferenceInputs:
     """Tests for Tx with readonly reference inputs that are expected to fail."""
@@ -2298,6 +2306,7 @@ class TestNegativeReadonlyReferenceInputs:
         assert "Missing: (--tx-in TX-IN)" in err_str, err_str
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestCollateralOutput:
     """Tests for Tx output locking using Plutus with collateral output."""
@@ -2625,3 +2634,124 @@ class TestCollateralOutput:
         tx_view_asset_key = next(iter(tx_view_token_rec))
         assert asset_name in tx_view_asset_key, "Token is missing from tx view return collateral"
         assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"
+
+
+@pytest.mark.testnets
+class TestCompatibility:
+    """Tests for checking compatibility with previous Tx eras."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era >= VERSIONS.BABBAGE,
+        reason="runs only with Tx era < Babbage",
+    )
+    def test_inline_datum_old_tx_era(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test locking a Tx output with an inline datum using old Tx era.
+
+        Expect failure with Alonzo-era Tx.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_V2_COST,
+        )
+
+        # create a Tx output with an inline datum at the script address
+        try:
+            script_utxos, *__ = _build_fund_script(
+                temp_template=temp_template,
+                cluster=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+            )
+        except clusterlib.CLIError as exc:
+            if "Inline datums cannot be used" not in str(exc):
+                raise
+            return
+
+        assert script_utxos and not script_utxos[0].inline_datum, "Inline datum was not ignored"
+
+        pytest.xfail("Inconsistent handling of Babbage-only features, see node issue #4424")
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era >= VERSIONS.BABBAGE,
+        reason="runs only with Tx era < Babbage",
+    )
+    def test_reference_script_old_tx_era(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test locking a Tx output with a reference script using old Tx era."""
+        __: Any  # mypy workaround
+        temp_template = common.get_test_id(cluster)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS_V2_COST,
+        )
+
+        # create a Tx output with an inline datum at the script address
+        __, __, reference_utxo, *__ = _build_fund_script(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            use_reference_script=True,
+            use_inline_datum=False,
+        )
+        assert (
+            reference_utxo and not reference_utxo.reference_script
+        ), "Reference script was not ignored"
+
+        pytest.xfail("Inconsistent handling of Babbage-only features, see node issue #4424")
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era >= VERSIONS.BABBAGE,
+        reason="runs only with Tx era < Babbage",
+    )
+    def test_ro_reference_old_tx_era(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test building Tx with read-only reference input using old Tx era.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            amount=amount,
+        )
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        txouts = [clusterlib.TxOut(address=payment_addrs[1].address, amount=amount)]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.build_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                txouts=txouts,
+                readonly_reference_txins=reference_input,
+            )
+        err_str = str(excinfo.value)
+        assert "Reference inputs cannot be used" in err_str, err_str
