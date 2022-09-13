@@ -2043,6 +2043,63 @@ class TestReadonlyReferenceInputs:
 
         # TODO check command 'transaction view' bug on cardano-node 4045
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_reference_input_non_plutus(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test using a read-only reference input in non-Plutus transaction.
+
+        * use a reference input in normal non-Plutus transaction
+        * check that the reference input was not spent
+        * (optional) check transactions in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        src_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=src_addr,
+            amount=amount,
+        )
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+
+        tx_raw_output = cluster.send_tx(
+            src_address=src_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            readonly_reference_txins=reference_input,
+            tx_files=tx_files,
+        )
+
+        # check that the reference input was not spent
+        assert cluster.get_utxo(
+            utxo=reference_input[0]
+        ), f"The reference input was spent `{reference_input[0]}`"
+
+        # check expected balances
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_addr.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
+        ), f"Incorrect balance for source address `{src_addr.address}`"
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        # check "transaction view"
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
 
 @common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
