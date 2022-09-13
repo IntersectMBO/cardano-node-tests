@@ -268,6 +268,7 @@ class TestBuildLocking:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
+    @pytest.mark.dbsync
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -359,7 +360,7 @@ class TestBuildLocking:
         # check that script address UTxO was spent
         assert not cluster.get_utxo(
             utxo=script_utxos[0]
-        ), f"Script address UTxO was not spent `{script_utxos}`"
+        ), f"Script address UTxO was NOT spent `{script_utxos}`"
 
         # check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.get_utxo(
@@ -515,6 +516,7 @@ class TestNegativeInlineDatum:
         assert "JSON object expected. Unexpected value" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_lock_tx_v1_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -620,6 +622,7 @@ class TestNegativeInlineDatum:
         assert "Byte strings in script data must consist of at most 64 bytes" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_lock_tx_datum_as_witness(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -1510,6 +1513,7 @@ class TestNegativeReferenceScripts:
         assert "The Plutus script evaluation failed" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_lock_tx_v1_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1721,6 +1725,7 @@ class TestNegativeReferenceScripts:
         assert "ReferenceInputsNotSupported" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_lock_byron_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1810,6 +1815,7 @@ class TestReadonlyReferenceInputs:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.parametrize("reference_input_scenario", ("single", "duplicated"))
+    @pytest.mark.dbsync
     def test_use_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1900,10 +1906,9 @@ class TestReadonlyReferenceInputs:
         )
 
         # check that the reference input was not spent
-        reference_input_utxo = cluster.get_utxo(utxo=reference_input[0])
-        assert (
-            clusterlib.calculate_utxos_balance(utxos=reference_input_utxo) == reference_input_amount
-        ), f"The reference input was spent `{reference_input_utxo}`"
+        assert cluster.get_utxo(
+            utxo=reference_input[0]
+        ), f"The reference input was spent `{reference_input[0]}`"
 
         # check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
@@ -1911,6 +1916,7 @@ class TestReadonlyReferenceInputs:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_same_input_as_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1996,10 +2002,9 @@ class TestReadonlyReferenceInputs:
         )
 
         # check that the input used also as reference was spent
-        reference_input_utxo = cluster.get_utxo(utxo=reference_input[0])
-        assert (
-            not reference_input_utxo
-        ), f"The reference input was not spent `{reference_input_utxo}`"
+        assert not cluster.get_utxo(
+            utxo=reference_input[0]
+        ), f"The reference input was NOT spent `{reference_input[0]}`"
 
         # TODO check command 'transaction view' bug on cardano-node 4045
 
@@ -2074,7 +2079,9 @@ class TestReadonlyReferenceInputs:
         clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=txins)
 
         # check that the reference input was not spent
-        assert cluster.get_utxo(utxo=reference_input[0])
+        assert cluster.get_utxo(
+            utxo=reference_input[0]
+        ), f"The reference input was spent `{reference_input[0]}`"
 
 
 @common.SKIPIF_PLUTUSV2_UNUSABLE
@@ -2083,6 +2090,7 @@ class TestNegativeReadonlyReferenceInputs:
     """Tests for Tx with readonly reference inputs that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_reference_spent_output(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2140,10 +2148,9 @@ class TestNegativeReadonlyReferenceInputs:
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output_spend_reference_input.txins)
 
         # check that the input used also as reference was spent
-        reference_input_utxo = cluster.get_utxo(utxo=reference_input[0])
-        assert (
-            not reference_input_utxo
-        ), f"The reference input was not spent `{reference_input_utxo}`"
+        assert not cluster.get_utxo(
+            utxo=reference_input[0]
+        ), f"The reference input was NOT spent `{reference_input[0]}`"
 
         #  spend the "locked" UTxO
 
@@ -2185,6 +2192,7 @@ class TestNegativeReadonlyReferenceInputs:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_v1_script_with_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2395,6 +2403,7 @@ class TestCollateralOutput:
         (True, False),
         ids=("using_total_collateral", "without_total_collateral"),
     )
+    @pytest.mark.dbsync
     def test_with_total_return_collateral(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2514,6 +2523,7 @@ class TestCollateralOutput:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_collateral_with_tokens(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
@@ -2602,7 +2612,7 @@ class TestCollateralOutput:
 
         return_collateral_utxos = cluster.get_utxo(tx_raw_output=tx_output_redeem)
 
-        assert return_collateral_utxos, "Return collateral UTxO was not created"
+        assert return_collateral_utxos, "Return collateral UTxO was NOT created"
 
         # check that return collateral is the only output and that the index matches
         out_utxos_ix = {r.utxo_ix for r in return_collateral_utxos}
@@ -2677,7 +2687,7 @@ class TestCompatibility:
                 raise
             return
 
-        assert script_utxos and not script_utxos[0].inline_datum, "Inline datum was not ignored"
+        assert script_utxos and not script_utxos[0].inline_datum, "Inline datum was NOT ignored"
 
         pytest.xfail("Inconsistent handling of Babbage-only features, see node issue #4424")
 
@@ -2686,6 +2696,7 @@ class TestCompatibility:
         VERSIONS.transaction_era >= VERSIONS.BABBAGE,
         reason="runs only with Tx era < Babbage",
     )
+    @pytest.mark.dbsync
     def test_reference_script_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2714,7 +2725,7 @@ class TestCompatibility:
         )
         assert (
             reference_utxo and not reference_utxo.reference_script
-        ), "Reference script was not ignored"
+        ), "Reference script was NOT ignored"
 
         pytest.xfail("Inconsistent handling of Babbage-only features, see node issue #4424")
 
