@@ -8,6 +8,7 @@
 import logging
 from pathlib import Path
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import allure
@@ -21,6 +22,7 @@ from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import pytest_utils
 from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
@@ -38,8 +40,14 @@ def cluster_lock_42stake(
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the balances etc. don't add up.
     """
+    plutus_script = (
+        plutus_common.STAKE_PLUTUS_V2
+        if "plutus_v2" in pytest_utils.get_current_test().test_params
+        else plutus_common.STAKE_GUESS_42_PLUTUS_V1
+    )
+
     cluster_obj = cluster_manager.get(
-        lock_resources=[str(plutus_common.STAKE_GUESS_42_PLUTUS_V1.stem)],
+        lock_resources=[str(plutus_script.stem)],
         use_resources=[cluster_management.Resources.POOL3],
     )
     pool_id = delegation.get_pool_id(
@@ -59,19 +67,25 @@ def pool_user(
     cluster, *__ = cluster_lock_42stake
     test_id = common.get_test_id(cluster)
 
+    plutus_script = (
+        plutus_common.STAKE_PLUTUS_V2
+        if "plutus_v2" in pytest_utils.get_current_test().test_params
+        else plutus_common.STAKE_GUESS_42_PLUTUS_V1
+    )
+
     script_stake_address = cluster.gen_stake_addr(
         addr_name=f"{test_id}_pool_user",
-        stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS_V1,
+        stake_script_file=plutus_script,
     )
     payment_addr_rec = cluster.gen_payment_addr_and_keys(
         name=f"{test_id}_pool_user",
-        stake_script_file=plutus_common.STAKE_GUESS_42_PLUTUS_V1,
+        stake_script_file=plutus_script,
     )
     pool_user = delegation.PoolUserScript(
         payment=payment_addr_rec,
         stake=delegation.AddressRecordScript(
             address=script_stake_address,
-            script_file=plutus_common.STAKE_GUESS_42_PLUTUS_V1,
+            script_file=plutus_script,
         ),
     )
 
@@ -94,6 +108,7 @@ def delegate_stake_addr(
     pool_user: delegation.PoolUserScript,
     pool_id: str,
     redeemer_file: Path,
+    reference_script_utxos: Optional[List[clusterlib.UTXOData]],
 ) -> Tuple[clusterlib.TxRawOutput, List[dict]]:
     """Submit registration certificate and delegate to pool."""
     # create stake address registration cert
@@ -116,7 +131,8 @@ def delegate_stake_addr(
     )
     deleg_cert_script = clusterlib.ComplexCert(
         certificate_file=stake_addr_deleg_cert_file,
-        script_file=pool_user.stake.script_file,
+        script_file=pool_user.stake.script_file if not reference_script_utxos else "",
+        reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
         collaterals=collaterals,
         redeemer_file=redeemer_file,
     )
@@ -171,6 +187,7 @@ def deregister_stake_addr(
     collaterals: List[clusterlib.UTXOData],
     pool_user: delegation.PoolUserScript,
     redeemer_file: Path,
+    reference_script_utxos: Optional[List[clusterlib.UTXOData]],
 ) -> clusterlib.TxRawOutput:
     """Deregister stake address."""
     src_payment_balance = cluster_obj.get_address_balance(pool_user.payment.address)
@@ -185,13 +202,15 @@ def deregister_stake_addr(
     # withdraw rewards to payment address, deregister stake address
     withdrawal_script = clusterlib.ScriptWithdrawal(
         txout=clusterlib.TxOut(address=pool_user.stake.address, amount=-1),
-        script_file=pool_user.stake.script_file,
+        script_file=pool_user.stake.script_file if not reference_script_utxos else "",
+        reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
         collaterals=[collaterals[0]],
         redeemer_file=redeemer_file,
     )
     dereg_cert_script = clusterlib.ComplexCert(
         certificate_file=stake_addr_dereg_cert,
-        script_file=pool_user.stake.script_file,
+        script_file=pool_user.stake.script_file if not reference_script_utxos else "",
+        reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
         collaterals=[collaterals[1]],
         redeemer_file=redeemer_file,
     )
@@ -245,6 +264,7 @@ def deregister_stake_addr(
         assert pool_user.stake.address in tx_db_dereg.stake_deregistration
 
         # compare cost of Plutus script with data from db-sync
+
         dbsync_utils.check_plutus_costs(
             redeemer_records=tx_db_dereg.redeemers, cost_records=plutus_costs
         )
@@ -256,6 +276,7 @@ def deregister_stake_addr(
 # might be already in use
 @pytest.mark.order(8)
 @common.SKIPIF_BUILD_UNUSABLE
+@common.PARAM_PLUTUS_VERSION
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
@@ -265,6 +286,7 @@ class TestDelegateAddr:
         self,
         cluster_lock_42stake: Tuple[clusterlib.ClusterLib, str],
         pool_user: delegation.PoolUserScript,
+        plutus_version: str,
     ):
         """Delegate and deregister Plutus script stake address.
 
@@ -296,12 +318,20 @@ class TestDelegateAddr:
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_deleg),
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_withdraw),
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_dereg),
-            clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_dereg),
             # for delegation
             clusterlib.TxOut(address=pool_user.payment.address, amount=deleg_fund),
             # for deregistration
             clusterlib.TxOut(address=pool_user.payment.address, amount=dereg_fund),
         ]
+
+        if plutus_version == "v2":
+            txouts_step1.append(
+                clusterlib.TxOut(
+                    address=pool_user.payment.address,
+                    amount=10_000_000,
+                    reference_script_file=plutus_common.STAKE_PLUTUS_V2,
+                )
+            )
 
         tx_files_step1 = clusterlib.TxFiles(
             signing_key_files=[pool_user.payment.skey_file],
@@ -322,12 +352,21 @@ class TestDelegateAddr:
         )
         cluster.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
 
-        txid_step1 = cluster.get_txid(tx_body_file=tx_output_step1.out_file)
-        collateral_deleg = cluster.get_utxo(txin=f"{txid_step1}#1")
-        collateral_withdraw = cluster.get_utxo(txin=f"{txid_step1}#2")
-        collateral_dereg = cluster.get_utxo(txin=f"{txid_step1}#3")
-        deleg_utxos = cluster.get_utxo(txin=f"{txid_step1}#4")
-        dereg_utxos = cluster.get_utxo(txin=f"{txid_step1}#5")
+        step1_utxos = cluster.get_utxo(tx_raw_output=tx_output_step1)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=step1_utxos, txouts=tx_output_step1.txouts
+        )
+        collateral_deleg = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset)
+        collateral_withdraw = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 1)
+        collateral_dereg = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 2)
+        deleg_utxos = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 3)
+        dereg_utxos = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 4)
+
+        reference_script_utxos = (
+            clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 5)
+            if plutus_version == "v2"
+            else None
+        )
 
         # Step 2: register and delegate
 
@@ -345,6 +384,7 @@ class TestDelegateAddr:
             pool_user=pool_user,
             pool_id=pool_id,
             redeemer_file=plutus_common.REDEEMER_42,
+            reference_script_utxos=reference_script_utxos,
         )
 
         assert (
@@ -383,6 +423,7 @@ class TestDelegateAddr:
             collaterals=[*collateral_withdraw, *collateral_dereg],
             pool_user=pool_user,
             redeemer_file=plutus_common.REDEEMER_42,
+            reference_script_utxos=reference_script_utxos,
         )
 
         if reward_error:

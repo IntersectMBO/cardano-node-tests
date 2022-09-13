@@ -887,6 +887,11 @@ def check_tx(
             for r in tx_raw_output.script_txins
             if r.reference_txin
         ],
+        *[
+            f"{r.reference_txin.utxo_hash}#{r.reference_txin.utxo_ix}"
+            for r in tx_raw_output.complex_certs
+            if r.reference_txin
+        ],
     }
     db_utxos_reference_inputs = {
         f"{r.utxo_hash}#{r.utxo_ix}" for r in response.reference_inputs if r
