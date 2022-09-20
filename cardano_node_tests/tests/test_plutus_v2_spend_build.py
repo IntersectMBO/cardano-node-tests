@@ -1910,6 +1910,11 @@ class TestReadonlyReferenceInputs:
             utxo=reference_input[0]
         ), f"The reference input was spent `{reference_input[0]}`"
 
+        expected_redeem_fee = 172_578
+        assert helpers.is_in_interval(
+            tx_output_redeem.fee, expected_redeem_fee, frac=0.15
+        ), "Expected fee doesn't match the actual fee"
+
         # check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
