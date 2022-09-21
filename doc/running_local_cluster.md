@@ -17,8 +17,9 @@
 
 </br>
 
-Local cluster consists 3 of pools and 1 BFT node.
-Default `testnet-magic` value is 42.
+A **local cluster** is a local Cardano blockchain that consists of 3 stake pools and 1 BFT node. The chain is started in Byron era and it is moved in the desired era, similarly to Mainnet, using Update Proposals. The default `testnet-magic` value is 42.
+
+Using a local cluster you can test/play/interact with all the Cardano blockchain functionalities - from block creation, to rewards generation based on the stake delegated to each of the stake pool, generating and sending all kinds of transactions, to interacting with Plutus scripts.
 
 ### Requirements:
 - Python 3.8 or newer
