@@ -1,0 +1,31 @@
+# Default state for all rules
+default: true
+
+# MD012/no-multiple-blanks - Multiple consecutive blank lines
+MD012:
+  # Consecutive blank lines
+  maximum: 2
+
+# MD013/line-length - Line length
+MD013:
+  # Number of characters
+  line_length: 1000
+  # Number of characters for headings
+  heading_line_length: 128
+  # Include code blocks
+  code_blocks: false
+  # Include tables
+  tables: true
+  # Include headings
+  headings: true
+  # Include headings
+  headers: true
+  # Strict length checking
+  strict: false
+  # Stern length checking
+  stern: false
+
+# MD024/no-duplicate-heading/no-duplicate-header - Multiple headings with the same content
+MD024:
+  allow_different_nesting: true
+  siblings_only: true

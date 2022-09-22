@@ -1,7 +1,7 @@
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
-
 README for cardano-node-tests
 =============================
+
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 Integration tests for cardano-node.
 
@@ -13,7 +13,7 @@ Installation
 Create a python virtual env and install this package together with dev requirements:
 
 ```sh
-$ ./setup_venv.sh
+./setup_venv.sh
 ```
 
 Requires Python 3.8 or newer.
@@ -60,7 +60,7 @@ $ BOOTSTRAP_DIR=<your path to bootstrap dir> make testnets
 Running individual tests:
 
 ```sh
-$ pytest -k "test_name1 or test_name2" cardano_node_tests
+pytest -k "test_name1 or test_name2" cardano_node_tests
 ```
 
 Running linter:
@@ -87,8 +87,9 @@ Variables for `make tests` and `make testnets`
 * `SCRIPTS_DIRNAME` - path to a dir with local cluster start / stop scripts and configuration files
 
 E.g.
+
 ```sh
-$ SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=mary SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/alonzo/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" make tests
+SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=mary SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/alonzo/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" make tests
 ```
 
 
@@ -116,15 +117,15 @@ Test coverage of cardano-cli commands
 
 To get test coverage of cardano-cli commands, run tests as usual (`make tests`) and generate the coverage report JSON file with
 
-```
-$ cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
+```sh
+cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
 ```
 
 
 Publishing testing results
 --------------------------
 
-Clone https://github.com/mkoura/cardano-node-tests-reports and see its [README](https://github.com/mkoura/cardano-node-tests-reports/blob/main/README.md).
+Clone <https://github.com/mkoura/cardano-node-tests-reports> and see its [README](https://github.com/mkoura/cardano-node-tests-reports/blob/main/README.md).
 
 
 Building documentation
@@ -132,14 +133,14 @@ Building documentation
 
 To build documentation using Sphinx, run
 
-```
-$ make install_doc
-$ make doc
+```sh
+make install_doc
+make doc
 ```
 
 The documentation is generated to `src_docs/build/html`.
 
-To publish documentation to https://input-output-hk.github.io/cardano-node-tests/, run:
+To publish documentation to <https://input-output-hk.github.io/cardano-node-tests/>, run:
 
 ```sh
 # checkout the "github_pages" branch
@@ -154,7 +155,6 @@ $ git commit
 # push to origin/github_pages (upstream/github_pages)
 $ git push origin github_pages
 ```
-
 
 
 Contributing

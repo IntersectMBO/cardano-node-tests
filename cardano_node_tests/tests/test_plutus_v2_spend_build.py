@@ -1249,7 +1249,7 @@ class TestReferenceScripts:
         """Test spend an UTxO and use a reference a script on the same transaction.
 
         * create the reference script UTxO with the 'ALWAYS_FAILS' script to have confidence that
-         the script was not being executed
+          the script was not being executed
         * spend a regular UTxO and reference the script at the same transaction
         * check that the destination UTxO have the right balance
         """

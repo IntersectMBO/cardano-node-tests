@@ -4,15 +4,13 @@
 Stake Credential History Tool is a very useful utility that produces a linear history of events for a given stake credential.
 It works with all blockchain networks including local testnets.
 
-</br>
 
-## Documentation:
+## Documentation
 
 Stake Credential History Tool is located in `cardano-node` repository.
 
 Full documentation for building, running and description of event types is [here](https://github.com/input-output-hk/cardano-node/blob/master/cardano-client-demo/Stake-Credential-History.md).
 
-</br>
 
 ## Example of usage
 
@@ -38,8 +36,6 @@ Once the test stops we will get the stake address we are interested in by using:
 ```python
 cluster.get_stake_addr_info(registered_user.stake.address)
 ```
-
-</br>
 
 Here is a step by step example:
 
@@ -73,11 +69,8 @@ Out[1]: StakeAddrInfo(address='stake_test1uzkhjy8tnvx5n9exsh0j63aq83laylzl7c8gq2
 In [2]: exit
 ```
 
-</br>
-
 We have our stake address `stake_test1uzkhjy8tnvx5n9exsh0j63aq83laylzl7c8gq2kmf4t9hyqg2thkv`.
 Now let's run `stake-credential-history` to see all events for this stake address:
-
 
 
 ```sh
@@ -102,8 +95,6 @@ BALANCE ----------- EpochNo 15, SlotNo 15012, balance: Lovelace 100000000
 BALANCE ----------- EpochNo 16, SlotNo 16010, balance: Lovelace 100000000
 BALANCE ----------- EpochNo 17, SlotNo 17070, balance: Lovelace 100000000
 ```
-
-</br>
 
 With Stake Credential History Tool we can see events like registrations, de-registrations, delegations, instantaneous rewards, reward withdrawals, mentions inside pool parameter registrations, and also per-epoch active stake and rewards.
 

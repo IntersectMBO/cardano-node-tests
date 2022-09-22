@@ -9,11 +9,11 @@ Below is an example of such case for running manual test for checking MIR certif
 
 This assumes that you have a running local cluster.
 Instructions on how to start a local cluster can be found here:
-https://github.com/input-output-hk/cardano-node-tests/blob/artur/docs/doc/running_local_cluster.md
+<https://github.com/input-output-hk/cardano-node-tests/blob/artur/docs/doc/running_local_cluster.md>
 
 ## Create key pairs
 
-**Payment key pair**
+### Payment key pair
 
 ```sh
 cardano-cli address key-gen \
@@ -21,7 +21,7 @@ cardano-cli address key-gen \
 --signing-key-file payment.skey
 ```
 
-**Stake key pair**
+### Stake key pair
 
 ```sh
 cardano-cli stake-address key-gen \
@@ -29,7 +29,7 @@ cardano-cli stake-address key-gen \
 --signing-key-file stake.skey
 ```
 
-**Payment address**
+### Payment address
 
 ```sh
 cardano-cli address build \
@@ -39,7 +39,7 @@ cardano-cli address build \
 --testnet-magic 42
 ```
 
-**Stake address**
+### Stake address
 
 ```sh
 cardano-cli stake-address build \
@@ -58,9 +58,8 @@ cat stake.addr
 stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns
 ```
 
-</br>
 
-## Let's transfer funds from "faucet" address to our own Shelley address `payment.addr`:
+## Let's transfer funds from "faucet" address to our own Shelley address `payment.addr`
 
 First query address that holds funds:
 
@@ -79,9 +78,8 @@ expr 35996998496920237 - 2000000000000 - 1000000
 35994998495920237
 ```
 
-</br>
 
-#### Build tx:
+### Build tx
 
 ```sh
 cardano-cli transaction build-raw \
@@ -92,7 +90,7 @@ cardano-cli transaction build-raw \
 --out-file tx.raw
 ```
 
-#### Sign tx:
+### Sign tx
 
 ```sh
 cardano-cli transaction sign \
@@ -102,7 +100,7 @@ cardano-cli transaction sign \
 --out-file tx.signed
 ```
 
-#### Submit tx:
+### Submit tx
 
 ```sh
 cardano-cli transaction submit --tx-file tx.signed  --testnet-magic 42
@@ -110,7 +108,7 @@ Transaction successfully submitted.
 ```
 
 
-### Check funds on the payment.addr:
+### Check funds on the payment.addr
 
 ```sh
 cardano-cli query utxo --address $(cat /home/artur/Projects/payment.addr) --testnet-magic 42
@@ -118,8 +116,6 @@ cardano-cli query utxo --address $(cat /home/artur/Projects/payment.addr) --test
 --------------------------------------------------------------------------------------
 ece90464d725625a1d7d5f484b24199f067d6bddb3df9b05a67c6cc8dba6944e     0        2000000000000 lovelace + TxOutDatumHashNone
 ```
-
-</br>
 
 ## Create a stake registration certificate
 
@@ -140,7 +136,6 @@ cardano-cli query protocol-parameters --testnet-magic 42 | grep Deposit
 `genesis.json` with value for deposits can be found: cardano-node/state-cluster0/shelley/genesis.json
 
 
-
 Query the UTXO of the address that pays for the transaction and deposit:
 
 ```sh
@@ -149,8 +144,6 @@ cardano-cli query utxo --address $(cat /home/artur/Projects/payment.addr) --test
 --------------------------------------------------------------------------------------
 ece90464d725625a1d7d5f484b24199f067d6bddb3df9b05a67c6cc8dba6944e     0        2000000000000 lovelace + TxOutDatumHashNone
 ```
-
-</br>
 
 Calculate the change to send back to payment address after including the deposit:
 
@@ -162,9 +155,9 @@ expr 2000000000000 - 1000000 - 400000
 1999994000000
 ```
 
-</br>
+### Submit the certificate with a transaction
 
-#### Submit the certificate with a transaction:
+#### Build tx
 
 ```sh
 cardano-cli transaction build-raw \
@@ -175,7 +168,7 @@ cardano-cli transaction build-raw \
 --certificate-file stake.cert
 ```
 
-#### Sign it:
+#### Sign it
 
 ```sh
 cardano-cli transaction sign \
@@ -186,7 +179,7 @@ cardano-cli transaction sign \
 --out-file tx002.signed
 ```
 
-#### And submit it:
+#### And submit it
 
 ```sh
 cardano-cli transaction submit \
@@ -194,9 +187,9 @@ cardano-cli transaction submit \
 --testnet-magic 42
 ```
 
-</br>
+### Our stake address has id=13 and is registered -> see in table below
 
-### Our stake address has id=13 (stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns) and is registered -> see in table below:
+Stake address is `stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns`.
 
 ```sql
 dbsync0=# select * from stake_address;
@@ -211,8 +204,6 @@ dbsync0=# select * from stake_address;
  13 | \xe027f58eedab972a15283c85aabf6670bf472394163f0329b9965bd69d | stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns |                9 |
 (7 rows)
 ```
-
-</br>
 
 ```sql
 dbsync0=# select * from stake_registration;
@@ -229,8 +220,6 @@ select * from stake_registration;
 (7 rows)
 ```
 
-</br>
-
 ## Deregister "empty" stake address (no rewards on stake address as it was no delegated)
 
 ```sh
@@ -243,6 +232,7 @@ cardano-cli query stake-address-info --address stake_test1uqnltrhd4wtj59fg8jz640
     }
 ]
 ```
+
 ### Create deregistration certificate
 
 ```sh
@@ -264,7 +254,8 @@ a4c141cfae907aa1c4b418f65f384a6d860d52786b412481bc63733acfab1541     0        19
 expr 1999998600000 + 400000 - 1000000
 1999998000000
 ```
-#### Build tx:
+
+#### Build tx
 
 ```sh
 cardano-cli transaction build-raw \
@@ -275,7 +266,7 @@ cardano-cli transaction build-raw \
 --certificate-file deregistration.cert
 ```
 
-#### Sign tx:
+#### Sign tx
 
 ```sh
 cardano-cli transaction sign \
@@ -286,7 +277,7 @@ cardano-cli transaction sign \
 --out-file tx-deregister-stake-addr.signed
 ```
 
-#### Submit tx:
+#### Submit tx
 
 ```sh
 cardano-cli transaction submit \
@@ -294,9 +285,7 @@ cardano-cli transaction submit \
 --testnet-magic 42
 ```
 
-</br>
-
-#### We can see that deregistartion event was registered in `db-sync`:
+#### Deregistartion event was registered in `db-sync`
 
 ```sql
 dbsync0=# select * from stake_deregistration;
@@ -307,7 +296,6 @@ select * from stake_deregistration;
 (1 row)
 ```
 
-</br>
 
 **RESERVES** and **TREASURY** table state before MIR cert submission:
 
@@ -327,9 +315,8 @@ select * from treasury;
 (0 rows)
 ```
 
-</br>
 
-## Generate MIR cert to send funds from reserves to unregistered stake address:
+## Generate MIR cert to send funds from reserves to unregistered stake address
 
 ```sh
 cardano-cli governance create-mir-certificate \
@@ -352,7 +339,7 @@ expr 1999998000000 - 1000000
 ```
 
 
-#### Build tx:
+### Build tx
 
 ```sh
 cardano-cli transaction build-raw \
@@ -363,7 +350,7 @@ cardano-cli transaction build-raw \
 --certificate-file mir_reserves_500K_to_unregistered_stake_addr.cert
 ```
 
-#### Sign tx:
+### Sign tx
 
 ```sh
 cardano-cli transaction sign \
@@ -375,7 +362,7 @@ cardano-cli transaction sign \
 --out-file tx-mir-cert.signed
 ```
 
-#### Submit tx:
+### Submit tx
 
 ```sh
 cardano-cli transaction submit \
@@ -383,9 +370,8 @@ cardano-cli transaction submit \
 --testnet-magic 42
 ```
 
-</br>
 
-## STATE of tables after MIR cert tx submission:
+## STATE of tables after MIR cert tx submission
 
 ```sql
 dbsync0=# select * from reserve;
@@ -404,13 +390,12 @@ select * from treasury;
 (0 rows)
 ```
 
-</br>
 
-# Logs
+## Logs
 
 We can see that currently there are some issues:
 
-### Stdout.log:
+### stdout.log
 
 ```sh
 [db-sync-node:Info:784][2021-10-08 12:45:33.21 UTC] Starting epoch 58

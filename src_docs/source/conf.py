@@ -1,4 +1,4 @@
-# pylint: disable=all
+# pylint: skip-file
 # type: ignore
 # Configuration file for the Sphinx documentation builder.
 #
@@ -23,8 +23,8 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "cardano-node-tests"
-copyright = "2021, Cardano QA Team"
-author = "Cardano QA Team"
+author = "Cardano Test Engineering Team"
+copyright = author
 
 
 # -- General configuration ---------------------------------------------------
@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.linkcode",
     "sphinx.ext.napoleon",
+    "sphinxemoji.sphinxemoji",
     "m2r2",
 ]
 
@@ -59,14 +60,15 @@ source_suffix = [".rst", ".md"]
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
 # html_theme = 'alabaster'
 html_theme = "sphinx_rtd_theme"
+html_logo = "images/Cardano-Crypto-Logo-128.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
 # Resolve function for the linkcode extension.
 
 # store current git revision

@@ -2515,7 +2515,7 @@ class TestCollateralOutput:
         amount_for_collateral = redeem_cost.collateral * 4
         return_collateral_amount = amount_for_collateral - redeem_cost.collateral
 
-        # creat the token
+        # create the token
         token_rand = clusterlib.get_rand_str(5)
         token = clusterlib_utils.new_tokens(
             *[f"qacoin{token_rand}".encode("utf-8").hex()],
