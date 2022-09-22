@@ -1,37 +1,22 @@
 # SMASH - Tests and debugging examples
 
-## Index:
-- [Checking SMASH status](#status)
-- [Fetching of the metadata](#fetch)
-- [Delisting pool](#delist)
-- [Reserving a ticker](#reserve_ticker)
-- [Whitelisting](#whitelist)
-- [Checking pool rejection errors](#errors)
-- [Pool unregistrations](#unregistrations)
-- [Fetch policies from other SMASH service](#fetch_policies )
-- [Debugging issue with pool - example](#debugging)
-
-</br>
 
 Examples come from `testnet` network.
 
-</br>
 
 **SMASH** can be build with:
 
 `cabal build cardano-smash-server`
 
-</br>
 
 Find and copy executable to your $PATH:
 
 `cp $(find . -name cardano-smash-server -executable -type f) ~/.local/bin`
 
-</br>
 
 Prepare `admins.txt` file which should have format:
 
-```
+```txt
 username, password
 ```
 
@@ -44,9 +29,8 @@ PGPASSFILE=config/pgpass-mainnet cardano-smash-server \
      --admins admins.txt
 ```
 
-</br>
 
-## <a name="status"></a> 0. Checking SMASH status
+## Checking SMASH status
 
 ```sh
 curl --verbose --header "Content-Type: application/json" --request GET http://localhost:3100/api/v1/status
@@ -54,9 +38,8 @@ curl --verbose --header "Content-Type: application/json" --request GET http://lo
 {"status":"OK","version":"12.0.0"}
 ```
 
-</br>
 
-## <a name="fetch"></a> 1. Fetching of the metadata
+## Fetching of the metadata
 
 ```sh
 curl --verbose --header "Content-Type: application/json" --request GET http://localhost:3100/api/v1/metadata/a5a3ce765f5162548181a44d1ff8c8f8c50018cca59acc0b70a85a41/d98a03b8aa962d80511d62566df2af415afd9bd03d53cbb0ad457a53d3491f74
@@ -64,9 +47,8 @@ curl --verbose --header "Content-Type: application/json" --request GET http://lo
 {"name": "MKS Stake Pool", "ticker": "MKS", "homepage": "http://23.234.197.69", "description": "testnet stake pool"}
 ```
 
-</br>
 
-## <a name="delist"></a> 2. Delisting pool
+## Delisting pool
 
 a) Delisting a pool for the first time:
 
@@ -92,10 +74,8 @@ testnet_v12_6=# select * from delisted_pool;
 (1 row)
 ```
 
-</br>
 
-
-## <a name="reserve_ticker"></a> 3. Reserving a ticker
+## Reserving a ticker
 
 a) Insert a new ticker for a pool:
 
@@ -112,13 +92,11 @@ curl --verbose -u username:password --header "Content-Type: application/json" --
 
 {"code":"TickerAlreadyReserved","description":"Ticker name ART is already reserved"}
 ```
-</br>
 
-```sh
+```txt
 [smash-server:Info:6] [2021-11-23 12:06:29.94 UTC] SMASH listening on port 3100
 [smash-server:Warning:27] [2021-11-23 12:59:18.14 UTC] TickerAlreadyReserved (TickerName "ART")
 ```
-</br>
 
 ```sql
 testnet_v12_6=# select * from reserved_pool_ticker;
@@ -128,9 +106,8 @@ testnet_v12_6=# select * from reserved_pool_ticker;
 (1 row)
 ```
 
-</br>
 
-## <a name="whitelist"></a> 4. Whitelisting
+## Whitelisting
 
 a) Query some pool:
 
@@ -152,6 +129,7 @@ curl --verbose -u username:password --header "Content-Type: application/json" --
 
 {"poolId":"81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27"}
 ```
+
 ```sql
 testnet_v12_6=# select * from delisted_pool;
  id |                          hash_raw
@@ -198,11 +176,10 @@ curl -X GET -v http://localhost:3100/api/v1/metadata/81e84003f3d2f65315b479dc3cd
 }
 ```
 
-</br>
 
-## <a name="errors"></a> 5. Checking pool rejection errors
+## Checking pool rejection errors
 
-```
+```sh
 curl http://localhost:3100/api/v1/errors/be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853?fromDate=13.10.2020
 ```
 
@@ -227,15 +204,15 @@ curl http://localhost:3100/api/v1/errors/be329bbf0ee0f53d19f3b2808611779a49c7df4
 ]
 ```
 
-</br>
 
-## <a name="unregistrations"></a> 6. Pool unregistrations
+## Pool unregistrations
 
 You can check what pools have unregistered with:
 
 ```sh
 curl --header "Content-Type: application/json" http://localhost:3100/api/v1/retired | jq .
 ```
+
 ```json
 [
   {
@@ -256,23 +233,19 @@ curl --header "Content-Type: application/json" http://localhost:3100/api/v1/reti
 ]
 ```
 
-</br>
 
-## <a name="fetch_policies"></a> 7. Fetch policies from other SMASH service
+## Fetch policies from other SMASH service
 
 Fetch policies from other SMASH service:
 
-- #### mainnet
-    https://smash.cardano-mainnet.iohk.io
-
-- #### testnet
-    https://smash.cardano-testnet.iohkdev.io
-
-- #### shelley-qa
-    https://smash.shelley-qa.dev.cardano.org
+* mainnet
+   <https://smash.cardano-mainnet.iohk.io>
+* testnet
+  <https://smash.cardano-testnet.iohkdev.io>
+* shelley-qa
+  <https://smash.shelley-qa.dev.cardano.org>
 
 ```sh
-
 curl -u username:password --verbose --header "Content-Type: application/json" --request POST --data '{"smashURL": "https://smash.cardano-mainnet.iohk.io"}' http://localhost:3100/api/v1/policies | jq .
 ```
 
@@ -380,14 +353,12 @@ testnet_v12_6=# select * from delisted_pool;
 
 ```
 
-</br>
-</br>
 
-# <a name="debugging"></a> Debugging issue with pool - example
+## Debugging issue with pool - example
 
 Here is an example of unusual behavior of pool on `testnet` that could not be seen in any tool that tracks pools and at the same time it could not be found in retired pools.
 
-We got pool `pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla` that can't be found in [Deadalus](https://buildkite.com/input-output-hk/daedalus/builds?branch=release%2F4.5.2) (version for `testnet`) nor on https://pooltool.io/ (which is a web tool for listing pool details on both, `mainnet` and `testnet`) and it is also not listed in **pool_retire** table:
+We got pool `pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla` that can't be found in [Deadalus](https://buildkite.com/input-output-hk/daedalus/builds?branch=release%2F4.5.2) (version for `testnet`) nor on <https://pooltool.io/> (which is a web tool for listing pool details on both, `mainnet` and `testnet`) and it is also not listed in **pool_retire** table:
 
 
 ```sql
@@ -397,7 +368,6 @@ testnet_v12_6=# select * from pool_hash where view='pool1hcefh0cwur6n6x0nk2qgvyt
  103 | \xbe329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853 | pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla
 (1 row)
 ```
-</br>
 
 
 **pool_retire**:
@@ -438,7 +408,6 @@ testnet_v12_6=# select * from pool_metadata_ref where pool_id=103;
 (4 rows)
 ```
 
-</br>
 
 So our pool is not visible in tools like wallet and it is also not present in **pool_retire** table.
 Private pools are not listed by those tools however last records from **pool_update** table listed above show that this is not a private pool because it has a `margin < 100%`.
@@ -455,7 +424,8 @@ testnet_v12_6=# select * from pool_relay where update_id=303;
 ```
 
 and try to ping it:
-```
+
+```sh
 ping 72.184.59.65
 PING 72.184.59.65 (72.184.59.65) 56(84) bytes of data.
 64 bytes from 72.184.59.65: icmp_seq=1 ttl=47 time=177 ms
@@ -464,36 +434,33 @@ PING 72.184.59.65 (72.184.59.65) 56(84) bytes of data.
 
 We can see that it is up.
 
-</br>
 
 Now let's check ledger state and see if the record for our pool is still present there:
 
-```
+```sh
 cardano-cli query stake-distribution --testnet-magic 1097911063 | grep pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla
 pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla   1.611e-7
 ```
-It is.
 
-</br>
+It is.
 
 Querying **SMASH** using `pool_hash=be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853` and metadata hash from `pool_metadata_ref` for last `id=301` which is: `f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395` returns:
 
-```
+```sh
 curl --verbose --header "Content-Type: application/json" --request GET http://localhost:3100/api/v1/metadata/be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853/f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395
 
 {"code":"DbLookupPoolMetadataHash","description":"The metadata with hash PoolMetadataHash \"f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395\" for pool PoolId \"be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853\" is missing from the DB."}
 
-
 [smash-server:Warning:124] [2021-11-24 12:48:43.03 UTC] DbLookupPoolMetadataHash (PoolId "be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853") (PoolMetadataHash "f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395")
 ```
 
-</br>
 
 Let's check errors for that pool:
 
-```
+```sh
 curl http://localhost:3100/api/v1/errors/pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla
 ```
+
 ```json
 [
    {
@@ -579,7 +546,6 @@ curl http://localhost:3100/api/v1/errors/pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7v
 ]
 ```
 
-
 For hash `f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395` url from **pool_metadata_ref** is:
 
 ```sql
@@ -616,12 +582,12 @@ testnet_v12_6=# select id, pool_id, json from pool_offline_data where pool_id=10
 but this is not the last entry in **pool_metadata_ref** which has `id=301` and  `homepage=https://git.io/JTUAD`.
 
 
-
 Reason of this problem is mentioned in one of errors returned by **SMASH**:
 
-```
+```txt
 "cause":"Hash mismatch from when fetching metadata from https://git.io/JTUAD. Expected f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395 but got 75848f572990cbc72a9efd62ed5aa0178e16d5164c6dcfbb040dcec47f13d8f4."
 ```
+
 If we download metadata file and check it's hash:
 
 ```sh

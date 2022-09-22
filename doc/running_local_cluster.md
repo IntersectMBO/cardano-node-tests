@@ -1,38 +1,22 @@
 # How to start local cluster
 
-## Index:
-- [Initial setup](#setup)
-- [Starting postgres test database](#postgres)
-- [Preparing local cluster scripts](#preparation)
-- [Adjusting some parameters](#adjustmen)
-- [Start local cluster](#start_cluster)
-- [Run tests](#run_tests)
-- [Interaction with node](#node_interaction)
-- [Transfering funds to your address](#funds)
-- [Debugging with IPython](#debugging)
-- [Logs for cardano-node and db-sync](#logs)
-- [Accessing db-sync database](#db_access)
-- [Useful queries](#queries)
-- [Additional resources](#resources)
-
-</br>
-
 A **local cluster** is a local Cardano blockchain that consists of 3 stake pools and 1 BFT node. The chain is started in Byron era and it is moved in the desired era, similarly to Mainnet, using Update Proposals. The default `testnet-magic` value is 42.
 
 Using a local cluster you can test/play/interact with all the Cardano blockchain functionalities - from block creation, to rewards generation based on the stake delegated to each of the stake pool, generating and sending all kinds of transactions, to interacting with Plutus scripts.
 
-### Requirements:
+
+## Requirements
+
 - Python 3.8 or newer
 - python3-pip
 - virtualenv
 - nix
 
 You can find here how to install `nix` and how to add **IOHK** binary cache:
-https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md
+<https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md>
 
-</br>
 
-## <a name="setup"></a> Initial setup for all cardano components
+## Initial setup for all cardano components
 
 Create directory for storing cardano components repos:
 
@@ -40,6 +24,7 @@ Create directory for storing cardano components repos:
 mkdir Projects
 cd Projects
 ```
+
 Clone Cardano projects:
 
 **cardano-node**:
@@ -77,7 +62,6 @@ At this point it might be beneficial to also install `ipython` that will help us
 pip install ipython
 ```
 
-
 Go to `cardano-node`, update and checkout the desired commit/tag:
 
 ```sh
@@ -99,13 +83,12 @@ cd ../cardano-node-tests
 . .env/bin/activate
 ```
 
-### All the remaining steps from the sections below should be performed from `cardano-node-tests` directory.
+## All the remaining steps from the sections below should be performed from `cardano-node-tests` directory
 
-</br>
 
-## <a name="postgres"></a> Starting postgres test database
+### Starting postgres test database
 
-<em>Usage of separate postgres database for testing is not mandatory.</em>
+**Usage of separate postgres database for testing is not mandatory.**
 
 There is a script for creating test database: `cardano-node-tests/scripts/postgres-start.sh`
 
@@ -138,9 +121,7 @@ that will start a separate postgres database for testing.
 Now you are ready to run preparation script (which is described in detail in next section **Preparing local cluster scripts**)
 
 
-</br>
-
-## <a name="preparation"></a> Preparing local cluster scripts:
+### Preparing local cluster scripts
 
 Inside `cardano-node-tests/cardano_node_tests/cluster_scripts` there are folders with all the data and scripts necessairy for starting cluster in various eras and setups:
 
@@ -151,9 +132,8 @@ own pool there.
 
 - `testnets` - prepare files so cluster will run on real network and will also have stake pool configured there. Tests that require pool presence will be run there.
 
-<em>The procedure for setting up cluster on real network will be described in a separate document and link will be added here later.</em>
+**The procedure for setting up cluster on real network will be described in a separate document and link will be added here later.**
 
-</br>
 
 If you want to prepare cluster for running in **alonzo** era use:
 
@@ -164,11 +144,10 @@ Once you run this preparation script you will notice a new directory with templa
 
 Those files will be used by script that will start our local cluster.
 
-</br>
 
-## <a name="adjustmen"></a> Adjusting some parameters like decentralization, adding new update proposals and etc.
+### Adjusting some parameters like decentralization, adding new update proposals and etc
 
-<em>This is an optional step and you can skip it </em>
+**This is an optional step and you can skip it.**
 
 As it was mentioned, after running the preparation script, a new directory with template files and scripts will be created:
 `cardano-node-tests/scripts/destination/dir`
@@ -208,9 +187,8 @@ jq -r '
   < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
 ```
 
-</br>
 
-## <a name="start_cluster"></a> Start the local cluster:
+### Start the local cluster
 
 The last step is to export **CARDANO_NODE_SOCKET_PATH**, **DBSYNC_REPO** and **DEV_CLUSTER_RUNNING** environment variables
 
@@ -228,7 +206,8 @@ Finally we can start our local cluster with:
 
 The local cluser will start 3 stake pools and 1 BFT node.
 
-### OUTPUT example:
+
+### OUTPUT example
 
 ```sh
 [nix-shell:~/Projects/cardano-node-tests]$ scripts/destination/dir/start-cluster-hfc
@@ -268,11 +247,11 @@ Waiting 187 sec for Alonzo era to start
 Cluster started. Run `/home/artur/Projects/cardano-node-tests/scripts/destination/dir/stop-cluster-hfc` to stop
 [18:50:12] (.env)
 ```
+
 To stop cluster run the exact command that last line suggests in the above log:
 
 `scripts/destination/dir/stop-cluster-hfc`
 
-</br>
 
 Once cluster is started you can see that there is a directory created inside `cardano-node` with all the local cluster files:
 `cardano-node/state-cluster0`
@@ -283,29 +262,30 @@ You can control transaction era dynamically while cluster is running through usa
 export TX_ERA=mary
 ```
 
- Available options for `TX_ERA`:
- - `shelley`
- - `allegra`
- - `mary`
- - `alonzo`
+Available options for `TX_ERA`:
+
+- `shelley`
+- `allegra`
+- `mary`
+- `alonzo`
 
 You can find available options inside file:
  `cardano-node-tests/cardano_node_tests/utils/configuration.py`
 
 You can now start the test (in the same shell and from `cardano-node-tests` directory)
 
-</br>
 
-## <a name="run_tests"></a> Run tests
+## Run tests
 
 Tests are located inside `cardano-node-tests/cardano_node_tests/tests`
 
-### Run test suite from file:
+### Run test suite from file
+
 ```sh
 pytest cardano_node_tests/tests/test_native_tokens.py
 ```
 
-### Run single test:
+### Run single test
 
 Open test file, find name of test you would like to run e.g. `test_minting_unicode_asset_name`
 
@@ -313,16 +293,16 @@ Open test file, find name of test you would like to run e.g. `test_minting_unico
 pytest -k "test_minting_unicode_asset_name"
 
 pytest -k "MyClass and not method"
-This will run tests which contain names that match the given string expression (case-insensitive), which can include Python operators that use filenames, class names and function names as variables.
-The example above will run TestMyClass.test_something but not TestMyClass.test_method_simple.
 ```
 
+This will run tests which contain names that match the given string expression (case-insensitive), which can include Python operators that use filenames, class names and function names as variables.
+The example above will run TestMyClass.test_something but not TestMyClass.test_method_simple.
+
 You can read more on how to invoke tests here:
-https://docs.pytest.org/en/6.2.x/usage.html
+<https://docs.pytest.org/en/6.2.x/usage.html>
 
-</br>
 
-## <a name="node_interaction"></a> Interaction with node
+## Interaction with node
 
 Once cluster is running you can interact with it's node. You can open a new shell and export
 `CARDANO_NODE_SOCKET_PATH` with the same value you used before to start cluster:
@@ -382,9 +362,8 @@ cardano-cli query protocol-parameters --testnet-magic 42
 
 ```
 
-</br>
 
-## <a name="funds"></a> Transfering funds to your address
+## Transfering funds to your address
 
 During cluster startup Byron address will be created and funds moved out of the genesis UTxO into a regular address.
 
@@ -405,6 +384,7 @@ Let's check the address that holds funds:
 cat /home/artur/Projects/cardano-node/state-cluster0/byron/address-000-converted
 2657WMsDfac7Mx1ew6MVfxGqLGwvkkExEFyuWRxDGk4rPQB86uAfrD8BGqjh6ToRj
 ```
+
 and query it:
 
 ```sh
@@ -431,7 +411,8 @@ cardano-cli transaction build \
 --testnet-magic 42 \
 --alonzo-era
 ```
-where `payment.addr` is Shelley address created manually by user and `--witness-override 2` is used becuse of the issue: https://github.com/input-output-hk/cardano-node/issues/3294
+
+where `payment.addr` is Shelley address created manually by user and `--witness-override 2` is used becuse of the issue: <https://github.com/input-output-hk/cardano-node/issues/3294>
 
 Sign tx:
 
@@ -450,9 +431,8 @@ cardano-cli transaction submit --tx-file tx.signed  --testnet-magic 42
 Transaction successfully submitted.
 ```
 
-</br>
 
-## <a name="debugging"></a> Debugging with IPython
+## Debugging with IPython
 
 - If you have not already installed `ipython` package earlier then do it in a shell that is not a `nix-shell` and where there was activated virtual environment
 
@@ -504,13 +484,12 @@ When you run tests with:
 
 you can see what cardano-cli commands are executed.
 
-</br>
 
-## <a name="logs"></a> Logs for `cardano-node` and `db-sync`
+## Logs for `cardano-node` and `db-sync`
 
 pools:
 
-    N=1,2,3
+`N=1,2,3`
 
 - `cardano-node/state-cluster0/pool<N>.stdout`
 - `cardano-node/state-cluster0/pool<N>.stderr`
@@ -525,9 +504,8 @@ db-sync:
 - `cardano-node/state-cluster0/dbsync.stdout`
 - `cardano-node/state-cluster0/dbsync.stderr`
 
-</br>
 
-## <a name="db_access"></a> Accessing `db-sync` database
+## Accessing `db-sync` database
 
 - If you did not change **PGPORT** and **PGUSER**:
 `psql -h /path/to/your/data -U postgres -e dbsync0` </br>
@@ -577,17 +555,17 @@ Foreign-key constraints:
 
 and `\q` for leaving database.
 
-</br>
 
-## <a name="queries"></a> Useful queries
+## Useful queries
+
 You can find interesting queries here:
-https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/interesting-queries.md
+<https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/interesting-queries.md>
 
-</br>
 
-## <a name="resources"></a> Additional resources
+## Additional resources
+
 More info on **cardano-node** can be found here:
-https://github.com/input-output-hk/cardano-node/tree/master/doc/getting-started
+<https://github.com/input-output-hk/cardano-node/tree/master/doc/getting-started>
 
 More info on **cardano-db-sync** can be found here:
-https://github.com/input-output-hk/cardano-db-sync/tree/master/doc
+<https://github.com/input-output-hk/cardano-db-sync/tree/master/doc>
