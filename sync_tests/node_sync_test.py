@@ -640,8 +640,8 @@ def get_calculated_slot_no(env):
         shelley_start_time = datetime.strptime("2022-06-21 00:00:00", "%Y-%m-%d %H:%M:%S")
     elif env == "preview":
         # this env was started directly in Alonzo
-        byron_start_time = None
-        shelley_start_time = None
+        byron_start_time = datetime.strptime("2022-08-09 00:00:00", "%Y-%m-%d %H:%M:%S")
+        shelley_start_time = datetime.strptime("2022-08-09 00:00:00", "%Y-%m-%d %H:%M:%S")
 
     last_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20 +
                        date_diff_in_seconds(current_time, shelley_start_time))
