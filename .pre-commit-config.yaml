@@ -1,13 +1,13 @@
 exclude: ^sync_tests/
 repos:
 - repo: https://github.com/asottile/reorder_python_imports
-  rev: v3.8.1
+  rev: v3.8.2
   hooks:
   - id: reorder-python-imports
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
     language_version: python3
 - repo: https://github.com/ambv/black
-  rev: 22.6.0
+  rev: 22.8.0
   hooks:
   - id: black
     args: [--safe, --quiet]
@@ -37,7 +37,7 @@ repos:
     - flake8-simplify
     - flake8-use-pathlib
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.37.1
+  rev: v2.38.0
   hooks:
   - id: pyupgrade
     language_version: python3
@@ -50,6 +50,15 @@ repos:
   rev: v0.8.0.4
   hooks:
   - id: shellcheck
+- repo: https://github.com/igorshubovych/markdownlint-cli
+  rev: v0.32.2
+  hooks:
+  - id: markdownlint
+- repo: https://github.com/rstcheck/rstcheck
+  rev: v6.1.0
+  hooks:
+  - id: rstcheck
+    additional_dependencies: [sphinx]
 - repo: local
   hooks:
   - id: pylint
