@@ -277,6 +277,12 @@ You can now start the test (in the same shell and from `cardano-node-tests` dire
 
 ## Run tests
 
+In order to avoid some possible incompatibility in some of the python package(s) provided by `nix-shell` and some of the python package(s) provided by your virtual environment add following export line before running tests:
+
+```sh
+[nix-shell:~/Projects/cardano-node-tests]$ export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
+```
+
 Tests are located inside `cardano-node-tests/cardano_node_tests/tests`
 
 ### Run test suite from file
