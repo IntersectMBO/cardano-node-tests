@@ -50,6 +50,15 @@ repos:
   rev: v0.8.0.4
   hooks:
   - id: shellcheck
+- repo: https://github.com/igorshubovych/markdownlint-cli
+  rev: v0.32.2
+  hooks:
+  - id: markdownlint
+- repo: https://github.com/rstcheck/rstcheck
+  rev: v6.1.0
+  hooks:
+  - id: rstcheck
+    additional_dependencies: [sphinx]
 - repo: local
   hooks:
   - id: pylint
