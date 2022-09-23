@@ -1,16 +1,19 @@
 # README for Dockerized cardano-node Cabal build tests
+
 ## Prerequisites
+
 - Docker Engine is installed
 - User is in group 'docker'
 
 ## Run tests
 
-### To test cardano-node Cabal build on Ubuntu:
+### To test cardano-node Cabal build on Ubuntu
+
 `./run-ubuntu.sh -t tag -o <cardano-node tag>`
 
 `./run-ubuntu.sh -t commit -o <cardano-node commit>`
 
-### To test cardano-node Cabal build on Fedora:
+### To test cardano-node Cabal build on Fedora
 
 `./run-fedora.sh  -t tag -o <cardano-node tag>`
 
