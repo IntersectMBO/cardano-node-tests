@@ -9,8 +9,17 @@ import inspect
 import os
 import subprocess
 import sys
+from pathlib import Path
 
-import cardano_node_tests
+
+# Mock testing environment if needed
+if not os.environ.get("CARDANO_NODE_SOCKET_PATH"):
+    os.environ["CARDANO_NODE_SOCKET_PATH"] = "/nonexistent"
+    mockdir = Path(__file__).parent / "mocks"
+    os.environ["PATH"] = f"{mockdir}:{os.environ['PATH']}"
+
+
+import cardano_node_tests  # noqa: E402
 
 # -- Path setup --------------------------------------------------------------
 
