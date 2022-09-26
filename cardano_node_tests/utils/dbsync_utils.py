@@ -8,7 +8,6 @@ from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
-from typing import Set
 from typing import Union
 
 from cardano_clusterlib import clusterlib
@@ -633,6 +632,8 @@ def _tx_scripts_hashes(
     hashes_db: dict = {}
 
     for r in records:
+        if not r.script_file:
+            continue
         shash = cluster_obj.get_policyid(script_file=r.script_file)
         shash_rec = hashes_db.get(shash)
         if shash_rec is None:
@@ -784,10 +785,10 @@ def check_tx(
         f"({response.invalid_hereafter} != {tx_raw_output.invalid_hereafter})"
     )
 
-    combined_txins: Set[clusterlib.UTXOData] = {
+    combined_txins: List[clusterlib.UTXOData] = [
         *tx_raw_output.txins,
         *[p.txins[0] for p in tx_raw_output.script_txins if p.txins],
-    }
+    ]
     txin_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in combined_txins}
     db_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in response.txins}
     assert (

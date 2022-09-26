@@ -286,7 +286,31 @@ class TestBuildLocking:
         __: Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
 
-        plutus_op = PLUTUS_OP_GUESSING_GAME
+        if use_reference_script and use_inline_datum:
+            per_time = 171_623_997
+            per_space = 548_658
+            fixed_cost = 44_032
+        elif use_reference_script and not use_inline_datum:
+            per_time = 174_674_459
+            per_space = 558_180
+            fixed_cost = 44_802
+        elif not use_reference_script and use_inline_datum:
+            per_time = 140_633_161
+            per_space = 452_332
+            fixed_cost = 36_240
+        else:
+            per_time = 143_683_623
+            per_space = 461_854
+            fixed_cost = 37_009
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME["v2"].script_file,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
+            execution_cost=plutus_common.ExecutionCost(
+                per_time=per_time, per_space=per_space, fixed_cost=fixed_cost
+            ),
+        )
 
         # for mypy
         assert plutus_op.execution_cost
@@ -384,6 +408,8 @@ class TestBuildLocking:
             expected_costs=[PLUTUS_OP_GUESSING_GAME.execution_cost],
             frac=0.2,
         )
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
 
 @common.SKIPIF_PLUTUSV2_UNUSABLE
