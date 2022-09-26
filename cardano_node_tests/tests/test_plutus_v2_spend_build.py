@@ -411,6 +411,114 @@ class TestBuildLocking:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("use_inline_datum", (True, False), ids=("inline_datum", "datum_file"))
+    @pytest.mark.parametrize("use_token", (True, False), ids=("with_token", "without_token"))
+    @pytest.mark.parametrize(
+        "use_reference_script",
+        (True, False),
+        ids=("with_reference_script", "without_reference_script"),
+    )
+    def test_min_required_utxo(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_inline_datum: bool,
+        use_token: bool,
+        use_reference_script: bool,
+        request: FixtureRequest,
+    ):
+        """Test minimum required UTxO in different scenarios with v2 functionalities.
+
+        * create the necessary Tx outputs
+        * check the min required UTxO
+        """
+        test_scenario = request.node.callspec.id
+        temp_template = f"{common.get_test_id(cluster)}_{test_scenario}"
+
+        expected_min_required_utxo = {
+            "with_reference_script-with_token-inline_datum": 9_848_350,
+            "with_reference_script-with_token-datum_file": 9_956_100,
+            "with_reference_script-without_token-inline_datum": 9_650_090,
+            "with_reference_script-without_token-datum_file": 9_757_840,
+            "without_reference_script-with_token-inline_datum": 1_107_670,
+            "without_reference_script-with_token-datum_file": 1_215_420,
+            "without_reference_script-without_token-inline_datum": 909_410,
+            "without_reference_script-without_token-datum_file": 1_017_160,
+        }
+
+        plutus_op = PLUTUS_OP_GUESSING_GAME
+
+        # for mypy
+        assert plutus_op.datum_file
+
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=plutus_op.script_file
+        )
+
+        # create a Tx outputs
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file],
+        )
+
+        txouts = [
+            clusterlib.TxOut(
+                address=script_address,
+                amount=expected_min_required_utxo[test_scenario],
+                inline_datum_file=plutus_op.datum_file if use_inline_datum else "",
+                datum_hash_file=plutus_op.datum_file if not use_inline_datum else "",
+                reference_script_file=plutus_op.script_file if use_reference_script else "",
+            )
+        ]
+
+        if use_token:
+            # create the token
+            token_rand = clusterlib.get_rand_str(5)
+            token = clusterlib_utils.new_tokens(
+                *[f"qacoin{token_rand}".encode("utf-8").hex()],
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_{token_rand}",
+                token_mint_addr=payment_addrs[0],
+                issuer_addr=payment_addrs[0],
+                amount=100,
+            )
+
+            txouts = [
+                *txouts,
+                clusterlib.TxOut(
+                    address=script_address,
+                    amount=10,
+                    coin=token[0].token,
+                    inline_datum_file=plutus_op.datum_file if use_inline_datum else "",
+                    datum_hash_file=plutus_op.datum_file if not use_inline_datum else "",
+                ),
+                # TODO: add ADA txout for change address - see node issue #3057
+                clusterlib.TxOut(address=payment_addrs[0].address, amount=2_000_000),
+            ]
+
+        tx_output = cluster.build_tx(
+            src_address=payment_addrs[0].address,
+            tx_name=f"{temp_template}_step1",
+            tx_files=tx_files,
+            txouts=txouts,
+            fee_buffer=2_000_000,
+        )
+        tx_signed = cluster.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_step1",
+        )
+        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        min_required_utxo = cluster.calculate_min_req_utxo(
+            txouts=txouts[:-1] if use_token else txouts
+        ).value
+
+        assert helpers.is_in_interval(
+            min_required_utxo, expected_min_required_utxo[test_scenario], frac=0.15
+        )
+
 
 @common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
@@ -446,6 +554,11 @@ class TestInlineDatum:
 
         min_utxo_small_inline_datum = cluster.calculate_min_req_utxo(
             txouts=txouts_with_small_inline_datum
+        ).value
+
+        expected_min_small_inline_datum = 892_170
+        assert helpers.is_in_interval(
+            min_utxo_small_inline_datum, expected_min_small_inline_datum, frac=0.15
         )
 
         small_datum_hash = cluster.get_hash_script_data(script_data_file=plutus_op.datum_file)
@@ -460,6 +573,11 @@ class TestInlineDatum:
 
         min_utxo_small_datum_hash = cluster.calculate_min_req_utxo(
             txouts=txouts_with_small_datum_hash
+        ).value
+
+        expected_min_small_datum_hash = 1_017_160
+        assert helpers.is_in_interval(
+            min_utxo_small_datum_hash, expected_min_small_datum_hash, frac=0.15
         )
 
         # big datum
@@ -474,6 +592,11 @@ class TestInlineDatum:
 
         min_utxo_big_inline_datum = cluster.calculate_min_req_utxo(
             txouts=txouts_with_big_inline_datum
+        ).value
+
+        expected_min_big_inline_datum = 1_193_870
+        assert helpers.is_in_interval(
+            min_utxo_big_inline_datum, expected_min_big_inline_datum, frac=0.15
         )
 
         big_datum_hash = cluster.get_hash_script_data(script_data_file=plutus_common.DATUM_BIG)
@@ -486,7 +609,14 @@ class TestInlineDatum:
             )
         ]
 
-        min_utxo_big_datum_hash = cluster.calculate_min_req_utxo(txouts=txouts_with_big_datum_hash)
+        min_utxo_big_datum_hash = cluster.calculate_min_req_utxo(
+            txouts=txouts_with_big_datum_hash
+        ).value
+
+        expected_min_big_datum_hash = 1_017_160
+        assert helpers.is_in_interval(
+            min_utxo_big_datum_hash, expected_min_big_datum_hash, frac=0.15
+        )
 
         # check that the min UTxO value with an inline datum depends on the size of the datum
 
@@ -742,6 +872,7 @@ class TestReferenceScripts:
         * spend the locked UTxOs using the reference UTxOs
         * check that the UTxOs were correctly spent
         """
+        # pylint: disable=too-many-locals
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
 
         plutus_op1 = PLUTUS_OP_ALWAYS_SUCCEEDS
@@ -887,9 +1018,17 @@ class TestReferenceScripts:
         )
 
         # check that script address UTxOs were spent
+
         assert not (
             cluster.get_utxo(utxo=script_utxos1[0]) or cluster.get_utxo(utxo=script_utxos2[0])
         ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
+
+        # check min required UTxO with reference script
+
+        min_required_utxo = cluster.calculate_min_req_utxo(txouts=[txouts[2]]).value
+
+        expected_min_required_utxo = 926_650
+        assert helpers.is_in_interval(min_required_utxo, expected_min_required_utxo, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     def test_reference_same_script(
