@@ -170,7 +170,6 @@ def _fund_script(
         tx_files=tx_files,
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add=2,
-        join_txouts=bool(tokens_collateral),
     )
 
     txid = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
