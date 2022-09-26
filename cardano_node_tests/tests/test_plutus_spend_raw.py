@@ -52,7 +52,7 @@ def payment_addrs(
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
-        *[f"{test_id}_payment_addr_{i}" for i in range(2)],
+        *[f"{test_id}_payment_addr_{i}" for i in range(3)],
         cluster_obj=cluster,
     )
 
@@ -2465,11 +2465,13 @@ class TestNegativeDatum:
     """Tests for Tx output locking using Plutus smart contracts with wrong datum."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
     @common.PARAM_PLUTUS_VERSION
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        address_type: str,
         plutus_version: str,
     ):
         """Test using UTxO without datum hash in place of locked UTxO.
@@ -2480,7 +2482,7 @@ class TestNegativeDatum:
         * try to spend the UTxO like it was locked Plutus UTxO
         * check that the expected error was raised
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{address_type}"
         amount = 2_000_000
 
         payment_addr = payment_addrs[0]
@@ -2494,13 +2496,20 @@ class TestNegativeDatum:
         )
         assert plutus_op.execution_cost  # for mypy
 
+        if address_type == "script_address":
+            redeem_address = cluster.gen_payment_addr(
+                addr_name=temp_template, payment_script_file=plutus_op.script_file
+            )
+        else:
+            redeem_address = payment_addrs[2].address
+
         redeem_cost = plutus_common.compute_cost(
             execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
         )
 
         txouts = [
             clusterlib.TxOut(
-                address=payment_addr.address, amount=amount + redeem_cost.fee + FEE_REDEEM_TXSIZE
+                address=redeem_address, amount=amount + redeem_cost.fee + FEE_REDEEM_TXSIZE
             ),
             clusterlib.TxOut(address=payment_addr.address, amount=redeem_cost.collateral),
         ]
