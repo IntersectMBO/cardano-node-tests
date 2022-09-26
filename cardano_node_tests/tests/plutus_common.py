@@ -14,6 +14,8 @@ DATA_DIR = Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
+SEPC256K1_ECDSA_DIR = PLUTUS_DIR / "sepc256k1_ecdsa"
+SEPC256K1_SCHNORR_DIR = PLUTUS_DIR / "sepc256k1_schnorr"
 
 ALWAYS_SUCCEEDS_PLUTUS_V1 = SCRIPTS_V1_DIR / "always-succeeds-spending.plutus"
 ALWAYS_FAILS_PLUTUS_V1 = SCRIPTS_V1_DIR / "always-fails.plutus"
@@ -37,6 +39,9 @@ MINTING_PLUTUS_V2 = SCRIPTS_V2_DIR / "anyone-can-mint.plutus"
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
 STAKE_PLUTUS_V2 = SCRIPTS_V2_DIR / "stake-script.plutus"
+
+SECP256K1_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-ecdsa-policy.plutus"
+SECP256K1_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-schnorr-policy.plutus"
 
 REDEEMER_42 = PLUTUS_DIR / "42.redeemer"
 REDEEMER_42_TYPED = PLUTUS_DIR / "typed-42.redeemer"

@@ -1,6 +1,7 @@
 """Tests for minting with Plutus V2 using `transaction build`."""
 import logging
 from pathlib import Path
+from typing import Any
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -370,3 +371,123 @@ class TestNegativeCollateralOutput:
             cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         err_str = str(excinfo.value)
         assert "IncorrectTotalCollateralField" in err_str, err_str
+
+
+@pytest.mark.testnets
+class TestSECP256k1:
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "test_vector",
+        ("positive", "invalid_sig", "invalid_pubkey", "no_msg", "no_pubkey", "no_sig"),
+    )
+    @pytest.mark.parametrize("algorithm", ("ecdsa", "schnorr"))
+    def test_use_secp_builtin_functions(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        test_vector: str,
+        algorithm: str,
+    ):
+        """Test that the two SECP256k1 builtin functions are impossible to use.
+
+        * lock some funds with the dedicated plutus script
+        * try to spend the locked UTxO
+        * check that is not possible to use SECP256k1
+        """
+        # pylint: disable=too-many-locals
+        __: Any  # mypy workaround
+        temp_template = f"{common.get_test_id(cluster)}_{test_vector}_{algorithm}"
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+        script_fund = 200_000_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_V2_REF_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
+
+        script_file = (
+            plutus_common.SECP256K1_ECDSA_PLUTUS_V2
+            if algorithm == "ecdsa"
+            else plutus_common.SECP256K1_SCHNORR_PLUTUS_V2
+        )
+
+        mint_utxos, collateral_utxos, __, __ = _fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=script_fund,
+        )
+
+        redeemer_dir = (
+            plutus_common.SEPC256K1_ECDSA_DIR
+            if algorithm == "ecdsa"
+            else plutus_common.SEPC256K1_SCHNORR_DIR
+        )
+
+        redeemer_file = redeemer_dir / f"{test_vector}.redeemer"
+
+        # Step 2: mint the "qacoin"
+
+        policyid = cluster.get_policyid(script_file)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=script_file,
+                collaterals=collateral_utxos,
+                redeemer_file=redeemer_file,
+                policyid=policyid,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+
+        protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
+
+        try:
+            cluster.build_tx(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_step2",
+                tx_files=tx_files_step2,
+                txins=mint_utxos,
+                txouts=txouts_step2,
+                mint=plutus_mint_data,
+            )
+        except clusterlib.CLIError as err:
+            err_msg = str(err)
+
+            # before protocol_version 8 the SECP256k1 is blocked
+            # after that the usage is limited by high cost model
+
+            is_forbidden = (
+                f"Forbidden builtin function: (builtin "
+                f"verify{algorithm.capitalize()}Secp256k1Signature)" in err_msg
+            )
+
+            is_overspending = (
+                "The machine terminated part way through evaluation due to "
+                "overspending the budget." in err_msg
+            )
+
+            if (is_forbidden or is_overspending) and protocol_version < 8:
+                pytest.xfail(
+                    "The SECP256k1 builtin functions are not allowed before protocol version 8"
+                )
+            raise
