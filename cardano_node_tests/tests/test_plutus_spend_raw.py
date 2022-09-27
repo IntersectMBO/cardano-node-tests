@@ -1295,6 +1295,48 @@ class TestLocking:
 
 @common.SKIPIF_PLUTUS_UNUSABLE
 @pytest.mark.testnets
+class TestDatum:
+    """Tests for datum."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_datum_on_key_credential_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test creating UTxO with datum on address with key credentials (non-script address)."""
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        txouts = [
+            clusterlib.TxOut(
+                address=dst_addr.address,
+                amount=amount,
+                datum_hash_file=plutus_common.DATUM_42_TYPED,
+            )
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+        tx_raw_output = cluster.send_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+        )
+
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0]
+        assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+
+@common.SKIPIF_PLUTUS_UNUSABLE
+@pytest.mark.testnets
 class TestNegative:
     """Tests for Tx output locking using Plutus smart contracts that are expected to fail."""
 

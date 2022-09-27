@@ -17,6 +17,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -1757,6 +1758,124 @@ class TestIncrementalSigning:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
+
+@pytest.mark.testnets
+@pytest.mark.smoke
+@pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.ALONZO,
+    reason="runs only with Alonzo+ TX",
+)
+class TestDatum:
+    """Tests for Simple Scripts V1 and V2 UTxOs with datum."""
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[
+                    f"multi_addr_datum_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(5)
+                ],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addrs
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
+    @pytest.mark.dbsync
+    def test_script_utxo_datum(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        script_version: str,
+    ):
+        """Test creating UTxO with datum on Simple Scripts V1 and V2 address."""
+        temp_template = f"{common.get_test_id(cluster)}_{script_version}_{use_build_cmd}"
+        amount = 2_000_000
+
+        src_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        # create multisig script
+        if script_version == "simple_v1":
+            multisig_script = Path(f"{temp_template}_multisig.script")
+            script_content = {
+                "keyHash": cluster.get_payment_vkey_hash(dst_addr.vkey_file),
+                "type": "sig",
+            }
+            with open(multisig_script, "w", encoding="utf-8") as fp_out:
+                json.dump(script_content, fp_out, indent=4)
+        else:
+            multisig_script = cluster.build_multisig_script(
+                script_name=temp_template,
+                script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
+                payment_vkey_files=[p.vkey_file for p in payment_addrs],
+                slot=100,
+                slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+            )
+
+        # create script address
+        script_address = cluster.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        txouts = [
+            clusterlib.TxOut(
+                address=script_address,
+                amount=amount,
+                datum_hash_file=plutus_common.DATUM_42_TYPED,
+            )
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+
+        # create a UTxO on script address
+        if use_build_cmd:
+            tx_output = cluster.build_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                txouts=txouts,
+                fee_buffer=2_000_000,
+                tx_files=tx_files,
+            )
+            tx_signed = cluster.sign_tx(
+                tx_body_file=tx_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        else:
+            tx_output = cluster.send_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                txouts=txouts,
+                tx_files=tx_files,
+            )
+
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=script_address)[0]
+        assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
 @pytest.mark.testnets
