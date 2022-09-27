@@ -2723,10 +2723,13 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
         if use_build_cmd:
-            expected_msg = "The following tx input(s) were not present in the UTxO"
+            assert (
+                "The UTxO is empty" in err
+                # in 1.35.3 and older
+                or "The following tx input(s) were not present in the UTxO" in err
+            ), err
         else:
-            expected_msg = "BadInputsUTxO"
-        assert expected_msg in err
+            assert "BadInputsUTxO" in err, err
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -2753,10 +2756,13 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
         if use_build_cmd:
-            expected_msg = "The following tx input(s) were not present in the UTxO"
+            assert (
+                "The UTxO is empty" in err
+                # in 1.35.3 and older
+                or "The following tx input(s) were not present in the UTxO" in err
+            ), err
         else:
-            expected_msg = "BadInputsUTxO"
-        assert expected_msg in err
+            assert "BadInputsUTxO" in err, err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))

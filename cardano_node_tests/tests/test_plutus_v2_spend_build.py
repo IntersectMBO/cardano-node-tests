@@ -2279,9 +2279,11 @@ class TestNegativeReadonlyReferenceInputs:
                 script_txins=plutus_txins,
             )
         err_str = str(excinfo.value)
-        # TODO improve error message cardano-node 4012
         assert (
-            "TranslationLogicMissingInput (TxIn (TxId "
+            "following tx input(s) were not present in the UTxO: \n"
+            f"{reference_input[0].utxo_hash}" in err_str
+            # in 1.35.3 and older - cardano-node issue #4012
+            or "TranslationLogicMissingInput (TxIn (TxId "
             f'{{_unTxId = SafeHash "{reference_input[0].utxo_hash}"}})' in err_str
         ), err_str
 
