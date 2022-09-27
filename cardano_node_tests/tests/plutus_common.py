@@ -38,6 +38,7 @@ MINTING_WITNESS_REDEEMER_PLUTUS_V1 = SCRIPTS_V1_DIR / "witness-redeemer.plutus"
 MINTING_TOKENNAME_PLUTUS_V1 = SCRIPTS_V1_DIR / "mint-tokenname.plutus"
 
 MINTING_PLUTUS_V2 = SCRIPTS_V2_DIR / "anyone-can-mint.plutus"
+MINTING_CHECK_REF_INPUTS_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-with-reference-inputs.plutus"
 
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
@@ -100,6 +101,9 @@ MINTING_TOKENNAME_COST = ExecutionCost(per_time=230_732_000, per_space=539_860, 
 
 MINTING_V2_COST = ExecutionCost(per_time=167_089_597, per_space=537_352, fixed_cost=43_053)
 MINTING_V2_REF_COST = ExecutionCost(per_time=198_080_433, per_space=633_678, fixed_cost=50_845)
+MINTING_V2_CHECK_REF_INPUTS_COST = ExecutionCost(
+    per_time=214_916_514, per_space=696_858, fixed_cost=55_705
+)
 
 
 # TODO: cost in old Alonzo cost model
