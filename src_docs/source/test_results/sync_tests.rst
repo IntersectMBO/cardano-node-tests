@@ -2,7 +2,7 @@
 
    <link rel="stylesheet" type="text/css" href="../_static/css/override-width.css">
 
-Automation Status
+Sync Tests
 =================
 
 All the visualizations are dynamic so feel free to play with them.
