@@ -1,11 +1,13 @@
 # How to start local cluster
 
 ## What is a local cluster
+
 A **local cluster** is a local Cardano blockchain that consists of 3 stake pools and 1 BFT node. The chain is started in Byron era and it is moved in the desired era, similarly to Mainnet, using Update Proposals. The default `testnet-magic` value is 42.
 
 Using a local cluster you can test/play/interact with all the Cardano blockchain functionalities - from block creation, to rewards generation based on the stake delegated to each of the stake pool, generating and sending all kinds of transactions, to interacting with Plutus scripts.
 
 **Local cluster parameters**:
+
 - slotLengthe: 200ms
 - epochLenght: 1000 slots per epoch (that is 200sec)
 - activeSlotsCoeff: 0.1 (that means there will be ~ 100 blocks per epoch)
@@ -254,11 +256,13 @@ Cluster started. Run `/home/artur/Projects/cardano-node-tests/scripts/destinatio
 ```
 
 ### Stop the local cluster
+
 To stop cluster run the exact command that last line suggests in the above log:
 
 `<scripts/destination/dir>/stop-cluster-hfc`
 
 ### Set the TX_Era
+
 You can even create and send different era transactions (for example the local cluster can be in
 Alonzo era and you can create and send Shelley era transactions).
 You can control the transaction_era dynamically, while the cluster is running, through usage of

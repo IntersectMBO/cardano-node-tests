@@ -18,10 +18,10 @@ This document also helps to clarify the QC activities, roles, responsibilities, 
 
 ## Quality Control Approach
 
-Quality Control takes place during the Development and Launch [SDLC phases]().
+Quality Control takes place during the Development and Launch SDLC phases.
 
 It is recommended to create and run automated tests as soon as possible, at the component, integration, and system test levels.
-For this reason, it is recommended to use the [Shift Left Testing]() approach that is based on the principle that if the
+For this reason, it is recommended to use the Shift Left Testing approach that is based on the principle that if the
 software development team can test code as it is being developed, they can discover errors earlier than if they wait until
 the end of the project.
 
