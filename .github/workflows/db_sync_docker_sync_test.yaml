@@ -1,0 +1,140 @@
+name: db-sync docker sync check
+
+on:
+  workflow_dispatch:
+    inputs:
+      db_sync_branch:
+        description: cardano-db-sync branch that will be used
+        required: true
+        default: "13.0.5-extra-args"
+
+jobs:
+  setup_and_start_db_sync:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        env: [mainnet, preprod, preview]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+
+      - name: Checkout cardano-db-sync Repository
+        uses: actions/checkout@v2
+        with:
+          repository: input-output-hk/cardano-db-sync
+          path: cardano-db-sync
+          ref: ${{ github.event.inputs.db_sync_branch }}
+
+      - name: Start docker-compose WITHOUT flags
+        run: |
+          cd cardano-db-sync
+          echo "DB_SYNC_REVISION=$(git rev-parse --short=40 HEAD)" >> $GITHUB_ENV
+          echo "DB_SYNC_VERSION=$(echo ${{ inputs.db_sync_branch }} | grep -oE "(\w*[.]\w*)*")" >> $GITHUB_ENV
+          sudo NETWORK=${{ matrix.env }} docker-compose up -d
+
+      - name: Wait for 60 seconds
+        run: |
+          echo "Waiting 60 seconds for startup"
+          sleep 60
+
+      - name: Print db-sync Logs
+        run: |
+          cd cardano-db-sync
+          echo "db-sync logs:"
+          sudo docker-compose logs cardano-db-sync | tee db_sync_no_flags_logs.txt
+
+      - name: Network Check
+        run: |
+          cd cardano-db-sync
+          if grep -i ${{ matrix.env }} "db_sync_no_flags_logs.txt"; then echo "Connected to correct network"; else echo "WRONG or NO NETWORK found !" && exit 1; fi
+
+      - name: Version and Revision Check
+        run: |
+          cd cardano-db-sync
+          if grep -i ${{ env.DB_SYNC_VERSION }} "db_sync_no_flags_logs.txt"; then echo "Correct version"; else echo "WRONG Version !" && exit 1; fi
+          if grep -i ${{ env.DB_SYNC_REVISION }} "db_sync_no_flags_logs.txt"; then echo "Correct SHA"; else echo "WRONG SHA !" && exit 1; fi
+
+      - name: Flags Check - Should be False
+        run: |
+          cd cardano-db-sync
+          if grep -i "Option disable-ledger: False" "db_sync_no_flags_logs.txt"; then echo "Flag disable-ledger set to False"; else echo "disable-ledger = True !" && exit 1; fi
+          if grep -i "Option disable-cache: False" "db_sync_no_flags_logs.txt"; then echo "Flag disable-cache set to False"; else echo "disable-cache = True !" && exit 1; fi
+          if grep -i "Option disable-epoch: False" "db_sync_no_flags_logs.txt"; then echo "Flag disable-epoch set to False"; else echo "disable-epoch = True !" && exit 1; fi
+
+      - name: Errors Check
+        run: |
+          cd cardano-db-sync
+          if grep -i Error "db_sync_no_flags_logs.txt"; then echo "Found Error(s) !" && exit 1; fi
+
+      - name: Blocks Insertion Check
+        run: |
+          cd cardano-db-sync
+          if grep -i epochPluginInsertBlockDetails "db_sync_no_flags_logs.txt"; then echo "Blocks inserted into DB"; else echo "NO block insertion !" && exit 1; fi
+
+      - name: Cache Statistics Check
+        run: |
+          cd cardano-db-sync
+          if grep -i "Cache Statistics" "db_sync_no_flags_logs.txt"; then echo "Cache Statistics present"; else echo "NO Cache Statistics !" && exit 1; fi
+
+      - name: Shut down docker-compose and remove volumes
+        run: |
+          cd cardano-db-sync
+          sudo docker-compose down -v
+
+      - name: Wait for 10 seconds
+        run: |
+          echo "Waiting 10 seconds for startup"
+          sleep 10
+
+      - name: Start docker-compose WITH flags
+        run: |
+          cd cardano-db-sync
+          sudo NETWORK=${{ matrix.env }} EXTRA_DB_SYNC_ARGS="--disable-ledger --disable-cache --disable-epoch" docker-compose up -d
+
+      - name: Wait for 60 seconds
+        run: |
+          echo "Waiting 60 seconds for startup"
+          sleep 60
+
+      - name: Print db-sync Logs
+        run: |
+          cd cardano-db-sync
+          echo "db-sync logs:"
+          sudo docker-compose logs cardano-db-sync | tee db_sync_flags_logs.txt
+
+      - name: Errors Check
+        run: |
+          cd cardano-db-sync
+          if grep -i Error "db_sync_flags_logs.txt"; then echo "Found Error(s) !" && exit 1; fi
+
+      - name: Epoch Plugin Check - Should be Gone
+        run: |
+          cd cardano-db-sync
+          if grep -i epochPluginInsertBlockDetails "db_sync_flags_logs.txt"; then echo "Epoch Plugin should be blocked !" && exit 1; fi
+
+      - name: Cache Statistics Check - Should be Gone
+        run: |
+          cd cardano-db-sync
+          if grep -i "Cache Statistics" "db_sync_flags_logs.txt"; then echo "Error - Found Cache Statistics !" && exit 1; fi
+
+      - name: Block Insertion Check
+        run: |
+          cd cardano-db-sync
+          if grep -i insert "db_sync_flags_logs.txt"; then echo "Blocks inserted into DB"; else echo "NO block insertion !" && exit 1; fi
+
+      - name: Flags Check - Should be True
+        run: |
+          cd cardano-db-sync
+          if grep -i "Option disable-ledger: True" "db_sync_flags_logs.txt"; then echo "Flag disable-ledger set to True"; else echo "disable-ledger = False !" && exit 1; fi
+          if grep -i "Option disable-cache: True" "db_sync_flags_logs.txt"; then echo "Flag disable-cache set to True"; else echo "disable-cache = False !" && exit 1; fi
+          if grep -i "Option disable-epoch: True" "db_sync_flags_logs.txt"; then echo "Flag disable-epoch set to True"; else echo "disable-epoch = False !" && exit 1; fi
+
+      - name: Upload Logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.env }}-db-sync-logs
+          path: |
+            cardano-db-sync/db_sync_no_flags_logs.txt
+            cardano-db-sync/db_sync_flags_logs.txt
+          retention-days: 5
