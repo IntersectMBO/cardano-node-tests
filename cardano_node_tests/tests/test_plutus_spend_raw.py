@@ -2641,9 +2641,9 @@ class TestNegativeDatum:
         """
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
-        dst_addr = payment_addrs[1]
 
         payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
 
         plutus_op_1 = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -2683,6 +2683,93 @@ class TestNegativeDatum:
 
         err_str = str(excinfo.value)
         assert "NonOutputSupplimentaryDatums" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS_VERSION
+    def test_unlock_non_script_utxo(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
+    ):
+        """Try to spend a non-script UTxO with datum as if it was script locked UTxO.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        amount_fund = 4_000_000
+        amount_redeem = 2_000_000
+        amount_collateral = 2_000_000
+
+        payment_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        datum_file = plutus_common.DATUM_42_TYPED
+
+        datum_hash = cluster.get_hash_script_data(script_data_file=datum_file)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
+            datum_file=datum_file,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
+        )
+        assert plutus_op.execution_cost  # for mypy
+
+        # create datum and collateral UTxOs
+
+        txouts = [
+            clusterlib.TxOut(
+                address=dst_addr.address,
+                amount=amount_fund,
+                datum_hash=datum_hash,
+            ),
+            clusterlib.TxOut(
+                address=payment_addr.address,
+                amount=amount_collateral,
+            ),
+        ]
+        tx_files_fund = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+        tx_raw_output = cluster.send_tx(
+            src_address=payment_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files_fund,
+        )
+
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        datum_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=dst_addr.address, datum_hash=datum_hash
+        )[0]
+        collateral_utxos = clusterlib.filter_utxos(
+            utxos=out_utxos, address=payment_addr.address, utxo_ix=datum_utxo.utxo_ix + 1
+        )
+        assert (
+            datum_utxo.datum_hash == datum_hash
+        ), f"UTxO should have datum hash '{datum_hash}': {datum_utxo}"
+
+        tx_files_redeem = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file, dst_addr.skey_file]
+        )
+
+        # try to spend the "locked" UTxO
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=dst_addr,
+                script_utxos=[datum_utxo],
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=amount_redeem,
+                tx_files=tx_files_redeem,
+            )
+
+        err_str = str(excinfo.value)
+        assert "ExtraneousScriptWitnessesUTXOW" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.binary(min_size=65))
