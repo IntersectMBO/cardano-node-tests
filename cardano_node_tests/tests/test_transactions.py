@@ -3114,7 +3114,7 @@ class TestNegative:
         # combination is used
         # TODO: move this tests from `TestNegative` once CDDL is the only supported format
         # of Tx body
-        if cluster.use_cddl:
+        if cluster.use_cddl or not clusterlib_utils.cli_has("transaction build-raw --cddl-format"):
             tx_signed_again = cluster.sign_tx(
                 **cli_args,
                 signing_key_files=tx_files.signing_key_files,

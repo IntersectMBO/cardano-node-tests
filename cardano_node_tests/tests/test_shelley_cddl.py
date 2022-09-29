@@ -30,6 +30,11 @@ LOGGER = logging.getLogger(__name__)
     reason="runs only with Shelley TX",
 )
 class TestShelleyCDDL:
+    @pytest.fixture(scope="class")
+    def skip_cddl(self):
+        if not clusterlib_utils.cli_has("transaction build-raw --cddl-format"):
+            pytest.skip("The `--cddl-format` option is no longer available.")
+
     @pytest.fixture
     def payment_addrs(
         self,
@@ -56,9 +61,13 @@ class TestShelleyCDDL:
 
     @allure.link(helpers.get_vcs_link())
     def test_shelley_cddl(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self,
+        skip_cddl: None,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
     ):
         """Check expected failure when Shelley Tx is used with CDDL format."""
+        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
 
         src_address = payment_addrs[0].address
