@@ -20,12 +20,12 @@ Before creating bug reports, please check [this list of existing issues](https:/
 
 Explain the problem and include additional details to help maintainers reproduce the problem:
 
-* **Use a clear and descriptive title** for the issue to identify the problem.
-* **Describe the exact steps which reproduce the problem** in as many details as possible. When listing steps, **don't just say what you did, but explain how you did it**.
-* **Provide specific examples to demonstrate the steps**. Include links to files or GitHub projects, or copy/pasteable snippets, which you use in those examples. If you're providing snippets in the issue, use [Markdown code blocks](https://help.github.com/articles/markdown-basics/#multiple-lines).
-* **Describe the behavior you observed after following the steps** and point out what exactly is the problem with that behavior.
-* **Explain which behavior you expected to see instead and why.**
-* **Which version of cardano-node & cardano-node-tests are you using?**
+- **Use a clear and descriptive title** for the issue to identify the problem.
+- **Describe the exact steps which reproduce the problem** in as many details as possible. When listing steps, **don't just say what you did, but explain how you did it**.
+- **Provide specific examples to demonstrate the steps**. Include links to files or GitHub projects, or copy/pasteable snippets, which you use in those examples. If you're providing snippets in the issue, use [Markdown code blocks](https://help.github.com/articles/markdown-basics/#multiple-lines).
+- **Describe the behavior you observed after following the steps** and point out what exactly is the problem with that behavior.
+- **Explain which behavior you expected to see instead and why.**
+- **Which version of cardano-node & cardano-node-tests are you using?**
 
 
 ### Your First Code Contribution
@@ -57,11 +57,12 @@ your pull request can be ultimately accepted.
 
 ### Git Commit Messages
 
-* Use the present tense ("Add feature" not "Added feature")
-* Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
-* Limit the first line to 72 characters or less
-* Reference issues and pull requests liberally after the first line
+- Use the present tense ("Add feature" not "Added feature")
+- Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
+- Limit the first line to 72 characters or less
+- Reference issues and pull requests liberally after the first line
 
 ### Python Styleguide
 
-Follow the Google Python Style Guide, with the exception that formatting is handled automatically by **Black** (through pre-commit command).
+Follow the Google Python Style Guide, with the exception that formatting is handled automatically
+by **Black** (through pre-commit command).
