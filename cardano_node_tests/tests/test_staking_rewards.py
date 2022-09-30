@@ -816,7 +816,7 @@ class TestRewards:
                 assert reward_addr_dec not in pstake_set
                 assert reward_addr_dec not in pstake_go
 
-            # check that rewards are comming from multiple sources where expected
+            # check that rewards are coming from multiple sources where expected
             # ("LeaderReward" and "MemberReward")
             if init_epoch + 3 <= this_epoch <= init_epoch + 7:
                 assert ["LeaderReward", "MemberReward"] == _get_rew_type_for_cred_hash(
@@ -841,7 +841,7 @@ class TestRewards:
             )
 
             LOGGER.info(
-                f"Submitting MIR cert for tranferring funds from {fund_src} to "
+                f"Submitting MIR cert for transferring funds from {fund_src} to "
                 f"'{pool_reward.stake.address}' in epoch {cluster.get_epoch()} "
                 f"on cluster instance {cluster_manager.cluster_instance_num}"
             )
@@ -1042,12 +1042,12 @@ class TestRewards:
                 assert rtypes_set == {"leader"}
 
     @allure.link(helpers.get_vcs_link())
-    def test_decreasing_reward_transfered_funds(
+    def test_decreasing_reward_transferred_funds(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool1: clusterlib.ClusterLib,
     ):
-        """Check that rewards are gradually decreasing when funds are being transfered.
+        """Check that rewards are gradually decreasing when funds are being transferred.
 
         Even though nothing is staked and rewards are being transferred from reward address, there
         are still some funds staked on the reward address at the time ledger snapshot is taken. For
