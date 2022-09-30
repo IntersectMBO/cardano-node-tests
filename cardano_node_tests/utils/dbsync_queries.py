@@ -72,6 +72,7 @@ class TxDBRow(NamedTuple):
     withdrawal_count: int
     collateral_count: int
     reference_input_count: int
+    collateral_out_count: int
     script_count: int
     redeemer_count: int
     ma_tx_out_id: Optional[int]
@@ -140,6 +141,14 @@ class TxInDBRow(NamedTuple):
 
 
 class TxInNoMADBRow(NamedTuple):
+    tx_out_id: int
+    utxo_ix: int
+    address: str
+    value: decimal.Decimal
+    tx_hash: memoryview
+
+
+class CollateralTxOutDBRow(NamedTuple):
     tx_out_id: int
     utxo_ix: int
     address: str
@@ -286,6 +295,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
         " (SELECT COUNT(id) FROM withdrawal WHERE tx_id=tx.id) AS withdrawal_count,"
         " (SELECT COUNT(id) FROM collateral_tx_in WHERE tx_in_id=tx.id) AS collateral_count,"
         " (SELECT COUNT(id) FROM reference_tx_in WHERE tx_in_id=tx.id) AS reference_input_count,"
+        " (SELECT COUNT(id) FROM collateral_tx_out WHERE tx_id=tx.id) AS collateral_out_count,"
         " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
         " (SELECT COUNT(id) FROM redeemer WHERE tx_id=tx.id) AS redeemer_count,"
         " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity,"
@@ -363,6 +373,23 @@ def query_reference_tx_ins(txhash: str) -> Generator[TxInNoMADBRow, None, None]:
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield TxInNoMADBRow(*result)
+
+
+def query_collateral_tx_outs(txhash: str) -> Generator[CollateralTxOutDBRow, None, None]:
+    """Query transaction collateral txouts in db-sync."""
+    query = (
+        "SELECT "
+        "collateral_tx_out.id, collateral_tx_out.index, collateral_tx_out.address, "
+        "collateral_tx_out.value, "
+        "(SELECT hash FROM tx WHERE id = collateral_tx_out.tx_id) AS tx_hash "
+        "FROM collateral_tx_out "
+        "LEFT JOIN tx ON tx.id = collateral_tx_out.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield CollateralTxOutDBRow(*result)
 
 
 def query_plutus_scripts(txhash: str) -> Generator[ScriptDBRow, None, None]:
