@@ -9,7 +9,7 @@ steps:
     agents:
       system: x86_64-linux
     artifact_paths:
-      - 'allure-report.tar.xz'
+      - 'allure-results.tar.xz'
       - 'cli_coverage.json'
       - 'testrun-report.html'
       - 'scheduling.log.xz'
