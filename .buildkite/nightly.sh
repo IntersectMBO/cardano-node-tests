@@ -24,21 +24,19 @@ mkdir -p "$WORKDIR"
 # shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/niv_update_cardano_node.sh"
 
-pushd "$WORKDIR"
-
-# install Allure
-# shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/allure_install.sh"
-
-pushd "$REPODIR"
-
 # run tests and generate report
 rm -rf "${ARTIFACTS_DIR:?}"/*
 set +e
 # shellcheck disable=SC2016
 nix-shell --run \
-  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" make tests; retval="$?"; ./.buildkite/report.sh .; ./.buildkite/cli_coverage.sh .; exit "$retval"'
+  'SCHEDULING_LOG=scheduling.log CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI" make tests; retval="$?"; ./.buildkite/cli_coverage.sh .; exit "$retval"'
 retval="$?"
+
+# move html report to root dir
+mv .reports/testrun-report.html testrun-report.html
+
+# create results archive
+"$REPODIR"/.buildkite/results.sh .
 
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
@@ -47,9 +45,6 @@ retval="$?"
 # save testing artifacts
 # shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/save_artifacts.sh"
-
-# move html report to root dir
-mv .reports/testrun-report.html testrun-report.html
 
 # compress scheduling log
 xz scheduling.log
