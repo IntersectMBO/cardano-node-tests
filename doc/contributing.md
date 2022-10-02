@@ -41,7 +41,7 @@ The process described here has several goals:
 
 Please follow these steps to have your contribution considered by the maintainers:
 
-1. Follow all instructions in [the template](PULL_REQUEST_TEMPLATE.md)
+1. Follow all instructions in the template (TO DO: to be added later)
 2. Follow the [styleguides](#styleguides)
 3. After you submit your pull request, verify that all [status checks](https://help.github.com/articles/about-status-checks/) are passing.
    If a status check is failing, and you believe that the failure is unrelated to your change,
@@ -64,5 +64,8 @@ your pull request can be ultimately accepted.
 
 ### Python Styleguide
 
-Follow the Google Python Style Guide, with the exception that formatting is handled automatically
-by **Black** (through pre-commit command).
+Run `pre-commit install` to set up the git hook scripts that will check you changes before every commit.
+Alternatively run `make lint` manually before pushing your changes.
+
+Follow the Google Python Style Guide, with the exception that formatting is handled automatically by Black
+(through `pre-commit` command).

@@ -8,7 +8,7 @@ Using a local cluster you can test/play/interact with all the Cardano blockchain
 
 **Local cluster parameters**:
 
-- slotLengthe: 200ms
+- slotLength: 200ms
 - epochLenght: 1000 slots per epoch (that is 200sec)
 - activeSlotsCoeff: 0.1 (that means there will be ~ 100 blocks per epoch)
 
