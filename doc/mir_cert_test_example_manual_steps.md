@@ -9,7 +9,7 @@ Below is an example of such case for running manual test for checking MIR certif
 
 This assumes that you have a running local cluster.
 Instructions on how to start a local cluster can be found here:
-<https://github.com/input-output-hk/cardano-node-tests/blob/artur/docs/doc/running_local_cluster.md>
+<https://input-output-hk.github.io/cardano-node-tests/how-tos/300_running_local_cluster.html>
 
 ## Create key pairs
 

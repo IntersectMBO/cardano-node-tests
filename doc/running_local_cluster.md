@@ -19,7 +19,7 @@ Using a local cluster you can test/play/interact with all the Cardano blockchain
 - virtualenv
 - nix
 
-You can find [here](<https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md>) how to install `nix` and how to add **IOHK** binary cache
+For instrucions on how to install `nix` and how to add IOHK binary cache, see <https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md>
 
 ## Initial setup for all cardano components
 
@@ -312,7 +312,7 @@ This will run tests which contain names that match the given string expression (
 which can include Python operators that use filenames, class names and function names as variables.
 The example above will run TestMyClass.test_something but not TestMyClass.test_method_simple.
 
-You can read more on how to invoke tests [here](https://docs.pytest.org/en/6.2.x/usage.html).
+For more info on how to invoke tests, see <https://docs.pytest.org/en/6.2.x/usage.html>.
 
 
 ## Interact with the node
@@ -571,11 +571,11 @@ and `\q` for leaving database.
 
 ### Useful queries
 
-You can find interesting db-sync queries [here](https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/interesting-queries.md).
+For interesting db-sync queries, see <https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/interesting-queries.md>.
 
 
 ## Additional resources
 
-More info on **cardano-node** can be found [here](https://github.com/input-output-hk/cardano-node/tree/master/doc/getting-started).
+For more info on **cardano-node**, see <https://github.com/input-output-hk/cardano-node/tree/master/doc/getting-started>.
 
-More info on **cardano-db-sync** can be found [here](https://github.com/input-output-hk/cardano-db-sync/tree/master/doc).
+For more info on **cardano-db-sync**, see <https://github.com/input-output-hk/cardano-db-sync/tree/master/doc>.

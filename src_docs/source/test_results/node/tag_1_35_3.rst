@@ -1,5 +1,5 @@
 1.35.3
-============
+======
 
 * tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.3-rc1>
 * tag PR - <https://github.com/input-output-hk/cardano-node/pull/4269>
@@ -16,7 +16,7 @@ Changelogs
 
 
 Regression testing on local cluster
--------------------------------------
+-----------------------------------
 
 .. list-table:: only with costModelV1
    :header-rows: 0
@@ -93,13 +93,13 @@ Release testing checklist
 
 
 Relevant existing issues
----------------------------
+------------------------
 
 * `[BUG] - Shelley era Tx body in CDDL format is not supported by some CLI commands <https://github.com/input-output-hk/cardano-node/issues/3688>`__ - not a regression in 1.35.3
 
 
 New issues
-------------------
+----------
 
 * `[BUG] - cannot use transaction build command to build Shelley/Allegra era Tx in Babbage <https://github.com/input-output-hk/cardano-node/issues/4286>`__
 * `[BUG] - cannot use transaction build command to build Mary era Tx in Babbage <https://github.com/input-output-hk/cardano-node/issues/4287>`__
@@ -107,7 +107,7 @@ New issues
 
 
 New functionalities in this tag
-------------------------------------------
+-------------------------------
 
 * Protocol in header to announce 7.2 (`#4260 <https://github.com/input-output-hk/cardano-node/pull/4260>`__) |:heavy_check_mark:|
 * `build` and `build-raw` commands to accept simple reference minting scripts (`#4087 <https://github.com/input-output-hk/cardano-node/pull/4087>`__) |:heavy_check_mark:|
