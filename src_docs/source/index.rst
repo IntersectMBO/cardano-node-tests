@@ -6,8 +6,10 @@ Welcome to cardano-node-test's documentation!
    :caption: Contents:
 
    readme
-   testing
-   tutorials
+   test_results
+   process
+   how-tos
+   contribute
    modules
 
 
