@@ -16,7 +16,7 @@ Find and copy executable to your $PATH:
 
 Prepare `admins.txt` file which should have format:
 
-```txt
+```text
 username, password
 ```
 
@@ -93,7 +93,7 @@ curl --verbose -u username:password --header "Content-Type: application/json" --
 {"code":"TickerAlreadyReserved","description":"Ticker name ART is already reserved"}
 ```
 
-```txt
+```text
 [smash-server:Info:6] [2021-11-23 12:06:29.94 UTC] SMASH listening on port 3100
 [smash-server:Warning:27] [2021-11-23 12:59:18.14 UTC] TickerAlreadyReserved (TickerName "ART")
 ```
@@ -584,7 +584,7 @@ but this is not the last entry in **pool_metadata_ref** which has `id=301` and  
 
 Reason of this problem is mentioned in one of errors returned by **SMASH**:
 
-```txt
+```text
 "cause":"Hash mismatch from when fetching metadata from https://git.io/JTUAD. Expected f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395 but got 75848f572990cbc72a9efd62ed5aa0178e16d5164c6dcfbb040dcec47f13d8f4."
 ```
 
