@@ -7,7 +7,7 @@ in order to make sure we are delivering the highest quality possible for any new
 
 This document also helps to clarify the QC activities, roles, responsibilities, processes and practices to be used on the Cardano project.
 
-![img.png](../src_docs/source/images/qa_process.png)
+![img.png](https://input-output-hk.github.io/cardano-node-tests/_static/images/qa_process.png)
 
 ## Key Principles
 
