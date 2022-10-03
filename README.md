@@ -3,9 +3,9 @@ README for cardano-node-tests
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-Integration tests for cardano-node.
+System/E2E tests for cardano-node.
 
-For more details check the [doc](https://github.com/input-output-hk/cardano-node-tests/tree/master/doc) folder
+Check [documentation](https://input-output-hk.github.io/cardano-node-tests) for more details.
 
 Installation
 ------------
