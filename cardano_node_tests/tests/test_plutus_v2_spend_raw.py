@@ -439,9 +439,12 @@ class TestLockingV2:
             orig_cbor_hex = orig_cbor_bin.hex()
 
         # see https://github.com/input-output-hk/cardano-db-sync/issues/1214
-        assert (
-            db_cbor_hex == orig_cbor_hex
-        ), "Datum bytes in db-sync doesn't correspond to the original datum"
+        # and https://github.com/input-output-hk/cardano-node/issues/4433
+        if db_cbor_hex != orig_cbor_hex:
+            pytest.xfail(
+                "See cardano-node-issue #4433 - "
+                "datum bytes in db-sync doesn't correspond to the original datum"
+            )
 
 
 @common.SKIPIF_PLUTUSV2_UNUSABLE
