@@ -15,7 +15,7 @@ export PGUSER="${PGUSER:-postgres}"
 # kill running postgres and clear its data
 if [ "${2:-""}" = "-k" ]; then
   # try to kill whatever is listening on postgres port
-  listening_pid="$(lsof -i:"$PGPORT" -t || echo "")"
+  listening_pid="$(lsof -i:"$PGPORT" -t | tail -n 1 || echo "")"
   if [ -n "$listening_pid" ]; then
     kill "$listening_pid"
   fi
