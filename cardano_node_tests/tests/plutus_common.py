@@ -39,6 +39,7 @@ MINTING_TOKENNAME_PLUTUS_V1 = SCRIPTS_V1_DIR / "mint-tokenname.plutus"
 
 MINTING_PLUTUS_V2 = SCRIPTS_V2_DIR / "anyone-can-mint.plutus"
 MINTING_CHECK_REF_INPUTS_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-with-reference-inputs.plutus"
+MINTING_CHECK_DATUM_HASH_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-datum-hash.plutus"
 
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
@@ -104,7 +105,9 @@ MINTING_V2_REF_COST = ExecutionCost(per_time=198_080_433, per_space=633_678, fix
 MINTING_V2_CHECK_REF_INPUTS_COST = ExecutionCost(
     per_time=214_916_514, per_space=696_858, fixed_cost=55_705
 )
-
+MINTING_V2_CHECK_DATUM_HASH_COST = ExecutionCost(
+    per_time=244_944_118, per_space=797_302, fixed_cost=63_665
+)
 
 # TODO: cost in old Alonzo cost model
 if configuration.ALONZO_COST_MODEL or VERSIONS.cluster_era == VERSIONS.ALONZO:

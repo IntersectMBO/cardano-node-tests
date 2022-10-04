@@ -1,4 +1,5 @@
 """Tests for minting with Plutus V2 using `transaction build-raw`."""
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -62,6 +63,7 @@ def _fund_issuer(
     fee_txsize: int = FEE_MINT_TXSIZE,
     collateral_utxo_num: int = 1,
     reference_script: Optional[Path] = None,
+    datum_file: Optional[Path] = None,
 ) -> Tuple[
     List[clusterlib.UTXOData],
     List[clusterlib.UTXOData],
@@ -84,12 +86,13 @@ def _fund_issuer(
     reference_amount = 0
     txouts_reference = []
     if reference_script:
-        reference_amount = 10_000_000
+        reference_amount = 20_000_000
         txouts_reference = [
             clusterlib.TxOut(
                 address=issuer_addr.address,
                 amount=reference_amount,
                 reference_script_file=reference_script,
+                datum_hash_file=datum_file if datum_file else "",
             )
         ]
 
@@ -143,6 +146,44 @@ def _fund_issuer(
     ]
 
     return mint_utxos, collateral_utxos, reference_utxo, tx_raw_output
+
+
+def _build_reference_txin(
+    temp_template: str,
+    cluster: clusterlib.ClusterLib,
+    amount: int,
+    payment_addr: clusterlib.AddressRecord,
+    dst_addr: Optional[clusterlib.AddressRecord] = None,
+    datum_file: Optional[Path] = None,
+) -> List[clusterlib.UTXOData]:
+    """Create a basic txin to use as readonly reference input.
+
+    Uses `cardano-cli transaction build-raw` command for building the transaction.
+    """
+    dst_addr = dst_addr or cluster.gen_payment_addr_and_keys(name=f"{temp_template}_readonly_input")
+
+    txouts = [
+        clusterlib.TxOut(
+            address=dst_addr.address,
+            amount=amount,
+            datum_hash_file=datum_file if datum_file else "",
+        )
+    ]
+    tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
+
+    tx_raw_output = cluster.send_tx(
+        src_address=payment_addr.address,
+        tx_name=f"{temp_template}_step1",
+        txouts=txouts,
+        tx_files=tx_files,
+    )
+
+    txid = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
+
+    reference_txin = cluster.get_utxo(txin=f"{txid}#0")
+    assert reference_txin, "UTxO not created"
+
+    return reference_txin
 
 
 @pytest.mark.testnets
@@ -272,6 +313,159 @@ class TestMinting:
 
         # check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "scenario",
+        ("reference_script", "readonly_reference_input", "different_datum"),
+        ids=("reference_script", "readonly_reference_input", "different_datum"),
+    )
+    def test_datum_hash_visibility(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        scenario: str,
+        request: FixtureRequest,
+    ):
+        """
+        Test check visibility of datum hash on reference inputs by the plutus script.
+
+        * create the necessary Tx outputs
+        * mint the token and check that the plutus script have visibility of the datum hash
+        * check that the token was minted
+        * check that the reference UTxO was not spent
+        """
+        # pylint: disable=too-many-locals
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        script_fund = 200_000_000
+        token_amount = 5
+        fee_txsize = 600_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_V2_CHECK_DATUM_HASH_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
+
+        # Step 1: fund the token issuer and create the reference script
+
+        mint_utxos, collateral_utxos, reference_utxo, __ = _fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=script_fund,
+            fee_txsize=fee_txsize,
+            reference_script=plutus_common.MINTING_CHECK_DATUM_HASH_PLUTUS_V2,
+            datum_file=plutus_common.DATUM_42,
+        )
+
+        # to check datum hash on readonly reference input
+        with_reference_input = scenario != "reference_script"
+        different_datum = scenario == "different_datum"
+        datum_file = plutus_common.DATUM_43_TYPED if different_datum else plutus_common.DATUM_42
+
+        reference_input = ()
+        if with_reference_input or different_datum:
+            reference_input = _build_reference_txin(
+                temp_template=temp_template,
+                cluster=cluster,
+                payment_addr=payment_addrs[0],
+                amount=lovelace_amount,
+                datum_file=datum_file,
+            )  # type: ignore
+
+        # Step 2: mint the "qacoin"
+
+        policyid = cluster.get_policyid(plutus_common.MINTING_CHECK_DATUM_HASH_PLUTUS_V2)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
+
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        datum_hash = cluster.get_hash_script_data(script_data_file=plutus_common.DATUM_42)
+
+        # the redeemer file will be composed by the datum hash
+        redeemer_file = f"{temp_template}.redeemer"
+        with open(redeemer_file, "w", encoding="utf-8") as outfile:
+            json.dump({"bytes": datum_hash}, outfile)
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                reference_txin=reference_utxo,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_common.MINTING_V2_CHECK_DATUM_HASH_COST.per_time,
+                    plutus_common.MINTING_V2_CHECK_DATUM_HASH_COST.per_space,
+                ),
+                redeemer_file=redeemer_file,
+                policyid=policyid,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+
+        # the plutus script checks if all reference inputs have the same datum hash
+        # it will fail if the datums hash are not the same in all reference inputs and
+        # succeed if all datums hash match
+        if different_datum:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.send_tx(
+                    src_address=payment_addr.address,
+                    tx_name=f"{temp_template}_step2",
+                    tx_files=tx_files_step2,
+                    fee=minting_cost.fee + fee_txsize,
+                    txins=mint_utxos,
+                    txouts=txouts_step2,
+                    mint=plutus_mint_data,
+                    readonly_reference_txins=reference_input,
+                )
+
+            err_str = str(excinfo.value)
+            try:
+                assert "Unexpected datum hash at each reference input" in err_str, err_str
+            except AssertionError:
+                if "The machine terminated because of an error" in err_str:
+                    pytest.xfail(
+                        "PlutusDebug doesn't return the evaluation error from "
+                        "plutus - see node issue #4488"
+                    )
+
+            return
+
+        cluster.send_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            fee=minting_cost.fee + fee_txsize,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            readonly_reference_txins=reference_input,
+        )
+
+        # check that the token was minted
+        token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
+        assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        # check that reference UTxO was NOT spent
+        assert not reference_utxo or cluster.get_utxo(
+            utxo=reference_utxo
+        ), "Reference UTxO was spent"
 
 
 @pytest.mark.testnets
