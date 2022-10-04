@@ -18,7 +18,11 @@ Nightly Results
    * Babbage transaction era
    * default (legacy) network topology
    * DB Sync testing enabled
-* `nightly-alonzo-tx-on-babbage <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-alonzo-tx-on-babbage/>`__:  |nightly-alonzo-tx-on-babbage-badge|
+* `nightly-p2p <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-p2p/>`__:  |nightly-p2p-badge|
+   * network in Babbage era
+   * Babbage transaction era
+   * P2P network topology
+* `nightly-alonzo-tx <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-alonzo-tx-on-babbage/>`__:  |nightly-alonzo-tx-badge|
    * network in Babbage era
    * Alonzo transaction era
    * default (legacy) network topology
@@ -38,7 +42,9 @@ Nightly Results
 .. |nightly-dbsync-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-dbsync%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-dbsync/
 
-.. |nightly-alonzo-tx-on-babbage-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-alonzo-tx-on-babbage%2Fbadge.json
+.. |nightly-p2p-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-p2p%2Fbadge.json
+
+.. |nightly-alonzo-tx-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-alonzo-tx-on-babbage%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-alonzo-tx-on-babbage/
 
 .. |nightly-mary-tx-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-mary-tx%2Fbadge.json
