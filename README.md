@@ -22,36 +22,60 @@ Preparing env:
 
 ```sh
 # cd to cardano-node repo
-$ cd <your path to cardano-node repo>
+cd <your path to cardano-node repo>
 # update and checkout the desired commit/tag
-$ git checkout master
-$ git pull origin master
-$ git fetch --all --tags
-$ git checkout tags/<tag>
+git checkout master
+git pull origin master
+git fetch --all --tags
+git checkout tags/<tag>
 # launch devops shell
-$ nix-shell -A devops
+nix-shell -A devops
+
 # cd to tests repo
-$ cd <your path to cardano-node-test repo>
+cd <your path to cardano-node-test repo>
 # activate virtual env
-$ . .env/bin/activate
+. .env/bin/activate
+# add virtual env to PYTHONPATH
+export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
+# set env variables
+export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket
+```
+
+Check that the env is correctly setup by running
+
+```text
+$ ./check_env.sh
+'nix-shell' available: ✔
+inside nix shell: ✔
+in repo root: ✔
+in python venv: ✔
+venv in python path: ✔
+dev cluster running: ✔
+cardano-node available: ✔
+cardano-cli available: ✔
+socket path set: ✔
+socket path correct: ✔
+cluster_era: babbage
+transaction era: babbage
+using dbsync (optional): ✔
+dbsync available: ✔
+p2p network (optional): ❌
 ```
 
 Running tests on local cluster (local cluster instances will be started automatically during test run setup):
 
 ```sh
-# set env variables
-$ export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket
 # run tests
-$ make tests
+make tests
 ```
 
 Running tests on one of the testnets:
 
 ```sh
 # set env variables
-$ export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/relay1.socket
+export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/relay1.socket
 # run tests
-$ BOOTSTRAP_DIR=<your path to bootstrap dir> make testnets
+BOOTSTRAP_DIR=<your path to bootstrap dir> make testnets
 ```
 
 Running individual tests:
@@ -64,9 +88,9 @@ Running linter:
 
 ```sh
 # activate virtual env
-$ . .env/bin/activate
+. .env/bin/activate
 # run linter
-$ make lint
+make lint
 ```
 
 ## Variables for `make tests` and `make testnets`
