@@ -330,7 +330,7 @@ class TestDelegateAddr:
         """
         # pylint: disable=too-many-locals
         cluster, pool_id = cluster_lock_42stake
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{plutus_version}"
 
         collateral_fund_deleg = 1_500_000_000
         collateral_fund_withdraw = 1_500_000_000
