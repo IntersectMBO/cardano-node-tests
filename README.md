@@ -1,5 +1,4 @@
-README for cardano-node-tests
-=============================
+# README for cardano-node-tests
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
@@ -7,8 +6,7 @@ System/E2E tests for cardano-node.
 
 Check [documentation](https://input-output-hk.github.io/cardano-node-tests) for more details.
 
-Installation
-------------
+## Installation
 
 Create a python virtual env and install this package together with dev requirements:
 
@@ -18,8 +16,7 @@ Create a python virtual env and install this package together with dev requireme
 
 Requires Python 3.8 or newer.
 
-Usage
------
+## Usage
 
 Preparing env:
 
@@ -72,8 +69,7 @@ $ . .env/bin/activate
 $ make lint
 ```
 
-Variables for `make tests` and `make testnets`
-----------------------------------------------
+## Variables for `make tests` and `make testnets`
 
 * `SCHEDULING_LOG` - specifies path to file where log messages for tests and cluster instance scheduler are stored
 * `PYTEST_ARGS` - specifies additional arguments for pytest
@@ -93,8 +89,7 @@ SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=m
 ```
 
 
-Tests development
------------------
+## Tests development
 
 When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for tests development, as starting a cluster instance takes several epochs (to get from Byron to Alonzo). To keep cardano cluster running in-between test runs, one needs to start it in "development mode".
 
@@ -112,8 +107,7 @@ $ <destination dir>/alonzo/start-cluster-hfc
 After starting the cluster, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pools-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, payment address with initial funds and related keys in the `byron` subdirectory. Local faucet address and related key files are stored in the `addrs_data` subdirectory.
 
 
-Test coverage of cardano-cli commands
--------------------------------------
+## Test coverage of cardano-cli commands
 
 To get test coverage of cardano-cli commands, run tests as usual (`make tests`) and generate the coverage report JSON file with
 
@@ -122,37 +116,22 @@ cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/cover
 ```
 
 
-Building documentation
-----------------------
+## Building documentation
 
-To build documentation using Sphinx, run
+Install Sphinx into your virtual env
 
 ```sh
 make install_doc
-make doc
 ```
 
-The documentation is generated to `src_docs/build/html`.
-
-To publish documentation to <https://input-output-hk.github.io/cardano-node-tests/>, run:
+Build and deploy documentation
 
 ```sh
-# checkout the "github_pages" branch
-$ git checkout github_pages
-# copy/move content of src_docs/build/html to src_docs
-$ rm -rf docs/*
-$ cp -aT src_docs/build/html docs
-# stage changes
-$ git add docs
-# commit changes
-$ git commit
-# push to origin/github_pages (upstream/github_pages)
-$ git push origin github_pages
+./deploy_doc.sh
 ```
 
 
-Contributing
-------------
+## Contributing
 
 Install this package and its dependencies as described above.
 
