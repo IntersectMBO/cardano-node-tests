@@ -109,23 +109,23 @@ make lint
 E.g.
 
 ```sh
-SCHEDULING_LOG=testrun_20211012_1.log TEST_THREADS=3 CLUSTER_ERA=alonzo TX_ERA=mary SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/alonzo/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" make tests
+SCHEDULING_LOG=testrun_20221005_1.log TEST_THREADS=3 CLUSTER_ERA=babbage TX_ERA=alonzo SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/babbage/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" make tests
 ```
 
 
 ## Tests development
 
-When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for tests development, as starting a cluster instance takes several epochs (to get from Byron to Alonzo). To keep cardano cluster running in-between test runs, one needs to start it in "development mode".
+When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for tests development, as starting a cluster instance takes several epochs (to get from Byron to Babbage). To keep cardano cluster running in-between test runs, one needs to start it in "development mode".
 
 ```sh
 # activate virtual env
-$ . .env/bin/activate
+. .env/bin/activate
 # prepare cluster scripts
-$ prepare-cluster-scripts -d <destination dir>/alonzo -s cardano_node_tests/cluster_scripts/alonzo/
+prepare-cluster-scripts -d <destination dir>/babbage -s cardano_node_tests/cluster_scripts/babbage/
 # set env variables
-$ export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
+export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
 # start the cluster instance in development mode
-$ <destination dir>/alonzo/start-cluster-hfc
+<destination dir>/babbage/start-cluster-hfc
 ```
 
 After starting the cluster, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pools-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, payment address with initial funds and related keys in the `byron` subdirectory. Local faucet address and related key files are stored in the `addrs_data` subdirectory.
