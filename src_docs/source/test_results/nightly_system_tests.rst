@@ -7,8 +7,8 @@ The tests are run on the `master` branch of the `cardano-node` repository.
 There are several pipelines that run the nightly system tests. In each pipeline, different sets of tests are run.
 
 * `skipped` - the tests that are not suitable for given pipeline
-* `failed` - the tests that failed on an assert
-* `broken` - the test is aborted for any other reason than failed assertion (unhandled exception, etc.)
+* `failed` - the tests that failed on an assert or are that are aborted for any other reason (unhandled exception, etc.)
+* `broken` - the test is affected by a real issue; marked as `xfailed` (expected failed) until the issue is fixed
 
 Nightly Results
 ---------------
