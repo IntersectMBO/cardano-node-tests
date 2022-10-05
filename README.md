@@ -45,27 +45,37 @@ Check that the env is correctly setup by running
 
 ```text
 $ ./check_env.sh
+'cardano-node' available: ✔
+'cardano-cli' available: ✔
+'python' available: ✔
+'pytest' available: ✔
 'nix-shell' available: ✔
+'jq' available: ✔
+'supervisord' available: ✔
+'supervisorctl' available: ✔
+'bech32' available: ✔
 inside nix shell: ✔
 in repo root: ✔
+DEV cluster: ✔
+python works: ✔
 in python venv: ✔
-venv in python path: ✔
-dev cluster running: ✔
-cardano-node available: ✔
-cardano-cli available: ✔
+venv in PYTHONPATH: ✔
+cardano-node-tests installed: ✔
+pytest works: ✔
+same version of node and cli: ✔
 socket path set: ✔
 socket path correct: ✔
-cluster_era: babbage
+socket path exists: ✔
+cluster era: babbage
 transaction era: babbage
 using dbsync (optional): ✔
 dbsync available: ✔
-p2p network (optional): ❌
+P2P network (optional): -
 ```
 
 Running tests on local cluster (local cluster instances will be started automatically during test run setup):
 
 ```sh
-# run tests
 make tests
 ```
 
