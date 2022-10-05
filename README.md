@@ -122,12 +122,6 @@ cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/cover
 ```
 
 
-Publishing testing results
---------------------------
-
-Clone <https://github.com/mkoura/cardano-node-tests-reports> and see its [README](https://github.com/mkoura/cardano-node-tests-reports/blob/main/README.md).
-
-
 Building documentation
 ----------------------
 

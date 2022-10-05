@@ -78,9 +78,9 @@ Release testing checklist
      - |:heavy_check_mark:|
    * - Regression testing against `shelley-qa` - `results <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/shelley_qa/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
      - |:heavy_check_mark:|
-   * - `Sync testing ran against shelley_qa & Staging & TestNet & Mainnet <https://input-output.atlassian.net/wiki/spaces/QA/pages/1872429072/Cardano+Sync+testing+from+clean+and+existing+state>`__ `(windows, linux, macos) <https://rootstakepool.eu/cardano_qa_tests/>`__
+   * - `Sync testing ran against shelley_qa & Staging & TestNet & Mainnet (windows, linux, macos) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html/>`__
      - |:heavy_check_mark:|
-   * - `DB re-validation testing (ledger snapshots compatibility) <https://rootstakepool.eu/cardano_qa_tests/>`__
+   * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html/>`__
      - |:heavy_check_mark:|
    * - Backward compatibility testing (Node with version N-1)
      - |:heavy_check_mark:|
@@ -90,20 +90,6 @@ Release testing checklist
      - |:heavy_check_mark:|
    * - sanity check release notes
      - |:heavy_check_mark:|
-
-
-Relevant existing issues
-------------------------
-
-* `[BUG] - Shelley era Tx body in CDDL format is not supported by some CLI commands <https://github.com/input-output-hk/cardano-node/issues/3688>`__ - not a regression in 1.35.3
-
-
-New issues
-----------
-
-* `[BUG] - cannot use transaction build command to build Shelley/Allegra era Tx in Babbage <https://github.com/input-output-hk/cardano-node/issues/4286>`__
-* `[BUG] - cannot use transaction build command to build Mary era Tx in Babbage <https://github.com/input-output-hk/cardano-node/issues/4287>`__
-* (not reported before and) already discussed in <https://input-output-rnd.slack.com/archives/CCRB7BU8Y/p1658835200064609>
 
 
 New functionalities in this tag
@@ -123,9 +109,23 @@ New functionalities in this tag
 * Condition SECP256k1 to the protocol version 8 (`#4795 <https://github.com/input-output-hk/plutus/pull/4795>`__) |:heavy_check_mark:|
 
 
+New issues
+----------
+
+* `[BUG] - cannot use transaction build command to build Shelley/Allegra era Tx in Babbage <https://github.com/input-output-hk/cardano-node/issues/4286>`__
+* `[BUG] - cannot use transaction build command to build Mary era Tx in Babbage <https://github.com/input-output-hk/cardano-node/issues/4287>`__
+* (not reported before and) already discussed in <https://input-output-rnd.slack.com/archives/CCRB7BU8Y/p1658835200064609>
+
+
 Breaking changes
 ----------------
 
 * `"decentralisationParam"` will not be supported after the Vasil HF (= from Babbage onwards, the protocol no longer supports BFT.) |:exclamation:|
 * the new OpCerts should be created using the previous cold.counter +1
 * Change to minUTxO Formula (`link to discussion <https://input-output-rnd.slack.com/archives/C02CHLB0BU4/p1654004520104929>`__)
+
+
+Relevant existing issues
+------------------------
+
+* `[BUG] - Shelley era Tx body in CDDL format is not supported by some CLI commands <https://github.com/input-output-hk/cardano-node/issues/3688>`__ - not a regression in 1.35.3
