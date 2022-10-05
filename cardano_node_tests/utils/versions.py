@@ -15,7 +15,7 @@ class Versions:
     ALONZO = 5
     BABBAGE = 6
 
-    DEFAULT_CLUSTER_ERA = 5
+    DEFAULT_CLUSTER_ERA = 6
     DEFAULT_TX_ERA = 5
     LAST_KNOWN_ERA = 6
 

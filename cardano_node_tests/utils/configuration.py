@@ -75,6 +75,6 @@ elif BOOTSTRAP_DIR and NOPOOLS:
 elif BOOTSTRAP_DIR:
     SCRIPTS_DIRNAME = "testnets"
 else:
-    SCRIPTS_DIRNAME = CLUSTER_ERA or "alonzo"
+    SCRIPTS_DIRNAME = CLUSTER_ERA or "babbage"
 
 SCRIPTS_DIR = Path(__file__).parent.parent / "cluster_scripts" / SCRIPTS_DIRNAME
