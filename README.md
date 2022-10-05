@@ -106,6 +106,12 @@ $ <destination dir>/alonzo/start-cluster-hfc
 
 After starting the cluster, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pools-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, payment address with initial funds and related keys in the `byron` subdirectory. Local faucet address and related key files are stored in the `addrs_data` subdirectory.
 
+To restart the cluster (e.g. after upgrading `cardano-node` and `cardano-cli` binaries), run
+
+```sh
+./scripts/restart_dev_cluster.sh
+```
+
 
 ## Test coverage of cardano-cli commands
 
