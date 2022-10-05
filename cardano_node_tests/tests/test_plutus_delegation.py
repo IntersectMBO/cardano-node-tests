@@ -109,6 +109,7 @@ def delegate_stake_addr(
     pool_id: str,
     redeemer_file: Path,
     reference_script_utxos: Optional[List[clusterlib.UTXOData]],
+    use_build_cmd: bool,
 ) -> Tuple[clusterlib.TxRawOutput, List[dict]]:
     """Submit registration certificate and delegate to pool."""
     # create stake address registration cert
@@ -134,36 +135,48 @@ def delegate_stake_addr(
         script_file=pool_user.stake.script_file if not reference_script_utxos else "",
         reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
         collaterals=collaterals,
+        execution_units=(218855869, 686154),
         redeemer_file=redeemer_file,
     )
 
     tx_files = clusterlib.TxFiles(signing_key_files=[pool_user.payment.skey_file])
+    plutus_costs = []
 
-    tx_raw_output = cluster_obj.build_tx(
-        src_address=pool_user.payment.address,
-        tx_name=f"{temp_template}_reg_deleg",
-        txins=txins,
-        tx_files=tx_files,
-        complex_certs=[reg_cert_script, deleg_cert_script],
-        fee_buffer=2_000_000,
-        witness_override=len(tx_files.signing_key_files),
-    )
-    # calculate cost of Plutus script
-    plutus_costs = cluster_obj.calculate_plutus_script_cost(
-        src_address=pool_user.payment.address,
-        tx_name=f"{temp_template}_reg_deleg",
-        txins=txins,
-        tx_files=tx_files,
-        complex_certs=[reg_cert_script, deleg_cert_script],
-        fee_buffer=2_000_000,
-        witness_override=len(tx_files.signing_key_files),
-    )
-    tx_signed = cluster_obj.sign_tx(
-        tx_body_file=tx_raw_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_reg_deleg",
-    )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+    if use_build_cmd:
+        tx_raw_output = cluster_obj.build_tx(
+            src_address=pool_user.payment.address,
+            tx_name=f"{temp_template}_reg_deleg",
+            txins=txins,
+            tx_files=tx_files,
+            complex_certs=[reg_cert_script, deleg_cert_script],
+            fee_buffer=2_000_000,
+            witness_override=len(tx_files.signing_key_files),
+        )
+        # calculate cost of Plutus script
+        plutus_costs = cluster_obj.calculate_plutus_script_cost(
+            src_address=pool_user.payment.address,
+            tx_name=f"{temp_template}_reg_deleg",
+            txins=txins,
+            tx_files=tx_files,
+            complex_certs=[reg_cert_script, deleg_cert_script],
+            fee_buffer=2_000_000,
+            witness_override=len(tx_files.signing_key_files),
+        )
+        tx_signed = cluster_obj.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_reg_deleg",
+        )
+        cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+    else:
+        tx_raw_output = cluster_obj.send_tx(
+            src_address=pool_user.payment.address,
+            tx_name=f"{temp_template}_reg_deleg",
+            txins=txins,
+            tx_files=tx_files,
+            complex_certs=[reg_cert_script, deleg_cert_script],
+            fee=300_000,
+        )
 
     # check that the balance for source address was correctly updated
     deposit = cluster_obj.get_address_deposit()
@@ -188,6 +201,7 @@ def deregister_stake_addr(
     pool_user: delegation.PoolUserScript,
     redeemer_file: Path,
     reference_script_utxos: Optional[List[clusterlib.UTXOData]],
+    use_build_cmd: bool,
 ) -> clusterlib.TxRawOutput:
     """Deregister stake address."""
     src_payment_balance = cluster_obj.get_address_balance(pool_user.payment.address)
@@ -205,6 +219,7 @@ def deregister_stake_addr(
         script_file=pool_user.stake.script_file if not reference_script_utxos else "",
         reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
         collaterals=[collaterals[0]],
+        execution_units=(213184888, 670528),
         redeemer_file=redeemer_file,
     )
     dereg_cert_script = clusterlib.ComplexCert(
@@ -212,39 +227,53 @@ def deregister_stake_addr(
         script_file=pool_user.stake.script_file if not reference_script_utxos else "",
         reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
         collaterals=[collaterals[1]],
+        execution_units=(218855869, 686154),
         redeemer_file=redeemer_file,
     )
 
     tx_files = clusterlib.TxFiles(signing_key_files=[pool_user.payment.skey_file])
 
-    tx_raw_output = cluster_obj.build_tx(
-        src_address=pool_user.payment.address,
-        tx_name=f"{temp_template}_dereg_withdraw",
-        txins=txins,
-        tx_files=tx_files,
-        complex_certs=[dereg_cert_script],
-        fee_buffer=2_000_000,
-        script_withdrawals=[withdrawal_script],
-        witness_override=len(tx_files.signing_key_files),
-    )
-    # calculate cost of Plutus script
-    plutus_costs = cluster_obj.calculate_plutus_script_cost(
-        src_address=pool_user.payment.address,
-        tx_name=f"{temp_template}_dereg_withdraw",
-        txins=txins,
-        tx_files=tx_files,
-        complex_certs=[dereg_cert_script],
-        fee_buffer=2_000_000,
-        script_withdrawals=[withdrawal_script],
-        witness_override=len(tx_files.signing_key_files),
-    )
-    tx_signed = cluster_obj.sign_tx(
-        tx_body_file=tx_raw_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_reg_deleg",
-    )
+    plutus_costs = []
 
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+    if use_build_cmd:
+        tx_raw_output = cluster_obj.build_tx(
+            src_address=pool_user.payment.address,
+            tx_name=f"{temp_template}_dereg_withdraw",
+            txins=txins,
+            tx_files=tx_files,
+            complex_certs=[dereg_cert_script],
+            fee_buffer=2_000_000,
+            script_withdrawals=[withdrawal_script],
+            witness_override=len(tx_files.signing_key_files),
+        )
+        # calculate cost of Plutus script
+        plutus_costs = cluster_obj.calculate_plutus_script_cost(
+            src_address=pool_user.payment.address,
+            tx_name=f"{temp_template}_dereg_withdraw",
+            txins=txins,
+            tx_files=tx_files,
+            complex_certs=[dereg_cert_script],
+            fee_buffer=2_000_000,
+            script_withdrawals=[withdrawal_script],
+            witness_override=len(tx_files.signing_key_files),
+        )
+        tx_signed = cluster_obj.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_reg_deleg",
+        )
+
+        cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+    else:
+        tx_raw_output = cluster_obj.send_tx(
+            src_address=pool_user.payment.address,
+            tx_name=f"{temp_template}_dereg_withdraw",
+            txins=txins,
+            tx_files=tx_files,
+            complex_certs=[dereg_cert_script],
+            script_withdrawals=[withdrawal_script],
+            fee=300_000,
+        )
 
     # check that the key deposit was returned and rewards withdrawn
     assert (
@@ -260,7 +289,7 @@ def deregister_stake_addr(
     assert not stake_addr_info.delegation, f"Stake address is still delegated: {stake_addr_info}"
 
     tx_db_dereg = dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
-    if tx_db_dereg:
+    if tx_db_dereg and use_build_cmd:
         assert pool_user.stake.address in tx_db_dereg.stake_deregistration
 
         # compare cost of Plutus script with data from db-sync
@@ -277,6 +306,7 @@ def deregister_stake_addr(
 @pytest.mark.order(8)
 @common.SKIPIF_BUILD_UNUSABLE
 @common.PARAM_PLUTUS_VERSION
+@common.PARAM_USE_BUILD_CMD
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
@@ -287,6 +317,7 @@ class TestDelegateAddr:
         cluster_lock_42stake: Tuple[clusterlib.ClusterLib, str],
         pool_user: delegation.PoolUserScript,
         plutus_version: str,
+        use_build_cmd: bool,
     ):
         """Delegate and deregister Plutus script stake address.
 
@@ -297,8 +328,9 @@ class TestDelegateAddr:
         * check that the stake address is no longer delegated
         * (optional) check records in db-sync
         """
+        # pylint: disable=too-many-locals
         cluster, pool_id = cluster_lock_42stake
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{plutus_version}"
 
         collateral_fund_deleg = 1_500_000_000
         collateral_fund_withdraw = 1_500_000_000
@@ -385,6 +417,7 @@ class TestDelegateAddr:
             pool_id=pool_id,
             redeemer_file=plutus_common.REDEEMER_42,
             reference_script_utxos=reference_script_utxos,
+            use_build_cmd=use_build_cmd,
         )
 
         assert (
@@ -424,6 +457,7 @@ class TestDelegateAddr:
             pool_user=pool_user,
             redeemer_file=plutus_common.REDEEMER_42,
             reference_script_utxos=reference_script_utxos,
+            use_build_cmd=use_build_cmd,
         )
 
         if reward_error:
@@ -434,7 +468,7 @@ class TestDelegateAddr:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_deregister_out)
 
         # compare cost of Plutus script with data from db-sync
-        if tx_db_record:
+        if tx_db_record and use_build_cmd:
             dbsync_utils.check_plutus_costs(
                 redeemer_records=tx_db_record.redeemers, cost_records=plutus_cost_deleg
             )
