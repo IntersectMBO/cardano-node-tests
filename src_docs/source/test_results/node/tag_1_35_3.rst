@@ -15,8 +15,8 @@ Changelogs
 * submit-api:
 
 
-Regression testing on local cluster
------------------------------------
+Regression testing on a local cluster
+-------------------------------------
 
 .. list-table:: only with costModelV1
    :header-rows: 0
@@ -78,7 +78,7 @@ Release testing checklist
      - |:heavy_check_mark:|
    * - Regression testing against `shelley-qa` - `results <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/shelley_qa/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
      - |:heavy_check_mark:|
-   * - `Sync testing ran against shelley_qa & Staging & TestNet & Mainnet (windows, linux, macos) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html/>`__
+   * - `Sync testing ran against shelley_qa & Staging & TestNet & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html/>`__
      - |:heavy_check_mark:|
    * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html/>`__
      - |:heavy_check_mark:|
@@ -105,7 +105,7 @@ New functionalities in this tag
 * Fix leadership schedule for current on Babbage (`#4106 <https://github.com/input-output-hk/cardano-node/pull/4106>`__) |:heavy_check_mark:|
 * `build` to allow all invalid scripts (`#4088 <https://github.com/input-output-hk/cardano-node/pull/4088>`__) |:heavy_check_mark:|
 * Add utxoCostPerByte protocol parameter (`#4141 <https://github.com/input-output-hk/cardano-node/pull/4141>`__) |:heavy_check_mark:|
-* Fix the alonzo UTxO rule to use alonzo minfee function (`#2938 <https://github.com/input-output-hk/cardano-ledger/pull/2938>`__) |:heavy_check_mark:|
+* Fix the Alonzo UTXO rule to use Alonzo minfee function (`#2938 <https://github.com/input-output-hk/cardano-ledger/pull/2938>`__) |:heavy_check_mark:|
 * Condition SECP256k1 to the protocol version 8 (`#4795 <https://github.com/input-output-hk/plutus/pull/4795>`__) |:heavy_check_mark:|
 
 
