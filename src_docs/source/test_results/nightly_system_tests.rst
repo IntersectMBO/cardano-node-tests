@@ -1,10 +1,10 @@
 Nightly System Tests Pipelines
 ==============================
 
-Cardano node nightly system tests are run on a nightly basis. The tests are run on multiple instances of local cluster.
+These Cardano node system tests are run on a nightly basis. The tests are run on multiple instances of a local cluster.
 The tests are run on the `master` branch of the `cardano-node` repository.
 
-There are several pipelines that run the nightly system tests. In each pipeline, different sets of tests are run.
+Several pipelines run the nightly system tests. In each pipeline, different sets of tests are run.
 
 
 Test statuses
@@ -12,7 +12,7 @@ Test statuses
 
 * **failed** - tests that failed assertion or that were aborted because of unhandled exception
 * **broken** - tests that are affected by a real known issue; these are marked as `xfailed` (expected failure) until the issue is fixed
-* **skipped** - tests that are not meant to run in given pipeline
+* **skipped** - tests that are not meant to run in the given pipeline
 
 
 Nightly Results
