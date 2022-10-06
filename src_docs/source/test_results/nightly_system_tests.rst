@@ -1,4 +1,4 @@
-Nightly System Tests Pipelines
+Nightly system tests pipelines
 ==============================
 
 These Cardano node system tests are run on a nightly basis. The tests are run on multiple instances of a local cluster.
@@ -15,7 +15,7 @@ Test statuses
 * **skipped** - tests that are not meant to run in the given pipeline
 
 
-Nightly Results
+Nightly results
 ---------------
 
 * `nightly <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly/>`__:  |nightly-badge|
