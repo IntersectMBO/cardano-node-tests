@@ -73,6 +73,7 @@ CLUSTER_DIR_TEMPLATE = "cluster"
 CLUSTER_RUNNING_FILE = ".cluster_running"
 CLUSTER_STOPPED_FILE = ".cluster_stopped"
 CLUSTER_DEAD_FILE = ".cluster_dead"
+CLUSTER_STARTED_BY_FRAMEWORK = ".cluster_started_by_cnt"
 
 if configuration.CLUSTERS_COUNT > 1 and configuration.DEV_CLUSTER_RUNNING:
     raise RuntimeError("Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set.")
@@ -264,6 +265,10 @@ class ClusterManager:
 
             state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}{instance_num}"
 
+            if state_dir.exists() and not (state_dir / CLUSTER_STARTED_BY_FRAMEWORK).exists():
+                self._log(f"c{instance_num}: cluster instance was not started by framework")
+                continue
+
             stop_script = state_dir / cluster_scripts.STOP_SCRIPT
             if not stop_script.exists():
                 self._log(f"c{instance_num}: stop script doesn't exist!")
@@ -392,7 +397,7 @@ class _ClusterGetter:
 
         Not called under global lock!
         """
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches,too-many-statements
         cluster_running_file = self.cm.instance_dir / CLUSTER_RUNNING_FILE
 
         # don't restart cluster if it was started outside of test framework
@@ -417,14 +422,17 @@ class _ClusterGetter:
             f"stop_cmd='{stop_cmd}'"
         )
 
+        state_dir = cluster_nodes.get_cluster_env().state_dir
+
+        if state_dir.exists() and not (state_dir / CLUSTER_STARTED_BY_FRAMEWORK).exists():
+            raise RuntimeError("Cannot restart cluster when it was not started by the framework.")
+
         startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
             destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance_num),
             instance_num=self.cm.cluster_instance_num,
             start_script=start_cmd,
             stop_script=stop_cmd,
         )
-
-        state_dir = cluster_nodes.get_cluster_env().state_dir
 
         self.cm._log(
             f"c{self.cm.cluster_instance_num}: in `_restart`, new files "
@@ -502,6 +510,10 @@ class _ClusterGetter:
         # create file that indicates that the cluster is running
         if not cluster_running_file.exists():
             helpers.touch(cluster_running_file)
+
+        # create file that indicates that the cluster was started by framework
+        if not (state_dir / CLUSTER_STARTED_BY_FRAMEWORK).exists():
+            helpers.touch(state_dir / CLUSTER_STARTED_BY_FRAMEWORK)
 
         return True
 
