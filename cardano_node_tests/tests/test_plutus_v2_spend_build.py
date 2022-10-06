@@ -14,6 +14,7 @@ import hypothesis.strategies as st
 import pytest
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
+from cardano_clusterlib import txtools
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
@@ -492,6 +493,7 @@ class TestBuildLocking:
                     coin=token[0].token,
                     inline_datum_file=plutus_op.datum_file if use_inline_datum else "",
                     datum_hash_file=plutus_op.datum_file if not use_inline_datum else "",
+                    reference_script_file=plutus_op.script_file if use_reference_script else "",
                 ),
                 # TODO: add ADA txout for change address - see node issue #3057
                 clusterlib.TxOut(address=payment_addrs[0].address, amount=2_000_000),
@@ -511,9 +513,8 @@ class TestBuildLocking:
         )
         cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        min_required_utxo = cluster.calculate_min_req_utxo(
-            txouts=txouts[:-1] if use_token else txouts
-        ).value
+        joined_txouts = txtools.get_joined_txouts(txouts=txouts)
+        min_required_utxo = cluster.calculate_min_req_utxo(txouts=joined_txouts[0]).value
 
         assert helpers.is_in_interval(
             min_required_utxo, expected_min_required_utxo[test_scenario], frac=0.15
