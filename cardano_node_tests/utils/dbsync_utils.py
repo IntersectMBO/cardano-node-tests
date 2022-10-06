@@ -853,13 +853,17 @@ def check_tx(
     ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
 
     if tx_collaterals:
-        tx_collaterals_amount = sum(col.amount for col in tx_collaterals)
-        db_collateral_output_amount = sum(col_out.amount for col_out in response.collateral_outputs)
         protocol_params = cluster_obj.get_protocol_params()
-
-        assert db_collateral_output_amount == int(
+        tx_collaterals_amount = sum(col.amount for col in tx_collaterals)
+        tx_collateral_output_amount = int(
             tx_collaterals_amount
             - tx_raw_output.fee * protocol_params["collateralPercentage"] / 100
+        )
+        db_collateral_output_amount = sum(col_out.amount for col_out in response.collateral_outputs)
+
+        assert db_collateral_output_amount == tx_collateral_output_amount, (
+            "TX collateral output amount doesn't match "
+            f"({db_collateral_output_amount} != {tx_collateral_output_amount})"
         )
 
     db_plutus_scripts = {r for r in response.scripts if r.type == "plutus"}
@@ -959,28 +963,18 @@ def check_tx_phase_2_failure(
     txhash = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
     response = get_tx_record_retry(txhash=txhash, retry_num=retry_num)
 
-    # In case of a phase 2 failure, the collateral output, becomes the output of the tx.
+    # In case of a phase 2 failure, the collateral output becomes the output of the tx.
 
     assert (
         not response.collateral_outputs
-    ), "Collaterals outputs present on dbsync when a tx have a phase 2 failure"
+    ), "Collateral outputs are present in dbsync when the tx have a phase 2 failure"
 
     db_txouts = {utxodata2txout(r) for r in response.txouts}
     tx_out = {utxodata2txout(r) for r in cluster_obj.get_utxo(tx_raw_output=tx_raw_output)}
 
-    assert db_txouts == tx_out, f"The output tx is not the expected ({db_txouts} != {tx_out})"
+    assert db_txouts == tx_out, f"The TX outputs don't match ({db_txouts} != {tx_out})"
 
-    if tx_raw_output.return_collateral_txouts:
-        tx_return_collaterals = {
-            _sanitize_txout(cluster_obj=cluster_obj, txout=r)
-            for r in tx_raw_output.return_collateral_txouts
-        }
-
-        assert (
-            tx_out == tx_return_collaterals
-        ), f"The tx output is not the expected ({tx_out} != {tx_return_collaterals})"
-
-    # In case of a phase 2 failure, the fees charged is the collateral amount
+    # In case of a phase 2 failure, the fee charged is the collateral amount.
 
     if tx_raw_output.total_collateral_amount:
         expected_fee = round(tx_raw_output.total_collateral_amount)
