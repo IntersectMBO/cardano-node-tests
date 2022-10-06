@@ -140,6 +140,7 @@ class TxRecord(NamedTuple):
     txouts: List[UTxORecord]
     mint: List[UTxORecord]
     collaterals: List[clusterlib.UTXOData]
+    collateral_outputs: List[clusterlib.UTXOData]
     reference_inputs: List[clusterlib.UTXOData]
     scripts: List[ScriptRecord]
     redeemers: List[RedeemerRecord]
@@ -165,8 +166,8 @@ class TxPrelimRecord(NamedTuple):
     last_row: dbsync_queries.TxDBRow
 
 
-def utxodata2txout(utxodata: UTxORecord) -> clusterlib.TxOut:
-    """Convert `UTxORecord` to `clusterlib.TxOut`."""
+def utxodata2txout(utxodata: Union[UTxORecord, clusterlib.UTXOData]) -> clusterlib.TxOut:
+    """Convert `UTxORecord` or `UTxOData` to `clusterlib.TxOut`."""
     return clusterlib.TxOut(
         address=utxodata.address,
         amount=utxodata.amount,
@@ -435,6 +436,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
 
     Compile data from multiple SQL queries to get as much information about the TX as possible.
     """
+    # pylint: disable=too-many-branches
     txdata = get_prelim_tx_record(txhash)
     txins = get_txins(txhash)
 
@@ -507,6 +509,18 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
             for r in dbsync_queries.query_collateral_tx_ins(txhash=txhash)
         ]
 
+    collateral_outputs = []
+    if txdata.last_row.collateral_out_count:
+        collateral_outputs = [
+            clusterlib.UTXOData(
+                utxo_hash=r.tx_hash.hex(),
+                utxo_ix=int(r.utxo_ix),
+                amount=int(r.value),
+                address=str(r.address),
+            )
+            for r in dbsync_queries.query_collateral_tx_outs(txhash=txhash)
+        ]
+
     reference_inputs = []
     if txdata.last_row.reference_input_count:
         reference_inputs = [
@@ -562,6 +576,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
         txouts=[*txdata.utxo_out, *txdata.ma_utxo_out],
         mint=txdata.mint_utxo_out,
         collaterals=collaterals,
+        collateral_outputs=collateral_outputs,
         reference_inputs=reference_inputs,
         scripts=scripts,
         redeemers=redeemers,
@@ -837,6 +852,20 @@ def check_tx(
         tx_collaterals == db_collaterals
     ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
 
+    if tx_collaterals:
+        protocol_params = cluster_obj.get_protocol_params()
+        tx_collaterals_amount = sum(col.amount for col in tx_collaterals)
+        tx_collateral_output_amount = int(
+            tx_collaterals_amount
+            - tx_raw_output.fee * protocol_params["collateralPercentage"] / 100
+        )
+        db_collateral_output_amount = sum(col_out.amount for col_out in response.collateral_outputs)
+
+        assert db_collateral_output_amount == tx_collateral_output_amount, (
+            "TX collateral output amount doesn't match "
+            f"({db_collateral_output_amount} != {tx_collateral_output_amount})"
+        )
+
     db_plutus_scripts = {r for r in response.scripts if r.type == "plutus"}
     # a script is added to `script` table only the first time it is seen, so the record
     # can be empty for the current transaction
@@ -917,6 +946,45 @@ def check_tx(
         "Reference scripts don't match "
         f"({tx_reference_script_hashes} != {db_reference_script_hashes})"
     )
+
+    return response
+
+
+def check_tx_phase_2_failure(
+    cluster_obj: clusterlib.ClusterLib,
+    tx_raw_output: clusterlib.TxRawOutput,
+    collateral_charged: int,
+    retry_num: int = 3,
+) -> Optional[TxRecord]:
+    """Check a transaction in db-sync when a phase 2 failure happens."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    txhash = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+    response = get_tx_record_retry(txhash=txhash, retry_num=retry_num)
+
+    # In case of a phase 2 failure, the collateral output becomes the output of the tx.
+
+    assert (
+        not response.collateral_outputs
+    ), "Collateral outputs are present in dbsync when the tx have a phase 2 failure"
+
+    db_txouts = {utxodata2txout(r) for r in response.txouts}
+    tx_out = {utxodata2txout(r) for r in cluster_obj.get_utxo(tx_raw_output=tx_raw_output)}
+
+    assert db_txouts == tx_out, f"The TX outputs don't match ({db_txouts} != {tx_out})"
+
+    # In case of a phase 2 failure, the fee charged is the collateral amount.
+
+    if tx_raw_output.total_collateral_amount:
+        expected_fee = round(tx_raw_output.total_collateral_amount)
+    elif tx_raw_output.return_collateral_txouts and not tx_raw_output.total_collateral_amount:
+        expected_fee = collateral_charged
+    else:
+        protocol_params = cluster_obj.get_protocol_params()
+        expected_fee = round(tx_raw_output.fee * protocol_params["collateralPercentage"] / 100)
+
+    assert response.fee == expected_fee, f"TX fee doesn't match ({response.fee} != {expected_fee})"
 
     return response
 

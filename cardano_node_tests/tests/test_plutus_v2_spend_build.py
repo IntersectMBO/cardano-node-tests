@@ -2575,7 +2575,7 @@ class TestCollateralOutput:
         return_collateral_utxos = cluster.get_utxo(tx_raw_output=tx_output_redeem)
 
         # when total collateral amount is specified, it is necessary to specify also return
-        # collateral `TxOut`
+        # collateral `TxOut` to get the change otherwise all collaterals will be collected
         if use_total_collateral and not use_return_collateral:
             assert not return_collateral_utxos, "Return collateral UTxO was unexpectedly created"
             return
@@ -2606,6 +2606,8 @@ class TestCollateralOutput:
             utxos=return_collateral_utxos
         )
 
+        collateral_charged = amount_for_collateral - returned_collateral_amount
+
         if use_return_collateral:
             assert (
                 returned_collateral_amount == return_collateral_amount
@@ -2615,7 +2617,6 @@ class TestCollateralOutput:
             ), "Return collateral address doesn't match the specified address"
         else:
             # check that the collateral amount charged corresponds to 'collateralPercentage'
-            collateral_charged = amount_for_collateral - returned_collateral_amount
             assert collateral_charged == round(
                 tx_output_redeem.fee * protocol_params["collateralPercentage"] / 100
             ), "The collateral amount charged is not the expected amount"
@@ -2626,6 +2627,12 @@ class TestCollateralOutput:
 
         # check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
+
+        dbsync_utils.check_tx_phase_2_failure(
+            cluster_obj=cluster,
+            tx_raw_output=tx_output_redeem,
+            collateral_charged=collateral_charged,
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -2753,6 +2760,12 @@ class TestCollateralOutput:
                 asset_name in tx_view_asset_key
             ), "Token is missing from tx view return collateral"
             assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"
+
+        dbsync_utils.check_tx_phase_2_failure(
+            cluster_obj=cluster,
+            tx_raw_output=tx_output_redeem,
+            collateral_charged=amount_for_collateral - return_collateral_amount,
+        )
 
 
 @pytest.mark.testnets
