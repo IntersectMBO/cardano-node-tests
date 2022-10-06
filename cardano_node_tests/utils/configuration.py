@@ -4,6 +4,23 @@ from pathlib import Path
 from typing import Union
 
 
+def _check_cardano_node_socket_path() -> None:
+    """Check that `CARDANO_NODE_SOCKET_PATH` value is valid for use by testing framework."""
+    socket_env = os.environ.get("CARDANO_NODE_SOCKET_PATH")
+    if not socket_env:
+        raise RuntimeError("The `CARDANO_NODE_SOCKET_PATH` env variable is not set.")
+
+    socket_path = Path(socket_env).expanduser().resolve()
+    parts = socket_path.parts
+    if parts[-2] != "state-cluster0" or parts[-1] not in ("bft1.socket", "relay1.socket"):
+        raise RuntimeError(
+            "The `CARDANO_NODE_SOCKET_PATH` value is not valid for use by testing framework."
+        )
+
+
+_check_cardano_node_socket_path()
+
+
 LAUNCH_PATH = Path(os.getcwd())
 
 NETWORK_MAGIC_LOCAL = 42
