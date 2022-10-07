@@ -46,7 +46,7 @@ CERTIFICATES_INFORMATION = {
 }
 
 
-def load_tx_view(tx_view: str) -> dict:
+def load_raw(tx_view: str) -> dict:
     """Load tx view output as YAML."""
     tx_loaded: dict = yaml.safe_load(tx_view)
     return tx_loaded
@@ -177,6 +177,11 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     if not (tx_raw_output.return_collateral_txouts or tx_raw_output.change_address):
         return
 
+    # when total collateral amount is specified, it is necessary to specify also return
+    # collateral `TxOut` to get the change, otherwise all collaterals will be collected
+    if tx_raw_output.total_collateral_amount and not tx_raw_output.return_collateral_txouts:
+        return
+
     return_collateral = tx_loaded.get("return collateral") or {}
     assert return_collateral, "No return collateral in tx view"
 
@@ -197,6 +202,21 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     ), "Return collateral address mismatch"
 
 
+def load_tx_view(
+    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
+) -> Dict[str, Any]:
+    # TODO: see https://github.com/input-output-hk/cardano-node/issues/4039
+    try:
+        tx_view_raw = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
+    except clusterlib.CLIError as exc:
+        if "TODO: Babbage" in str(exc):
+            return {}
+
+    tx_loaded: Dict[str, Any] = load_raw(tx_view=tx_view_raw)
+
+    return tx_loaded
+
+
 def check_tx_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
 ) -> Dict[str, Any]:
@@ -210,7 +230,7 @@ def check_tx_view(  # noqa: C901
         if "TODO: Babbage" in str(exc):
             return {}
 
-    tx_loaded: Dict[str, Any] = load_tx_view(tx_view=tx_view_raw)
+    tx_loaded: Dict[str, Any] = load_raw(tx_view=tx_view_raw)
 
     # check inputs
     loaded_txins = set(tx_loaded.get("inputs") or [])
