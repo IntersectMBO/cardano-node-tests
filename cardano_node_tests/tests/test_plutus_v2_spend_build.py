@@ -2712,67 +2712,11 @@ class TestCollateralOutput:
         assert cluster.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
         assert cluster.get_utxo(utxo=script_utxos), "Script UTxO was spent"
 
-        return_collateral_utxos = cluster.get_utxo(tx_raw_output=tx_output_redeem)
-
-        # when total collateral amount is specified, it is necessary to specify also return
-        # collateral `TxOut` to get the change otherwise all collaterals will be collected
-        if use_total_collateral and not use_return_collateral:
-            assert not return_collateral_utxos, "Return collateral UTxO was unexpectedly created"
-            return
-
-        # check "transaction view"
-        tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
-
-        # TODO: automatic return collateral is not supported on 1.35.3 and older
-        if not (
-            use_return_collateral or use_total_collateral or "return collateral" in tx_view_out
-        ):
-            return
-
-        # check that correct return collateral UTxO was created
-        assert return_collateral_utxos, "Return collateral UTxO was NOT created"
-
-        # check that return collateral is the only output and that the index matches
-        out_utxos_ix = {r.utxo_ix for r in return_collateral_utxos}
-        assert len(out_utxos_ix) == 1, "There are other outputs other than return collateral"
-        # TODO: the index of change can be either 0 (in old node versions) or `txouts_count`,
-        # that affects index of return collateral UTxO
-        assert return_collateral_utxos[0].utxo_ix in (
-            tx_output_redeem.txouts_count,
-            tx_output_redeem.txouts_count + 1,
-        )
-
-        returned_collateral_amount = clusterlib.calculate_utxos_balance(
-            utxos=return_collateral_utxos
-        )
-
-        collateral_charged = amount_for_collateral - returned_collateral_amount
-
-        if use_return_collateral:
-            assert (
-                returned_collateral_amount == return_collateral_amount
-            ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
-            assert (
-                return_collateral_txouts[0].address == return_collateral_utxos[0].address
-            ), "Return collateral address doesn't match the specified address"
-        else:
-            # check that the collateral amount charged corresponds to 'collateralPercentage'
-            assert collateral_charged == round(
-                tx_output_redeem.fee * protocol_params["collateralPercentage"] / 100
-            ), "The collateral amount charged is not the expected amount"
-
-            assert (
-                payment_addr.address == return_collateral_utxos[0].address
-            ), "Return collateral address doesn't match change address"
+        # check that collateral was correctly returned
+        plutus_common.check_return_collateral(cluster_obj=cluster, tx_output=tx_output_redeem)
 
         # check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
-
-        dbsync_utils.check_tx_phase_2_failure(
-            cluster_obj=cluster,
-            tx_raw_output=tx_output_redeem,
-            collateral_charged=collateral_charged,
-        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -2860,33 +2804,8 @@ class TestCollateralOutput:
         assert cluster.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
         assert cluster.get_utxo(utxo=script_utxos), "Script UTxO was spent"
 
-        # check that the right amount of collateral was spent and that the tokens were returned
-
-        return_collateral_utxos = cluster.get_utxo(tx_raw_output=tx_output_redeem)
-
-        assert return_collateral_utxos, "Return collateral UTxO was NOT created"
-
-        # check that return collateral is the only output and that the index matches
-        out_utxos_ix = {r.utxo_ix for r in return_collateral_utxos}
-        assert len(out_utxos_ix) == 1, "There are other outputs other than return collateral"
-        # TODO: the index of change can be either 0 (in old node versions) or `txouts_count`,
-        # that affects index of return collateral UTxO
-        assert return_collateral_utxos[0].utxo_ix in (
-            tx_output_redeem.txouts_count,
-            tx_output_redeem.txouts_count + 1,
-        )
-
-        assert (
-            clusterlib.calculate_utxos_balance(utxos=return_collateral_utxos)
-            == return_collateral_amount
-        ), f"Incorrect balance for collateral return address `{dst_addr.address}`"
-
-        assert (
-            clusterlib.calculate_utxos_balance(
-                utxos=return_collateral_utxos, coin=tokens_rec[0].coin
-            )
-            == tokens_rec[0].amount
-        ), f"Incorrect token balance for collateral return address `{dst_addr.address}`"
+        # check that collateral was correctly returned
+        plutus_common.check_return_collateral(cluster_obj=cluster, tx_output=tx_output_redeem)
 
         # check "transaction view"
         tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
@@ -2900,12 +2819,6 @@ class TestCollateralOutput:
                 asset_name in tx_view_asset_key
             ), "Token is missing from tx view return collateral"
             assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"
-
-        dbsync_utils.check_tx_phase_2_failure(
-            cluster_obj=cluster,
-            tx_raw_output=tx_output_redeem,
-            collateral_charged=amount_for_collateral - return_collateral_amount,
-        )
 
 
 @pytest.mark.testnets
