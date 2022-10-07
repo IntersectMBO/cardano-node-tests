@@ -775,7 +775,7 @@ def check_tx(
             len_out_txouts + 1,  # when there's a change txout
         ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts} (+1))"
     else:
-        txouts_amount = clusterlib.calculate_utxos_balance(tx_raw_output.txouts)
+        txouts_amount = clusterlib.calculate_utxos_balance(utxos=tx_raw_output.txouts)
         assert (
             response.out_sum == txouts_amount
         ), f"Sum of TX amounts doesn't match ({response.out_sum} != {txouts_amount})"
@@ -852,14 +852,23 @@ def check_tx(
         tx_collaterals == db_collaterals
     ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
 
-    if tx_collaterals:
+    # test automatic return collateral only with `transaction build` command on node/dbsync versions
+    # that support it
+    if (
+        tx_collaterals
+        and tx_raw_output.change_address
+        and response.collateral_outputs
+        and not (tx_raw_output.total_collateral_amount or tx_raw_output.return_collateral_txouts)
+    ):
         protocol_params = cluster_obj.get_protocol_params()
-        tx_collaterals_amount = sum(col.amount for col in tx_collaterals)
+        tx_collaterals_amount = clusterlib.calculate_utxos_balance(utxos=list(tx_collaterals))
         tx_collateral_output_amount = int(
             tx_collaterals_amount
             - tx_raw_output.fee * protocol_params["collateralPercentage"] / 100
         )
-        db_collateral_output_amount = sum(col_out.amount for col_out in response.collateral_outputs)
+        db_collateral_output_amount = clusterlib.calculate_utxos_balance(
+            utxos=list(response.collateral_outputs)
+        )
 
         assert db_collateral_output_amount == tx_collateral_output_amount, (
             "TX collateral output amount doesn't match "
