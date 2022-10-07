@@ -62,7 +62,10 @@ templates_path = ["_templates"]
 exclude_patterns = []
 
 # source_suffix = '.rst'
-source_suffix = [".rst", ".md"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -71,7 +74,30 @@ source_suffix = [".rst", ".md"]
 # a list of builtin themes.
 # html_theme = 'alabaster'
 html_theme = "sphinx_rtd_theme"
+
+html_theme_options = {
+    "logo_only": False,
+    "display_version": False,
+    "prev_next_buttons_location": "bottom",
+    "style_external_links": False,
+    # Toc options
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
+}
+
 html_logo = "_static/images/Cardano-Crypto-Logo-128.png"
+
+html_context = {
+    "display_github": True,  # Add 'Edit on Github' link instead of 'View page source'
+    "github_user": "input-output-hk",
+    "github_repo": "cardano-node-tests",
+    "github_version": "master",
+    "conf_py_path": "/src_docs/source/",
+    "source_suffix": source_suffix,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
