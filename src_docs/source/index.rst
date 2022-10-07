@@ -9,7 +9,7 @@ Welcome to cardano-node-test's documentation!
    test_results
    process
    how-tos
-   contribute
+   contribute/contributing.rst
    modules
 
 
