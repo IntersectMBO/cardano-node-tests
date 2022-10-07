@@ -1,5 +1,5 @@
 Test Results
-===============
+============
 
 .. toctree::
    :maxdepth: 4
