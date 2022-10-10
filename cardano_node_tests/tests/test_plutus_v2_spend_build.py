@@ -2941,3 +2941,50 @@ class TestCompatibility:
             )
         err_str = str(excinfo.value)
         assert "Reference inputs cannot be used" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_PLUTUSV2_UNUSABLE
+    def test_default_tx_era(
+        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+    ):
+        """Check that is possible to build a transaction without specify a Tx era.
+
+        * Build a transaction providing a Tx era flag
+        * Build a transaction without provide any Tx era flag
+        * Calculate the minimum required UTxO without provide any Tx era flag
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        reference_input = _build_reference_txin(
+            temp_template=temp_template,
+            cluster=cluster,
+            payment_addr=payment_addrs[0],
+            amount=amount,
+        )
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        txouts = [clusterlib.TxOut(address=payment_addrs[1].address, amount=amount)]
+
+        tx_raw_output = None
+        try:
+            tx_raw_output = cluster.build_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                txouts=txouts,
+                readonly_reference_txins=reference_input,
+                use_explicit_tx_era=False,
+            )
+
+            cluster.calculate_min_req_utxo(txouts=txouts, use_explicit_tx_era=False)
+        except clusterlib.CLIError as err:
+            err_str = str(err)
+            if "The era of the node and the tx do not match" in err_str:
+                pytest.xfail(
+                    "Impossible to "
+                    f"{'build a valid Tx' if not tx_raw_output else 'calculate min required UTxO'},"
+                    " the default Tx era isn't the expected"
+                )
+            else:
+                raise
