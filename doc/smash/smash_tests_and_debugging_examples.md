@@ -1,4 +1,4 @@
-# SMASH - Tests and debugging examples
+# SMASH - tests and debugging examples
 
 
 These examples come from the `testnet` network.  
@@ -357,7 +357,7 @@ testnet_v12_6=# select * from delisted_pool;
 
 
 
-## Debugging issue with pool - example
+## An example of debugging an issue with a pool
 
 Here is an example of unusual behavior of a pool on `testnet` that could not be seen in any tool that tracks pools and at the same time, it could not be found in retired pools.
 

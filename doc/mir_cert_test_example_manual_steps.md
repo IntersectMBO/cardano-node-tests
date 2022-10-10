@@ -1,4 +1,4 @@
-# Test MIR certificate submission with a local cluster
+# Testing MIR certificate submission with a local cluster
 
 Some node network operations require access to genesis keys, and this requires proper access to the
 machines where those nodes are running. To run these tests more quickly and more safely (in the worst case, the test can only break your local cluster, which you can easily respin), `local-cluster` is just what you need.
@@ -9,7 +9,7 @@ This assumes that you have a running local cluster.
 Instructions on how to start a local cluster can be found here:
 <https://input-output-hk.github.io/cardano-node-tests/how-tos/300_running_local_cluster.html>
 
-## Create key pairs
+## Creating key pairs
 
 ### Payment key pair
 
@@ -57,7 +57,7 @@ stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns
 ```
 
 
-## Let's transfer funds from the 'faucet' address to our own Shelley address `payment.addr`
+## Transferring funds from the 'faucet' address to our own Shelley address `payment.addr`
 
 First query an address that holds funds:
 
@@ -115,7 +115,7 @@ cardano-cli query utxo --address $(cat /home/artur/Projects/payment.addr) --test
 ece90464d725625a1d7d5f484b24199f067d6bddb3df9b05a67c6cc8dba6944e     0        2000000000000 lovelace + TxOutDatumHashNone
 ```
 
-## Create a stake registration certificate
+## Creating a stake registration certificate
 
 ```sh
 cardano-cli stake-address registration-certificate \
@@ -153,7 +153,7 @@ expr 2000000000000 - 1000000 - 400000
 1999994000000
 ```
 
-### Submit the certificate with a transaction
+### Submitting the certificate with a transaction
 
 #### Build tx
 
@@ -224,7 +224,8 @@ select * from stake_registration;
 (7 rows)
 
 
-## Deregister 'empty' stake address (no rewards on the stake address as it was not delegated)
+## Deregistering an 'empty' stake address  
+ This address has no rewards because its stake was not delegated.
 
 ```sh
 cardano-cli query stake-address-info --address stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns --testnet-magic 42
@@ -237,7 +238,7 @@ cardano-cli query stake-address-info --address stake_test1uqnltrhd4wtj59fg8jz640
 ]
 ```
 
-### Create deregistration certificate
+### Creating a deregistration certificate
 
 ```sh
 cardano-cli stake-address deregistration-certificate \
@@ -252,7 +253,7 @@ cardano-cli query utxo --address $(cat payment.addr) --testnet-magic 42
 a4c141cfae907aa1c4b418f65f384a6d860d52786b412481bc63733acfab1541     0        1999998600000 lovelace + TxOutDatumHashNone
 ```
 
-#### Add +400000 from Key Deposit that will be returned
+#### Adding +400000 from a key deposit that will be returned
 
 ```sh
 expr 1999998600000 + 400000 - 1000000
@@ -281,23 +282,15 @@ cardano-cli transaction sign \
 --out-file tx-deregister-stake-addr.signed
 ```
 
-#### Submit tx
-
-```sh
-cardano-cli transaction submit \
---tx-file tx-deregister-stake-addr.signed \
---testnet-magic 42
-```  
-
-#### Deregistartion event was registered in `db-sync`
+#### Submit txDeregistration event was registered in `db-sync`
 
 ```sql
 dbsync0=# select * from stake_deregistration;
 select * from stake_deregistration;
 ```  
-| id | addr_id | cert_index | tx_id | epoch_no | redeemer_id
-| -- | ------- | ---------- | ----- | -------- | ------------
-|  1 |      13 |          0 |    11 |       39 |  
+ id | addr_id | cert_index | tx_id | epoch_no | redeemer_id
+ -- | ------- | ---------- | ----- | -------- | ------------
+  1 |      13 |          0 |    11 |       39 |  
 
 (1 row)
 
@@ -322,7 +315,7 @@ select * from treasury;
 (0 rows)
 
 
-## Generate MIR cert to send funds from reserves to unregistered stake address
+## Generating MIR cert to send funds from reserves to unregistered stake address
 
 ```sh
 cardano-cli governance create-mir-certificate \
@@ -377,7 +370,7 @@ cardano-cli transaction submit \
 ```
 
 
-## STATE of tables after MIR cert tx submission
+## State of tables after MIR cert tx submission
 
 ```sql
 dbsync0=# select * from reserve;

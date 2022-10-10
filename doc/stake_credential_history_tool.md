@@ -1,12 +1,12 @@
-# Stake Credential History Tool
+# Stake credential history tool
 
 
-The Stake Credential History Tool is a very useful utility that produces a linear history of events for a given stake credential.
+The stake credential history tool is a very useful utility that produces a linear history of events for a given stake credential.
 It works with all blockchain networks including local testnets.
 
 
 ## Documentation  
-The Stake Credential History Tool is located in the `cardano-node` repository.
+The stake credential history tool is located in the `cardano-node` repository.
 
 Full documentation for building, running, and description of event types is [in its description](https://github.com/input-output-hk/cardano-node/blob/master/cardano-client-demo/Stake-Credential-History.md).
 

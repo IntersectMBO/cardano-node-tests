@@ -127,7 +127,7 @@ Now you are ready to run the preparation script (which is described in detail in
 
 Inside `cardano-node-tests/cardano_node_tests/cluster_scripts` there are folders with all the data and scripts necessary for starting the cluster in various eras and setups:
 
-- `alonzo` - prepare files to start the cluster in `Byron` era and transition it through update proposals to `Alonzo` era. Once the cluster is ready it will be in `Alonzo` era and the decentralization parameter is set to: `d = 0`.
+- `Alonzo` - prepare files to start the cluster in `Byron` era and transition it through update proposals to `Alonzo` era. Once the cluster is ready it will be in `Alonzo` era and the decentralization parameter is set to: `d = 0`.
 
 - `testnets_nopools` - prepare files so the cluster will run on the real network but without setting up our own pool there.
 
@@ -493,7 +493,7 @@ When you run tests with:
 
 `pytest ... --log-level=debug`
 
-you can see what Cardano-CLI commands are executed.
+you can see what Cardano CLI commands are executed.
 
 
 ## Logs for `cardano-node` and `db-sync`
@@ -516,7 +516,7 @@ db-sync:
 - `cardano-node/state-cluster0/dbsync.stderr`
 
 
-## Accessing the `DB-sync` database
+## Accessing the `db-sync` database
 
 - If you did not change **PGPORT** and **PGUSER**:
 `psql -h /path/to/your/data -U postgres -e dbsync0` </br>
