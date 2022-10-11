@@ -12,6 +12,7 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
@@ -90,6 +91,7 @@ def _build_fund_script(
     tokens_collateral: Optional[
         List[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
+    embed_datum: bool = False,
 ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO.
 
@@ -115,26 +117,22 @@ def _build_fund_script(
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
     )
-    datum_hash = cluster_obj.get_hash_script_data(
-        script_data_file=plutus_op.datum_file if plutus_op.datum_file else None,
-        script_data_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else None,
-        script_data_value=plutus_op.datum_value if plutus_op.datum_value else "",
+
+    script_txout = plutus_common.txout_factory(
+        address=script_address,
+        amount=script_fund,
+        plutus_op=plutus_op,
+        embed_datum=embed_datum,
     )
+
     txouts = [
-        clusterlib.TxOut(address=script_address, amount=script_fund, datum_hash=datum_hash),
+        script_txout,
         # for collateral
         clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
     ]
 
     for token in stokens:
-        txouts.append(
-            clusterlib.TxOut(
-                address=script_address,
-                amount=token.amount,
-                coin=token.coin,
-                datum_hash=datum_hash,
-            )
-        )
+        txouts.append(script_txout._replace(amount=token.amount, coin=token.coin))
 
     for token in ctokens:
         txouts.append(
@@ -572,6 +570,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    @pytest.mark.parametrize("embed_datum", (True, False), ids=("embedded_datum", "datum"))
     @pytest.mark.parametrize(
         "variant",
         ("typed_json", "typed_cbor", "untyped_value", "untyped_json", "untyped_cbor"),
@@ -583,6 +582,8 @@ class TestBuildLocking:
         payment_addrs: List[clusterlib.AddressRecord],
         variant: str,
         plutus_version: str,
+        embed_datum: bool,
+        request: FixtureRequest,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
@@ -599,7 +600,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         __: Any  # mypy workaround
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{variant}"
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
 
         datum_file: Optional[Path] = None
         datum_cbor_file: Optional[Path] = None
@@ -652,6 +653,7 @@ class TestBuildLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            embed_datum=embed_datum,
         )
 
         __, __, plutus_costs = _build_spend_locked_txin(
