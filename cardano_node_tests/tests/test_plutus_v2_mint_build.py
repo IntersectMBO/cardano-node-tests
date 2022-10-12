@@ -276,7 +276,7 @@ class TestBuildMinting:
         request: FixtureRequest,
     ):
         """
-        Test check visibility of reference inputs by the plutus script.
+        Test visibility of reference inputs by a plutus script.
 
         * create the necessary Tx outputs
         * create the redeemer with the reference input
@@ -358,7 +358,7 @@ class TestBuildMinting:
             *mint_txouts,
         ]
 
-        # if the redeemer is not the expected the script evaluation will fail and should show
+        # if the redeemer is not the expected, script evaluation will fail and should show
         # the expected error message defined by the plutus script
         if not valid_redeemer:
             with pytest.raises(clusterlib.CLIError) as excinfo:
