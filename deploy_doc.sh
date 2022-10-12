@@ -2,9 +2,11 @@
 
 set -euo pipefail
 
-# check that "src_docs" dir exists
-if [ ! -d src_docs ]; then
-    echo "The 'src_docs' dir doesn't exist, are you in the right directory?"
+DOC_SRC="src_docs"
+
+# check that "$DOC_SRC" dir exists
+if [ ! -d "$DOC_SRC" ]; then
+    echo "The '$DOC_SRC' dir doesn't exist, are you in the right directory?"
     exit 1
 fi
 
@@ -30,10 +32,10 @@ fi
 # build documentation
 make doc
 
-# check that there still are no uncommitted changes after building docs
-if ! git diff-index --quiet HEAD --; then
-    echo "There are uncommitted changes after running 'make doc', aborting."
-    exit 1
+# drop changes made automatically by `make doc`
+if ! git diff-index --quiet HEAD -- "$DOC_SRC"; then
+  git stash -- "$DOC_SRC"
+  git stash drop
 fi
 
 # checkout the "github_pages" branch
@@ -42,9 +44,9 @@ git checkout github_pages
 # reset the "github_pages" branch
 git reset --hard upstream/master
 
-# copy generated documention to "src_docs" dir
+# copy generated documention to 'docs' dir
 rm -rf docs/*
-cp -aT src_docs/build/html docs
+cp -aT "$DOC_SRC"/build/html docs
 
 # stage changes
 git add docs
