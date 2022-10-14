@@ -149,8 +149,8 @@ def _fund_issuer(
 
 
 def _build_reference_txin(
+    cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
-    cluster: clusterlib.ClusterLib,
     amount: int,
     payment_addr: clusterlib.AddressRecord,
     dst_addr: Optional[clusterlib.AddressRecord] = None,
@@ -160,7 +160,9 @@ def _build_reference_txin(
 
     Uses `cardano-cli transaction build-raw` command for building the transaction.
     """
-    dst_addr = dst_addr or cluster.gen_payment_addr_and_keys(name=f"{temp_template}_readonly_input")
+    dst_addr = dst_addr or cluster_obj.gen_payment_addr_and_keys(
+        name=f"{temp_template}_readonly_input"
+    )
 
     txouts = [
         clusterlib.TxOut(
@@ -171,16 +173,16 @@ def _build_reference_txin(
     ]
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-    tx_raw_output = cluster.send_tx(
+    tx_raw_output = cluster_obj.send_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step1",
         txouts=txouts,
         tx_files=tx_files,
     )
 
-    txid = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
+    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
 
-    reference_txin = cluster.get_utxo(txin=f"{txid}#0")
+    reference_txin = cluster_obj.get_utxo(txin=f"{txid}#0")
     assert reference_txin, "UTxO not created"
 
     return reference_txin
@@ -316,27 +318,23 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
-        "scenario",
-        ("reference_script", "readonly_reference_input", "different_datum"),
-        ids=("reference_script", "readonly_reference_input", "different_datum"),
+        "scenario", ("reference_script", "readonly_reference_input", "different_datum")
     )
     def test_datum_hash_visibility(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         scenario: str,
-        request: FixtureRequest,
     ):
-        """
-        Test check visibility of datum hash on reference inputs by the plutus script.
+        """Test visibility of datum hash on reference inputs by the plutus script.
 
-        * create the necessary Tx outputs
-        * mint the token and check that the plutus script have visibility of the datum hash
+        * create needed Tx outputs
+        * mint token and check that plutus script have visibility of the datum hash
         * check that the token was minted
         * check that the reference UTxO was not spent
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = f"{common.get_test_id(cluster)}_{scenario}"
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -369,15 +367,15 @@ class TestMinting:
         different_datum = scenario == "different_datum"
         datum_file = plutus_common.DATUM_43_TYPED if different_datum else plutus_common.DATUM_42
 
-        reference_input = ()
+        reference_input = []
         if with_reference_input or different_datum:
             reference_input = _build_reference_txin(
+                cluster_obj=cluster,
                 temp_template=temp_template,
-                cluster=cluster,
                 payment_addr=payment_addrs[0],
                 amount=lovelace_amount,
                 datum_file=datum_file,
-            )  # type: ignore
+            )
 
         # Step 2: mint the "qacoin"
 
