@@ -1,17 +1,15 @@
-# Test MIR certificate submission with local cluster
+# Testing MIR certificate submission with a local cluster
 
-Some node network operations require access to genesis keys and this in other hand requires proper access to
-machines where those nodes are running. This is more of a `dev-ops` thing and in order
-to test things much faster and safer (in worst case test can only break your local cluster which you can easily respin) `local-cluster` is perfect fot investigating such cases.
+Some node network operations require access to genesis keys, and this requires proper access to the
+machines where those nodes are running. To run these tests more quickly and more safely (in the worst case, the test can only break your local cluster, which you can easily respin), `local-cluster` is just what you need.
 
-
-Below is an example of such case for running manual test for checking MIR certificate transfer to stake address that was registered and then deregistered before submission of MIR cert transaction. This is a practical example of interacting with `local cluster` - `cardano-node` and `db-sync` which also presents how easily you can use `local cluster` for examining cardano fautures.
+Below is an example of such a case of running a manual test for checking the MIR certificate transfer to a stake address that was registered and then deregistered before the MIR cert transaction was submitted. This is a practical example of interacting with `local-cluster` - `cardano-node` and `db-sync`, which also shows how easily you can use `local-cluster` for examining Cardano features.
 
 This assumes that you have a running local cluster.
 Instructions on how to start a local cluster can be found here:
 <https://input-output-hk.github.io/cardano-node-tests/how-tos/300_running_local_cluster.html>
 
-## Create key pairs
+## Creating key pairs
 
 ### Payment key pair
 
@@ -59,9 +57,9 @@ stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns
 ```
 
 
-## Let's transfer funds from "faucet" address to our own Shelley address `payment.addr`
+## Transferring funds from the 'faucet' address to our own Shelley address `payment.addr`
 
-First query address that holds funds:
+First query an address that holds funds:
 
 ```sh
 cardano-cli query utxo --address $(cat /home/artur/Projects/cardano-node/state-cluster0/byron/address-000-converted) --testnet-magic 42
@@ -70,8 +68,8 @@ cardano-cli query utxo --address $(cat /home/artur/Projects/cardano-node/state-c
 3409ede3ea6665b175c5a56e41187f9e62b4f02901b1437a935b90ad60042249     0        35996998496920237 lovelace + TxOutDatumHashNone
 ```
 
-We will use arbitrary fee = 1 ADA
-and send 2 mln ADA from "faucet" address (address-000-converted) to payment.addr:
+We will assume an arbitrary fee = 1 ADA
+and send 2 mln ADA from the 'faucet' address (address-000-converted) to payment.addr:
 
 ```sh
 expr 35996998496920237 - 2000000000000 - 1000000
@@ -117,7 +115,7 @@ cardano-cli query utxo --address $(cat /home/artur/Projects/payment.addr) --test
 ece90464d725625a1d7d5f484b24199f067d6bddb3df9b05a67c6cc8dba6944e     0        2000000000000 lovelace + TxOutDatumHashNone
 ```
 
-## Create a stake registration certificate
+## Creating a stake registration certificate
 
 ```sh
 cardano-cli stake-address registration-certificate \
@@ -125,7 +123,7 @@ cardano-cli stake-address registration-certificate \
 --out-file stake.cert
 ```
 
-There is a deposit required for `stake address`. Let's check it's value:
+There is a deposit required for `stake address`. Let's check its value:
 
 ```sh
 cardano-cli query protocol-parameters --testnet-magic 42 | grep Deposit
@@ -145,7 +143,7 @@ cardano-cli query utxo --address $(cat /home/artur/Projects/payment.addr) --test
 ece90464d725625a1d7d5f484b24199f067d6bddb3df9b05a67c6cc8dba6944e     0        2000000000000 lovelace + TxOutDatumHashNone
 ```
 
-Calculate the change to send back to payment address after including the deposit:
+Calculate the change to send back to the payment address after including the deposit:
 
 ```sh
 fee = 1 ADA = 1000000 lovelaces
@@ -155,7 +153,7 @@ expr 2000000000000 - 1000000 - 400000
 1999994000000
 ```
 
-### Submit the certificate with a transaction
+### Submitting the certificate with a transaction
 
 #### Build tx
 
@@ -187,40 +185,44 @@ cardano-cli transaction submit \
 --testnet-magic 42
 ```
 
-### Our stake address has id=13 and is registered -> see in table below
+### Our stake address has id=13 and is registered
 
-Stake address is `stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns`.
+See the table below:
+The stake address is `stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns`.
 
 ```sql
-dbsync0=# select * from stake_address;
- id |                           hash_raw                           |                               view                               | registered_tx_id | script_hash
-----+--------------------------------------------------------------+------------------------------------------------------------------+------------------+-------------
-  5 | \xe0568028c22bdf100e83979696540db02ec6a4eb1f1c8e9d5b91b77487 | stake_test1uptgq2xz9003qr5rj7tfv4qdkqhvdf8truwga82mjxmhfpcxv3p46 |                5 |
-  1 | \xe0e50e564992e494d163c310af81d858168286e6acdff5bf15d887ed19 | stake_test1urjsu4jfjtjff5trcvg2lqwctqtg9phx4n0lt0c4mzr76xgfd5c7u |                5 |
-  8 | \xe0c4e0c1c243bcb0ff38e835d8e35f29c1f7d277587d602d713cf1933e | stake_test1urzwpswzgw7tplecaq6a3c6l98ql05nhtp7kqtt38ncex0stcmuyj |                5 |
-  2 | \xe054ddf4c30186b9154afe55b42ba175d903794ecd66b785c68bd2e7c1 | stake_test1up2dmaxrqxrtj922le2mg2apwhvsx72we4nt0pwx30fw0sg607vyz |                5 |
- 11 | \xe01c60761146bc394d9fb4e47f9ffbd3fd53256ca52b88dc040f6be406 | stake_test1uqwxqas3g67rjnvlknj8l8lm6074xftv554c3hqypa47gpstqfku4 |                5 |
-  3 | \xe07940665a5f25116ac467b1d0fdc514b86cad61786c59d1a52fcce9da | stake_test1upu5qej6tuj3z6kyv7caplw9zjuxettp0pk9n5d99lxwnksl99hux |                5 |
- 13 | \xe027f58eedab972a15283c85aabf6670bf472394163f0329b9965bd69d | stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns |                9 |
-(7 rows)
+select * from stake_address;
 ```
 
+| id |                           hash_raw                           |                               view                               | registered_tx_id | script_hash |
+| -- | ------------------------------------------------------------ | ---------------------------------------------------------------- | ---------------- | ----------- |
+| 5  | \xe0568028c22bdf100e83979696540db02ec6a4eb1f1c8e9d5b91b77487 | stake_test1uptgq2xz9003qr5rj7tfv4qdkqhvdf8truwga82mjxmhfpcxv3p46 |                5 |  |
+| 1  | \xe0e50e564992e494d163c310af81d858168286e6acdff5bf15d887ed19 | stake_test1urjsu4jfjtjff5trcvg2lqwctqtg9phx4n0lt0c4mzr76xgfd5c7u |                5 |  |
+| 8  | \xe0c4e0c1c243bcb0ff38e835d8e35f29c1f7d277587d602d713cf1933e | stake_test1urzwpswzgw7tplecaq6a3c6l98ql05nhtp7kqtt38ncex0stcmuyj |                5 |  |
+| 2  | \xe054ddf4c30186b9154afe55b42ba175d903794ecd66b785c68bd2e7c1 | stake_test1up2dmaxrqxrtj922le2mg2apwhvsx72we4nt0pwx30fw0sg607vyz |                5 |  |
+| 11 | \xe01c60761146bc394d9fb4e47f9ffbd3fd53256ca52b88dc040f6be406 | stake_test1uqwxqas3g67rjnvlknj8l8lm6074xftv554c3hqypa47gpstqfku4 |                5 |  |
+| 3  | \xe07940665a5f25116ac467b1d0fdc514b86cad61786c59d1a52fcce9da | stake_test1upu5qej6tuj3z6kyv7caplw9zjuxettp0pk9n5d99lxwnksl99hux |                5 |  |
+| 13 | \xe027f58eedab972a15283c85aabf6670bf472394163f0329b9965bd69d | stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns |                9 |  |
+
+
 ```sql
-dbsync0=# select * from stake_registration;
 select * from stake_registration;
- id | addr_id | cert_index | tx_id | epoch_no
-----+---------+------------+-------+----------
-  1 |       1 |          0 |     5 |        1
-  2 |       5 |          1 |     5 |        1
-  3 |       2 |          4 |     5 |        1
-  4 |       8 |          5 |     5 |        1
-  5 |       3 |          8 |     5 |        1
-  6 |      11 |          9 |     5 |        1
-  7 |      13 |          0 |    10 |       34
-(7 rows)
 ```
 
-## Deregister "empty" stake address (no rewards on stake address as it was no delegated)
+| id | addr_id | cert_index | tx_id | epoch_no |
+| -- | ------- | ---------- | ----- | --------- |
+| 1 |       1 |          0 |     5 |        1 |
+| 2 |       5 |          1 |     5 |        1 |
+| 3 |       2 |          4 |     5 |        1 |
+| 4 |       8 |          5 |     5 |        1 |
+| 5 |       3 |          8 |     5 |        1 |
+| 6 |      11 |          9 |     5 |        1 |
+| 7 |      13 |          0 |    10 |       34 |
+
+
+## Deregistering an 'empty' stake address
+
+ This address has no rewards because its stake was not delegated.
 
 ```sh
 cardano-cli query stake-address-info --address stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns --testnet-magic 42
@@ -233,7 +235,7 @@ cardano-cli query stake-address-info --address stake_test1uqnltrhd4wtj59fg8jz640
 ]
 ```
 
-### Create deregistration certificate
+### Creating a deregistration certificate
 
 ```sh
 cardano-cli stake-address deregistration-certificate \
@@ -248,7 +250,7 @@ cardano-cli query utxo --address $(cat payment.addr) --testnet-magic 42
 a4c141cfae907aa1c4b418f65f384a6d860d52786b412481bc63733acfab1541     0        1999998600000 lovelace + TxOutDatumHashNone
 ```
 
-#### Add +400000 from Key Deposit the will be returned
+#### Adding +400000 from a key deposit that will be returned
 
 ```sh
 expr 1999998600000 + 400000 - 1000000
@@ -277,46 +279,37 @@ cardano-cli transaction sign \
 --out-file tx-deregister-stake-addr.signed
 ```
 
-#### Submit tx
-
-```sh
-cardano-cli transaction submit \
---tx-file tx-deregister-stake-addr.signed \
---testnet-magic 42
-```
-
-#### Deregistartion event was registered in `db-sync`
+#### Submit txDeregistration event was registered in `db-sync`
 
 ```sql
-dbsync0=# select * from stake_deregistration;
 select * from stake_deregistration;
- id | addr_id | cert_index | tx_id | epoch_no | redeemer_id
-----+---------+------------+-------+----------+-------------
-  1 |      13 |          0 |    11 |       39 |
-(1 row)
 ```
+
+ id | addr_id | cert_index | tx_id | epoch_no | redeemer_id
+ -- | ------- | ---------- | ----- | -------- | ------------
+  1 |      13 |          0 |    11 |       39 |
 
 
 **RESERVES** and **TREASURY** table state before MIR cert submission:
 
 ```sql
-dbsync0=# select * from reserve;
 select * from reserve;
- id | addr_id | cert_index | amount | tx_id
-----+---------+------------+--------+-------
-(0 rows)
 ```
+
+| id | addr_id | cert_index | amount | tx_id
+| -- | ------- | ---------- | ------ | ------
+(0 rows)
 
 ```sql
-dbsync0=# select * from treasury;
 select * from treasury;
- id | addr_id | cert_index | amount | tx_id
-----+---------+------------+--------+-------
-(0 rows)
 ```
 
+| id | addr_id | cert_index | amount | tx_id
+| -- | ------- | ---------- | ------ | ------
+(0 rows)
 
-## Generate MIR cert to send funds from reserves to unregistered stake address
+
+## Generating MIR cert to send funds from reserves to unregistered stake address
 
 ```sh
 cardano-cli governance create-mir-certificate \
@@ -328,9 +321,9 @@ cardano-cli governance create-mir-certificate \
 
 ```sh
 cardano-cli query utxo --address $(cat payment.addr) --testnet-magic 42
-                           TxHash                                 TxIx        Amount
---------------------------------------------------------------------------------------
-277cab33552f06331af9dbf0d05635464a769dab05335511df7c7d4d70f41b61     0        1999998000000 lovelace + TxOutDatumHashNone
+                            TxHash                               | TxIx |    Amount
+ -----------------------------------------------------------------------------------
+ 277cab33552f06331af9dbf0d05635464a769dab05335511df7c7d4d70f41b61  0      1999998000000 lovelace + TxOutDatumHashNone
 ```
 
 ```sh
@@ -371,24 +364,23 @@ cardano-cli transaction submit \
 ```
 
 
-## STATE of tables after MIR cert tx submission
+## State of tables after MIR cert tx submission
 
 ```sql
-dbsync0=# select * from reserve;
 select * from reserve;
- id | addr_id | cert_index |    amount    | tx_id
-----+---------+------------+--------------+-------
-  1 |      13 |          0 | 500000000000 |    12
-(1 row)
 ```
 
+ | id | addr_id | cert_index |    amount    | tx_id
+ | -- | ------ | ---------- | ------------ | ------
+  |  1 |      13 |          0 | 500000000000 |    12
+
 ```sql
-dbsync0=# select * from treasury;
 select * from treasury;
- id | addr_id | cert_index | amount | tx_id
-----+---------+------------+--------+-------
-(0 rows)
 ```
+
+ | id | addr_id | cert_index | amount | tx_id
+ | -- | ------ | ---------- | ------ | ------
+(0 rows)
 
 
 ## Logs
@@ -404,17 +396,16 @@ We can see that currently there are some issues:
 ```
 
 ```sql
-dbsync0=# select * from epoch_reward_total_received order by id DESC LIMIT 5;
 select * from epoch_reward_total_received order by id DESC LIMIT 5;
- id | earned_epoch |    amount
-----+--------------+--------------
- 57 |           56 | 501065150011
- 56 |           55 |   1196962304
- 55 |           54 |   1197126868
- 54 |           53 |   1197291461
- 53 |           52 |   1197456077
-(5 rows)
 ```
+
+ | id | earned_epoch |    amount
+ | -- | ----------- | -------------
+ | 57 |           56 | 501065150011
+ | 56 |           55 |   1196962304
+ | 55 |           54 |   1197126868
+ | 54 |           53 |   1197291461
+ | 53 |           52 |   1197456077
 
 ```sql
 select reward.earned_epoch, pool_hash.view as delegated_pool, reward.amount as lovelace
@@ -422,6 +413,6 @@ select reward.earned_epoch, pool_hash.view as delegated_pool, reward.amount as l
     inner join pool_hash on reward.pool_id = pool_hash.id
     where stake_address.view = 'stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns'
     order by earned_epoch asc ;
-
-<NOTHING>
 ```
+
+`(NOTHING)`

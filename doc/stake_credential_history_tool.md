@@ -1,30 +1,30 @@
-# Stake Credential History Tool
+# Stake credential history tool
 
 
-Stake Credential History Tool is a very useful utility that produces a linear history of events for a given stake credential.
+The stake credential history tool is a very useful utility that produces a linear history of events for a given stake credential.
 It works with all blockchain networks including local testnets.
 
 
 ## Documentation
 
-Stake Credential History Tool is located in `cardano-node` repository.
+The stake credential history tool is located in the `cardano-node` repository.
 
-Full documentation for building, running and description of event types is [here](https://github.com/input-output-hk/cardano-node/blob/master/cardano-client-demo/Stake-Credential-History.md).
+Full documentation for building, running, and description of event types is [in its description](https://github.com/input-output-hk/cardano-node/blob/master/cardano-client-demo/Stake-Credential-History.md).
 
 
 ## Example of usage
 
-We will use a [local test cluster](https://github.com/input-output-hk/cardano-node-tests/blob/master/doc/running_local_cluster.md) to present Stake Credential History Tool in action.
+We will use a [local test cluster](https://github.com/input-output-hk/cardano-node-tests/blob/master/doc/running_local_cluster.md) to show the Stake Credential History Tool in action.
 
 
-Let's place a breakpoint:
+Let's place a breakpoint...
 
 
 ```python
 from IPython import embed; embed()
 ```
 
-in one of tests in `test_mir_certs.py` named `test_pay_stake_addr_from_both` that sends funds from the reserves and treasury pots to stake address and run it with:
+in one of the tests in `test_mir_certs.py` named `test_pay_stake_addr_from_both` that sends funds from the reserves and treasury pots to a stake address, and run it with:
 
 
 ```sh
@@ -37,7 +37,7 @@ Once the test stops we will get the stake address we are interested in by using:
 cluster.get_stake_addr_info(registered_user.stake.address)
 ```
 
-Here is a step by step example:
+Here is a step-by-step example:
 
 
 ```sh
@@ -96,7 +96,7 @@ BALANCE ----------- EpochNo 16, SlotNo 16010, balance: Lovelace 100000000
 BALANCE ----------- EpochNo 17, SlotNo 17070, balance: Lovelace 100000000
 ```
 
-With Stake Credential History Tool we can see events like registrations, de-registrations, delegations, instantaneous rewards, reward withdrawals, mentions inside pool parameter registrations, and also per-epoch active stake and rewards.
+With the Stake Credential History Tool, we can see events like registrations, de-registrations, delegations, instantaneous rewards, reward withdrawals, mentions inside pool parameter registrations, and also per-epoch active stake and rewards.
 
 
 ```sh
