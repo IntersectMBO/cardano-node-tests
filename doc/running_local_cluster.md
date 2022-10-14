@@ -6,7 +6,7 @@ A **local cluster** is a local Cardano blockchain that consists of 3 stake pools
 
 Using a local cluster, you can test/play/interact with all the Cardano blockchain functionalities - from block creation to rewards generation - based on the stake delegated to each of the stake pools, generating and sending all kinds of transactions, to interact with Plutus scripts.
 
-**Local cluster parameters**
+### Local cluster parameters
 
 - slotLength: 200ms
 - epochLength: 1000 slots per epoch (that is 200sec)
@@ -89,7 +89,7 @@ cd ../cardano-node-tests
 > **Note:** All the remaining steps from the sections below should be performed from the `cardano-node-tests` directory
 
 
-### Starting Postgres test database  
+### Starting Postgres test database
 
 **Usage of a separate Postgres database for testing is not mandatory.**
 
@@ -398,9 +398,9 @@ and query it:
 
 ```sh
 cardano-cli query utxo --address 2657WMsDfac7Mx1ew6MVfxGqLGwvkkExEFyuWRxDGk4rPQB86uAfrD8BGqjh6ToRj --testnet-magic 42
+```
 
-``` 
- |                          TxHash                                    | TxIx |  Amount  
+ |                          TxHash                                    | TxIx |  Amount
  | ----------------------------------------------------------------- | ---- | ------------
  | 30bfdafa359d0258e54c80de8d00b0556572fef93ec6171ac16572f3994132c7  |   0  |      35996998496920237  lovelace + TxOutDatumHashNone
 
@@ -530,43 +530,42 @@ for values used in examples above it would be: </br>
 
 Use `\dt` for listing all tables:
 
-```sql
+```text
 dbsync0=# \dt
 ```
-                    List of relations
+
  Schema |            Name             | Type  |  Owner
 ------- | --------------------------- | ----- | ---------
  public | ada_pots                    | table | postgres
  public | admin_user                  | table | postgres
  public | block                       | table | postgres
  public | collateral_tx_in            | table | postgres
- public | cost_models                 | table | postgres  
-
-... < skipped >
-(42 rows)
+ public | cost_models                 | table | postgres
+ ...
 
 
 Use `\d table_name` for checking table details:
 
 
-```sql
+```text
 dbsync0=# \d collateral_tx_in
 ```
-                               Table "public.collateral_tx_in"  
+
 |    Column    |  Type   | Collation | Nullable |                   Default
 |  ----------- | ------- | --------- | -------- | ---------------------------------------------
  id           | bigint  |           | not null | nextval('collateral_tx_in_id_seq'::regclass)
  tx_in_id     | bigint  |           | not null |
  tx_out_id    | bigint  |           | not null |
- tx_out_index | txindex |           | not null |  
+ tx_out_index | txindex |           | not null |
 
+ ```text
 Indexes:
     "collateral_tx_in_pkey" PRIMARY KEY, btree (id)
     "unique_col_txin" UNIQUE CONSTRAINT, btree (tx_in_id, tx_out_id, tx_out_index)
 Foreign-key constraints:
     "collateral_tx_in_tx_in_id_fkey" FOREIGN KEY (tx_in_id) REFERENCES tx(id) ON UPDATE RESTRICT ON DELETE CASCADE
     "collateral_tx_in_tx_out_id_fkey" FOREIGN KEY (tx_out_id) REFERENCES tx(id) ON UPDATE RESTRICT ON DELETE CASCADE
-
+```
 
 and `\q` for leaving the database.
 

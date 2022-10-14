@@ -185,12 +185,13 @@ cardano-cli transaction submit \
 --testnet-magic 42
 ```
 
-### Our stake address has id=13 and is registered 
-See the table below:  
+### Our stake address has id=13 and is registered
+
+See the table below:
 The stake address is `stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns`.
 
 ```sql
-dbsync0=# select * from stake_address;   
+select * from stake_address;
 ```
 
 | id |                           hash_raw                           |                               view                               | registered_tx_id | script_hash |
@@ -203,13 +204,10 @@ dbsync0=# select * from stake_address;
 | 3  | \xe07940665a5f25116ac467b1d0fdc514b86cad61786c59d1a52fcce9da | stake_test1upu5qej6tuj3z6kyv7caplw9zjuxettp0pk9n5d99lxwnksl99hux |                5 |  |
 | 13 | \xe027f58eedab972a15283c85aabf6670bf472394163f0329b9965bd69d | stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns |                9 |  |
 
-(7 rows)
-
 
 ```sql
-dbsync0=# select * from stake_registration;
 select * from stake_registration;
-```  
+```
 
 | id | addr_id | cert_index | tx_id | epoch_no |
 | -- | ------- | ---------- | ----- | --------- |
@@ -221,10 +219,9 @@ select * from stake_registration;
 | 6 |      11 |          9 |     5 |        1 |
 | 7 |      13 |          0 |    10 |       34 |
 
-(7 rows)
 
+## Deregistering an 'empty' stake address
 
-## Deregistering an 'empty' stake address  
  This address has no rewards because its stake was not delegated.
 
 ```sh
@@ -285,31 +282,28 @@ cardano-cli transaction sign \
 #### Submit txDeregistration event was registered in `db-sync`
 
 ```sql
-dbsync0=# select * from stake_deregistration;
 select * from stake_deregistration;
-```  
+```
+
  id | addr_id | cert_index | tx_id | epoch_no | redeemer_id
  -- | ------- | ---------- | ----- | -------- | ------------
-  1 |      13 |          0 |    11 |       39 |  
-
-(1 row)
-
+  1 |      13 |          0 |    11 |       39 |
 
 
 **RESERVES** and **TREASURY** table state before MIR cert submission:
 
 ```sql
-dbsync0=# select * from reserve;
 select * from reserve;
 ```
+
 | id | addr_id | cert_index | amount | tx_id
 | -- | ------- | ---------- | ------ | ------
 (0 rows)
 
 ```sql
-dbsync0=# select * from treasury;
 select * from treasury;
 ```
+
 | id | addr_id | cert_index | amount | tx_id
 | -- | ------- | ---------- | ------ | ------
 (0 rows)
@@ -373,18 +367,17 @@ cardano-cli transaction submit \
 ## State of tables after MIR cert tx submission
 
 ```sql
-dbsync0=# select * from reserve;
 select * from reserve;
 ```
+
  | id | addr_id | cert_index |    amount    | tx_id
  | -- | ------ | ---------- | ------------ | ------
   |  1 |      13 |          0 | 500000000000 |    12
-(1 row)
 
 ```sql
-dbsync0=# select * from treasury;
 select * from treasury;
 ```
+
  | id | addr_id | cert_index | amount | tx_id
  | -- | ------ | ---------- | ------ | ------
 (0 rows)
@@ -403,18 +396,16 @@ We can see that currently there are some issues:
 ```
 
 ```sql
-dbsync0=# select * from epoch_reward_total_received order by id DESC LIMIT 5;
 select * from epoch_reward_total_received order by id DESC LIMIT 5;
 ```
+
  | id | earned_epoch |    amount
  | -- | ----------- | -------------
  | 57 |           56 | 501065150011
  | 56 |           55 |   1196962304
  | 55 |           54 |   1197126868
  | 54 |           53 |   1197291461
- | 53 |           52 |   1197456077  
-
-(5 rows)
+ | 53 |           52 |   1197456077
 
 ```sql
 select reward.earned_epoch, pool_hash.view as delegated_pool, reward.amount as lovelace
@@ -422,6 +413,6 @@ select reward.earned_epoch, pool_hash.view as delegated_pool, reward.amount as l
     inner join pool_hash on reward.pool_id = pool_hash.id
     where stake_address.view = 'stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns'
     order by earned_epoch asc ;
-``` 
+```
 
-(NOTHING)
+`(NOTHING)`

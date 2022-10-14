@@ -5,7 +5,8 @@ The stake credential history tool is a very useful utility that produces a linea
 It works with all blockchain networks including local testnets.
 
 
-## Documentation  
+## Documentation
+
 The stake credential history tool is located in the `cardano-node` repository.
 
 Full documentation for building, running, and description of event types is [in its description](https://github.com/input-output-hk/cardano-node/blob/master/cardano-client-demo/Stake-Credential-History.md).
@@ -16,7 +17,7 @@ Full documentation for building, running, and description of event types is [in 
 We will use a [local test cluster](https://github.com/input-output-hk/cardano-node-tests/blob/master/doc/running_local_cluster.md) to show the Stake Credential History Tool in action.
 
 
-Let's place a breakpoint...  
+Let's place a breakpoint...
 
 
 ```python
