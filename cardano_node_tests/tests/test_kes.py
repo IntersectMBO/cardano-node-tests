@@ -48,8 +48,8 @@ pytestmark = common.SKIPIF_WRONG_ERA
 
 
 @pytest.fixture
-def cluster_lock_pool2(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
-    return cluster_manager.get(lock_resources=[cluster_management.Resources.POOL2])
+def cluster_singleton(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
+    return cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
 
 
 @pytest.fixture(scope="module")
@@ -223,7 +223,7 @@ class TestKES:
                 shutil.copy(refreshed_opcert_file, refreshed_pool_rec["pool_operational_cert"])
                 refreshed_nodes_kes_period[n] = kes_period
 
-            cluster_nodes.restart_nodes(refreshed_nodes)
+            cluster_nodes.restart_all_nodes()
             return refreshed_nodes_kes_period
 
         _refresh_opcerts()
@@ -321,7 +321,7 @@ class TestKES:
     @pytest.mark.long
     def test_opcert_invalid_kes_period(  # noqa: C901
         self,
-        cluster_lock_pool2: clusterlib.ClusterLib,
+        cluster_singleton: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
     ):
         """Start a stake pool with an operational certificate created with invalid `--kes-period`.
@@ -345,7 +345,7 @@ class TestKES:
         pool_name = cluster_management.Resources.POOL2
         pool_num = 2
         node_name = "pool2"
-        cluster = cluster_lock_pool2
+        cluster = cluster_singleton
 
         temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -389,9 +389,10 @@ class TestKES:
 
         with cluster_manager.restart_on_failure():
             with logfiles.expect_errors(expected_errors, ignore_file_id=cluster_manager.worker_id):
-                # restart the node with the new operational certificate
+                # restart the node with the new operational certificate (restart all nodes so
+                # the connection is established again)
                 shutil.copy(invalid_opcert_file, opcert_file)
-                cluster_nodes.restart_nodes([node_name])
+                cluster_nodes.restart_all_nodes()
 
                 LOGGER.info("Checking blocks production for 4 epochs.")
                 this_epoch = cluster.get_epoch()
@@ -435,9 +436,10 @@ class TestKES:
                             cold_counter_file=cold_counter_file,
                             kes_period=overincrement_kes_period,
                         )
-                        # copy the new certificate and restart the node
+                        # copy the new certificate and restart the node (restart all nodes so
+                        # the connection is established again)
                         shutil.copy(overincrement_opcert_file, opcert_file)
-                        cluster_nodes.restart_nodes([node_name])
+                        cluster_nodes.restart_all_nodes()
 
                         kes_period_info = cluster.get_kes_period_info(overincrement_opcert_file)
                         kes_period_info_errors_list.extend(
@@ -480,9 +482,10 @@ class TestKES:
                 cold_counter_file=cold_counter_file,
                 kes_period=valid_kes_period,
             )
-            # copy the new certificate and restart the node
+            # copy the new certificate and restart the node (restart all nodes so
+            # the connection is established again)
             shutil.copy(valid_opcert_file, opcert_file)
-            cluster_nodes.restart_nodes([node_name])
+            cluster_nodes.restart_all_nodes()
 
             LOGGER.info("Checking blocks production for up to 6 epochs.")
             updated_epoch = cluster.get_epoch()
@@ -563,7 +566,7 @@ class TestKES:
     @pytest.mark.long
     def test_update_valid_opcert(
         self,
-        cluster_lock_pool2: clusterlib.ClusterLib,
+        cluster_singleton: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
     ):
         """Update a valid operational certificate with another valid operational certificate.
@@ -584,7 +587,7 @@ class TestKES:
         pool_name = cluster_management.Resources.POOL2
         pool_num = 2
         node_name = "pool2"
-        cluster = cluster_lock_pool2
+        cluster = cluster_singleton
 
         temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -651,8 +654,9 @@ class TestKES:
                     f"New and old opcert counters don't match: {new_opcert_num} vs {old_opcert_num}"
                 )
 
-            # start the node with the new operational certificate
-            cluster_nodes.start_nodes([node_name])
+            # start the node with the new operational certificate (restart all nodes so
+            # the connection is established again)
+            cluster_nodes.restart_all_nodes()
 
             LOGGER.info("Checking blocks production for up to 6 epochs.")
             updated_epoch = cluster.get_epoch()
