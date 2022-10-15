@@ -18,6 +18,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import resources_management
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -41,39 +42,50 @@ def cluster_and_pool(
 
 
 @pytest.fixture
-def cluster_use_pool1(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
-    return cluster_manager.get(use_resources=[cluster_management.Resources.POOL1])
-
-
-@pytest.fixture
-def cluster_use_pool1_2(
+def cluster_use_two_pools(
     cluster_manager: cluster_management.ClusterManager,
-) -> clusterlib.ClusterLib:
-    return cluster_manager.get(
-        use_resources=[cluster_management.Resources.POOL1, cluster_management.Resources.POOL2]
-    )
-
-
-@pytest.fixture
-def cluster_lock_pool1_2(
-    cluster_manager: cluster_management.ClusterManager,
-) -> clusterlib.ClusterLib:
-    return cluster_manager.get(
-        lock_resources=[cluster_management.Resources.POOL1, cluster_management.Resources.POOL2]
-    )
-
-
-@pytest.fixture
-def cluster_lock_pool2_pots(
-    cluster_manager: cluster_management.ClusterManager,
-) -> clusterlib.ClusterLib:
-    return cluster_manager.get(
-        lock_resources=[
-            cluster_management.Resources.POOL2,
-            cluster_management.Resources.RESERVES,
-            cluster_management.Resources.TREASURY,
+) -> Tuple[clusterlib.ClusterLib, str, str]:
+    cluster_obj = cluster_manager.get(
+        use_resources=[
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
         ]
     )
+    pool_names = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)
+    return cluster_obj, pool_names[0], pool_names[1]
+
+
+@pytest.fixture
+def cluster_lock_two_pools(
+    cluster_manager: cluster_management.ClusterManager,
+) -> Tuple[clusterlib.ClusterLib, str, str]:
+    cluster_obj = cluster_manager.get(
+        lock_resources=[
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+        ]
+    )
+    pool_names = cluster_manager.get_locked_resources(
+        from_set=cluster_management.Resources.ALL_POOLS
+    )
+    return cluster_obj, pool_names[0], pool_names[1]
+
+
+@pytest.fixture
+def cluster_lock_pool_and_pots(
+    cluster_manager: cluster_management.ClusterManager,
+) -> Tuple[clusterlib.ClusterLib, str]:
+    cluster_obj = cluster_manager.get(
+        lock_resources=[
+            cluster_management.Resources.RESERVES,
+            cluster_management.Resources.TREASURY,
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+        ]
+    )
+    pool_name = cluster_manager.get_locked_resources(
+        from_set=cluster_management.Resources.ALL_POOLS
+    )[0]
+    return cluster_obj, pool_name
 
 
 def _add_spendable(rewards: List[dbsync_utils.RewardEpochRecord], max_epoch: int) -> Dict[int, int]:
@@ -327,7 +339,7 @@ class TestRewards:
     def test_reward_amount(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake address and pool owner are receiving rewards.
 
@@ -345,8 +357,7 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
-        pool_name = cluster_management.Resources.POOL1
-        cluster = cluster_use_pool1
+        cluster, pool_name = cluster_use_pool
 
         temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -650,7 +661,7 @@ class TestRewards:
     def test_reward_addr_delegation(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool2_pots: clusterlib.ClusterLib,
+        cluster_lock_pool_and_pots: Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the rewards address can be delegated and receive rewards.
 
@@ -677,8 +688,8 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
-        pool_name = cluster_management.Resources.POOL2
-        cluster = cluster_lock_pool2_pots
+        cluster, pool_name = cluster_lock_pool_and_pots
+
         mir_reward = 50_000_000_000
 
         temp_template = common.get_test_id(cluster)
@@ -1045,7 +1056,7 @@ class TestRewards:
     def test_decreasing_reward_transferred_funds(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that rewards are gradually decreasing when funds are being transferred.
 
@@ -1060,8 +1071,7 @@ class TestRewards:
         * keep withdrawing new rewards so reward balance is 0
         * check that reward amount is decreasing epoch after epoch
         """
-        pool_name = cluster_management.Resources.POOL1
-        cluster = cluster_use_pool1
+        cluster, pool_name = cluster_use_pool
 
         temp_template = common.get_test_id(cluster)
 
@@ -1162,7 +1172,7 @@ class TestRewards:
     def test_2_pools_same_reward_addr(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool1_2: clusterlib.ClusterLib,
+        cluster_lock_two_pools: Tuple[clusterlib.ClusterLib, str, str],
     ):
         """Check that one reward address used for two pools receives rewards for both of them.
 
@@ -1180,16 +1190,16 @@ class TestRewards:
            - expected pool ids
         """
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
-        pool_name = cluster_management.Resources.POOL2
-        cluster = cluster_lock_pool1_2
+        cluster, pool1_name, pool2_name = cluster_lock_two_pools
+
         temp_template = common.get_test_id(cluster)
 
-        pool1_rec = cluster_manager.cache.addrs_data[cluster_management.Resources.POOL1]
+        pool1_rec = cluster_manager.cache.addrs_data[pool1_name]
         pool1_reward = clusterlib.PoolUser(payment=pool1_rec["payment"], stake=pool1_rec["reward"])
         pool1_node_cold = pool1_rec["cold_key_pair"]
         pool1_id = cluster.get_stake_pool_id(pool1_node_cold.vkey_file)
 
-        pool2_rec = cluster_manager.cache.addrs_data[pool_name]
+        pool2_rec = cluster_manager.cache.addrs_data[pool2_name]
         pool2_owner = clusterlib.PoolUser(payment=pool2_rec["payment"], stake=pool2_rec["stake"])
         pool2_reward = clusterlib.PoolUser(payment=pool2_rec["payment"], stake=pool2_rec["reward"])
         pool2_node_cold = pool2_rec["cold_key_pair"]
@@ -1197,7 +1207,7 @@ class TestRewards:
 
         # load pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
-            cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool2_id
+            cluster_obj=cluster, pool_name=f"changed_{pool2_name}", pool_id=pool2_id
         )
 
         LOGGER.info("Waiting up to 4 full epochs for first rewards.")
@@ -1346,12 +1356,12 @@ class TestRewards:
 
         # check that pledge is still met after the owner address was used to pay for Txs
         pool2_data = clusterlib_utils.load_registered_pool_data(
-            cluster_obj=cluster, pool_name=pool_name, pool_id=pool2_id
+            cluster_obj=cluster, pool_name=pool2_name, pool_id=pool2_id
         )
         owner_payment_balance = cluster.get_address_balance(pool2_owner.payment.address)
         assert (
             owner_payment_balance >= pool2_data.pool_pledge
-        ), f"Pledge is not met for pool '{pool_name}'!"
+        ), f"Pledge is not met for pool '{pool2_name}'!"
 
         # check TX records in db-sync
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_update_pool)
@@ -1409,7 +1419,7 @@ class TestRewards:
     def test_redelegation(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1_2: clusterlib.ClusterLib,
+        cluster_use_two_pools: Tuple[clusterlib.ClusterLib, str, str],
     ):
         """Check rewards received by stake address over multiple epochs.
 
@@ -1429,9 +1439,7 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
-        pool1_name = cluster_management.Resources.POOL1
-        pool2_name = cluster_management.Resources.POOL2
-        cluster = cluster_use_pool1_2
+        cluster, pool1_name, pool2_name = cluster_use_two_pools
 
         temp_template = common.get_test_id(cluster)
 

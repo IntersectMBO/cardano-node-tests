@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import Generator
+from typing import Tuple
 
 import pytest
 from _pytest.config import Config
@@ -21,6 +22,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import resources_management
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
@@ -297,3 +299,33 @@ def cluster(
 ) -> clusterlib.ClusterLib:
     """Return instance of `clusterlib.ClusterLib`."""
     return cluster_manager.get()
+
+
+@pytest.fixture
+def cluster_lock_pool(
+    cluster_manager: cluster_management.ClusterManager,
+) -> Tuple[clusterlib.ClusterLib, str]:
+    cluster_obj = cluster_manager.get(
+        lock_resources=[
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+        ]
+    )
+    pool_name = cluster_manager.get_locked_resources(
+        from_set=cluster_management.Resources.ALL_POOLS
+    )[0]
+    return cluster_obj, pool_name
+
+
+@pytest.fixture
+def cluster_use_pool(
+    cluster_manager: cluster_management.ClusterManager,
+) -> Tuple[clusterlib.ClusterLib, str]:
+    cluster_obj = cluster_manager.get(
+        use_resources=[
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+        ]
+    )
+    pool_name = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)[
+        0
+    ]
+    return cluster_obj, pool_name

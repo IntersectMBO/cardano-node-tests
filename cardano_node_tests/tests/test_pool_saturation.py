@@ -40,13 +40,7 @@ class PoolRecord(NamedTuple):
 
 @pytest.fixture
 def cluster_lock_pools(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
-    return cluster_manager.get(
-        lock_resources=[
-            cluster_management.Resources.POOL1,
-            cluster_management.Resources.POOL2,
-            cluster_management.Resources.POOL3,
-        ]
-    )
+    return cluster_manager.get(lock_resources=cluster_management.Resources.ALL_POOLS)
 
 
 def _get_saturation_threshold(
@@ -166,14 +160,7 @@ class TestPoolSaturation:
         init_epoch = cluster.get_epoch()
 
         # submit registration certificates and delegate to pools
-        for idx, res in enumerate(
-            [
-                cluster_management.Resources.POOL1,
-                cluster_management.Resources.POOL2,
-                cluster_management.Resources.POOL3,
-            ],
-            start=1,
-        ):
+        for idx, res in enumerate(cluster_management.Resources.ALL_POOLS, start=1):
             pool_addrs_data = cluster_manager.cache.addrs_data[res]
             reward_addr = clusterlib.PoolUser(
                 payment=pool_addrs_data["payment"], stake=pool_addrs_data["reward"]
