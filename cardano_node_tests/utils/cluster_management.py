@@ -8,6 +8,7 @@ import inspect
 import logging
 import os
 import random
+import re
 import shutil
 import time
 from pathlib import Path
@@ -15,6 +16,7 @@ from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import Iterator
+from typing import List
 from typing import Optional
 
 import pytest
@@ -29,6 +31,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import resources_management
 from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
@@ -52,6 +55,9 @@ class Resources:
     POOL1 = "node-pool1"
     POOL2 = "node-pool2"
     POOL3 = "node-pool3"
+    ALL_POOLS = (POOL1, POOL2, POOL3)
+    # reserve one pool for all tests where the pool will stop producing blocks
+    POOL_FOR_OFFLINE = POOL2
     RESERVES = "reserves"
     TREASURY = "treasury"
     PERF = "performance"
@@ -62,11 +68,11 @@ LOG_LOCK = ".manager_log.lock"
 
 RESOURCE_LOCKED_GLOB = ".resource_locked"
 RESOURCE_IN_USE_GLOB = ".resource_in_use"
+TEST_CURR_MARK_GLOB = ".curr_test_mark"
 RESTART_NEEDED_GLOB = ".needs_restart"
 RESTART_IN_PROGRESS_GLOB = ".restart_in_progress"
 RESTART_AFTER_MARK_GLOB = ".restart_after_mark"
 TEST_RUNNING_GLOB = ".test_running"
-TEST_CURR_MARK_GLOB = ".curr_test_mark"
 TEST_MARK_STARTING_GLOB = ".starting_marked_tests"
 
 CLUSTER_DIR_TEMPLATE = "cluster"
@@ -108,6 +114,12 @@ def _get_fixture_hash() -> int:
     return hash_num
 
 
+def _get_resources_from_paths(paths: Iterator[Path]) -> List[str]:
+    """Get resources names from status files path."""
+    resources = [re.search("_@@(.+)@@_", str(r)).group(1) for r in paths]  # type: ignore
+    return resources
+
+
 @dataclasses.dataclass
 class ClusterManagerCache:
     """Cache for a single cluster instance."""
@@ -135,8 +147,8 @@ class ClusterGetStatus:
     """Intermediate status while trying to `get` suitable cluster instance."""
 
     mark: str
-    lock_resources: Iterable[str]
-    use_resources: Iterable[str]
+    lock_resources: resources_management.ResourcesType
+    use_resources: resources_management.ResourcesType
     cleanup: bool
     start_cmd: str
     current_test: str
@@ -147,6 +159,8 @@ class ClusterGetStatus:
     restart_ready: bool = False
     first_iteration: bool = True
     instance_dir: Path = Path("/nonexistent")
+    final_lock_resources: Iterable[str] = ()
+    final_use_resources: Iterable[str] = ()
     # status files
     started_tests_sfiles: Iterable[Path] = ()
     marked_starting_sfiles: Iterable[Path] = ()
@@ -165,7 +179,6 @@ class ClusterManager:
     def __init__(
         self, tmp_path_factory: TempPathFactory, worker_id: str, pytest_config: Config
     ) -> None:
-        self.cluster_obj: Optional[clusterlib.ClusterLib] = None
         self.worker_id = worker_id
         self.pytest_config = pytest_config
         self.tmp_path_factory = tmp_path_factory
@@ -220,13 +233,6 @@ class ClusterManager:
             configuration.SCHEDULING_LOG, "a", encoding="utf-8"
         ) as logfile:
             logfile.write(f"{datetime.datetime.now()} on {self.worker_id}: {msg}\n")
-
-    def _create_startup_files_dir(self, instance_num: int) -> Path:
-        instance_dir = self.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
-        rand_str = clusterlib.get_rand_str(8)
-        startup_files_dir = instance_dir / "startup_files" / rand_str
-        startup_files_dir.mkdir(exist_ok=True, parents=True)
-        return startup_files_dir
 
     def save_worker_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this pytest worker.
@@ -345,14 +351,14 @@ class ClusterManager:
 
             # remove resource locking files created by the worker
             resource_locking_files = list(
-                self.instance_dir.glob(f"{RESOURCE_LOCKED_GLOB}_*_{self.worker_id}")
+                self.instance_dir.glob(f"{RESOURCE_LOCKED_GLOB}_@@*@@_{self.worker_id}")
             )
             for f in resource_locking_files:
                 f.unlink()
 
             # remove "resource in use" files created by the worker
             resource_in_use_files = list(
-                self.instance_dir.glob(f"{RESOURCE_IN_USE_GLOB}_*_{self.worker_id}")
+                self.instance_dir.glob(f"{RESOURCE_IN_USE_GLOB}_@@*@@_{self.worker_id}")
             )
             for f in resource_in_use_files:
                 f.unlink()
@@ -368,11 +374,50 @@ class ClusterManager:
         if errors:
             logfiles.report_artifacts_errors(errors)
 
+    def _get_resources_by_glob(
+        self,
+        glob: str,
+        from_set: Optional[Iterable[str]] = None,
+    ) -> List[str]:
+        if from_set is not None and isinstance(from_set, str):
+            raise AssertionError("`from_set` cannot be a string")
+
+        resources_locked = set(_get_resources_from_paths(paths=self.instance_dir.glob(glob)))
+
+        if from_set is not None:
+            return list(resources_locked.intersection(from_set))
+
+        return list(resources_locked)
+
+    def get_locked_resources(
+        self,
+        from_set: Optional[Iterable[str]] = None,
+        worker_id: Optional[str] = None,
+    ) -> List[str]:
+        """Get resources locked by worker.
+
+        It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
+        """
+        glob = f"{RESOURCE_LOCKED_GLOB}_@@*@@_{worker_id or self.worker_id}"
+        return self._get_resources_by_glob(glob=glob, from_set=from_set)
+
+    def get_used_resources(
+        self,
+        from_set: Optional[Iterable[str]] = None,
+        worker_id: Optional[str] = None,
+    ) -> List[str]:
+        """Get resources used by worker.
+
+        It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
+        """
+        glob = f"{RESOURCE_IN_USE_GLOB}_@@*@@_{worker_id or self.worker_id}"
+        return self._get_resources_by_glob(glob=glob, from_set=from_set)
+
     def get(
         self,
         mark: str = "",
-        lock_resources: Iterable[str] = (),
-        use_resources: Iterable[str] = (),
+        lock_resources: resources_management.ResourcesType = (),
+        use_resources: resources_management.ResourcesType = (),
         cleanup: bool = False,
         start_cmd: str = "",
     ) -> clusterlib.ClusterLib:
@@ -391,6 +436,13 @@ class _ClusterGetter:
 
     def __init__(self, cluster_manager: ClusterManager) -> None:
         self.cm = cluster_manager  # pylint: disable=invalid-name
+
+    def _create_startup_files_dir(self, instance_num: int) -> Path:
+        instance_dir = self.cm.pytest_tmp_dir / f"{CLUSTER_DIR_TEMPLATE}{instance_num}"
+        rand_str = clusterlib.get_rand_str(8)
+        startup_files_dir = instance_dir / "startup_files" / rand_str
+        startup_files_dir.mkdir(exist_ok=True, parents=True)
+        return startup_files_dir
 
     def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> bool:  # noqa: C901
         """Restart cluster.
@@ -428,7 +480,7 @@ class _ClusterGetter:
             raise RuntimeError("Cannot restart cluster when it was not started by the framework.")
 
         startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
-            destdir=self.cm._create_startup_files_dir(self.cm.cluster_instance_num),
+            destdir=self._create_startup_files_dir(self.cm.cluster_instance_num),
             instance_num=self.cm.cluster_instance_num,
             start_script=start_cmd,
             stop_script=stop_cmd,
@@ -469,14 +521,20 @@ class _ClusterGetter:
             with contextlib.suppress(Exception):
                 _kill_supervisor(self.cm.cluster_instance_num)
 
+            _cluster_started = False
             try:
                 cluster_obj = cluster_nodes.start_cluster(
                     cmd=str(startup_files.start_script), args=startup_files.start_script_args
                 )
+                _cluster_started = True
             except Exception as err:
                 LOGGER.error(f"Failed to start cluster: {err}")
                 excp = err
-            else:
+            finally:
+                if state_dir.exists():
+                    helpers.touch(state_dir / CLUSTER_STARTED_BY_FRAMEWORK)
+            # `else` cannot be used together with `finally`
+            if _cluster_started:
                 break
         else:
             self.cm._log(
@@ -510,10 +568,6 @@ class _ClusterGetter:
         # create file that indicates that the cluster is running
         if not cluster_running_file.exists():
             helpers.touch(cluster_running_file)
-
-        # create file that indicates that the cluster was started by framework
-        if not (state_dir / CLUSTER_STARTED_BY_FRAMEWORK).exists():
-            helpers.touch(state_dir / CLUSTER_STARTED_BY_FRAMEWORK)
 
         return True
 
@@ -636,62 +690,54 @@ class _ClusterGetter:
             )
             self._on_marked_test_stop(instance_num)
 
-    def _are_resources_usable(
-        self, resources: Iterable[str], instance_dir: Path, instance_num: int
-    ) -> bool:
-        """Check if resources are locked or in use."""
-        for res in resources:
-            res_locked = list(instance_dir.glob(f"{RESOURCE_LOCKED_GLOB}_{res}_*"))
-            if res_locked:
-                self.cm._log(f"c{instance_num}: resource '{res}' locked, cannot start")
-                break
-            res_used = list(instance_dir.glob(f"{RESOURCE_IN_USE_GLOB}_{res}_*"))
-            if res_used:
-                self.cm._log(f"c{instance_num}: resource '{res}' in use, cannot lock and start")
-                break
-        else:
-            self.cm._log(
-                f"c{instance_num}: none of the resources in {resources} "
-                "locked or in use, can start and lock"
-            )
-            return True
-        return False
+    def _resolve_resources_availability(self, cget_status: ClusterGetStatus) -> bool:
+        """Resolve availability of required "use" and "lock" resources."""
+        resources_locked = _get_resources_from_paths(
+            paths=cget_status.instance_dir.glob(f"{RESOURCE_LOCKED_GLOB}_*")
+        )
 
-    def _are_resources_locked(
-        self, resources: Iterable[str], instance_dir: Path, instance_num: int
-    ) -> bool:
-        """Check if resources are locked."""
-        res_locked = []
-        for res in resources:
-            res_locked = list(instance_dir.glob(f"{RESOURCE_LOCKED_GLOB}_{res}_*"))
-            if res_locked:
-                self.cm._log(f"c{instance_num}: resource '{res}' locked, cannot start")
-                break
-
-        if not res_locked:
-            self.cm._log(f"c{instance_num}: none of the resources in {resources} locked, can start")
-        return bool(res_locked)
-
-    def _are_resources_available(self, cget_status: ClusterGetStatus) -> bool:
-        """Check if all required "use" and "lock" resources are available."""
+        # this test wants to lock some resources, check if these are not in use
+        res_lockable = []
         if cget_status.lock_resources:
-            res_usable = self._are_resources_usable(
-                resources=cget_status.lock_resources,
-                instance_dir=cget_status.instance_dir,
-                instance_num=cget_status.instance_num,
+            resources_used = _get_resources_from_paths(
+                paths=cget_status.instance_dir.glob(f"{RESOURCE_IN_USE_GLOB}_*")
             )
-            if not res_usable:
+            unlockable_resources = {*resources_locked, *resources_used}
+            res_lockable = resources_management.get_resources(
+                resources=cget_status.lock_resources,
+                unavailable=unlockable_resources,
+            )
+            if not res_lockable:
+                self.cm._log(
+                    f"c{cget_status.instance_num}: want to lock '{cget_status.lock_resources}' and "
+                    f"'{unlockable_resources}' are unavailable, cannot start"
+                )
                 return False
 
         # this test wants to use some resources, check if these are not locked
+        res_usable = []
         if cget_status.use_resources:
-            res_locked = self._are_resources_locked(
+            res_usable = resources_management.get_resources(
                 resources=cget_status.use_resources,
-                instance_dir=cget_status.instance_dir,
-                instance_num=cget_status.instance_num,
+                unavailable=resources_locked,
             )
-            if res_locked:
+            if not res_usable:
+                self.cm._log(
+                    f"c{cget_status.instance_num}: want to use '{cget_status.use_resources}' and "
+                    f"'{resources_locked}' are locked, cannot start"
+                )
                 return False
+
+        # resources that are locked are also in use
+        use_minus_lock = list(set(res_usable) - set(res_lockable))
+
+        cget_status.final_use_resources = use_minus_lock
+        cget_status.final_lock_resources = res_lockable
+
+        self.cm._log(
+            f"c{cget_status.instance_num}: can start, resources '{use_minus_lock}' usable, "
+            f"resources '{res_lockable}' lockable"
+        )
 
         return True
 
@@ -754,11 +800,11 @@ class _ClusterGetter:
     def _marked_select_instance(self, cget_status: ClusterGetStatus) -> bool:
         """Select this cluster instance for running marked tests if possible."""
         marked_running_my_here = list(
-            cget_status.instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_{cget_status.mark}_*")
+            cget_status.instance_dir.glob(f"{TEST_CURR_MARK_GLOB}_@@{cget_status.mark}@@_*")
         )
         marked_running_my_anywhere = list(
             self.cm.pytest_tmp_dir.glob(
-                f"{CLUSTER_DIR_TEMPLATE}*/{TEST_CURR_MARK_GLOB}_{cget_status.mark}_*"
+                f"{CLUSTER_DIR_TEMPLATE}*/{TEST_CURR_MARK_GLOB}_@@{cget_status.mark}@@_*"
             )
         )
         if not marked_running_my_here and marked_running_my_anywhere:
@@ -769,11 +815,11 @@ class _ClusterGetter:
             return False
 
         marked_starting_my_here = list(
-            cget_status.instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_{cget_status.mark}_*")
+            cget_status.instance_dir.glob(f"{TEST_MARK_STARTING_GLOB}_@@{cget_status.mark}@@_*")
         )
         marked_starting_my_anywhere = list(
             self.cm.pytest_tmp_dir.glob(
-                f"{CLUSTER_DIR_TEMPLATE}*/{TEST_MARK_STARTING_GLOB}_{cget_status.mark}_*"
+                f"{CLUSTER_DIR_TEMPLATE}*/{TEST_MARK_STARTING_GLOB}_@@{cget_status.mark}@@_*"
             )
         )
         if not marked_starting_my_here and marked_starting_my_anywhere:
@@ -802,7 +848,7 @@ class _ClusterGetter:
             cget_status.selected_instance = cget_status.instance_num
             mark_starting_file = (
                 cget_status.instance_dir
-                / f"{TEST_MARK_STARTING_GLOB}_{cget_status.mark}_{self.cm.worker_id}"
+                / f"{TEST_MARK_STARTING_GLOB}_@@{cget_status.mark}@@_{self.cm.worker_id}"
             )
             if not mark_starting_file.exists():
                 self.cm._log(f"c{cget_status.instance_num}: initialized mark '{cget_status.mark}'")
@@ -900,18 +946,22 @@ class _ClusterGetter:
             self.cm._log(f"c{cget_status.instance_num}: starting '{cget_status.mark}' tests")
             helpers.touch(
                 self.cm.instance_dir
-                / f"{TEST_CURR_MARK_GLOB}_{cget_status.mark}_{self.cm.worker_id}"
+                / f"{TEST_CURR_MARK_GLOB}_@@{cget_status.mark}@@_{self.cm.worker_id}"
             )
             for sf in cget_status.marked_starting_sfiles:
                 sf.unlink()
 
         # create status file for each in-use resource
-        for r in cget_status.use_resources:
-            helpers.touch(self.cm.instance_dir / f"{RESOURCE_IN_USE_GLOB}_{r}_{self.cm.worker_id}")
+        for r in cget_status.final_use_resources:
+            helpers.touch(
+                self.cm.instance_dir / f"{RESOURCE_IN_USE_GLOB}_@@{r}@@_{self.cm.worker_id}"
+            )
 
         # create status file for each locked resource
-        for r in cget_status.lock_resources:
-            helpers.touch(self.cm.instance_dir / f"{RESOURCE_LOCKED_GLOB}_{r}_{self.cm.worker_id}")
+        for r in cget_status.final_lock_resources:
+            helpers.touch(
+                self.cm.instance_dir / f"{RESOURCE_LOCKED_GLOB}_@@{r}@@_{self.cm.worker_id}"
+            )
 
         # cleanup = cluster restart after test (group of tests) is finished
         if cget_status.cleanup:
@@ -930,11 +980,32 @@ class _ClusterGetter:
         test_running_file = self.cm.instance_dir / f"{TEST_RUNNING_GLOB}_{self.cm.worker_id}"
         helpers.touch(test_running_file)
 
+    def _init_use_resources(
+        self,
+        lock_resources: resources_management.ResourcesType,
+        use_resources: resources_management.ResourcesType,
+    ) -> resources_management.ResourcesType:
+        """Add `Resources.CLUSTER` to `use_resources`.
+
+        Filter out `lock_resources` from the list of `use_resources`.
+        """
+        lock_named = {r for r in lock_resources if isinstance(r, str)}
+
+        use_named = {r for r in use_resources if isinstance(r, str)}
+        use_w_filter = [r for r in use_resources if not isinstance(r, str)]
+
+        use_named.add(Resources.CLUSTER)
+
+        use_minus_lock = use_named - lock_named
+        use_resources = [*use_minus_lock, *use_w_filter]
+
+        return use_resources
+
     def get(  # noqa: C901
         self,
         mark: str = "",
-        lock_resources: Iterable[str] = (),
-        use_resources: Iterable[str] = (),
+        lock_resources: resources_management.ResourcesType = (),
+        use_resources: resources_management.ResourcesType = (),
         cleanup: bool = False,
         start_cmd: str = "",
     ) -> clusterlib.ClusterLib:
@@ -944,8 +1015,8 @@ class _ClusterGetter:
         right away.
         """
         # pylint: disable=too-many-statements,too-many-branches
-        assert not isinstance(lock_resources, str), "`lock_resources` must be sequence of strings"
-        assert not isinstance(use_resources, str), "`use_resources` must be sequence of strings"
+        assert not isinstance(lock_resources, str), "`lock_resources` can't be single string"
+        assert not isinstance(use_resources, str), "`use_resources` can't be single string"
 
         if configuration.DEV_CLUSTER_RUNNING:
             if start_cmd:
@@ -970,9 +1041,9 @@ class _ClusterGetter:
             # always clean after test(s) that started cluster with custom configuration
             cleanup = True
 
-        # Add `Resources.CLUSTER` to `use_resources`. Filter out `lock_resources` from the
-        # list of `use_resources`.
-        use_resources = list(set(use_resources).union({Resources.CLUSTER}) - set(lock_resources))
+        use_resources = self._init_use_resources(
+            lock_resources=lock_resources, use_resources=use_resources
+        )
 
         cget_status = ClusterGetStatus(
             mark=mark,
@@ -1084,7 +1155,7 @@ class _ClusterGetter:
                         continue
 
                     # check availability of the required resources
-                    if not self._are_resources_available(cget_status):
+                    if not self._resolve_resources_availability(cget_status):
                         cget_status.sleep_delay = 5
                         continue
 

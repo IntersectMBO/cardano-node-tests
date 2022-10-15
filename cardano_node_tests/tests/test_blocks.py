@@ -5,6 +5,7 @@ Other block production checks may be present in `test_staking.py`.
 import logging
 from typing import Dict
 from typing import List
+from typing import Tuple
 
 import allure
 import pytest
@@ -17,11 +18,6 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
-
-
-@pytest.fixture
-def cluster_use_pool3(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
-    return cluster_manager.get(use_resources=[cluster_management.Resources.POOL3])
 
 
 class TestLeadershipSchedule:
@@ -39,7 +35,7 @@ class TestLeadershipSchedule:
         self,
         skip_leadership_schedule: None,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool3: clusterlib.ClusterLib,
+        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
         for_epoch: str,
     ):
         """Check that blocks were minted according to leadership schedule.
@@ -51,10 +47,9 @@ class TestLeadershipSchedule:
         * compare db-sync records with ledger state dump
         """
         # pylint: disable=unused-argument
-        cluster = cluster_use_pool3
+        cluster, pool_name = cluster_use_pool
         temp_template = f"{common.get_test_id(cluster)}_{for_epoch}"
 
-        pool_name = cluster_management.Resources.POOL3
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 

@@ -27,11 +27,6 @@ def cluster_and_pool(
 
 
 @pytest.fixture
-def cluster_use_pool1(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
-    return cluster_manager.get(use_resources=[cluster_management.Resources.POOL1])
-
-
-@pytest.fixture
 def pool_users(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
@@ -131,7 +126,7 @@ class TestDelegateAddr:
     def test_delegate_using_vkey(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool1: clusterlib.ClusterLib,
+        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
         use_build_cmd: bool,
     ):
         """Submit registration certificate and delegate to pool using cold vkey.
@@ -140,8 +135,7 @@ class TestDelegateAddr:
         * check that the stake address was delegated
         * (optional) check records in db-sync
         """
-        pool_name = cluster_management.Resources.POOL1
-        cluster = cluster_use_pool1
+        cluster, pool_name = cluster_use_pool
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         clusterlib_utils.wait_for_epoch_interval(

@@ -23,6 +23,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import pytest_utils
+from cardano_node_tests.utils import resources_management
 from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
@@ -48,12 +49,17 @@ def cluster_lock_42stake(
 
     cluster_obj = cluster_manager.get(
         lock_resources=[str(plutus_script.stem)],
-        use_resources=[cluster_management.Resources.POOL3],
+        use_resources=[
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS)
+        ],
     )
+    pool_name = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)[
+        0
+    ]
     pool_id = delegation.get_pool_id(
         cluster_obj=cluster_obj,
         addrs_data=cluster_manager.cache.addrs_data,
-        pool_name=cluster_management.Resources.POOL3,
+        pool_name=pool_name,
     )
     return cluster_obj, pool_id
 

@@ -342,9 +342,9 @@ class TestKES:
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
         __: Any  # mypy workaround
         kes_period_info_errors_list = []
-        pool_name = cluster_management.Resources.POOL2
-        pool_num = 2
-        node_name = "pool2"
+        pool_name = cluster_management.Resources.POOL_FOR_OFFLINE
+        pool_num = int(pool_name.replace("node-pool", ""))
+        node_name = pool_name.replace("node-", "")
         cluster = cluster_singleton
 
         temp_template = common.get_test_id(cluster)
@@ -584,9 +584,9 @@ class TestKES:
         # pylint: disable=too-many-statements,too-many-locals
         __: Any  # mypy workaround
         kes_period_info_errors_list = []
-        pool_name = cluster_management.Resources.POOL2
-        pool_num = 2
-        node_name = "pool2"
+        pool_name = cluster_management.Resources.POOL_FOR_OFFLINE
+        pool_num = int(pool_name.replace("node-pool", ""))
+        node_name = pool_name.replace("node-", "")
         cluster = cluster_singleton
 
         temp_template = common.get_test_id(cluster)
