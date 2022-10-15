@@ -194,15 +194,15 @@ The stake address is `stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8g
 select * from stake_address;
 ```
 
-| id |                           hash_raw                           |                               view                               | registered_tx_id | script_hash |
+| id | hash_raw                                                     | view                                                             | registered_tx_id | script_hash |
 | -- | ------------------------------------------------------------ | ---------------------------------------------------------------- | ---------------- | ----------- |
-| 5  | \xe0568028c22bdf100e83979696540db02ec6a4eb1f1c8e9d5b91b77487 | stake_test1uptgq2xz9003qr5rj7tfv4qdkqhvdf8truwga82mjxmhfpcxv3p46 |                5 |  |
-| 1  | \xe0e50e564992e494d163c310af81d858168286e6acdff5bf15d887ed19 | stake_test1urjsu4jfjtjff5trcvg2lqwctqtg9phx4n0lt0c4mzr76xgfd5c7u |                5 |  |
-| 8  | \xe0c4e0c1c243bcb0ff38e835d8e35f29c1f7d277587d602d713cf1933e | stake_test1urzwpswzgw7tplecaq6a3c6l98ql05nhtp7kqtt38ncex0stcmuyj |                5 |  |
-| 2  | \xe054ddf4c30186b9154afe55b42ba175d903794ecd66b785c68bd2e7c1 | stake_test1up2dmaxrqxrtj922le2mg2apwhvsx72we4nt0pwx30fw0sg607vyz |                5 |  |
-| 11 | \xe01c60761146bc394d9fb4e47f9ffbd3fd53256ca52b88dc040f6be406 | stake_test1uqwxqas3g67rjnvlknj8l8lm6074xftv554c3hqypa47gpstqfku4 |                5 |  |
-| 3  | \xe07940665a5f25116ac467b1d0fdc514b86cad61786c59d1a52fcce9da | stake_test1upu5qej6tuj3z6kyv7caplw9zjuxettp0pk9n5d99lxwnksl99hux |                5 |  |
-| 13 | \xe027f58eedab972a15283c85aabf6670bf472394163f0329b9965bd69d | stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns |                9 |  |
+| 5  | \xe0568028c22bdf100e83979696540db02ec6a4eb1f1c8e9d5b91b77487 | stake_test1uptgq2xz9003qr5rj7tfv4qdkqhvdf8truwga82mjxmhfpcxv3p46 | 5                |             |
+| 1  | \xe0e50e564992e494d163c310af81d858168286e6acdff5bf15d887ed19 | stake_test1urjsu4jfjtjff5trcvg2lqwctqtg9phx4n0lt0c4mzr76xgfd5c7u | 5                |             |
+| 8  | \xe0c4e0c1c243bcb0ff38e835d8e35f29c1f7d277587d602d713cf1933e | stake_test1urzwpswzgw7tplecaq6a3c6l98ql05nhtp7kqtt38ncex0stcmuyj | 5                |             |
+| 2  | \xe054ddf4c30186b9154afe55b42ba175d903794ecd66b785c68bd2e7c1 | stake_test1up2dmaxrqxrtj922le2mg2apwhvsx72we4nt0pwx30fw0sg607vyz | 5                |             |
+| 11 | \xe01c60761146bc394d9fb4e47f9ffbd3fd53256ca52b88dc040f6be406 | stake_test1uqwxqas3g67rjnvlknj8l8lm6074xftv554c3hqypa47gpstqfku4 | 5                |             |
+| 3  | \xe07940665a5f25116ac467b1d0fdc514b86cad61786c59d1a52fcce9da | stake_test1upu5qej6tuj3z6kyv7caplw9zjuxettp0pk9n5d99lxwnksl99hux | 5                |             |
+| 13 | \xe027f58eedab972a15283c85aabf6670bf472394163f0329b9965bd69d | stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns | 9                |             |
 
 
 ```sql
@@ -210,14 +210,14 @@ select * from stake_registration;
 ```
 
 | id | addr_id | cert_index | tx_id | epoch_no |
-| -- | ------- | ---------- | ----- | --------- |
-| 1 |       1 |          0 |     5 |        1 |
-| 2 |       5 |          1 |     5 |        1 |
-| 3 |       2 |          4 |     5 |        1 |
-| 4 |       8 |          5 |     5 |        1 |
-| 5 |       3 |          8 |     5 |        1 |
-| 6 |      11 |          9 |     5 |        1 |
-| 7 |      13 |          0 |    10 |       34 |
+| -- | ------- | ---------- | ----- | -------- |
+| 1  | 1       | 0          | 5     | 1        |
+| 2  | 5       | 1          | 5     | 1        |
+| 3  | 2       | 4          | 5     | 1        |
+| 4  | 8       | 5          | 5     | 1        |
+| 5  | 3       | 8          | 5     | 1        |
+| 6  | 11      | 9          | 5     | 1        |
+| 7  | 13      | 0          | 10    | 34       |
 
 
 ## Deregistering an 'empty' stake address
@@ -285,9 +285,9 @@ cardano-cli transaction sign \
 select * from stake_deregistration;
 ```
 
- id | addr_id | cert_index | tx_id | epoch_no | redeemer_id
- -- | ------- | ---------- | ----- | -------- | ------------
-  1 |      13 |          0 |    11 |       39 |
+| id | addr_id | cert_index | tx_id | epoch_no | redeemer_id  |
+| -- | ------- | ---------- | ----- | -------- | ------------ |
+| 1  | 13      | 0          | 11    | 39       |              |
 
 
 **RESERVES** and **TREASURY** table state before MIR cert submission:
@@ -296,17 +296,17 @@ select * from stake_deregistration;
 select * from reserve;
 ```
 
-| id | addr_id | cert_index | amount | tx_id
-| -- | ------- | ---------- | ------ | ------
-(0 rows)
+| id       | addr_id | cert_index | amount | tx_id  |
+| --       | ------- | ---------- | ------ | ------ |
+| (0 rows) |         |            |        |        |
 
 ```sql
 select * from treasury;
 ```
 
-| id | addr_id | cert_index | amount | tx_id
-| -- | ------- | ---------- | ------ | ------
-(0 rows)
+| id       | addr_id | cert_index | amount | tx_id  |
+| --       | ------- | ---------- | ------ | ------ |
+| (0 rows) |         |            |        |        |
 
 
 ## Generating MIR cert to send funds from reserves to unregistered stake address
@@ -370,17 +370,17 @@ cardano-cli transaction submit \
 select * from reserve;
 ```
 
- | id | addr_id | cert_index |    amount    | tx_id
- | -- | ------ | ---------- | ------------ | ------
-  |  1 |      13 |          0 | 500000000000 |    12
+| id | addr_id | cert_index | amount       | tx_id  |
+| -- | ------  | ---------- | ------------ | ------ |
+| 1  | 13      | 0          | 500000000000 | 12     |
 
 ```sql
 select * from treasury;
 ```
 
- | id | addr_id | cert_index | amount | tx_id
- | -- | ------ | ---------- | ------ | ------
-(0 rows)
+| id       | addr_id | cert_index | amount | tx_id  |
+| --       | ------- | ---------- | ------ | ------ |
+| (0 rows) |         |            |        |        |
 
 
 ## Logs
@@ -399,13 +399,13 @@ We can see that currently there are some issues:
 select * from epoch_reward_total_received order by id DESC LIMIT 5;
 ```
 
- | id | earned_epoch |    amount
- | -- | ----------- | -------------
- | 57 |           56 | 501065150011
- | 56 |           55 |   1196962304
- | 55 |           54 |   1197126868
- | 54 |           53 |   1197291461
- | 53 |           52 |   1197456077
+| id | earned_epoch | amount        |
+| -- | ------------ | ------------- |
+| 57 | 56           | 501065150011  |
+| 56 | 55           | 1196962304    |
+| 55 | 54           | 1197126868    |
+| 54 | 53           | 1197291461    |
+| 53 | 52           | 1197456077    |
 
 ```sql
 select reward.earned_epoch, pool_hash.view as delegated_pool, reward.amount as lovelace

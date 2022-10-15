@@ -400,9 +400,9 @@ and query it:
 cardano-cli query utxo --address 2657WMsDfac7Mx1ew6MVfxGqLGwvkkExEFyuWRxDGk4rPQB86uAfrD8BGqjh6ToRj --testnet-magic 42
 ```
 
- |                          TxHash                                    | TxIx |  Amount
- | ----------------------------------------------------------------- | ---- | ------------
- | 30bfdafa359d0258e54c80de8d00b0556572fef93ec6171ac16572f3994132c7  |   0  |      35996998496920237  lovelace + TxOutDatumHashNone
+| TxHash                                                            | TxIx | Amount                                           |
+| ----------------------------------------------------------------- | ---- | ------------                                     |
+| 30bfdafa359d0258e54c80de8d00b0556572fef93ec6171ac16572f3994132c7  | 0    | 35996998496920237  lovelace + TxOutDatumHashNone |
 
 
 You can use `address-000-converted` as a faucet to transfer funds to your manually created addresses. The signing key file that you need to use during the transaction sign process is located here:
@@ -534,14 +534,13 @@ Use `\dt` for listing all tables:
 dbsync0=# \dt
 ```
 
- Schema |            Name             | Type  |  Owner
-------- | --------------------------- | ----- | ---------
- public | ada_pots                    | table | postgres
- public | admin_user                  | table | postgres
- public | block                       | table | postgres
- public | collateral_tx_in            | table | postgres
- public | cost_models                 | table | postgres
- ...
+| Schema  | Name                        | Type  | Owner     |
+| ------- | --------------------------- | ----- | --------- |
+| public  | ada_pots                    | table | postgres  |
+| public  | admin_user                  | table | postgres  |
+| public  | block                       | table | postgres  |
+| public  | collateral_tx_in            | table | postgres  |
+| public  | cost_models                 | table | postgres  |
 
 
 Use `\d table_name` for checking table details:
@@ -551,12 +550,12 @@ Use `\d table_name` for checking table details:
 dbsync0=# \d collateral_tx_in
 ```
 
-|    Column    |  Type   | Collation | Nullable |                   Default
-|  ----------- | ------- | --------- | -------- | ---------------------------------------------
- id           | bigint  |           | not null | nextval('collateral_tx_in_id_seq'::regclass)
- tx_in_id     | bigint  |           | not null |
- tx_out_id    | bigint  |           | not null |
- tx_out_index | txindex |           | not null |
+| Column       | Type    | Collation | Nullable | Default                                       |
+| -----------  | ------- | --------- | -------- | --------------------------------------------- |
+| id           | bigint  |           | not null | nextval('collateral_tx_in_id_seq'::regclass)  |
+| tx_in_id     | bigint  |           | not null |                                               |
+| tx_out_id    | bigint  |           | not null |                                               |
+| tx_out_index | txindex |           | not null |                                               |
 
  ```text
 Indexes:
