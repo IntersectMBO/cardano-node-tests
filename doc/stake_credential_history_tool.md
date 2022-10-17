@@ -1,7 +1,7 @@
 # Stake credential history tool
 
 
-The stake credential history tool is a very useful utility that produces a linear history of events for a given stake credential.
+The stake credential history tool is a useful utility that produces a linear history of events for a given stake credential.
 It works with all blockchain networks including local testnets.
 
 
@@ -14,10 +14,10 @@ Full documentation for building, running, and description of event types is [in 
 
 ## Example of usage
 
-We will use a [local test cluster](https://github.com/input-output-hk/cardano-node-tests/blob/master/doc/running_local_cluster.md) to show the Stake Credential History Tool in action.
+We will use a [local test cluster](https://github.com/input-output-hk/cardano-node-tests/blob/master/doc/running_local_cluster.md) to show the stake credential history tool in action.
 
 
-Let's place a breakpoint...
+First, let's place a breakpoint
 
 
 ```python
@@ -31,7 +31,7 @@ in one of the tests in `test_mir_certs.py` named `test_pay_stake_addr_from_both`
 pytest -sv cardano_node_tests/tests/test_mir_certs.py -k 'test_pay_stake_addr_from_both'
 ```
 
-Once the test stops we will get the stake address we are interested in by using:
+Once the test stops, we will get the stake address we are interested in by using:
 
 ```python
 cluster.get_stake_addr_info(registered_user.stake.address)
@@ -96,7 +96,7 @@ BALANCE ----------- EpochNo 16, SlotNo 16010, balance: Lovelace 100000000
 BALANCE ----------- EpochNo 17, SlotNo 17070, balance: Lovelace 100000000
 ```
 
-With the Stake Credential History Tool, we can see events like registrations, de-registrations, delegations, instantaneous rewards, reward withdrawals, mentions inside pool parameter registrations, and also per-epoch active stake and rewards.
+With the stake credential history tool, we can see events like registrations, de-registrations, delegations, instantaneous rewards, reward withdrawals, mentions inside pool parameter registrations, and also per-epoch active stake and rewards.
 
 
 ```sh
