@@ -47,7 +47,7 @@ select * from delisted_pool;
    5 | \x8517fa7042cb9494818861c53c87780b4975c0bd402e3ed85168aa66
 
 
-A: Yes, this is a valid behavior, for example, someone could start syncing and delist the pool either manually or using the fetch policies endpoint before they appear in the Blockchain. Keeping them separate means we don't impose any order.
+A: Yes, this is a valid behavior. For example, someone could start syncing and delisting the pool either manually or using the fetch policies endpoint before they appeared in the blockchain. Keeping them separate means we don't impose any order.
 
 
 Q: What happened to `testing-flag`?
