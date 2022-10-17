@@ -5,11 +5,9 @@
 Sync tests
 =================
 
-All the visualizations are dynamic, so feel free to play with them.
+All the visualizations are dynamic. Use the **left/right arrows** from the bottom of the page to navigate through the different visuals.
 
-Use the **left/right arrows** from the bottom of the page to navigate through the different visuals.
-
-For best results, we recommended using the full screen option (bottom right corner).
+For best results, we recommend using the full screen option (bottom right corner).
 
 .. raw:: html
 
