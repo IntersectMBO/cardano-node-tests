@@ -15,14 +15,14 @@ from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 from xdist import workermanage
 
+from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.utils import artifacts
-from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
-from cardano_node_tests.utils import resources_management
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
@@ -152,7 +152,7 @@ def _stop_all_cluster_instances(
     cluster_manager_obj = cluster_management.ClusterManager(
         tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=pytest_config
     )
-    cluster_manager_obj._log("running `_stop_all_cluster_instances`")
+    cluster_manager_obj.log("running `_stop_all_cluster_instances`")
 
     # stop all cluster instances
     with helpers.ignore_interrupt():

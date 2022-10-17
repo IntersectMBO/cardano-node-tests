@@ -12,9 +12,9 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
-from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
