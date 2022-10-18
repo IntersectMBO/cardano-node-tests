@@ -1,4 +1,4 @@
-Welcome to cardano-node-test's documentation!
+Welcome to Cardano node tests documentation!
 =============================================
 
 .. toctree::
