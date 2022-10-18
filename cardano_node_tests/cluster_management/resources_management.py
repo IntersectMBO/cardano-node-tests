@@ -1,3 +1,4 @@
+"""Functionality for getting a cluster instance that has required resources available."""
 import random
 from typing import Any
 from typing import Iterable
@@ -24,9 +25,12 @@ class OneOf(BaseFilter):
     """Filter that returns one usable resource out of list of resources."""
 
     def filter(self, unavailable: Iterable[str], **kwargs: Any) -> List[str]:
+        assert not isinstance(unavailable, str), "`unavailable` can't be single string"
+
         usable = [r for r in self.resources if r not in unavailable]
         if not usable:
             return []
+
         return [random.choice(usable)]
 
 

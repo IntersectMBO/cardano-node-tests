@@ -7,7 +7,7 @@ from typing import Tuple
 import pytest
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import cluster_management
+from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -118,7 +118,7 @@ def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
     # after the start of a test, so the log entry can be used for determining
     # time of the test start
     cm: cluster_management.ClusterManager = cluster_obj._cluster_manager  # type: ignore
-    cm._log(f"c{cm.cluster_instance_num}: got ID `{test_id}` for '{curr_test.full}'")
+    cm.log(f"c{cm.cluster_instance_num}: got ID `{test_id}` for '{curr_test.full}'")
 
     return test_id
 

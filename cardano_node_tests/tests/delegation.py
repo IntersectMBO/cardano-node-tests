@@ -11,12 +11,12 @@ from typing import Union
 import pytest
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import cluster_management
+from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
-from cardano_node_tests.utils import resources_management
 
 LOGGER = logging.getLogger(__name__)
 

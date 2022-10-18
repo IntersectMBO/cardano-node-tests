@@ -11,8 +11,8 @@ import allure
 import pytest
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
