@@ -2,23 +2,21 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-System/E2E tests for cardano-node.
+System and end-to-end (E2E) tests for cardano-node.
 
-Check the [documentation](https://input-output-hk.github.io/cardano-node-tests) for more details.
+Check this [documentation](https://input-output-hk.github.io/cardano-node-tests) for more details.
 
 ## Installation
 
-Create a Python virtual env and install this package together with dev requirements:
+Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
 
 ```sh
 ./setup_venv.sh
 ```
 
-Requires Python 3.8 or newer.
-
 ## Usage
 
-Preparing env:
+Preparing the environment:
 
 ```sh
 # cd to cardano-node repo
@@ -41,7 +39,7 @@ export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
 export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket
 ```
 
-Check that the env is correctly setup by running
+Check that the environment is correctly set up by running:
 
 ```text
 $ ./check_env.sh
@@ -105,16 +103,16 @@ make lint
 
 ## Variables for `make tests` and `make testnets`
 
-* `SCHEDULING_LOG` - specifies the path to the file where log messages for tests and cluster instance scheduler are stored
-* `PYTEST_ARGS` - specifies additional arguments for pytest
-* `MARKEXPR` - specifies marker expression for pytest
-* `TEST_THREADS` - specifies the number of pytest workers
-* `CLUSTERS_COUNT` - number of cluster instances that will be started
-* `CLUSTER_ERA` - cluster era for Cardano node - used for selecting the correct cluster start script
-* `TX_ERA` - era for transactions - can be used for creating Shelley-era (Allegra-era, ...) transactions
-* `NOPOOLS` - when running tests on testnet, a cluster with no staking pools will be created
-* `BOOTSTRAP_DIR` - path to a bootstrap dir for the given testnet (genesis files, config files, faucet data)
-* `SCRIPTS_DIRNAME` - path to a dir with local cluster start/stop scripts and configuration files
+* `SCHEDULING_LOG` – specifies the path to the file where log messages for tests and cluster instance scheduler are stored
+* `PYTEST_ARGS` – specifies additional arguments for pytest
+* `MARKEXPR` – specifies marker expression for pytest
+* `TEST_THREADS` – specifies the number of pytest workers
+* `CLUSTERS_COUNT` – number of cluster instances that will be started
+* `CLUSTER_ERA` – cluster era for Cardano node – used for selecting the correct cluster start script
+* `TX_ERA` – era for transactions – can be used for creating Shelley-era (Allegra-era, ...) transactions
+* `NOPOOLS` – when running tests on testnet, a cluster with no staking pools will be created
+* `BOOTSTRAP_DIR` – path to a bootstrap dir for the given testnet (genesis files, config files, faucet data)
+* `SCRIPTS_DIRNAME` – path to a dir with local cluster start/stop scripts and configuration files
 
 For example:
 
@@ -125,7 +123,7 @@ SCHEDULING_LOG=testrun_20221005_1.log TEST_THREADS=3 CLUSTER_ERA=babbage TX_ERA=
 
 ## Tests development
 
-When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for test development, as starting a cluster instance takes several epochs (to get from Byron to Babbage). To keep the Cardano cluster running in between test runs, one needs to start it in 'development mode'.
+When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for test development, as starting a cluster instance takes several epochs (to get from Byron to Babbage). To keep the Cardano cluster running in between test runs, one needs to start it in 'development mode':
 
 ```sh
 # activate virtual env
@@ -138,18 +136,18 @@ export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/
 <destination dir>/babbage/start-cluster-hfc
 ```
 
-After the cluster starts, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pools-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.
+After the cluster starts, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pool-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.
 
-To restart the cluster (eg, after upgrading `cardano-node` and `cardano-cli` binaries), run
+To restart the cluster (eg, after upgrading `cardano-node` and `cardano-cli` binaries), run:
 
 ```sh
 ./scripts/restart_dev_cluster.sh
 ```
 
 
-## Test coverage of Cardano-CLI commands
+## Test coverage of Cardano CLI commands
 
-To get test coverage of Cardano-CLI commands, run tests as usual (`make tests`) and generate the coverage report JSON file with
+To get test coverage of Cardano CLI commands, run tests as usual (`make tests`) and generate the coverage report JSON file with:
 
 ```sh
 cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
@@ -158,13 +156,13 @@ cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/cover
 
 ## Building documentation
 
-Install Sphinx into your virtual env
+Install Sphinx into your virtual environment:
 
 ```sh
 make install_doc
 ```
 
-Build and deploy documentation
+Build and deploy documentation:
 
 ```sh
 ./deploy_doc.sh
