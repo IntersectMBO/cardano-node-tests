@@ -402,6 +402,131 @@ class TestBuildMinting:
             utxo=reference_utxo
         ), "Reference UTxO was spent"
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "valid_redeemer", (True, False), ids=("right_redeemer", "wrong_redeemer")
+    )
+    def test_reference_scripts_visibility(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        valid_redeemer: bool,
+        request: FixtureRequest,
+    ):
+        """Test visibility of reference inputs by a plutus script.
+
+        * create needed Tx outputs
+        * create the redeemer with the script hash
+        * mint the token and check that the plutus script has visibility of the reference script
+        * check that the token was minted
+        * check that the reference UTxO was not spent
+        """
+        # pylint: disable=too-many-locals
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+        script_fund = 200_000_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_V2_CHECK_REF_SCRIPTS_COST,
+            protocol_params=cluster.get_protocol_params(),
+        )
+
+        mint_utxos, collateral_utxos, reference_utxo, __ = _fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=script_fund,
+            reference_script=plutus_common.MINTING_CHECK_REF_SCRIPTS_PLUTUS_V2,
+        )
+
+        # Step 2: mint the "qacoin"
+
+        policyid = cluster.get_policyid(plutus_common.MINTING_CHECK_REF_SCRIPTS_PLUTUS_V2)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        # the redeemer file will be composed by the script hash
+        redeemer_file = f"{temp_template}.redeemer"
+        with open(redeemer_file, "w", encoding="utf-8") as outfile:
+            json.dump(
+                {"bytes": policyid} if valid_redeemer else {"bytes": mint_utxos[0].utxo_hash},
+                outfile,
+            )
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                reference_txin=reference_utxo,
+                collaterals=collateral_utxos,
+                redeemer_file=redeemer_file,
+                policyid=policyid,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(signing_key_files=[issuer_addr.skey_file])
+
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+
+        # if the redeemer is not the expected the script evaluation will fail and should show
+        # the expected error message defined by the plutus script
+        if not valid_redeemer:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.build_tx(
+                    src_address=payment_addr.address,
+                    tx_name=f"{temp_template}_step2",
+                    tx_files=tx_files_step2,
+                    txins=mint_utxos,
+                    txouts=txouts_step2,
+                    mint=plutus_mint_data,
+                )
+            err_str = str(excinfo.value)
+
+            assert "Unexpected reference script at each reference input" in err_str, err_str
+            return
+
+        tx_output_step2 = cluster.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+        )
+
+        tx_signed_step2 = cluster.sign_tx(
+            tx_body_file=tx_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        # the plutus script checks if the redeemer complies with the reference script provided
+        # so a successful submit of the tx proves that the script can see the reference script
+        cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+
+        # check that the token was minted
+        out_utxos = cluster.get_utxo(tx_raw_output=tx_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
+        assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        # check that reference UTxO was NOT spent
+        assert not reference_utxo or cluster.get_utxo(
+            utxo=reference_utxo
+        ), "Reference UTxO was spent"
+
 
 @pytest.mark.testnets
 class TestNegativeCollateralOutput:
