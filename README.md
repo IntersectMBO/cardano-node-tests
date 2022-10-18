@@ -8,7 +8,7 @@ Check this [documentation](https://input-output-hk.github.io/cardano-node-tests)
 
 ## Installation
 
-Create a Python virtual environment (requires Python v.3.8 or newer) and install this package together with development requirements:
+Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
 
 ```sh
 ./setup_venv.sh
