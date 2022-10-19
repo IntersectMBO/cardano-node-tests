@@ -324,7 +324,8 @@ class TestDelegateAddr:
                 tx_name=f"{temp_template}_dereg_fail",
                 tx_files=tx_files_deregister,
             )
-        assert "StakeKeyNonZeroAccountBalanceDELEG" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert "StakeKeyNonZeroAccountBalanceDELEG" in err_msg, err_msg
 
         src_payment_balance = cluster.get_address_balance(src_address)
         reward_balance = cluster.get_stake_addr_info(
@@ -572,6 +573,11 @@ class TestDelegateAddr:
                 deposit=0,
             )
 
+        # check that the stake address is not registered
+        assert not cluster.get_stake_addr_info(
+            user_registered.stake.address
+        ).address, f"Stake address is registered: {user_registered.stake.address}"
+
         # check that the balance for source address was correctly updated and that key deposit
         # was not needed
         assert (
@@ -634,6 +640,11 @@ class TestDelegateAddr:
             tx_name=f"{temp_template}_reg",
             tx_files=tx_files,
         )
+
+        # check that the stake address is registered
+        assert cluster.get_stake_addr_info(
+            user_registered.stake.address
+        ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
         tx_db_reg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_reg)
         if tx_db_reg:
@@ -780,7 +791,9 @@ class TestDelegateAddr:
             )
 
         # check that the stake address is registered
-        assert cluster.get_stake_addr_info(user_registered.stake.address).address
+        assert cluster.get_stake_addr_info(
+            user_registered.stake.address
+        ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
         # check that the balance for source address was correctly updated and that key deposit
         # was needed
@@ -817,7 +830,8 @@ class TestNegative:
             cluster.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_users[0].payment.vkey_file
             )
-        assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert "Expected: StakeVerificationKeyShelley" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     def test_delegation_cert_with_wrong_key(
@@ -839,7 +853,8 @@ class TestNegative:
                 stake_vkey_file=pool_users_cluster_and_pool[0].payment.vkey_file,
                 stake_pool_id=pool_id,
             )
-        assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert "Expected: StakeVerificationKeyShelley" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     def test_register_addr_with_wrong_key(
@@ -872,7 +887,8 @@ class TestNegative:
             cluster.send_tx(
                 src_address=user_payment.address, tx_name=temp_template, tx_files=tx_files
             )
-        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert "MissingVKeyWitnessesUTXOW" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     def test_delegate_addr_with_wrong_key(
@@ -905,6 +921,11 @@ class TestNegative:
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
         )
 
+        # check that the stake address is registered
+        assert cluster.get_stake_addr_info(
+            user_registered.stake.address
+        ).address, f"Stake address is not registered: {user_registered.stake.address}"
+
         # create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
@@ -924,7 +945,8 @@ class TestNegative:
                 tx_name=f"{temp_template}_deleg",
                 tx_files=tx_files,
             )
-        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert "MissingVKeyWitnessesUTXOW" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -979,7 +1001,8 @@ class TestNegative:
                     tx_name=f"{temp_template}_deleg_unknown",
                     tx_files=tx_files,
                 )
-        assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert "StakeDelegationImpossibleDELEG" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -1014,6 +1037,11 @@ class TestNegative:
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
         )
 
+        # check that the stake address is registered
+        assert cluster.get_stake_addr_info(
+            user_registered.stake.address
+        ).address, f"Stake address is not registered: {user_registered.stake.address}"
+
         # deregister stake address
         stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
@@ -1031,6 +1059,11 @@ class TestNegative:
             tx_name=f"{temp_template}_dereg",
             tx_files=tx_files_deregister,
         )
+
+        # check that the stake address is not registered
+        assert not cluster.get_stake_addr_info(
+            user_registered.stake.address
+        ).address, f"Stake address is registered: {user_registered.stake.address}"
 
         # create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
@@ -1066,7 +1099,8 @@ class TestNegative:
                     tx_name=f"{temp_template}_deleg_dereg",
                     tx_files=tx_files,
                 )
-        assert "StakeDelegationImpossibleDELEG" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert "StakeDelegationImpossibleDELEG" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -1113,4 +1147,65 @@ class TestNegative:
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
                 )
-        assert "StakeKeyNotRegisteredDELEG" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert "StakeKeyNotRegisteredDELEG" in err_msg, err_msg
+
+    @allure.link(helpers.get_vcs_link())
+    def test_delegatee_not_registered(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        pool_users_disposable: List[clusterlib.PoolUser],
+    ):
+        """Try to delegate stake address to unregistered pool.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        user_registered = pool_users_disposable[0]
+        user_payment = pool_users[0].payment
+
+        # create stake address registration cert
+        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+        )
+
+        # register stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_reg_cert_file],
+            signing_key_files=[user_payment.skey_file],
+        )
+        cluster.send_tx(
+            src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
+        )
+
+        # check that the stake address is registered
+        assert cluster.get_stake_addr_info(
+            user_registered.stake.address
+        ).address, f"Stake address is not registered: {user_registered.stake.address}"
+
+        # create pool cold keys and ceritifcate, but don't register the pool
+        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_pool")
+
+        # create stake address delegation cert
+        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=user_registered.stake.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+        )
+
+        # delegate stake address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[stake_addr_deleg_cert_file],
+            signing_key_files=[pool_users[0].payment.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.send_tx(
+                src_address=user_payment.address,
+                tx_name=f"{temp_template}_deleg",
+                tx_files=tx_files,
+            )
+        err_msg = str(excinfo.value)
+        assert "DelegateeNotRegisteredDELEG" in err_msg, err_msg
