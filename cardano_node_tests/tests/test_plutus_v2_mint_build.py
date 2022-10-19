@@ -579,7 +579,6 @@ class TestBuildMinting:
     @pytest.mark.parametrize(
         "scenario",
         ("reference_script", "readonly_reference_input", "different_datum"),
-        ids=("reference_script", "readonly_reference_input", "different_datum"),
     )
     def test_inline_datum_visibility(
         self,
@@ -589,7 +588,7 @@ class TestBuildMinting:
         request: FixtureRequest,
     ):
         """
-        Test check visibility of inline datums on reference inputs by a plutus script.
+        Test visibility of inline datums on reference inputs by a plutus script.
 
         * create the necessary Tx outputs
         * mint the token and check that the plutus script have visibility of the inline datum
