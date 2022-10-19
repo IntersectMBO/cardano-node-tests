@@ -67,6 +67,49 @@ def pool_users_disposable(
     return pool_users
 
 
+@pytest.fixture
+def pool_users_cluster_and_pool(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
+) -> List[clusterlib.PoolUser]:
+    """Create pool users using `cluster_and_pool` fixture."""
+    cluster, *__ = cluster_and_pool
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+        created_users = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster,
+            name_template=f"test_delegation_pool_user_cap_ci{cluster_manager.cluster_instance_num}",
+            no_of_addr=2,
+        )
+        fixture_cache.value = created_users
+
+    # fund source addresses
+    clusterlib_utils.fund_from_faucet(
+        created_users[0],
+        cluster_obj=cluster,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+    )
+
+    return created_users
+
+
+@pytest.fixture
+def pool_users_disposable_cluster_and_pool(
+    cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
+) -> List[clusterlib.PoolUser]:
+    """Create function scoped pool users using `cluster_and_pool` fixture."""
+    cluster, *__ = cluster_and_pool
+    test_id = common.get_test_id(cluster)
+    pool_users = clusterlib_utils.create_pool_users(
+        cluster_obj=cluster,
+        name_template=f"{test_id}_pool_user_cap",
+        no_of_addr=2,
+    )
+    return pool_users
+
+
 @pytest.mark.testnets
 @pytest.mark.order(8)
 class TestDelegateAddr:
@@ -548,8 +591,8 @@ class TestDelegateAddr:
     def test_addr_delegation_deregistration(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Submit delegation and deregistration certificates in single TX.
@@ -567,8 +610,8 @@ class TestDelegateAddr:
         cluster, pool_id = cluster_and_pool
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        user_registered = pool_users_disposable[0]
-        user_payment = pool_users[0].payment
+        user_registered = pool_users_disposable_cluster_and_pool[0]
+        user_payment = pool_users_cluster_and_pool[0].payment
         src_init_balance = cluster.get_address_balance(user_payment.address)
 
         # create stake address registration cert
@@ -780,7 +823,7 @@ class TestNegative:
     def test_delegation_cert_with_wrong_key(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users: List[clusterlib.PoolUser],
+        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
     ):
         """Try to generate stake address delegation certificate using wrong stake vkey.
 
@@ -793,7 +836,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.gen_stake_addr_delegation_cert(
                 addr_name=f"{temp_template}_addr0",
-                stake_vkey_file=pool_users[0].payment.vkey_file,
+                stake_vkey_file=pool_users_cluster_and_pool[0].payment.vkey_file,
                 stake_pool_id=pool_id,
             )
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
@@ -835,8 +878,8 @@ class TestNegative:
     def test_delegate_addr_with_wrong_key(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
     ):
         """Try to delegate stake address using wrong payment skey.
 
@@ -845,8 +888,8 @@ class TestNegative:
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 
-        user_registered = pool_users_disposable[0]
-        user_payment = pool_users[0].payment
+        user_registered = pool_users_disposable_cluster_and_pool[0]
+        user_payment = pool_users_cluster_and_pool[0].payment
 
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
@@ -872,7 +915,7 @@ class TestNegative:
         # delegate stake address, use wrong payment skey
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_deleg_cert_file],
-            signing_key_files=[pool_users[1].payment.skey_file],
+            signing_key_files=[pool_users_cluster_and_pool[1].payment.skey_file],
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -888,8 +931,8 @@ class TestNegative:
     def test_delegate_unknown_addr(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to delegate unknown stake address.
@@ -899,8 +942,8 @@ class TestNegative:
         cluster, pool_id = cluster_and_pool
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        user_registered = pool_users_disposable[0]
-        user_payment = pool_users[0].payment
+        user_registered = pool_users_disposable_cluster_and_pool[0]
+        user_payment = pool_users_cluster_and_pool[0].payment
 
         # create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
@@ -943,8 +986,8 @@ class TestNegative:
     def test_delegate_deregistered_addr(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to delegate deregistered stake address.
@@ -954,8 +997,8 @@ class TestNegative:
         cluster, pool_id = cluster_and_pool
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        user_registered = pool_users_disposable[0]
-        user_payment = pool_users[0].payment
+        user_registered = pool_users_disposable_cluster_and_pool[0]
+        user_payment = pool_users_cluster_and_pool[0].payment
 
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
