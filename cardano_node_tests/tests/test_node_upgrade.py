@@ -43,7 +43,7 @@ def cluster_locked(
 
 
 @pytest.fixture
-def payment_addrs(
+def payment_addrs_locked(
     cluster_manager: cluster_management.ClusterManager,
     cluster_locked: clusterlib.ClusterLib,
 ) -> List[clusterlib.AddressRecord]:
@@ -129,12 +129,12 @@ class TestSetup:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_locked: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs_locked: List[clusterlib.AddressRecord],
     ):
         """Update cluster to Babbage era."""
         cluster = cluster_locked
         temp_template = common.get_test_id(cluster)
-        src_addr = payment_addrs[0]
+        src_addr = payment_addrs_locked[0]
 
         cluster.wait_for_new_epoch()
 
