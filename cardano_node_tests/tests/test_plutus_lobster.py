@@ -78,7 +78,7 @@ def _fund_issuer(
         ),
         clusterlib.TxOut(address=issuer_addr.address, amount=collateral_amount),
     ]
-    tx_output = cluster_obj.build_tx(
+    tx_output = cluster_obj.g_transaction.build_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step1",
         tx_files=tx_files,
@@ -87,14 +87,14 @@ def _fund_issuer(
         # don't join 'change' and 'collateral' txouts, we need separate UTxOs
         join_txouts=False,
     )
-    tx_signed = cluster_obj.sign_tx(
+    tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=f"{temp_template}_step1",
     )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     out_issuer_utxos = clusterlib.filter_utxos(
         utxos=out_utxos, address=issuer_addr.address, coin=clusterlib.DEFAULT_COIN
     )
@@ -118,7 +118,7 @@ def _mint_lobster_nft(
     lovelace_amount: int,
 ) -> Tuple[str, List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Mint the LobsterNFT token."""
-    lobster_policyid = cluster_obj.get_policyid(NFT_MINT_PLUTUS)
+    lobster_policyid = cluster_obj.g_transaction.get_policyid(NFT_MINT_PLUTUS)
     asset_name = b"LobsterNFT".hex()
     lobster_nft_token = f"{lobster_policyid}.{asset_name}"
 
@@ -146,7 +146,7 @@ def _mint_lobster_nft(
         clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
         *mint_txouts,
     ]
-    tx_output = cluster_obj.build_tx(
+    tx_output = cluster_obj.g_transaction.build_tx(
         src_address=issuer_addr.address,
         tx_name=f"{temp_template}_mint_nft",
         tx_files=tx_files,
@@ -154,14 +154,14 @@ def _mint_lobster_nft(
         txouts=txouts,
         mint=plutus_mint_data,
     )
-    tx_signed = cluster_obj.sign_tx(
+    tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=f"{temp_template}_mint_nft",
     )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=mint_utxos)
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=mint_utxos)
 
-    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     lovelace_utxos = clusterlib.filter_utxos(
         utxos=out_utxos, address=issuer_addr.address, coin=clusterlib.DEFAULT_COIN
     )
@@ -197,7 +197,7 @@ def _deploy_lobster_nft(
     lovelace_amount: int,
 ) -> Tuple[str, List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Deploy the LobsterNFT token to script address."""
-    script_address = cluster_obj.gen_payment_addr(
+    script_address = cluster_obj.g_address.gen_payment_addr(
         addr_name=f"{temp_template}_deploy_nft", payment_script_file=LOBSTER_PLUTUS
     )
 
@@ -216,22 +216,22 @@ def _deploy_lobster_nft(
         ),
     ]
 
-    funds_txin = cluster_obj.get_utxo_with_highest_amount(address=payment_addr.address)
-    tx_output = cluster_obj.build_tx(
+    funds_txin = cluster_obj.g_query.get_utxo_with_highest_amount(address=payment_addr.address)
+    tx_output = cluster_obj.g_transaction.build_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_deploy_nft",
         tx_files=tx_files,
         txins=[*token_utxos, funds_txin],
         txouts=txouts,
     )
-    tx_signed = cluster_obj.sign_tx(
+    tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=f"{temp_template}_deploy_nft",
     )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=token_utxos)
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=token_utxos)
 
-    out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
+    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     lovelace_utxos = clusterlib.filter_utxos(
         utxos=out_utxos, address=script_address, coin=clusterlib.DEFAULT_COIN
     )
@@ -340,7 +340,7 @@ class TestLobsterChallenge:
 
         # Step 5: vote
 
-        other_policyid = cluster.get_policyid(OTHER_MINT_PLUTUS)
+        other_policyid = cluster.g_transaction.get_policyid(OTHER_MINT_PLUTUS)
         asset_name_counter = b"LobsterCounter".hex()
         asset_name_votes = b"LobsterVotes".hex()
         counter_token = f"{other_policyid}.{asset_name_counter}"
@@ -429,8 +429,8 @@ class TestLobsterChallenge:
             tx_files = clusterlib.TxFiles(
                 signing_key_files=[payment_addr.skey_file, issuer_addr.skey_file],
             )
-            funds_txin = cluster.get_utxo_with_highest_amount(address=payment_addr.address)
-            tx_output_vote = cluster.build_tx(
+            funds_txin = cluster.g_query.get_utxo_with_highest_amount(address=payment_addr.address)
+            tx_output_vote = cluster.g_transaction.build_tx(
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_voting_{vote_num}",
                 txins=[funds_txin],
@@ -439,16 +439,16 @@ class TestLobsterChallenge:
                 script_txins=txin_script_data,
                 mint=mint_script_data,
             )
-            tx_signed = cluster.sign_tx(
+            tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_output_vote.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=f"{temp_template}_voting_{vote_num}",
             )
-            cluster.submit_tx(tx_file=tx_signed, txins=vote_utxos)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=vote_utxos)
 
             tx_outputs_all.append(tx_output_vote)
 
-            out_utxos_vote = cluster.get_utxo(tx_raw_output=tx_output_vote)
+            out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
             utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
                 utxos=out_utxos_vote, txouts=tx_output_vote.txouts
             )

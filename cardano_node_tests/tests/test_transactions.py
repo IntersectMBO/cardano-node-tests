@@ -82,13 +82,13 @@ def _get_raw_tx_values(
     dst_address = dst_record.address
 
     tx_files = clusterlib.TxFiles(signing_key_files=[src_record.skey_file])
-    ttl = cluster_obj.calculate_tx_ttl()
+    ttl = cluster_obj.g_transaction.calculate_tx_ttl()
 
     if for_build_command:
         fee = 0
         min_change = 1_500_000
     else:
-        fee = cluster_obj.calculate_tx_fee(
+        fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=tx_name,
             dst_addresses=[dst_address],
@@ -97,7 +97,7 @@ def _get_raw_tx_values(
         )
         min_change = 0
 
-    src_addr_highest_utxo = cluster_obj.get_utxo_with_highest_amount(src_address)
+    src_addr_highest_utxo = cluster_obj.g_query.get_utxo_with_highest_amount(src_address)
 
     # use only the UTxO with the highest amount
     txins = [src_addr_highest_utxo]
@@ -225,14 +225,14 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        tx_raw_output = cluster.send_funds(
+        tx_raw_output = cluster.g_transaction.send_funds(
             src_address=src_address,
             destinations=destinations,
             tx_name=temp_template,
             tx_files=tx_files,
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
@@ -244,7 +244,7 @@ class TestBasic:
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             assert (
-                cluster.get_address_balance(src_address)
+                cluster.g_query.get_address_balance(src_address)
                 == dbsync_utils.get_utxo(address=src_address).amount_sum
             ), f"Unexpected balance for source address `{src_address}` in db-sync"
 
@@ -272,21 +272,21 @@ class TestBasic:
         txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        tx_output = cluster.build_tx(
+        tx_output = cluster.g_transaction.build_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
             txouts=txouts,
             fee_buffer=1_000_000,
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output.txins) - amount - tx_output.fee
@@ -322,13 +322,13 @@ class TestBasic:
         src_address = src_addr.address
         dst_address = payment_addrs_no_change[1].address
 
-        src_init_balance = cluster.get_address_balance(src_address)
+        src_init_balance = cluster.g_query.get_address_balance(src_address)
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
         txouts_init = [clusterlib.TxOut(address=dst_address, amount=src_init_balance)]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_tx(
+            cluster.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 tx_files=tx_files,
@@ -341,23 +341,23 @@ class TestBasic:
         amount = src_init_balance - fee
         txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
-        tx_output = cluster.build_tx(
+        tx_output = cluster.g_transaction.build_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
             txouts=txouts,
             change_address=src_address,
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=tx_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert not clusterlib.filter_utxos(
             utxos=out_utxos, address=src_address
         ), f"Incorrect balance for source address `{src_address}`"
@@ -392,32 +392,32 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[1].skey_file])
 
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
         )
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
             fee=fee,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
 
         if submit_method == "submit_cli":
-            cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+            cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
         else:
             submit_api.submit_tx(tx_file=out_file_signed)
             cluster.wait_for_new_block(2)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert not clusterlib.filter_utxos(
             utxos=out_utxos, address=src_address
         ), f"Incorrect balance for source address `{src_address}`"
@@ -458,14 +458,14 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        tx_raw_output = cluster.send_funds(
+        tx_raw_output = cluster.g_transaction.send_funds(
             src_address=src_address,
             destinations=destinations,
             tx_name=temp_template,
             tx_files=tx_files,
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
@@ -475,7 +475,7 @@ class TestBasic:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
         # check min UTxO value
-        min_value = cluster.calculate_min_req_utxo(txouts=destinations)
+        min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=destinations)
         assert min_value.value == MIN_UTXO_VALUE
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -503,22 +503,24 @@ class TestBasic:
 
         destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        tx_raw_output = cluster.send_funds(
+        tx_raw_output = cluster.g_transaction.send_funds(
             src_address=src_address,
             destinations=destinations,
             tx_name=temp_template,
             tx_files=tx_files,
         )
 
-        txid_body = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
-        txid_signed = cluster.get_txid(tx_file=tx_raw_output.out_file.with_suffix(".signed"))
+        txid_body = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
+        txid_signed = cluster.g_transaction.get_txid(
+            tx_file=tx_raw_output.out_file.with_suffix(".signed")
+        )
         assert txid_body == txid_signed
         assert len(txid_body) == 64
 
-        utxo_src = cluster.get_utxo(txin=f"{txid_body}#1")[0]  # change UTxO
+        utxo_src = cluster.g_query.get_utxo(txin=f"{txid_body}#1")[0]  # change UTxO
         assert txid_body in utxo_src.utxo_hash
 
-        utxo_dst = cluster.get_utxo(txin=f"{txid_body}#0")[0]
+        utxo_dst = cluster.g_query.get_utxo(txin=f"{txid_body}#0")[0]
         assert txid_body in utxo_dst.utxo_hash
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -548,11 +550,11 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         # it should be possible to submit a transaction with extra signing key
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
@@ -587,11 +589,11 @@ class TestBasic:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         # it should be possible to submit a transaction with duplicate signing key
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
@@ -628,8 +630,8 @@ class TestBasic:
         )
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_record.skey_file])
-        fee = cluster.get_address_balance(src_record.address)
-        tx_raw_output = cluster.send_tx(
+        fee = cluster.g_query.get_address_balance(src_record.address)
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_record.address, tx_name=temp_template, tx_files=tx_files, fee=fee
         )
 
@@ -702,18 +704,18 @@ class TestBasic:
                 str(tx_raw_output.out_file),
                 *helpers.prepend_flag("--tx-in", txins),
                 *helpers.prepend_flag("--tx-out", txouts),
-                *cluster.tx_era_arg,
+                *cluster.g_transaction.tx_era_arg,
             ]
         )
 
-        tx_signed_file = cluster.sign_tx(
+        tx_signed_file = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             tx_name=temp_template,
             signing_key_files=[payment_addrs[0].skey_file],
         )
-        cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
@@ -754,18 +756,18 @@ class TestBasic:
                 str(txins[0]),
                 *helpers.prepend_flag("--tx-in", txins),
                 *helpers.prepend_flag("--tx-out", txouts),
-                *cluster.tx_era_arg,
+                *cluster.g_transaction.tx_era_arg,
             ]
         )
 
-        tx_signed_file = cluster.sign_tx(
+        tx_signed_file = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             tx_name=temp_template,
             signing_key_files=[payment_addrs[0].skey_file],
         )
-        cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
@@ -809,7 +811,7 @@ class TestBasic:
                 str(txins[0]),
                 *helpers.prepend_flag("--tx-in", txins),
                 *helpers.prepend_flag("--tx-out", txouts),
-                *cluster.tx_era_arg,
+                *cluster.g_transaction.tx_era_arg,
             ]
         )
         assert tx_raw_output.out_file.exists()
@@ -836,7 +838,7 @@ class TestBasic:
         payment_addr_2 = payment_addrs[1].address
 
         # step 1: create utxo with a datum hash
-        datum_hash = cluster.get_hash_script_data(
+        datum_hash = cluster.g_transaction.get_hash_script_data(
             script_data_value="42",
         )
 
@@ -845,22 +847,22 @@ class TestBasic:
         ]
         tx_files_1 = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        tx_raw_output_1 = cluster.send_tx(
+        tx_raw_output_1 = cluster.g_transaction.send_tx(
             src_address=payment_addr_1,
             tx_name=f"{temp_template}_step_1",
             txouts=destinations_1,
             tx_files=tx_files_1,
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_raw_output_1.out_file)
-        datum_hash_utxo = cluster.get_utxo(txin=f"{txid}#0")
+        txid = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output_1.out_file)
+        datum_hash_utxo = cluster.g_query.get_utxo(txin=f"{txid}#0")
         assert datum_hash_utxo[0].datum_hash, "No datum hash"
 
         # step 2: spend the created utxo
         destinations_2 = [clusterlib.TxOut(address=payment_addr_1, amount=-1)]
         tx_files_2 = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
 
-        tx_raw_output_2 = cluster.send_tx(
+        tx_raw_output_2 = cluster.g_transaction.send_tx(
             src_address=payment_addr_2,
             tx_name=f"{temp_template}_step_2",
             txins=datum_hash_utxo,
@@ -869,7 +871,7 @@ class TestBasic:
         )
 
         # check that the UTxO was spent
-        assert not cluster.get_utxo(txin=f"{txid}#0"), "UTxO not spent"
+        assert not cluster.g_query.get_utxo(txin=f"{txid}#0"), "UTxO not spent"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_2)
@@ -890,8 +892,8 @@ class TestBasic:
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=2_000_000)]
 
-        ttl = cluster.get_slot_no() + 10_000_000
-        fee = cluster.calculate_tx_fee(
+        ttl = cluster.g_query.get_slot_no() + 10_000_000
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_addr.address,
             tx_name=temp_template,
             txouts=destinations,
@@ -899,7 +901,7 @@ class TestBasic:
             invalid_hereafter=ttl,
         )
 
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_addr.address,
             tx_name=temp_template,
             txouts=destinations,
@@ -907,14 +909,14 @@ class TestBasic:
             fee=fee,
             invalid_hereafter=ttl,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
 
         # it should be possible to submit a transaction with ttl far in the future
-        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -934,20 +936,20 @@ class TestBasic:
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
 
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_addr.address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
         )
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_addr.address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
             fee=fee,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
@@ -959,14 +961,14 @@ class TestBasic:
         for r in range(5):
             tx_resubmitted = False
             try:
-                cluster.submit_tx_bare(tx_file=out_file_signed)
+                cluster.g_transaction.submit_tx_bare(tx_file=out_file_signed)
             except clusterlib.CLIError as exc:
                 if r == 0 or "(BadInputsUTxO" not in str(exc):
                     raise
                 tx_resubmitted = True
 
             # if the Tx is only in mempool, its txins can still be queried
-            txin_queried = bool(cluster.get_utxo(utxo=tx_raw_output.txins[0]))
+            txin_queried = bool(cluster.g_query.get_utxo(utxo=tx_raw_output.txins[0]))
 
             if tx_resubmitted or not txin_queried:
                 break
@@ -1052,21 +1054,21 @@ class TestMultiInOut:
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         if use_build_cmd:
-            tx_output_fund = cluster_obj.build_tx(
+            tx_output_fund = cluster_obj.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=f"{tx_name}_add_funds",
                 tx_files=fund_tx_files,
                 txouts=fund_dst,
                 fee_buffer=1_000_000,
             )
-            tx_signed_fund = cluster_obj.sign_tx(
+            tx_signed_fund = cluster_obj.g_transaction.sign_tx(
                 tx_body_file=tx_output_fund.out_file,
                 signing_key_files=fund_tx_files.signing_key_files,
                 tx_name=f"{tx_name}_add_funds",
             )
-            cluster_obj.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
+            cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
         else:
-            cluster_obj.send_funds(
+            cluster_obj.g_transaction.send_funds(
                 src_address=src_address,
                 destinations=fund_dst,
                 tx_name=f"{tx_name}_add_funds",
@@ -1074,7 +1076,7 @@ class TestMultiInOut:
             )
 
         # create TX data
-        _txins = [cluster_obj.get_utxo(address=r.address) for r in from_addr_recs]
+        _txins = [cluster_obj.g_query.get_utxo(address=r.address) for r in from_addr_recs]
         # flatten the list of lists that is _txins
         txins = list(itertools.chain.from_iterable(_txins))
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
@@ -1082,7 +1084,7 @@ class TestMultiInOut:
 
         # send TX
         if use_build_cmd:
-            tx_raw_output = cluster_obj.build_tx(
+            tx_raw_output = cluster_obj.g_transaction.build_tx(
                 src_address=from_addr_recs[0].address,
                 tx_name=tx_name,
                 txins=txins,
@@ -1091,14 +1093,14 @@ class TestMultiInOut:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-            tx_signed = cluster_obj.sign_tx(
+            tx_signed = cluster_obj.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=tx_name,
             )
-            cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+            cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
-            tx_raw_output = cluster_obj.send_tx(
+            tx_raw_output = cluster_obj.g_transaction.send_tx(
                 src_address=src_address,  # change is returned to `src_address`
                 tx_name=tx_name,
                 txins=txins,
@@ -1107,7 +1109,7 @@ class TestMultiInOut:
             )
 
         # check balances
-        out_utxos = cluster_obj.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[
             0
         ].amount == clusterlib.calculate_utxos_balance(
@@ -1139,13 +1141,13 @@ class TestMultiInOut:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        src_init_balance = cluster.get_address_balance(src_address)
-        dst_init_balance = cluster.get_address_balance(dst_address)
+        src_init_balance = cluster.g_query.get_address_balance(src_address)
+        dst_init_balance = cluster.g_query.get_address_balance(dst_address)
 
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        ttl = cluster.calculate_tx_ttl()
+        ttl = cluster.g_transaction.calculate_tx_ttl()
 
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             dst_addresses=[dst_address],
@@ -1156,7 +1158,7 @@ class TestMultiInOut:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         for i in range(no_of_transactions):
-            tx_raw_output = cluster.send_funds(
+            tx_raw_output = cluster.g_transaction.send_funds(
                 src_address=src_address,
                 destinations=destinations,
                 tx_name=f"{temp_template}_{i}",
@@ -1167,12 +1169,12 @@ class TestMultiInOut:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         assert (
-            cluster.get_address_balance(src_address)
+            cluster.g_query.get_address_balance(src_address)
             == src_init_balance - fee * no_of_transactions - amount * no_of_transactions
         ), f"Incorrect balance for source address `{src_address}`"
 
         assert (
-            cluster.get_address_balance(dst_address)
+            cluster.g_query.get_address_balance(dst_address)
             == dst_init_balance + amount * no_of_transactions
         ), f"Incorrect balance for destination address `{dst_address}`"
 
@@ -1339,7 +1341,7 @@ class TestManyUTXOs:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
         # send TX
-        cluster_obj.send_tx(
+        cluster_obj.g_transaction.send_tx(
             src_address=src_address,  # change is returned to `src_address`
             tx_name=tx_name,
             txouts=txouts,
@@ -1414,8 +1416,8 @@ class TestManyUTXOs:
             retval = payment_addrs[1], payment_addrs[2]
             fixture_cache.value = retval
 
-        num_of_utxo = len(cluster.get_utxo(address=payment_addrs[1].address)) + len(
-            cluster.get_utxo(address=payment_addrs[2].address)
+        num_of_utxo = len(cluster.g_query.get_utxo(address=payment_addrs[1].address)) + len(
+            cluster.g_query.get_utxo(address=payment_addrs[2].address)
         )
         LOGGER.info(f"Generated {num_of_utxo} of UTxO addresses in {end - start} seconds.")
 
@@ -1448,15 +1450,15 @@ class TestManyUTXOs:
         tx_files = clusterlib.TxFiles(signing_key_files=[many_utxos[0].skey_file])
 
         # sort UTxOs by amount
-        utxos_sorted = sorted(cluster.get_utxo(address=src_address), key=lambda x: x.amount)
+        utxos_sorted = sorted(cluster.g_query.get_utxo(address=src_address), key=lambda x: x.amount)
 
         # select 350 UTxOs, so we are in a limit of command line arguments lenght and size of the TX
         txins = random.sample(utxos_sorted[:big_funds_idx], k=350)
         # add several UTxOs with "big funds" so we can pay fees
         txins.extend(utxos_sorted[-30:])
 
-        ttl = cluster.calculate_tx_ttl()
-        fee = cluster.calculate_tx_fee(
+        ttl = cluster.g_transaction.calculate_tx_ttl()
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             txins=txins,
@@ -1487,7 +1489,7 @@ class TestManyUTXOs:
             fee=fee,
             tx_files=tx_files,
         )
-        tx_raw_output = cluster.build_raw_tx_bare(
+        tx_raw_output = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_tx.body",
             txins=data_for_build.txins,
             txouts=data_for_build.txouts,
@@ -1495,14 +1497,14 @@ class TestManyUTXOs:
             fee=fee,
             ttl=ttl,
         )
-        tx_signed_file = cluster.sign_tx(
+        tx_signed_file = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             tx_name=temp_template,
             signing_key_files=tx_files.signing_key_files,
         )
-        cluster.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
@@ -1544,7 +1546,7 @@ class TestNotBalanced:
                     f"{dst_address}+{amount}",
                     "--out-file",
                     f"{temp_template}_tx.body",
-                    *cluster.tx_era_arg,
+                    *cluster.g_transaction.tx_era_arg,
                     *cluster.magic_args,
                 ]
             )
@@ -1593,7 +1595,7 @@ class TestNotBalanced:
 
         Meant for property-based tests, so this expensive operation gets executed only once.
         """
-        return cluster.get_utxo_with_highest_amount(payment_addrs[0].address)
+        return cluster.g_query.get_utxo_with_highest_amount(payment_addrs[0].address)
 
     @allure.link(helpers.get_vcs_link())
     def test_negative_change(
@@ -1611,9 +1613,9 @@ class TestNotBalanced:
         dst_address = payment_addrs[1].address
 
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        ttl = cluster.calculate_tx_ttl()
+        ttl = cluster.g_transaction.calculate_tx_ttl()
 
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             dst_addresses=[dst_address],
@@ -1621,7 +1623,7 @@ class TestNotBalanced:
             ttl=ttl,
         )
 
-        src_addr_highest_utxo = cluster.get_utxo_with_highest_amount(src_address)
+        src_addr_highest_utxo = cluster.g_query.get_utxo_with_highest_amount(src_address)
 
         # use only the UTxO with the highest amount
         txins = [src_addr_highest_utxo]
@@ -1633,7 +1635,7 @@ class TestNotBalanced:
         assert txins[0].amount - txouts[0].amount - fee == txouts[-1].amount
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_raw_tx_bare(
+            cluster.g_transaction.build_raw_tx_bare(
                 out_file=f"{helpers.get_timestamped_rand_str()}_tx.body",
                 txins=txins,
                 txouts=txouts,
@@ -1678,7 +1680,7 @@ class TestNotBalanced:
         txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_tx(
+            cluster.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 txins=txins,
@@ -1715,7 +1717,7 @@ class TestNotBalanced:
 
         out_file_tx = f"{temp_template}_tx.body"
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        ttl = cluster.calculate_tx_ttl()
+        ttl = cluster.g_transaction.calculate_tx_ttl()
 
         # use only the UTxO with the highest amount
         txins = [pbt_highest_utxo]
@@ -1726,7 +1728,7 @@ class TestNotBalanced:
             clusterlib.TxOut(address=src_address, amount=change_amount),
         ]
 
-        cluster.build_raw_tx_bare(
+        cluster.g_transaction.build_raw_tx_bare(
             out_file=out_file_tx,
             txins=txins,
             txouts=txouts,
@@ -1734,7 +1736,7 @@ class TestNotBalanced:
             fee=fee,
             ttl=ttl,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=out_file_tx,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
@@ -1742,7 +1744,7 @@ class TestNotBalanced:
 
         # it should NOT be possible to submit an unbalanced transaction
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx_bare(out_file_signed)
+            cluster.g_transaction.submit_tx_bare(out_file_signed)
         exc_val = str(excinfo.value)
         # TODO: see https://github.com/input-output-hk/cardano-node/issues/2555
         assert "ValueNotConservedUTxO" in exc_val or "DeserialiseFailure" in exc_val, exc_val
@@ -1765,7 +1767,7 @@ class TestNotBalanced:
 
         out_file_tx = f"{temp_template}_tx.body"
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        ttl = cluster.calculate_tx_ttl()
+        ttl = cluster.g_transaction.calculate_tx_ttl()
 
         # use only the UTxO with the highest amount
         txins = [pbt_highest_utxo]
@@ -1774,7 +1776,7 @@ class TestNotBalanced:
         ]
 
         try:
-            cluster.build_raw_tx_bare(
+            cluster.g_transaction.build_raw_tx_bare(
                 out_file=out_file_tx,
                 txins=txins,
                 txouts=txouts,
@@ -1883,17 +1885,19 @@ class TestNotBalanced:
             f"{dst_address}+{amount}",
             "--tx-out",
             f"{src_address}+{pbt_highest_utxo.amount - amount - fee}",
-            *cluster.tx_era_arg,
+            *cluster.g_transaction.tx_era_arg,
             "--out-file",
             out_file,
         ]
         if VERSIONS.transaction_era < VERSIONS.ALLEGRA:
-            build_args.extend(["--invalid-hereafter", str(cluster.calculate_tx_ttl())])
+            build_args.extend(
+                ["--invalid-hereafter", str(cluster.g_transaction.calculate_tx_ttl())]
+            )
 
         cluster.cli(build_args)
 
         # create signed transaction
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=out_file,
             signing_key_files=[payment_addrs[0].skey_file],
             tx_name=f"{temp_template}_signed",
@@ -1901,7 +1905,7 @@ class TestNotBalanced:
 
         with pytest.raises(clusterlib.CLIError) as excinfo_build:
             # submit the signed transaction
-            cluster.submit_tx(tx_file=out_file_signed, txins=[pbt_highest_utxo])
+            cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=[pbt_highest_utxo])
 
         exc_val = str(excinfo_build.value)
         assert "OutputTooSmallUTxO" in exc_val, exc_val
@@ -1943,12 +1947,14 @@ class TestNotBalanced:
             f"{dst_address}+{amount}",
             "--tx-out",
             f"{src_address}+2000000",
-            *cluster.tx_era_arg,
+            *cluster.g_transaction.tx_era_arg,
             "--out-file",
             out_file,
         ]
         if VERSIONS.transaction_era < VERSIONS.ALLEGRA:
-            build_args.extend(["--invalid-hereafter", str(cluster.calculate_tx_ttl())])
+            build_args.extend(
+                ["--invalid-hereafter", str(cluster.g_transaction.calculate_tx_ttl())]
+            )
 
         with pytest.raises(clusterlib.CLIError) as excinfo_build:
             cluster.cli(build_args)
@@ -2034,7 +2040,7 @@ class TestNegative:
         # it should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
-                cluster_obj.build_tx(
+                cluster_obj.g_transaction.build_tx(
                     src_address=pool_users[0].payment.address,
                     tx_name="to_invalid",
                     txouts=destinations,
@@ -2042,7 +2048,7 @@ class TestNegative:
                     fee_buffer=1_000_000,
                 )
             else:
-                cluster_obj.build_raw_tx(
+                cluster_obj.g_transaction.build_raw_tx(
                     src_address=pool_users[0].payment.address,
                     tx_name="to_invalid",
                     txouts=destinations,
@@ -2066,7 +2072,7 @@ class TestNegative:
         # it should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
-                cluster_obj.build_tx(
+                cluster_obj.g_transaction.build_tx(
                     src_address=addr,
                     tx_name="from_invalid",
                     txouts=destinations,
@@ -2074,7 +2080,7 @@ class TestNegative:
                     fee_buffer=1_000_000,
                 )
             else:
-                cluster_obj.build_raw_tx(
+                cluster_obj.g_transaction.build_raw_tx(
                     src_address=addr,
                     tx_name="from_invalid",
                     txouts=destinations,
@@ -2095,7 +2101,7 @@ class TestNegative:
 
         # it should NOT be possible to build a transaction using an invalid change address
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.build_tx(
+            cluster_obj.g_transaction.build_tx(
                 src_address=pool_users[0].payment.address,
                 tx_name="invalid_change",
                 txouts=destinations,
@@ -2120,7 +2126,7 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
-                cluster_obj.build_tx(
+                cluster_obj.g_transaction.build_tx(
                     src_address=src_addr.address,
                     tx_name=temp_template,
                     txins=[utxo],
@@ -2129,7 +2135,7 @@ class TestNegative:
                     fee_buffer=1_000_000,
                 )
             else:
-                cluster_obj.send_tx(
+                cluster_obj.g_transaction.send_tx(
                     src_address=src_addr.address,
                     tx_name=temp_template,
                     txins=[utxo],
@@ -2155,8 +2161,8 @@ class TestNegative:
 
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
-        ttl = cluster.get_slot_no() - 1
-        fee = cluster.calculate_tx_fee(
+        ttl = cluster.g_query.get_slot_no() - 1
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
@@ -2165,7 +2171,7 @@ class TestNegative:
         )
 
         # it should be possible to build and sign a transaction with ttl in the past
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
@@ -2173,7 +2179,7 @@ class TestNegative:
             fee=fee,
             ttl=ttl,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
@@ -2181,7 +2187,7 @@ class TestNegative:
 
         # it should NOT be possible to submit a transaction with ttl in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx_bare(out_file_signed)
+            cluster.g_transaction.submit_tx_bare(out_file_signed)
         exc_val = str(excinfo.value)
         assert "ExpiredUTxO" in exc_val or "ValidityIntervalUTxO" in exc_val
 
@@ -2205,29 +2211,29 @@ class TestNegative:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         # build and sign a transaction
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
         )
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
             fee=fee,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
 
         # submit a transaction for the first time
-        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
@@ -2238,7 +2244,7 @@ class TestNegative:
 
         # it should NOT be possible to submit a transaction twice
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx_bare(out_file_signed)
+            cluster.g_transaction.submit_tx_bare(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -2262,20 +2268,20 @@ class TestNegative:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         # build and sign a transaction
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
         )
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
             fee=fee,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
@@ -2327,7 +2333,7 @@ class TestNegative:
 
         # it should NOT be possible to submit a transaction with wrong signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster.g_transaction.send_tx(
                 src_address=pool_users[0].payment.address,
                 tx_name=temp_template,
                 txouts=destinations,
@@ -2353,7 +2359,7 @@ class TestNegative:
 
         # it should NOT be possible to submit a transaction when TX era > network era
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_wrong_tx_era.send_tx(
+            cluster_wrong_tx_era.g_transaction.send_tx(
                 src_address=pool_users[0].payment.address,
                 tx_name=temp_template,
                 txouts=destinations,
@@ -2399,7 +2405,7 @@ class TestNegative:
         common.get_test_id(cluster)
 
         dst_addr = pool_users[1].payment.address
-        utxo_addr = cluster.get_utxo(address=dst_addr)[0].utxo_hash
+        utxo_addr = cluster.g_query.get_utxo(address=dst_addr)[0].utxo_hash
         self._send_funds_to_invalid_address(
             cluster_obj=cluster, pool_users=pool_users, addr=utxo_addr, use_build_cmd=use_build_cmd
         )
@@ -2713,7 +2719,7 @@ class TestNegative:
         """
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
+        utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_ix=5)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
@@ -2745,7 +2751,7 @@ class TestNegative:
         """
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
+        utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         new_hash = f"{utxo.utxo_hash[:-4]}fd42"
         utxo_copy = utxo._replace(utxo_hash=new_hash)
         err = self._send_funds_with_invalid_utxo(
@@ -2779,7 +2785,7 @@ class TestNegative:
         """
         temp_template = f"test_invalid_lenght_utxo_hash_ci{cluster.cluster_id}"
 
-        utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
+        utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
@@ -2808,7 +2814,7 @@ class TestNegative:
         """
         temp_template = f"test_build_invalid_length_utxo_hash_ci{cluster.cluster_id}"
 
-        utxo = cluster.get_utxo(address=pool_users[0].payment.address)[0]
+        utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
@@ -2893,7 +2899,7 @@ class TestNegative:
                     str(tx_raw_output.out_file),
                     *helpers.prepend_flag("--tx-in", txins),
                     *helpers.prepend_flag("--tx-out", txouts),
-                    *cluster.tx_era_arg,
+                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         assert "TTL must be specified" in str(excinfo.value)
@@ -2970,7 +2976,7 @@ class TestNegative:
                     "--testnet-magic",
                     str(cluster.network_magic),
                     *helpers.prepend_flag("--tx-out", txouts),
-                    *cluster.tx_era_arg,
+                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
@@ -3010,7 +3016,7 @@ class TestNegative:
                     str(cluster.network_magic),
                     *helpers.prepend_flag("--tx-in", txins),
                     *helpers.prepend_flag("--tx-out", txouts),
-                    *cluster.tx_era_arg,
+                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         assert re.search(r"Missing:.* --change-address ADDRESS", str(excinfo.value))
@@ -3054,7 +3060,7 @@ class TestNegative:
                         "--change-address",
                         [pool_users[0].payment.address, pool_users[2].payment.address],
                     ),
-                    *cluster.tx_era_arg,
+                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         assert re.search(r"Invalid option.*--change-address", str(excinfo.value))
@@ -3084,20 +3090,20 @@ class TestNegative:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         # build and sign a transaction
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
         )
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
             fee=fee,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
@@ -3115,16 +3121,16 @@ class TestNegative:
         # TODO: move this tests from `TestNegative` once CDDL is the only supported format
         # of Tx body
         if cluster.use_cddl or not clusterlib_utils.cli_has("transaction build-raw --cddl-format"):
-            tx_signed_again = cluster.sign_tx(
+            tx_signed_again = cluster.g_transaction.sign_tx(
                 **cli_args,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
             )
             # check that the Tx can be successfully submitted
-            cluster.submit_tx(tx_file=tx_signed_again, txins=tx_raw_output.txins)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_again, txins=tx_raw_output.txins)
         else:
             with pytest.raises(clusterlib.CLIError) as exc_body:
-                cluster.sign_tx(
+                cluster.g_transaction.sign_tx(
                     **cli_args,
                     signing_key_files=tx_files.signing_key_files,
                     tx_name=f"{temp_template}_err1",
@@ -3187,7 +3193,7 @@ class TestMetadata:
 
         # it should NOT be possible to build a transaction using wrongly formatted metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_raw_tx(
+            cluster.g_transaction.build_raw_tx(
                 src_address=payment_addr.address,
                 tx_name="wrong_json_format",
                 tx_files=tx_files,
@@ -3213,7 +3219,7 @@ class TestMetadata:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_tx(
+            cluster.g_transaction.build_tx(
                 src_address=payment_addr.address,
                 tx_name="wrong_json_format",
                 tx_files=tx_files,
@@ -3238,7 +3244,7 @@ class TestMetadata:
 
         # it should NOT be possible to build a transaction using an invalid metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_raw_tx(
+            cluster.g_transaction.build_raw_tx(
                 src_address=payment_addr.address,
                 tx_name="invalid_metadata",
                 tx_files=tx_files,
@@ -3265,7 +3271,7 @@ class TestMetadata:
 
         # it should NOT be possible to build a transaction using an invalid metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_tx(
+            cluster.g_transaction.build_tx(
                 src_address=payment_addr.address,
                 tx_name="invalid_metadata",
                 tx_files=tx_files,
@@ -3287,7 +3293,7 @@ class TestMetadata:
 
         # it should NOT be possible to build a transaction using too long metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_raw_tx(
+            cluster.g_transaction.build_raw_tx(
                 src_address=payment_addr.address,
                 tx_name="too_long_metadata",
                 tx_files=tx_files,
@@ -3314,7 +3320,7 @@ class TestMetadata:
 
         # it should NOT be possible to build a transaction using too long metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.build_tx(
+            cluster.g_transaction.build_tx(
                 src_address=payment_addr.address,
                 tx_name="too_long_metadata",
                 tx_files=tx_files,
@@ -3340,7 +3346,7 @@ class TestMetadata:
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_FILE],
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
         )
         assert tx_raw_output.fee, "Transaction had no fee"
@@ -3383,18 +3389,18 @@ class TestMetadata:
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[self.JSON_METADATA_FILE],
         )
-        tx_output = cluster.build_tx(
+        tx_output = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
             tx_name=temp_template,
             tx_files=tx_files,
             fee_buffer=1_000_000,
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_output.out_file)
         # dump it as JSON, so keys are converted to strings
@@ -3430,7 +3436,7 @@ class TestMetadata:
             signing_key_files=[payment_addr.skey_file],
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
         )
         assert tx_raw_output.fee, "Transaction had no fee"
@@ -3471,19 +3477,19 @@ class TestMetadata:
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
 
-        tx_output = cluster.build_tx(
+        tx_output = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
             tx_name=temp_template,
             tx_files=tx_files,
             fee_buffer=1_000_000,
         )
 
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_output.out_file)
 
@@ -3518,7 +3524,7 @@ class TestMetadata:
             metadata_json_files=[self.JSON_METADATA_FILE],
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
         )
         assert tx_raw_output.fee, "Transaction had no fee"
@@ -3571,18 +3577,18 @@ class TestMetadata:
             metadata_cbor_files=[self.CBOR_METADATA_FILE],
         )
 
-        tx_output = cluster.build_tx(
+        tx_output = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
             tx_name=temp_template,
             tx_files=tx_files,
             fee_buffer=1_000_000,
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_output.out_file)
         # dump it as JSON, so keys are converted to strings
@@ -3630,7 +3636,7 @@ class TestMetadata:
             metadata_json_files=metadata_json_files,
         )
 
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=payment_addr.address, tx_name=temp_template, tx_files=tx_files
         )
         assert tx_raw_output.fee, "Transaction had no fee"
@@ -3689,8 +3695,8 @@ class TestMetadata:
             signing_key_files=[src_record.skey_file],
             metadata_json_files=[self.JSON_METADATA_FILE],
         )
-        fee = cluster.get_address_balance(src_record.address)
-        tx_raw_output = cluster.send_tx(
+        fee = cluster.g_query.get_address_balance(src_record.address)
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_record.address, tx_name=temp_template, tx_files=tx_files, fee=fee
         )
         assert not tx_raw_output.txouts, "Transaction has unexpected txouts"

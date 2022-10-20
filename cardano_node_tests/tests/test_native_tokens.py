@@ -73,13 +73,13 @@ def simple_script_policyid(
     issuer_addr = issuers_addrs[1]
 
     # create simple script
-    keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+    keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = Path(f"{temp_template}.script")
     with open(script, "w", encoding="utf-8") as out_json:
         json.dump(script_content, out_json)
 
-    policyid = cluster.get_policyid(script)
+    policyid = cluster.g_transaction.get_policyid(script)
 
     return script, policyid
 
@@ -99,12 +99,12 @@ def multisig_script_policyid(
     payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
     # create multisig script
-    multisig_script = cluster.build_multisig_script(
+    multisig_script = cluster.g_transaction.build_multisig_script(
         script_name=temp_template,
         script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
         payment_vkey_files=payment_vkey_files[1:],
     )
-    policyid = cluster.get_policyid(multisig_script)
+    policyid = cluster.g_transaction.get_policyid(multisig_script)
 
     return multisig_script, policyid
 
@@ -161,13 +161,13 @@ class TestMinting:
             token_issuers = [issuers_addrs[0], *_empty_issuers]
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files,
         )
 
-        policyid = cluster.get_policyid(multisig_script)
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
         token = f"{policyid}.{asset_name}" if asset_name else policyid
 
         token_mint = clusterlib_utils.TokenRecord(
@@ -186,7 +186,7 @@ class TestMinting:
             use_build_cmd=use_build_cmd,
         )
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -198,7 +198,7 @@ class TestMinting:
             use_build_cmd=use_build_cmd,
         )
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -252,13 +252,13 @@ class TestMinting:
             )[0]
 
         # create simple script
-        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
-        policyid = cluster.get_policyid(script)
+        policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}" if asset_name else policyid
 
         token_mint = clusterlib_utils.TokenRecord(
@@ -276,7 +276,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -287,7 +287,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -334,7 +334,7 @@ class TestMinting:
         tokens_mint = []
         for i in range(num_of_scripts):
             # create simple script
-            keyhash = cluster.get_payment_vkey_hash(i_addrs[i].vkey_file)
+            keyhash = cluster.g_address.get_payment_vkey_hash(i_addrs[i].vkey_file)
             script_content = {"keyHash": keyhash, "type": "sig"}
             script = Path(f"{temp_template}_{i}.script")
             with open(script, "w", encoding="utf-8") as out_json:
@@ -342,7 +342,7 @@ class TestMinting:
 
             asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
             asset_name = asset_name_dec.encode("utf-8").hex()
-            policyid = cluster.get_policyid(script)
+            policyid = cluster.g_transaction.get_policyid(script)
             aname_token = f"{policyid}.{asset_name}"
 
             # for each script mint both token identified by policyid + asset name and token
@@ -373,7 +373,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        mint_utxos = cluster.get_utxo(tx_raw_output=tx_out_mint)
+        mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
         for t in tokens_mint:
             utxo_mint = clusterlib.filter_utxos(utxos=mint_utxos, coin=t.token)
             assert (
@@ -388,7 +388,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        burn_utxos = cluster.get_utxo(tx_raw_output=tx_out_burn)
+        burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
         for t in tokens_burn:
             utxo_burn = clusterlib.filter_utxos(utxos=burn_utxos, coin=t.token)
             assert not utxo_burn, f"The {t.token} token was not burnt"
@@ -432,13 +432,13 @@ class TestMinting:
         issuer_addr = issuers_addrs[1]
 
         # create simple script
-        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
-        policyid = cluster.get_policyid(script)
+        policyid = cluster.g_transaction.get_policyid(script)
         asset_names = [
             f"couttscoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex(),
             f"couttscoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex(),
@@ -464,7 +464,7 @@ class TestMinting:
             sign_incrementally=True,
         )
 
-        token1_mint_utxo = cluster.get_utxo(tx_raw_output=tx_out_mint1, coins=[tokens[0]])
+        token1_mint_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint1, coins=[tokens[0]])
         assert token1_mint_utxo and token1_mint_utxo[0].amount == amount, "The token was not minted"
 
         # second token minting and first token burning in single TX
@@ -476,7 +476,7 @@ class TestMinting:
             sign_incrementally=True,
         )
 
-        mint_burn_utxos = cluster.get_utxo(tx_raw_output=tx_out_mint_burn)
+        mint_burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint_burn)
         token1_burn_utxo = clusterlib.filter_utxos(
             utxos=mint_burn_utxos, address=token_mint_addr.address, coin=tokens[0]
         )
@@ -495,7 +495,7 @@ class TestMinting:
             sign_incrementally=True,
         )
 
-        token2_burn_utxo = cluster.get_utxo(tx_raw_output=tx_out_burn2, coins=[tokens[1]])
+        token2_burn_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn2, coins=[tokens[1]])
         assert not token2_burn_utxo, "The token was not burnt"
 
         # check expected fees
@@ -534,13 +534,13 @@ class TestMinting:
         issuer_addr = issuers_addrs[1]
 
         # create simple script
-        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
-        policyid = cluster.get_policyid(script)
+        policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
         # build and sign a transaction
@@ -565,7 +565,7 @@ class TestMinting:
             ),
         ]
 
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
             txouts=txouts,
@@ -574,7 +574,7 @@ class TestMinting:
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=2,
         )
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
             txouts=txouts,
@@ -583,16 +583,16 @@ class TestMinting:
             tx_files=tx_files,
             fee=fee,
         )
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_mint_burn",
         )
 
         # submit signed transaction
-        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
 
         # check expected fees
@@ -684,7 +684,7 @@ class TestMinting:
 
         tx_out_mint = clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
 
-        mint_utxos = cluster.get_utxo(tx_raw_output=tx_out_mint)
+        mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
         for t in tokens_to_mint:
             token_utxo = clusterlib.filter_utxos(
                 utxos=mint_utxos, address=token_mint_addr.address, coin=t.token
@@ -699,7 +699,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        burn_utxos = cluster.get_utxo(tx_raw_output=tx_out_burn)
+        burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
         for t in tokens_to_burn:
             token_utxo = clusterlib.filter_utxos(
                 utxos=burn_utxos, address=token_mint_addr.address, coin=t.token
@@ -801,7 +801,7 @@ class TestMinting:
 
         tx_out_mint = clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
 
-        mint_utxos = cluster.get_utxo(tx_raw_output=tx_out_mint)
+        mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
         for t in tokens_to_mint:
             token_utxo = clusterlib.filter_utxos(
                 utxos=mint_utxos, address=token_mint_addr.address, coin=t.token
@@ -816,7 +816,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        burn_utxos = cluster.get_utxo(tx_raw_output=tx_out_burn)
+        burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
         for t in tokens_to_burn:
             token_utxo = clusterlib.filter_utxos(
                 utxos=burn_utxos, address=token_mint_addr.address, coin=t.token
@@ -858,13 +858,13 @@ class TestMinting:
         token_mint_addr = issuers_addrs[0]
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files[1:],
         )
 
-        policyid = cluster.get_policyid(multisig_script)
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
         token = f"{policyid}.{asset_name}"
 
         token_mint = clusterlib_utils.TokenRecord(
@@ -884,7 +884,7 @@ class TestMinting:
             sign_incrementally=True,
         )
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
@@ -899,7 +899,7 @@ class TestMinting:
             sign_incrementally=True,
         )
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_out_burn1, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn1, coins=[token])
         assert (
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not burned"
@@ -950,13 +950,13 @@ class TestMinting:
         issuer_addr = issuers_addrs[1]
 
         # create simple script
-        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
-        policyid = cluster.get_policyid(script)
+        policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
         token_mint = clusterlib_utils.TokenRecord(
@@ -974,7 +974,7 @@ class TestMinting:
             temp_template=f"{temp_template}_mint",
         )
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert (
             token_utxo and token_utxo[0].amount == amount
         ), "The token was not minted or expected chars are not present in the asset name"
@@ -987,7 +987,7 @@ class TestMinting:
             temp_template=f"{temp_template}_burn",
         )
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
         # check expected fees
@@ -1027,14 +1027,14 @@ class TestPolicies:
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files[1:],
             slot=100,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
         )
-        policyid = cluster.get_policyid(multisig_script)
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
 
         tokens_to_mint = []
         for tnum in range(5):
@@ -1058,11 +1058,11 @@ class TestPolicies:
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1_000,
+            invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
-        mint_utxos = cluster.get_utxo(tx_raw_output=tx_out_mint)
+        mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
         for t in tokens_to_mint:
             token_utxo = clusterlib.filter_utxos(
                 utxos=mint_utxos, address=token_mint_addr.address, coin=t.token
@@ -1076,11 +1076,11 @@ class TestPolicies:
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1_000,
+            invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
-        burn_utxos = cluster.get_utxo(tx_raw_output=tx_out_burn)
+        burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
         for t in tokens_to_burn:
             token_utxo = clusterlib.filter_utxos(
                 utxos=burn_utxos, address=token_mint_addr.address, coin=t.token
@@ -1116,17 +1116,17 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        before_slot = cluster.get_slot_no() + 10_000
+        before_slot = cluster.g_query.get_slot_no() + 10_000
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files[1:],
             slot=before_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
         )
-        policyid = cluster.get_policyid(multisig_script)
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
 
         tokens_to_mint = []
         for tnum in range(5):
@@ -1150,11 +1150,11 @@ class TestPolicies:
             new_tokens=tokens_to_mint,
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1_000,
+            invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
-        mint_utxos = cluster.get_utxo(tx_raw_output=tx_out_mint)
+        mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
         for t in tokens_to_mint:
             token_utxo = clusterlib.filter_utxos(
                 utxos=mint_utxos, address=token_mint_addr.address, coin=t.token
@@ -1168,11 +1168,11 @@ class TestPolicies:
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
-            invalid_hereafter=cluster.get_slot_no() + 1_000,
+            invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
 
-        burn_utxos = cluster.get_utxo(tx_raw_output=tx_out_burn)
+        burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
         for t in tokens_to_burn:
             token_utxo = clusterlib.filter_utxos(
                 utxos=burn_utxos, address=token_mint_addr.address, coin=t.token
@@ -1201,17 +1201,17 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        before_slot = cluster.get_slot_no() - 1
+        before_slot = cluster.g_query.get_slot_no() - 1
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files[1:],
             slot=before_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
         )
-        policyid = cluster.get_policyid(multisig_script)
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
 
         tokens_to_mint = []
         for tnum in range(5):
@@ -1251,7 +1251,7 @@ class TestPolicies:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
-        mint_utxos = cluster.get_utxo(address=token_mint_addr.address)
+        mint_utxos = cluster.g_query.get_utxo(address=token_mint_addr.address)
         for t in tokens_to_mint:
             token_utxo = clusterlib.filter_utxos(
                 utxos=mint_utxos, address=token_mint_addr.address, coin=t.token
@@ -1273,17 +1273,17 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        before_slot = cluster.get_slot_no() + 10_000
+        before_slot = cluster.g_query.get_slot_no() + 10_000
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files[1:],
             slot=before_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
         )
-        policyid = cluster.get_policyid(multisig_script)
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
 
         tokens_to_mint = []
         for tnum in range(5):
@@ -1312,7 +1312,7 @@ class TestPolicies:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
-        mint_utxos = cluster.get_utxo(address=token_mint_addr.address)
+        mint_utxos = cluster.g_query.get_utxo(address=token_mint_addr.address)
         for t in tokens_to_mint:
             token_utxo = clusterlib.filter_utxos(
                 utxos=mint_utxos, address=token_mint_addr.address, coin=t.token
@@ -1334,17 +1334,17 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        after_slot = cluster.get_slot_no() + 10_000
+        after_slot = cluster.g_query.get_slot_no() + 10_000
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files[1:],
             slot=after_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
         )
-        policyid = cluster.get_policyid(multisig_script)
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
 
         tokens_to_mint = []
         for tnum in range(5):
@@ -1384,7 +1384,7 @@ class TestPolicies:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
-        mint_utxos = cluster.get_utxo(address=token_mint_addr.address)
+        mint_utxos = cluster.g_query.get_utxo(address=token_mint_addr.address)
         for t in tokens_to_mint:
             token_utxo = clusterlib.filter_utxos(
                 utxos=mint_utxos, address=token_mint_addr.address, coin=t.token
@@ -1406,17 +1406,17 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        after_slot = cluster.get_slot_no() - 1
+        after_slot = cluster.g_query.get_slot_no() - 1
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files[1:],
             slot=after_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
         )
-        policyid = cluster.get_policyid(multisig_script)
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
 
         tokens_to_mint = []
         for tnum in range(5):
@@ -1445,7 +1445,7 @@ class TestPolicies:
             )
         assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
 
-        mint_utxos = cluster.get_utxo(address=token_mint_addr.address)
+        mint_utxos = cluster.g_query.get_utxo(address=token_mint_addr.address)
         for t in tokens_to_mint:
             token_utxo = clusterlib.filter_utxos(
                 utxos=mint_utxos, address=token_mint_addr.address, coin=t.token
@@ -1555,7 +1555,7 @@ class TestTransfer:
             clusterlib.TxOut(address=dst_address, amount=2_000_000),
         ]
 
-        min_value = cluster.calculate_min_req_utxo(txouts=calc_destinations)
+        min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=calc_destinations)
         assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
         assert min_value.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace = min_value.value
@@ -1578,7 +1578,7 @@ class TestTransfer:
             ):
                 err_str = ""
                 try:
-                    cluster.build_tx(
+                    cluster.g_transaction.build_tx(
                         src_address=src_address,
                         tx_name=temp_template,
                         txouts=destinations,
@@ -1605,28 +1605,28 @@ class TestTransfer:
                     clusterlib.TxOut(address=src_address, amount=2_000_000),
                 ]
 
-            tx_raw_output = cluster.build_tx(
+            tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
                 fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
-            tx_signed = cluster.sign_tx(
+            tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
             )
-            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
-            tx_raw_output = cluster.send_funds(
+            tx_raw_output = cluster.g_transaction.send_funds(
                 src_address=src_address,
                 destinations=destinations,
                 tx_name=temp_template,
                 tx_files=tx_files,
             )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
 
         out_src_utxos = clusterlib.filter_utxos(utxos=out_utxos, address=src_address)
         assert (
@@ -1714,12 +1714,16 @@ class TestTransfer:
             clusterlib.TxOut(address=dst_address2, amount=2_000_000),
         ]
 
-        min_value_address1 = cluster.calculate_min_req_utxo(txouts=calc_destinations_address1)
+        min_value_address1 = cluster.g_transaction.calculate_min_req_utxo(
+            txouts=calc_destinations_address1
+        )
         assert min_value_address1.coin.lower() == clusterlib.DEFAULT_COIN
         assert min_value_address1.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address1 = min_value_address1.value
 
-        min_value_address2 = cluster.calculate_min_req_utxo(txouts=calc_destinations_address2)
+        min_value_address2 = cluster.g_transaction.calculate_min_req_utxo(
+            txouts=calc_destinations_address2
+        )
         assert min_value_address2.coin.lower() == clusterlib.DEFAULT_COIN
         assert min_value_address2.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address2 = min_value_address2.value
@@ -1746,7 +1750,7 @@ class TestTransfer:
             ):
                 err_str = ""
                 try:
-                    cluster.build_tx(
+                    cluster.g_transaction.build_tx(
                         src_address=src_address,
                         tx_name=temp_template,
                         txouts=destinations,
@@ -1775,28 +1779,28 @@ class TestTransfer:
                     clusterlib.TxOut(address=src_address, amount=4_000_000),
                 ]
 
-            tx_raw_output = cluster.build_tx(
+            tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
                 fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
-            tx_signed = cluster.sign_tx(
+            tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
             )
-            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
-            tx_raw_output = cluster.send_funds(
+            tx_raw_output = cluster.g_transaction.send_funds(
                 src_address=src_address,
                 destinations=destinations,
                 tx_name=temp_template,
                 tx_files=tx_files,
             )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
 
         out_src_utxos = clusterlib.filter_utxos(utxos=out_utxos, address=src_address)
         assert (
@@ -1864,7 +1868,7 @@ class TestTransfer:
             destinations.append(clusterlib.TxOut(address=src_address, amount=3500_000))
 
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.build_tx(
+                cluster.g_transaction.build_tx(
                     src_address=src_address,
                     tx_name=temp_template,
                     txouts=destinations,
@@ -1876,7 +1880,7 @@ class TestTransfer:
             expected_error = "OutputTooSmallUTxO"
 
             try:
-                cluster.send_funds(
+                cluster.g_transaction.send_funds(
                     src_address=src_address,
                     destinations=destinations,
                     tx_name=temp_template,
@@ -1930,7 +1934,7 @@ class TestTransfer:
 
                 try:
                     logging.disable(logging.ERROR)
-                    cluster.build_tx(
+                    cluster.g_transaction.build_tx(
                         src_address=src_address,
                         tx_name=temp_template,
                         txouts=destinations,
@@ -1946,7 +1950,7 @@ class TestTransfer:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 try:
                     logging.disable(logging.ERROR)
-                    cluster.send_funds(
+                    cluster.g_transaction.send_funds(
                         src_address=src_address,
                         destinations=destinations,
                         tx_name=temp_template,
@@ -2001,7 +2005,7 @@ class TestNegative:
         txouts_lovelace = [clusterlib.TxOut(address=a, amount=2_000_000) for a in token_mint_addrs]
         txouts = [*txouts_mint, *txouts_lovelace]
 
-        tx_raw_output = cluster_obj.build_raw_tx(
+        tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=txouts,
@@ -2009,7 +2013,7 @@ class TestNegative:
             tx_files=tx_files,
             fee=100_000,
         )
-        out_file_signed = cluster_obj.sign_tx(
+        out_file_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
@@ -2144,13 +2148,13 @@ class TestCLITxOutSyntax:
         issuer_addr = issuers_addrs[1]
 
         # create simple script
-        keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
-        policyid = cluster.get_policyid(script)
+        policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
         # Build transaction body. The `tx_raw_blueprint` will be used as blueprint for assembling
@@ -2169,13 +2173,13 @@ class TestCLITxOutSyntax:
                 script_file=script,
             ),
         ]
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
             mint=mint,
             tx_files=tx_files,
         )
-        tx_raw_blueprint = cluster.build_raw_tx(
+        tx_raw_blueprint = cluster.g_transaction.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
             # token minting and burning in the same TX
@@ -2233,7 +2237,7 @@ class TestCLITxOutSyntax:
         cluster.cli(build_raw_args)
 
         # create signed transaction
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_mint_burn",
@@ -2242,9 +2246,9 @@ class TestCLITxOutSyntax:
         tx_raw_output = tx_raw_blueprint._replace(out_file=out_file)
 
         # submit signed transaction
-        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1_000, "The token was not minted"
 
         # check expected fees
@@ -2307,19 +2311,19 @@ class TestReferenceUTxO:
 
             reference_type = clusterlib.ScriptTypes.SIMPLE_V1
 
-            keyhash = cluster.get_payment_vkey_hash(issuer_addr.vkey_file)
+            keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
             script_content = {"keyHash": keyhash, "type": "sig"}
             script = Path(f"{temp_template}.script")
             with open(script, "w", encoding="utf-8") as out_json:
                 json.dump(script_content, out_json)
         else:
             invalid_before = 100
-            invalid_hereafter = cluster.get_slot_no() + 1_000
+            invalid_hereafter = cluster.g_query.get_slot_no() + 1_000
 
             reference_type = clusterlib.ScriptTypes.SIMPLE_V2
 
             payment_vkey_files = [p.vkey_file for p in issuers_addrs]
-            script = cluster.build_multisig_script(
+            script = cluster.g_transaction.build_multisig_script(
                 script_name=temp_template,
                 script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
                 payment_vkey_files=payment_vkey_files[1:],
@@ -2327,7 +2331,7 @@ class TestReferenceUTxO:
                 slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
             )
 
-        policyid = cluster.get_policyid(script)
+        policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
         # create reference UTxO
@@ -2366,7 +2370,7 @@ class TestReferenceUTxO:
         ]
 
         if use_build_cmd:
-            tx_raw_output = cluster.build_tx(
+            tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=token_mint_addr.address,
                 tx_name=temp_template,
                 txouts=txouts,
@@ -2378,7 +2382,7 @@ class TestReferenceUTxO:
                 witness_override=2,
             )
         else:
-            fee = cluster.calculate_tx_fee(
+            fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
                 txouts=txouts,
@@ -2389,7 +2393,7 @@ class TestReferenceUTxO:
                 # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
                 witness_count_add=2,
             )
-            tx_raw_output = cluster.build_raw_tx(
+            tx_raw_output = cluster.g_transaction.build_raw_tx(
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
                 txouts=txouts,
@@ -2401,22 +2405,22 @@ class TestReferenceUTxO:
                 invalid_before=invalid_before,
             )
 
-        out_file_signed = cluster.sign_tx(
+        out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_mint_burn",
         )
 
         # submit signed transaction
-        cluster.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
-        token_utxo = cluster.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
         assert (
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not minted / burned"
 
         # check that reference UTxO was NOT spent
-        assert cluster.get_utxo(utxo=reference_utxo), "Reference input was spent"
+        assert cluster.g_query.get_utxo(utxo=reference_utxo), "Reference input was spent"
 
         # check expected fees
         assert helpers.is_in_interval(

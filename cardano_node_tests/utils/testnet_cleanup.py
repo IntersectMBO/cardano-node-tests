@@ -37,7 +37,7 @@ def withdraw_reward(
 
     LOGGER.info(f"Withdrawing rewards for '{stake_addr_record.address}'")
     with contextlib.suppress(clusterlib.CLIError):
-        cluster_obj.send_tx(
+        cluster_obj.g_transaction.send_tx(
             src_address=dst_address,
             tx_name=f"rf_{name_template}_reward_withdrawal",
             tx_files=tx_files_withdrawal,
@@ -50,7 +50,7 @@ def deregister_stake_addr(
 ) -> None:
     """Deregister stake address."""
     # files for deregistering stake address
-    stake_addr_dereg_cert = cluster_obj.gen_stake_addr_deregistration_cert(
+    stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
         addr_name=f"rf_{name_template}_addr0_dereg", stake_vkey_file=pool_user.stake.vkey_file
     )
     tx_files_deregister = clusterlib.TxFiles(
@@ -60,7 +60,7 @@ def deregister_stake_addr(
 
     LOGGER.info(f"Deregistering stake address '{pool_user.stake.address}'")
     with contextlib.suppress(clusterlib.CLIError):
-        cluster_obj.send_tx(
+        cluster_obj.g_transaction.send_tx(
             src_address=pool_user.payment.address,
             tx_name=f"{name_template}_dereg_stake_addr",
             tx_files=tx_files_deregister,
@@ -79,7 +79,7 @@ def return_funds_to_faucet(
     fund_dst = [clusterlib.TxOut(address=faucet_address, amount=-1)]
     fund_tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
-    txins = cluster_obj.get_utxo(address=src_addr.address, coins=[clusterlib.DEFAULT_COIN])
+    txins = cluster_obj.g_query.get_utxo(address=src_addr.address, coins=[clusterlib.DEFAULT_COIN])
     utxos_balance = functools.reduce(lambda x, y: x + y.amount, txins, 0)
 
     # skip if there no (or too little) Lovelace
@@ -89,14 +89,16 @@ def return_funds_to_faucet(
     # if the balance is too low, add a faucet UTxO so there's enough funds for fee
     # and the total amount is higher than min ADA value
     if utxos_balance < 3000_000:
-        faucet_utxos = cluster_obj.get_utxo(address=faucet_address, coins=[clusterlib.DEFAULT_COIN])
+        faucet_utxos = cluster_obj.g_query.get_utxo(
+            address=faucet_address, coins=[clusterlib.DEFAULT_COIN]
+        )
         futxo = random.choice(faucet_utxos)
         txins.append(futxo)
 
     LOGGER.info(f"Returning funds from '{src_addr.address}'")
     # try to return funds; don't mind if there's not enough funds for fees etc.
     with contextlib.suppress(clusterlib.CLIError):
-        cluster_obj.send_tx(
+        cluster_obj.g_transaction.send_tx(
             src_address=src_addr.address,
             tx_name=tx_name,
             txins=txins,
@@ -185,7 +187,7 @@ def cleanup(  # noqa: C901
 
                 pool_user = clusterlib.PoolUser(payment=payment, stake=stake)
 
-                stake_addr_info = cluster_obj.get_stake_addr_info(pool_user.stake.address)
+                stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
                 if not stake_addr_info:
                     continue
 

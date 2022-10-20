@@ -44,7 +44,7 @@ def get_pool_id(
 ) -> str:
     """Return stake pool id."""
     node_cold = addrs_data[pool_name]["cold_key_pair"]
-    return cluster_obj.get_stake_pool_id(node_cold.vkey_file)
+    return cluster_obj.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
 
 
 def cluster_and_pool(
@@ -63,7 +63,7 @@ def cluster_and_pool(
         # getting ledger state on official testnet is too expensive,
         # use one of hardcoded pool IDs if possible
         if cluster_type.testnet_type == cluster_nodes.Testnets.testnet:  # type: ignore
-            stake_pools = cluster_obj.get_stake_pools()
+            stake_pools = cluster_obj.g_query.get_stake_pools()
             for pool_id in configuration.TESTNET_POOL_IDS:
                 if pool_id in stake_pools:
                     return cluster_obj, pool_id
@@ -73,7 +73,7 @@ def cluster_and_pool(
         pool_ids_s = sorted(blocks_before, key=blocks_before.get, reverse=True)  # type: ignore
         # select a pool with reasonable margin
         for pool_id in pool_ids_s:
-            pool_params = cluster_obj.get_pool_params(pool_id)
+            pool_params = cluster_obj.g_query.get_pool_params(pool_id)
             if pool_params.pool_params["margin"] <= 0.5 and not pool_params.retiring:
                 break
         else:
@@ -152,10 +152,10 @@ def delegate_stake_addr(
         )
 
     # create stake address registration cert if address is not already registered
-    if cluster_obj.get_stake_addr_info(pool_user.stake.address):
+    if cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
         stake_addr_reg_cert_file = None
     else:
-        stake_addr_reg_cert_file = cluster_obj.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_user.stake.vkey_file
         )
 
@@ -168,12 +168,14 @@ def delegate_stake_addr(
         deleg_kwargs["stake_pool_id"] = pool_id
     elif cold_vkey:
         deleg_kwargs["cold_vkey_file"] = cold_vkey
-        pool_id = cluster_obj.get_stake_pool_id(cold_vkey)
+        pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(cold_vkey)
 
-    stake_addr_deleg_cert_file = cluster_obj.gen_stake_addr_delegation_cert(**deleg_kwargs)
+    stake_addr_deleg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
+        **deleg_kwargs
+    )
 
     src_address = pool_user.payment.address
-    src_init_balance = cluster_obj.get_address_balance(src_address)
+    src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
 
     # register stake address and delegate it to pool
     certificate_files = [stake_addr_deleg_cert_file]
@@ -185,33 +187,33 @@ def delegate_stake_addr(
     )
 
     if use_build_cmd:
-        tx_raw_output = cluster_obj.build_tx(
+        tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
             tx_name=f"{temp_template}_reg_deleg",
             tx_files=tx_files,
             fee_buffer=2_000_000,
             witness_override=len(tx_files.signing_key_files),
         )
-        tx_signed = cluster_obj.sign_tx(
+        tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_reg_deleg",
         )
-        cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
     else:
-        tx_raw_output = cluster_obj.send_tx(
+        tx_raw_output = cluster_obj.g_transaction.send_tx(
             src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
         )
 
     # check that the balance for source address was correctly updated
-    deposit = cluster_obj.get_address_deposit() if stake_addr_reg_cert_file else 0
+    deposit = cluster_obj.g_query.get_address_deposit() if stake_addr_reg_cert_file else 0
     assert (
-        cluster_obj.get_address_balance(src_address)
+        cluster_obj.g_query.get_address_balance(src_address)
         == src_init_balance - deposit - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that the stake address was delegated
-    stake_addr_info = cluster_obj.get_stake_addr_info(pool_user.stake.address)
+    stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
     assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
     assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 

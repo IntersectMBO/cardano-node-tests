@@ -51,7 +51,7 @@ class TestLeadershipSchedule:
         temp_template = f"{common.get_test_id(cluster)}_{for_epoch}"
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
-        pool_id = cluster.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
+        pool_id = cluster.g_stake_pool.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 
         if for_epoch == "current":
             # wait for beginning of an epoch
@@ -65,10 +65,10 @@ class TestLeadershipSchedule:
                 stop=-10,
                 check_slot=True,
             )
-            queried_epoch = cluster.get_epoch() + 1
+            queried_epoch = cluster.g_query.get_epoch() + 1
 
         # query leadership schedule for selected pool
-        leadership_schedule = cluster.get_leadership_schedule(
+        leadership_schedule = cluster.g_query.get_leadership_schedule(
             vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
             cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
             for_next=for_epoch != "current",
@@ -148,7 +148,7 @@ class TestLeadershipSchedule:
 
         # it should NOT be possible to query leadership schedule
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.get_leadership_schedule(
+            cluster.g_query.get_leadership_schedule(
                 vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
                 cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
                 for_next=True,

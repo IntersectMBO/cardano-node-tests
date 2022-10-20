@@ -137,7 +137,7 @@ class TestDelegateAddr:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        init_epoch = cluster.get_epoch()
+        init_epoch = cluster.g_query.get_epoch()
 
         # submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
@@ -184,7 +184,7 @@ class TestDelegateAddr:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        init_epoch = cluster.get_epoch()
+        init_epoch = cluster.g_query.get_epoch()
 
         # submit registration certificate and delegate to pool
         node_cold = cluster_manager.cache.addrs_data[pool_name]["cold_key_pair"]
@@ -253,7 +253,7 @@ class TestDelegateAddr:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        init_epoch = cluster.get_epoch()
+        init_epoch = cluster.g_query.get_epoch()
 
         # submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
@@ -265,7 +265,7 @@ class TestDelegateAddr:
         )
 
         assert (
-            cluster.get_epoch() == init_epoch
+            cluster.g_query.get_epoch() == init_epoch
         ), "Delegation took longer than expected and would affect other checks"
 
         tx_db_deleg = dbsync_utils.check_tx(
@@ -293,7 +293,7 @@ class TestDelegateAddr:
 
         LOGGER.info("Waiting 4 epochs for first reward.")
         cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
-        if not cluster.get_stake_addr_info(
+        if not cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
@@ -304,7 +304,7 @@ class TestDelegateAddr:
         )
 
         # files for deregistering stake address
-        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+        stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
         )
@@ -319,7 +319,7 @@ class TestDelegateAddr:
         # attempt to deregister the stake address - deregistration is expected to fail
         # because there are rewards in the stake address
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster.g_transaction.send_tx(
                 src_address=src_address,
                 tx_name=f"{temp_template}_dereg_fail",
                 tx_files=tx_files_deregister,
@@ -327,13 +327,13 @@ class TestDelegateAddr:
         err_msg = str(excinfo.value)
         assert "StakeKeyNonZeroAccountBalanceDELEG" in err_msg, err_msg
 
-        src_payment_balance = cluster.get_address_balance(src_address)
-        reward_balance = cluster.get_stake_addr_info(
+        src_payment_balance = cluster.g_query.get_address_balance(src_address)
+        reward_balance = cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance
 
         # withdraw rewards to payment address, deregister stake address
-        tx_raw_deregister_output = cluster.send_tx(
+        tx_raw_deregister_output = cluster.g_transaction.send_tx(
             src_address=src_address,
             tx_name=f"{temp_template}_dereg_withdraw",
             tx_files=tx_files_deregister,
@@ -344,15 +344,17 @@ class TestDelegateAddr:
 
         # check that the key deposit was returned and rewards withdrawn
         assert (
-            cluster.get_address_balance(src_address)
+            cluster.g_query.get_address_balance(src_address)
             == src_payment_balance
             - tx_raw_deregister_output.fee
             + reward_balance
-            + cluster.get_address_deposit()
+            + cluster.g_query.get_address_deposit()
         ), f"Incorrect balance for source address `{src_address}`"
 
         # check that the stake address is no longer delegated
-        stake_addr_info = cluster.get_stake_addr_info(delegation_out.pool_user.stake.address)
+        stake_addr_info = cluster.g_query.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        )
         assert (
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
@@ -363,7 +365,7 @@ class TestDelegateAddr:
         if tx_db_dereg:
             assert delegation_out.pool_user.stake.address in tx_db_dereg.stake_deregistration
             assert (
-                cluster.get_address_balance(src_address)
+                cluster.g_query.get_address_balance(src_address)
                 == dbsync_utils.get_utxo(address=src_address).amount_sum
             ), f"Unexpected balance for source address `{src_address}` in db-sync"
 
@@ -398,7 +400,7 @@ class TestDelegateAddr:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        init_epoch = cluster.get_epoch()
+        init_epoch = cluster.g_query.get_epoch()
 
         # submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
@@ -409,7 +411,7 @@ class TestDelegateAddr:
         )
 
         assert (
-            cluster.get_epoch() == init_epoch
+            cluster.g_query.get_epoch() == init_epoch
         ), "Delegation took longer than expected and would affect other checks"
 
         # check records in db-sync
@@ -427,7 +429,7 @@ class TestDelegateAddr:
 
         LOGGER.info("Waiting 4 epochs for first reward.")
         cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
-        if not cluster.get_stake_addr_info(
+        if not cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
@@ -438,11 +440,11 @@ class TestDelegateAddr:
         )
 
         # files for deregistering / re-registering stake address
-        stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
+        stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_undeleg_addr0",
             stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
         )
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_undeleg_addr0",
             stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
         )
@@ -454,13 +456,13 @@ class TestDelegateAddr:
             ],
         )
 
-        src_payment_balance = cluster.get_address_balance(src_address)
-        reward_balance = cluster.get_stake_addr_info(
+        src_payment_balance = cluster.g_query.get_address_balance(src_address)
+        reward_balance = cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance
 
         # withdraw rewards to payment address; deregister and re-register stake address
-        tx_raw_undeleg = cluster.send_tx(
+        tx_raw_undeleg = cluster.g_transaction.send_tx(
             src_address=src_address,
             tx_name=f"{temp_template}_undeleg_withdraw",
             tx_files=tx_files_undeleg,
@@ -471,19 +473,21 @@ class TestDelegateAddr:
 
         # check that the key deposit was NOT returned and rewards were withdrawn
         assert (
-            cluster.get_address_balance(src_address)
+            cluster.g_query.get_address_balance(src_address)
             == src_payment_balance - tx_raw_undeleg.fee + reward_balance
         ), f"Incorrect balance for source address `{src_address}`"
 
         # check that the stake address is no longer delegated
-        stake_addr_info = cluster.get_stake_addr_info(delegation_out.pool_user.stake.address)
+        stake_addr_info = cluster.g_query.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        )
         assert stake_addr_info.address, f"Reward address is not registered: {stake_addr_info}"
         assert (
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
 
         this_epoch = cluster.wait_for_new_epoch(padding_seconds=20)
-        assert cluster.get_stake_addr_info(
+        assert cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance, "No reward was received next epoch after undelegation"
 
@@ -528,15 +532,15 @@ class TestDelegateAddr:
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
-        src_init_balance = cluster.get_address_balance(user_payment.address)
+        src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
         # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # create stake address deregistration cert
-        stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
+        stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
@@ -551,7 +555,7 @@ class TestDelegateAddr:
         )
 
         if use_build_cmd:
-            tx_raw_output = cluster.build_tx(
+            tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_reg_deleg",
                 tx_files=tx_files,
@@ -559,14 +563,14 @@ class TestDelegateAddr:
                 deposit=0,
                 witness_override=len(tx_files.signing_key_files),
             )
-            tx_signed = cluster.sign_tx(
+            tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=f"{temp_template}_reg_deleg",
             )
-            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
-            tx_raw_output = cluster.send_tx(
+            tx_raw_output = cluster.g_transaction.send_tx(
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_reg_dereg",
                 tx_files=tx_files,
@@ -574,14 +578,14 @@ class TestDelegateAddr:
             )
 
         # check that the stake address is not registered
-        assert not cluster.get_stake_addr_info(
+        assert not cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is registered: {user_registered.stake.address}"
 
         # check that the balance for source address was correctly updated and that key deposit
         # was not needed
         assert (
-            cluster.get_address_balance(user_payment.address)
+            cluster.g_query.get_address_balance(user_payment.address)
             == src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
@@ -618,15 +622,15 @@ class TestDelegateAddr:
 
         user_registered = pool_users_disposable_cluster_and_pool[0]
         user_payment = pool_users_cluster_and_pool[0].payment
-        src_init_balance = cluster.get_address_balance(user_payment.address)
+        src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
         # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # create stake address deregistration cert
-        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+        stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
@@ -635,14 +639,14 @@ class TestDelegateAddr:
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[user_payment.skey_file],
         )
-        tx_raw_output_reg = cluster.send_tx(
+        tx_raw_output_reg = cluster.g_transaction.send_tx(
             src_address=user_payment.address,
             tx_name=f"{temp_template}_reg",
             tx_files=tx_files,
         )
 
         # check that the stake address is registered
-        assert cluster.get_stake_addr_info(
+        assert cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
@@ -652,14 +656,14 @@ class TestDelegateAddr:
 
         # check that the balance for source address was correctly updated
         assert (
-            cluster.get_address_balance(user_payment.address)
-            == src_init_balance - tx_raw_output_reg.fee - cluster.get_address_deposit()
+            cluster.g_query.get_address_balance(user_payment.address)
+            == src_init_balance - tx_raw_output_reg.fee - cluster.g_query.get_address_deposit()
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
-        src_registered_balance = cluster.get_address_balance(user_payment.address)
+        src_registered_balance = cluster.g_query.get_address_balance(user_payment.address)
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             stake_pool_id=pool_id,
@@ -668,7 +672,7 @@ class TestDelegateAddr:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        init_epoch = cluster.get_epoch()
+        init_epoch = cluster.g_query.get_epoch()
 
         # delegate and deregister stake address in single TX
         tx_files = clusterlib.TxFiles(
@@ -677,21 +681,21 @@ class TestDelegateAddr:
         )
 
         if use_build_cmd:
-            tx_raw_output_deleg = cluster.build_tx(
+            tx_raw_output_deleg = cluster.g_transaction.build_tx(
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_deleg_dereg",
                 tx_files=tx_files,
                 fee_buffer=2_000_000,
                 witness_override=len(tx_files.signing_key_files),
             )
-            tx_signed = cluster.sign_tx(
+            tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output_deleg.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=f"{temp_template}_deleg_dereg",
             )
-            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output_deleg.txins)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_deleg.txins)
         else:
-            tx_raw_output_deleg = cluster.send_tx(
+            tx_raw_output_deleg = cluster.g_transaction.send_tx(
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_deleg_dereg",
                 tx_files=tx_files,
@@ -700,12 +704,14 @@ class TestDelegateAddr:
         # check that the balance for source address was correctly updated and that the key
         # deposit was returned
         assert (
-            cluster.get_address_balance(user_payment.address)
-            == src_registered_balance - tx_raw_output_deleg.fee + cluster.get_address_deposit()
+            cluster.g_query.get_address_balance(user_payment.address)
+            == src_registered_balance
+            - tx_raw_output_deleg.fee
+            + cluster.g_query.get_address_deposit()
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
         # check that the stake address was NOT delegated
-        stake_addr_info = cluster.get_stake_addr_info(user_registered.stake.address)
+        stake_addr_info = cluster.g_query.get_stake_addr_info(user_registered.stake.address)
         assert not stake_addr_info.delegation, f"Stake address was delegated: {stake_addr_info}"
 
         tx_db_deleg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_deleg)
@@ -740,15 +746,15 @@ class TestDelegateAddr:
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
-        src_init_balance = cluster.get_address_balance(user_payment.address)
+        src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
         # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
         # create stake address deregistration cert
-        stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
+        stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
@@ -765,10 +771,10 @@ class TestDelegateAddr:
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
-        deposit = cluster.get_address_deposit()
+        deposit = cluster.g_query.get_address_deposit()
 
         if use_build_cmd:
-            tx_raw_output = cluster.build_tx(
+            tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_reg_dereg_cert_order",
                 tx_files=tx_files,
@@ -776,14 +782,14 @@ class TestDelegateAddr:
                 witness_override=len(tx_files.signing_key_files),
                 deposit=deposit,
             )
-            tx_signed = cluster.sign_tx(
+            tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=f"{temp_template}_reg_dereg_cert_order",
             )
-            cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
-            tx_raw_output = cluster.send_tx(
+            tx_raw_output = cluster.g_transaction.send_tx(
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_reg_dereg",
                 tx_files=tx_files,
@@ -791,14 +797,14 @@ class TestDelegateAddr:
             )
 
         # check that the stake address is registered
-        assert cluster.get_stake_addr_info(
+        assert cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
         # check that the balance for source address was correctly updated and that key deposit
         # was needed
         assert (
-            cluster.get_address_balance(user_payment.address)
+            cluster.g_query.get_address_balance(user_payment.address)
             == src_init_balance - tx_raw_output.fee - deposit
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
@@ -827,7 +833,7 @@ class TestNegative:
 
         # create stake address registration cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_stake_addr_registration_cert(
+            cluster.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_users[0].payment.vkey_file
             )
         err_msg = str(excinfo.value)
@@ -848,7 +854,7 @@ class TestNegative:
 
         # create stake address delegation cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_stake_addr_delegation_cert(
+            cluster.g_stake_address.gen_stake_addr_delegation_cert(
                 addr_name=f"{temp_template}_addr0",
                 stake_vkey_file=pool_users_cluster_and_pool[0].payment.vkey_file,
                 stake_pool_id=pool_id,
@@ -873,7 +879,7 @@ class TestNegative:
         user_payment = pool_users[0].payment
 
         # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
@@ -884,7 +890,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster.g_transaction.send_tx(
                 src_address=user_payment.address, tx_name=temp_template, tx_files=tx_files
             )
         err_msg = str(excinfo.value)
@@ -908,7 +914,7 @@ class TestNegative:
         user_payment = pool_users_cluster_and_pool[0].payment
 
         # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
@@ -917,17 +923,17 @@ class TestNegative:
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[user_payment.skey_file],
         )
-        cluster.send_tx(
+        cluster.g_transaction.send_tx(
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
         )
 
         # check that the stake address is registered
-        assert cluster.get_stake_addr_info(
+        assert cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             stake_pool_id=pool_id,
@@ -940,7 +946,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster.g_transaction.send_tx(
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_deleg",
                 tx_files=tx_files,
@@ -968,7 +974,7 @@ class TestNegative:
         user_payment = pool_users_cluster_and_pool[0].payment
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             stake_pool_id=pool_id,
@@ -982,21 +988,21 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
-                tx_raw_output = cluster.build_tx(
+                tx_raw_output = cluster.g_transaction.build_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_deleg_unknown",
                     tx_files=tx_files,
                     fee_buffer=2_000_000,
                     witness_override=len(tx_files.signing_key_files),
                 )
-                tx_signed = cluster.sign_tx(
+                tx_signed = cluster.g_transaction.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,
                     tx_name=f"{temp_template}_deleg_unknown",
                 )
-                cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
             else:
-                cluster.send_tx(
+                cluster.g_transaction.send_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_deleg_unknown",
                     tx_files=tx_files,
@@ -1024,7 +1030,7 @@ class TestNegative:
         user_payment = pool_users_cluster_and_pool[0].payment
 
         # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
@@ -1033,17 +1039,17 @@ class TestNegative:
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[user_payment.skey_file],
         )
-        cluster.send_tx(
+        cluster.g_transaction.send_tx(
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
         )
 
         # check that the stake address is registered
-        assert cluster.get_stake_addr_info(
+        assert cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
         # deregister stake address
-        stake_addr_dereg_cert_file = cluster.gen_stake_addr_deregistration_cert(
+        stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
         )
@@ -1054,19 +1060,19 @@ class TestNegative:
                 user_registered.stake.skey_file,
             ],
         )
-        cluster.send_tx(
+        cluster.g_transaction.send_tx(
             src_address=user_payment.address,
             tx_name=f"{temp_template}_dereg",
             tx_files=tx_files_deregister,
         )
 
         # check that the stake address is not registered
-        assert not cluster.get_stake_addr_info(
+        assert not cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is registered: {user_registered.stake.address}"
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             stake_pool_id=pool_id,
@@ -1080,21 +1086,21 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
-                tx_raw_output = cluster.build_tx(
+                tx_raw_output = cluster.g_transaction.build_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_deleg_dereg",
                     tx_files=tx_files,
                     fee_buffer=2_000_000,
                     witness_override=len(tx_files.signing_key_files),
                 )
-                tx_signed = cluster.sign_tx(
+                tx_signed = cluster.g_transaction.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,
                     tx_name=f"{temp_template}_deleg_dereg",
                 )
-                cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
             else:
-                cluster.send_tx(
+                cluster.g_transaction.send_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_deleg_dereg",
                     tx_files=tx_files,
@@ -1118,7 +1124,7 @@ class TestNegative:
         user_payment = pool_users[0].payment
 
         # files for deregistering stake address
-        stake_addr_dereg_cert = cluster.gen_stake_addr_deregistration_cert(
+        stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
         tx_files = clusterlib.TxFiles(
@@ -1128,21 +1134,21 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
-                tx_raw_output = cluster.build_tx(
+                tx_raw_output = cluster.g_transaction.build_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
                     fee_buffer=2_000_000,
                     witness_override=len(tx_files.signing_key_files),
                 )
-                tx_signed = cluster.sign_tx(
+                tx_signed = cluster.g_transaction.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,
                     tx_name=f"{temp_template}_dereg_fail",
                 )
-                cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
             else:
-                cluster.send_tx(
+                cluster.g_transaction.send_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
@@ -1167,7 +1173,7 @@ class TestNegative:
         user_payment = pool_users[0].payment
 
         # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
         )
 
@@ -1176,20 +1182,20 @@ class TestNegative:
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[user_payment.skey_file],
         )
-        cluster.send_tx(
+        cluster.g_transaction.send_tx(
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
         )
 
         # check that the stake address is registered
-        assert cluster.get_stake_addr_info(
+        assert cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
         # create pool cold keys and ceritifcate, but don't register the pool
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_pool")
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_pool")
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
@@ -1202,7 +1208,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster.g_transaction.send_tx(
                 src_address=user_payment.address,
                 tx_name=f"{temp_template}_deleg",
                 tx_files=tx_files,

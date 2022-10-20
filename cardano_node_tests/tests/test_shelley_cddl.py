@@ -77,7 +77,7 @@ class TestShelleyCDDL:
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
@@ -87,7 +87,7 @@ class TestShelleyCDDL:
         orig_cddl_value = cluster.use_cddl
         try:
             cluster.use_cddl = True
-            tx_raw_output = cluster.build_raw_tx(
+            tx_raw_output = cluster.g_transaction.build_raw_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
@@ -99,7 +99,7 @@ class TestShelleyCDDL:
 
         err = ""
         try:
-            cluster.sign_tx(
+            cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
@@ -112,9 +112,9 @@ class TestShelleyCDDL:
         elif err:
             pytest.fail(f"Unexpected error:\n{err}")
 
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)

@@ -161,7 +161,7 @@ class TestSetup:
 
         cluster.wait_for_new_epoch(padding_seconds=3)
 
-        protocol_params = cluster.get_protocol_params()
+        protocol_params = cluster.g_query.get_protocol_params()
         assert protocol_params["protocolVersion"]["major"] == 7
         assert protocol_params["protocolVersion"]["minor"] == 0
 
@@ -203,7 +203,7 @@ class TestSetup:
 
         cluster.wait_for_new_epoch(padding_seconds=3)
 
-        protocol_params = cluster.get_protocol_params()
+        protocol_params = cluster.g_query.get_protocol_params()
         assert protocol_params["costModels"]["PlutusScriptV2"]["bData-memory-arguments"] == 32
 
 
@@ -257,33 +257,33 @@ class TestUpgrade:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[0].skey_file])
 
         if use_build_cmd:
-            tx_raw_output = cluster.build_tx(
+            tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 tx_files=tx_files,
                 txouts=destinations,
                 fee_buffer=1_000_000,
             )
-            out_file_signed = cluster.sign_tx(
+            out_file_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
             )
         else:
-            fee = cluster.calculate_tx_fee(
+            fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
                 tx_files=tx_files,
             )
-            tx_raw_output = cluster.build_raw_tx(
+            tx_raw_output = cluster.g_transaction.build_raw_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
                 tx_files=tx_files,
                 fee=fee,
             )
-            out_file_signed = cluster.sign_tx(
+            out_file_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
@@ -375,11 +375,11 @@ class TestUpgrade:
         skey_file = list(tx_dir.glob("*.skey"))[0]
 
         if file_type == "tx_body":
-            tx_file = cluster.sign_tx(
+            tx_file = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_body_file,
                 tx_name=temp_template,
                 signing_key_files=[skey_file],
             )
 
-        cluster.submit_tx_bare(tx_file=tx_file)
+        cluster.g_transaction.submit_tx_bare(tx_file=tx_file)
         cluster.wait_for_new_block(2)

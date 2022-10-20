@@ -50,7 +50,7 @@ def register_stake_address(
 ) -> clusterlib.TxRawOutput:
     """Register stake address."""
     # files for registering stake address
-    addr_reg_cert = cluster_obj.gen_stake_addr_registration_cert(
+    addr_reg_cert = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
         addr_name=name_template,
         stake_vkey_file=pool_user.stake.vkey_file,
     )
@@ -59,13 +59,13 @@ def register_stake_address(
         signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
     )
 
-    tx_raw_output = cluster_obj.send_tx(
+    tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=pool_user.payment.address,
         tx_name=f"{name_template}_reg_stake_addr",
         tx_files=tx_files,
     )
 
-    if not cluster_obj.get_stake_addr_info(pool_user.stake.address):
+    if not cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
         raise AssertionError(f"The address {pool_user.stake.address} was not registered.")
 
     return tx_raw_output
@@ -76,7 +76,7 @@ def deregister_stake_address(
 ) -> Tuple[clusterlib.TxRawOutput, clusterlib.TxRawOutput]:
     """Deregister stake address."""
     # files for deregistering stake address
-    stake_addr_dereg_cert = cluster_obj.gen_stake_addr_deregistration_cert(
+    stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
         addr_name=f"{name_template}_addr0_dereg", stake_vkey_file=pool_user.stake.vkey_file
     )
     tx_files_deregister = clusterlib.TxFiles(
@@ -85,14 +85,14 @@ def deregister_stake_address(
     )
 
     # withdraw rewards to payment address
-    tx_raw_output_withdrawal = cluster_obj.withdraw_reward(
+    tx_raw_output_withdrawal = cluster_obj.g_stake_address.withdraw_reward(
         stake_addr_record=pool_user.stake,
         dst_addr_record=pool_user.payment,
         tx_name=name_template,
     )
 
     # deregister the stake address
-    tx_raw_output_dereg = cluster_obj.send_tx(
+    tx_raw_output_dereg = cluster_obj.g_transaction.send_tx(
         src_address=pool_user.payment.address,
         tx_name=f"{name_template}_dereg_stake_addr",
         tx_files=tx_files_deregister,
@@ -111,25 +111,25 @@ def fund_from_genesis(
     fund_dst = [
         clusterlib.TxOut(address=d, amount=amount)
         for d in dst_addrs
-        if cluster_obj.get_address_balance(d) < amount
+        if cluster_obj.g_query.get_address_balance(d) < amount
     ]
     if not fund_dst:
         return
 
     with locking.FileLockIfXdist(
-        f"{temptools.get_basetemp()}/{cluster_obj.genesis_utxo_addr}.lock"
+        f"{temptools.get_basetemp()}/{cluster_obj.g_genesis.genesis_utxo_addr}.lock"
     ):
         tx_name = tx_name or helpers.get_timestamped_rand_str()
         tx_name = f"{tx_name}_genesis_funding"
         fund_tx_files = clusterlib.TxFiles(
             signing_key_files=[
-                *cluster_obj.genesis_keys.delegate_skeys,
-                cluster_obj.genesis_keys.genesis_utxo_skey,
+                *cluster_obj.g_genesis.genesis_keys.delegate_skeys,
+                cluster_obj.g_genesis.genesis_keys.genesis_utxo_skey,
             ]
         )
 
-        cluster_obj.send_funds(
-            src_address=cluster_obj.genesis_utxo_addr,
+        cluster_obj.g_transaction.send_funds(
+            src_address=cluster_obj.g_genesis.genesis_utxo_addr,
             destinations=fund_dst,
             tx_name=tx_name,
             tx_files=fund_tx_files,
@@ -162,7 +162,7 @@ def return_funds_to_faucet(
                 fund_tx_files = clusterlib.TxFiles(signing_key_files=[addr.skey_file])
                 # try to return funds; don't mind if there's not enough funds for fees etc.
                 with contextlib.suppress(Exception):
-                    cluster_obj.send_funds(
+                    cluster_obj.g_transaction.send_funds(
                         src_address=addr.address,
                         destinations=fund_dst,
                         tx_name=tx_name,
@@ -193,7 +193,7 @@ def fund_from_faucet(
     fund_dst = [
         clusterlib.TxOut(address=d.address, amount=a)
         for d, a in zip(dst_addr_records, amount)
-        if force or cluster_obj.get_address_balance(d.address) < a
+        if force or cluster_obj.g_query.get_address_balance(d.address) < a
     ]
     if not fund_dst:
         return None
@@ -204,7 +204,7 @@ def fund_from_faucet(
         tx_name = f"{tx_name}_funding"
         fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])
 
-        tx_raw_output = cluster_obj.send_funds(
+        tx_raw_output = cluster_obj.g_transaction.send_funds(
             src_address=src_address,
             destinations=fund_dst,
             tx_name=tx_name,
@@ -223,7 +223,7 @@ def create_payment_addr_records(
 ) -> List[clusterlib.AddressRecord]:
     """Create new payment address(es)."""
     addrs = [
-        cluster_obj.gen_payment_addr_and_keys(
+        cluster_obj.g_address.gen_payment_addr_and_keys(
             name=name,
             stake_vkey_file=stake_vkey_file,
             destination_dir=destination_dir,
@@ -242,7 +242,9 @@ def create_stake_addr_records(
 ) -> List[clusterlib.AddressRecord]:
     """Create new stake address(es)."""
     addrs = [
-        cluster_obj.gen_stake_addr_and_keys(name=name, destination_dir=destination_dir)
+        cluster_obj.g_stake_address.gen_stake_addr_and_keys(
+            name=name, destination_dir=destination_dir
+        )
         for name in names
     ]
 
@@ -276,12 +278,12 @@ def create_pool_users(
 
 def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib) -> dict:
     """Wait to 3rd epoch (if necessary) and return stake distribution info."""
-    epoch = cluster_obj.get_epoch()
+    epoch = cluster_obj.g_query.get_epoch()
     if epoch < 3:
         new_epochs = 3 - epoch
         LOGGER.info(f"Waiting {new_epochs} epoch(s) to get stake distribution.")
         cluster_obj.wait_for_new_epoch(new_epochs)
-    return cluster_obj.get_stake_distribution()
+    return cluster_obj.g_query.get_stake_distribution()
 
 
 def load_registered_pool_data(
@@ -291,7 +293,7 @@ def load_registered_pool_data(
     if pool_id.startswith("pool"):
         pool_id = helpers.decode_bech32(pool_id)
 
-    pool_state: dict = cluster_obj.get_pool_params(pool_id).pool_params
+    pool_state: dict = cluster_obj.g_query.get_pool_params(pool_id).pool_params
     metadata = pool_state.get("metadata") or {}
 
     # TODO: extend to handle more relays records
@@ -410,7 +412,7 @@ def update_params(
     _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
     cli_args = list(itertools.chain.from_iterable(_cli_args))
 
-    cluster_obj.submit_update_proposal(
+    cluster_obj.g_governance.submit_update_proposal(
         cli_args=cli_args,
         src_address=src_addr_record.address,
         src_skey_file=src_addr_record.skey_file,
@@ -437,9 +439,9 @@ def update_params_build(
     temp_template = helpers.get_timestamped_rand_str()
 
     # assumption is update proposals are submitted near beginning of epoch
-    epoch = cluster_obj.get_epoch()
+    epoch = cluster_obj.g_query.get_epoch()
 
-    out_file = cluster_obj.gen_update_proposal(
+    out_file = cluster_obj.g_governance.gen_update_proposal(
         cli_args=cli_args,
         epoch=epoch,
         tx_name=temp_template,
@@ -447,22 +449,22 @@ def update_params_build(
     tx_files = clusterlib.TxFiles(
         proposal_files=[out_file],
         signing_key_files=[
-            *cluster_obj.genesis_keys.delegate_skeys,
+            *cluster_obj.g_genesis.genesis_keys.delegate_skeys,
             Path(src_addr_record.skey_file),
         ],
     )
-    tx_output = cluster_obj.build_tx(
+    tx_output = cluster_obj.g_transaction.build_tx(
         src_address=src_addr_record.address,
         tx_name=f"{temp_template}_submit_proposal",
         tx_files=tx_files,
         fee_buffer=2000_000,
     )
-    tx_signed = cluster_obj.sign_tx(
+    tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=f"{temp_template}_submit_proposal",
     )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
     LOGGER.info(f"Update Proposal submitted ({cli_args})")
 
@@ -512,7 +514,7 @@ def mint_or_burn_witness(
         ]
 
     if use_build_cmd:
-        tx_raw_output = cluster_obj.build_tx(
+        tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
@@ -523,7 +525,7 @@ def mint_or_burn_witness(
             witness_override=len(signing_key_files),
         )
     else:
-        fee = cluster_obj.calculate_tx_fee(
+        fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
@@ -531,7 +533,7 @@ def mint_or_burn_witness(
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=len(signing_key_files),
         )
-        tx_raw_output = cluster_obj.build_raw_tx(
+        tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
@@ -544,20 +546,20 @@ def mint_or_burn_witness(
     # sign incrementally (just to check that it works)
     if sign_incrementally and len(signing_key_files) >= 1:
         # create witness file for first required key
-        witness_file = cluster_obj.witness_tx(
+        witness_file = cluster_obj.g_transaction.witness_tx(
             tx_body_file=tx_raw_output.out_file,
             witness_name=f"{temp_template}_skey0",
             signing_key_files=signing_key_files[:1],
         )
         # sign Tx using witness file
-        tx_witnessed_file = cluster_obj.assemble_tx(
+        tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
             tx_body_file=tx_raw_output.out_file,
             witness_files=[witness_file],
             tx_name=f"{temp_template}_sign0",
         )
         # incrementally sign the already signed Tx with rest of required skeys
         for idx, skey in enumerate(signing_key_files[1:], start=1):
-            tx_witnessed_file = cluster_obj.sign_tx(
+            tx_witnessed_file = cluster_obj.g_transaction.sign_tx(
                 tx_file=tx_witnessed_file,
                 signing_key_files=[skey],
                 tx_name=f"{temp_template}_sign{idx}",
@@ -565,7 +567,7 @@ def mint_or_burn_witness(
     else:
         # create witness file for each required key
         witness_files = [
-            cluster_obj.witness_tx(
+            cluster_obj.g_transaction.witness_tx(
                 tx_body_file=tx_raw_output.out_file,
                 witness_name=f"{temp_template}_skey{idx}",
                 signing_key_files=[skey],
@@ -574,14 +576,14 @@ def mint_or_burn_witness(
         ]
 
         # sign Tx using witness files
-        tx_witnessed_file = cluster_obj.assemble_tx(
+        tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
             tx_body_file=tx_raw_output.out_file,
             witness_files=witness_files,
             tx_name=temp_template,
         )
 
     # submit signed TX
-    cluster_obj.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
     return tx_raw_output
 
@@ -626,7 +628,7 @@ def mint_or_burn_sign(
             clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=lovelace_amount),
             *mint_txouts,
         ]
-    fee = cluster_obj.calculate_tx_fee(
+    fee = cluster_obj.g_transaction.calculate_tx_fee(
         src_address=token_mint_addr.address,
         tx_name=temp_template,
         txouts=txouts,
@@ -635,7 +637,7 @@ def mint_or_burn_sign(
         # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
         witness_count_add=len(issuers_skey_files),
     )
-    tx_raw_output = cluster_obj.build_raw_tx(
+    tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
         src_address=token_mint_addr.address,
         tx_name=temp_template,
         txouts=txouts,
@@ -646,27 +648,27 @@ def mint_or_burn_sign(
 
     # sign incrementally (just to check that it works)
     if sign_incrementally and len(signing_key_files) >= 1:
-        out_file_signed = cluster_obj.sign_tx(
+        out_file_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=signing_key_files[:1],
             tx_name=f"{temp_template}_sign0",
         )
         # incrementally sign the already signed Tx with rest of required skeys
         for idx, skey in enumerate(signing_key_files[1:], start=1):
-            out_file_signed = cluster_obj.sign_tx(
+            out_file_signed = cluster_obj.g_transaction.sign_tx(
                 tx_file=out_file_signed,
                 signing_key_files=[skey],
                 tx_name=f"{temp_template}_sign{idx}",
             )
     else:
-        out_file_signed = cluster_obj.sign_tx(
+        out_file_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
 
     # submit signed transaction
-    cluster_obj.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+    cluster_obj.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
     return tx_raw_output
 
@@ -690,13 +692,13 @@ def withdraw_reward_w_build(
         destination_dir: A path to directory for storing artifacts (optional).
     """
     dst_address = dst_addr_record.address
-    src_init_balance = cluster_obj.get_address_balance(dst_address)
+    src_init_balance = cluster_obj.g_query.get_address_balance(dst_address)
 
     tx_files_withdrawal = clusterlib.TxFiles(
         signing_key_files=[dst_addr_record.skey_file, stake_addr_record.skey_file],
     )
 
-    tx_raw_withdrawal_output = cluster_obj.build_tx(
+    tx_raw_withdrawal_output = cluster_obj.g_transaction.build_tx(
         src_address=dst_address,
         tx_name=f"{tx_name}_reward_withdrawal",
         tx_files=tx_files_withdrawal,
@@ -706,27 +708,30 @@ def withdraw_reward_w_build(
         destination_dir=destination_dir,
     )
     # sign incrementally (just to check that it works)
-    tx_signed = cluster_obj.sign_tx(
+    tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_withdrawal_output.out_file,
         signing_key_files=[dst_addr_record.skey_file],
         tx_name=f"{tx_name}_reward_withdrawal_sign0",
     )
-    tx_signed_inc = cluster_obj.sign_tx(
+    tx_signed_inc = cluster_obj.g_transaction.sign_tx(
         tx_file=tx_signed,
         signing_key_files=[stake_addr_record.skey_file],
         tx_name=f"{tx_name}_reward_withdrawal_sign1",
     )
-    cluster_obj.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_withdrawal_output.txins)
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_withdrawal_output.txins)
 
     if not verify:
         return tx_raw_withdrawal_output
 
     # check that reward is 0
-    if cluster_obj.get_stake_addr_info(stake_addr_record.address).reward_account_balance != 0:
+    if (
+        cluster_obj.g_query.get_stake_addr_info(stake_addr_record.address).reward_account_balance
+        != 0
+    ):
         raise AssertionError("Not all rewards were transferred.")
 
     # check that rewards were transferred
-    src_reward_balance = cluster_obj.get_address_balance(dst_address)
+    src_reward_balance = cluster_obj.g_query.get_address_balance(dst_address)
     if (
         src_reward_balance
         != src_init_balance
@@ -748,19 +753,19 @@ def new_tokens(
 ) -> List[TokenRecord]:
     """Mint new token, sign using skeys."""
     # create simple script
-    keyhash = cluster_obj.get_payment_vkey_hash(issuer_addr.vkey_file)
+    keyhash = cluster_obj.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = Path(f"{temp_template}.script")
     with open(f"{temp_template}.script", "w", encoding="utf-8") as out_json:
         json.dump(script_content, out_json)
 
-    policyid = cluster_obj.get_policyid(script)
+    policyid = cluster_obj.g_transaction.get_policyid(script)
 
     tokens_to_mint = []
     for asset_name in asset_names:
         token = f"{policyid}.{asset_name}"
 
-        if cluster_obj.get_utxo(address=token_mint_addr.address, coins=[token]):
+        if cluster_obj.g_query.get_utxo(address=token_mint_addr.address, coins=[token]):
             raise AssertionError("The token already exists.")
 
         tokens_to_mint.append(
@@ -781,7 +786,9 @@ def new_tokens(
     )
 
     for token_rec in tokens_to_mint:
-        token_utxo = cluster_obj.get_utxo(address=token_mint_addr.address, coins=[token_rec.token])
+        token_utxo = cluster_obj.g_query.get_utxo(
+            address=token_mint_addr.address, coins=[token_rec.token]
+        )
         if not (token_utxo and token_utxo[0].amount == amount):
             raise AssertionError("The token was not minted.")
 
@@ -895,7 +902,7 @@ def wait_for_epoch_interval(
     if start_abs > stop_abs:
         raise AssertionError(f"The 'start' ({start_abs}) needs to be <= 'stop' ({stop_abs}).")
 
-    start_epoch = cluster_obj.get_epoch()
+    start_epoch = cluster_obj.g_query.get_epoch()
 
     # wait for new block so we start counting with an up-to-date slot number
     cluster_obj.wait_for_new_block()
@@ -913,7 +920,7 @@ def wait_for_epoch_interval(
                 raise AssertionError(
                     f"Cannot reach the given interval ({start_abs}s to {stop_abs}s) in this epoch."
                 )
-            if cluster_obj.get_epoch() >= start_epoch + 2:
+            if cluster_obj.g_query.get_epoch() >= start_epoch + 2:
                 raise AssertionError(
                     f"Was unable to reach the given interval ({start_abs}s to {stop_abs}s) "
                     "in past 3 epochs."
@@ -1002,7 +1009,7 @@ def datum_hash_from_txout(cluster_obj: clusterlib.ClusterLib, txout: clusterlib.
     )
 
     if script_data_file or script_data_cbor_file or script_data_value:
-        datum_hash = cluster_obj.get_hash_script_data(
+        datum_hash = cluster_obj.g_transaction.get_hash_script_data(
             script_data_file=script_data_file,
             script_data_cbor_file=script_data_cbor_file,
             script_data_value=script_data_value,
@@ -1062,7 +1069,7 @@ def check_txins_spent(
     if wait_blocks > 0:
         cluster_obj.wait_for_new_block(wait_blocks)
 
-    utxo_data = cluster_obj.get_utxo(utxo=txins)
+    utxo_data = cluster_obj.g_query.get_utxo(utxo=txins)
 
     if utxo_data:
         raise AssertionError(f"Some txins were not spent: {txins}")
@@ -1090,7 +1097,7 @@ def create_reference_utxo(
         )
     ]
 
-    tx_raw_output = cluster_obj.send_tx(
+    tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_reference_utxo",
         txouts=txouts,
@@ -1100,9 +1107,9 @@ def create_reference_utxo(
         join_txouts=False,
     )
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+    txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
 
-    reference_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
+    reference_utxos = cluster_obj.g_query.get_utxo(txin=f"{txid}#0")
     assert reference_utxos, "No reference script UTxO"
     reference_utxo = reference_utxos[0]
 
@@ -1164,10 +1171,10 @@ def gen_byron_addr(
     )
     assert skey_file.exists()
 
-    vkey_file = cluster_obj.gen_verification_key(
+    vkey_file = cluster_obj.g_key.gen_verification_key(
         key_name=f"{name_template}_byron", signing_key_file=skey_file
     )
-    address = cluster_obj.gen_payment_addr(
+    address = cluster_obj.g_address.gen_payment_addr(
         addr_name=f"{name_template}_byron", payment_vkey_file=vkey_file
     )
 

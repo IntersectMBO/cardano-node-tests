@@ -74,7 +74,7 @@ class TestProtocol:
         # The query dumps CBOR instead of JSON in some circumstances. We'll save the output
         # for later.
         try:
-            protocol_state_raw = cluster.query_cli(["protocol-state"])
+            protocol_state_raw = cluster.g_query.query_cli(["protocol-state"])
         except clusterlib.CLIError as err:
             # TODO: the query is broken on 1.35.0-rc4
             if "currentlyBroken" in str(err):
@@ -107,7 +107,7 @@ class TestProtocol:
         common.get_test_id(cluster)
         try:
             protocol_state: dict = json.loads(
-                cluster.query_cli(["protocol-state", "--out-file", "/dev/stdout"])
+                cluster.g_query.query_cli(["protocol-state", "--out-file", "/dev/stdout"])
             )
         except clusterlib.CLIError as err:
             # TODO: the query is broken on 1.35.0-rc4
@@ -125,7 +125,7 @@ class TestProtocol:
     def test_protocol_params(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-parameters`."""
         common.get_test_id(cluster)
-        protocol_params = cluster.get_protocol_params()
+        protocol_params = cluster.g_query.get_protocol_params()
 
         union_with: FrozenSet[str] = frozenset()
         if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
