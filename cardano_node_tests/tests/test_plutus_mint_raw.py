@@ -266,12 +266,18 @@ class TestMinting:
             == issuer_fund_balance - tx_raw_output_step2.fee
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo_a = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token_a])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output_step2)
+
+        token_utxo_a = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token_a
+        )
         assert (
             token_utxo_a and token_utxo_a[0].amount == token_amount
         ), "The 'token a' was not minted"
 
-        token_utxo_b = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token_b])
+        token_utxo_b = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token_b
+        )
         assert (
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), "The 'token b' was not minted"
@@ -402,7 +408,10 @@ class TestMinting:
             == issuer_fund_balance - tx_raw_output_step2.fee
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
         # check tx_view
@@ -516,7 +525,10 @@ class TestMinting:
             == issuer_fund_balance - tx_raw_output_step2.fee
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
         # check tx_view
@@ -734,12 +746,18 @@ class TestMinting:
             + lovelace_amount
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo1 = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token1])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output_step2)
+
+        token_utxo1 = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token1
+        )
         assert (
             token_utxo1 and token_utxo1[0].amount == token_amount
         ), "The 'anyone' token was not minted"
 
-        token_utxo2 = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token2])
+        token_utxo2 = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token2
+        )
         assert (
             token_utxo2 and token_utxo2[0].amount == token_amount
         ), "The 'timerange' token was not minted"
@@ -883,12 +901,18 @@ class TestMinting:
             == issuer_init_balance - tx_raw_output_step2.fee
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo_a = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token_a])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output_step2)
+
+        token_utxo_a = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token_a
+        )
         assert (
             token_utxo_a and token_utxo_a[0].amount == token_amount
         ), f"The '{asset_name_a_dec}' token was not minted"
 
-        token_utxo_b = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token_b])
+        token_utxo_b = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token_b
+        )
         assert (
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), f"The '{asset_name_b_dec}' token was not minted"
@@ -1014,12 +1038,18 @@ class TestMinting:
             == issuer_fund_balance - tx_raw_output_step2.fee
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo_a = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token_a])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output_step2)
+
+        token_utxo_a = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token_a
+        )
         assert (
             token_utxo_a and token_utxo_a[0].amount == token_amount
         ), f"The '{asset_name_a_dec}' was not minted"
 
-        token_utxo_b = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token_b])
+        token_utxo_b = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token_b
+        )
         assert (
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), f"The '{asset_name_b_dec}' was not minted"
@@ -1184,7 +1214,10 @@ class TestMinting:
             == issuer_fund_balance - tx_raw_output_step2.fee
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
