@@ -34,7 +34,7 @@ pytest -sv cardano_node_tests/tests/test_mir_certs.py -k 'test_pay_stake_addr_fr
 Once the test stops, we will get the stake address we are interested in by using:
 
 ```python
-cluster.get_stake_addr_info(registered_user.stake.address)
+cluster.g_query.get_stake_addr_info(registered_user.stake.address)
 ```
 
 Here is a step-by-step example:
@@ -63,7 +63,7 @@ Python 3.8.10 (default, Nov 26 2021, 20:14:08)
 Type 'copyright', 'credits' or 'license' for more information
 IPython 7.21.0 -- An enhanced Interactive Python. Type '?' for help.
 
-In [1]: cluster.get_stake_addr_info(registered_user.stake.address)
+In [1]: cluster.g_query.get_stake_addr_info(registered_user.stake.address)
 Out[1]: StakeAddrInfo(address='stake_test1uzkhjy8tnvx5n9exsh0j63aq83laylzl7c8gq2kmf4t9hyqg2thkv', delegation='', reward_account_balance=100000000)
 
 In [2]: exit
