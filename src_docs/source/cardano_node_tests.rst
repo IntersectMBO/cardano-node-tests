@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   cardano_node_tests.cluster_management
    cardano_node_tests.tests
    cardano_node_tests.utils
 
