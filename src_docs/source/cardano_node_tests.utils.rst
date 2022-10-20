@@ -12,14 +12,6 @@ cardano\_node\_tests.utils.artifacts module
    :undoc-members:
    :show-inheritance:
 
-cardano\_node\_tests.utils.cluster\_management module
------------------------------------------------------
-
-.. automodule:: cardano_node_tests.utils.cluster_management
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 cardano\_node\_tests.utils.cluster\_nodes module
 ------------------------------------------------
 
