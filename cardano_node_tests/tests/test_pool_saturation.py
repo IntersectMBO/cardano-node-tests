@@ -53,10 +53,10 @@ def _get_saturation_threshold(
         - account_state["reserves"]
         - account_state["treasury"]
     )
-    k_param = cluster_obj.get_protocol_params()["stakePoolTargetNum"]
+    k_param = cluster_obj.g_query.get_protocol_params()["stakePoolTargetNum"]
     saturation_amount = int(active_supply / k_param)
 
-    pool_stake = int(cluster_obj.get_stake_snapshot(pool_id)["poolStakeMark"])
+    pool_stake = int(cluster_obj.g_query.get_stake_snapshot(pool_id)["poolStakeMark"])
     saturation_threshold = saturation_amount - pool_stake
     return saturation_threshold
 
@@ -106,7 +106,7 @@ def _withdraw_rewards(
         signing_key_files=[src_addr.skey_file, *[p.stake.skey_file for p in pool_users]],
     )
 
-    tx_raw_withdrawal_output = cluster_obj.send_tx(
+    tx_raw_withdrawal_output = cluster_obj.g_transaction.send_tx(
         src_address=src_addr.address,
         tx_name=f"{tx_name}_reward_withdrawals",
         tx_files=tx_files_withdrawal,
@@ -157,7 +157,7 @@ class TestPoolSaturation:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        init_epoch = cluster.get_epoch()
+        init_epoch = cluster.g_query.get_epoch()
 
         # submit registration certificates and delegate to pools
         for idx, res in enumerate(cluster_management.Resources.ALL_POOLS, start=1):
@@ -194,10 +194,10 @@ class TestPoolSaturation:
 
         # record initial reward balance for each pool
         for pool_rec in pool_records.values():
-            user_payment_balance = cluster.get_address_balance(
+            user_payment_balance = cluster.g_query.get_address_balance(
                 pool_rec.delegation_out.pool_user.payment.address
             )
-            owner_payment_balance = cluster.get_address_balance(
+            owner_payment_balance = cluster.g_query.get_address_balance(
                 pool_rec.reward_addr.payment.address
             )
             pool_rec.user_rewards.append(
@@ -211,7 +211,7 @@ class TestPoolSaturation:
             pool_rec.owner_rewards.append(
                 RewardRecord(
                     epoch_no=init_epoch,
-                    reward_total=cluster.get_stake_addr_info(
+                    reward_total=cluster.g_query.get_stake_addr_info(
                         pool_rec.reward_addr.stake.address
                     ).reward_account_balance,
                     reward_per_epoch=0,
@@ -220,20 +220,20 @@ class TestPoolSaturation:
             )
 
         assert (
-            cluster.get_epoch() == init_epoch
+            cluster.g_query.get_epoch() == init_epoch
         ), "Delegation took longer than expected and would affect other checks"
 
         LOGGER.info("Checking rewards for 10 epochs.")
         for __ in range(10):
             # wait for new epoch
-            if cluster.get_epoch() == pool_records[2].owner_rewards[-1].epoch_no:
+            if cluster.g_query.get_epoch() == pool_records[2].owner_rewards[-1].epoch_no:
                 cluster.wait_for_new_epoch()
 
             # sleep till the end of epoch
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster, start=-50, stop=common.EPOCH_STOP_SEC_BUFFER, force_epoch=True
             )
-            this_epoch = cluster.get_epoch()
+            this_epoch = cluster.g_query.get_epoch()
 
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
             clusterlib_utils.save_ledger_state(
@@ -252,10 +252,10 @@ class TestPoolSaturation:
                 )
 
                 # current reward balance
-                user_reward = cluster.get_stake_addr_info(
+                user_reward = cluster.g_query.get_stake_addr_info(
                     pool_rec.delegation_out.pool_user.stake.address
                 ).reward_account_balance
-                owner_reward = cluster.get_stake_addr_info(
+                owner_reward = cluster.g_query.get_stake_addr_info(
                     pool_rec.reward_addr.stake.address
                 ).reward_account_balance
 
@@ -270,10 +270,10 @@ class TestPoolSaturation:
                     user_reward_epoch = user_reward - prev_user_reward
 
                 # store collected rewards info
-                user_payment_balance = cluster.get_address_balance(
+                user_payment_balance = cluster.g_query.get_address_balance(
                     pool_rec.delegation_out.pool_user.payment.address
                 )
-                owner_payment_balance = cluster.get_address_balance(
+                owner_payment_balance = cluster.g_query.get_address_balance(
                     pool_rec.reward_addr.payment.address
                 )
                 pool_rec.user_rewards.append(
@@ -319,7 +319,7 @@ class TestPoolSaturation:
                         pool_records[2].saturation_amounts[this_epoch] > 0
                     ), "Pool is already saturated"
                     current_stake = int(
-                        cluster.get_stake_snapshot(pool_records[2].id)["poolStakeMark"]
+                        cluster.g_query.get_stake_snapshot(pool_records[2].id)["poolStakeMark"]
                     )
                     overstaturate_amount = current_stake * 2
                     saturation_threshold = pool_records[2].saturation_amounts[this_epoch]
@@ -354,7 +354,7 @@ class TestPoolSaturation:
                     return_to_addrs = []
                     return_amounts = []
                     for idx, pool_rec in pool_records.items():
-                        deleg_payment_balance = cluster.get_address_balance(
+                        deleg_payment_balance = cluster.g_query.get_address_balance(
                             pool_rec.delegation_out.pool_user.payment.address
                         )
                         if deleg_payment_balance > initial_balance + 10_000_000:
@@ -370,13 +370,15 @@ class TestPoolSaturation:
                     )
 
                     for return_addr in return_to_addrs:
-                        deleg_payment_balance = cluster.get_address_balance(return_addr.address)
+                        deleg_payment_balance = cluster.g_query.get_address_balance(
+                            return_addr.address
+                        )
                         assert (
                             deleg_payment_balance <= initial_balance
                         ), "Unexpected funds in payment address '{return_addr}'"
 
                 assert (
-                    cluster.get_epoch() == this_epoch
+                    cluster.g_query.get_epoch() == this_epoch
                 ), "Failed to finish actions in single epoch, it would affect other checks"
 
         pool1_user_rewards_per_block = _get_reward_per_block(pool_records[1])

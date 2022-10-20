@@ -92,7 +92,7 @@ class TestUpdateProposals:
 
         this_epoch = cluster.wait_for_new_epoch()
 
-        protocol_params = cluster.get_protocol_params()
+        protocol_params = cluster.g_query.get_protocol_params()
         with open(f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8") as fp_out:
             json.dump(protocol_params, fp_out, indent=4)
 
@@ -166,7 +166,7 @@ class TestUpdateProposals:
 
             this_epoch = cluster.wait_for_new_epoch()
 
-            protocol_params = cluster.get_protocol_params()
+            protocol_params = cluster.g_query.get_protocol_params()
             with open(
                 f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8"
             ) as fp_out:
@@ -340,7 +340,7 @@ class TestUpdateProposals:
 
         this_epoch = cluster.wait_for_new_epoch()
 
-        protocol_params = cluster.get_protocol_params()
+        protocol_params = cluster.g_query.get_protocol_params()
         with open(f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8") as fp_out:
             json.dump(protocol_params, fp_out, indent=4)
 

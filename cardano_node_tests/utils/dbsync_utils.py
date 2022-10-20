@@ -649,7 +649,7 @@ def _tx_scripts_hashes(
     for r in records:
         if not r.script_file:
             continue
-        shash = cluster_obj.get_policyid(script_file=r.script_file)
+        shash = cluster_obj.g_transaction.get_policyid(script_file=r.script_file)
         shash_rec = hashes_db.get(shash)
         if shash_rec is None:
             hashes_db[shash] = [r]
@@ -758,7 +758,7 @@ def check_tx(
     if not configuration.HAS_DBSYNC:
         return None
 
-    txhash = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+    txhash = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
     response = get_tx_record_retry(txhash=txhash, retry_num=retry_num)
 
     tx_txouts = {_sanitize_txout(cluster_obj=cluster_obj, txout=r) for r in tx_raw_output.txouts}
@@ -860,7 +860,7 @@ def check_tx(
         and response.collateral_outputs
         and not (tx_raw_output.total_collateral_amount or tx_raw_output.return_collateral_txouts)
     ):
-        protocol_params = cluster_obj.get_protocol_params()
+        protocol_params = cluster_obj.g_query.get_protocol_params()
         tx_collaterals_amount = clusterlib.calculate_utxos_balance(utxos=list(tx_collaterals))
         tx_collateral_output_amount = int(
             tx_collaterals_amount
@@ -942,7 +942,7 @@ def check_tx(
 
     # check reference scripts
     tx_reference_script_hashes = {
-        cluster_obj.get_policyid(script_file=r.reference_script_file)
+        cluster_obj.g_transaction.get_policyid(script_file=r.reference_script_file)
         for r in tx_raw_output.txouts
         if r.reference_script_file
     }
@@ -969,7 +969,7 @@ def check_tx_phase_2_failure(
     if not configuration.HAS_DBSYNC:
         return None
 
-    txhash = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+    txhash = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
     response = get_tx_record_retry(txhash=txhash, retry_num=retry_num)
 
     # In case of a phase 2 failure, the collateral output becomes the output of the tx.
@@ -979,7 +979,7 @@ def check_tx_phase_2_failure(
     ), "Collateral outputs are present in dbsync when the tx have a phase 2 failure"
 
     db_txouts = {utxodata2txout(r) for r in response.txouts}
-    tx_out = {utxodata2txout(r) for r in cluster_obj.get_utxo(tx_raw_output=tx_raw_output)}
+    tx_out = {utxodata2txout(r) for r in cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)}
 
     assert db_txouts == tx_out, f"The TX outputs don't match ({db_txouts} != {tx_out})"
 
@@ -990,7 +990,7 @@ def check_tx_phase_2_failure(
     elif tx_raw_output.return_collateral_txouts and not tx_raw_output.total_collateral_amount:
         expected_fee = collateral_charged
     else:
-        protocol_params = cluster_obj.get_protocol_params()
+        protocol_params = cluster_obj.g_query.get_protocol_params()
         expected_fee = round(tx_raw_output.fee * protocol_params["collateralPercentage"] / 100)
 
     assert response.fee == expected_fee, f"TX fee doesn't match ({response.fee} != {expected_fee})"

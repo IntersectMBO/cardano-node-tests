@@ -125,7 +125,7 @@ def _check_block_production(
     pool_num: int,
     in_epoch: int,
 ) -> Tuple[int, bool]:
-    epoch = cluster_obj.get_epoch()
+    epoch = cluster_obj.g_query.get_epoch()
     if epoch < in_epoch:
         new_epochs = in_epoch - epoch
         LOGGER.info(f"{datetime.datetime.now()}: Waiting for {new_epochs} new epoch(s).")
@@ -138,7 +138,7 @@ def _check_block_production(
         stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
     )
 
-    epoch = cluster_obj.get_epoch()
+    epoch = cluster_obj.g_query.get_epoch()
 
     ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster_obj)
 
@@ -194,7 +194,9 @@ class TestKES:
         expire_pool_num = 1
         expire_pool_name = f"node-{expire_node_name}"
         expire_pool_rec = cluster_manager.cache.addrs_data[expire_pool_name]
-        expire_pool_id = cluster.get_stake_pool_id(expire_pool_rec["cold_key_pair"].vkey_file)
+        expire_pool_id = cluster.g_stake_pool.get_stake_pool_id(
+            expire_pool_rec["cold_key_pair"].vkey_file
+        )
         expire_pool_id_dec = helpers.decode_bech32(expire_pool_id)
 
         # refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
@@ -211,9 +213,9 @@ class TestKES:
 
             for n in refreshed_nodes:
                 refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
-                kes_period = cluster.get_kes_period()
+                kes_period = cluster.g_query.get_kes_period()
 
-                refreshed_opcert_file = cluster.gen_node_operational_cert(
+                refreshed_opcert_file = cluster.g_node.gen_node_operational_cert(
                     node_name=f"{n}_refreshed_opcert",
                     kes_vkey_file=refreshed_pool_rec["kes_key_pair"].vkey_file,
                     cold_skey_file=refreshed_pool_rec["cold_key_pair"].skey_file,
@@ -254,14 +256,16 @@ class TestKES:
                 f"{datetime.datetime.now()}: Waiting for {expire_timeout} sec for KES expiration."
             )
             time.sleep(expire_timeout)
-            LOGGER.info(f"{datetime.datetime.now()}: KES expired (?); tip: '{cluster.get_tip()}'.")
+            LOGGER.info(
+                f"{datetime.datetime.now()}: KES expired (?); tip: '{cluster.g_query.get_tip()}'."
+            )
 
             this_epoch, is_minting = _check_block_production(
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 pool_id_dec=expire_pool_id_dec,
                 pool_num=expire_pool_num,
-                in_epoch=cluster.get_epoch() + 1,
+                in_epoch=cluster.g_query.get_epoch() + 1,
             )
 
             # check that the pool is not minting any blocks
@@ -279,7 +283,7 @@ class TestKES:
             time.sleep(120)
 
         # check kes-period-info with an operational certificate with KES expired
-        kes_info_expired = cluster.get_kes_period_info(
+        kes_info_expired = cluster.g_query.get_kes_period_info(
             opcert_file=expire_pool_rec["pool_operational_cert"]
         )
         kes_period_info_errors_list.extend(
@@ -295,7 +299,7 @@ class TestKES:
         # check kes-period-info with valid operational certificates
         for idx, n in enumerate(refreshed_nodes):
             refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
-            kes_info_valid = cluster.get_kes_period_info(
+            kes_info_valid = cluster.g_query.get_kes_period_info(
                 opcert_file=refreshed_pool_rec["pool_operational_cert"]
             )
             kes_period_info_errors_list.extend(
@@ -351,7 +355,7 @@ class TestKES:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         node_cold = pool_rec["cold_key_pair"]
-        pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+        pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
         pool_id_dec = helpers.decode_bech32(pool_id)
 
         opcert_file: Path = pool_rec["pool_operational_cert"]
@@ -378,8 +382,8 @@ class TestKES:
         )
 
         # generate new operational certificate with `--kes-period` in the future
-        invalid_kes_period = cluster.get_kes_period() + 100
-        invalid_opcert_file = cluster.gen_node_operational_cert(
+        invalid_kes_period = cluster.g_query.get_kes_period() + 100
+        invalid_opcert_file = cluster.g_node.gen_node_operational_cert(
             node_name=f"{node_name}_invalid_opcert_file",
             kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
             cold_skey_file=pool_rec["cold_key_pair"].skey_file,
@@ -395,7 +399,7 @@ class TestKES:
                 cluster_nodes.restart_all_nodes()
 
                 LOGGER.info("Checking blocks production for 4 epochs.")
-                this_epoch = cluster.get_epoch()
+                this_epoch = cluster.g_query.get_epoch()
                 for invalid_opcert_epoch in range(4):
                     this_epoch, is_minting = _check_block_production(
                         cluster_obj=cluster,
@@ -413,7 +417,7 @@ class TestKES:
                     if invalid_opcert_epoch == 1:
                         # check kes-period-info with operational certificate with
                         # invalid `--kes-period`
-                        kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
+                        kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
                         kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
                                 cluster_obj=cluster,
@@ -428,8 +432,8 @@ class TestKES:
                     # test the `CounterOverIncrementedOCERT` error - the counter will now be +2 from
                     # last used opcert counter value
                     if invalid_opcert_epoch == 2 and VERSIONS.cluster_era > VERSIONS.ALONZO:
-                        overincrement_kes_period = cluster.get_kes_period()
-                        overincrement_opcert_file = cluster.gen_node_operational_cert(
+                        overincrement_kes_period = cluster.g_query.get_kes_period()
+                        overincrement_opcert_file = cluster.g_node.gen_node_operational_cert(
                             node_name=f"{node_name}_overincrement_opcert_file",
                             kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                             cold_skey_file=pool_rec["cold_key_pair"].skey_file,
@@ -441,7 +445,9 @@ class TestKES:
                         shutil.copy(overincrement_opcert_file, opcert_file)
                         cluster_nodes.restart_all_nodes()
 
-                        kes_period_info = cluster.get_kes_period_info(overincrement_opcert_file)
+                        kes_period_info = cluster.g_query.get_kes_period_info(
+                            overincrement_opcert_file
+                        )
                         kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
                                 cluster_obj=cluster,
@@ -456,7 +462,7 @@ class TestKES:
                     if invalid_opcert_epoch == 3:
                         # check kes-period-info with operational certificate with
                         # invalid kes-period
-                        kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
+                        kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
                         kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
                                 cluster_obj=cluster,
@@ -474,8 +480,8 @@ class TestKES:
                 shutil.copy(cold_counter_file_orig, cold_counter_file)
 
             # generate new operational certificate with valid `--kes-period`
-            valid_kes_period = cluster.get_kes_period()
-            valid_opcert_file = cluster.gen_node_operational_cert(
+            valid_kes_period = cluster.g_query.get_kes_period()
+            valid_opcert_file = cluster.g_node.gen_node_operational_cert(
                 node_name=f"{node_name}_valid_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
@@ -488,7 +494,7 @@ class TestKES:
             cluster_nodes.restart_all_nodes()
 
             LOGGER.info("Checking blocks production for up to 6 epochs.")
-            updated_epoch = cluster.get_epoch()
+            updated_epoch = cluster.g_query.get_epoch()
             this_epoch = updated_epoch
             for __ in range(6):
                 this_epoch, is_minting = _check_block_production(
@@ -526,7 +532,7 @@ class TestKES:
                 )
 
         # check kes-period-info with valid operational certificate
-        kes_period_info = cluster.get_kes_period_info(valid_opcert_file)
+        kes_period_info = cluster.g_query.get_kes_period_info(valid_opcert_file)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
@@ -539,7 +545,7 @@ class TestKES:
         )
 
         # check kes-period-info with operational certificate with invalid counter and kes-period
-        kes_period_info = cluster.get_kes_period_info(invalid_opcert_file)
+        kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
@@ -593,7 +599,7 @@ class TestKES:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         node_cold = pool_rec["cold_key_pair"]
-        pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+        pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
         pool_id_dec = helpers.decode_bech32(pool_id)
 
         opcert_file = pool_rec["pool_operational_cert"]
@@ -601,8 +607,8 @@ class TestKES:
 
         with cluster_manager.restart_on_failure():
             # generate new operational certificate with valid `--kes-period`
-            new_kes_period = cluster.get_kes_period()
-            new_opcert_file = cluster.gen_node_operational_cert(
+            new_kes_period = cluster.g_query.get_kes_period()
+            new_opcert_file = cluster.g_node.gen_node_operational_cert(
                 node_name=f"{node_name}_new_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
@@ -624,7 +630,7 @@ class TestKES:
             time.sleep(10)
 
             # check kes-period-info while the pool is not minting blocks
-            kes_period_info_new = cluster.get_kes_period_info(opcert_file)
+            kes_period_info_new = cluster.g_query.get_kes_period_info(opcert_file)
             kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
                     cluster_obj=cluster,
@@ -634,7 +640,7 @@ class TestKES:
                     expected_start_kes=new_kes_period,
                 )
             )
-            kes_period_info_old = cluster.get_kes_period_info(opcert_file_old)
+            kes_period_info_old = cluster.g_query.get_kes_period_info(opcert_file_old)
             kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
                     cluster_obj=cluster,
@@ -659,7 +665,7 @@ class TestKES:
             cluster_nodes.restart_all_nodes()
 
             LOGGER.info("Checking blocks production for up to 6 epochs.")
-            updated_epoch = cluster.get_epoch()
+            updated_epoch = cluster.g_query.get_epoch()
             this_epoch = updated_epoch
             for __ in range(6):
                 this_epoch, is_minting = _check_block_production(
@@ -698,7 +704,7 @@ class TestKES:
 
         # check that metrics reported by kes-period-info got updated once the pool started
         # minting blocks again
-        kes_period_info_updated = cluster.get_kes_period_info(opcert_file)
+        kes_period_info_updated = cluster.g_query.get_kes_period_info(opcert_file)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
@@ -720,7 +726,7 @@ class TestKES:
             )
 
         # check kes-period-info with operational certificate with a wrong counter
-        kes_period_info_invalid = cluster.get_kes_period_info(opcert_file_old)
+        kes_period_info_invalid = cluster.g_query.get_kes_period_info(opcert_file_old)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,

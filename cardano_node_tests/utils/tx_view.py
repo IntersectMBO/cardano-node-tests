@@ -207,7 +207,7 @@ def load_tx_view(
 ) -> Dict[str, Any]:
     # TODO: see https://github.com/input-output-hk/cardano-node/issues/4039
     try:
-        tx_view_raw = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
+        tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_raw_output.out_file)
     except clusterlib.CLIError as exc:
         if "TODO: Babbage" in str(exc):
             return {}
@@ -225,7 +225,7 @@ def check_tx_view(  # noqa: C901
 
     # TODO: see https://github.com/input-output-hk/cardano-node/issues/4039
     try:
-        tx_view_raw = cluster_obj.view_tx(tx_body_file=tx_raw_output.out_file)
+        tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_raw_output.out_file)
     except clusterlib.CLIError as exc:
         if "TODO: Babbage" in str(exc):
             return {}

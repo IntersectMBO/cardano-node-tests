@@ -76,7 +76,7 @@ def _fund_issuer(
     collateral_subtotal = sum(collateral_amounts)
     collateral_amounts.append(minting_cost.collateral - collateral_subtotal)
 
-    issuer_init_balance = cluster_obj.get_address_balance(issuer_addr.address)
+    issuer_init_balance = cluster_obj.g_query.get_address_balance(issuer_addr.address)
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -109,7 +109,7 @@ def _fund_issuer(
         *txouts_collateral,
     ]
 
-    tx_raw_output = cluster_obj.send_tx(
+    tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step1",
         txouts=txouts,
@@ -120,7 +120,7 @@ def _fund_issuer(
         join_txouts=False,
     )
 
-    issuer_balance = cluster_obj.get_address_balance(issuer_addr.address)
+    issuer_balance = cluster_obj.g_query.get_address_balance(issuer_addr.address)
     assert (
         issuer_balance
         == issuer_init_balance
@@ -131,12 +131,12 @@ def _fund_issuer(
         + reference_amount
     ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
-    mint_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
+    txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
+    mint_utxos = cluster_obj.g_query.get_utxo(txin=f"{txid}#0")
 
     reference_utxo = None
     if reference_script:
-        reference_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
+        reference_utxos = cluster_obj.g_query.get_utxo(txin=f"{txid}#1")
         assert reference_utxos, "No reference script UTxO"
         reference_utxo = reference_utxos[0]
 
@@ -160,7 +160,7 @@ def _build_reference_txin(
 
     Uses `cardano-cli transaction build-raw` command for building the transaction.
     """
-    dst_addr = dst_addr or cluster_obj.gen_payment_addr_and_keys(
+    dst_addr = dst_addr or cluster_obj.g_address.gen_payment_addr_and_keys(
         name=f"{temp_template}_readonly_input"
     )
 
@@ -173,16 +173,16 @@ def _build_reference_txin(
     ]
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-    tx_raw_output = cluster_obj.send_tx(
+    tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step1",
         txouts=txouts,
         tx_files=tx_files,
     )
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+    txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
 
-    reference_txin = cluster_obj.get_utxo(txin=f"{txid}#0")
+    reference_txin = cluster_obj.g_query.get_utxo(txin=f"{txid}#0")
     assert reference_txin, "UTxO not created"
 
     return reference_txin
@@ -227,7 +227,7 @@ class TestMinting:
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=execution_cost,
-            protocol_params=cluster.get_protocol_params(),
+            protocol_params=cluster.g_query.get_protocol_params(),
         )
 
         # Step 1: fund the token issuer
@@ -245,11 +245,11 @@ class TestMinting:
         )
         assert reference_utxo or not use_reference_script, "No reference script UTxO"
 
-        issuer_fund_balance = cluster.get_address_balance(issuer_addr.address)
+        issuer_fund_balance = cluster.g_query.get_address_balance(issuer_addr.address)
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V2)
+        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_PLUTUS_V2)
         asset_name_a = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token_a = f"{policyid}.{asset_name_a}"
         asset_name_b = f"qacoinb{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
@@ -281,7 +281,7 @@ class TestMinting:
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
             *mint_txouts,
         ]
-        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+        tx_raw_output_step2 = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txins=mint_utxos,
             txouts=txouts_step2,
@@ -289,26 +289,26 @@ class TestMinting:
             tx_files=tx_files_step2,
             fee=minting_cost.fee + fee_txsize,
             # ttl is optional in this test
-            invalid_hereafter=cluster.get_slot_no() + 200,
+            invalid_hereafter=cluster.g_query.get_slot_no() + 200,
         )
-        tx_signed_step2 = cluster.sign_tx(
+        tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
 
         assert (
-            cluster.get_address_balance(issuer_addr.address)
+            cluster.g_query.get_address_balance(issuer_addr.address)
             == issuer_fund_balance - tx_raw_output_step2.fee
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        token_utxo_a = cluster.get_utxo(address=issuer_addr.address, coins=[token_a])
+        token_utxo_a = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token_a])
         assert (
             token_utxo_a and token_utxo_a[0].amount == token_amount
         ), "The 'token a' was not minted"
 
-        token_utxo_b = cluster.get_utxo(address=issuer_addr.address, coins=[token_b])
+        token_utxo_b = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token_b])
         assert (
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), "The 'token b' was not minted"
@@ -345,7 +345,7 @@ class TestMinting:
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_V2_CHECK_DATUM_HASH_COST,
-            protocol_params=cluster.get_protocol_params(),
+            protocol_params=cluster.g_query.get_protocol_params(),
         )
 
         # Step 1: fund the token issuer and create the reference script
@@ -379,7 +379,9 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_CHECK_DATUM_HASH_PLUTUS_V2)
+        policyid = cluster.g_transaction.get_policyid(
+            plutus_common.MINTING_CHECK_DATUM_HASH_PLUTUS_V2
+        )
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
 
@@ -387,7 +389,9 @@ class TestMinting:
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
         ]
 
-        datum_hash = cluster.get_hash_script_data(script_data_file=plutus_common.DATUM_42)
+        datum_hash = cluster.g_transaction.get_hash_script_data(
+            script_data_file=plutus_common.DATUM_42
+        )
 
         # the redeemer file will be composed by the datum hash
         redeemer_file = f"{temp_template}.redeemer"
@@ -422,7 +426,7 @@ class TestMinting:
         # succeed if all datums hash match
         if different_datum:
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.send_tx(
+                cluster.g_transaction.send_tx(
                     src_address=payment_addr.address,
                     tx_name=f"{temp_template}_step2",
                     tx_files=tx_files_step2,
@@ -445,7 +449,7 @@ class TestMinting:
 
             return
 
-        cluster.send_tx(
+        cluster.g_transaction.send_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files_step2,
@@ -457,11 +461,11 @@ class TestMinting:
         )
 
         # check that the token was minted
-        token_utxo = cluster.get_utxo(address=issuer_addr.address, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token])
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
         # check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.get_utxo(
+        assert not reference_utxo or cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), "Reference UTxO was spent"
 
@@ -494,7 +498,7 @@ class TestNegativeCollateralOutput:
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_V2_COST,
-            protocol_params=cluster.get_protocol_params(),
+            protocol_params=cluster.g_query.get_protocol_params(),
         )
 
         # Step 1: fund the token issuer
@@ -517,7 +521,7 @@ class TestNegativeCollateralOutput:
             address=issuer_addr.address,
         )
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V2)
+        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_PLUTUS_V2)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -553,7 +557,7 @@ class TestNegativeCollateralOutput:
             )
         ]
 
-        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+        tx_raw_output_step2 = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txins=mint_utxos,
             return_collateral_txouts=return_collateral_txouts,
@@ -563,7 +567,7 @@ class TestNegativeCollateralOutput:
             tx_files=tx_files_step2,
             fee=minting_cost.fee + FEE_MINT_TXSIZE,
         )
-        tx_signed_step2 = cluster.sign_tx(
+        tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
@@ -571,7 +575,7 @@ class TestNegativeCollateralOutput:
 
         # it should NOT be possible to mint with a collateral with insufficient funds
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         err_str = str(excinfo.value)
         assert "InsufficientCollateral" in err_str, err_str
 
@@ -602,7 +606,7 @@ class TestNegativeCollateralOutput:
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_V2_COST,
-            protocol_params=cluster.get_protocol_params(),
+            protocol_params=cluster.g_query.get_protocol_params(),
         )
 
         # Step 1: fund the token issuer
@@ -625,7 +629,7 @@ class TestNegativeCollateralOutput:
             address=issuer_addr.address,
         )
 
-        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS_V2)
+        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_PLUTUS_V2)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -657,7 +661,7 @@ class TestNegativeCollateralOutput:
             clusterlib.TxOut(payment_addr.address, amount=minting_cost.collateral)
         ]
 
-        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+        tx_raw_output_step2 = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txins=mint_utxos,
             return_collateral_txouts=return_collateral_txouts if with_return_collateral else (),
@@ -667,7 +671,7 @@ class TestNegativeCollateralOutput:
             tx_files=tx_files_step2,
             fee=minting_cost.fee + FEE_MINT_TXSIZE,
         )
-        tx_signed_step2 = cluster.sign_tx(
+        tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
@@ -675,7 +679,7 @@ class TestNegativeCollateralOutput:
 
         # it should NOT be possible to mint with an unbalanced total collateral
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         err_str = str(excinfo.value)
         assert "IncorrectTotalCollateralField" in err_str, err_str
 
@@ -713,7 +717,7 @@ class TestSECP256k1:
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_V2_REF_COST,
-            protocol_params=cluster.get_protocol_params(),
+            protocol_params=cluster.g_query.get_protocol_params(),
         )
 
         script_file = (
@@ -742,7 +746,7 @@ class TestSECP256k1:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.get_policyid(script_file)
+        policyid = cluster.g_transaction.get_policyid(script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -771,7 +775,7 @@ class TestSECP256k1:
             *mint_txouts,
         ]
 
-        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+        tx_raw_output_step2 = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txins=mint_utxos,
             txouts=txouts_step2,
@@ -780,16 +784,16 @@ class TestSECP256k1:
             fee=minting_cost.fee + fee_txsize,
         )
 
-        tx_signed_step2 = cluster.sign_tx(
+        tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
 
-        protocol_version = cluster.get_protocol_params()["protocolVersion"]["major"]
+        protocol_version = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
 
         try:
-            cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         except clusterlib.CLIError as err:
             err_msg = str(err)
 

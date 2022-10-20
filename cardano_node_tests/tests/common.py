@@ -140,7 +140,7 @@ def detect_fork(
     instance_num = cluster_nodes.get_instance_num()
 
     # create a UTxO
-    payment_rec = cluster_obj.gen_payment_addr_and_keys(
+    payment_rec = cluster_obj.g_address.gen_payment_addr_and_keys(
         name=temp_template,
     )
     tx_raw_output = clusterlib_utils.fund_from_faucet(
@@ -150,7 +150,7 @@ def detect_fork(
         amount=2_000_000,
     )
     assert tx_raw_output
-    utxos = cluster_obj.get_utxo(tx_raw_output=tx_raw_output)
+    utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)
 
     # check if all nodes know about the UTxO
     for node in known_nodes:
@@ -158,14 +158,14 @@ def detect_fork(
         cluster_nodes.set_cluster_env(instance_num=instance_num, socket_file_name=f"{node}.socket")
 
         for __ in range(5):
-            if float(cluster_obj.get_tip()["syncProgress"]) == 100:
+            if float(cluster_obj.g_query.get_tip()["syncProgress"]) == 100:
                 break
             time.sleep(1)
         else:
             unsynced_nodes.add(node)
             continue
 
-        if not cluster_obj.get_utxo(utxo=utxos):
+        if not cluster_obj.g_query.get_utxo(utxo=utxos):
             forked_nodes.add(node)
 
     # restore 'CARDANO_NODE_SOCKET_PATH' to original value

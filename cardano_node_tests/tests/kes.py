@@ -103,7 +103,7 @@ def check_kes_period_info_result(  # noqa: C901
 
     # check kes metrics with expected values
     expected_metrics: Dict[str, Any] = {
-        "qKesCurrentKesPeriod": cluster_obj.get_kes_period(),
+        "qKesCurrentKesPeriod": cluster_obj.g_query.get_kes_period(),
     }
     if expected_start_kes is not None:
         expected_metrics["qKesStartKesInterval"] = expected_start_kes

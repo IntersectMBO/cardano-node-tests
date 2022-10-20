@@ -106,10 +106,10 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
 
     epoch = cluster_obj.wait_for_new_epoch()
     time.sleep(cluster_obj.epoch_length_sec - end_sec)
-    assert epoch == cluster_obj.get_epoch()
+    assert epoch == cluster_obj.g_query.get_epoch()
 
     time.sleep(end_sec_padded)
-    assert epoch + 1 == cluster_obj.get_epoch()
+    assert epoch + 1 == cluster_obj.g_query.get_epoch()
 
 
 @pytest.mark.order(5)

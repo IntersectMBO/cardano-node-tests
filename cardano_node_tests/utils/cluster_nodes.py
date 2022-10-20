@@ -145,7 +145,7 @@ class LocalCluster(ClusterType):
         new_addrs_data: Dict[str, Dict[str, Any]] = {}
         for addr_name in self.test_addr_records:
             addr_name_instance = f"{addr_name}_ci{instance_num}"
-            payment = cluster_obj.gen_payment_addr_and_keys(
+            payment = cluster_obj.g_address.gen_payment_addr_and_keys(
                 name=addr_name_instance,
                 destination_dir=destination_dir,
             )
@@ -488,7 +488,7 @@ def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
                 skey_file=pool_data_dir / "owner-stake.skey",
             ),
             "reward": clusterlib.AddressRecord(
-                address=cluster_obj.gen_stake_addr(
+                address=cluster_obj.g_stake_address.gen_stake_addr(
                     addr_name="reward",
                     stake_vkey_file=pool_data_dir / "reward.vkey",
                     destination_dir=pool_data_dir,

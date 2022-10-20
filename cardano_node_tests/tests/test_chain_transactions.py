@@ -36,24 +36,24 @@ def _gen_signed_tx(
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
     # send Tx
-    tx_raw_output = cluster_obj.build_raw_tx_bare(
+    tx_raw_output = cluster_obj.g_transaction.build_raw_tx_bare(
         out_file=out_file,
         txouts=[txout],
         tx_files=tx_files,
         fee=fee,
         txins=[txin],
-        invalid_hereafter=cluster_obj.calculate_tx_ttl()
+        invalid_hereafter=cluster_obj.g_transaction.calculate_tx_ttl()
         if VERSIONS.transaction_era < VERSIONS.ALLEGRA
         else None,
     )
-    tx_file = cluster_obj.sign_tx(
+    tx_file = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         tx_name=tx_name,
         signing_key_files=tx_files.signing_key_files,
     )
 
     # transform output of this Tx (`TxOut`) to input for next Tx (`UTXOData`)
-    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+    txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
     out_utxo = clusterlib.UTXOData(
         utxo_hash=txid,
         utxo_ix=0,
@@ -114,7 +114,7 @@ class TestTxChaining:
         iterations = 1_000
         min_utxo_value = 1_000_000
 
-        init_utxo = cluster.get_utxo(address=payment_addr.address)[0]
+        init_utxo = cluster.g_query.get_utxo(address=payment_addr.address)[0]
 
         assert (
             init_utxo.amount - (fee * iterations) >= min_utxo_value
@@ -138,7 +138,7 @@ class TestTxChaining:
 
         # submit Txs one by one without waiting for them to appear on ledger
         for tx_file in generated_txs:
-            cluster.submit_tx_bare(tx_file=tx_file)
+            cluster.g_transaction.submit_tx_bare(tx_file=tx_file)
 
         if configuration.HAS_DBSYNC:
             # wait a bit for all Txs to appear in db-sync

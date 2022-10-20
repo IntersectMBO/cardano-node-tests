@@ -91,7 +91,7 @@ class TestDBSync:
         # pylint: disable=too-many-branches
         common.get_test_id(cluster)
 
-        tip = cluster.get_tip()
+        tip = cluster.g_query.get_tip()
         block_no = int(tip["block"])
         epoch = int(tip["epoch"])
 

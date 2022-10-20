@@ -72,7 +72,7 @@ class TestFee:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_funds(
+            cluster.g_transaction.send_funds(
                 src_address=src_address,
                 destinations=destinations,
                 tx_name=temp_template,
@@ -104,7 +104,7 @@ class TestFee:
         fee = 0.0
         if fee_change:
             fee = (
-                cluster.calculate_tx_fee(
+                cluster.g_transaction.calculate_tx_fee(
                     src_address=src_address,
                     tx_name=temp_template,
                     txouts=destinations,
@@ -114,7 +114,7 @@ class TestFee:
             )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_funds(
+            cluster.g_transaction.send_funds(
                 src_address=src_address,
                 destinations=destinations,
                 tx_name=temp_template,
@@ -141,7 +141,7 @@ class TestFee:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         fee = (
-            cluster.calculate_tx_fee(
+            cluster.g_transaction.calculate_tx_fee(
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=destinations,
@@ -150,7 +150,7 @@ class TestFee:
             + fee_add
         )
 
-        tx_raw_output = cluster.send_funds(
+        tx_raw_output = cluster.g_transaction.send_funds(
             src_address=src_address,
             destinations=destinations,
             tx_name=temp_template,
@@ -160,7 +160,7 @@ class TestFee:
 
         assert tx_raw_output.fee == fee, "The actual fee doesn't match the specified fee"
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
@@ -210,13 +210,13 @@ class TestExpectedFees:
     ) -> Tuple[str, clusterlib.TxFiles]:
         """Create certificates for registering a stake pool, delegating stake address."""
         # create node VRF key pair
-        node_vrf = cluster_obj.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_vrf = cluster_obj.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
         # create node cold key pair and counter
-        node_cold = cluster_obj.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_cold = cluster_obj.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         # create stake address registration certs
         stake_addr_reg_cert_files = [
-            cluster_obj.gen_stake_addr_registration_cert(
+            cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
             )
             for i, p in enumerate(pool_owners)
@@ -224,7 +224,7 @@ class TestExpectedFees:
 
         # create stake address delegation cert
         stake_addr_deleg_cert_files = [
-            cluster_obj.gen_stake_addr_delegation_cert(
+            cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
                 addr_name=f"{temp_template}_addr{i}",
                 stake_vkey_file=p.stake.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
@@ -233,7 +233,7 @@ class TestExpectedFees:
         ]
 
         # create stake pool registration cert
-        pool_reg_cert_file = cluster_obj.gen_pool_registration_cert(
+        pool_reg_cert_file = cluster_obj.g_stake_pool.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
@@ -279,14 +279,14 @@ class TestExpectedFees:
         ]
 
         # create TX data
-        _txins = [cluster_obj.get_utxo(address=r.address) for r in from_addr_recs]
+        _txins = [cluster_obj.g_query.get_utxo(address=r.address) for r in from_addr_recs]
         # flatten the list of lists that is _txins
         txins = list(itertools.chain.from_iterable(_txins))
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
         tx_files = clusterlib.TxFiles(signing_key_files=[r.skey_file for r in from_addr_recs])
 
         # calculate TX fee
-        tx_fee = cluster_obj.calculate_tx_fee(
+        tx_fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=tx_name, txins=txins, txouts=txouts, tx_files=tx_files
         )
         assert helpers.is_in_interval(
@@ -323,7 +323,7 @@ class TestExpectedFees:
             pool_cost=15,
             pool_margin=0.2,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         # create pool owners
@@ -338,7 +338,7 @@ class TestExpectedFees:
         )
 
         # calculate TX fee
-        tx_fee = cluster.calculate_tx_fee(
+        tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
         assert helpers.is_in_interval(
@@ -376,20 +376,20 @@ class TestExpectedFees:
             pool_cost=123,
             pool_margin=0.512,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         # create pool owners
         selected_owners = pool_users[:no_of_addr]
 
         # create node cold key pair and counter
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         # create deregistration certificate
-        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+        pool_dereg_cert_file = cluster.g_stake_pool.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.g_query.get_epoch() + 1,
         )
 
         tx_files = clusterlib.TxFiles(
@@ -402,7 +402,7 @@ class TestExpectedFees:
         )
 
         # calculate TX fee
-        tx_fee = cluster.calculate_tx_fee(
+        tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
         assert helpers.is_in_interval(
@@ -424,7 +424,7 @@ class TestExpectedFees:
         selected_users = pool_users[:no_of_addr]
 
         stake_addr_reg_certs = [
-            cluster.gen_stake_addr_registration_cert(
+            cluster.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
             )
             for i, p in enumerate(selected_users)
@@ -440,7 +440,7 @@ class TestExpectedFees:
         )
 
         # calculate TX fee
-        tx_fee = cluster.calculate_tx_fee(
+        tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
         assert helpers.is_in_interval(
@@ -462,7 +462,7 @@ class TestExpectedFees:
         selected_users = pool_users[:no_of_addr]
 
         stake_addr_dereg_certs = [
-            cluster.gen_stake_addr_deregistration_cert(
+            cluster.g_stake_address.gen_stake_addr_deregistration_cert(
                 addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
             )
             for i, p in enumerate(selected_users)
@@ -478,7 +478,7 @@ class TestExpectedFees:
         )
 
         # calculate TX fee
-        tx_fee = cluster.calculate_tx_fee(
+        tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
         assert helpers.is_in_interval(

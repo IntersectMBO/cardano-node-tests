@@ -45,7 +45,7 @@ class TestLedgerState:
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
-        stake_pool_ids = cluster.get_stake_pools()
+        stake_pool_ids = cluster.g_query.get_stake_pools()
         if not stake_pool_ids:
             pytest.skip("No stake pools are available.")
         if len(stake_pool_ids) > 200:
@@ -161,7 +161,7 @@ class TestLedgerState:
             pstake_sum_go = functools.reduce(lambda x, y: x + y, pstake_amounts_go, 0)
 
             # get stake info from `stake-snapshot` command
-            stake_snapshot = cluster.get_stake_snapshot(stake_pool_id=pool_id)
+            stake_snapshot = cluster.g_query.get_stake_snapshot(stake_pool_id=pool_id)
             pstake_mark_cmd = stake_snapshot["poolStakeMark"]
             pstake_set_cmd = stake_snapshot["poolStakeSet"]
             pstake_go_cmd = stake_snapshot["poolStakeGo"]

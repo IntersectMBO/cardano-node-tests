@@ -120,7 +120,7 @@ class TestCLI:
             clusterlib.TxOut(address=dst_address, amount=amount2),
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=txouts,
@@ -142,7 +142,7 @@ class TestCLI:
             .split()
         )
 
-        txid = cluster.get_txid(tx_body_file=tx_raw_output.out_file)
+        txid = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
         expected_out = [
             "TxHash",
             "TxIx",
@@ -172,8 +172,8 @@ class TestCLI:
         """Check that the output of `transaction view` is as expected."""
         common.get_test_id(cluster)
 
-        tx_body = cluster.view_tx(tx_body_file=self.TX_BODY_FILE)
-        tx = cluster.view_tx(tx_file=self.TX_FILE)
+        tx_body = cluster.g_transaction.view_tx(tx_body_file=self.TX_BODY_FILE)
+        tx = cluster.g_transaction.view_tx(tx_file=self.TX_FILE)
 
         if "return collateral:" in tx_body:
             with open(self.TX_BODY_OUT, encoding="utf-8") as infile:
@@ -201,12 +201,12 @@ class TestAddressInfo:
         if addr_gen == "static":
             address = "addr_test1vzp4kj0rmnl5q5046e2yy697fndej56tm35jekemj6ew2gczp74wk"
         else:
-            payment_rec = cluster.gen_payment_addr_and_keys(
+            payment_rec = cluster.g_address.gen_payment_addr_and_keys(
                 name=temp_template,
             )
             address = payment_rec.address
 
-        addr_info = cluster.get_address_info(address=address)
+        addr_info = cluster.g_address.get_address_info(address=address)
 
         assert addr_info.address == address
         assert addr_info.era == "shelley"
@@ -224,12 +224,12 @@ class TestAddressInfo:
         if addr_gen == "static":
             address = "stake_test1uz5mstpskyhpcvaw2enlfk8fa5k335cpd0lfz6chd5c2xpck3nld4"
         else:
-            stake_rec = cluster.gen_stake_addr_and_keys(
+            stake_rec = cluster.g_stake_address.gen_stake_addr_and_keys(
                 name=temp_template,
             )
             address = stake_rec.address
 
-        addr_info = cluster.get_address_info(address=address)
+        addr_info = cluster.g_address.get_address_info(address=address)
 
         assert addr_info.address == address
         assert addr_info.era == "shelley"
@@ -244,12 +244,12 @@ class TestAddressInfo:
         temp_template = common.get_test_id(cluster)
 
         # create payment address
-        payment_rec = cluster.gen_payment_addr_and_keys(
+        payment_rec = cluster.g_address.gen_payment_addr_and_keys(
             name=temp_template,
         )
 
         # create multisig script
-        multisig_script = cluster.build_multisig_script(
+        multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=[payment_rec.vkey_file],
@@ -258,11 +258,11 @@ class TestAddressInfo:
         )
 
         # create script address
-        address = cluster.gen_payment_addr(
+        address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        addr_info = cluster.get_address_info(address=address)
+        addr_info = cluster.g_address.get_address_info(address=address)
 
         assert addr_info.address == address
         assert addr_info.era == "shelley"
@@ -302,7 +302,7 @@ class TestKey:
         temp_template = common.get_test_id(cluster)
 
         # get an extended verification key
-        payment_keys = cluster.gen_payment_key_pair(
+        payment_keys = cluster.g_address.gen_payment_key_pair(
             key_name=f"{temp_template}_extended", extended=True
         )
 
@@ -311,7 +311,7 @@ class TestKey:
             extended_vkey = json.loads(in_file.read().strip()).get("cborHex", "")[4:]
 
         # get a non-extended verification key using the extended key
-        non_extended_key_file = cluster.gen_non_extended_verification_key(
+        non_extended_key_file = cluster.g_key.gen_non_extended_verification_key(
             key_name=temp_template, extended_verification_key_file=payment_keys.vkey_file
         )
 
@@ -330,13 +330,13 @@ class TestKey:
         temp_template = common.get_test_id(cluster)
 
         # get an extended key
-        payment_keys = cluster.gen_payment_key_pair(
+        payment_keys = cluster.g_address.gen_payment_key_pair(
             key_name=f"{temp_template}_extended", extended=True
         )
 
         # try to get a non-extended verification key using the extended signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_non_extended_verification_key(
+            cluster.g_key.gen_non_extended_verification_key(
                 key_name=temp_template, extended_verification_key_file=payment_keys.skey_file
             )
 
@@ -354,7 +354,7 @@ class TestAdvancedQueries:
 
     @pytest.fixture
     def pool_ids(self, cluster: clusterlib.ClusterLib) -> List[str]:
-        stake_pool_ids = cluster.get_stake_pools()
+        stake_pool_ids = cluster.g_query.get_stake_pools()
         if not stake_pool_ids:
             pytest.skip("No stake pools are available.")
         return stake_pool_ids
@@ -376,7 +376,7 @@ class TestAdvancedQueries:
     def test_stake_snapshot(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
         """Test `query stake-snapshot`."""
         try:
-            stake_snapshot = cluster.get_stake_snapshot(stake_pool_id=pool_ids[0])
+            stake_snapshot = cluster.g_query.get_stake_snapshot(stake_pool_id=pool_ids[0])
         except json.decoder.JSONDecodeError as err:
             pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
 
@@ -394,7 +394,7 @@ class TestAdvancedQueries:
     def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
         """Test `query pool-params`."""
         try:
-            pool_params = cluster.get_pool_params(stake_pool_id=pool_ids[0])
+            pool_params = cluster.g_query.get_pool_params(stake_pool_id=pool_ids[0])
         except json.decoder.JSONDecodeError as err:
             pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
 

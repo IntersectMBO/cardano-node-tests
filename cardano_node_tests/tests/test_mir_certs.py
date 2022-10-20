@@ -121,10 +121,15 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 10_000_000_000_000
 
-        mir_cert = cluster.gen_mir_cert_to_treasury(transfer=amount, tx_name=temp_template)
+        mir_cert = cluster.g_governance.gen_mir_cert_to_treasury(
+            transfer=amount, tx_name=temp_template
+        )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
-            signing_key_files=[pool_user.payment.skey_file, *cluster.genesis_keys.delegate_skeys],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
+            ],
         )
 
         # send the transaction at the beginning of an epoch
@@ -134,7 +139,7 @@ class TestMIRCerts:
         # fail is expected when Era < Alonzo
         if VERSIONS.cluster_era < VERSIONS.ALONZO:
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.send_tx(
+                cluster.g_transaction.send_tx(
                     src_address=pool_user.payment.address,
                     tx_name=temp_template,
                     tx_files=tx_files,
@@ -143,16 +148,17 @@ class TestMIRCerts:
             return
 
         LOGGER.info(
-            f"Submitting MIR cert for transferring funds to treasury in epoch {cluster.get_epoch()}"
-            f" on cluster instance {cluster_manager.cluster_instance_num}"
+            "Submitting MIR cert for transferring funds to treasury in "
+            f"epoch {cluster.g_query.get_epoch()} on "
+            f"cluster instance {cluster_manager.cluster_instance_num}"
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
@@ -163,7 +169,7 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            tx_epoch = cluster.get_epoch()
+            tx_epoch = cluster.g_query.get_epoch()
 
             assert tx_db_record.pot_transfers[0].reserves == -amount, (
                 "Incorrect amount transferred from reserves "
@@ -200,17 +206,22 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 10_000_000_000_000
 
-        mir_cert = cluster.gen_mir_cert_to_treasury(transfer=amount, tx_name=temp_template)
+        mir_cert = cluster.g_governance.gen_mir_cert_to_treasury(
+            transfer=amount, tx_name=temp_template
+        )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
-            signing_key_files=[pool_user.payment.skey_file, *cluster.genesis_keys.delegate_skeys],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
+            ],
         )
 
         # send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
-        tx_output = cluster.build_tx(
+        tx_output = cluster.g_transaction.build_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
@@ -219,17 +230,18 @@ class TestMIRCerts:
         )
 
         LOGGER.info(
-            f"Submitting MIR cert for transferring funds to treasury in epoch {cluster.get_epoch()}"
-            f" on cluster instance {cluster_manager.cluster_instance_num}"
+            "Submitting MIR cert for transferring funds to treasury in "
+            f"epoch {cluster.g_query.get_epoch()} on "
+            f"cluster instance {cluster_manager.cluster_instance_num}"
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
@@ -237,7 +249,7 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
-            tx_epoch = cluster.get_epoch()
+            tx_epoch = cluster.g_query.get_epoch()
 
             assert tx_db_record.pot_transfers[0].reserves == -amount, (
                 "Incorrect amount transferred from reserves "
@@ -273,10 +285,15 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 1_000_000_000_000
 
-        mir_cert = cluster.gen_mir_cert_to_rewards(transfer=amount, tx_name=temp_template)
+        mir_cert = cluster.g_governance.gen_mir_cert_to_rewards(
+            transfer=amount, tx_name=temp_template
+        )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
-            signing_key_files=[pool_user.payment.skey_file, *cluster.genesis_keys.delegate_skeys],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
+            ],
         )
 
         # send the transaction at the beginning of an epoch
@@ -286,7 +303,7 @@ class TestMIRCerts:
         # fail is expected when Era < Alonzo
         if VERSIONS.cluster_era < VERSIONS.ALONZO:
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.send_tx(
+                cluster.g_transaction.send_tx(
                     src_address=pool_user.payment.address,
                     tx_name=temp_template,
                     tx_files=tx_files,
@@ -295,16 +312,17 @@ class TestMIRCerts:
             return
 
         LOGGER.info(
-            f"Submitting MIR cert for transferring funds to reserves in epoch {cluster.get_epoch()}"
-            f" on cluster instance {cluster_manager.cluster_instance_num}"
+            "Submitting MIR cert for transferring funds to reserves in "
+            f"epoch {cluster.g_query.get_epoch()} on "
+            f"cluster instance {cluster_manager.cluster_instance_num}"
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
@@ -315,7 +333,7 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            tx_epoch = cluster.get_epoch()
+            tx_epoch = cluster.g_query.get_epoch()
 
             assert tx_db_record.pot_transfers[0].treasury == -amount, (
                 "Incorrect amount transferred from treasury "
@@ -352,36 +370,42 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 1_000_000_000_000
 
-        mir_cert = cluster.gen_mir_cert_to_rewards(transfer=amount, tx_name=temp_template)
+        mir_cert = cluster.g_governance.gen_mir_cert_to_rewards(
+            transfer=amount, tx_name=temp_template
+        )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
-            signing_key_files=[pool_user.payment.skey_file, *cluster.genesis_keys.delegate_skeys],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
+            ],
         )
 
         # send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
-        tx_output = cluster.build_tx(
+        tx_output = cluster.g_transaction.build_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
             fee_buffer=1_000_000,
             witness_override=2,
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
 
         LOGGER.info(
-            f"Submitting MIR cert for transferring funds to reserves in epoch {cluster.get_epoch()}"
-            f" on cluster instance {cluster_manager.cluster_instance_num}"
+            "Submitting MIR cert for transferring funds to reserves in "
+            f"epoch {cluster.g_query.get_epoch()} on "
+            f"cluster instance {cluster_manager.cluster_instance_num}"
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
@@ -389,7 +413,7 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
-            tx_epoch = cluster.get_epoch()
+            tx_epoch = cluster.g_query.get_epoch()
 
             assert tx_db_record.pot_transfers[0].treasury == -amount, (
                 "Incorrect amount transferred from treasury "
@@ -430,11 +454,11 @@ class TestMIRCerts:
         amount = 50_000_000
         registered_user = registered_users[0]
 
-        init_reward = cluster.get_stake_addr_info(
+        init_reward = cluster.g_query.get_stake_addr_info(
             registered_user.stake.address
         ).reward_account_balance
 
-        mir_cert = cluster.gen_mir_cert_stake_addr(
+        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
@@ -444,7 +468,7 @@ class TestMIRCerts:
             certificate_files=[mir_cert],
             signing_key_files=[
                 registered_user.payment.skey_file,
-                *cluster.genesis_keys.delegate_skeys,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
             ],
         )
 
@@ -454,16 +478,16 @@ class TestMIRCerts:
 
         LOGGER.info(
             f"Submitting MIR cert for transferring funds from {fund_src} to "
-            f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"'{registered_user.stake.address}' in epoch {cluster.g_query.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=registered_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=registered_user.payment.address)[
                 0
@@ -474,7 +498,9 @@ class TestMIRCerts:
         cluster.wait_for_new_epoch()
 
         assert (
-            cluster.get_stake_addr_info(registered_user.stake.address).reward_account_balance
+            cluster.g_query.get_stake_addr_info(
+                registered_user.stake.address
+            ).reward_account_balance
             == init_reward + amount
         ), f"Incorrect reward balance for stake address `{registered_user.stake.address}`"
 
@@ -520,11 +546,11 @@ class TestMIRCerts:
         amount = 50_000_000
         registered_user = registered_users[0]
 
-        init_reward = cluster.get_stake_addr_info(
+        init_reward = cluster.g_query.get_stake_addr_info(
             registered_user.stake.address
         ).reward_account_balance
 
-        mir_cert = cluster.gen_mir_cert_stake_addr(
+        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
@@ -534,7 +560,7 @@ class TestMIRCerts:
             certificate_files=[mir_cert],
             signing_key_files=[
                 registered_user.payment.skey_file,
-                *cluster.genesis_keys.delegate_skeys,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
             ],
         )
 
@@ -542,14 +568,14 @@ class TestMIRCerts:
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
-        tx_output = cluster.build_tx(
+        tx_output = cluster.g_transaction.build_tx(
             src_address=registered_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
             fee_buffer=1_000_000,
             witness_override=2,
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
@@ -557,12 +583,12 @@ class TestMIRCerts:
 
         LOGGER.info(
             f"Submitting MIR cert for transferring funds from {fund_src} to "
-            f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"'{registered_user.stake.address}' in epoch {cluster.g_query.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
-        cluster.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=registered_user.payment.address)[
                 0
@@ -573,7 +599,9 @@ class TestMIRCerts:
         cluster.wait_for_new_epoch()
 
         assert (
-            cluster.get_stake_addr_info(registered_user.stake.address).reward_account_balance
+            cluster.g_query.get_stake_addr_info(
+                registered_user.stake.address
+            ).reward_account_balance
             == init_reward + amount
         ), f"Incorrect reward balance for stake address `{registered_user.stake.address}`"
 
@@ -613,12 +641,12 @@ class TestMIRCerts:
         amount = 50_000_000
         registered_user = registered_users[0]
 
-        init_reward = cluster.get_stake_addr_info(
+        init_reward = cluster.g_query.get_stake_addr_info(
             registered_user.stake.address
         ).reward_account_balance
-        init_balance = cluster.get_address_balance(registered_user.payment.address)
+        init_balance = cluster.g_query.get_address_balance(registered_user.payment.address)
 
-        mir_cert_treasury = cluster.gen_mir_cert_stake_addr(
+        mir_cert_treasury = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=f"{temp_template}_treasury",
@@ -628,11 +656,11 @@ class TestMIRCerts:
             certificate_files=[mir_cert_treasury],
             signing_key_files=[
                 registered_user.payment.skey_file,
-                *cluster.genesis_keys.delegate_skeys,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
             ],
         )
 
-        mir_cert_reserves = cluster.gen_mir_cert_stake_addr(
+        mir_cert_reserves = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=f"{temp_template}_reserves",
@@ -641,7 +669,7 @@ class TestMIRCerts:
             certificate_files=[mir_cert_reserves],
             signing_key_files=[
                 registered_user.payment.skey_file,
-                *cluster.genesis_keys.delegate_skeys,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
             ],
         )
 
@@ -651,10 +679,10 @@ class TestMIRCerts:
 
         LOGGER.info(
             f"Submitting MIR cert for transferring funds from treasury to "
-            f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"'{registered_user.stake.address}' in epoch {cluster.g_query.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
-        tx_raw_output_treasury = cluster.send_tx(
+        tx_raw_output_treasury = cluster.g_transaction.send_tx(
             src_address=registered_user.payment.address,
             tx_name=f"{temp_template}_treasury",
             tx_files=tx_files_treasury,
@@ -664,24 +692,26 @@ class TestMIRCerts:
 
         LOGGER.info(
             f"Submitting MIR cert for transferring funds from reserves to "
-            f"'{registered_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"'{registered_user.stake.address}' in epoch {cluster.g_query.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
-        tx_raw_output_reserves = cluster.send_tx(
+        tx_raw_output_reserves = cluster.g_transaction.send_tx(
             src_address=registered_user.payment.address,
             tx_name=f"{temp_template}_reserves",
             tx_files=tx_files_reserves,
         )
 
         assert (
-            cluster.get_address_balance(registered_user.payment.address)
+            cluster.g_query.get_address_balance(registered_user.payment.address)
             == init_balance - tx_raw_output_treasury.fee - tx_raw_output_reserves.fee
         ), f"Incorrect balance for source address `{registered_user.payment.address}`"
 
         cluster.wait_for_new_epoch()
 
         assert (
-            cluster.get_stake_addr_info(registered_user.stake.address).reward_account_balance
+            cluster.g_query.get_stake_addr_info(
+                registered_user.stake.address
+            ).reward_account_balance
             == init_reward + amount * 2
         ), f"Incorrect reward balance for stake address `{registered_user.stake.address}`"
 
@@ -742,31 +772,31 @@ class TestMIRCerts:
         amount_treasury = 50_000_000
         amount_reserves = 60_000_000
 
-        init_reward_u0 = cluster.get_stake_addr_info(
+        init_reward_u0 = cluster.g_query.get_stake_addr_info(
             registered_users[0].stake.address
         ).reward_account_balance
-        init_reward_u1 = cluster.get_stake_addr_info(
+        init_reward_u1 = cluster.g_query.get_stake_addr_info(
             registered_users[1].stake.address
         ).reward_account_balance
 
-        mir_cert_treasury_u0 = cluster.gen_mir_cert_stake_addr(
+        mir_cert_treasury_u0 = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_users[0].stake.address,
             reward=amount_treasury,
             tx_name=f"{temp_template}_treasury_u0",
             use_treasury=True,
         )
-        mir_cert_reserves_u0 = cluster.gen_mir_cert_stake_addr(
+        mir_cert_reserves_u0 = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_users[0].stake.address,
             reward=amount_reserves,
             tx_name=f"{temp_template}_reserves_u0",
         )
-        mir_cert_treasury_u1 = cluster.gen_mir_cert_stake_addr(
+        mir_cert_treasury_u1 = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_users[1].stake.address,
             reward=amount_treasury,
             tx_name=f"{temp_template}_treasury_u1",
             use_treasury=True,
         )
-        mir_cert_reserves_u1 = cluster.gen_mir_cert_stake_addr(
+        mir_cert_reserves_u1 = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_users[1].stake.address,
             reward=amount_reserves,
             tx_name=f"{temp_template}_reserves_u1",
@@ -781,7 +811,7 @@ class TestMIRCerts:
             ],
             signing_key_files=[
                 registered_users[0].payment.skey_file,
-                *cluster.genesis_keys.delegate_skeys,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
             ],
         )
 
@@ -791,16 +821,16 @@ class TestMIRCerts:
 
         LOGGER.info(
             f"Submitting MIR cert for transferring funds from treasury and reserves to "
-            f"multiple stake addresses in epoch {cluster.get_epoch()} "
+            f"multiple stake addresses in epoch {cluster.g_query.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=registered_users[0].payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=registered_users[0].payment.address)[
                 0
@@ -811,11 +841,15 @@ class TestMIRCerts:
         cluster.wait_for_new_epoch()
 
         assert (
-            cluster.get_stake_addr_info(registered_users[0].stake.address).reward_account_balance
+            cluster.g_query.get_stake_addr_info(
+                registered_users[0].stake.address
+            ).reward_account_balance
             == init_reward_u0 + amount_treasury + amount_reserves
         ), f"Incorrect reward balance for stake address `{registered_users[0].stake.address}`"
         assert (
-            cluster.get_stake_addr_info(registered_users[1].stake.address).reward_account_balance
+            cluster.g_query.get_stake_addr_info(
+                registered_users[1].stake.address
+            ).reward_account_balance
             == init_reward_u1 + amount_treasury + amount_reserves
         ), f"Incorrect reward balance for stake address `{registered_users[1].stake.address}`"
 
@@ -880,7 +914,7 @@ class TestMIRCerts:
         amount = 30_000_000_000_000_000
         registered_user = registered_users[0]
 
-        mir_cert = cluster.gen_mir_cert_stake_addr(
+        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
@@ -890,7 +924,7 @@ class TestMIRCerts:
             certificate_files=[mir_cert],
             signing_key_files=[
                 registered_user.payment.skey_file,
-                *cluster.genesis_keys.delegate_skeys,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
             ],
         )
 
@@ -899,7 +933,7 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster.g_transaction.send_tx(
                 src_address=registered_user.payment.address,
                 tx_name=temp_template,
                 tx_files=tx_files,
@@ -944,9 +978,9 @@ class TestMIRCerts:
             amount = 50_000_000_000_000
             pool_user = pool_users[4]
 
-        init_balance = cluster.get_address_balance(pool_user.payment.address)
+        init_balance = cluster.g_query.get_address_balance(pool_user.payment.address)
 
-        mir_cert = cluster.gen_mir_cert_stake_addr(
+        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
             stake_addr=pool_user.stake.address,
             reward=amount,
             tx_name=temp_template,
@@ -956,7 +990,7 @@ class TestMIRCerts:
             certificate_files=[mir_cert],
             signing_key_files=[
                 pool_user.payment.skey_file,
-                *cluster.genesis_keys.delegate_skeys,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
             ],
         )
 
@@ -978,16 +1012,16 @@ class TestMIRCerts:
 
         LOGGER.info(
             f"Submitting MIR cert for transferring funds from {fund_src} to "
-            f"'{pool_user.stake.address}' in epoch {cluster.get_epoch()} "
+            f"'{pool_user.stake.address}' in epoch {cluster.g_query.get_epoch()} "
             f"on cluster instance {cluster_manager.cluster_instance_num}"
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
             tx_files=tx_files,
         )
 
-        tx_epoch = cluster.get_epoch()
+        tx_epoch = cluster.g_query.get_epoch()
 
         # deregister the stake address after submitting the Tx with MIR cert
         if addr_history == "addr_known" and fund_src != self.TREASURY:
@@ -1000,7 +1034,7 @@ class TestMIRCerts:
             reg_dereg_fees = tx_raw_out_reg.fee + tx_raw_out_withdrawal.fee + tx_raw_out_dereg.fee
 
         assert (
-            cluster.get_address_balance(pool_user.payment.address)
+            cluster.g_query.get_address_balance(pool_user.payment.address)
             == init_balance - tx_raw_output.fee - reg_dereg_fees
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
@@ -1020,7 +1054,7 @@ class TestMIRCerts:
         # wait for next epoch and check the reward
         cluster.wait_for_new_epoch()
 
-        assert not cluster.get_stake_addr_info(
+        assert not cluster.g_query.get_stake_addr_info(
             pool_user.stake.address
         ).reward_account_balance, (
             f"Reward was added for unregistered stake address `{pool_user.stake.address}`"

@@ -307,8 +307,8 @@ def txout_factory(
 
 def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clusterlib.TxRawOutput):
     """Check if collateral is returned on Plutus script failure."""
-    return_collateral_utxos = cluster_obj.get_utxo(tx_raw_output=tx_output)
-    protocol_params = cluster_obj.get_protocol_params()
+    return_collateral_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
+    protocol_params = cluster_obj.g_query.get_protocol_params()
 
     # when total collateral amount is specified, it is necessary to specify also return
     # collateral `TxOut` to get the change, otherwise all collaterals will be collected

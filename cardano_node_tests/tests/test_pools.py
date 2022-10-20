@@ -80,12 +80,12 @@ def _check_pool(
     pool_data: clusterlib.PoolData,
 ):
     """Check and return ledger state of the pool, and optionaly also db-sync records."""
-    pool_params: dict = cluster_obj.get_pool_params(stake_pool_id).pool_params
+    pool_params: dict = cluster_obj.g_query.get_pool_params(stake_pool_id).pool_params
 
     assert pool_params, (
         "The newly created stake pool id is not shown inside the available stake pools;\n"
         f"Pool ID: {stake_pool_id} vs Existing IDs: "
-        f"{list(cluster_obj.get_registered_stake_pools_ledger_state())}"
+        f"{list(cluster_obj.g_query.get_registered_stake_pools_ledger_state())}"
     )
     assert not clusterlib_utils.check_pool_data(
         pool_params=pool_params, pool_creation_data=pool_data
@@ -101,19 +101,19 @@ def _check_staking(
     stake_pool_id: str,
 ):
     """Check that staking was correctly setup."""
-    pool_params: dict = cluster_obj.get_pool_params(stake_pool_id).pool_params
+    pool_params: dict = cluster_obj.g_query.get_pool_params(stake_pool_id).pool_params
 
     LOGGER.info("Waiting up to 3 full epochs for stake pool to be registered.")
     for i in range(4):
         if i > 0:
             cluster_obj.wait_for_new_epoch(padding_seconds=10)
-        if stake_pool_id in cluster_obj.get_stake_distribution():
+        if stake_pool_id in cluster_obj.g_query.get_stake_distribution():
             break
     else:
         raise AssertionError(f"Stake pool `{stake_pool_id}` not registered even after 3 epochs.")
 
     for owner in pool_owners:
-        stake_addr_info = cluster_obj.get_stake_addr_info(owner.stake.address)
+        stake_addr_info = cluster_obj.g_query.get_stake_addr_info(owner.stake.address)
 
         # check that the stake address was delegated
         assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
@@ -155,7 +155,7 @@ def _register_stake_pool_w_build(
             output details.
     """
     tx_name = f"{tx_name}_reg_pool"
-    pool_reg_cert_file = cluster_obj.gen_pool_registration_cert(
+    pool_reg_cert_file = cluster_obj.g_stake_pool.gen_pool_registration_cert(
         pool_data=pool_data,
         vrf_vkey_file=vrf_vkey_file,
         cold_vkey_file=cold_key_pair.vkey_file,
@@ -176,7 +176,7 @@ def _register_stake_pool_w_build(
         signing_key_files=signing_key_files,
     )
 
-    tx_raw_output = cluster_obj.build_tx(
+    tx_raw_output = cluster_obj.g_transaction.build_tx(
         src_address=pool_owners[0].payment.address,
         tx_name=tx_name,
         tx_files=tx_files,
@@ -186,17 +186,17 @@ def _register_stake_pool_w_build(
         destination_dir=destination_dir,
     )
     # sign incrementally (just to check that it works)
-    tx_signed = cluster_obj.sign_tx(
+    tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=signing_key_files[:1],
         tx_name=f"{tx_name}_sign0",
     )
-    tx_signed_inc = cluster_obj.sign_tx(
+    tx_signed_inc = cluster_obj.g_transaction.sign_tx(
         tx_file=tx_signed,
         signing_key_files=signing_key_files[1:],
         tx_name=f"{tx_name}_sign1",
     )
-    cluster_obj.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_output.txins)
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_output.txins)
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
@@ -223,21 +223,21 @@ def _create_stake_pool_w_build(
         PoolCreationOutput: A tuple containing pool creation output.
     """
     # create the KES key pair
-    node_kes = cluster_obj.gen_kes_key_pair(
+    node_kes = cluster_obj.g_node.gen_kes_key_pair(
         node_name=pool_data.pool_name,
         destination_dir=destination_dir,
     )
     LOGGER.debug(f"KES keys created - {node_kes.vkey_file}; {node_kes.skey_file}")
 
     # create the VRF key pair
-    node_vrf = cluster_obj.gen_vrf_key_pair(
+    node_vrf = cluster_obj.g_node.gen_vrf_key_pair(
         node_name=pool_data.pool_name,
         destination_dir=destination_dir,
     )
     LOGGER.debug(f"VRF keys created - {node_vrf.vkey_file}; {node_vrf.skey_file}")
 
     # create the cold key pair and node operational certificate counter
-    node_cold = cluster_obj.gen_cold_key_pair_and_counter(
+    node_cold = cluster_obj.g_node.gen_cold_key_pair_and_counter(
         node_name=pool_data.pool_name,
         destination_dir=destination_dir,
     )
@@ -259,7 +259,7 @@ def _create_stake_pool_w_build(
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     return clusterlib.PoolCreationOutput(
-        stake_pool_id=cluster_obj.get_stake_pool_id(node_cold.vkey_file),
+        stake_pool_id=cluster_obj.g_stake_pool.get_stake_pool_id(node_cold.vkey_file),
         vrf_key_pair=node_vrf,
         cold_key_pair=node_cold,
         pool_reg_cert_file=pool_reg_cert_file,
@@ -297,9 +297,9 @@ def _deregister_stake_pool_w_build(
     tx_name = f"{tx_name}_dereg_pool"
     LOGGER.debug(
         f"Deregistering stake pool starting with epoch: {epoch}; "
-        f"Current epoch is: {cluster_obj.get_epoch()}"
+        f"Current epoch is: {cluster_obj.g_query.get_epoch()}"
     )
-    pool_dereg_cert_file = cluster_obj.gen_pool_deregistration_cert(
+    pool_dereg_cert_file = cluster_obj.g_stake_pool.gen_pool_deregistration_cert(
         pool_name=pool_name,
         cold_vkey_file=cold_key_pair.vkey_file,
         epoch=epoch,
@@ -316,7 +316,7 @@ def _deregister_stake_pool_w_build(
         ],
     )
 
-    tx_raw_output = cluster_obj.build_tx(
+    tx_raw_output = cluster_obj.g_transaction.build_tx(
         src_address=pool_owners[0].payment.address,
         tx_name=tx_name,
         tx_files=tx_files,
@@ -324,12 +324,12 @@ def _deregister_stake_pool_w_build(
         witness_override=len(pool_owners) * 3,
         destination_dir=destination_dir,
     )
-    tx_signed = cluster_obj.sign_tx(
+    tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=tx_name,
     )
-    cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
@@ -352,7 +352,7 @@ def _create_register_pool(
     temp_dir = temp_dir.expanduser().resolve()
 
     src_address = pool_owners[0].payment.address
-    src_init_balance = cluster_obj.get_address_balance(src_address)
+    src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
 
     # create and register pool
     if use_build_cmd:
@@ -363,7 +363,7 @@ def _create_register_pool(
             tx_name=temp_template,
         )
     else:
-        pool_creation_out = cluster_obj.create_stake_pool(
+        pool_creation_out = cluster_obj.g_stake_pool.create_stake_pool(
             pool_data=pool_data, pool_owners=pool_owners, tx_name=temp_template
         )
         dbsync_utils.check_tx(
@@ -374,10 +374,10 @@ def _create_register_pool(
     def _deregister():
         depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         with helpers.change_cwd(temp_dir):
-            cluster_obj.deregister_stake_pool(
+            cluster_obj.g_stake_pool.deregister_stake_pool(
                 pool_owners=pool_owners,
                 cold_key_pair=pool_creation_out.cold_key_pair,
-                epoch=cluster_obj.get_epoch() + depoch,
+                epoch=cluster_obj.g_query.get_epoch() + depoch,
                 pool_name=pool_data.pool_name,
                 tx_name=temp_template,
             )
@@ -387,8 +387,10 @@ def _create_register_pool(
 
     # check that the balance for source address was correctly updated
     assert (
-        cluster_obj.get_address_balance(src_address)
-        == src_init_balance - cluster_obj.get_pool_deposit() - pool_creation_out.tx_raw_output.fee
+        cluster_obj.g_query.get_address_balance(src_address)
+        == src_init_balance
+        - cluster_obj.g_query.get_pool_deposit()
+        - pool_creation_out.tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that pool was correctly setup
@@ -417,13 +419,13 @@ def _create_register_pool_delegate_stake_tx(
     temp_dir = temp_dir.expanduser().resolve()
 
     # create node VRF key pair
-    node_vrf = cluster_obj.gen_vrf_key_pair(node_name=pool_data.pool_name)
+    node_vrf = cluster_obj.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
     # create node cold key pair and counter
-    node_cold = cluster_obj.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+    node_cold = cluster_obj.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
     # create stake address registration certs
     stake_addr_reg_cert_files = [
-        cluster_obj.gen_stake_addr_registration_cert(
+        cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
         )
         for i, p in enumerate(pool_owners)
@@ -431,7 +433,7 @@ def _create_register_pool_delegate_stake_tx(
 
     # create stake address delegation cert
     stake_addr_deleg_cert_files = [
-        cluster_obj.gen_stake_addr_delegation_cert(
+        cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr{i}",
             stake_vkey_file=p.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
@@ -440,7 +442,7 @@ def _create_register_pool_delegate_stake_tx(
     ]
 
     # create stake pool registration cert
-    pool_reg_cert_file = cluster_obj.gen_pool_registration_cert(
+    pool_reg_cert_file = cluster_obj.g_stake_pool.gen_pool_registration_cert(
         pool_data=pool_data,
         vrf_vkey_file=node_vrf.vkey_file,
         cold_vkey_file=node_cold.vkey_file,
@@ -448,7 +450,7 @@ def _create_register_pool_delegate_stake_tx(
     )
 
     src_address = pool_owners[0].payment.address
-    src_init_balance = cluster_obj.get_address_balance(src_address)
+    src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
 
     # register and delegate stake address, create and register pool
     tx_files = clusterlib.TxFiles(
@@ -465,21 +467,21 @@ def _create_register_pool_delegate_stake_tx(
     )
 
     if use_build_cmd:
-        tx_raw_output = cluster_obj.build_tx(
+        tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
             fee_buffer=2_000_000,
             witness_override=len(pool_owners) * 3,
         )
-        tx_signed = cluster_obj.sign_tx(
+        tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
     else:
-        tx_raw_output = cluster_obj.send_tx(
+        tx_raw_output = cluster_obj.g_transaction.send_tx(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
 
@@ -487,10 +489,10 @@ def _create_register_pool_delegate_stake_tx(
     def _deregister():
         depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
         with helpers.change_cwd(temp_dir):
-            cluster_obj.deregister_stake_pool(
+            cluster_obj.g_stake_pool.deregister_stake_pool(
                 pool_owners=pool_owners,
                 cold_key_pair=node_cold,
-                epoch=cluster_obj.get_epoch() + depoch,
+                epoch=cluster_obj.g_query.get_epoch() + depoch,
                 pool_name=pool_data.pool_name,
                 tx_name=temp_template,
             )
@@ -500,15 +502,15 @@ def _create_register_pool_delegate_stake_tx(
 
     # check that the balance for source address was correctly updated
     assert (
-        cluster_obj.get_address_balance(src_address)
+        cluster_obj.g_query.get_address_balance(src_address)
         == src_init_balance
-        - len(pool_owners) * cluster_obj.get_address_deposit()
-        - cluster_obj.get_pool_deposit()
+        - len(pool_owners) * cluster_obj.g_query.get_address_deposit()
+        - cluster_obj.g_query.get_pool_deposit()
         - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     # check that pool and staking were correctly setup
-    stake_pool_id = cluster_obj.get_stake_pool_id(node_cold.vkey_file)
+    stake_pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
     _check_pool(cluster_obj=cluster_obj, stake_pool_id=stake_pool_id, pool_data=pool_data)
     _check_staking(
         pool_owners,
@@ -555,7 +557,7 @@ def _create_register_pool_tx_delegate_stake_tx(
 
     # create stake address registration certs
     stake_addr_reg_cert_files = [
-        cluster_obj.gen_stake_addr_registration_cert(
+        cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
         )
         for i, p in enumerate(pool_owners)
@@ -563,7 +565,7 @@ def _create_register_pool_tx_delegate_stake_tx(
 
     # create stake address delegation cert
     stake_addr_deleg_cert_files = [
-        cluster_obj.gen_stake_addr_delegation_cert(
+        cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr{i}",
             stake_vkey_file=p.stake.vkey_file,
             cold_vkey_file=pool_creation_out.cold_key_pair.vkey_file,
@@ -572,7 +574,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     ]
 
     src_address = pool_owners[0].payment.address
-    src_init_balance = cluster_obj.get_address_balance(src_address)
+    src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
 
     # register and delegate stake address
     tx_files = clusterlib.TxFiles(
@@ -585,29 +587,29 @@ def _create_register_pool_tx_delegate_stake_tx(
     )
 
     if use_build_cmd:
-        tx_raw_output = cluster_obj.build_tx(
+        tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
             fee_buffer=2_000_000,
             witness_override=len(pool_owners) * 3,
         )
-        tx_signed = cluster_obj.sign_tx(
+        tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster_obj.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
     else:
-        tx_raw_output = cluster_obj.send_tx(
+        tx_raw_output = cluster_obj.g_transaction.send_tx(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
 
     # check that the balance for source address was correctly updated
     assert (
-        cluster_obj.get_address_balance(src_address)
+        cluster_obj.g_query.get_address_balance(src_address)
         == src_init_balance
-        - len(pool_owners) * cluster_obj.get_address_deposit()
+        - len(pool_owners) * cluster_obj.g_query.get_address_deposit()
         - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
@@ -660,10 +662,10 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1_000,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
             pool_metadata_url="https://bit.ly/3bDUg9z",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         # create pool owners
@@ -725,10 +727,10 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1_000,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         # create pool owners
@@ -778,7 +780,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
             pool_pledge=12_345,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.123,
         )
 
@@ -839,10 +841,10 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         # create pool owners
@@ -871,9 +873,9 @@ class TestStakePool:
         )
 
         pool_owner = pool_owners[0]
-        src_register_balance = cluster.get_address_balance(pool_owner.payment.address)
+        src_register_balance = cluster.g_query.get_address_balance(pool_owner.payment.address)
 
-        src_register_reward = cluster.get_stake_addr_info(
+        src_register_reward = cluster.g_query.get_stake_addr_info(
             pool_owner.stake.address
         ).reward_account_balance
 
@@ -881,7 +883,7 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        depoch = cluster.get_epoch() + 1
+        depoch = cluster.g_query.get_epoch() + 1
         if use_build_cmd:
             __, tx_raw_output = _deregister_stake_pool_w_build(
                 cluster_obj=cluster,
@@ -892,7 +894,7 @@ class TestStakePool:
                 tx_name=temp_template,
             )
         else:
-            __, tx_raw_output = cluster.deregister_stake_pool(
+            __, tx_raw_output = cluster.g_stake_pool.deregister_stake_pool(
                 pool_owners=pool_owners,
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 epoch=depoch,
@@ -900,31 +902,31 @@ class TestStakePool:
                 tx_name=temp_template,
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
-        assert cluster.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
+        assert cluster.g_query.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
 
         # check that the pool was deregistered
         cluster.wait_for_new_epoch()
         assert not (
-            cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params
+            cluster.g_query.get_pool_params(pool_creation_out.stake_pool_id).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
         # check that the balance for source address was correctly updated
         assert (
-            cluster.get_address_balance(pool_owner.payment.address)
+            cluster.g_query.get_address_balance(pool_owner.payment.address)
             == src_register_balance - tx_raw_output.fee
         )
 
         # check that the stake addresses are no longer delegated
         for owner_rec in pool_owners:
-            stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
+            stake_addr_info = cluster.g_query.get_stake_addr_info(owner_rec.stake.address)
             assert (
                 not stake_addr_info.delegation
             ), f"Stake address is still delegated: {stake_addr_info}"
 
         # check that the pool deposit was returned to reward account
         assert (
-            cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
-            == src_register_reward + cluster.get_pool_deposit()
+            cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
+            == src_register_reward + cluster.g_query.get_pool_deposit()
         )
 
         # check `transaction view` command
@@ -968,10 +970,10 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         # create pool owners
@@ -1000,20 +1002,20 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        depoch = cluster.get_epoch() + 1
-        cluster.deregister_stake_pool(
+        depoch = cluster.g_query.get_epoch() + 1
+        cluster.g_stake_pool.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
             epoch=depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
-        assert cluster.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
+        assert cluster.g_query.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
 
         # check that the pool was deregistered
         cluster.wait_for_new_epoch()
         assert not (
-            cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params
+            cluster.g_query.get_pool_params(pool_creation_out.stake_pool_id).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
         dbsync_utils.check_pool_deregistration(
@@ -1022,13 +1024,13 @@ class TestStakePool:
 
         # check that the stake addresses are no longer delegated
         for owner_rec in pool_owners:
-            stake_addr_info = cluster.get_stake_addr_info(owner_rec.stake.address)
+            stake_addr_info = cluster.g_query.get_stake_addr_info(owner_rec.stake.address)
             assert (
                 not stake_addr_info.delegation
             ), f"Stake address is still delegated: {stake_addr_info}"
 
         src_address = pool_owners[0].payment.address
-        src_init_balance = cluster.get_address_balance(src_address)
+        src_init_balance = cluster.g_query.get_address_balance(src_address)
 
         # reregister the pool by resubmitting the pool registration certificate,
         # delegate stake address to pool again (the address is already registered)
@@ -1039,7 +1041,7 @@ class TestStakePool:
             ],
             signing_key_files=pool_creation_out.tx_raw_output.tx_files.signing_key_files,
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
 
@@ -1047,10 +1049,10 @@ class TestStakePool:
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
             with helpers.change_cwd(testfile_temp_dir):
-                cluster.deregister_stake_pool(
+                cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=pool_creation_out.cold_key_pair,
-                    epoch=cluster.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + depoch,
                     pool_name=pool_data.pool_name,
                     tx_name=temp_template,
                 )
@@ -1059,17 +1061,17 @@ class TestStakePool:
 
         # check that the balance for source address was correctly updated
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
+            cluster.g_query.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - cluster.g_query.get_pool_deposit()
         ), (
             f"Incorrect balance for source address `{src_address}` "
-            f"({src_init_balance}, {tx_raw_output.fee}, {cluster.get_pool_deposit()})"
+            f"({src_init_balance}, {tx_raw_output.fee}, {cluster.g_query.get_pool_deposit()})"
         )
 
         LOGGER.info("Waiting up to 5 full epochs for stake pool to be reregistered.")
         for __ in range(5):
             cluster.wait_for_new_epoch(padding_seconds=10)
-            if pool_creation_out.stake_pool_id in cluster.get_stake_distribution():
+            if pool_creation_out.stake_pool_id in cluster.g_query.get_stake_distribution():
                 break
         else:
             raise AssertionError(
@@ -1124,10 +1126,10 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         # create pool owners
@@ -1156,20 +1158,20 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        depoch = cluster.get_epoch() + 2
-        cluster.deregister_stake_pool(
+        depoch = cluster.g_query.get_epoch() + 2
+        cluster.g_stake_pool.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
             epoch=depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
-        assert cluster.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
+        assert cluster.g_query.get_pool_params(pool_creation_out.stake_pool_id).retiring == depoch
 
         cluster.wait_for_new_epoch()
 
         src_address = pool_owners[0].payment.address
-        src_init_balance = cluster.get_address_balance(src_address)
+        src_init_balance = cluster.g_query.get_address_balance(src_address)
 
         # reregister the pool by resubmitting the pool registration certificate,
         # delegate stake address to pool again (the address is already registered)
@@ -1180,7 +1182,7 @@ class TestStakePool:
             ],
             signing_key_files=pool_creation_out.tx_raw_output.tx_files.signing_key_files,
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
@@ -1191,10 +1193,10 @@ class TestStakePool:
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
             with helpers.change_cwd(testfile_temp_dir):
-                cluster.deregister_stake_pool(
+                cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=pool_creation_out.cold_key_pair,
-                    epoch=cluster.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + depoch,
                     pool_name=pool_data.pool_name,
                     tx_name=temp_template,
                 )
@@ -1204,13 +1206,13 @@ class TestStakePool:
         # check that the balance for source address was correctly updated
         # and no additional pool deposit was used
         assert (
-            cluster.get_address_balance(src_address) == src_init_balance - tx_raw_output.fee
+            cluster.g_query.get_address_balance(src_address) == src_init_balance - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
         LOGGER.info("Checking for 3 epochs that the stake pool will NOT get deregistered.")
         for __ in range(3):
             cluster.wait_for_new_epoch(padding_seconds=10)
-            if not cluster.get_pool_params(pool_creation_out.stake_pool_id).pool_params:
+            if not cluster.g_query.get_pool_params(pool_creation_out.stake_pool_id).pool_params:
                 raise AssertionError("Pool `{pool_creation_out.stake_pool_id}` got deregistered.")
 
         # check that pool is still correctly setup
@@ -1272,15 +1274,17 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=4567,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.01,
             pool_metadata_url="https://init_location.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         pool_data_updated = pool_data._replace(
             pool_metadata_url="https://www.updated_location.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_updated_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(
+                pool_metadata_updated_file
+            ),
         )
 
         # create pool owners
@@ -1326,7 +1330,7 @@ class TestStakePool:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
         else:
-            __, tx_raw_output = cluster.register_stake_pool(
+            __, tx_raw_output = cluster.g_stake_pool.register_stake_pool(
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
@@ -1337,7 +1341,9 @@ class TestStakePool:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # check that pool is going to be updated with correct data
-        future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
+        future_params = cluster.g_query.get_pool_params(
+            pool_creation_out.stake_pool_id
+        ).future_pool_params
         assert not clusterlib_utils.check_pool_data(
             pool_params=future_params, pool_creation_data=pool_data_updated
         )
@@ -1381,7 +1387,7 @@ class TestStakePool:
             f"{pool_name}_registration_metadata.json", pool_metadata
         )
 
-        min_pool_cost = cluster.get_protocol_params().get("minPoolCost", 500)
+        min_pool_cost = cluster.g_query.get_protocol_params().get("minPoolCost", 500)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
@@ -1389,7 +1395,7 @@ class TestStakePool:
             pool_cost=min_pool_cost,
             pool_margin=0.01,
             pool_metadata_url="https://www.where_metadata_file_is_located.com",
-            pool_metadata_hash=cluster.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         pool_data_updated = pool_data._replace(
@@ -1439,7 +1445,7 @@ class TestStakePool:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
         else:
-            __, tx_raw_output = cluster.register_stake_pool(
+            __, tx_raw_output = cluster.g_stake_pool.register_stake_pool(
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
@@ -1450,7 +1456,9 @@ class TestStakePool:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # check that pool is going to be updated with correct data
-        future_params = cluster.get_pool_params(pool_creation_out.stake_pool_id).future_pool_params
+        future_params = cluster.g_query.get_pool_params(
+            pool_creation_out.stake_pool_id
+        ).future_pool_params
         assert not clusterlib_utils.check_pool_data(
             pool_params=future_params, pool_creation_data=pool_data_updated
         )
@@ -1486,7 +1494,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
             pool_pledge=5,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.01,
         )
 
@@ -1506,12 +1514,12 @@ class TestStakePool:
         )
 
         # create node VRF key pair
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
         # create node cold key pair and counter
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         # create stake pool registration cert
-        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+        pool_reg_cert_file = cluster.g_stake_pool.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
@@ -1519,7 +1527,7 @@ class TestStakePool:
         )
 
         src_address = pool_owners[0].payment.address
-        src_init_balance = cluster.get_address_balance(src_address)
+        src_init_balance = cluster.g_query.get_address_balance(src_address)
 
         # keys to sign the TX with
         witness_skeys = (
@@ -1536,14 +1544,14 @@ class TestStakePool:
             ],
         )
 
-        fee = cluster.calculate_tx_fee(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
             witness_count_add=len(witness_skeys),
         )
 
-        tx_raw_output = cluster.build_raw_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             tx_files=tx_files,
@@ -1552,7 +1560,7 @@ class TestStakePool:
 
         # create witness file for each signing key
         witness_files = [
-            cluster.witness_tx(
+            cluster.g_transaction.witness_tx(
                 tx_body_file=tx_raw_output.out_file,
                 witness_name=f"{temp_template}_skey{idx}",
                 signing_key_files=[skey],
@@ -1561,20 +1569,20 @@ class TestStakePool:
         ]
 
         # sign TX using witness files
-        tx_witnessed_file = cluster.assemble_tx(
+        tx_witnessed_file = cluster.g_transaction.assemble_tx(
             tx_body_file=tx_raw_output.out_file, witness_files=witness_files, tx_name=temp_template
         )
         # create and register pool
-        cluster.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
         # deregister stake pool
         def _deregister():
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
             with helpers.change_cwd(testfile_temp_dir):
-                cluster.deregister_stake_pool(
+                cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=node_cold,
-                    epoch=cluster.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + depoch,
                     pool_name=pool_data.pool_name,
                     tx_name=temp_template,
                 )
@@ -1583,14 +1591,14 @@ class TestStakePool:
 
         # check that the balance for source address was correctly updated
         assert (
-            cluster.get_address_balance(src_address)
-            == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
+            cluster.g_query.get_address_balance(src_address)
+            == src_init_balance - tx_raw_output.fee - cluster.g_query.get_pool_deposit()
         ), f"Incorrect balance for source address `{src_address}`"
 
         cluster.wait_for_new_epoch()
 
         # check that the pool was correctly registered on chain
-        stake_pool_id = cluster.get_stake_pool_id(node_cold.vkey_file)
+        stake_pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
         _check_pool(
             cluster_obj=cluster,
             stake_pool_id=stake_pool_id,
@@ -1619,7 +1627,7 @@ class TestStakePool:
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
             pool_pledge=5,
-            pool_cost=cluster.get_protocol_params().get("minPoolCost", 500),
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.01,
         )
 
@@ -1638,16 +1646,16 @@ class TestStakePool:
             amount=900_000_000,
         )
 
-        src_init_balance = cluster.get_address_balance(pool_owner.payment.address)
-        src_init_reward = cluster.get_stake_addr_info(
+        src_init_balance = cluster.g_query.get_address_balance(pool_owner.payment.address)
+        src_init_reward = cluster.g_query.get_stake_addr_info(
             pool_owner.stake.address
         ).reward_account_balance
 
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         # create pool registration cert
-        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+        pool_reg_cert_file = cluster.g_stake_pool.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
@@ -1658,10 +1666,10 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+        pool_dereg_cert_file = cluster.g_stake_pool.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
-            epoch=cluster.get_epoch() + 1,
+            epoch=cluster.g_query.get_epoch() + 1,
         )
 
         # register and deregister stake pool in single TX
@@ -1673,7 +1681,7 @@ class TestStakePool:
                 node_cold.skey_file,
             ],
         )
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=pool_owner.payment.address,
             tx_name=f"{temp_template}_conflicting_certs",
             tx_files=tx_files,
@@ -1681,15 +1689,15 @@ class TestStakePool:
 
         # check that the balance for source address was correctly updated
         assert (
-            cluster.get_address_balance(pool_owner.payment.address)
-            == src_init_balance - tx_raw_output.fee - cluster.get_pool_deposit()
+            cluster.g_query.get_address_balance(pool_owner.payment.address)
+            == src_init_balance - tx_raw_output.fee - cluster.g_query.get_pool_deposit()
         ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
         # check that the pool deposit was NOT returned to reward account as the reward address
         # is not registered (deposit is lost)
         cluster.wait_for_new_epoch(3, padding_seconds=30)
         assert (
-            cluster.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
+            cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
             == src_init_reward
         )
 
@@ -1883,12 +1891,12 @@ class TestNegative:
         pool_metadata_file = helpers.write_json(
             "hypothesis_metadata_registration_metadata.json", pool_metadata
         )
-        pool_metadata_hash = cluster.gen_pool_metadata_hash(pool_metadata_file)
+        pool_metadata_hash = cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
 
         # create node VRF key pair
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_name)
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=pool_name)
         # create node cold key pair and counter
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_name)
 
         return pool_name, pool_metadata_hash, node_vrf, node_cold
 
@@ -1905,11 +1913,11 @@ class TestNegative:
         """
         common.get_test_id(cluster)
 
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_registration_cert(
+            cluster.g_stake_pool.gen_pool_registration_cert(
                 pool_data=pool_data,
                 vrf_vkey_file=node_vrf.skey_file,  # skey instead of vkey
                 cold_vkey_file=node_cold.vkey_file,
@@ -1930,11 +1938,11 @@ class TestNegative:
         """
         common.get_test_id(cluster)
 
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_registration_cert(
+            cluster.g_stake_pool.gen_pool_registration_cert(
                 pool_data=pool_data,
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.skey_file,  # skey instead of vkey
@@ -1955,11 +1963,11 @@ class TestNegative:
         """
         common.get_test_id(cluster)
 
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_registration_cert(
+            cluster.g_stake_pool.gen_pool_registration_cert(
                 pool_data=pool_data,
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
@@ -1980,10 +1988,10 @@ class TestNegative:
         """
         common.get_test_id(cluster)
 
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
-        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+        pool_reg_cert_file = cluster.g_stake_pool.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
@@ -1999,7 +2007,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster.g_transaction.send_tx(
                 src_address=pool_users[0].payment.address,
                 tx_name="missing_cold_key",
                 tx_files=tx_files,
@@ -2019,10 +2027,10 @@ class TestNegative:
         """
         common.get_test_id(cluster)
 
-        node_vrf = cluster.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
-        pool_reg_cert_file = cluster.gen_pool_registration_cert(
+        pool_reg_cert_file = cluster.g_stake_pool.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
@@ -2038,7 +2046,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.send_tx(
+            cluster.g_transaction.send_tx(
                 src_address=pool_users[0].payment.address, tx_name="missing_skey", tx_files=tx_files
             )
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
@@ -2058,12 +2066,12 @@ class TestNegative:
         """
         common.get_test_id(cluster)
 
-        node_cold = cluster.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
-        pool_dereg_cert_file = cluster.gen_pool_deregistration_cert(
+        pool_dereg_cert_file = cluster.g_stake_pool.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
-            epoch=cluster.get_epoch() + 2,
+            epoch=cluster.g_query.get_epoch() + 2,
         )
 
         tx_files = clusterlib.TxFiles(
@@ -2073,20 +2081,20 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
-                tx_raw_output = cluster.build_tx(
+                tx_raw_output = cluster.g_transaction.build_tx(
                     src_address=pool_users[0].payment.address,
                     tx_name="deregister_unregistered",
                     tx_files=tx_files,
                     fee_buffer=2_000_000,
                 )
-                tx_signed = cluster.sign_tx(
+                tx_signed = cluster.g_transaction.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,
                     tx_name="deregister_unregistered",
                 )
-                cluster.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
             else:
-                cluster.send_tx(
+                cluster.g_transaction.send_tx(
                     src_address=pool_users[0].payment.address,
                     tx_name="deregister_unregistered",
                     tx_files=tx_files,
@@ -2114,7 +2122,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_metadata_hash(pool_metadata_file)
+            cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
         assert 'key "name" not found' in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -2138,7 +2146,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_metadata_hash(pool_metadata_file)
+            cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
         assert 'key "description" not found' in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -2162,7 +2170,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_metadata_hash(pool_metadata_file)
+            cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
         assert 'key "ticker" not found' in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -2186,7 +2194,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_metadata_hash(pool_metadata_file)
+            cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
         assert 'key "homepage" not found' in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -2214,7 +2222,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_metadata_hash(pool_metadata_file)
+            cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
         err_value = str(excinfo.value)
         assert (
             "Stake pool metadata must consist of at most 512 bytes" in err_value
@@ -2246,7 +2254,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_metadata_hash(pool_metadata_file)
+            cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
         err_value = str(excinfo.value)
         assert (
             "Stake pool metadata must consist of at most 512 bytes" in err_value
@@ -2280,7 +2288,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_metadata_hash(pool_metadata_file)
+            cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
         err_value = str(excinfo.value)
         assert (
             "Stake pool metadata must consist of at most 512 bytes" in err_value
@@ -2312,7 +2320,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_metadata_hash(pool_metadata_file)
+            cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
         assert "Stake pool metadata must consist of at most 512 bytes" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
@@ -2346,7 +2354,7 @@ class TestNegative:
 
         # create stake pool registration cert
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.gen_pool_registration_cert(
+            cluster.g_stake_pool.gen_pool_registration_cert(
                 pool_data=pool_data,
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,

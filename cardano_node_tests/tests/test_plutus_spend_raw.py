@@ -114,13 +114,13 @@ def _fund_script(
     stokens = tokens or ()
     ctokens = tokens_collateral or ()
 
-    script_address = cluster_obj.gen_payment_addr(
+    script_address = cluster_obj.g_address.gen_payment_addr(
         addr_name=temp_template, payment_script_file=plutus_op.script_file
     )
 
     redeem_cost = plutus_common.compute_cost(
         execution_cost=plutus_op.execution_cost,
-        protocol_params=cluster_obj.get_protocol_params(),
+        protocol_params=cluster_obj.g_query.get_protocol_params(),
         collateral_fraction_offset=collateral_fraction_offset,
     )
 
@@ -155,7 +155,7 @@ def _fund_script(
             )
         )
 
-    tx_raw_output = cluster_obj.send_tx(
+    tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step1",
         txouts=txouts,
@@ -164,16 +164,16 @@ def _fund_script(
         witness_count_add=2,
     )
 
-    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+    txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
 
-    script_utxos = cluster_obj.get_utxo(txin=f"{txid}#0")
+    script_utxos = cluster_obj.g_query.get_utxo(txin=f"{txid}#0")
     assert script_utxos, "No script UTxO"
 
     assert (
         clusterlib.calculate_utxos_balance(utxos=script_utxos) == txouts[0].amount
     ), f"Incorrect balance for script address `{script_address}`"
 
-    collateral_utxos = cluster_obj.get_utxo(txin=f"{txid}#1")
+    collateral_utxos = cluster_obj.g_query.get_utxo(txin=f"{txid}#1")
     assert collateral_utxos, "No collateral UTxO"
 
     assert (
@@ -226,7 +226,8 @@ def _spend_locked_txin(  # noqa: C901
     change_rec = script_utxos[0]
 
     redeem_cost = plutus_common.compute_cost(
-        execution_cost=plutus_op.execution_cost, protocol_params=cluster_obj.get_protocol_params()
+        execution_cost=plutus_op.execution_cost,
+        protocol_params=cluster_obj.g_query.get_protocol_params(),
     )
 
     script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
@@ -285,7 +286,7 @@ def _spend_locked_txin(  # noqa: C901
                 )
             )
 
-    tx_raw_output = cluster_obj.build_raw_tx_bare(
+    tx_raw_output = cluster_obj.g_transaction.build_raw_tx_bare(
         out_file=f"{temp_template}_step2_tx.body",
         txins=txins,
         txouts=txouts,
@@ -296,7 +297,7 @@ def _spend_locked_txin(  # noqa: C901
         invalid_before=invalid_before,
         script_valid=script_valid,
     )
-    tx_signed = cluster_obj.sign_tx(
+    tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
         tx_name=f"{temp_template}_step2",
@@ -305,18 +306,18 @@ def _spend_locked_txin(  # noqa: C901
     if not submit_tx:
         return "", tx_raw_output
 
-    dst_init_balance = cluster_obj.get_address_balance(dst_addr.address)
+    dst_init_balance = cluster_obj.g_query.get_address_balance(dst_addr.address)
 
     if not script_valid:
-        cluster_obj.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
+        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
 
         assert (
-            cluster_obj.get_address_balance(dst_addr.address)
+            cluster_obj.g_query.get_address_balance(dst_addr.address)
             == dst_init_balance - collateral_utxos[0].amount
         ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
         for u in script_utxos_lovelace:
-            assert cluster_obj.get_utxo(
+            assert cluster_obj.g_query.get_utxo(
                 utxo=u, coins=[clusterlib.DEFAULT_COIN]
             ), f"Inputs were unexpectedly spent for `{u.address}`"
 
@@ -324,36 +325,36 @@ def _spend_locked_txin(  # noqa: C901
 
     if expect_failure:
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.submit_tx_bare(tx_file=tx_signed)
+            cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
         err = str(excinfo.value)
         assert (
-            cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance
+            cluster_obj.g_query.get_address_balance(dst_addr.address) == dst_init_balance
         ), f"Collateral was spent from `{dst_addr.address}`"
 
         for u in script_utxos_lovelace:
-            assert cluster_obj.get_utxo(
+            assert cluster_obj.g_query.get_utxo(
                 utxo=u, coins=[clusterlib.DEFAULT_COIN]
             ), f"Inputs were unexpectedly spent for `{u.address}`"
 
         return err, tx_raw_output
 
-    cluster_obj.submit_tx(
+    cluster_obj.g_transaction.submit_tx(
         tx_file=tx_signed, txins=[t.txins[0] for t in tx_raw_output.script_txins if t.txins]
     )
 
     assert (
-        cluster_obj.get_address_balance(dst_addr.address) == dst_init_balance + amount
+        cluster_obj.g_query.get_address_balance(dst_addr.address) == dst_init_balance + amount
     ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
     for u in script_utxos_lovelace:
-        assert not cluster_obj.get_utxo(
+        assert not cluster_obj.g_query.get_utxo(
             utxo=u, coins=[clusterlib.DEFAULT_COIN]
         ), f"Inputs were NOT spent for `{u.address}`"
 
     for token in spent_tokens:
         script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
         for u in script_utxos_token:
-            assert not cluster_obj.get_utxo(
+            assert not cluster_obj.g_query.get_utxo(
                 utxo=u, coins=[token.coin]
             ), f"Token inputs were NOT spent for `{u.address}`"
 
@@ -370,7 +371,7 @@ def _check_pretty_utxo(
 ) -> str:
     """Check that pretty printed `query utxo` output looks as expected."""
     err = ""
-    txid = cluster_obj.get_txid(tx_body_file=tx_raw_output.out_file)
+    txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
 
     utxo_out = (
         cluster_obj.cli(
@@ -493,10 +494,10 @@ class TestLocking:
         __: Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
         amount = 10_000_000
-        deposit_amount = cluster.get_address_deposit()
+        deposit_amount = cluster.g_query.get_address_deposit()
 
         # create stake address registration cert
-        stake_addr_reg_cert_file = cluster.gen_stake_addr_registration_cert(
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=pool_users[0].stake.vkey_file,
         )
@@ -528,7 +529,7 @@ class TestLocking:
             deposit_amount=deposit_amount,
         )
 
-        invalid_hereafter = cluster.get_slot_no() + 200
+        invalid_hereafter = cluster.g_query.get_slot_no() + 200
 
         __, tx_output_dummy = _spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
@@ -714,7 +715,7 @@ class TestLocking:
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
-        protocol_params = cluster.get_protocol_params()
+        protocol_params = cluster.g_query.get_protocol_params()
 
         script_file1_v1 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1
         execution_cost1_v1 = plutus_common.ALWAYS_SUCCEEDS_COST
@@ -779,21 +780,25 @@ class TestLocking:
 
         assert plutus_op1.execution_cost and plutus_op2.execution_cost  # for mypy
 
-        script_address1 = cluster.gen_payment_addr(
+        script_address1 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
         )
         redeem_cost1 = plutus_common.compute_cost(
             execution_cost=plutus_op1.execution_cost, protocol_params=protocol_params
         )
-        datum_hash1 = cluster.get_hash_script_data(script_data_file=plutus_op1.datum_file)
+        datum_hash1 = cluster.g_transaction.get_hash_script_data(
+            script_data_file=plutus_op1.datum_file
+        )
 
-        script_address2 = cluster.gen_payment_addr(
+        script_address2 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr2", payment_script_file=plutus_op2.script_file
         )
         redeem_cost2 = plutus_common.compute_cost(
             execution_cost=plutus_op2.execution_cost, protocol_params=protocol_params
         )
-        datum_hash2 = cluster.get_hash_script_data(script_data_file=plutus_op2.datum_file)
+        datum_hash2 = cluster.g_transaction.get_hash_script_data(
+            script_data_file=plutus_op2.datum_file
+        )
 
         # create a Tx output with a datum hash at the script address
 
@@ -816,7 +821,7 @@ class TestLocking:
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
 
-        tx_output_fund = cluster.send_tx(
+        tx_output_fund = cluster.g_transaction.send_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step1",
             txouts=txouts_fund,
@@ -826,11 +831,15 @@ class TestLocking:
             join_txouts=False,
         )
 
-        txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#0", coins=[clusterlib.DEFAULT_COIN])
-        script_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#1", coins=[clusterlib.DEFAULT_COIN])
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#2")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#3")
+        txid_fund = cluster.g_transaction.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos1 = cluster.g_query.get_utxo(
+            txin=f"{txid_fund}#0", coins=[clusterlib.DEFAULT_COIN]
+        )
+        script_utxos2 = cluster.g_query.get_utxo(
+            txin=f"{txid_fund}#1", coins=[clusterlib.DEFAULT_COIN]
+        )
+        collateral_utxos1 = cluster.g_query.get_utxo(txin=f"{txid_fund}#2")
+        collateral_utxos2 = cluster.g_query.get_utxo(txin=f"{txid_fund}#3")
 
         assert script_utxos1 and script_utxos2, "No script UTxOs"
         assert collateral_utxos1 and collateral_utxos2, "No collateral UTxOs"
@@ -879,35 +888,36 @@ class TestLocking:
         txouts_redeem = [
             clusterlib.TxOut(address=payment_addrs[1].address, amount=amount * 2),
         ]
-        tx_output_redeem = cluster.build_raw_tx_bare(
+        tx_output_redeem = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txouts=txouts_redeem,
             tx_files=tx_files_redeem,
             fee=redeem_cost1.fee + redeem_cost2.fee + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
         )
-        tx_signed_redeem = cluster.sign_tx(
+        tx_signed_redeem = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
 
-        dst_init_balance = cluster.get_address_balance(payment_addrs[1].address)
+        dst_init_balance = cluster.g_query.get_address_balance(payment_addrs[1].address)
 
-        cluster.submit_tx(
+        cluster.g_transaction.submit_tx(
             tx_file=tx_signed_redeem,
             txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
         )
 
         assert (
-            cluster.get_address_balance(payment_addrs[1].address) == dst_init_balance + amount * 2
+            cluster.g_query.get_address_balance(payment_addrs[1].address)
+            == dst_init_balance + amount * 2
         ), f"Incorrect balance for destination address `{payment_addrs[1].address}`"
 
         script_utxos_lovelace = [
             u for u in [*script_utxos1, *script_utxos2] if u.coin == clusterlib.DEFAULT_COIN
         ]
         for u in script_utxos_lovelace:
-            assert not cluster.get_utxo(
+            assert not cluster.g_query.get_utxo(
                 utxo=u, coins=[clusterlib.DEFAULT_COIN]
             ), f"Inputs were NOT spent for `{u.address}`"
 
@@ -1010,7 +1020,7 @@ class TestLocking:
         # include any payment txin
         txins = [
             r
-            for r in cluster.get_utxo(
+            for r in cluster.g_query.get_utxo(
                 address=payment_addrs[0].address, coins=[clusterlib.DEFAULT_COIN]
             )
             if not (r.datum_hash or r.inline_datum_hash)
@@ -1166,8 +1176,8 @@ class TestLocking:
             tokens=tokens_spend_rec,
         )
 
-        txid_spend = cluster.get_txid(tx_body_file=tx_output_spend.out_file)
-        change_utxos = cluster.get_utxo(txin=f"{txid_spend}#1")
+        txid_spend = cluster.g_transaction.get_txid(tx_body_file=tx_output_spend.out_file)
+        change_utxos = cluster.g_query.get_utxo(txin=f"{txid_spend}#1")
 
         # check that the expected amounts of Lovelace and native tokens were spent and change UTxOs
         # with appropriate datum hash were created
@@ -1210,7 +1220,7 @@ class TestLocking:
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{scenario}"
         amount = 2_000_000
 
-        max_collateral_ins = cluster.get_protocol_params()["maxCollateralInputs"]
+        max_collateral_ins = cluster.g_query.get_protocol_params()["maxCollateralInputs"]
         collateral_utxos = []
 
         if scenario == "max":
@@ -1255,16 +1265,19 @@ class TestLocking:
                 for __ in range(collateral_num)
             ]
             tx_files_collaterals = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
-            tx_output_collaterals = cluster.send_tx(
+            tx_output_collaterals = cluster.g_transaction.send_tx(
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_collaterals",
                 txouts=txouts_collaterals,
                 tx_files=tx_files_collaterals,
                 join_txouts=False,
             )
-            txid_collaterals = cluster.get_txid(tx_body_file=tx_output_collaterals.out_file)
+            txid_collaterals = cluster.g_transaction.get_txid(
+                tx_body_file=tx_output_collaterals.out_file
+            )
             _utxos_nested = [
-                cluster.get_utxo(txin=f"{txid_collaterals}#{i}") for i in range(collateral_num)
+                cluster.g_query.get_utxo(txin=f"{txid_collaterals}#{i}")
+                for i in range(collateral_num)
             ]
             collateral_utxos = list(itertools.chain.from_iterable(_utxos_nested))
 
@@ -1321,14 +1334,14 @@ class TestDatum:
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=payment_addr.address,
             tx_name=temp_template,
             txouts=txouts,
             tx_files=tx_files,
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
@@ -1607,7 +1620,7 @@ class TestNegative:
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
         amount = 2_000_000
 
-        protocol_params = cluster.get_protocol_params()
+        protocol_params = cluster.g_query.get_protocol_params()
 
         plutus_op1 = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -1626,22 +1639,26 @@ class TestNegative:
 
         assert plutus_op1.execution_cost and plutus_op2.execution_cost  # for mypy
 
-        script_address1 = cluster.gen_payment_addr(
+        script_address1 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
         )
         redeem_cost1 = plutus_common.compute_cost(
             execution_cost=plutus_op1.execution_cost, protocol_params=protocol_params
         )
-        datum_hash1 = cluster.get_hash_script_data(script_data_file=plutus_op1.datum_file)
+        datum_hash1 = cluster.g_transaction.get_hash_script_data(
+            script_data_file=plutus_op1.datum_file
+        )
 
-        script_address2 = cluster.gen_payment_addr(
+        script_address2 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr2", payment_script_file=plutus_op2.script_file
         )
         script2_hash = helpers.decode_bech32(bech32=script_address2)[2:]
         redeem_cost2 = plutus_common.compute_cost(
             execution_cost=plutus_op2.execution_cost, protocol_params=protocol_params
         )
-        datum_hash2 = cluster.get_hash_script_data(script_data_file=plutus_op2.datum_file)
+        datum_hash2 = cluster.g_transaction.get_hash_script_data(
+            script_data_file=plutus_op2.datum_file
+        )
 
         # create a Tx output with a datum hash at the script address
 
@@ -1664,7 +1681,7 @@ class TestNegative:
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
 
-        tx_output_fund = cluster.send_tx(
+        tx_output_fund = cluster.g_transaction.send_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step1",
             txouts=txouts_fund,
@@ -1674,11 +1691,15 @@ class TestNegative:
             join_txouts=False,
         )
 
-        txid_fund = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#0", coins=[clusterlib.DEFAULT_COIN])
-        script_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#1", coins=[clusterlib.DEFAULT_COIN])
-        collateral_utxos1 = cluster.get_utxo(txin=f"{txid_fund}#2")
-        collateral_utxos2 = cluster.get_utxo(txin=f"{txid_fund}#3")
+        txid_fund = cluster.g_transaction.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos1 = cluster.g_query.get_utxo(
+            txin=f"{txid_fund}#0", coins=[clusterlib.DEFAULT_COIN]
+        )
+        script_utxos2 = cluster.g_query.get_utxo(
+            txin=f"{txid_fund}#1", coins=[clusterlib.DEFAULT_COIN]
+        )
+        collateral_utxos1 = cluster.g_query.get_utxo(txin=f"{txid_fund}#2")
+        collateral_utxos2 = cluster.g_query.get_utxo(txin=f"{txid_fund}#3")
 
         # Step 2: spend the "locked" UTxOs
 
@@ -1716,21 +1737,21 @@ class TestNegative:
             clusterlib.TxOut(address=payment_addrs[1].address, amount=amount * 2),
         ]
 
-        tx_output_redeem = cluster.build_raw_tx_bare(
+        tx_output_redeem = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txouts=txouts_redeem,
             tx_files=tx_files_redeem,
             fee=redeem_cost1.fee + redeem_cost2.fee + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
         )
-        tx_signed_redeem = cluster.sign_tx(
+        tx_signed_redeem = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx_bare(tx_file=tx_signed_redeem)
+            cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
 
         err_str = str(excinfo.value)
         assert rf"ScriptHash \"{script2_hash}\") fails" in err_str, err_str
@@ -1832,7 +1853,9 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
     ) -> plutus_common.ExecutionCost:
-        return plutus_common.get_cost_per_unit(protocol_params=cluster.get_protocol_params())
+        return plutus_common.get_cost_per_unit(
+            protocol_params=cluster.g_query.get_protocol_params()
+        )
 
     def _failed_tx_build(
         self,
@@ -1876,7 +1899,7 @@ class TestNegativeRedeemer:
         ]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.build_raw_tx_bare(
+            cluster_obj.g_transaction.build_raw_tx_bare(
                 out_file=f"{temp_template}_step2_tx.body",
                 txouts=txouts,
                 tx_files=tx_files,
@@ -1933,7 +1956,7 @@ class TestNegativeRedeemer:
         ]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_obj.build_raw_tx_bare(
+            cluster_obj.g_transaction.build_raw_tx_bare(
                 out_file=f"{temp_template}_step2_tx.body",
                 txouts=txouts,
                 tx_files=tx_files,
@@ -2010,21 +2033,21 @@ class TestNegativeRedeemer:
                 redeemer_value=str(redeemer_value) if not redeemer_content else "",
             )
         ]
-        tx_raw_output = cluster.build_raw_tx_bare(
+        tx_raw_output = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txouts=txouts,
             tx_files=tx_files,
             fee=fee_redeem + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx_bare(tx_file=tx_signed)
+            cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
 
         err_str = str(excinfo.value)
         assert "ValidationTagMismatch (IsValid True)" in err_str, err_str
@@ -2159,21 +2182,21 @@ class TestNegativeRedeemer:
             )
         ]
 
-        tx_raw_output = cluster.build_raw_tx_bare(
+        tx_raw_output = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txouts=txouts,
             tx_files=tx_files,
             fee=fee_redeem + FEE_REDEEM_TXSIZE,
             script_txins=plutus_txins,
         )
-        tx_signed = cluster.sign_tx(
+        tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.submit_tx_bare(tx_file=tx_signed)
+            cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
 
         err_str = str(excinfo.value)
         assert "ValidationTagMismatch (IsValid True)" in err_str, err_str
@@ -2539,14 +2562,15 @@ class TestNegativeDatum:
         assert plutus_op.execution_cost  # for mypy
 
         if address_type == "script_address":
-            redeem_address = cluster.gen_payment_addr(
+            redeem_address = cluster.g_address.gen_payment_addr(
                 addr_name=temp_template, payment_script_file=plutus_op.script_file
             )
         else:
             redeem_address = payment_addrs[2].address
 
         redeem_cost = plutus_common.compute_cost(
-            execution_cost=plutus_op.execution_cost, protocol_params=cluster.get_protocol_params()
+            execution_cost=plutus_op.execution_cost,
+            protocol_params=cluster.g_query.get_protocol_params(),
         )
 
         txouts = [
@@ -2557,16 +2581,16 @@ class TestNegativeDatum:
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-        tx_output_fund = cluster.send_tx(
+        tx_output_fund = cluster.g_transaction.send_tx(
             src_address=payment_addr.address,
             tx_name=temp_template,
             txouts=txouts,
             tx_files=tx_files,
             join_txouts=False,
         )
-        txid = cluster.get_txid(tx_body_file=tx_output_fund.out_file)
-        script_utxos = cluster.get_utxo(txin=f"{txid}#0")
-        collateral_utxos = cluster.get_utxo(txin=f"{txid}#1")
+        txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_fund.out_file)
+        script_utxos = cluster.g_query.get_utxo(txin=f"{txid}#0")
+        collateral_utxos = cluster.g_query.get_utxo(txin=f"{txid}#1")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _spend_locked_txin(
@@ -2707,7 +2731,7 @@ class TestNegativeDatum:
 
         datum_file = plutus_common.DATUM_42_TYPED
 
-        datum_hash = cluster.get_hash_script_data(script_data_file=datum_file)
+        datum_hash = cluster.g_transaction.get_hash_script_data(script_data_file=datum_file)
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -2732,14 +2756,14 @@ class TestNegativeDatum:
         ]
         tx_files_fund = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-        tx_raw_output = cluster.send_tx(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=payment_addr.address,
             tx_name=temp_template,
             txouts=txouts,
             tx_files=tx_files_fund,
         )
 
-        out_utxos = cluster.get_utxo(tx_raw_output=tx_raw_output)
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         datum_utxo = clusterlib.filter_utxos(
             utxos=out_utxos, address=dst_addr.address, datum_hash=datum_hash
         )[0]
