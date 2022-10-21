@@ -1435,7 +1435,7 @@ class TestRewards:
 
         * delegate stake address to pool
         * in next epoch, re-delegate to another pool
-        * in next epoch, deregister stake address, immediatelly re-register and delegate to pool
+        * in next epoch, deregister stake address, immediately re-register and delegate to pool
         * in next epoch, deregister stake address, wait for second half of an epoch, re-register
           and delegate to pool
         * while doing the steps above, collect data for pool user for 8 epochs

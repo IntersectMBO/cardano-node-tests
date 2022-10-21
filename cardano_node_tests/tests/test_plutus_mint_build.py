@@ -682,7 +682,7 @@ class TestBuildMinting:
     )
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_minting_context_equivalance(
+    def test_minting_context_equivalence(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Test context equivalence while minting a token.
@@ -1115,7 +1115,7 @@ class TestBuildMinting:
         last_slot_diff = cluster.g_query.get_slot_no() - last_slot_init
         expect_pass_finish = slot_no_3kf + last_slot_diff >= ttl_epoch_info.first_slot
         if expect_pass != expect_pass_finish:
-            # we have hit a boundary and it is hard to say if the test should have passed or not
+            # we have hit a boundary, and it is hard to say if the test should have passed or not
             assert not err or "TimeTranslationPastHorizon" in err, err
             pytest.skip("Boundary hit, skipping")
             return

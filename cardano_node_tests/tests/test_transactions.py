@@ -1452,7 +1452,7 @@ class TestManyUTXOs:
         # sort UTxOs by amount
         utxos_sorted = sorted(cluster.g_query.get_utxo(address=src_address), key=lambda x: x.amount)
 
-        # select 350 UTxOs, so we are in a limit of command line arguments lenght and size of the TX
+        # select 350 UTxOs, so we are in a limit of command line arguments length and size of the TX
         txins = random.sample(utxos_sorted[:big_funds_idx], k=350)
         # add several UTxOs with "big funds" so we can pay fees
         txins.extend(utxos_sorted[-30:])
@@ -2773,7 +2773,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
-    def test_invalid_lenght_utxo_hash(
+    def test_invalid_length_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
@@ -2783,7 +2783,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"test_invalid_lenght_utxo_hash_ci{cluster.cluster_id}"
+        temp_template = f"test_invalid_length_utxo_hash_ci{cluster.cluster_id}"
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
@@ -2800,7 +2800,7 @@ class TestNegative:
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
-    def test_build_invalid_lenght_utxo_hash(
+    def test_build_invalid_length_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],

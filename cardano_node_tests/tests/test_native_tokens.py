@@ -1457,7 +1457,7 @@ class TestPolicies:
 @pytest.mark.testnets
 @pytest.mark.smoke
 class TestTransfer:
-    """Tests for transfering tokens."""
+    """Tests for transferring tokens."""
 
     NEW_TOKENS_NUM = 20_000_000
 
