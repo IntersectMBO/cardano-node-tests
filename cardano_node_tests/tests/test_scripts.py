@@ -1996,7 +1996,6 @@ class TestReferenceUTxO:
             signing_key_files=[dst_addr.skey_file],
         )
         # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
-        script_txins = [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
         script_txins = [
             clusterlib.ScriptTxIn(
                 txins=[],
