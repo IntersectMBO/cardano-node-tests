@@ -77,7 +77,7 @@ git checkout tags/1.30.1
 
 and start nix devops shell:
 
-`nix-shell -A devops`
+`nix develop .#devops`
 
 Go back to the tests repo and activate the virtual environment:
 

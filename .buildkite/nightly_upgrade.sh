@@ -1,6 +1,4 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i bash -p niv nix gnugrep gnumake gnutar coreutils adoptopenjdk-jre-bin curl git xz
-#! nix-shell -I nixpkgs=./nix
+#! /usr/bin/env -S nix develop --accept-flake-config .#base -c bash
 # shellcheck shell=bash
 
 set -xeuo pipefail
@@ -16,12 +14,10 @@ mkdir -p "$ARTIFACTS_DIR" "$COVERAGE_DIR"
 BASE_REVISION="${BASE_REVISION:-1.35.3}"
 
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/niv_update_func.sh"
+. "$REPODIR/.buildkite/nix_override_cardano_node.sh"
 
 # update cardano-node to specified revision
-niv_update
-niv_update cardano-node --rev "$BASE_REVISION"
-cat nix/sources.json
+NODE_OVERRIDE=$(node_override "$BASE_REVISION")
 
 export WORKDIR="/scratch/workdir"
 rm -rf "$WORKDIR"
@@ -31,7 +27,8 @@ export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10
 
 set +e
 # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
-nix-shell --run './.buildkite/nightly_upgrade_pytest.sh step1'
+# shellcheck disable=SC2086
+nix develop --accept-flake-config $NODE_OVERRIDE --command ./.buildkite/nightly_upgrade_pytest.sh step1
 retval="$?"
 
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
@@ -39,27 +36,30 @@ retval="$?"
 
 # update cardano-node to specified branch and/or revision, or to the latest available revision
 if [ -n "${UPGRADE_REVISION:-""}" ]; then
-  niv_update cardano-node --rev "$UPGRADE_REVISION"
+  NODE_OVERRIDE=$(node_override "$UPGRADE_REVISION")
 elif [ -n "${UPGRADE_BRANCH:-""}" ]; then
-  niv_update cardano-node --branch "$UPGRADE_BRANCH"
+  NODE_OVERRIDE=$(node_override "$UPGRADE_BRANCH")
 else
-  niv_update cardano-node
+  NODE_OVERRIDE=$(node_override)
 fi
-cat nix/sources.json
 
-# update cluster nodes, run smoke tests
-nix-shell --run './.buildkite/nightly_upgrade_pytest.sh step2'
+# shellcheck disable=SC2086,SC2016
+nix develop --accept-flake-config $NODE_OVERRIDE --command bash -c '
+  # update cluster nodes, run smoke tests
+  ./.buildkite/nightly_upgrade_pytest.sh step2
+  retval="$?"
+  # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we dont want to continue
+  [ "$retval" -le 1 ] || exit "$retval"
+
+  # update to Babbage, run smoke tests
+  ./.buildkite/nightly_upgrade_pytest.sh step3
+  retval="$?"
+
+  # teardown cluster
+  ./.buildkite/nightly_upgrade_pytest.sh finish
+  exit $retval
+'
 retval="$?"
-
-# retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
-[ "$retval" -le 1 ] || exit "$retval"
-
-# update to Babbage PV8, run smoke tests
-nix-shell --run './.buildkite/nightly_upgrade_pytest.sh step3'
-retval="$?"
-
-# teardown cluster
-nix-shell --run './.buildkite/nightly_upgrade_pytest.sh finish'
 
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091

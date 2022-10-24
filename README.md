@@ -27,7 +27,7 @@ git pull origin master
 git fetch --all --tags
 git checkout tags/<tag>
 # launch devops shell
-nix-shell -A devops
+nix develop .#devops
 
 # cd to tests repo
 cd <your path to cardano-node-test repo>
