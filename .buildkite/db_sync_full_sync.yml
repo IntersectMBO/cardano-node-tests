@@ -1,13 +1,13 @@
 steps:
   - label: ':drum_with_drumsticks: Full sync test :drum_with_drumsticks:'
     commands:
+      - df -h
       - git checkout origin/db_sync_tests
       - git pull origin db_sync_tests
       - cd db_sync_tests
-      - df -h
-      - nix-shell --run 'python ./db_sync_tests.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -dsa "${db_sync_start_arguments}"  -e "${environment}"'
-      - nix-shell --run 'python ./write_test_data_to_db.py -e "${environment}"'
-      - nix-shell --run 'python ./generate_plot.py'
+      - nix-shell --run 'python ./tests/full_sync_from_clean_state.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -dsa "${db_sync_start_arguments}"  -e "${environment}"'
+      - nix-shell --run 'python ./tests/snapshot_creation.py -dpr "${db_sync_pr}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -e "${environment}" -rosc "${run_only_sync_test}"'
+      - nix-shell --run 'python ./tests/local_snapshot_restoration.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -dsa "${db_sync_start_arguments}" -e "${environment}" -rosc "${run_only_sync_test}"'
     timeout_in_minutes: 43200
     agents:
       system: x86_64-linux
