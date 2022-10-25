@@ -358,7 +358,7 @@ class TestLobsterChallenge:
             # final IO vote
             else:
                 # set new counter value to `(seed + counter value) % number of names`
-                # and burn excesive LobsterCounter tokens
+                # and burn excessive LobsterCounter tokens
                 mint_val = vote_val - vote_counter
                 vote_counter = vote_val
 

@@ -79,7 +79,7 @@ def _check_pool(
     stake_pool_id: str,
     pool_data: clusterlib.PoolData,
 ):
-    """Check and return ledger state of the pool, and optionaly also db-sync records."""
+    """Check and return ledger state of the pool, and optionally also db-sync records."""
     pool_params: dict = cluster_obj.g_query.get_pool_params(stake_pool_id).pool_params
 
     assert pool_params, (

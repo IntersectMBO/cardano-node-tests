@@ -96,7 +96,7 @@ class TestUpdateProposals:
         with open(f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8") as fp_out:
             json.dump(protocol_params, fp_out, indent=4)
 
-        # update Alonzo+ speciffic parameters in separate update proposal
+        # update Alonzo+ specific parameters in separate update proposal
         if VERSIONS.cluster_era >= VERSIONS.ALONZO:
             if VERSIONS.cluster_era >= VERSIONS.BABBAGE and clusterlib_utils.cli_has(
                 "governance create-update-proposal --utxo-cost-per-byte"

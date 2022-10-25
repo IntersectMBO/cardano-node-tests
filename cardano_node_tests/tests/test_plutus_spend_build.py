@@ -452,7 +452,7 @@ class TestBuildLocking:
         reason="cannot find `create-script-context` on the PATH",
     )
     @pytest.mark.dbsync
-    def test_context_equivalance(
+    def test_context_equivalence(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],

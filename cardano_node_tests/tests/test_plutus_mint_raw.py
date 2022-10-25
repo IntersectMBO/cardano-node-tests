@@ -766,7 +766,7 @@ class TestMinting:
 
         The Plutus script used in this test takes the expected token name as
         redeemer. Even though the redeemer used for minting the first token
-        doesn't match the token name, the token get's minted anyway. That's
+        doesn't match the token name, the token gets minted anyway. That's
         because only the last redeemer is used and all the other scripts with
         identical minting policy (and corresponding redeemers) are ignored. So
         it only matters that the last redeemer matches the last token name.
@@ -1037,7 +1037,7 @@ class TestMinting:
     )
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    def test_minting_context_equivalance(
+    def test_minting_context_equivalence(
         self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
     ):
         """Test context equivalence while minting a token.

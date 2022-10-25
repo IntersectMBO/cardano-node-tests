@@ -695,7 +695,7 @@ def _compare_redeemers(
         # when minting with one Plutus script and two (or more) redeemers, only the last redeemer
         # is used
         if hasattr(tx_recs[0], "txouts"):  # check it is minting record
-            tx_recs = tx_recs[-1:]  # we'll check only the last reedeemer
+            tx_recs = tx_recs[-1:]  # we'll check only the last redeemer
 
         db_redeemer_recs = db_data.get(script_hash)
         assert db_redeemer_recs, f"No redeemer info in db-sync for script hash `{script_hash}`"

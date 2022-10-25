@@ -135,7 +135,7 @@ def find_files(location: FileType) -> Generator[Path, None, None]:
 def group_files(file_paths: Generator[Path, None, None]) -> List[List[Path]]:
     """Group payment address files with corresponding stake address files.
 
-    These need to be processed together - funds are transfered from payment address after
+    These need to be processed together - funds are transferred from payment address after
     the stake address was deregistered.
     """
     curr_group: List[Path] = []

@@ -203,7 +203,7 @@ def get_xfails(errors: List[str]) -> Set[str]:
         if "expiration date is `null`" in error:
             xfails.add("See cardano-node issue #4396")
             continue
-        # if here, there are also other failures than the expected ones
+        # if here, there are other failures than the expected ones
         return set()
 
     return xfails

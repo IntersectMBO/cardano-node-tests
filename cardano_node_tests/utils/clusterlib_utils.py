@@ -385,7 +385,7 @@ def check_updated_params(update_proposals: List[UpdateProposal], protocol_params
         if not u.name:
             continue
 
-        # nested dictionaries - keys are seperated with comma (,)
+        # nested dictionaries - keys are separated with comma (,)
         names = u.name.split(",")
         nested = protocol_params
         for n in names:
