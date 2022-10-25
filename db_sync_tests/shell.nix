@@ -6,6 +6,7 @@ let
     matplotlib
     pandas
     requests
+    xmltodict
     psutil
     GitPython
     pymysql
