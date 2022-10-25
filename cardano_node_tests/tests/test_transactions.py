@@ -133,6 +133,13 @@ class TestBasic:
     """Test basic transactions - transferring funds, transaction IDs."""
 
     @pytest.fixture
+    def cluster_locked(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+    ) -> clusterlib.ClusterLib:
+        return cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
+
+    @pytest.fixture
     def payment_addrs(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -199,6 +206,29 @@ class TestBasic:
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+        return addrs
+
+    @pytest.fixture
+    def payment_addrs_locked(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_locked: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create 2 new payment addresses for 'test_query_mempool_txin'."""
+        temp_template = common.get_test_id(cluster_locked)
+
+        addrs = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_addr_0",
+            f"{temp_template}_addr_1",
+            cluster_obj=cluster_locked,
+        )
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            *addrs,
+            cluster_obj=cluster_locked,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
         return addrs
@@ -923,15 +953,20 @@ class TestBasic:
     @allure.link(helpers.get_vcs_link())
     def test_query_mempool_txin(
         self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        cluster_locked: clusterlib.ClusterLib,
+        payment_addrs_locked: List[clusterlib.AddressRecord],
     ):
-        """Test that is possible to query txin of a transaction that is still in mempool."""
+        """Test that is possible to query txin of a transaction that is still in mempool.
+
+        * check if 'query tx-mempool next-tx' is returning a TxId
+        * check if 'query tx-mempool exists <TxId>' found the expected TxId
+        """
+        cluster = cluster_locked
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
-        src_addr = payment_addrs[0]
-        dst_addr = payment_addrs[1]
+        src_addr = payment_addrs_locked[0]
+        dst_addr = payment_addrs_locked[1]
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
@@ -955,6 +990,9 @@ class TestBasic:
             tx_name=temp_template,
         )
 
+        txid = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
+        last_ledger_slot = cluster.g_query.get_slot_no()
+
         tx_resubmitted = False
         txin_queried = False
 
@@ -969,6 +1007,21 @@ class TestBasic:
 
             # if the Tx is only in mempool, its txins can still be queried
             txin_queried = bool(cluster.g_query.get_utxo(utxo=tx_raw_output.txins[0]))
+
+            # check 'query tx-mempool next-tx'
+            mempool_next_tx = cluster.g_query.get_mempool_next_tx()
+            assert mempool_next_tx["nextTx"] == txid, f"The nextTx {txid} is not the one expected"
+
+            # check 'query tx-mempool exists <TxId>'
+            txid_exists_in_mempool = cluster.g_query.get_mempool_tx_exists(txid=txid)
+            assert (
+                txid_exists_in_mempool["exists"] and txid_exists_in_mempool["txId"] == txid
+            ), f"The TxId {txid} not exists in the mempool or is not the one expected"
+
+            # check that the slot reported by the tx-mempool commands is correct
+            assert (
+                mempool_next_tx["slot"] == txid_exists_in_mempool["slot"] == last_ledger_slot + 1
+            ), "The slot reported by the 'tx-mempool' commands is not the expected"
 
             if tx_resubmitted or not txin_queried:
                 break

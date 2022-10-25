@@ -399,3 +399,34 @@ class TestAdvancedQueries:
             pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
 
         assert hasattr(pool_params, "retiring")
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_tx_mempool_info(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Test 'query tx-mempool info'.
+
+        * check that the expected fields are returned
+        * check that the slot number returned is the last applied on the ledger plus one.
+        """
+        last_ledger_slot = cluster.g_query.get_slot_no()
+
+        tx_mempool = cluster.g_query.get_mempool_info()
+
+        out_file = "/dev/stdout"
+        cli_out = cluster.cli(
+            ["query", "tx-mempool", "info", "--out-file", out_file, *cluster.magic_args]
+        )
+        tx_mempool_file = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
+
+        assert {"capacityInBytes", "numberOfTxs", "sizeInBytes", "slot"}.issubset(
+            tx_mempool
+        ) and tx_mempool == tx_mempool_file, (
+            f"The result of the 'query tx-mempool' is not the expected {tx_mempool}"
+        )
+
+        assert (
+            tx_mempool["slot"] - 1 == last_ledger_slot
+        ), f"The slot number returned {tx_mempool['slot']} is not the expected {last_ledger_slot}"
