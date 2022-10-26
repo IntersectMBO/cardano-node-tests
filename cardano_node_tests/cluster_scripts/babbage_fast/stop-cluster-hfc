@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+STATE_CLUSTER="${SOCKET_PATH%/*}"
+
+supervisorctl stop all
+
+if [ -f "$STATE_CLUSTER/supervisord.pid" ]
+then
+  kill "$(<"$STATE_CLUSTER/supervisord.pid")"
+  rm -f "$STATE_CLUSTER/supervisord.pid"
+  echo "Cluster terminated!"
+else
+  echo "Cluster is not running!"
+fi
