@@ -115,7 +115,7 @@ def _fund_issuer(
 ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund the token issuer."""
     single_collateral_amount = minting_cost.collateral // collateral_utxo_num
-    collateral_amounts = [single_collateral_amount for c in range(collateral_utxo_num - 1)]
+    collateral_amounts = [single_collateral_amount for __ in range(collateral_utxo_num - 1)]
     collateral_subtotal = sum(collateral_amounts)
     collateral_amounts.append(minting_cost.collateral - collateral_subtotal)
 
