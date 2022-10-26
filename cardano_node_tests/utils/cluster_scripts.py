@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 from typing import List
 from typing import NamedTuple
+from typing import Optional
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.types import FileType
@@ -115,9 +116,10 @@ class LocalScripts(ScriptsTypes):
         )
         return ports
 
-    def copy_scripts_files(self, destdir: Path) -> StartupFiles:
+    def copy_scripts_files(self, destdir: Path, scripts_dir: Optional[Path] = None) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
-        scripts_dir = configuration.SCRIPTS_DIR
+        scripts_dir = scripts_dir or configuration.SCRIPTS_DIR
+
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
