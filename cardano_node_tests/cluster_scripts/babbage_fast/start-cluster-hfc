@@ -471,4 +471,12 @@ cardano_cli_log transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
+sleep 2
+for _ in {1..10}; do
+  if ! cardano_cli_log query utxo "${TXINS[@]}" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
+    break
+  fi
+  sleep 2
+done
+
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster-hfc\` to stop"
