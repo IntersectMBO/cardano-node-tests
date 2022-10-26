@@ -10,7 +10,6 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import pytest_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -51,8 +50,8 @@ SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
 
 
 SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.BABBAGE or configuration.SKIP_PLUTUSV2,
-    reason="runs only with Babbage+ TX; needs PlutusV2 cost model",
+    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+    reason="Plutus V2 is available only in Babbage+ eras",
 )
 
 

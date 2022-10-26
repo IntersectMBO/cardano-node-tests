@@ -17,8 +17,7 @@ on:
         description: "Cluster era"
         options:
         - babbage
-        - alonzo
-        default: alonzo
+        default: babbage
       tx_era:
         type: choice
         description: "Tx era (uses default Tx era when empty)"

@@ -3,7 +3,6 @@
 # controlling environment variables:
 # DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
 # ENABLE_P2P - if set, local cluster will use P2P
-# SKIP_PLUTUSV2 - if set, PlutusV2 cost model will not be present in alonzo genesis
 # UPDATE_COST_MODEL - if set, PlutusV2 cost model will be made available through update proposal
 
 set -euo pipefail
@@ -187,7 +186,7 @@ cat "$STATE_CLUSTER/shelley/genesis.json_jq" > "$STATE_CLUSTER/shelley/genesis.j
 rm -f "$STATE_CLUSTER/shelley/genesis.json_jq"
 
 # delete PlutusV2 cost model when indicated
-if [ -n "${SKIP_PLUTUSV2:-""}" ] || [ -n "${UPDATE_COST_MODEL:-""}" ]; then
+if [ -n "${UPDATE_COST_MODEL:-""}" ]; then
   jq -r '
     del(.costModels.PlutusV2)' \
     < "$STATE_CLUSTER/shelley/genesis.alonzo.json" > "$STATE_CLUSTER/shelley/genesis.alonzo.json_jq"
