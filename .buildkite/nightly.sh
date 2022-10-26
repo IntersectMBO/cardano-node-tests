@@ -14,6 +14,10 @@ if [ "${CI_SKIP_LONG:-"false"}" != "false" ]; then
 fi
 export MARKEXPR
 
+if [ "${CI_ENABLE_P2P:-"false"}" != "false" ]; then
+  export ENABLE_P2P="true"
+fi
+
 WORKDIR="/scratch/workdir"
 rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR"

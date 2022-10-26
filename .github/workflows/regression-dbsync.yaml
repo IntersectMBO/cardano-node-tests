@@ -39,6 +39,10 @@ on:
         type: boolean
         default: false
         description: "Use CDDL format for Tx body"
+      enable_p2p:
+        type: boolean
+        default: false
+        description: "Enable P2P network topology"
       skip_long:
         type: boolean
         default: false
@@ -63,5 +67,6 @@ jobs:
           "CLUSTER_ERA":"${{ github.event.inputs.cluster_era }}",
           "TX_ERA":"${{ github.event.inputs.tx_era }}",
           "USE_CDDL":"${{ github.event.inputs.cddl_format }}",
+          "CI_ENABLE_P2P":"${{ github.event.inputs.enable_p2p }}",
           "CI_SKIP_LONG":"${{ github.event.inputs.skip_long }}"
           }'
