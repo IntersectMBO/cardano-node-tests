@@ -89,6 +89,13 @@ class LocalCluster(ClusterType):
         self.type = ClusterType.LOCAL
         self.cluster_scripts = cluster_scripts.LocalScripts()
 
+    @property
+    def uses_shortcut(self) -> bool:
+        """Check if cluster uses shortcut to go from Byron to last supported era."""
+        byron_dir = get_cluster_env().state_dir / "byron"
+        _uses_shortcut = not (byron_dir / "address-000-converted").exists()
+        return _uses_shortcut
+
     def _get_slots_offset(self, state_dir: Path) -> int:
         """Get offset of blocks from Byron era vs current configuration.
 
@@ -153,20 +160,25 @@ class LocalCluster(ClusterType):
                 "payment": payment,
             }
 
-        # create records for existing byron addresses
-        byron_addrs_data: Dict[str, Dict[str, Any]] = {}
-        byron_dir = get_cluster_env().state_dir / "byron"
-        for b in range(len(list(byron_dir.glob("*.skey")))):
-            byron_addr = {
-                "payment": clusterlib.AddressRecord(
-                    address=clusterlib.read_address_from_file(
-                        byron_dir / f"address-00{b}-converted"
-                    ),
-                    vkey_file=byron_dir / f"payment-keys.00{b}-converted.vkey",
-                    skey_file=byron_dir / f"payment-keys.00{b}-converted.skey",
-                )
-            }
-            byron_addrs_data[f"byron00{b}"] = byron_addr
+        # create records for existing addresses
+        faucet_addrs_data: Dict[str, Dict[str, Any]] = {"faucet": {"payment": None}}
+        byron_dir = cluster_env.state_dir / "byron"
+        shelley_dir = cluster_env.state_dir / "shelley"
+
+        if (byron_dir / "address-000-converted").exists():
+            faucet_addrs_data["faucet"]["payment"] = clusterlib.AddressRecord(
+                address=clusterlib.read_address_from_file(byron_dir / "address-000-converted"),
+                vkey_file=byron_dir / "payment-keys.000-converted.vkey",
+                skey_file=byron_dir / "payment-keys.000-converted.skey",
+            )
+        elif (shelley_dir / "genesis-utxo.addr").exists():
+            faucet_addrs_data["faucet"]["payment"] = clusterlib.AddressRecord(
+                address=clusterlib.read_address_from_file(shelley_dir / "genesis-utxo.addr"),
+                vkey_file=shelley_dir / "genesis-utxo.vkey",
+                skey_file=shelley_dir / "genesis-utxo.skey",
+            )
+        else:
+            raise RuntimeError("Faucet address file doesn't exist.")
 
         # fund new addresses from byron address
         LOGGER.debug("Funding created addresses.")
@@ -174,13 +186,13 @@ class LocalCluster(ClusterType):
         clusterlib_utils.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
-            faucet_data=byron_addrs_data["byron000"],
+            faucet_data=faucet_addrs_data["faucet"],
             amount=100_000_000_000_000,
             destination_dir=destination_dir,
             force=True,
         )
 
-        addrs_data = {**new_addrs_data, **byron_addrs_data}
+        addrs_data = {**new_addrs_data, **faucet_addrs_data}
         return addrs_data
 
 

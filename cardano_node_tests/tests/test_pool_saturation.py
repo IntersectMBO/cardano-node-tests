@@ -150,7 +150,7 @@ class TestPoolSaturation:
         temp_template = common.get_test_id(cluster)
         initial_balance = 1_000_000_000
 
-        faucet_rec = cluster_manager.cache.addrs_data["byron000"]
+        faucet_rec = cluster_manager.cache.addrs_data["faucet"]
         pool_records: Dict[int, PoolRecord] = {}
 
         # make sure we have enough time to finish the delegation in one epoch
