@@ -31,7 +31,6 @@ USE_CDDL = bool(os.environ.get("USE_CDDL"))  # TODO: remove once `--cddl-format`
 ENABLE_P2P = bool(os.environ.get("ENABLE_P2P"))
 
 # TODO: for PlutusV2 cost model, used also in startup scripts as `if [ -n "$VAR" ]...`
-SKIP_PLUTUSV2 = (os.environ.get("SKIP_PLUTUSV2") or "") != ""
 UPDATE_COST_MODEL = (os.environ.get("UPDATE_COST_MODEL") or "") != ""
 # TODO: uses old Alonzo PlutusV1 cost model - remove once it is not needed
 ALONZO_COST_MODEL = (os.environ.get("ALONZO_COST_MODEL") or "") != ""
