@@ -298,24 +298,26 @@ done
 for i in $(seq 1 $NUM_POOLS); do
   mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
   echo "Generating Pool $i Secrets"
+
+  # pool owner addresses and keys
   cardano_cli_log address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey"
   cardano_cli_log stake-address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
-  # payment addresses
+  #   payment address
   cardano_cli_log address build \
     --payment-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner.addr"
-  # stake addresses
+  #   stake address
   cardano_cli_log stake-address build \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
-  # stake addresses registration certs
+  #   stake address registration cert
   cardano_cli_log stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
@@ -324,10 +326,12 @@ for i in $(seq 1 $NUM_POOLS); do
   cardano_cli_log stake-address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey"
-  # stake reward addresses registration certs
+  # stake reward address registration cert
   cardano_cli_log stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
+
+  # pool keys
   cardano_cli_log node key-gen \
     --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
@@ -345,6 +349,7 @@ for i in $(seq 1 $NUM_POOLS); do
     --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
 
+  # pool opcert
   cardano_cli_log node issue-op-cert \
     --kes-period 0 \
     --cold-signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
@@ -464,6 +469,27 @@ sleep 200
 # In Shelley era
 #
 
+# variables used in Shelley-based eras
+GENESIS_VERIFICATION=()
+for vkey in "$STATE_CLUSTER"/shelley/genesis-keys/genesis?.vkey; do
+  GENESIS_VERIFICATION+=("--genesis-verification-key-file" "$vkey")
+done
+
+GENESIS_SIGNING=()
+for skey in "$STATE_CLUSTER"/shelley/genesis-keys/genesis?.skey; do
+  GENESIS_SIGNING+=("--signing-key-file" "$skey")
+done
+
+DELEGATE_SIGNING=()
+for skey in "$STATE_CLUSTER"/shelley/delegate-keys/delegate?.skey; do
+  DELEGATE_SIGNING+=("--signing-key-file" "$skey")
+done
+
+FEE_BUFFER=100000000
+
+FAUCET_ADDR="$(<"$STATE_CLUSTER"/byron/address-000-converted)"
+FAUCET_SKEY="$STATE_CLUSTER/byron/payment-keys.000-converted.skey"
+
 
 wait_for_era "Shelley"
 
@@ -476,17 +502,11 @@ fi
 sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to transfer to Allegra, transfering funds to pool owners, registering pools and delegations"
 
-ALLEGRA_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-allegra.proposal"
-
-GENESIS_VERIFICATION=()
-for i in $(seq 1 $NUM_BFT_NODES); do
-  GENESIS_VERIFICATION+=( \
-    "--genesis-verification-key-file" "$STATE_CLUSTER/shelley/genesis-keys/genesis$i.vkey" \
-  )
-done
+ALLEGRA_HF_PROPOSAL_FILE="$STATE_CLUSTER/shelley/update-proposal-allegra.proposal"
+ALLEGRA_TX_BASE="$STATE_CLUSTER/shelley/transfer-register-delegate"
 
 cardano_cli_log governance create-update-proposal \
-  --out-file "$ALLEGRA_HF_PROPOSAL" \
+  --out-file "$ALLEGRA_HF_PROPOSAL_FILE" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 3 \
@@ -498,11 +518,9 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-TXIN_ADDR="$(<"$STATE_CLUSTER"/byron/address-000-converted)"
 DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' \
   < "$STATE_CLUSTER/shelley/genesis.json")"
 NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
-FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE_BUFFER))"
 
 TXINS=()
@@ -517,7 +535,7 @@ while read -r txhash txix amount _; do
   fi
 done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
-            --address "$TXIN_ADDR" |
+            --address "$FAUCET_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
 TTL="$(get_slot 1000)"
@@ -538,10 +556,10 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+0" \
+  --tx-out "$FAUCET_ADDR+0" \
   "${POOL_ARGS[@]}" \
-  --update-proposal-file "$ALLEGRA_HF_PROPOSAL" \
-  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody"
+  --update-proposal-file "$ALLEGRA_HF_PROPOSAL_FILE" \
+  --out-file "${ALLEGRA_TX_BASE}-fee-tx.txbody"
 
 FEE="$(cardano_cli_log transaction calculate-min-fee \
         --testnet-magic "$NETWORK_MAGIC" \
@@ -550,7 +568,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --tx-out-count 3 \
         --witness-count 9 \
         --byron-witness-count 0 \
-        --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody" |
+        --tx-body-file "${ALLEGRA_TX_BASE}-fee-tx.txbody" |
         cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
@@ -560,10 +578,10 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
   "${POOL_ARGS[@]}" \
-  --update-proposal-file "$ALLEGRA_HF_PROPOSAL" \
-  --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
+  --update-proposal-file "$ALLEGRA_HF_PROPOSAL_FILE" \
+  --out-file         "${ALLEGRA_TX_BASE}-tx.txbody"
 
 POOL_SIGNING=()
 for i in $(seq 1 $NUM_POOLS); do
@@ -573,24 +591,18 @@ for i in $(seq 1 $NUM_POOLS); do
     "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
   )
 done
-BFT_SIGNING=()
-for i in $(seq 1 $NUM_BFT_NODES); do
-  BFT_SIGNING+=( \
-    "--signing-key-file" "$STATE_CLUSTER/shelley/genesis-keys/genesis$i.skey" \
-    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
-  )
-done
 
 cardano_cli_log transaction sign \
   "${POOL_SIGNING[@]}" \
-  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
-  "${BFT_SIGNING[@]}" \
+  --signing-key-file "$FAUCET_SKEY" \
+  "${GENESIS_SIGNING[@]}" \
+  "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
-  --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
+  --tx-body-file     "${ALLEGRA_TX_BASE}-tx.txbody" \
+  --out-file         "${ALLEGRA_TX_BASE}-tx.tx"
 
 cardano_cli_log transaction submit \
-  --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
+  --tx-file "${ALLEGRA_TX_BASE}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
 EPOCH_SEC="$(jq '.epochLength * .slotLength' < "$STATE_CLUSTER/shelley/genesis.json")"
@@ -610,10 +622,10 @@ wait_for_era "Allegra"
 sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to transfer to Mary, set d = 0"
 
-MARY_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-mary.proposal"
+MARY_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-mary"
 
 cardano_cli_log governance create-update-proposal \
-  --out-file "$MARY_HF_PROPOSAL" \
+  --out-file "${MARY_HF_PROPOSAL}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --decentralization-parameter 0 \
@@ -624,7 +636,6 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT=$FEE_BUFFER
 
 TXINS=()
@@ -639,7 +650,7 @@ while read -r txhash txix amount _; do
   fi
 done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
-            --address "$TXIN_ADDR" |
+            --address "$FAUCET_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
 TTL="$(get_slot 1000)"
@@ -649,9 +660,9 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+0" \
-  --update-proposal-file "$MARY_HF_PROPOSAL" \
-  --out-file "$STATE_CLUSTER/shelley/update-proposal-mary-fee-tx.txbody"
+  --tx-out "$FAUCET_ADDR+0" \
+  --update-proposal-file "${MARY_HF_PROPOSAL}.proposal" \
+  --out-file "${MARY_HF_PROPOSAL}-fee-tx.txbody"
 
 FEE="$(cardano_cli_log transaction calculate-min-fee \
         --testnet-magic "$NETWORK_MAGIC" \
@@ -660,7 +671,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --tx-out-count 1 \
         --witness-count 5 \
         --byron-witness-count 0 \
-        --tx-body-file "$STATE_CLUSTER/shelley/update-proposal-mary-fee-tx.txbody" |
+        --tx-body-file "${MARY_HF_PROPOSAL}-fee-tx.txbody" |
         cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
@@ -670,25 +681,19 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
-  --update-proposal-file "$MARY_HF_PROPOSAL" \
-  --out-file         "$STATE_CLUSTER/shelley/update-proposal-mary-tx.txbody"
+  --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
+  --update-proposal-file "${MARY_HF_PROPOSAL}.proposal" \
+  --out-file         "${MARY_HF_PROPOSAL}-tx.txbody"
 
-DELEGATE_SIGNING=()
-for i in $(seq 1 $NUM_BFT_NODES); do
-  DELEGATE_SIGNING+=( \
-    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
-  )
-done
 cardano_cli_log transaction sign \
-  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+  --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "$STATE_CLUSTER/shelley/update-proposal-mary-tx.txbody" \
-  --out-file         "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx"
+  --tx-body-file     "${MARY_HF_PROPOSAL}-tx.txbody" \
+  --out-file         "${MARY_HF_PROPOSAL}-tx.tx"
 
 cardano_cli_log transaction submit \
-  --tx-file "$STATE_CLUSTER/shelley/update-proposal-mary-tx.tx" \
+  --tx-file "${MARY_HF_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
 echo "Waiting $NEXT_EPOCH_SLEEP sec for Mary era to start"
@@ -705,10 +710,10 @@ wait_for_era "Mary"
 sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to transfer to Alonzo"
 
-ALONZO_UPDATE_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-alonzo.proposal"
+ALONZO_UPDATE_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-alonzo"
 
 cardano_cli_log governance create-update-proposal \
-  --out-file "$ALONZO_UPDATE_PROPOSAL" \
+  --out-file "${ALONZO_UPDATE_PROPOSAL}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 5 \
@@ -718,7 +723,6 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT=$FEE_BUFFER
 
 TXINS=()
@@ -733,7 +737,7 @@ while read -r txhash txix amount _; do
   fi
 done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
-            --address "$TXIN_ADDR" |
+            --address "$FAUCET_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
 TTL="$(get_slot 1000)"
@@ -743,9 +747,9 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+0" \
-  --update-proposal-file "$ALONZO_UPDATE_PROPOSAL" \
-  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-fee-tx.txbody"
+  --tx-out "$FAUCET_ADDR+0" \
+  --update-proposal-file "${ALONZO_UPDATE_PROPOSAL}.proposal" \
+  --out-file "${ALONZO_UPDATE_PROPOSAL}-fee-tx.txbody"
 
 FEE="$(cardano_cli_log transaction calculate-min-fee \
         --testnet-magic "$NETWORK_MAGIC" \
@@ -754,7 +758,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --tx-out-count 1 \
         --witness-count 5 \
         --byron-witness-count 0 \
-        --tx-body-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-fee-tx.txbody" |
+        --tx-body-file "${ALONZO_UPDATE_PROPOSAL}-fee-tx.txbody" |
         cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
@@ -764,25 +768,19 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
-  --update-proposal-file "$ALONZO_UPDATE_PROPOSAL" \
-  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.txbody"
+  --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
+  --update-proposal-file "${ALONZO_UPDATE_PROPOSAL}.proposal" \
+  --out-file "${ALONZO_UPDATE_PROPOSAL}-tx.txbody"
 
-DELEGATE_SIGNING=()
-for i in $(seq 1 $NUM_BFT_NODES); do
-  DELEGATE_SIGNING+=( \
-    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
-  )
-done
 cardano_cli_log transaction sign \
-  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+  --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.txbody" \
-  --out-file         "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.tx"
+  --tx-body-file     "${ALONZO_UPDATE_PROPOSAL}-tx.txbody" \
+  --out-file         "${ALONZO_UPDATE_PROPOSAL}-tx.tx"
 
 cardano_cli_log transaction submit \
-  --tx-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-tx.tx" \
+  --tx-file "${ALONZO_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
 # give it some time before restaring the nodes so the update proposal Tx is likely to get through
@@ -811,11 +809,11 @@ wait_for_era "Alonzo"
 sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to update to PV6"
 
-ALONZO_UPDATE_PROPOSAL_PV6="$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6.proposal"
+ALONZO_UPDATE_PROPOSAL_PV6="$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6"
 
 # protocol version + dapps parameters update
 cardano_cli_log governance create-update-proposal \
-  --out-file "$ALONZO_UPDATE_PROPOSAL_PV6" \
+  --out-file "${ALONZO_UPDATE_PROPOSAL_PV6}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 6 \
@@ -827,7 +825,6 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT=$FEE_BUFFER
 
 TXINS=()
@@ -842,7 +839,7 @@ while read -r txhash txix amount _; do
   fi
 done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
-            --address "$TXIN_ADDR" |
+            --address "$FAUCET_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
 
 TTL="$(get_slot 1000)"
@@ -852,9 +849,9 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+0" \
-  --update-proposal-file "$ALONZO_UPDATE_PROPOSAL_PV6" \
-  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-fee-tx.txbody"
+  --tx-out "$FAUCET_ADDR+0" \
+  --update-proposal-file "${ALONZO_UPDATE_PROPOSAL_PV6}.proposal" \
+  --out-file "${ALONZO_UPDATE_PROPOSAL_PV6}-fee-tx.txbody"
 
 FEE="$(cardano_cli_log transaction calculate-min-fee \
         --testnet-magic "$NETWORK_MAGIC" \
@@ -863,7 +860,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --tx-out-count 1 \
         --witness-count 5 \
         --byron-witness-count 0 \
-        --tx-body-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-fee-tx.txbody" |
+        --tx-body-file "${ALONZO_UPDATE_PROPOSAL_PV6}-fee-tx.txbody" |
         cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
@@ -873,25 +870,19 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
-  --update-proposal-file "$ALONZO_UPDATE_PROPOSAL_PV6" \
-  --out-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-tx.txbody"
+  --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
+  --update-proposal-file "${ALONZO_UPDATE_PROPOSAL_PV6}.proposal" \
+  --out-file "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.txbody"
 
-DELEGATE_SIGNING=()
-for i in $(seq 1 $NUM_BFT_NODES); do
-  DELEGATE_SIGNING+=( \
-    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
-  )
-done
 cardano_cli_log transaction sign \
-  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+  --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-tx.txbody" \
-  --out-file         "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-tx.tx"
+  --tx-body-file     "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.txbody" \
+  --out-file         "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.tx"
 
 cardano_cli_log transaction submit \
-  --tx-file "$STATE_CLUSTER/shelley/update-proposal-alonzo-pv6-tx.tx" \
+  --tx-file "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
 # give it some time before restaring the nodes so the update proposal Tx is likely to get through
@@ -942,7 +933,6 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT=$FEE_BUFFER
 
 TXINS=()
@@ -957,7 +947,7 @@ while read -r txhash txix amount _; do
   fi
 done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
-            --address "$TXIN_ADDR" |
+            --address "$FAUCET_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
 
 TTL="$(get_slot 1000)"
@@ -967,7 +957,7 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+0" \
+  --tx-out "$FAUCET_ADDR+0" \
   --update-proposal-file "${BABBAGE_UPDATE_PROPOSAL}.proposal" \
   --out-file "${BABBAGE_UPDATE_PROPOSAL}-fee-tx.txbody"
 
@@ -988,18 +978,12 @@ cardano_cli_log transaction build-raw \
   --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
   --update-proposal-file "${BABBAGE_UPDATE_PROPOSAL}.proposal" \
   --out-file "${BABBAGE_UPDATE_PROPOSAL}-tx.txbody"
 
-DELEGATE_SIGNING=()
-for i in $(seq 1 $NUM_BFT_NODES); do
-  DELEGATE_SIGNING+=( \
-    "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
-  )
-done
 cardano_cli_log transaction sign \
-  --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+  --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --tx-body-file     "${BABBAGE_UPDATE_PROPOSAL}-tx.txbody" \
@@ -1045,7 +1029,6 @@ if [ -n "${UPDATE_COST_MODEL:-""}" ]; then
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/pparams.json"
 
-  FEE_BUFFER=100000000
   STOP_TXIN_AMOUNT=$FEE_BUFFER
 
   TXINS=()
@@ -1060,14 +1043,14 @@ if [ -n "${UPDATE_COST_MODEL:-""}" ]; then
     fi
   done <<< "$(cardano_cli_log query utxo --testnet-magic \
               "$NETWORK_MAGIC" \
-              --address "$TXIN_ADDR" |
+              --address "$FAUCET_ADDR" |
               grep -E "lovelace \+ TxOutDatumNone$")"
 
   cardano_cli_log transaction build-raw \
     --babbage-era \
     --fee    0 \
     "${TXINS[@]}" \
-    --tx-out "$TXIN_ADDR+0" \
+    --tx-out "$FAUCET_ADDR+0" \
     --update-proposal-file "${COST_UPDATE_PROPOSAL}.proposal" \
     --out-file "${COST_UPDATE_PROPOSAL}-fee-tx.txbody"
 
@@ -1087,18 +1070,12 @@ if [ -n "${UPDATE_COST_MODEL:-""}" ]; then
     --babbage-era \
     --fee    "$FEE" \
     "${TXINS[@]}" \
-    --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+    --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
     --update-proposal-file "${COST_UPDATE_PROPOSAL}.proposal" \
     --out-file "${COST_UPDATE_PROPOSAL}-tx.txbody"
 
-  DELEGATE_SIGNING=()
-  for i in $(seq 1 $NUM_BFT_NODES); do
-    DELEGATE_SIGNING+=( \
-      "--signing-key-file" "$STATE_CLUSTER/shelley/delegate-keys/delegate$i.skey" \
-    )
-  done
   cardano_cli_log transaction sign \
-    --signing-key-file "$STATE_CLUSTER/byron/payment-keys.000-converted.skey" \
+    --signing-key-file "$FAUCET_SKEY" \
     "${DELEGATE_SIGNING[@]}" \
     --testnet-magic    "$NETWORK_MAGIC" \
     --tx-body-file     "${COST_UPDATE_PROPOSAL}-tx.txbody" \
