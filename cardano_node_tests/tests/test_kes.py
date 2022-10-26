@@ -391,7 +391,7 @@ class TestKES:
             kes_period=invalid_kes_period,
         )
 
-        with cluster_manager.restart_on_failure():
+        with cluster_manager.respin_on_failure():
             with logfiles.expect_errors(expected_errors, ignore_file_id=cluster_manager.worker_id):
                 # restart the node with the new operational certificate (restart all nodes so
                 # the connection is established again)
@@ -605,7 +605,7 @@ class TestKES:
         opcert_file = pool_rec["pool_operational_cert"]
         opcert_file_old = shutil.copy(opcert_file, f"{opcert_file}_old")
 
-        with cluster_manager.restart_on_failure():
+        with cluster_manager.respin_on_failure():
             # generate new operational certificate with valid `--kes-period`
             new_kes_period = cluster.g_query.get_kes_period()
             new_opcert_file = cluster.g_node.gen_node_operational_cert(

@@ -112,7 +112,7 @@ class TestNoRewards:
 
         cluster.wait_for_new_epoch(3)
 
-        with cluster_manager.restart_on_failure():
+        with cluster_manager.respin_on_failure():
             # check that NO new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
@@ -277,7 +277,7 @@ class TestNoRewards:
 
         cluster.wait_for_new_epoch(3)
 
-        with cluster_manager.restart_on_failure():
+        with cluster_manager.respin_on_failure():
             # check that NO new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
@@ -425,7 +425,7 @@ class TestNoRewards:
             tx_files=tx_files_deregister,
         )
 
-        with cluster_manager.restart_on_failure():
+        with cluster_manager.respin_on_failure():
             # check that the key deposit was returned
             assert (
                 cluster.g_query.get_address_balance(pool_owner.payment.address)
@@ -632,7 +632,7 @@ class TestNoRewards:
             tx_files=tx_files_deregister,
         )
 
-        with cluster_manager.restart_on_failure():
+        with cluster_manager.respin_on_failure():
             # check that the key deposit was returned
             assert (
                 cluster.g_query.get_address_balance(pool_reward.payment.address)
@@ -803,7 +803,7 @@ class TestNoRewards:
             tx_files=tx_files_deregister,
         )
 
-        with cluster_manager.restart_on_failure():
+        with cluster_manager.respin_on_failure():
             # check that the key deposit was returned
             assert (
                 cluster.g_query.get_address_balance(pool_reward.payment.address)

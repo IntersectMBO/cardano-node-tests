@@ -74,8 +74,8 @@ class _ClusterGetStatus:
     selected_instance: int = -1
     instance_num: int = -1
     sleep_delay: int = 1
-    restart_here: bool = False
-    restart_ready: bool = False
+    respin_here: bool = False
+    respin_ready: bool = False
     first_iteration: bool = True
     instance_dir: Path = Path("/nonexistent")
     final_lock_resources: Iterable[str] = ()
@@ -128,38 +128,36 @@ class ClusterGetter:
         startup_files_dir.mkdir(exist_ok=True, parents=True)
         return startup_files_dir
 
-    def _restart(self, start_cmd: str = "", stop_cmd: str = "") -> bool:  # noqa: C901
-        """Restart cluster.
+    def _respin(self, start_cmd: str = "", stop_cmd: str = "") -> bool:  # noqa: C901
+        """Respin cluster.
 
         Not called under global lock!
         """
         # pylint: disable=too-many-branches,too-many-statements
         cluster_running_file = self.instance_dir / common.CLUSTER_RUNNING_FILE
 
-        # don't restart cluster if it was started outside of test framework
+        # don't respin cluster if it was started outside of test framework
         if configuration.DEV_CLUSTER_RUNNING:
-            self.log(f"c{self.cluster_instance_num}: ignoring restart, dev cluster is running")
+            self.log(f"c{self.cluster_instance_num}: ignoring respin, dev cluster is running")
             if cluster_running_file.exists():
-                LOGGER.warning(
-                    "Ignoring requested cluster restart as 'DEV_CLUSTER_RUNNING' is set."
-                )
+                LOGGER.warning("Ignoring requested cluster respin as 'DEV_CLUSTER_RUNNING' is set.")
             else:
                 helpers.touch(cluster_running_file)
             return True
 
-        # fail if cluster restart is forbidden and it was already started
+        # fail if cluster respin is forbidden and the cluster was already started
         if configuration.FORBID_RESTART and cluster_running_file.exists():
-            raise RuntimeError("Cannot restart cluster when 'FORBID_RESTART' is set.")
+            raise RuntimeError("Cannot respin cluster when 'FORBID_RESTART' is set.")
 
         self.log(
-            f"c{self.cluster_instance_num}: called `_restart`, start_cmd='{start_cmd}', "
+            f"c{self.cluster_instance_num}: called `_respin`, start_cmd='{start_cmd}', "
             f"stop_cmd='{stop_cmd}'"
         )
 
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
         if state_dir.exists() and not (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).exists():
-            raise RuntimeError("Cannot restart cluster when it was not started by the framework.")
+            raise RuntimeError("Cannot respin cluster when it was not started by the framework.")
 
         startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
             destdir=self._create_startup_files_dir(self.cluster_instance_num),
@@ -169,7 +167,7 @@ class ClusterGetter:
         )
 
         self.log(
-            f"c{self.cluster_instance_num}: in `_restart`, new files "
+            f"c{self.cluster_instance_num}: in `_respin`, new files "
             f"start_cmd='{startup_files.start_script}', "
             f"stop_cmd='{startup_files.stop_script}'"
         )
@@ -283,14 +281,14 @@ class ClusterGetter:
             self.log(f"c{instance_num}: found not running services {not_running_services}")
         return not failed_services
 
-    def _is_restart_needed(self, instance_num: int) -> bool:
-        """Check if it is necessary to restart cluster."""
+    def _is_respin_needed(self, instance_num: int) -> bool:
+        """Check if it is necessary to respin cluster."""
         instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
         # if cluster instance is not started yet
         if not (instance_dir / common.CLUSTER_RUNNING_FILE).exists():
             return True
-        # if it was indicated that the cluster instance needs to be restarted
-        if list(instance_dir.glob(f"{common.RESTART_NEEDED_GLOB}_*")):
+        # if it was indicated that the cluster instance needs to be respun
+        if list(instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*")):
             return True
         # if a service failed on cluster instance
         if not self._is_healthy(instance_num):
@@ -302,13 +300,13 @@ class ClusterGetter:
         self.log(f"c{instance_num}: in `_on_marked_test_stop`")
         instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
 
-        # set cluster instance to be restarted if needed
-        restart_after_mark_files = list(instance_dir.glob(f"{common.RESTART_AFTER_MARK_GLOB}_*"))
-        if restart_after_mark_files:
-            for f in restart_after_mark_files:
+        # set cluster instance to be respun if needed
+        respin_after_mark_files = list(instance_dir.glob(f"{common.RESPIN_AFTER_MARK_GLOB}_*"))
+        if respin_after_mark_files:
+            for f in respin_after_mark_files:
                 f.unlink()
-            self.log(f"c{instance_num}: in `_on_marked_test_stop`, creating 'restart needed' file")
-            helpers.touch(instance_dir / f"{common.RESTART_NEEDED_GLOB}_{self.worker_id}")
+            self.log(f"c{instance_num}: in `_on_marked_test_stop`, creating 'respin needed' file")
+            helpers.touch(instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}")
 
         # remove file that indicates that tests with the mark are running
         marked_running_sfiles = list(instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_*"))
@@ -430,15 +428,15 @@ class ClusterGetter:
 
         return False
 
-    def _restarted_by_other_worker(self, cget_status: _ClusterGetStatus) -> bool:
-        """Check if the cluster is currently being restarted by worker other than this one."""
-        if cget_status.restart_here:
+    def _respun_by_other_worker(self, cget_status: _ClusterGetStatus) -> bool:
+        """Check if the cluster is currently being respun by worker other than this one."""
+        if cget_status.respin_here:
             return False
 
-        restart_in_progress = list(
-            cget_status.instance_dir.glob(f"{common.RESTART_IN_PROGRESS_GLOB}_*")
+        respin_in_progress = list(
+            cget_status.instance_dir.glob(f"{common.RESPIN_IN_PROGRESS_GLOB}_*")
         )
-        if restart_in_progress:
+        if respin_in_progress:
             # no log message here, it would be too many of them
             return True
 
@@ -495,7 +493,7 @@ class ClusterGetter:
         else:
             # No marked tests are running yet. Indicate that it is planned to start marked tests as
             # soon as possible (when all currently running tests are finished or the cluster is
-            # restarted).
+            # respun).
             cget_status.selected_instance = cget_status.instance_num
             mark_starting_file = (
                 cget_status.instance_dir
@@ -511,8 +509,8 @@ class ClusterGetter:
         """Cleanup if the selected cluster instance failed to start."""
         # move on to other cluster instance
         cget_status.selected_instance = -1
-        cget_status.restart_here = False
-        cget_status.restart_ready = False
+        cget_status.respin_here = False
+        cget_status.respin_ready = False
 
         # remove status files that are checked by other workers
         for sf in (
@@ -527,67 +525,67 @@ class ClusterGetter:
         if len(dead_clusters) == self.num_of_instances:
             raise RuntimeError("All clusters are dead, cannot run.")
 
-    def _init_restart(self, cget_status: _ClusterGetStatus) -> bool:
-        """Initialize restart of this cluster instance on this worker."""
-        # restart already initialized
-        if cget_status.restart_here:
+    def _init_respin(self, cget_status: _ClusterGetStatus) -> bool:
+        """Initialize respin of this cluster instance on this worker."""
+        # respin already initialized
+        if cget_status.respin_here:
             return True
 
-        # restart is needed when custom start command was specified and the test is marked test or
+        # respin is needed when custom start command was specified and the test is marked test or
         # singleton
         initial_marked_test = bool(cget_status.mark and not cget_status.marked_running_sfiles)
         singleton_test = resources.Resources.CLUSTER in cget_status.lock_resources
-        new_cmd_restart = bool(cget_status.start_cmd and (initial_marked_test or singleton_test))
-        will_restart = new_cmd_restart or self._is_restart_needed(cget_status.instance_num)
-        if not will_restart:
+        new_cmd_respin = bool(cget_status.start_cmd and (initial_marked_test or singleton_test))
+        will_respin = new_cmd_respin or self._is_respin_needed(cget_status.instance_num)
+        if not will_respin:
             return True
 
-        # if tests are running on the instance, we cannot restart, therefore we cannot continue
+        # if tests are running on the instance, we cannot respin, therefore we cannot continue
         if cget_status.started_tests_sfiles:
-            self.log(f"c{cget_status.instance_num}: tests are running, cannot restart")
+            self.log(f"c{cget_status.instance_num}: tests are running, cannot respin")
             return False
 
-        self.log(f"c{cget_status.instance_num}: setting 'restart in progress'")
+        self.log(f"c{cget_status.instance_num}: setting 'respin in progress'")
 
-        # Cluster restart will be performed by this worker.
-        # By setting `restart_here`, we make sure this worker continue on this cluster instance
-        # after restart is finished. It is important because the `start_cmd` used for starting the
+        # Cluster respin will be performed by this worker.
+        # By setting `respin_here`, we make sure this worker continue on this cluster instance
+        # after respin is finished. It is important because the `start_cmd` used for starting the
         # cluster instance might be specific for the test.
-        cget_status.restart_here = True
+        cget_status.respin_here = True
         cget_status.selected_instance = cget_status.instance_num
 
-        restart_in_progress_file = (
-            cget_status.instance_dir / f"{common.RESTART_IN_PROGRESS_GLOB}_{self.worker_id}"
+        respin_in_progress_file = (
+            cget_status.instance_dir / f"{common.RESPIN_IN_PROGRESS_GLOB}_{self.worker_id}"
         )
-        if not restart_in_progress_file.exists():
-            helpers.touch(restart_in_progress_file)
+        if not respin_in_progress_file.exists():
+            helpers.touch(respin_in_progress_file)
 
         return True
 
-    def _finish_restart(self, cget_status: _ClusterGetStatus) -> bool:
-        """On first call, setup cluster instance for restart. On second call, perform cleanup."""
-        if not cget_status.restart_here:
+    def _finish_respin(self, cget_status: _ClusterGetStatus) -> bool:
+        """On first call, setup cluster instance for respin. On second call, perform cleanup."""
+        if not cget_status.respin_here:
             return True
 
-        if cget_status.restart_ready:
-            # The cluster was already restarted if we are here and `restart_ready` is still True.
+        if cget_status.respin_ready:
+            # The cluster was already respined if we are here and `respin_ready` is still True.
             # If that's the case, do cleanup.
-            cget_status.restart_ready = False
-            cget_status.restart_here = False
+            cget_status.respin_ready = False
+            cget_status.respin_here = False
 
-            # remove status files that are no longer valid after restart
-            for f in cget_status.instance_dir.glob(f"{common.RESTART_IN_PROGRESS_GLOB}_*"):
+            # remove status files that are no longer valid after respin
+            for f in cget_status.instance_dir.glob(f"{common.RESPIN_IN_PROGRESS_GLOB}_*"):
                 f.unlink()
-            for f in cget_status.instance_dir.glob(f"{common.RESTART_NEEDED_GLOB}_*"):
+            for f in cget_status.instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*"):
                 f.unlink()
             return True
 
-        # NOTE: when `_restart` is called, the env variables needed for cluster start scripts need
+        # NOTE: when `_respin` is called, the env variables needed for cluster start scripts need
         # to be already set (e.g. CARDANO_NODE_SOCKET_PATH)
-        self.log(f"c{cget_status.instance_num}: ready to restart cluster")
-        # the actual `_restart` function will be called outside of global lock so other workers
+        self.log(f"c{cget_status.instance_num}: ready to respin cluster")
+        # the actual `_respin` function will be called outside of global lock so other workers
         # don't need to wait
-        cget_status.restart_ready = True
+        cget_status.respin_ready = True
         return False
 
     def _create_test_status_files(self, cget_status: _ClusterGetStatus) -> None:
@@ -614,18 +612,18 @@ class ClusterGetter:
                 self.instance_dir / f"{common.RESOURCE_LOCKED_GLOB}_@@{r}@@_{self.worker_id}"
             )
 
-        # cleanup = cluster restart after test (group of tests) is finished
+        # cleanup = cluster respin after test (group of tests) is finished
         if cget_status.cleanup:
             # cleanup after group of test that are marked with a marker
             if cget_status.mark:
                 self.log(f"c{cget_status.instance_num}: cleanup and mark")
                 helpers.touch(
-                    self.instance_dir / f"{common.RESTART_AFTER_MARK_GLOB}_{self.worker_id}"
+                    self.instance_dir / f"{common.RESPIN_AFTER_MARK_GLOB}_{self.worker_id}"
                 )
             # cleanup after single test (e.g. singleton)
             else:
                 self.log(f"c{cget_status.instance_num}: cleanup and not mark")
-                helpers.touch(self.instance_dir / f"{common.RESTART_NEEDED_GLOB}_{self.worker_id}")
+                helpers.touch(self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}")
 
         self.log(f"c{self.cluster_instance_num}: creating 'test running' status file")
         test_running_file = self.instance_dir / f"{common.TEST_RUNNING_GLOB}_{self.worker_id}"
@@ -710,8 +708,8 @@ class ClusterGetter:
 
         # iterate until it is possible to start the test
         while True:
-            if cget_status.restart_ready:
-                self._restart(start_cmd=start_cmd)
+            if cget_status.respin_ready:
+                self._respin(start_cmd=start_cmd)
 
             if not cget_status.first_iteration:
                 _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
@@ -750,8 +748,8 @@ class ClusterGetter:
                         self._cleanup_dead_clusters(cget_status)
                         continue
 
-                    # cluster restart planned or in progress, so no new tests can start
-                    if self._restarted_by_other_worker(cget_status):
+                    # cluster respin planned or in progress, so no new tests can start
+                    if self._respun_by_other_worker(cget_status):
                         cget_status.sleep_delay = 5
                         continue
 
@@ -808,21 +806,21 @@ class ClusterGetter:
                         cget_status.sleep_delay = 5
                         continue
 
-                    # if restart is needed, indicate that the cluster will be restarted
+                    # if respin is needed, indicate that the cluster will be respined
                     # (after all currently running tests are finished)
-                    if not self._init_restart(cget_status):
+                    if not self._init_respin(cget_status):
                         continue
 
                     # we've found suitable cluster instance
                     cget_status.selected_instance = instance_num
                     self._cluster_instance_num = instance_num
                     self.log(f"c{instance_num}: can run test '{cget_status.current_test}'")
-                    # set environment variables that are needed when restarting the cluster
+                    # set environment variables that are needed when respinning the cluster
                     # and running tests
                     cluster_nodes.set_cluster_env(instance_num)
 
-                    # if needed, finish restart related actions
-                    if not self._finish_restart(cget_status):
+                    # if needed, finish respin related actions
+                    if not self._finish_respin(cget_status):
                         continue
 
                     # from this point on, all conditions needed to start the test are met
