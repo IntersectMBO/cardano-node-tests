@@ -178,19 +178,19 @@ class ClusterManager:
             helpers.touch(instance_dir / common.CLUSTER_STOPPED_FILE)
             self.log(f"c{instance_num}: stopped cluster instance")
 
-    def set_needs_restart(self) -> None:
-        """Indicate that the cluster instance needs restart."""
+    def set_needs_respin(self) -> None:
+        """Indicate that the cluster instance needs respin."""
         with locking.FileLockIfXdist(self.cluster_lock):
-            self.log(f"c{self.cluster_instance_num}: called `set_needs_restart`")
-            helpers.touch(self.instance_dir / f"{common.RESTART_NEEDED_GLOB}_{self.worker_id}")
+            self.log(f"c{self.cluster_instance_num}: called `set_needs_respin`")
+            helpers.touch(self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}")
 
     @contextlib.contextmanager
-    def restart_on_failure(self) -> Iterator[None]:
-        """Indicate that the cluster instance needs restart if command failed - context manager."""
+    def respin_on_failure(self) -> Iterator[None]:
+        """Indicate that the cluster instance needs respin if command failed - context manager."""
         try:
             yield
         except Exception:
-            self.set_needs_restart()
+            self.set_needs_respin()
             raise
 
     @contextlib.contextmanager
@@ -222,12 +222,12 @@ class ClusterManager:
             # apply only from the time they were added (by `logfiles.add_ignore_rule`) until the end
             # of the test.
             # However sometimes we don't want to remove the rules file. Imagine situation when test
-            # failed and cluster instance needs to be restarted. The failed test already finished,
-            # but other tests are still running and need to finish first before restart can happen.
+            # failed and cluster instance needs to be respun. The failed test already finished,
+            # but other tests are still running and need to finish first before respin can happen.
             # If the ignored error continues to get printed into log file, tests that are still
             # running on the cluster instance would report that error. Therefore if the cluster
-            # instance is scheduled for restart, don't delete the rules file.
-            if not list(self.instance_dir.glob(f"{common.RESTART_NEEDED_GLOB}_*")):
+            # instance is scheduled for respin, don't delete the rules file.
+            if not list(self.instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*")):
                 logfiles.clean_ignore_rules(ignore_file_id=self.worker_id)
 
             # remove resource locking files created by the worker
@@ -308,7 +308,7 @@ class ClusterManager:
     def _reload_cluster_obj(self, state_dir: Path) -> None:
         """Reload cluster instance data if necessary."""
         addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
-        # the checksum will not match when cluster was restarted
+        # the checksum will not match when cluster was respun
         if addrs_data_checksum == self.cache.last_checksum:
             return
 

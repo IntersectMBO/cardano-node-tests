@@ -195,6 +195,6 @@ def fail_on_fork(
         err_msg.append(f"Following nodes appear to be out of sync: {sorted(unsynced_nodes)}")
 
     if err_msg:
-        # the local cluster needs to be restarted before it is usable again
-        cluster_manager.set_needs_restart()
+        # the local cluster needs to be respun before it is usable again
+        cluster_manager.set_needs_respin()
         raise AssertionError("\n".join(err_msg))

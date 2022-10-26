@@ -889,7 +889,7 @@ class TestRewards:
             tx_files=tx_files,
         )
 
-        with cluster_manager.restart_on_failure():
+        with cluster_manager.respin_on_failure():
             # make sure we managed to finish delegation in the expected epoch
             assert (
                 cluster.g_query.get_epoch() == init_epoch
@@ -1273,8 +1273,8 @@ class TestRewards:
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
-        # pool configuration changed, restart needed
-        cluster_manager.set_needs_restart()
+        # pool configuration changed, respin needed
+        cluster_manager.set_needs_respin()
 
         assert (
             cluster.g_query.get_epoch() == init_epoch

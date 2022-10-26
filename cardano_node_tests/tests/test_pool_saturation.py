@@ -311,7 +311,7 @@ class TestPoolSaturation:
                     force=True,
                 )
 
-            with cluster_manager.restart_on_failure():
+            with cluster_manager.respin_on_failure():
                 # Fund the address delegated to "pool2" to oversaturate the pool.
                 # New stake amount will be current (saturated) stake * 2.
                 if this_epoch == init_epoch + epoch_oversaturate:
