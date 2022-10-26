@@ -653,11 +653,8 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
-TTL="$(get_slot 1000)"
-
 cardano_cli_log transaction build-raw \
   --allegra-era \
-  --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
   --tx-out "$FAUCET_ADDR+0" \
@@ -678,7 +675,6 @@ TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
 cardano_cli_log transaction build-raw \
   --allegra-era \
-  --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
@@ -740,11 +736,8 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace$|[0-9]$")"
 
-TTL="$(get_slot 1000)"
-
 cardano_cli_log transaction build-raw \
   --mary-era \
-  --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
   --tx-out "$FAUCET_ADDR+0" \
@@ -765,7 +758,6 @@ TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
 cardano_cli_log transaction build-raw \
   --mary-era \
-  --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
@@ -842,11 +834,8 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
 
-TTL="$(get_slot 1000)"
-
 cardano_cli_log transaction build-raw \
   --alonzo-era \
-  --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
   --tx-out "$FAUCET_ADDR+0" \
@@ -867,7 +856,6 @@ TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
 cardano_cli_log transaction build-raw \
   --alonzo-era \
-  --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
@@ -950,11 +938,8 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
 
-TTL="$(get_slot 1000)"
-
 cardano_cli_log transaction build-raw \
   --alonzo-era \
-  --ttl    "$TTL" \
   --fee    0 \
   "${TXINS[@]}" \
   --tx-out "$FAUCET_ADDR+0" \
@@ -975,7 +960,6 @@ TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
 cardano_cli_log transaction build-raw \
   --alonzo-era \
-  --ttl    "$TTL" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
