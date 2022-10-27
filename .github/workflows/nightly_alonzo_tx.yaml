@@ -1,0 +1,13 @@
+name: Nightly tests Alonzo Tx
+
+on:
+  schedule:
+    - cron: '15 01 * * *'
+  workflow_dispatch:
+
+jobs:
+  nightly_job_alonzo_tx:
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/regression_reusable.yaml
+    with:
+      env-path: .github/env_nightly_alonzo_tx

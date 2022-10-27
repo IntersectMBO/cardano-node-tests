@@ -1,0 +1,95 @@
+name: Regression tests reusable
+
+on:
+  workflow_call:
+    inputs:
+      env-path:
+        required: false
+        type: string
+        default: ""
+      node_rev:
+        required: false
+        type: string
+        default: ""
+      node_branch:
+        required: false
+        type: string
+        default: ""
+      cluster_era:
+        required: false
+        type: string
+        default: ""
+      tx_era:
+        required: false
+        type: string
+        default: ""
+      scripts_dirname:
+        required: false
+        type: string
+        default: ""
+      enable_p2p:
+        required: false
+        type: boolean
+        default: false
+      skip_long:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  cli_regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+        with:
+          extra_nix_config: |
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=
+            substituters = https://cache.nixos.org https://hydra.iohk.io https://iohk.cachix.org
+            allow-import-from-derivation = true
+      - name: Collect env variables
+        run: |
+          : > .github_ci_env
+          echo "NODE_REV=${{ inputs.node_rev }}" >> .github_ci_env
+          echo "NODE_BRANCH=${{ inputs.node_branch }}" >> .github_ci_env
+          echo "CLUSTER_ERA=${{ inputs.cluster_era }}" >> .github_ci_env
+          echo "TX_ERA=${{ inputs.tx_era }}" >> .github_ci_env
+          echo "SCRIPTS_DIRNAME=${{ inputs.scripts_dirname }}" >> .github_ci_env
+          echo "CI_ENABLE_P2P=${{ inputs.enable_p2p }}" >> .github_ci_env
+          echo "CI_SKIP_LONG=${{ inputs.skip_long }}" >> .github_ci_env
+          if [ -e "${{ inputs.env-path }}" ]; then cat "${{ inputs.env-path }}" >> .github_ci_env; fi
+      - name: Export env variables
+        run: |
+          cat .github_ci_env
+          cat .github_ci_env >> $GITHUB_ENV
+      - name: Run CLI regression tests
+        run: .github/regression.sh
+      - name: Upload testing artifacts on failure
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: testing-artifacts
+          path: testing_artifacts.tar.xz
+      - name: Upload Allure results
+        uses: actions/upload-artifact@v3
+        # When using `always()`, you lose ability to manually cancel the workflow.
+        # Use `success() || failure()` instead.
+        if: success() || failure()
+        with:
+          name: allure-results
+          path: allure-results.tar.xz
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: testrun-report
+          path: testrun-report.html
+      - name: Upload testrun files
+        uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: testrun-files
+          path: |
+            cli_coverage.json
+            scheduling.log.xz
+            errors_all.log

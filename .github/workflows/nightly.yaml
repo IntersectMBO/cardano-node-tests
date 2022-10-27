@@ -1,0 +1,13 @@
+name: Nightly tests
+
+on:
+  schedule:
+    - cron: '15 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  nightly_job_default:
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/regression_reusable.yaml
+    with:
+      env-path: .github/env_nightly
