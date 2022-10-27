@@ -1,0 +1,66 @@
+name: Regression tests on GA
+
+on:
+  workflow_dispatch:
+    inputs:
+      tests_rev:
+        description: "cardano-node-tests revision (default: HEAD)"
+        required: false
+      node_rev:
+        description: "cardano-node revision (default: HEAD)"
+        required: false
+      node_branch:
+        description: "cardano-node branch (default: master)"
+        required: false
+      cluster_era:
+        type: choice
+        description: "Cluster era"
+        options:
+        - babbage
+        default: babbage
+      tx_era:
+        type: choice
+        description: "Tx era (uses default Tx era when empty)"
+        options:
+        - ""
+        - babbage
+        - alonzo
+        - mary
+        - allegra
+        - shelley
+        default: ""
+      cddl_format:
+        type: boolean
+        default: false
+        description: "Use CDDL format for Tx body"
+      enable_p2p:
+        type: boolean
+        default: false
+        description: "Enable P2P network topology"
+      skip_long:
+        type: boolean
+        default: false
+        description: "Skip long running tests"
+
+jobs:
+  cli_regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=
+            substituters = https://cache.nixos.org https://hydra.iohk.io https://iohk.cachix.org
+            allow-import-from-derivation = true
+      - name: run CLI regression tests using Nix
+        run: nix-shell --run "echo CARDANO_NODE_SOCKET_PATH_CI=$CARDANO_NODE_SOCKET_PATH_CI"
+        env:
+          NODE_REV: ${{ github.event.inputs.node_rev }}
+          NODE_BRANCH: ${{ github.event.inputs.node_branch }}
+          CLUSTER_ERA: ${{ github.event.inputs.cluster_era }}
+          TX_ERA: ${{ github.event.inputs.tx_era }}
+          USE_CDDL: ${{ github.event.inputs.cddl_format }}
+          CI_ENABLE_P2P: ${{ github.event.inputs.enable_p2p }}
+          CI_SKIP_LONG: ${{ github.event.inputs.skip_long }}
