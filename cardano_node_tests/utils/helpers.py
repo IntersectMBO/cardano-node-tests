@@ -69,7 +69,17 @@ def change_cwd(dir_path: FileType) -> Iterator[FileType]:
 @contextlib.contextmanager
 def ignore_interrupt() -> Iterator[None]:
     """Ignore the KeyboardInterrupt signal."""
-    orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    orig_handler = None
+    try:
+        orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    except ValueError as exc:
+        if "signal only works in main thread" not in str(exc):
+            raise
+
+    if orig_handler is None:
+        yield
+        return
+
     try:
         yield
     finally:
