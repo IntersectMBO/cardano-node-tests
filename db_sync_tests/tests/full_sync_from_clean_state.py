@@ -172,7 +172,7 @@ def main():
     print(f"- cardano-db-sync version: {db_sync_version}")
     print(f"- cardano-db-sync git revision: {db_sync_git_rev}")
     print_file(DB_SYNC_LOG_FILE_PATH, 30)
-    db_full_sync_time_in_secs = wait_for_db_to_sync(env, sync_percentage=40)
+    db_full_sync_time_in_secs = wait_for_db_to_sync(env)
     epoch_no, block_no, slot_no = get_db_sync_tip(env)
     end_test_time = get_current_date_time()
     print("--- Summary & Artifacts uploading")
