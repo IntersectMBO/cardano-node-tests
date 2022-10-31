@@ -1,0 +1,13 @@
+name: Nightly tests P2P
+
+on:
+  schedule:
+    - cron: '15 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  nightly_job_p2p:
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/regression_reusable.yaml
+    with:
+      env-path: .github/env_nightly_p2p
