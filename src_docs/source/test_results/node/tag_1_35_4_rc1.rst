@@ -87,3 +87,84 @@ New issues
 
 Breaking changes
 ----------------
+
+
+SECP256k1 IOG Test Tracking
+---------------------------
+
+.. list-table:: Test Definition and Status
+   :header-rows: 1
+
+   * - Required Tests
+     - Test Definition Owners
+     - Test Def Status
+     - Link to tests
+     - Comments
+     - Tests Status on tag 1.35.4-rc1
+   * - Unit tests using test vectors (positive and negative paths)
+     - Dquadrant & IOG
+     - |:heavy_check_mark:|
+     - <https://github.com/dQuadrant/cardano-secp256k1-tests>
+     - to be merged in cardano-base in `PR <https://github.com/input-output-hk/cardano-base/pull/320>`__
+     - |:hourglass_flowing_sand:|
+   * - Unit/Property Tests using Builtins
+     - Plutus Core squad
+     - |:heavy_check_mark:|
+     - `positve <https://github.com/input-output-hk/plutus/blob/849b76ee93646c5ea2e45d2d8171441272846f42/plutus-core/untyped-plutus-core/test/Evaluation/Builtins/Definition.hs#L603>`__ and `negative <https://github.com/input-output-hk/plutus/blob/849b76ee93646c5ea2e45d2d8171441272846f42/plutus-core/untyped-plutus-core/test/Evaluation/Builtins/SignatureVerification.hs#L45-L64>`__
+     - Have existed since the re-implementation
+     - |:heavy_check_mark:|
+   * - E2E test - using simple smart contract (positive path)
+     - Dquadrant
+     - |:hourglass_flowing_sand:|
+     - <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>
+     - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
+     - |:hourglass_flowing_sand:|
+   * - E2E test - using a bridge (positive path)
+     - Dquadrant
+     - |:hourglass_flowing_sand:|
+     - <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>
+     -  
+     - |:hourglass_flowing_sand:|
+   * - E2E test - negative paths
+     - James Browning, Sara Tomaz
+     - |:hourglass_flowing_sand:|
+     -  
+     - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__ as part of `#1269 <https://github.com/input-output-hk/cardano-node-tests/issues/1269#issuecomment-1252144265>`__
+     - |:hourglass_flowing_sand:|
+   * - Integration tests
+     - James Browning, Sara Tomaz
+     - |:heavy_check_mark:|
+     -
+       - <https://input-output.atlassian.net/wiki/spaces/QA/pages/3518202008>
+       - <https://input-output.atlassian.net/wiki/spaces/QA/pages/3522101311/1.35.2#SECP256k1-Testing-%3Acheck_mark%3A>
+     - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
+
+       - Testing carried out by on node 1.35.1
+       - Testing carried out on node 1.35.2
+
+       Before any end-to-end automation existed. Includes negative and edge cases.
+     - |:hourglass_flowing_sand:|
+   * - Performance
+     - Kenneth MacKenzie
+     - |:heavy_check_mark:|
+     - <https://github.com/input-output-hk/plutus/blob/dbcaad6feb903551d55443ce0c9ee5e9c03c194e/plutus-core/cost-model/budgeting-bench/Benchmarks/CryptoAndHashes.hs>
+     - discussion about the results `here <https://github.com/input-output-hk/plutus/pull/4591>`__
+     - |:hourglass_flowing_sand:|
+   * - Audits
+     - BCryptic, Charles Morgan, Querejeta Azurmendi
+     - |:heavy_check_mark:|
+     - TODO: link to pdf
+     - Audit report successful, with minor comments that were addressed `here <https://github.com/input-output-hk/cardano-base/pull/313>`__.
+     - N/A
+   * - Plutus side tests
+     - Ziyang Liu
+     - |:heavy_check_mark:|
+     - no specific tests besides the existing Plutus regression
+     -  
+     - |:heavy_check_mark:|
+   * - Crypto side tests
+     - Querejeta Azurmendi
+     - |:heavy_check_mark:|
+     - <https://github.com/input-output-hk/cardano-base/blob/master/cardano-crypto-tests/src/Test/Crypto/DSIGN.hs#L142>
+     - Unit tests over the generic signature algorithm DSIGN, which includes Schnorr and ECDSA over SECP256k1
+     - N/A
