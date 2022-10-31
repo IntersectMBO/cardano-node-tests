@@ -69,7 +69,7 @@ Release testing checklist
 New functionalities in this tag
 -------------------------------
 
-* Improve memory efficiency of query ledger-state command (`#4205 <https://github.com/input-output-hk/cardano-node/pull/4205>`__) |:hourglass_flowing_sand:|
+* Improve memory efficiency of query ledger-state command (`#4205 <https://github.com/input-output-hk/cardano-node/pull/4205>`__) |:heavy_check_mark:|
 * Update transaction build command to automatically calculate total and return collateral values (`#4198 <https://github.com/input-output-hk/cardano-node/pull/4198>`__) |:heavy_check_mark:|
 * Allow reading and writing text envelope files from pipes (`#4384 <https://github.com/input-output-hk/cardano-node/pull/4384>`__) |:hourglass_flowing_sand:|
 * Update cardano transaction view command to render inline datums and reference inputs (`#4089 <https://github.com/input-output-hk/cardano-node/pull/4089>`__) |:heavy_check_mark:|
