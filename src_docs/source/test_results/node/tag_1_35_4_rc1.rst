@@ -20,17 +20,15 @@ Regression testing on a local cluster
 .. list-table:: costModelV2
    :header-rows: 0
 
-   * - CDDL OFF, P2P OFF - `Babbage with Babbage TX </>`__
+   * - P2P OFF - `Babbage with Babbage TX </>`__
      - |:hourglass_flowing_sand:|
-   * - CDDL OFF, P2P OFF - `Babbage with Alonzo TX </>`__
+   * - P2P ON - `Babbage with Babbage TX </>`__
      - |:hourglass_flowing_sand:|
-   * - CDDL ON, P2P OFF - `Babbage with Babbage TX </>`__
+   * - P2P OFF - `Babbage with Alonzo TX </>`__
      - |:hourglass_flowing_sand:|
-   * - CDDL ON, P2P ON - `Babbage with Babbage TX </>`__
+   * - P2P OFF - `Babbage with Mary TX </>`__
      - |:hourglass_flowing_sand:|
-   * - CDDL ON, P2P OFF - `Babbage with Mary TX </>`__
-     - |:hourglass_flowing_sand:|
-   * - CDDL OFF, P2P OFF - `Babbage with Shelley TX </>`__
+   * - P2P OFF - `Babbage with Shelley TX </>`__
      - |:hourglass_flowing_sand:|
 
 .. list-table:: other testing
