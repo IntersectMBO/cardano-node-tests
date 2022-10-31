@@ -72,7 +72,7 @@ New functionalities in this tag
 * Improve memory efficiency of query ledger-state command (`#4205 <https://github.com/input-output-hk/cardano-node/pull/4205>`__) |:hourglass_flowing_sand:|
 * Update transaction build command to automatically calculate total and return collateral values (`#4198 <https://github.com/input-output-hk/cardano-node/pull/4198>`__) |:heavy_check_mark:|
 * Allow reading and writing text envelope files from pipes (`#4384 <https://github.com/input-output-hk/cardano-node/pull/4384>`__) |:hourglass_flowing_sand:|
-* Update cardano transaction view command to render inline datums and reference inputs (`#4089 <https://github.com/input-output-hk/cardano-node/pull/4089>`__) |:hourglass_flowing_sand:|
+* Update cardano transaction view command to render inline datums and reference inputs (`#4089 <https://github.com/input-output-hk/cardano-node/pull/4089>`__) |:heavy_check_mark:|
 * Switch default era in cardano-cli from Alonzo to Babbage (`#4485 <https://github.com/input-output-hk/cardano-node/pull/4485>`__) |:heavy_check_mark:|
 * Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` (`#4303 <https://github.com/input-output-hk/cardano-node/pull/4303>`__) |:heavy_check_mark:|
 * Allow reading signing keys from a pipe (`#4342 <https://github.com/input-output-hk/cardano-node/pull/4342>`__) |:hourglass_flowing_sand:|
