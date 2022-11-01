@@ -1,4 +1,4 @@
 CLUSTER_ERA=babbage
 TX_ERA=alonzo
-MARKEXPR="not long"
+MARKEXPR=not long
 CLUSTERS_COUNT=3
