@@ -2862,7 +2862,12 @@ class TestNegative:
                     *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
-        assert "fee must be specified" in str(excinfo.value)
+        err_str = str(excinfo.value)
+
+        if "Transaction _ fee not supported in" in err_str:
+            pytest.xfail("See node issue #4591 - Transaction _ fee not supported")
+
+        assert "fee must be specified" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -2902,7 +2907,12 @@ class TestNegative:
                     *cluster.g_transaction.tx_era_arg,
                 ]
             )
-        assert "TTL must be specified" in str(excinfo.value)
+        err_str = str(excinfo.value)
+
+        if "Transaction validity upper bound not supported" in err_str:
+            pytest.xfail("See node issue #4591 - Transaction validity upper bound not supported")
+
+        assert "TTL must be specified" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     def test_missing_tx_in(
