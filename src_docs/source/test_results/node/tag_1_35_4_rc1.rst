@@ -47,23 +47,23 @@ Release testing checklist
    :header-rows: 0
 
    * - `1.35.4-rc1` pushed to `shelley-qa`
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Grafana metrics OK
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Regression testing against `shelley-qa` - `results </>`__
      - |:hourglass_flowing_sand:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Backward compatibility testing (Node with version N-1)
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Check build instructions changes
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Benchmarking - Report
      - |:heavy_check_mark:|
    * - sanity check release notes
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 
 New functionalities in this tag
@@ -104,7 +104,7 @@ SECP256k1 IOG Test Tracking
    * - Unit tests using test vectors (positive and negative paths)
      - Dquadrant & IOG
      - |:heavy_check_mark:|
-     - <https://github.com/dQuadrant/cardano-secp256k1-tests>
+     - `link to tests <https://github.com/dQuadrant/cardano-secp256k1-tests>`__
      - to be merged in cardano-base in `PR <https://github.com/input-output-hk/cardano-base/pull/320>`__
      - |:hourglass_flowing_sand:|
    * - Unit/Property Tests using Builtins
@@ -116,13 +116,13 @@ SECP256k1 IOG Test Tracking
    * - E2E test - using simple smart contract (positive path)
      - Dquadrant
      - |:hourglass_flowing_sand:|
-     - <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>
+     - `link to tests <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>`__
      - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
      - |:hourglass_flowing_sand:|
    * - E2E test - using a bridge (positive path)
      - Dquadrant
      - |:hourglass_flowing_sand:|
-     - <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>
+     - `link to tests <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>`__
      -  
      - |:hourglass_flowing_sand:|
    * - E2E test - negative paths
@@ -135,8 +135,8 @@ SECP256k1 IOG Test Tracking
      - James Browning, Sara Tomaz
      - |:heavy_check_mark:|
      -
-       - <https://input-output.atlassian.net/wiki/spaces/QA/pages/3518202008>
-       - <https://input-output.atlassian.net/wiki/spaces/QA/pages/3522101311/1.35.2#SECP256k1-Testing-%3Acheck_mark%3A>
+       - `link to tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3518202008>`__
+       - `link to tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3522101311/1.35.2#SECP256k1-Testing-%3Acheck_mark%3A>`__
      - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
 
        - Testing carried out by on node 1.35.1
@@ -147,7 +147,7 @@ SECP256k1 IOG Test Tracking
    * - Performance
      - Kenneth MacKenzie
      - |:heavy_check_mark:|
-     - <https://github.com/input-output-hk/plutus/blob/dbcaad6feb903551d55443ce0c9ee5e9c03c194e/plutus-core/cost-model/budgeting-bench/Benchmarks/CryptoAndHashes.hs>
+     - `link to tests <https://github.com/input-output-hk/plutus/blob/dbcaad6feb903551d55443ce0c9ee5e9c03c194e/plutus-core/cost-model/budgeting-bench/Benchmarks/CryptoAndHashes.hs>`__
      - discussion about the results `here <https://github.com/input-output-hk/plutus/pull/4591>`__
      - |:hourglass_flowing_sand:|
    * - Audits
@@ -165,6 +165,6 @@ SECP256k1 IOG Test Tracking
    * - Crypto side tests
      - Querejeta Azurmendi
      - |:heavy_check_mark:|
-     - <https://github.com/input-output-hk/cardano-base/blob/master/cardano-crypto-tests/src/Test/Crypto/DSIGN.hs#L142>
+     - `link to tests <https://github.com/input-output-hk/cardano-base/blob/master/cardano-crypto-tests/src/Test/Crypto/DSIGN.hs#L142>`__
      - Unit tests over the generic signature algorithm DSIGN, which includes Schnorr and ECDSA over SECP256k1
      - N/A
