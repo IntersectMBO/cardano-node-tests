@@ -4,6 +4,7 @@
 # DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
 # ENABLE_P2P - if set, local cluster will use P2P
 # UPDATE_COST_MODEL - if set, PlutusV2 cost model will be made available through update proposal
+# UPDATE_PV8 - if set, update to PV8 and update Secp256k1 cost model
 
 set -euo pipefail
 sets="$-"
@@ -105,6 +106,7 @@ cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/submit-api-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/genesis*.spec.json "$STATE_CLUSTER/shelley/"
+cp "$SCRIPT_DIR"/plutus-costmodels*.json "$STATE_CLUSTER/shelley/"
 
 if [ -n "${ENABLE_P2P:-""}" ]; then
   # use P2P topology files
@@ -1006,7 +1008,7 @@ if [ -n "${UPDATE_COST_MODEL:-""}" ]; then
     --out-file "${COST_UPDATE_PROPOSAL}.proposal" \
     --epoch "$(get_epoch)" \
     "${GENESIS_VERIFICATION[@]}" \
-    --cost-model-file "${COST_UPDATE_PROPOSAL}-values.json" \
+    --cost-model-file "${COST_UPDATE_PROPOSAL}-values.json"
 
   cardano_cli_log query protocol-parameters \
     --testnet-magic "$NETWORK_MAGIC" \
@@ -1087,6 +1089,103 @@ if [ -n "${UPDATE_COST_MODEL:-""}" ]; then
   COST_MODELS="$(jq ".costModels.PlutusScriptV2" < "$STATE_CLUSTER/pparams.json")"
 
   [ "$COST_MODELS" != null ] || { echo "Unexpected cost models '$COST_MODELS' on line $LINENO" >&2; exit 1; }  # assert
+fi
+
+# update to PV8 and Secp256k1 cost model when indicated
+if [ -n "${UPDATE_PV8:-""}" ]; then
+  sleep "$PROPOSAL_DELAY"
+  echo "Submitting update proposal to update to PV8 and update Secp256k1 cost model"
+
+  BABBAGE_UPDATE_PROPOSAL_PV8="$STATE_CLUSTER/shelley/update-proposal-babbage-pv8"
+
+  # protocol version + secp parameters update
+  cardano_cli_log governance create-update-proposal \
+    --out-file "${BABBAGE_UPDATE_PROPOSAL_PV8}.proposal" \
+    --epoch "$(get_epoch)" \
+    "${GENESIS_VERIFICATION[@]}" \
+    --protocol-major-version 8 \
+    --protocol-minor-version 0 \
+    --cost-model-file "$STATE_CLUSTER/shelley/plutus-costmodels-secp256k1-enabled.json"
+
+  cardano_cli_log query protocol-parameters \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/pparams.json"
+
+  STOP_TXIN_AMOUNT=$FEE_BUFFER
+
+  TXINS=()
+  TXIN_COUNT=0
+  TXIN_AMOUNT=0
+  while read -r txhash txix amount _; do
+    TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+    TXIN_COUNT="$((TXIN_COUNT + 1))"
+    TXINS+=("--tx-in" "${txhash}#${txix}")
+    if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+      break
+    fi
+  done <<< "$(cardano_cli_log query utxo --testnet-magic \
+              "$NETWORK_MAGIC" \
+              --address "$FAUCET_ADDR" |
+              grep -E "lovelace \+ TxOutDatumNone$")"
+
+  cardano_cli_log transaction build-raw \
+    --babbage-era \
+    --fee    0 \
+    "${TXINS[@]}" \
+    --tx-out "$FAUCET_ADDR+0" \
+    --update-proposal-file "${BABBAGE_UPDATE_PROPOSAL_PV8}.proposal" \
+    --out-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-fee-tx.txbody"
+
+  FEE="$(cardano_cli_log transaction calculate-min-fee \
+          --testnet-magic "$NETWORK_MAGIC" \
+          --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+          --tx-in-count 1 \
+          --tx-out-count 1 \
+          --witness-count 5 \
+          --byron-witness-count 0 \
+          --tx-body-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-fee-tx.txbody" |
+          cut -d' ' -f1)"
+
+  TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
+
+  cardano_cli_log transaction build-raw \
+    --babbage-era \
+    --fee    "$FEE" \
+    "${TXINS[@]}" \
+    --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
+    --update-proposal-file "${BABBAGE_UPDATE_PROPOSAL_PV8}.proposal" \
+    --out-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.txbody"
+
+  cardano_cli_log transaction sign \
+    --signing-key-file "$FAUCET_SKEY" \
+    "${DELEGATE_SIGNING[@]}" \
+    --testnet-magic    "$NETWORK_MAGIC" \
+    --tx-body-file     "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.txbody" \
+    --out-file         "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.tx"
+
+  cardano_cli_log transaction submit \
+    --tx-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.tx" \
+    --testnet-magic "$NETWORK_MAGIC"
+
+  # give it some time before restaring the nodes so the update proposal Tx is likely to get through
+  echo "Waiting 15 sec before restarting the nodes"
+  sleep 15
+  supervisorctl restart nodes:
+
+  BABBAGE_EPOCH="$(get_epoch)"
+
+  echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Babbage era with PV8 to start"
+  sleep "$NEXT_EPOCH_SLEEP_RESTART"
+
+  wait_for_epoch "$((BABBAGE_EPOCH + 1))"
+
+  cardano_cli_log query protocol-parameters \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/pparams.json"
+
+  SECP_VALUE="$(jq '.costModels.PlutusScriptV2."verifyEcdsaSecp256k1Signature-cpu-arguments"' < "$STATE_CLUSTER/pparams.json")"
+
+  [ "$SECP_VALUE" = "35892428" ] || { echo "Unexpected Secp256k1 cost model value '$SECP_VALUE' on line $LINENO" >&2; exit 1; }  # assert
 fi
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster-hfc\` to stop"
