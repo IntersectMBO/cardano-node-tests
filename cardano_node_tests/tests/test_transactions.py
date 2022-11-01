@@ -991,48 +991,69 @@ class TestBasic:
         )
 
         txid = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
-        last_ledger_slot = cluster.g_query.get_slot_no()
 
-        tx_resubmitted = False
+        tx_in_mempool = False
         txin_queried = False
 
+        # we want to submit the Tx and then re-submit it and see the expected error, to make sure
+        # the Tx made it to mempool
         for r in range(5):
-            tx_resubmitted = False
+            tx_in_mempool = False
             try:
                 cluster.g_transaction.submit_tx_bare(tx_file=out_file_signed)
             except clusterlib.CLIError as exc:
                 if r == 0 or "(BadInputsUTxO" not in str(exc):
                     raise
-                tx_resubmitted = True
+                tx_in_mempool = True
 
-            # if the Tx is only in mempool, its txins can still be queried
-            txin_queried = bool(cluster.g_query.get_utxo(utxo=tx_raw_output.txins[0]))
-
-            # check 'query tx-mempool next-tx'
-            mempool_next_tx = cluster.g_query.get_mempool_next_tx()
-            assert mempool_next_tx["nextTx"] == txid, f"The nextTx {txid} is not the one expected"
-
-            # check 'query tx-mempool exists <TxId>'
-            txid_exists_in_mempool = cluster.g_query.get_mempool_tx_exists(txid=txid)
-            assert (
-                txid_exists_in_mempool["exists"] and txid_exists_in_mempool["txId"] == txid
-            ), f"The TxId {txid} not exists in the mempool or is not the one expected"
-
-            # check that the slot reported by the tx-mempool commands is correct
-            assert (
-                mempool_next_tx["slot"] == txid_exists_in_mempool["slot"] == last_ledger_slot + 1
-            ), "The slot reported by the 'tx-mempool' commands is not the expected"
-
-            if tx_resubmitted or not txin_queried:
+            if tx_in_mempool:
                 break
 
-        # make sure the txin is removed from mempool so it cannot be selected by other tests
-        cluster.wait_for_new_block(new_blocks=2)
+        # if the Tx is only in mempool, its txins can still be queried
+        txin_queried = bool(cluster.g_query.get_utxo(utxo=tx_raw_output.txins[0]))
 
-        assert tx_resubmitted, "Failed to re-submit the Tx"
+        assert tx_in_mempool, "Failed to make sure the Tx is in mempool"
 
         if not txin_queried:
             pytest.skip("the Tx was removed from mempool before running `query utxo`")
+
+        def _check_query_mempool() -> None:
+            if not clusterlib_utils.cli_has("query tx-mempool"):
+                return
+
+            # check 'query tx-mempool next-tx'
+            mempool_next_tx = cluster.g_query.get_mempool_next_tx()
+            next_txid = mempool_next_tx["nextTx"]
+            if next_txid is None:
+                LOGGER.warning(
+                    "The Tx was removed from mempool before running `query tx-mempool next-tx`"
+                )
+                return
+            assert (
+                next_txid == txid
+            ), f"The reported nextTx is '{mempool_next_tx['nextTx']}', expected '{txid}'"
+
+            # check 'query tx-mempool exists <TxId>'
+            txid_exists_in_mempool = cluster.g_query.get_mempool_tx_exists(txid=txid)
+            if not txid_exists_in_mempool["exists"]:
+                LOGGER.warning(
+                    "The Tx was removed from mempool before running `query tx-mempool exists`"
+                )
+                return
+            assert (
+                txid_exists_in_mempool["txId"] == txid
+            ), f"The reported txId is '{txid_exists_in_mempool['txId']}', expected '{txid}'"
+
+            # check that the slot reported by the tx-mempool commands is correct
+            assert mempool_next_tx["slot"] == txid_exists_in_mempool["slot"], (
+                f"The slots reported by the 'tx-mempool' commands don't match: "
+                f"{mempool_next_tx['slot']} vs {txid_exists_in_mempool['slot']}"
+            )
+
+        _check_query_mempool()
+
+        # make sure the txin is removed from mempool so it cannot be selected by other tests
+        cluster.wait_for_new_block(new_blocks=2)
 
 
 @pytest.mark.testnets

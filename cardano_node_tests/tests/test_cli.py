@@ -409,11 +409,21 @@ class TestAdvancedQueries:
         """Test 'query tx-mempool info'.
 
         * check that the expected fields are returned
-        * check that the slot number returned is the last applied on the ledger plus one.
+        * check that the slot number returned is the last applied on the ledger plus one
         """
-        last_ledger_slot = cluster.g_query.get_slot_no()
+        if not clusterlib_utils.cli_has("query tx-mempool"):
+            pytest.skip("CLI command `query tx-mempool` is not available")
 
-        tx_mempool = cluster.g_query.get_mempool_info()
+        for __ in range(5):
+            tx_mempool = cluster.g_query.get_mempool_info()
+            last_ledger_slot = cluster.g_query.get_slot_no()
+
+            if last_ledger_slot + 1 == tx_mempool["slot"]:
+                break
+        else:
+            raise AssertionError(
+                f"Expected slot number '{last_ledger_slot + 1}', got '{tx_mempool['slot']}'"
+            )
 
         out_file = "/dev/stdout"
         cli_out = cluster.cli(
@@ -424,9 +434,6 @@ class TestAdvancedQueries:
         assert {"capacityInBytes", "numberOfTxs", "sizeInBytes", "slot"}.issubset(
             tx_mempool
         ) and tx_mempool == tx_mempool_file, (
-            f"The result of the 'query tx-mempool' is not the expected {tx_mempool}"
+            "The output to file doesn't match the expected output:\n"
+            f"{tx_mempool_file}\nvs\n{tx_mempool}"
         )
-
-        assert (
-            tx_mempool["slot"] - 1 == last_ledger_slot
-        ), f"The slot number returned {tx_mempool['slot']} is not the expected {last_ledger_slot}"
