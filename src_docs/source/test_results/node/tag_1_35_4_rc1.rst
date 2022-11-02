@@ -17,7 +17,7 @@ Changelogs
 Regression testing on a local cluster
 -------------------------------------
 
-.. list-table:: costModelV2
+.. list-table:: protocol version 7
    :header-rows: 0
 
    * - P2P OFF - `Babbage with Babbage TX </>`__
@@ -31,15 +31,15 @@ Regression testing on a local cluster
    * - P2P OFF - `Babbage with Shelley TX </>`__
      - |:heavy_check_mark:|
 
-.. list-table:: both with costModelV2 and costModelV3
+.. list-table:: protocol version 8 and SECP256K1 cost model
    :header-rows: 0
 
    * - P2P OFF - `Babbage with Babbage TX </>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - P2P ON - `Babbage with Babbage TX </>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - P2P OFF - `Babbage with Alonzo TX </>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - P2P OFF - `Babbage with Mary TX </>`__
      - |:hourglass_flowing_sand:|
    * - P2P OFF - `Babbage with Shelley TX </>`__
