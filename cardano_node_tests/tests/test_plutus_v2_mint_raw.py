@@ -820,7 +820,7 @@ class TestSECP256k1:
                 test_vector.startswith("no_")
                 and re.search(
                     r"Caused by: \(verify(Schnorr|Ecdsa)Secp256k1Signature"
-                    r"#[0-9a-f]* #[0-9a-f]* #[0-9a-f]*\)",
+                    r" #[0-9a-f]* #[0-9a-f]* #[0-9a-f]*\)",
                     err_msg,
                 )
                 is not None
