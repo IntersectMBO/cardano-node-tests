@@ -287,8 +287,10 @@ class TestBuildMinting:
             reference_utxo.amount if reference_utxo else 0
         ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
 
-        # TODO: query single UTxO
-        token_utxo = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
         # check that reference UTxO was NOT spent
@@ -334,6 +336,7 @@ class TestBuildMinting:
         * check that the token was minted
         * check that the reference UTxO was not spent
         """
+        # pylint: disable=too-many-locals
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -446,7 +449,10 @@ class TestBuildMinting:
         cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
 
         # check that the token was minted
-        token_utxo = cluster.g_query.get_utxo(address=issuer_addr.address, coins=[token])
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
         # check that reference UTxO was NOT spent
