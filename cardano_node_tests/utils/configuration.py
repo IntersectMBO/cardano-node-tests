@@ -28,10 +28,13 @@ DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
 USE_CDDL = bool(os.environ.get("USE_CDDL"))  # TODO: remove once `--cddl-format` is deprecated
-ENABLE_P2P = bool(os.environ.get("ENABLE_P2P"))
 
+# used also in startup scripts as `if [ -n "$VAR" ]...`
+ENABLE_P2P = (os.environ.get("ENABLE_P2P") or "") != ""
 # TODO: for PlutusV2 cost model, used also in startup scripts as `if [ -n "$VAR" ]...`
 UPDATE_COST_MODEL = (os.environ.get("UPDATE_COST_MODEL") or "") != ""
+# TODO: for PV8 and PlutusV2cost model, used also in startup scripts as `if [ -n "$VAR" ]...`
+UPDATE_PV8 = (os.environ.get("UPDATE_PV8") or "") != ""
 # TODO: uses old Alonzo PlutusV1 cost model - remove once it is not needed
 ALONZO_COST_MODEL = (os.environ.get("ALONZO_COST_MODEL") or "") != ""
 
@@ -54,7 +57,7 @@ if SCHEDULING_LOG:
 
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
-if CLUSTER_ERA not in ("", "alonzo", "babbage"):
+if CLUSTER_ERA not in ("", "babbage"):
     raise RuntimeError(f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}")
 
 TX_ERA = os.environ.get("TX_ERA") or ""

@@ -1,4 +1,5 @@
 # pylint: disable=abstract-class-instantiated
+import json
 import logging
 import os
 import shutil
@@ -59,6 +60,11 @@ def pytest_addoption(parser: Any) -> None:
 def pytest_configure(config: Any) -> None:
     config._metadata["cardano-node"] = str(VERSIONS.node)
     config._metadata["cardano-node rev"] = VERSIONS.git_rev
+    config._metadata["CLUSTER_ERA"] = configuration.CLUSTER_ERA
+    config._metadata["TX_ERA"] = configuration.TX_ERA
+    config._metadata["SCRIPTS_DIRNAME"] = configuration.SCRIPTS_DIRNAME
+    config._metadata["ENABLE_P2P"] = str(configuration.ENABLE_P2P)
+    config._metadata["UPDATE_PV8"] = str(configuration.UPDATE_PV8)
     config._metadata["ghc"] = VERSIONS.ghc
     config._metadata["cardano-node-tests rev"] = helpers.get_current_commit()
     config._metadata[
@@ -67,6 +73,15 @@ def pytest_configure(config: Any) -> None:
     config._metadata["CARDANO_NODE_SOCKET_PATH"] = os.environ.get("CARDANO_NODE_SOCKET_PATH")
     config._metadata["cardano-cli exe"] = shutil.which("cardano-cli") or ""
     config._metadata["cardano-node exe"] = shutil.which("cardano-node") or ""
+
+    network_magic = configuration.NETWORK_MAGIC_LOCAL
+    if configuration.BOOTSTRAP_DIR:
+        with open(
+            Path(configuration.BOOTSTRAP_DIR) / "genesis-shelley.json", encoding="utf-8"
+        ) as in_fp:
+            genesis = json.load(in_fp)
+        network_magic = genesis["networkMagic"]
+    config._metadata["network magic"] = network_magic
 
     config._metadata["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
     if configuration.HAS_DBSYNC:
