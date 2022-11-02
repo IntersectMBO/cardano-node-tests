@@ -959,17 +959,20 @@ class TestSECP256k1:
                 redeemer_file=redeemer_file,
             )
         except clusterlib.CLIError as err:
-            before_pv8 = cluster.g_query.get_protocol_params()["protocolVersion"]["major"] >= 8
+            before_pv8 = cluster.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
 
             # the SECP256k1 functions should work from protocol version 8
-            if before_pv8:
+            if not before_pv8:
                 raise
 
             # before protocol_version 8 the SECP256k1 is blocked
             # or limited by high cost model
             err_msg = str(err)
 
-            is_forbidden = "MalformedScriptWitnesses" in err_msg
+            is_forbidden = (
+                f"Forbidden builtin function: (builtin "
+                f"verify{algorithm.capitalize()}Secp256k1Signature)" in err_msg
+            )
 
             is_overspending = (
                 "The machine terminated part way through evaluation due to "

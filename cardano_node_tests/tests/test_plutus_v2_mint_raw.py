@@ -815,7 +815,7 @@ class TestSECP256k1:
                 redeemer_file=redeemer_file,
             )
         except clusterlib.CLIError as err:
-            before_pv8 = cluster.g_query.get_protocol_params()["protocolVersion"]["major"] >= 8
+            before_pv8 = cluster.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
 
             # the SECP256k1 functions should work from protocol version 8
             if not before_pv8:
