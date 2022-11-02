@@ -31,10 +31,24 @@ Regression testing on a local cluster
    * - P2P OFF - `Babbage with Shelley TX </>`__
      - |:heavy_check_mark:|
 
+.. list-table:: both with costModelV2 and costModelV3
+   :header-rows: 0
+
+   * - P2P OFF - `Babbage with Babbage TX </>`__
+     - |:hourglass_flowing_sand:|
+   * - P2P ON - `Babbage with Babbage TX </>`__
+     - |:hourglass_flowing_sand:|
+   * - P2P OFF - `Babbage with Alonzo TX </>`__
+     - |:hourglass_flowing_sand:|
+   * - P2P OFF - `Babbage with Mary TX </>`__
+     - |:hourglass_flowing_sand:|
+   * - P2P OFF - `Babbage with Shelley TX </>`__
+     - |:hourglass_flowing_sand:|
+
 .. list-table:: other testing
    :header-rows: 0
 
-   * - upgrade job (1.35.3 to 1.35.4-rc1)
+   * - upgrade job (1.35.3 to 1.35.4-rc1) (including the intra-era hard fork)
      - |:hourglass_flowing_sand:|
    * - sanity check `submit-api REST service </>`__
      - |:hourglass_flowing_sand:|
@@ -81,14 +95,6 @@ New functionalities in this tag
 * Update cardano-crypto-class to version 2.0.0.0.2 to add SECP crypto primitives () |:hourglass_flowing_sand:|
 
 
-New issues
-----------
-
-
-Breaking changes
-----------------
-
-
 SECP256k1 IOG Test Tracking
 ---------------------------
 
@@ -113,12 +119,18 @@ SECP256k1 IOG Test Tracking
      - `positve <https://github.com/input-output-hk/plutus/blob/849b76ee93646c5ea2e45d2d8171441272846f42/plutus-core/untyped-plutus-core/test/Evaluation/Builtins/Definition.hs#L603>`__ and `negative <https://github.com/input-output-hk/plutus/blob/849b76ee93646c5ea2e45d2d8171441272846f42/plutus-core/untyped-plutus-core/test/Evaluation/Builtins/SignatureVerification.hs#L45-L64>`__
      - Have existed since the re-implementation
      - |:heavy_check_mark:|
-   * - E2E test - using simple smart contract (positive path)
-     - Dquadrant
-     - |:hourglass_flowing_sand:|
-     - `link to tests <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>`__
-     - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
-     - |:hourglass_flowing_sand:|
+   * - E2E test PV7 - using simple smart contract (secp256k1 not usable)
+     - James Browning, Sara Tomaz
+     - |:heavy_check_mark:|
+     - `link to tests <https://github.com/input-output-hk/cardano-node-tests/pull/1386>`__
+     - test already automated in cardano-node-tests for the Babbage HF
+     - |:heavy_check_mark:|
+    * - E2E test PV8 - using simple smart contract (positive path)
+      - Dquadrant
+      - |:hourglass_flowing_sand:|
+      - `link to tests <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>`__
+      - to be added by DQ to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
+      - |:hourglass_flowing_sand:|
    * - E2E test - using a bridge (positive path)
      - Dquadrant
      - |:hourglass_flowing_sand:|
@@ -131,18 +143,13 @@ SECP256k1 IOG Test Tracking
      -  
      - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__ as part of `#1269 <https://github.com/input-output-hk/cardano-node-tests/issues/1269#issuecomment-1252144265>`__
      - |:hourglass_flowing_sand:|
-   * - Integration tests
+   * - Integration tests (PV7)
      - James Browning, Sara Tomaz
      - |:heavy_check_mark:|
-     -
-       - `link to tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3518202008>`__
-       - `link to tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3522101311/1.35.2#SECP256k1-Testing-%3Acheck_mark%3A>`__
+       - `link to 1.35.1 tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3518202008>`__
+       - `link to 1.35.2 tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3522101311/1.35.2#SECP256k1-Testing-%3Acheck_mark%3A>`__
      - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
-
-       - Testing carried out by on node 1.35.1
-       - Testing carried out on node 1.35.2
-
-       Before any end-to-end automation existed. Includes negative and edge cases.
+     - These are the tests executed manually by James during the Babbage testing. Includes negative and edge cases.
      - |:hourglass_flowing_sand:|
    * - Performance
      - Kenneth MacKenzie
@@ -168,3 +175,12 @@ SECP256k1 IOG Test Tracking
      - `link to tests <https://github.com/input-output-hk/cardano-base/blob/master/cardano-crypto-tests/src/Test/Crypto/DSIGN.hs#L142>`__
      - Unit tests over the generic signature algorithm DSIGN, which includes Schnorr and ECDSA over SECP256k1
      - N/A
+
+
+New issues
+----------
+
+
+Breaking changes
+----------------
+- Switch default era in cardano-cli from Alonzo to Babbage
