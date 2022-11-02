@@ -1,8 +1,8 @@
 """Tests for minting with Plutus V2 using `transaction build`."""
 import json
 import logging
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Optional
@@ -951,16 +951,28 @@ class TestSECP256k1:
                 "The machine terminated part way through evaluation due to "
                 "overspending the budget." in err_msg
             )
-            
-            expected_decoding_error = test_vector.startswith("no_")  \
-                and re.search(r'Script debugging logs: (ECDSA|Schnorr) SECP256k1 signature verification: Invalid ',err_msg) is not None
 
-            expected_validation_error=test_vector.startswith("invalid_") and \
-                re.search("Script debugging logs: Trace error: (Schnorr|ECDSA) validation failed",err_msg) is not None
+            is_expected_decoding_error = (
+                test_vector.startswith("no_")
+                and re.search(
+                    r"Script debugging logs: (ECDSA|Schnorr) SECP256k1"
+                    r" signature verification: Invalid ",
+                    err_msg,
+                )
+                is not None
+            )
 
-            if expected_decoding_error or expected_validation_error: 
-                return 
-                        
+            is_expected_validation_error = (
+                test_vector.startswith("invalid_")
+                and re.search(
+                    "Script debugging logs: Trace error: (Schnorr|ECDSA) validation failed", err_msg
+                )
+                is not None
+            )
+
+            if is_expected_decoding_error or is_expected_validation_error:
+                return
+
             if (is_forbidden or is_overspending) and protocol_version < 8:
                 pytest.xfail(
                     "The SECP256k1 builtin functions are not allowed before protocol version 8"
