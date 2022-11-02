@@ -1018,6 +1018,15 @@ class TestMinting:
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
             *mint_txouts,
         ]
+
+        plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+        )
+
         tx_raw_output_step2 = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
             txins=mint_utxos,
@@ -1053,6 +1062,11 @@ class TestMinting:
         assert (
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), f"The '{asset_name_b_dec}' was not minted"
+
+        plutus_common.check_plutus_costs(
+            plutus_costs=plutus_costs,
+            expected_costs=[plutus_common.MINTING_TOKENNAME_COST],
+        )
 
         # check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)

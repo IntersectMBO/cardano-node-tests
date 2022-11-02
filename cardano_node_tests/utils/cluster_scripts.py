@@ -140,7 +140,7 @@ class LocalScripts(ScriptsTypes):
             fname = infile.name
             dest_file = destdir / fname
 
-            if "genesis" in fname:
+            if ".json" in fname and not ("config" in fname or "topology" in fname):
                 shutil.copy(infile, dest_file)
                 continue
 

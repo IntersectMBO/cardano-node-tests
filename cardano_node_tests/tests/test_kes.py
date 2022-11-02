@@ -42,6 +42,8 @@ else:
 
 if configuration.UPDATE_COST_MODEL and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
     NUM_OF_EPOCHS += 1
+if configuration.UPDATE_PV8 and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
+    NUM_OF_EPOCHS += 1
 
 
 pytestmark = common.SKIPIF_WRONG_ERA
