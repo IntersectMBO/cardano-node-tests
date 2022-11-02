@@ -125,12 +125,12 @@ SECP256k1 IOG Test Tracking
      - `link to tests <https://github.com/input-output-hk/cardano-node-tests/pull/1386>`__
      - test already automated in cardano-node-tests for the Babbage HF
      - |:heavy_check_mark:|
-    * - E2E test PV8 - using simple smart contract (positive path)
-      - Dquadrant
-      - |:hourglass_flowing_sand:|
-      - `link to tests <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>`__
-      - to be added by DQ to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
-      - |:hourglass_flowing_sand:|
+   * - E2E test PV8 - using simple smart contract (positive path)
+     - Dquadrant
+     - |:hourglass_flowing_sand:|
+     - `link to tests <https://github.com/dQuadrant/cardano-secp256k1-tests/blob/test/plutus-secp256k1/secptest-app/Readme.md>`__
+     - to be added by DQ to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
+     - |:hourglass_flowing_sand:|
    * - E2E test - using a bridge (positive path)
      - Dquadrant
      - |:hourglass_flowing_sand:|
