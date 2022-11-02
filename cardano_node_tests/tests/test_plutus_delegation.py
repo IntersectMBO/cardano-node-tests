@@ -208,7 +208,7 @@ def deregister_stake_addr(
     redeemer_file: Path,
     reference_script_utxos: Optional[List[clusterlib.UTXOData]],
     use_build_cmd: bool,
-) -> clusterlib.TxRawOutput:
+) -> Tuple[clusterlib.TxRawOutput, List[dict]]:
     """Deregister stake address."""
     src_payment_balance = cluster_obj.g_query.get_address_balance(pool_user.payment.address)
     reward_balance = cluster_obj.g_query.get_stake_addr_info(
@@ -306,7 +306,7 @@ def deregister_stake_addr(
             redeemer_records=tx_db_dereg.redeemers, cost_records=plutus_costs
         )
 
-    return tx_raw_output
+    return tx_raw_output, plutus_costs
 
 
 # don't run these tests on testnets as a stake address corresponding to the Plutus script
@@ -457,7 +457,7 @@ class TestDelegateAddr:
         )
 
         # submit deregistration certificate and withdraw rewards
-        tx_raw_deregister_out = deregister_stake_addr(
+        tx_raw_deregister_out, __ = deregister_stake_addr(
             cluster_obj=cluster,
             temp_template=temp_template,
             txins=dereg_utxos,

@@ -100,7 +100,7 @@ MINTING_CONTEXT_EQUIVALENCE_COST = ExecutionCost(
 MINTING_WITNESS_REDEEMER_COST = ExecutionCost(
     per_time=261_056_789, per_space=1_013_630, fixed_cost=75_278
 )
-MINTING_TOKENNAME_COST = ExecutionCost(per_time=230_732_000, per_space=539_860, fixed_cost=47_786)
+MINTING_TOKENNAME_COST = ExecutionCost(per_time=162_418_952, per_space=539_860, fixed_cost=42_861)
 
 MINTING_V2_COST = ExecutionCost(per_time=167_089_597, per_space=537_352, fixed_cost=43_053)
 MINTING_V2_REF_COST = ExecutionCost(per_time=198_080_433, per_space=633_678, fixed_cost=50_845)

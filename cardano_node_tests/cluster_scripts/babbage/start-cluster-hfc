@@ -810,9 +810,7 @@ cardano_cli_log governance create-update-proposal \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 6 \
-  --protocol-minor-version 0 \
-  --max-tx-execution-units "(10000000000,11250000)" \
-  --max-block-body-size 73728
+  --protocol-minor-version 0
 
 cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
