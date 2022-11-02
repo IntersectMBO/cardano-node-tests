@@ -2,6 +2,7 @@
 import json
 import logging
 from pathlib import Path
+import re
 from typing import Any
 from typing import List
 from typing import Optional
@@ -814,8 +815,17 @@ class TestSECP256k1:
             is_overspending = (
                 "The machine terminated part way through evaluation due to "
                 "overspending the budget." in err_msg
-            )
+            )   
+            expected_decoding_error = test_vector.startswith("no_") and  \
+                re.search(r'Caused by: \(verify(Schnorr|Ecdsa)Secp256k1Signature #[0-9a-f]* #[0-9a-f]* #[0-9a-f]*\)',err_msg) is not None
 
+            expected_validation_error=test_vector.startswith("invalid_") and \
+                err_msg.find("Error An error has occurred:  User error:\\n"
+                    "The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.") >=0
+
+            if expected_decoding_error or expected_validation_error :
+                return 
+            
             if (is_forbidden or is_overspending) and protocol_version < 8:
                 pytest.xfail(
                     "The SECP256k1 builtin functions are not allowed before protocol version 8"
