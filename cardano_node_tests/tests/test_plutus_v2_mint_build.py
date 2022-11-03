@@ -968,8 +968,7 @@ class TestSECP256k1:
             if not before_pv8:
                 raise
 
-            # before  rotocol_version 8 the SECP256k1 is blocked
-            # or limited by high cost model
+            # before protocol version 8 the SECP256k1 is blocked or limited by high cost model
             err_msg = str(err)
 
             is_forbidden = (
@@ -1034,7 +1033,7 @@ class TestSECP256k1:
 
         err_msg = str(excinfo.value)
 
-        # before  rotocol_version 8 the SECP256k1 is blocked
+        # before protocol version 8 the SECP256k1 is blocked
         # after that the usage is limited by high cost model
         is_forbidden = (
             f"Forbidden builtin function: (builtin "
