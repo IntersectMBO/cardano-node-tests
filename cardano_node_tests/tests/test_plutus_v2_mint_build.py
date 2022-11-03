@@ -915,7 +915,10 @@ class TestSECP256k1:
 
         cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
 
-        token_utxo = cluster_obj.g_query.get_utxo(address=issuer_addr.address, coins=[token])
+        out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
     @allure.link(helpers.get_vcs_link())
@@ -965,7 +968,7 @@ class TestSECP256k1:
             if not before_pv8:
                 raise
 
-            # before protocol_version 8 the SECP256k1 is blocked
+            # before  rotocol_version 8 the SECP256k1 is blocked
             # or limited by high cost model
             err_msg = str(err)
 
@@ -1031,7 +1034,7 @@ class TestSECP256k1:
 
         err_msg = str(excinfo.value)
 
-        # before protocol_version 8 the SECP256k1 is blocked
+        # before  rotocol_version 8 the SECP256k1 is blocked
         # after that the usage is limited by high cost model
         is_forbidden = (
             f"Forbidden builtin function: (builtin "
@@ -1056,6 +1059,6 @@ class TestSECP256k1:
         }
 
         if before_pv8:
-            assert is_forbidden or is_overspending
+            assert is_forbidden or is_overspending, err_msg
         else:
-            assert expected_error_messages[test_vector] in err_msg
+            assert expected_error_messages[test_vector] in err_msg, err_msg
