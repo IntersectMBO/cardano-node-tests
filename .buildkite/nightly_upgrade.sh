@@ -13,7 +13,7 @@ export COVERAGE_DIR="${COVERAGE_DIR:-".cli_coverage"}"
 rm -f "$ARTIFACTS_DIR" "$COVERAGE_DIR"
 mkdir -p "$ARTIFACTS_DIR" "$COVERAGE_DIR"
 
-BASE_REVISION="${BASE_REVISION:-1.34.1}"
+BASE_REVISION="${BASE_REVISION:-1.35.3}"
 
 # shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/niv_update_func.sh"
@@ -54,7 +54,7 @@ retval="$?"
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
 [ "$retval" -le 1 ] || exit "$retval"
 
-# update to Babbage, run smoke tests
+# update to Babbage PV8, run smoke tests
 nix-shell --run './.buildkite/nightly_upgrade_pytest.sh step3'
 retval="$?"
 
