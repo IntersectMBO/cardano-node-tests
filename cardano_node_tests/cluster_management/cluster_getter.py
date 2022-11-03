@@ -157,6 +157,10 @@ class ClusterGetter:
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
         if state_dir.exists() and not (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).exists():
+            self.log(
+                f"c{self.cluster_instance_num}: ERROR: state dir exists but cluster "
+                "was not started by the framework"
+            )
             raise RuntimeError("Cannot respin cluster when it was not started by the framework.")
 
         startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
