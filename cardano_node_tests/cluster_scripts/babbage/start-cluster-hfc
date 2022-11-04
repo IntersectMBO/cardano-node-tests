@@ -292,7 +292,7 @@ for i in $(seq 1 $NUM_BFT_NODES); do
     --payment-verification-key-file "$STATE_CLUSTER/byron/payment-keys.$INDEX-converted.vkey" \
     > "$STATE_CLUSTER/byron/address-$INDEX-converted"
 
-  BFT_PORT=$(("30000" + i))
+  BFT_PORT=$(("%%NODE_PORT_BASE%%0" + i))
   echo "$BFT_PORT" > "$STATE_CLUSTER/nodes/node-bft$i/port"
 done
 
@@ -381,14 +381,14 @@ EoF
     --arg name "$POOL_NAME" \
     --arg description "$POOL_DESC" \
     --arg ticker "$POOL_TICKER" \
-    --arg homepage "http://localhost:30000/pool$i.html" \
+    --arg homepage "http://localhost:%%NODE_PORT_BASE%%0/pool$i.html" \
     '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
     > "$STATE_CLUSTER/webserver/pool$i.json"
 
-  METADATA_URL="http://localhost:30000/pool$i.json"
+  METADATA_URL="http://localhost:%%NODE_PORT_BASE%%0/pool$i.json"
   METADATA_HASH=$(cardano_cli_log stake-pool metadata-hash --pool-metadata-file \
     "$STATE_CLUSTER/webserver/pool$i.json")
-  POOL_PORT=$(("30000" + "$NUM_BFT_NODES" + i))
+  POOL_PORT=$(("%%NODE_PORT_BASE%%0" + "$NUM_BFT_NODES" + i))
   echo "$POOL_PORT" > "$STATE_CLUSTER/nodes/node-pool$i/port"
   echo $POOL_PLEDGE > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
 
@@ -413,9 +413,9 @@ mv "$STATE_CLUSTER/shelley/utxo-keys/utxo1.skey" "$STATE_CLUSTER/shelley/genesis
 rmdir "$STATE_CLUSTER/shelley/utxo-keys"
 
 # create scripts for cluster starting / stopping
-printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
-printf "#!/bin/sh\n\nsupervisorctl restart nodes:" > "$STATE_CLUSTER/supervisorctl_restart_nodes"
-printf "#!/bin/sh\n\nsupervisorctl \"\$@\"" > "$STATE_CLUSTER/supervisorctl"
+printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start all" > "$STATE_CLUSTER/supervisorctl_start"
+printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:" > "$STATE_CLUSTER/supervisorctl_restart_nodes"
+printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% \"\$@\"" > "$STATE_CLUSTER/supervisorctl"
 cat > "$STATE_CLUSTER/supervisord_start" <<EoF
 #!/usr/bin/env bash
 
@@ -434,7 +434,7 @@ set -uo pipefail
 
 SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
 
-supervisorctl stop all
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
 
 if [ -f "\$SCRIPT_DIR/supervisord.pid" ]; then
   kill "\$(<"\$SCRIPT_DIR/supervisord.pid")"
@@ -497,7 +497,7 @@ wait_for_era "Shelley"
 # start db-sync
 if [ -n "${DBSYNC_REPO:-""}" ]; then
   echo "Starting db-sync"
-  supervisorctl start dbsync
+  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start dbsync
 fi
 
 sleep "$PROPOSAL_DELAY"
@@ -786,7 +786,7 @@ for conf in "$STATE_CLUSTER"/config-*.json; do
   cat "${conf}_jq" > "$conf"
   rm -f "${conf}_jq"
 done
-supervisorctl restart nodes:
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
 
 echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Alonzo era to start"
 sleep "$NEXT_EPOCH_SLEEP_RESTART"
@@ -875,7 +875,7 @@ cardano_cli_log transaction submit \
 # give it some time before restaring the nodes so the update proposal Tx is likely to get through
 echo "Waiting 15 sec before restarting the nodes"
 sleep 15
-supervisorctl restart nodes:
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
 
 ALONZO_EPOCH="$(get_epoch)"
 
@@ -892,7 +892,7 @@ wait_for_epoch "$((ALONZO_EPOCH + 1))"
 # start cardano-submit-api
 if type cardano-submit-api >/dev/null 2>&1; then
   echo "Starting cardano-submit-api"
-  supervisorctl start submit_api
+  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start submit_api
 fi
 
 cardano_cli_log query protocol-parameters \
@@ -979,7 +979,7 @@ cardano_cli_log transaction submit \
 # give it some time before restaring the nodes so the update proposal Tx is likely to get through
 echo "Waiting 15 sec before restarting the nodes"
 sleep 15
-supervisorctl restart nodes:
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
 
 echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Babbage era to start"
 sleep "$NEXT_EPOCH_SLEEP_RESTART"
@@ -1071,7 +1071,7 @@ if [ -n "${UPDATE_COST_MODEL:-""}" ]; then
   # give it some time before restaring the nodes so the update proposal Tx is likely to get through
   echo "Waiting 15 sec before restarting the nodes"
   sleep 15
-  supervisorctl restart nodes:
+  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
 
   BABBAGE_EPOCH="$(get_epoch)"
 
@@ -1168,7 +1168,7 @@ if [ -n "${UPDATE_PV8:-""}" ]; then
   # give it some time before restaring the nodes so the update proposal Tx is likely to get through
   echo "Waiting 15 sec before restarting the nodes"
   sleep 15
-  supervisorctl restart nodes:
+  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
 
   BABBAGE_EPOCH="$(get_epoch)"
 
