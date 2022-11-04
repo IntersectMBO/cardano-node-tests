@@ -49,7 +49,7 @@ Regression testing on a local cluster
    :header-rows: 0
 
    * - upgrade job (1.35.3 to 1.35.4-rc1) (including the intra-era hard fork)
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - sanity check `submit-api REST service </>`__
      - |:heavy_check_mark:|
 
