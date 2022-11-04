@@ -127,7 +127,7 @@ SECP256k1 IOG Test Tracking
      - |:heavy_check_mark:|
    * - E2E test PV8 - using plutus script (positive path with successful signature verification & error cases when verification fails)
      - Dquadrant
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
      - `link to tests <https://github.com/input-output-hk/cardano-node-tests/pull/1469>`__
      - Tests are passing. PR in review.
      - |:heavy_check_mark:|
@@ -142,9 +142,9 @@ SECP256k1 IOG Test Tracking
      - |:heavy_check_mark:|
        - `link to 1.35.1 tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3518202008>`__
        - `link to 1.35.2 tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3522101311/1.35.2#SECP256k1-Testing-%3Acheck_mark%3A>`__
-     - to be added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
+     - Key scenarios from this have been added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
      - These are the tests executed manually by James during the Babbage testing. Includes negative and edge cases.
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Performance
      - Kenneth MacKenzie
      - |:heavy_check_mark:|
