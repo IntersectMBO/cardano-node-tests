@@ -5,7 +5,7 @@ set -uo pipefail
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 
-supervisorctl stop all
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]
 then

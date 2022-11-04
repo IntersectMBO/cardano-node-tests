@@ -58,16 +58,16 @@ if [ -z "${RELAY1_HOST:-""}" ]; then
   RELAY1_HOST="$(curl -s "http://whatismyip.akamai.com/" || echo "")"
   [ -n "$RELAY1_HOST" ] || { echo "Empty 'RELAY1_HOST' on line $LINENO" >&2; exit 1; }  # assert
 fi
-RELAY1_PORT="${RELAY1_PORT:-"30001"}"
+RELAY1_PORT="${RELAY1_PORT:-"%%NODE_PORT_BASE%%1"}"
 echo "$RELAY1_HOST" > "$STATE_CLUSTER/nodes/relay_host"
 echo "$RELAY1_PORT" > "$STATE_CLUSTER/nodes/relay_port"
 
-RELAY1_EKG="30300"
-RELAY1_PROMETHEUS="30301"
-POOL1_EKG="30306"
-POOL1_PROMETHEUS="30307"
-POOL2_EKG="30308"
-POOL2_PROMETHEUS="30309"
+RELAY1_EKG="%%METRICS_PORT_BASE%%0"
+RELAY1_PROMETHEUS="%%METRICS_PORT_BASE%%1"
+POOL1_EKG="%%METRICS_PORT_BASE%%6"
+POOL1_PROMETHEUS="%%METRICS_PORT_BASE%%7"
+POOL2_EKG="%%METRICS_PORT_BASE%%8"
+POOL2_PROMETHEUS="%%METRICS_PORT_BASE%%9"
 jq --arg ekg "$RELAY1_EKG" --arg prometheus "$RELAY1_PROMETHEUS" \
   '.hasEKG = ($ekg|tonumber) | .hasPrometheus[1] = ($prometheus|tonumber)' \
   "$TESTNET_CONF_DIR"/config-*.json > "$STATE_CLUSTER/config-relay1.json"
@@ -180,14 +180,14 @@ EoF
     --arg name "$POOL_NAME" \
     --arg description "$POOL_DESC" \
     --arg ticker "$POOL_TICKER" \
-    --arg homepage "http://${RELAY1_HOST}:30000/pool$i.html" \
+    --arg homepage "http://${RELAY1_HOST}:%%NODE_PORT_BASE%%0/pool$i.html" \
     '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
     > "$STATE_CLUSTER/webserver/pool$i.json"
 
-  METADATA_URL="http://${RELAY1_HOST}:30000/pool$i.json"
+  METADATA_URL="http://${RELAY1_HOST}:%%NODE_PORT_BASE%%0/pool$i.json"
   METADATA_HASH=$(cardano_cli_log stake-pool metadata-hash --pool-metadata-file \
                   "$STATE_CLUSTER/webserver/pool$i.json")
-  POOL_PORT=$(("30000" + "$POOL_PORT_OFFSET" + i))
+  POOL_PORT=$(("%%NODE_PORT_BASE%%0" + "$POOL_PORT_OFFSET" + i))
   POOL_COST="$(jq '.protocolParams.minPoolCost' "$STATE_CLUSTER/shelley/genesis.json")"
   echo "$POOL_PORT" > "$STATE_CLUSTER/nodes/node-pool$i/port"
   echo "${POOL_PLEDGES[$pledge_idx]}" > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
@@ -209,8 +209,8 @@ EoF
 done
 
 # create scripts for cluster starting / stopping
-printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
-printf "#!/bin/sh\n\nsupervisorctl \"\$@\"" > "$STATE_CLUSTER/supervisorctl"
+printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start all" > "$STATE_CLUSTER/supervisorctl_start"
+printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% \"\$@\"" > "$STATE_CLUSTER/supervisorctl"
 cat > "$STATE_CLUSTER/supervisord_start" <<EoF
 #!/usr/bin/env bash
 
@@ -229,7 +229,7 @@ set -uo pipefail
 
 SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
 
-supervisorctl stop all
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
 
 if [ -f "\$SCRIPT_DIR/supervisord.pid" ]; then
   kill "\$(<"\$SCRIPT_DIR/supervisord.pid")"
