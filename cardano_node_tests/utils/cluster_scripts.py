@@ -140,25 +140,19 @@ class LocalScripts(ScriptsTypes):
             fname = infile.name
             dest_file = destdir / fname
 
-            if ".json" in fname and not ("config" in fname or "topology" in fname):
-                shutil.copy(infile, dest_file)
-                continue
-
             with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
-            new_content = content.replace("/state-cluster", f"/state-cluster{instance_num}")
-            # replace node port number strings, omitting the last digit
-            new_content = new_content.replace("3000", str(instance_ports.base // 10))
-            new_content = new_content.replace("9001", str(instance_ports.supervisor))
-            new_content = new_content.replace("8090", str(instance_ports.submit_api))
-            new_content = new_content.replace(
-                "supervisorctl ", f"supervisorctl -s http://127.0.0.1:{instance_ports.supervisor} "
+            new_content = content.replace(
+                "/state-cluster%%INSTANCE_NUM%%", f"/state-cluster{instance_num}"
             )
-
-            if fname.startswith("config-"):
-                # reconfigure metrics ports in config-*.json
-                new_content = new_content.replace("3030", str(instance_ports.ekg_bft1 // 10))
+            # replace node port number strings, omitting the last digit
+            new_content = new_content.replace("%%NODE_PORT_BASE%%", str(instance_ports.base // 10))
+            new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
+            new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
+            new_content = new_content.replace(
+                "%%METRICS_PORT_BASE%%", str(instance_ports.ekg_bft1 // 10)
+            )
 
             with open(dest_file, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)

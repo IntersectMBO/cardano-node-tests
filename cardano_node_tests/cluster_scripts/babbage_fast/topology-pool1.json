@@ -2,17 +2,17 @@
     "Producers": [
         {
             "addr": "127.0.0.1",
-            "port": 30001,
+            "port": %%NODE_PORT_BASE%%1,
             "valency": 1
         },
         {
             "addr": "127.0.0.1",
-            "port": 30003,
+            "port": %%NODE_PORT_BASE%%3,
             "valency": 1
         },
         {
             "addr": "127.0.0.1",
-            "port": 30004,
+            "port": %%NODE_PORT_BASE%%4,
             "valency": 1
         }
     ]

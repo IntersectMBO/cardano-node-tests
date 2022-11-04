@@ -4,8 +4,8 @@
       {
         "localRoots": {
           "accessPoints": [
-            { "address": "127.0.0.1", "port": 30002 },
-            { "address": "127.0.0.1", "port": 30004 }
+            { "address": "127.0.0.1", "port": %%NODE_PORT_BASE%%2 },
+            { "address": "127.0.0.1", "port": %%NODE_PORT_BASE%%4 }
           ],
           "advertise": false
         },
