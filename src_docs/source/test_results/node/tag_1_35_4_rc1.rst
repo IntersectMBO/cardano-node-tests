@@ -150,7 +150,7 @@ SECP256k1 IOG Test Tracking
      - |:heavy_check_mark:|
      - `link to tests <https://github.com/input-output-hk/plutus/blob/dbcaad6feb903551d55443ce0c9ee5e9c03c194e/plutus-core/cost-model/budgeting-bench/Benchmarks/CryptoAndHashes.hs>`__
      - costing discussion and results, see `before <https://github.com/input-output-hk/plutus/pull/4591>`__ and `after <https://github.com/input-output-hk/plutus/issues/4802>`__ reimplementation.
-     - N/A (benchmarking for plutus is done in advance of node tag)
+     - |:exclamation:| |:question:| (benchmarking for plutus is done in advance of node tag) --> `link to discussion <https://input-output-rnd.slack.com/archives/C0441DTDH8R/p1667549179045499?thread_ts=1667478716.971429&cid=C0441DTDH8R>`__
    * - Audits
      - BCryptic, Charles Morgan, Querejeta Azurmendi
      - |:heavy_check_mark:|
@@ -173,7 +173,7 @@ SECP256k1 IOG Test Tracking
 
 New issues
 ----------
-
+- https://github.com/input-output-hk/cardano-node/issues/4597
 
 Breaking changes
 ----------------
