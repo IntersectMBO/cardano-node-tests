@@ -173,8 +173,9 @@ SECP256k1 IOG Test Tracking
 
 New issues
 ----------
-- https://github.com/input-output-hk/cardano-node/issues/4597
+* https://github.com/input-output-hk/cardano-node/issues/4597
+* https://github.com/input-output-hk/cardano-node/issues/4235
 
 Breaking changes
 ----------------
-- Switch default era in cardano-cli from Alonzo to Babbage
+* Switch default era in cardano-cli from Alonzo to Babbage
