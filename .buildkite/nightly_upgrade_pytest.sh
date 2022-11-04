@@ -7,7 +7,8 @@ retval=1
 export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
 export SCHEDULING_LOG=scheduling.log
 
-CLUSTER_ERA="${CLUSTER_ERA:-"alonzo"}"
+export CLUSTER_ERA="${CLUSTER_ERA:-"babbage"}"
+export TX_ERA="babbage"
 CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 
 #
@@ -18,7 +19,7 @@ if [ "$1" = "step1" ]; then
   export UPGRADE_TESTS_STEP=1
 
   # generate local cluster scripts
-  PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py -s cardano_node_tests/cluster_scripts/alonzo/ -d "$CLUSTER_SCRIPTS_DIR"
+  PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py -s cardano_node_tests/cluster_scripts/babbage/ -d "$CLUSTER_SCRIPTS_DIR"
 
   # try to stop local cluster
   "$CLUSTER_SCRIPTS_DIR"/stop-cluster-hfc
@@ -98,7 +99,7 @@ elif [ "$1" = "step2" ]; then
 
 
 #
-# STEP3 - update local cluster to Babbage, run smoke tests for the third time
+# STEP3 - update local cluster to Babbage PV8, run smoke tests for the third time
 #
 
 elif [ "$1" = "step3" ]; then
@@ -124,8 +125,6 @@ elif [ "$1" = "step3" ]; then
   [ "$retval" -le 1 ] || exit "$retval"
 
   # run smoke tests
-  export CLUSTER_ERA="babbage"
-  export TX_ERA="babbage"
   pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step3.html --self-contained-html
   retval="$?"
 

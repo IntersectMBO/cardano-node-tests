@@ -1,5 +1,4 @@
 """Tests for node upgrade."""
-import json
 import logging
 import os
 import shutil
@@ -12,19 +11,15 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import artifacts
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
-ALONZO_GENESIS_SPEC = (
-    Path(__file__).parent.parent / "cluster_scripts" / "babbage" / "genesis.alonzo.spec.json"
-)
+BABBAGE_DIR = Path(__file__).parent.parent / "cluster_scripts" / "babbage"
+COST_MODEL_FILE = BABBAGE_DIR / "plutus-costmodels-secp256k1-enabled.json"
 
 UPGRADE_TESTS_STEP = int(os.environ.get("UPGRADE_TESTS_STEP") or 0)
 BASE_REVISION = os.environ.get("BASE_REVISION")
@@ -125,25 +120,24 @@ class TestSetup:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
-    def test_update_to_babbage(
+    def test_update_to_babbage_pv8(
         self,
-        cluster_manager: cluster_management.ClusterManager,
         cluster_locked: clusterlib.ClusterLib,
         payment_addrs_locked: List[clusterlib.AddressRecord],
     ):
-        """Update cluster to Babbage era."""
+        """Update cluster to Babbage PV8."""
         cluster = cluster_locked
-        temp_template = common.get_test_id(cluster)
+        common.get_test_id(cluster)
         src_addr = payment_addrs_locked[0]
 
         cluster.wait_for_new_epoch()
 
-        # update to Babbage
+        # update to Babbage PV8 + update cost model
 
-        update_proposal_babbage = [
+        update_proposal_pv8 = [
             clusterlib_utils.UpdateProposal(
                 arg="--protocol-major-version",
-                value=7,
+                value=8,
                 name="",  # needs custom check
             ),
             clusterlib_utils.UpdateProposal(
@@ -151,46 +145,9 @@ class TestSetup:
                 value=0,
                 name="",  # needs custom check
             ),
-        ]
-
-        clusterlib_utils.update_params(
-            cluster_obj=cluster,
-            src_addr_record=src_addr,
-            update_proposals=update_proposal_babbage,
-        )
-
-        cluster.wait_for_new_epoch(padding_seconds=3)
-
-        protocol_params = cluster.g_query.get_protocol_params()
-        assert protocol_params["protocolVersion"]["major"] == 7
-        assert protocol_params["protocolVersion"]["minor"] == 0
-
-        # update cluster instance - we need to use Babbage-era Tx for now on
-
-        artifacts.save_cli_coverage(
-            cluster_obj=cluster, pytest_config=cluster_manager.pytest_config
-        )
-
-        configuration.CLUSTER_ERA = "babbage"
-        configuration.TX_ERA = "babbage"
-
-        cluster = cluster_nodes.get_cluster_type().get_cluster_obj(tx_era=configuration.TX_ERA)
-        cluster_manager.cache.cluster_obj = cluster
-
-        # update cost model
-
-        with open(ALONZO_GENESIS_SPEC, encoding="utf-8") as genesis_fp:
-            alonzo_genesis_spec = json.load(genesis_fp)
-        cost_models = alonzo_genesis_spec["costModels"]
-
-        cost_models_file = Path(f"{temp_template}_cost_values.json").resolve()
-        with open(cost_models_file, "w", encoding="utf-8") as out_fp:
-            out_fp.write(json.dumps(cost_models, indent=4))
-
-        update_proposal_cost_model = [
             clusterlib_utils.UpdateProposal(
                 arg="--cost-model-file",
-                value=str(cost_models_file),
+                value=str(COST_MODEL_FILE),
                 name="",  # needs custom check
             ),
         ]
@@ -198,13 +155,20 @@ class TestSetup:
         clusterlib_utils.update_params(
             cluster_obj=cluster,
             src_addr_record=src_addr,
-            update_proposals=update_proposal_cost_model,
+            update_proposals=update_proposal_pv8,
         )
 
         cluster.wait_for_new_epoch(padding_seconds=3)
 
         protocol_params = cluster.g_query.get_protocol_params()
-        assert protocol_params["costModels"]["PlutusScriptV2"]["bData-memory-arguments"] == 32
+        assert protocol_params["protocolVersion"]["major"] == 8
+        assert protocol_params["protocolVersion"]["minor"] == 0
+        assert (
+            protocol_params["costModels"]["PlutusScriptV2"][
+                "verifyEcdsaSecp256k1Signature-cpu-arguments"
+            ]
+            == 35892428
+        )
 
 
 @pytest.mark.upgrade
