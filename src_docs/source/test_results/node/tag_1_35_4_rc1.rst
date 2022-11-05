@@ -65,7 +65,7 @@ Release testing checklist
    * - Grafana metrics OK
      - |:heavy_check_mark:|
    * - Regression testing against `shelley-qa` - `results </>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
      - |:heavy_check_mark:|
    * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
@@ -173,8 +173,8 @@ SECP256k1 IOG Test Tracking
 
 New issues
 ----------
-* https://github.com/input-output-hk/cardano-node/issues/4597
-* https://github.com/input-output-hk/cardano-node/issues/4235
+* <https://github.com/input-output-hk/cardano-node/issues/4597>
+* <https://github.com/input-output-hk/cardano-node/issues/4235>
 
 Breaking changes
 ----------------
