@@ -14,7 +14,7 @@ if "$SCRIPT_DIR/deregister-pools"; then
   fi
 fi
 
-supervisorctl stop all
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]
 then

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
 echo "Starting cardano-node run: cardano-node run"
-   echo "--config ./state-cluster/config-relay1.json"
-   echo "--database-path ./state-cluster/db-relay1"
-   echo "--topology ./state-cluster/topology-relay1.json"
+   echo "--config ./state-cluster%%INSTANCE_NUM%%/config-relay1.json"
+   echo "--database-path ./state-cluster%%INSTANCE_NUM%%/db-relay1"
+   echo "--topology ./state-cluster%%INSTANCE_NUM%%/topology-relay1.json"
    echo "--host-addr 0.0.0.0"
-   echo "--port 30001"
-   echo "--socket-path ./state-cluster/relay1.socket"
+   echo "--port %%NODE_PORT_BASE%%1"
+   echo "--socket-path ./state-cluster%%INSTANCE_NUM%%/relay1.socket"
 echo "..or, once again, in a single line:"
-echo "cardano-node run --config ./state-cluster/config-relay1.json --database-path ./state-cluster/db-relay1 --topology ./state-cluster/topology-relay1.json --host-addr 0.0.0.0 --port 30001 --socket-path ./state-cluster/relay1.socket"
+echo "cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-relay1.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-relay1 --topology ./state-cluster%%INSTANCE_NUM%%/topology-relay1.json --host-addr 0.0.0.0 --port %%NODE_PORT_BASE%%1 --socket-path ./state-cluster%%INSTANCE_NUM%%/relay1.socket"
 
 
-exec cardano-node run --config ./state-cluster/config-relay1.json --database-path ./state-cluster/db-relay1 --topology ./state-cluster/topology-relay1.json --host-addr 0.0.0.0 --port 30001 --socket-path ./state-cluster/relay1.socket
+exec cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-relay1.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-relay1 --topology ./state-cluster%%INSTANCE_NUM%%/topology-relay1.json --host-addr 0.0.0.0 --port %%NODE_PORT_BASE%%1 --socket-path ./state-cluster%%INSTANCE_NUM%%/relay1.socket

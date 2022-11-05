@@ -143,13 +143,17 @@ class LocalScripts(ScriptsTypes):
             with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
+            # replace cluster instance number
             new_content = content.replace(
                 "/state-cluster%%INSTANCE_NUM%%", f"/state-cluster{instance_num}"
             )
             # replace node port number strings, omitting the last digit
             new_content = new_content.replace("%%NODE_PORT_BASE%%", str(instance_ports.base // 10))
+            # reconfigure supervisord port
             new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
+            # reconfigure submit-api port
             new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
+            # replace metrics port number strings, omitting the last digit
             new_content = new_content.replace(
                 "%%METRICS_PORT_BASE%%", str(instance_ports.ekg_bft1 // 10)
             )
@@ -273,26 +277,22 @@ class TestnetScripts(ScriptsTypes):
             fname = infile.name
             dest_file = destdir / fname
 
-            if "genesis" in fname:
-                shutil.copy(infile, dest_file)
-                continue
-
-            if "topology" in fname:
-                shutil.copy(infile, dest_file)
-                continue
-
             with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
-            new_content = content.replace("/state-cluster", f"/state-cluster{instance_num}")
+            # replace cluster instance number
+            new_content = content.replace(
+                "/state-cluster%%INSTANCE_NUM%%", f"/state-cluster{instance_num}"
+            )
             # replace node port number strings, omitting the last digit
-            new_content = new_content.replace("3000", str(instance_ports.base // 10))
-            # reconfigure metrics ports
-            new_content = new_content.replace("3030", str(instance_ports.ekg_relay1 // 10))
-            new_content = new_content.replace("9001", str(instance_ports.supervisor))
-            new_content = new_content.replace("8090", str(instance_ports.submit_api))
+            new_content = new_content.replace("%%NODE_PORT_BASE%%", str(instance_ports.base // 10))
+            # reconfigure supervisord port
+            new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
+            # reconfigure submit-api port
+            new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
+            # replace metrics port number strings, omitting the last digit
             new_content = new_content.replace(
-                "supervisorctl ", f"supervisorctl -s http://127.0.0.1:{instance_ports.supervisor} "
+                "%%METRICS_PORT_BASE%%", str(instance_ports.ekg_relay1 // 10)
             )
 
             with open(dest_file, "w", encoding="utf-8") as out_fp:
@@ -301,6 +301,39 @@ class TestnetScripts(ScriptsTypes):
             # make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
                 dest_file.chmod(0o755)
+
+    def _reconfigure_bootstrap(
+        self, indir: Path, destdir: Path, instance_num: int, globs: List[str]
+    ) -> None:
+        """Copy and reconfigure config files from bootstrap dir.
+
+        .. warning::
+           This can be fragile as we are changing real port numbers, not just string tokens.
+        """
+        instance_ports = self.get_instance_ports(instance_num)
+        _infiles = [list(indir.glob(g)) for g in globs]
+        infiles = list(itertools.chain.from_iterable(_infiles))
+        for infile in infiles:
+            fname = infile.name
+            dest_file = destdir / fname
+
+            # copy genesis and topology files without changing them
+            if "config" not in fname:
+                shutil.copy(infile, dest_file)
+                continue
+
+            with open(infile, encoding="utf-8") as in_fp:
+                content = in_fp.read()
+
+            # replace node port number strings, omitting the last digit
+            new_content = content.replace("3000", str(instance_ports.base // 10))
+            # replace metrics port number strings, omitting the last digit
+            new_content = new_content.replace("3030", str(instance_ports.ekg_relay1 // 10))
+            # reconfigure submit-api port
+            new_content = new_content.replace("8090", str(instance_ports.submit_api))
+
+            with open(dest_file, "w", encoding="utf-8") as out_fp:
+                out_fp.write(new_content)
 
     def _is_bootstrap_conf_dir(self, bootstrap_dir: Path) -> bool:
         return all(list(bootstrap_dir.glob(g)) for g in self.TESTNET_GLOBS)
@@ -341,7 +374,7 @@ class TestnetScripts(ScriptsTypes):
         new_start_script = destdir / start_script.name
         new_stop_script = destdir / stop_script.name
 
-        self._reconfigure_testnet(
+        self._reconfigure_bootstrap(
             indir=bootstrap_conf_dir,
             destdir=destdir_bootstrap,
             instance_num=instance_num,

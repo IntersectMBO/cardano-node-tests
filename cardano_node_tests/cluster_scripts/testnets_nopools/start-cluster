@@ -39,8 +39,8 @@ ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.json"
 
-RELAY1_EKG="30300"
-RELAY1_PROMETHEUS="30301"
+RELAY1_EKG="%%METRICS_PORT_BASE%%0"
+RELAY1_PROMETHEUS="%%METRICS_PORT_BASE%%1"
 jq --arg ekg "$RELAY1_EKG" --arg prometheus "$RELAY1_PROMETHEUS" \
   '.hasEKG = ($ekg|tonumber) | .hasPrometheus[1] = ($prometheus|tonumber)' \
   "$TESTNET_CONF_DIR"/config-*.json > "$STATE_CLUSTER/config-relay1.json"
@@ -88,8 +88,8 @@ EoF
 fi
 
 # create scripts for cluster starting / stopping
-printf "#!/bin/sh\n\nsupervisorctl start all" > "$STATE_CLUSTER/supervisorctl_start"
-printf "#!/bin/sh\n\nsupervisorctl \"\$@\"" > "$STATE_CLUSTER/supervisorctl"
+printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start all" > "$STATE_CLUSTER/supervisorctl_start"
+printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% \"\$@\"" > "$STATE_CLUSTER/supervisorctl"
 cat > "$STATE_CLUSTER/supervisord_start" <<EoF
 #!/usr/bin/env bash
 
@@ -108,7 +108,7 @@ set -uo pipefail
 
 SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
 
-supervisorctl stop all
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
 
 if [ -f "\$SCRIPT_DIR/supervisord.pid" ]; then
   kill "\$(<"\$SCRIPT_DIR/supervisord.pid")"
@@ -151,13 +151,13 @@ done
 # start cardano-submit-api
 if type cardano-submit-api >/dev/null 2>&1 && [ -e "$STATE_CLUSTER/submit-api-config.yaml" ]; then
   echo "Starting cardano-submit-api"
-  supervisorctl start submit_api
+  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start submit_api
 fi
 
 # start db-sync
 if [ -n "${DBSYNC_REPO:-""}" ]; then
   echo "Starting db-sync"
-  supervisorctl start dbsync
+  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start dbsync
   sleep 10
 
   echo "Waiting to make sure db-sync is synced"
