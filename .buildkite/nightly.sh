@@ -6,6 +6,8 @@ set -xeuo pipefail
 REPODIR="$PWD"
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 
+export SCHEDULING_LOG=scheduling.log
+
 MARKEXPR="${MARKEXPR:-""}"
 if [ "${CI_SKIP_LONG:-"false"}" != "false" ]; then
   MARKEXPR="${MARKEXPR:+"${MARKEXPR} and "}not long"
@@ -28,7 +30,6 @@ mkdir -p "$WORKDIR"
 rm -rf "${ARTIFACTS_DIR:?}"/*
 set +e
 
-export SCHEDULING_LOG=scheduling.log
 # shellcheck disable=SC2016,SC2086,SC2046,SC2119
 nix develop --accept-flake-config $(node_override) --command bash -c \ "
   export CARDANO_NODE_SOCKET_PATH=\"$CARDANO_NODE_SOCKET_PATH_CI\"

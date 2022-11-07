@@ -5,7 +5,6 @@ set -x
 retval=1
 
 export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
-export SCHEDULING_LOG=scheduling.log
 
 export CLUSTER_ERA="${CLUSTER_ERA:-"babbage"}"
 export TX_ERA="babbage"

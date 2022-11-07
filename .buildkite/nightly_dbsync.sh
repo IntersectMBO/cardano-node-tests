@@ -7,6 +7,8 @@ REPODIR="$PWD"
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 export CLUSTERS_COUNT="${CLUSTERS_COUNT:-5}"
 
+export SCHEDULING_LOG=scheduling.log
+
 MARKEXPR="${MARKEXPR:-"dbsync"}"
 if [ "${CI_SKIP_LONG:-"false"}" != "false" ]; then
   MARKEXPR="${MARKEXPR:+"${MARKEXPR} and "}not long"
@@ -58,7 +60,6 @@ export PGPORT=5432
 # run tests and generate report
 rm -rf "${ARTIFACTS_DIR:?}"/*
 set +e
-export SCHEDULING_LOG=scheduling.log
 # shellcheck disable=SC2046,SC2016,SC2119
 nix develop --accept-flake-config $(node_override) --command bash -c \ "
   export CARDANO_NODE_SOCKET_PATH=\"$CARDANO_NODE_SOCKET_PATH_CI\"

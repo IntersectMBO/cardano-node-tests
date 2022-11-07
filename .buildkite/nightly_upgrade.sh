@@ -8,6 +8,8 @@ export STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
 
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 export COVERAGE_DIR="${COVERAGE_DIR:-".cli_coverage"}"
+export SCHEDULING_LOG=scheduling.log
+
 rm -f "$ARTIFACTS_DIR" "$COVERAGE_DIR"
 mkdir -p "$ARTIFACTS_DIR" "$COVERAGE_DIR"
 
@@ -70,7 +72,7 @@ retval="$?"
 . "$REPODIR/.buildkite/save_artifacts.sh"
 
 # compress scheduling log
-xz scheduling.log
+xz "$SCHEDULING_LOG"
 
 echo
 echo "Dir content:"

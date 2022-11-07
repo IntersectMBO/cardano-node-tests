@@ -33,7 +33,7 @@
         {
           devShells = rec {
             base = pkgs.mkShell {
-              nativeBuildInputs = with pkgs; [ bash nix gnugrep gnumake gnutar coreutils adoptopenjdk-jre-bin curl git xz ];
+              nativeBuildInputs = with pkgs; [ bash nix gnugrep gnumake gnutar coreutils git xz ];
             };
             default = (
               cardano-node.devShells.${system}.devops or (
