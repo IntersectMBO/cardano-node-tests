@@ -92,7 +92,7 @@ New functionalities in this tag
 * Allow reading signing keys from a pipe (`#4342 <https://github.com/input-output-hk/cardano-node/pull/4342>`__) |:heavy_check_mark:|
 * Update plutus to version 1.0.0.1 to enable SECP at protocol version 8 () |:heavy_check_mark:|
 * Update block header advertised version in babbage to 8.0 () |:heavy_check_mark:|
-* Update cardano-crypto-class to version 2.0.0.0.2 to add SECP crypto primitives () |:hourglass_flowing_sand:|
+* Update cardano-crypto-class to version 2.0.0.0.1 to add SECP crypto primitives () |:heavy_check_mark:|
 
 
 SECP256k1 IOG Test Tracking
