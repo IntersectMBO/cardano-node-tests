@@ -9,6 +9,7 @@ on:
 
 jobs:
   auto_tests_results:
+    if: github.repository_owner == "input-output-hk"
     runs-on: ubuntu-latest
     steps:
       - name: checkout cardano-node-tests repo

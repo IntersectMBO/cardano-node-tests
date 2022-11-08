@@ -5,6 +5,25 @@ set -xeuo pipefail
 
 REPODIR="$PWD"
 
+WORKDIR="$REPODIR/run_workdir"
+rm -rf "$WORKDIR"
+mkdir -p "$WORKDIR"
+
+export TMPDIR="$WORKDIR/tmp"
+mkdir -p "$TMPDIR"
+
+if [ "${CI_ENABLE_DBSYNC:-"false"}" != "false" ]; then
+  # setup dbsync
+  # shellcheck disable=SC1090,SC1091
+  . "$REPODIR/.github/source_dbsync.sh"
+fi
+
+echo "::group::Nix env setup"
+
+# function to update cardano-node to specified branch and/or revision, or to the latest available
+# shellcheck disable=SC1090,SC1091
+. "$REPODIR/.buildkite/nix_override_cardano_node.sh"
+
 if [ "${CI_ENABLE_P2P:-"false"}" != "false" ]; then
   export ENABLE_P2P="true"
 fi
@@ -19,25 +38,20 @@ if [ "${CI_SKIP_LONG:-"false"}" != "false" ]; then
 fi
 export MARKEXPR
 
-WORKDIR="$REPODIR/run_workdir"
-rm -rf "$WORKDIR"
-mkdir -p "$WORKDIR"
+if [ -n "${CLUSTERS_COUNT:-""}" ]; then
+  export CLUSTERS_COUNT
+fi
+
+if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ] && [ -z "${SCRIPTS_DIRNAME:-""}" ]; then
+  export SCRIPTS_DIRNAME="${CLUSTER_ERA:-"babbage"}_fast"
+fi
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
-
-export TMPDIR="$WORKDIR/tmp"
-mkdir -p "$TMPDIR"
-
-echo "::group::Nix env setup"
-
-# function to update cardano-node to specified branch and/or revision, or to the latest available
-# shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/nix_override_cardano_node.sh"
 
 # run tests and generate report
 rm -rf "${ARTIFACTS_DIR:?}"/*
 set +e
-# shellcheck disable=SC2016,SC2086,SC2046,SC2119
+# shellcheck disable=SC2046,SC2016,SC2119
 nix develop --accept-flake-config $(node_override) --command bash -c '
   echo "::endgroup::"  # end group for "Nix env setup"
   echo "::group::Pytest run"

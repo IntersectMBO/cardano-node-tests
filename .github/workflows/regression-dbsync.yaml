@@ -1,11 +1,8 @@
-name: db-sync regression tests
+name: 02 Regression tests with db-sync
 
 on:
   workflow_dispatch:
     inputs:
-      tests_rev:
-        description: "cardano-node-tests revision (default: HEAD)"
-        required: false
       node_rev:
         description: "cardano-node revision (default: HEAD)"
         required: false
@@ -35,10 +32,6 @@ on:
         - allegra
         - shelley
         default: ""
-      cddl_format:
-        type: boolean
-        default: false
-        description: "Use CDDL format for Tx body"
       enable_p2p:
         type: boolean
         default: false
@@ -47,26 +40,22 @@ on:
         type: boolean
         default: false
         description: "Skip long running tests"
+      fast_cluster:
+        type: boolean
+        default: false
+        description: "Start local cluster directly in target cluster era"
 
 jobs:
   dbsync_regression:
-    runs-on: ubuntu-latest
-    steps:
-      - name: trigger the Buildkite pipeline - run db-sync regression tests
-        uses: zegocover/buildkite-pipeline-action@master
-        with:
-          access_token: "${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}"
-          pipeline: "input-output-hk/cardano-node-tests-dbsync"
-          commit: "${{ github.event.inputs.tests_rev }}"
-          message: ":github: Triggered by GitHub Action"
-          env: '{
-          "NODE_REV":"${{ github.event.inputs.node_rev }}",
-          "NODE_BRANCH":"${{ github.event.inputs.node_branch }}",
-          "DBSYNC_REV":"${{ github.event.inputs.dbsync_rev }}",
-          "DBSYNC_BRANCH":"${{ github.event.inputs.dbsync_branch }}",
-          "CLUSTER_ERA":"${{ github.event.inputs.cluster_era }}",
-          "TX_ERA":"${{ github.event.inputs.tx_era }}",
-          "USE_CDDL":"${{ github.event.inputs.cddl_format }}",
-          "CI_ENABLE_P2P":"${{ github.event.inputs.enable_p2p }}",
-          "CI_SKIP_LONG":"${{ github.event.inputs.skip_long }}"
-          }'
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/regression_reusable.yaml
+    with:
+      node_rev: ${{ inputs.node_rev }}
+      node_branch: ${{ inputs.node_branch }}
+      dbsync_rev: ${{ inputs.dbsync_rev }}
+      dbsync_branch: ${{ inputs.dbsync_branch }}
+      cluster_era: ${{ inputs.cluster_era }}
+      tx_era: ${{ inputs.tx_era }}
+      enable_p2p: ${{ inputs.enable_p2p }}
+      skip_long: ${{ inputs.skip_long }}
+      fast_cluster: ${{ inputs.fast_cluster }}

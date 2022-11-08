@@ -9,6 +9,7 @@ on:
 
 jobs:
   mainnet_tx_count_per_epoch:
+    if: github.repository_owner == "input-output-hk"
     runs-on: ubuntu-latest
     steps:
       - name: checkout cardano-node-tests repo

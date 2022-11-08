@@ -1,8 +1,8 @@
-name: Nightly tests
+name: Nightly tests db-sync
 
 on:
   schedule:
-    - cron: '15 23 * * *'
+    - cron: '15 02 * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,4 +11,4 @@ jobs:
     # reusable workflow from local repo and same branch as this config
     uses: ./.github/workflows/regression_reusable.yaml
     with:
-      env-path: .github/env_nightly
+      env-path: .github/env_nightly_dbsync
