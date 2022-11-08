@@ -1,0 +1,183 @@
+1.35.4-rc1
+===========
+
+* release page - https://github.com/input-output-hk/cardano-node/releases/tag/1.35.4
+* tag link - https://github.com/input-output-hk/cardano-node/releases/tag/1.35.4-rc1
+* tag PR - https://github.com/input-output-hk/cardano-node/pull/4508
+
+
+Changelogs
+----------
+
+* cardano-api: https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-api/ChangeLog.md
+* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-cli/ChangeLog.md
+* cardano-node: https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-node/ChangeLog.md
+* submit-api:
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: protocol version 7
+   :header-rows: 0
+
+   * - P2P OFF - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_p2p/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_alonzo/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Mary TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_mary/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Shelley TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_shelley/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: protocol version 8 and SECP256K1 cost model
+   :header-rows: 0
+
+   * - P2P OFF - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_pv8/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_p2p_pv8/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_alonzo_pv8/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Mary TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_mary_pv8/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Shelley TX <https://cardano-tests-reports-3-74-115-22.nip.io/babbage_shelley_pv8/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: other testing
+   :header-rows: 0
+
+   * - upgrade job (1.35.3 to 1.35.4-rc1) (including the intra-era hard fork)
+     - |:heavy_check_mark:|
+   * - sanity check submit-api REST service
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+----------------------------
+
+.. list-table::
+   :header-rows: 0
+
+   * - `1.35.4-rc1` pushed to `shelley-qa`
+     - |:heavy_check_mark:|
+   * - Grafana metrics OK
+     - |:heavy_check_mark:|
+   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/1.35.4-rc1/>`__
+     - |:heavy_check_mark:|
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+     - |:heavy_check_mark:|
+   * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+     - |:heavy_check_mark:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:heavy_check_mark:|
+   * - Benchmarking - Report
+     - |:heavy_check_mark:|
+   * - sanity check release notes
+     - |:heavy_check_mark:|
+
+
+New functionalities in this tag
+-------------------------------
+
+* Improve memory efficiency of query ledger-state command (`#4205 <https://github.com/input-output-hk/cardano-node/pull/4205>`__) |:heavy_check_mark:|
+* Update transaction build command to automatically calculate total and return collateral values (`#4198 <https://github.com/input-output-hk/cardano-node/pull/4198>`__) |:heavy_check_mark:|
+* Allow reading and writing text envelope files from pipes (`#4384 <https://github.com/input-output-hk/cardano-node/pull/4384>`__) |:x:|
+* Update cardano transaction view command to render inline datums and reference inputs (`#4089 <https://github.com/input-output-hk/cardano-node/pull/4089>`__) |:heavy_check_mark:|
+* Switch default era in cardano-cli from Alonzo to Babbage (`#4485 <https://github.com/input-output-hk/cardano-node/pull/4485>`__) |:heavy_check_mark:|
+* Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` (`#4303 <https://github.com/input-output-hk/cardano-node/pull/4303>`__) |:heavy_check_mark:|
+* Allow reading signing keys from a pipe (`#4342 <https://github.com/input-output-hk/cardano-node/pull/4342>`__) |:heavy_check_mark:|
+* Update plutus to version 1.0.0.1 to enable SECP at protocol version 8 () |:heavy_check_mark:|
+* Update block header advertised version in babbage to 8.0 () |:heavy_check_mark:|
+* Update cardano-crypto-class to version 2.0.0.0.1 to add SECP crypto primitives () |:heavy_check_mark:|
+
+
+SECP256k1 IOG Test Tracking
+---------------------------
+
+.. list-table:: Test Definition and Status
+   :header-rows: 1
+
+   * - Required Tests
+     - Test Definition Owners
+     - Test Def Status
+     - Link to tests
+     - Comments
+     - Tests Status on tag 1.35.4-rc1
+   * - Unit tests using test vectors (positive and negative paths)
+     - Dquadrant & IOG
+     - |:heavy_check_mark:|
+     - `link to tests <https://github.com/dQuadrant/cardano-secp256k1-tests>`__
+     - to be merged in cardano-base in `PR <https://github.com/input-output-hk/cardano-base/pull/320>`__
+     - |:heavy_check_mark:|
+   * - Unit/Property Tests using Builtins
+     - Plutus Core squad
+     - |:heavy_check_mark:|
+     - `positve <https://github.com/input-output-hk/plutus/blob/849b76ee93646c5ea2e45d2d8171441272846f42/plutus-core/untyped-plutus-core/test/Evaluation/Builtins/Definition.hs#L603>`__ and `negative <https://github.com/input-output-hk/plutus/blob/849b76ee93646c5ea2e45d2d8171441272846f42/plutus-core/untyped-plutus-core/test/Evaluation/Builtins/SignatureVerification.hs#L45-L64>`__
+     - Have existed since the re-implementation
+     - |:heavy_check_mark:|
+   * - E2E test PV7 - using plutus script (prohibited use of secp256k1 or exceeds budget due to expensive cost model)
+     - James Browning, Sara Tomaz
+     - |:heavy_check_mark:|
+     - `link to tests <https://github.com/input-output-hk/cardano-node-tests/pull/1386>`__
+     - test already automated in cardano-node-tests for the Babbage HF
+     - |:heavy_check_mark:|
+   * - E2E test PV8 - using plutus script (positive path with successful signature verification & error cases when verification fails)
+     - Dquadrant
+     - |:heavy_check_mark:|
+     - `link to tests <https://github.com/input-output-hk/cardano-node-tests/pull/1469>`__
+     - Tests are passing. PR in review.
+     - |:heavy_check_mark:|
+   * - E2E test - using a bridge (positive path)
+     - Dquadrant
+     - |:heavy_minus_sign:|
+     -  
+     - No longer a requirement for testing the release
+     - |:heavy_minus_sign:|
+   * - Integration tests (PV7)
+     - James Browning, Sara Tomaz
+     - |:heavy_check_mark:|
+       - `link to 1.35.1 tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3518202008>`__
+       - `link to 1.35.2 tests <https://input-output.atlassian.net/wiki/spaces/QA/pages/3522101311/1.35.2#SECP256k1-Testing-%3Acheck_mark%3A>`__
+     - Key scenarios from this have been added to the `cardano-node-tests <https://github.com/input-output-hk/cardano-node-tests>`__
+     - These are the tests executed manually by James during the Babbage testing. Includes negative and edge cases.
+     - |:heavy_check_mark:|
+   * - Performance
+     - Kenneth MacKenzie
+     - |:heavy_check_mark:|
+     - `link to tests <https://github.com/input-output-hk/plutus/blob/dbcaad6feb903551d55443ce0c9ee5e9c03c194e/plutus-core/cost-model/budgeting-bench/Benchmarks/CryptoAndHashes.hs>`__ and  `verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature benchmarks <https://github.com/input-output-hk/plutus/pull/4883#issuecomment-1306132062>`__
+     - costing discussion and results, see `before <https://github.com/input-output-hk/plutus/pull/4591>`__ and `after <https://github.com/input-output-hk/plutus/issues/4802>`__ reimplementation.
+     - |:heavy_check_mark:| (benchmarking for plutus is done in advance of node tag) --> `link to discussion <https://input-output-rnd.slack.com/archives/C0441DTDH8R/p1667549179045499?thread_ts=1667478716.971429&cid=C0441DTDH8R>`__
+   * - Audits
+     - BCryptic, Charles Morgan, Querejeta Azurmendi
+     - |:heavy_check_mark:|
+     - TODO: link to pdf
+     - Audit report successful, with minor comments that were addressed `here <https://github.com/input-output-hk/cardano-base/pull/313>`__.
+     - N/A
+   * - Plutus side tests
+     - Ziyang Liu
+     - |:heavy_check_mark:|
+     - no specific tests besides the existing Plutus regression
+     -  
+     - |:heavy_check_mark:|
+   * - Crypto side tests
+     - Querejeta Azurmendi
+     - |:heavy_check_mark:|
+     - `link to tests <https://github.com/input-output-hk/cardano-base/blob/master/cardano-crypto-tests/src/Test/Crypto/DSIGN.hs#L142>`__
+     - Unit tests over the generic signature algorithm DSIGN, which includes Schnorr and ECDSA over SECP256k1
+     - N/A
+
+
+New issues
+----------
+* <https://github.com/input-output-hk/cardano-node/issues/4597>
+    * fixed in `1.35.4-rc2` (not tested separately as there is low risk for collaterals)
+* <https://github.com/input-output-hk/cardano-node/issues/4235>
+
+Breaking changes
+----------------
+* Switch default era in cardano-cli from Alonzo to Babbage
