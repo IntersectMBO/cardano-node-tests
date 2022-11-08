@@ -37,10 +37,10 @@ on:
       fast_cluster:
         type: boolean
         default: false
-        description: "Start local cluster directly in target cluster era"
+        description: "Start cluster directly in target era"
 
 jobs:
-  cli_regression:
+  regression_tests:
     # reusable workflow from local repo and same branch as this config
     uses: ./.github/workflows/regression_reusable.yaml
     with:
