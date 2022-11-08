@@ -1,16 +1,17 @@
 1.35.4-rc1
 ===========
 
-* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.4-rc1>
-* tag PR - <https://github.com/input-output-hk/cardano-node/pull/4508>
+* release page - https://github.com/input-output-hk/cardano-node/releases/tag/1.35.4
+* tag link - https://github.com/input-output-hk/cardano-node/releases/tag/1.35.4-rc1
+* tag PR - https://github.com/input-output-hk/cardano-node/pull/4508
 
 
 Changelogs
 ----------
 
-* cardano-api: <https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-api/ChangeLog.md>
-* cardano-cli: <https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-cli/ChangeLog.md>
-* cardano-node: <https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-node/ChangeLog.md>
+* cardano-api: https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-api/ChangeLog.md
+* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-cli/ChangeLog.md
+* cardano-node: https://github.com/input-output-hk/cardano-node/blob/1.35.4-rc1/cardano-node/ChangeLog.md
 * submit-api:
 
 
@@ -148,7 +149,7 @@ SECP256k1 IOG Test Tracking
    * - Performance
      - Kenneth MacKenzie
      - |:heavy_check_mark:|
-     - `link to tests <https://github.com/input-output-hk/plutus/blob/dbcaad6feb903551d55443ce0c9ee5e9c03c194e/plutus-core/cost-model/budgeting-bench/Benchmarks/CryptoAndHashes.hs>`__
+     - `link to tests <https://github.com/input-output-hk/plutus/blob/dbcaad6feb903551d55443ce0c9ee5e9c03c194e/plutus-core/cost-model/budgeting-bench/Benchmarks/CryptoAndHashes.hs>`__ and  `verifySchnorrSecp256k1Signature and verifyEcdsaSecp256k1Signature benchmarks <https://github.com/input-output-hk/plutus/pull/4883#issuecomment-1306132062>`__
      - costing discussion and results, see `before <https://github.com/input-output-hk/plutus/pull/4591>`__ and `after <https://github.com/input-output-hk/plutus/issues/4802>`__ reimplementation.
      - |:heavy_check_mark:| (benchmarking for plutus is done in advance of node tag) --> `link to discussion <https://input-output-rnd.slack.com/archives/C0441DTDH8R/p1667549179045499?thread_ts=1667478716.971429&cid=C0441DTDH8R>`__
    * - Audits
