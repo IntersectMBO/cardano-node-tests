@@ -166,6 +166,22 @@ class TestCLI:
         assert utxo_out == expected_out
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_txid_with_process_substitution(self):
+        """Check that it is possible to use 'transaction txid' using process substitution."""
+        cmd = (
+            f"txFileJSON=$(cat {DATA_DIR / 'unwitnessed.tx'});"
+            'cardano-cli transaction txid --tx-file <(echo "${txFileJSON}")'
+        )
+
+        try:
+            helpers.run_in_bash(command=cmd)
+        except AssertionError as err:
+            if "cardano-cli: TODO" in str(err):
+                pytest.xfail("Not possible to use process substitution - see node issue #4235")
+            raise
+
+    @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_WRONG_ERA
     @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
