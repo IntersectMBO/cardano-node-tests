@@ -57,5 +57,6 @@ jobs:
       cluster_era: ${{ inputs.cluster_era }}
       tx_era: ${{ inputs.tx_era }}
       enable_p2p: ${{ inputs.enable_p2p }}
+      enable_dbsync: true
       skip_long: ${{ inputs.skip_long }}
       fast_cluster: ${{ inputs.fast_cluster }}
