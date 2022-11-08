@@ -42,6 +42,10 @@ if [ -n "${CLUSTERS_COUNT:-""}" ]; then
   export CLUSTERS_COUNT
 fi
 
+if [ "${TX_ERA:-""}" == "default" ]; then
+  export TX_ERA=""
+fi
+
 if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ] && [ -z "${SCRIPTS_DIRNAME:-""}" ]; then
   export SCRIPTS_DIRNAME="${CLUSTER_ERA:-"babbage"}_fast"
 fi

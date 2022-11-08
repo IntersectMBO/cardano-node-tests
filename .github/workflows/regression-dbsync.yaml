@@ -23,15 +23,15 @@ on:
         default: babbage
       tx_era:
         type: choice
-        description: "Tx era (uses default Tx era when empty)"
+        description: "Tx era"
         options:
-        - ""
+        - default
         - babbage
         - alonzo
         - mary
         - allegra
         - shelley
-        default: ""
+        default: default
       enable_p2p:
         type: boolean
         default: false
