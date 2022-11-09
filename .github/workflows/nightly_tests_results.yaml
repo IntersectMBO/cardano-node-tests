@@ -2,14 +2,14 @@ name: auto_tests_results
 
 on:
   schedule:
-    - cron:  '0 4 * * *'
+    - cron: '0 4 * * *'
   workflow_dispatch:
     branches:
       - sync_tests
 
 jobs:
   auto_tests_results:
-    if: github.repository_owner == "input-output-hk"
+    if: github.repository_owner == 'input-output-hk'
     runs-on: ubuntu-latest
     steps:
       - name: checkout cardano-node-tests repo
