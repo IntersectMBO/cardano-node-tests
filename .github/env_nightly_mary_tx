@@ -1,0 +1,4 @@
+CLUSTER_ERA=babbage
+TX_ERA=mary
+MARKEXPR=not long
+CLUSTERS_COUNT=3
