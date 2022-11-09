@@ -2,14 +2,14 @@ name: mainnet_tx_count_per_epoch
 
 on:
   schedule:
-    - cron:  '0 8 * * *'
+    - cron: '0 8 * * *'
   workflow_dispatch:
     branches:
       - sync_tests
 
 jobs:
   mainnet_tx_count_per_epoch:
-    if: github.repository_owner == "input-output-hk"
+    if: github.repository_owner == 'input-output-hk'
     runs-on: ubuntu-latest
     steps:
       - name: checkout cardano-node-tests repo
