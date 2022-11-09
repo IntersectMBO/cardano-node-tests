@@ -1,14 +1,14 @@
-name: Nightly tests dbsync
+name: Nightly tests Mary Tx
 
 on:
   schedule:
-    - cron: '15 02 * * *'
+    - cron: '15 03 * * *'
   workflow_dispatch:
 
 jobs:
-  nightly_job_default:
+  nightly_job_alonzo_tx:
     if: github.repository_owner == 'input-output-hk'
     # reusable workflow from local repo and same branch as this config
     uses: ./.github/workflows/regression_reusable.yaml
     with:
-      env-path: .github/env_nightly_dbsync
+      env-path: .github/env_nightly_mary_tx
