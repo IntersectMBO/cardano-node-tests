@@ -35,6 +35,12 @@
             base = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ bash nix gnugrep gnumake gnutar coreutils git xz ];
             };
+            python = pkgs.mkShell {
+              nativeBuildInputs = with pkgs; [ python39Full python39Packages.virtualenv python39Packages.pip ];
+            };
+            postgres = pkgs.mkShell {
+              nativeBuildInputs = with pkgs; [ glibcLocales postgresql lsof procps ];
+            };
             default = (
               cardano-node.devShells.${system}.devops or (
                 # Compat with 1.34.1:
