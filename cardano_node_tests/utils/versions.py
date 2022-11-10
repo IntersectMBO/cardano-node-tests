@@ -16,7 +16,7 @@ class Versions:
     BABBAGE = 6
 
     DEFAULT_CLUSTER_ERA = 6
-    DEFAULT_TX_ERA = 5
+    DEFAULT_TX_ERA = 6
     LAST_KNOWN_ERA = 6
 
     MAP = {1: "byron", 2: "shelley", 3: "allegra", 4: "mary", 5: "alonzo", 6: "babbage"}
