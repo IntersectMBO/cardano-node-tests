@@ -1,6 +1,4 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i bash -p python39Full python39Packages.virtualenv python39Packages.pip
-#! nix-shell -I nixpkgs=./nix
+#! /usr/bin/env -S nix develop --accept-flake-config .#python -c bash
 # shellcheck shell=bash
 
 pip install blockfrost-python
