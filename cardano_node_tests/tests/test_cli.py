@@ -167,9 +167,10 @@ class TestCLI:
         assert utxo_out == expected_out
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_txid_with_process_substitution(self):
-        """Check that it is possible to use 'transaction txid' using process substitution."""
+    def test_txid_with_process_substitution(self, cluster: clusterlib.ClusterLib):
+        """Check that it is possible to pass Tx file using process substitution."""
+        common.get_test_id(cluster)
+
         cmd = (
             f"txFileJSON=$(cat {DATA_DIR / 'unwitnessed.tx'});"
             'cardano-cli transaction txid --tx-file <(echo "${txFileJSON}")'
@@ -185,9 +186,8 @@ class TestCLI:
             raise
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     def test_sign_tx_with_process_substitution(self, cluster: clusterlib.ClusterLib):
-        """Check that it is possible to use 'transaction sign' using process substitution."""
+        """Check that it is possible to pass skey file using process substitution."""
         temp_template = common.get_test_id(cluster)
 
         cmd = (
