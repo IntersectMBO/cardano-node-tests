@@ -5,9 +5,9 @@ steps:
       - git checkout origin/db_sync_tests
       - git pull origin db_sync_tests
       - cd db_sync_tests
-      - nix-shell --run 'python ./tests/full_sync_from_clean_state.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -dsa "${db_sync_start_arguments}"  -e "${environment}"'
-      - nix-shell --run 'python ./tests/snapshot_creation.py -dpr "${db_sync_pr}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -e "${environment}" -rosc "${run_only_sync_test}"'
-      - nix-shell --run 'python ./tests/local_snapshot_restoration.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -dsa "${db_sync_start_arguments}" -e "${environment}" -rosc "${run_only_sync_test}"'
+      - nix develop --accept-flake-config ..#python --command python ./tests/full_sync_from_clean_state.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -dsa "${db_sync_start_arguments}"  -e "${environment}"
+      - nix develop --accept-flake-config ..#python --command python ./tests/snapshot_creation.py -dpr "${db_sync_pr}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -e "${environment}" -rosc "${run_only_sync_test}"
+      - nix develop --accept-flake-config ..#python --command python ./tests/local_snapshot_restoration.py -npr "${node_pr}" -nbr "${node_branch}" -nv "${node_version}" -dbr "${db_sync_branch}" -dv "${db_sync_version}" -dsa "${db_sync_start_arguments}" -e "${environment}" -rosc "${run_only_sync_test}"
     timeout_in_minutes: 43200
     agents:
       system: x86_64-linux

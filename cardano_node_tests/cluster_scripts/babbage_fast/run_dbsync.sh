@@ -1,5 +1,4 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i bash --pure --keep CARDANO_NODE_SOCKET_PATH --keep PGHOST --keep PGPORT --keep PGUSER --keep PGPASSFILE --keep DbSyncAbortOnPanic --keep DBSYNC_REPO -p postgresql
+#! /usr/bin/env -S nix develop --accept-flake-config github:input-output-hk/cardano-node-tests#postgres -i -k CARDANO_NODE_SOCKET_PATH -k PGHOST -k PGPORT -k PGUSER -k PGPASSFILE -k DbSyncAbortOnPanic -k DBSYNC_REPO -c bash
 # shellcheck shell=bash
 
 set -uo pipefail
