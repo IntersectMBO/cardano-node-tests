@@ -11,7 +11,6 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -67,22 +66,6 @@ class TestCLI:
                 *cluster.magic_args,
             ]
         )
-
-    @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
-    @pytest.mark.testnets
-    def test_testnet_whole_utxo(self, cluster: clusterlib.ClusterLib):
-        """Check that it is possible to return the whole UTxO on testnets."""
-        cluster_type = cluster_nodes.get_cluster_type()
-        if cluster_type.type == cluster_nodes.ClusterType.LOCAL:
-            pytest.skip("supposed to run on testnet")
-        if cluster_type.testnet_type == cluster_nodes.Testnets.testnet:  # type: ignore
-            pytest.skip("too expensive to run on the official Testnet")
-
-        common.get_test_id(cluster)
-
-        magic_args = " ".join(cluster.magic_args)
-        helpers.run_in_bash(f"cardano-cli query utxo --whole-utxo {magic_args} > /dev/null")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -201,7 +184,6 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_WRONG_ERA
-    @pytest.mark.testnets
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
         common.get_test_id(cluster)
@@ -222,7 +204,6 @@ class TestCLI:
             assert tx == tx_body
 
 
-@pytest.mark.testnets
 class TestAddressInfo:
     """Tests for cardano-cli address info."""
 
@@ -326,7 +307,6 @@ class TestAddressInfo:
         ), "Address information doesn't match"
 
 
-@pytest.mark.testnets
 class TestKey:
     """Tests for cardano-cli key."""
 
