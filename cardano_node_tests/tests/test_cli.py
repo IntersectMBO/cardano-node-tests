@@ -10,6 +10,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -164,6 +165,39 @@ class TestCLI:
         ]
 
         assert utxo_out == expected_out
+
+    @allure.link(helpers.get_vcs_link())
+    def test_txid_with_process_substitution(self, cluster: clusterlib.ClusterLib):
+        """Check that it is possible to pass Tx file using process substitution."""
+        common.get_test_id(cluster)
+
+        cmd = (
+            f"txFileJSON=$(cat {DATA_DIR / 'unwitnessed.tx'});"
+            'cardano-cli transaction txid --tx-file <(echo "${txFileJSON}")'
+        )
+
+        try:
+            helpers.run_in_bash(command=cmd)
+        except AssertionError as err:
+            if "cardano-cli: TODO" in str(err) or "Could not JSON decode TextEnvelopeCddl" in str(
+                err
+            ):
+                pytest.xfail("Not possible to use process substitution - see node issue #4235")
+            raise
+
+    @allure.link(helpers.get_vcs_link())
+    def test_sign_tx_with_process_substitution(self, cluster: clusterlib.ClusterLib):
+        """Check that it is possible to pass skey file using process substitution."""
+        temp_template = common.get_test_id(cluster)
+
+        cmd = (
+            f"tmpKey=$(cat {plutus_common.SIGNING_KEY_GOLDEN});"
+            f'cardano-cli transaction sign --tx-file {DATA_DIR / "unwitnessed.tx"}'
+            ' --signing-key-file <(echo "${tmpKey}")'
+            f" --out-file {temp_template}.signed"
+        )
+
+        helpers.run_in_bash(command=cmd)
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_WRONG_ERA
