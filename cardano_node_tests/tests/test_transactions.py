@@ -25,6 +25,8 @@ import cbor2
 import hypothesis
 import hypothesis.strategies as st
 import pytest
+from _pytest.fixtures import FixtureRequest
+from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -232,6 +234,26 @@ class TestBasic:
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
         return addrs
+
+    @pytest.fixture
+    def cluster_default_tx_era(
+        self,
+        cluster: clusterlib.ClusterLib,
+        request: SubRequest,
+    ) -> clusterlib.ClusterLib:
+        is_era_explicit = request.param
+        cluster_default = cluster
+
+        if is_era_explicit:
+            default_tx_era = VERSIONS.MAP[VERSIONS.DEFAULT_TX_ERA]
+            if cluster.tx_era != default_tx_era:
+                cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(
+                    tx_era=default_tx_era
+                )
+        elif cluster.tx_era:
+            cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(tx_era="")
+
+        return cluster_default
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -951,7 +973,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    def test_query_mempool_txin(
+    def test_query_mempool_txin(  # noqa: C901
         self,
         cluster_locked: clusterlib.ClusterLib,
         payment_addrs_locked: List[clusterlib.AddressRecord],
@@ -1054,6 +1076,63 @@ class TestBasic:
 
         # make sure the txin is removed from mempool so it cannot be selected by other tests
         cluster.wait_for_new_block(new_blocks=2)
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_WRONG_ERA
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize(
+        "cluster_default_tx_era",
+        (True, False),
+        ids=("explicit_tx_era", "implicit_tx_era"),
+        indirect=True,
+    )
+    def test_default_tx_era(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_default_tx_era: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        request: FixtureRequest,
+    ):
+        """Test default Tx era.
+
+        * check that default Tx era is implicit
+        * check that default Tx era can be specified explicitly
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+
+        cluster = cluster_default_tx_era
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        if use_build_cmd:
+            tx_output = cluster.g_transaction.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                txouts=destinations,
+                fee_buffer=1_000_000,
+            )
+            tx_signed_fund = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_fund, txins=tx_output.txins)
+        else:
+            tx_output = cluster.g_transaction.send_funds(
+                src_address=src_address,
+                destinations=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
+
+        # check `transaction view` command, this will check if the tx era is the expected
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
 @pytest.mark.testnets
