@@ -17,6 +17,7 @@ let
         packageOverrides = self: _: {
           allure = self.callPackage ./allure.nix {};
           pytest-allure = self.callPackage ./pytest-allure.nix {};
+          pytest-select = self.callPackage ./pytest-select.nix {};
           cardano-clusterlib = self.callPackage ./cardano-clusterlib.nix {};
         };
       };
@@ -31,6 +32,7 @@ let
           pytest-allure
           pytest-html
           pytest-order
+          pytest-select
           pytest_xdist
           pyyaml
           setuptools
