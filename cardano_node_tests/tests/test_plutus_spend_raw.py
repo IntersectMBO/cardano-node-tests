@@ -1072,7 +1072,7 @@ class TestLocking:
         )
 
         tokens = clusterlib_utils.new_tokens(
-            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
+            *[f"qacoin{token_rand}{i}".encode().hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
             token_mint_addr=payment_addrs[0],
@@ -1140,7 +1140,7 @@ class TestLocking:
         )
 
         tokens = clusterlib_utils.new_tokens(
-            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
+            *[f"qacoin{token_rand}{i}".encode().hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
             token_mint_addr=payment_addrs[0],
@@ -1458,7 +1458,7 @@ class TestNegative:
         )
 
         tokens = clusterlib_utils.new_tokens(
-            *[f"qacoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
+            *[f"qacoin{token_rand}{i}".encode().hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
             token_mint_addr=payment_addrs[0],

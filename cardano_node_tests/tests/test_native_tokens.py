@@ -440,8 +440,8 @@ class TestMinting:
 
         policyid = cluster.g_transaction.get_policyid(script)
         asset_names = [
-            f"couttscoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex(),
-            f"couttscoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex(),
+            f"couttscoin{clusterlib.get_rand_str(4)}".encode().hex(),
+            f"couttscoin{clusterlib.get_rand_str(4)}".encode().hex(),
         ]
         tokens = [f"{policyid}.{an}" for an in asset_names]
 
@@ -1680,7 +1680,7 @@ class TestTransfer:
         xfail_msgs = []
 
         new_tokens = clusterlib_utils.new_tokens(
-            *[f"couttscoin{rand}{i}".encode("utf-8").hex() for i in range(5)],
+            *[f"couttscoin{rand}{i}".encode().hex() for i in range(5)],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{rand}",
             token_mint_addr=payment_addrs[0],
