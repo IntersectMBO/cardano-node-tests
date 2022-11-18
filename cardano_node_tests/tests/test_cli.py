@@ -354,7 +354,11 @@ class TestKey:
                 key_name=temp_template, extended_verification_key_file=payment_keys.skey_file
             )
 
-        assert "TextEnvelope type error:  Expected one of:" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert (
+            "TextEnvelope type error:  Expected one of:" in err_str
+            or "key non-extended-key  Error: Invalid key." in err_str
+        ), err_str
 
 
 @common.SKIPIF_WRONG_ERA
