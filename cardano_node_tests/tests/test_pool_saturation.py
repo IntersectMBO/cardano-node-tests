@@ -353,7 +353,7 @@ class TestPoolSaturation:
 
                     return_to_addrs = []
                     return_amounts = []
-                    for idx, pool_rec in pool_records.items():
+                    for pool_rec in pool_records.values():
                         deleg_payment_balance = cluster.g_query.get_address_balance(
                             pool_rec.delegation_out.pool_user.payment.address
                         )
