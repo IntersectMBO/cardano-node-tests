@@ -2552,7 +2552,7 @@ class TestCollateralOutput:
         # create the token
         token_rand = clusterlib.get_rand_str(5)
         token = clusterlib_utils.new_tokens(
-            *[f"qacoin{token_rand}".encode("utf-8").hex()],
+            *[f"qacoin{token_rand}".encode().hex()],
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{token_rand}",
             token_mint_addr=payment_addr,

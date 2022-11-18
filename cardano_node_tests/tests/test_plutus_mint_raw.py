@@ -215,9 +215,9 @@ class TestMinting:
         # Step 2: mint the "qacoin"
 
         policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
-        asset_name_a = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name_a = f"qacoina{clusterlib.get_rand_str(4)}".encode().hex()
         token_a = f"{policyid}.{asset_name_a}"
-        asset_name_b = f"qacoinb{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name_b = f"qacoinb{clusterlib.get_rand_str(4)}".encode().hex()
         token_b = f"{policyid}.{asset_name_b}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_a),
@@ -355,7 +355,7 @@ class TestMinting:
         policyid = cluster.g_transaction.get_policyid(
             plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1
         )
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
@@ -477,7 +477,7 @@ class TestMinting:
             redeemer_value = 1_000_000_000_000
 
         policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
@@ -662,7 +662,7 @@ class TestMinting:
 
         # "anyone can mint" qacoin
         policyid1 = cluster.g_transaction.get_policyid(script_file1)
-        asset_name1 = f"qacoina{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name1 = f"qacoina{clusterlib.get_rand_str(4)}".encode().hex()
         token1 = f"{policyid1}.{asset_name1}"
         mint_txouts1 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token1)
@@ -683,7 +683,7 @@ class TestMinting:
             redeemer_value_timerange = 1_000_000_000_000
 
         policyid2 = cluster.g_transaction.get_policyid(script_file2)
-        asset_name2 = f"qacoint{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name2 = f"qacoint{clusterlib.get_rand_str(4)}".encode().hex()
         token2 = f"{policyid2}.{asset_name2}"
         mint_txouts2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token2)
@@ -1127,7 +1127,7 @@ class TestMinting:
         policyid = cluster.g_transaction.get_policyid(
             plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1
         )
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
@@ -1294,7 +1294,7 @@ class TestMinting:
         # Step 2: try to mint the "qacoin"
 
         policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token),
@@ -1432,7 +1432,7 @@ class TestMintingNegative:
         policyid = cluster.g_transaction.get_policyid(
             plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1
         )
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
@@ -1525,7 +1525,7 @@ class TestMintingNegative:
         # Step 2: try to mint the "qacoin"
 
         policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
@@ -1620,7 +1620,7 @@ class TestMintingNegative:
         # Step 2: try to mint the "qacoin"
 
         policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
@@ -1726,7 +1726,7 @@ class TestNegativeCollateral:
         )
 
         policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
@@ -1829,7 +1829,7 @@ class TestNegativeCollateral:
         )
 
         policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)

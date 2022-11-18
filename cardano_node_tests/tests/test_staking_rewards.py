@@ -415,7 +415,7 @@ class TestRewards:
         if VERSIONS.transaction_era >= VERSIONS.MARY:
             # create native tokens UTxOs for pool user
             native_tokens = clusterlib_utils.new_tokens(
-                *[f"couttscoin{token_rand}{i}".encode("utf-8").hex() for i in range(5)],
+                *[f"couttscoin{token_rand}{i}".encode().hex() for i in range(5)],
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_{token_rand}",
                 token_mint_addr=delegation_out.pool_user.payment,

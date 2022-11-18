@@ -1,13 +1,13 @@
 exclude: ^sync_tests/
 repos:
 - repo: https://github.com/asottile/reorder_python_imports
-  rev: v3.8.2
+  rev: v3.9.0
   hooks:
   - id: reorder-python-imports
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
     language_version: python3
 - repo: https://github.com/ambv/black
-  rev: 22.8.0
+  rev: 22.10.0
   hooks:
   - id: black
     args: [--safe, --quiet]
@@ -26,8 +26,8 @@ repos:
     language_version: python3
   - id: debug-statements
     language_version: python3
-- repo: https://gitlab.com/pycqa/flake8.git
-  rev: 3.9.2
+- repo: https://github.com/pycqa/flake8.git
+  rev: 5.0.4
   hooks:
   - id: flake8
     language_version: python3
@@ -37,7 +37,7 @@ repos:
     - flake8-simplify
     - flake8-use-pathlib
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.38.0
+  rev: v3.2.2
   hooks:
   - id: pyupgrade
     language_version: python3
@@ -55,7 +55,7 @@ repos:
   hooks:
   - id: markdownlint
 - repo: https://github.com/rstcheck/rstcheck
-  rev: v6.1.0
+  rev: v6.1.1
   hooks:
   - id: rstcheck
     additional_dependencies: [sphinx]
