@@ -796,9 +796,9 @@ class TestSECP256k1:
         temp_template = f"{common.get_test_id(cluster)}_positive_{algorithm}"
 
         script_file = (
-            plutus_common.SECP256K1_ECDSA_PLUTUS_V2
+            plutus_common.MINTING_SECP256K1_ECDSA_PLUTUS_V2
             if algorithm == "ecdsa"
-            else plutus_common.SECP256K1_SCHNORR_PLUTUS_V2
+            else plutus_common.MINTING_SECP256K1_SCHNORR_PLUTUS_V2
         )
 
         redeemer_dir = (
@@ -860,9 +860,9 @@ class TestSECP256k1:
         temp_template = f"{common.get_test_id(cluster)}_{test_vector}_{algorithm}"
 
         script_file = (
-            plutus_common.SECP256K1_ECDSA_PLUTUS_V2
+            plutus_common.MINTING_SECP256K1_ECDSA_PLUTUS_V2
             if algorithm == "ecdsa"
-            else plutus_common.SECP256K1_SCHNORR_PLUTUS_V2
+            else plutus_common.MINTING_SECP256K1_SCHNORR_PLUTUS_V2
         )
 
         redeemer_dir = (

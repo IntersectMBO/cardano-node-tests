@@ -42,13 +42,12 @@ MINTING_CHECK_REF_INPUTS_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-with-reference
 MINTING_CHECK_DATUM_HASH_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-datum-hash.plutus"
 MINTING_CHECK_REF_SCRIPTS_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-with-reference-scripts.plutus"
 MINTING_CHECK_INLINE_DATUM_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-inline-datum.plutus"
+MINTING_SECP256K1_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-ecdsa-policy.plutus"
+MINTING_SECP256K1_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-schnorr-policy.plutus"
 
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
 STAKE_PLUTUS_V2 = SCRIPTS_V2_DIR / "stake-script.plutus"
-
-SECP256K1_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-ecdsa-policy.plutus"
-SECP256K1_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-schnorr-policy.plutus"
 
 REDEEMER_42 = PLUTUS_DIR / "42.redeemer"
 REDEEMER_42_TYPED = PLUTUS_DIR / "typed-42.redeemer"
