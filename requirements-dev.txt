@@ -3,7 +3,7 @@
 # linting
 mypy
 pre-commit
-pylint
+pylint==2.15.5
 types-PyYAML
 types-requests
 
