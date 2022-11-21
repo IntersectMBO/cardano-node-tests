@@ -217,7 +217,7 @@ def testenv_setup_teardown(
         if not list(pytest_root_tmp.glob(".started_session_*")):
             _save_env_for_allure(request.config)
 
-        helpers.touch(pytest_root_tmp / f".started_session_{worker_id}")
+        (pytest_root_tmp / f".started_session_{worker_id}").touch()
 
     yield
 

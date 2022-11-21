@@ -175,14 +175,14 @@ class ClusterManager:
 
             shutil.rmtree(state_dir, ignore_errors=True)
 
-            helpers.touch(instance_dir / common.CLUSTER_STOPPED_FILE)
+            (instance_dir / common.CLUSTER_STOPPED_FILE).touch()
             self.log(f"c{instance_num}: stopped cluster instance")
 
     def set_needs_respin(self) -> None:
         """Indicate that the cluster instance needs respin."""
         with locking.FileLockIfXdist(self.cluster_lock):
             self.log(f"c{self.cluster_instance_num}: called `set_needs_respin`")
-            helpers.touch(self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}")
+            (self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}").touch()
 
     @contextlib.contextmanager
     def respin_on_failure(self) -> Iterator[None]:

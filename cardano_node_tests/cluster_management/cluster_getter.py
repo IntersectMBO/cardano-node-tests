@@ -142,7 +142,7 @@ class ClusterGetter:
             if cluster_running_file.exists():
                 LOGGER.warning("Ignoring requested cluster respin as 'DEV_CLUSTER_RUNNING' is set.")
             else:
-                helpers.touch(cluster_running_file)
+                cluster_running_file.touch()
             return True
 
         # fail if cluster respin is forbidden and the cluster was already started
@@ -214,7 +214,7 @@ class ClusterGetter:
                 excp = err
             finally:
                 if state_dir.exists():
-                    helpers.touch(state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK)
+                    (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).touch()
             # `else` cannot be used together with `finally`
             if _cluster_started:
                 break
@@ -224,7 +224,7 @@ class ClusterGetter:
             )
             if not configuration.IS_XDIST:
                 pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
-            helpers.touch(self.instance_dir / common.CLUSTER_DEAD_FILE)
+            (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
             return False
 
         # generate ID for the new cluster instance so it is possible to match log entries with
@@ -245,7 +245,7 @@ class ClusterGetter:
 
         # create file that indicates that the cluster is running
         if not cluster_running_file.exists():
-            helpers.touch(cluster_running_file)
+            cluster_running_file.touch()
 
         return True
 
@@ -310,7 +310,7 @@ class ClusterGetter:
             for f in respin_after_mark_files:
                 f.unlink()
             self.log(f"c{instance_num}: in `_on_marked_test_stop`, creating 'respin needed' file")
-            helpers.touch(instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}")
+            (instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}").touch()
 
         # remove file that indicates that tests with the mark are running
         marked_running_sfiles = list(instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_*"))
@@ -505,7 +505,7 @@ class ClusterGetter:
             )
             if not mark_starting_file.exists():
                 self.log(f"c{cget_status.instance_num}: initialized mark '{cget_status.mark}'")
-                helpers.touch(mark_starting_file)
+                (mark_starting_file).touch()
 
         return True
 
@@ -562,7 +562,7 @@ class ClusterGetter:
             cget_status.instance_dir / f"{common.RESPIN_IN_PROGRESS_GLOB}_{self.worker_id}"
         )
         if not respin_in_progress_file.exists():
-            helpers.touch(respin_in_progress_file)
+            respin_in_progress_file.touch()
 
         return True
 
@@ -597,41 +597,35 @@ class ClusterGetter:
         # this test is a first marked test
         if cget_status.mark and not cget_status.marked_running_sfiles:
             self.log(f"c{cget_status.instance_num}: starting '{cget_status.mark}' tests")
-            helpers.touch(
+            (
                 self.instance_dir
                 / f"{common.TEST_CURR_MARK_GLOB}_@@{cget_status.mark}@@_{self.worker_id}"
-            )
+            ).touch()
             for sf in cget_status.marked_starting_sfiles:
                 sf.unlink()
 
         # create status file for each in-use resource
         for r in cget_status.final_use_resources:
-            helpers.touch(
-                self.instance_dir / f"{common.RESOURCE_IN_USE_GLOB}_@@{r}@@_{self.worker_id}"
-            )
+            (self.instance_dir / f"{common.RESOURCE_IN_USE_GLOB}_@@{r}@@_{self.worker_id}").touch()
 
         # create status file for each locked resource
         for r in cget_status.final_lock_resources:
-            helpers.touch(
-                self.instance_dir / f"{common.RESOURCE_LOCKED_GLOB}_@@{r}@@_{self.worker_id}"
-            )
+            (self.instance_dir / f"{common.RESOURCE_LOCKED_GLOB}_@@{r}@@_{self.worker_id}").touch()
 
         # cleanup = cluster respin after test (group of tests) is finished
         if cget_status.cleanup:
             # cleanup after group of test that are marked with a marker
             if cget_status.mark:
                 self.log(f"c{cget_status.instance_num}: cleanup and mark")
-                helpers.touch(
-                    self.instance_dir / f"{common.RESPIN_AFTER_MARK_GLOB}_{self.worker_id}"
-                )
+                (self.instance_dir / f"{common.RESPIN_AFTER_MARK_GLOB}_{self.worker_id}").touch()
             # cleanup after single test (e.g. singleton)
             else:
                 self.log(f"c{cget_status.instance_num}: cleanup and not mark")
-                helpers.touch(self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}")
+                (self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}").touch()
 
         self.log(f"c{self.cluster_instance_num}: creating 'test running' status file")
         test_running_file = self.instance_dir / f"{common.TEST_RUNNING_GLOB}_{self.worker_id}"
-        helpers.touch(test_running_file)
+        test_running_file.touch()
 
     def _init_use_resources(
         self,

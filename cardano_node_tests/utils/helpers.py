@@ -291,12 +291,6 @@ def is_in_interval(num1: float, num2: float, frac: float = 0.1) -> bool:
     return _min <= num1 <= _max
 
 
-def touch(file: Path) -> None:
-    """Do the same as unix `touch` command."""
-    with open(file, "a", encoding="utf-8"):
-        pass
-
-
 def is_port_open(host: str, port: int) -> bool:
     """Check if port is open."""
     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
