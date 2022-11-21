@@ -48,22 +48,42 @@ ifndef NO_ARTIFACTS
 endif
 
 ifndef PYTEST_ARGS
-	HTML_REPORT_ARGS := --html=$(REPORTS_DIR)/testrun-report.html --self-contained-html
+	TESTRUN_REPORT_ARGS := --html=$(REPORTS_DIR)/testrun-report.html --self-contained-html --junitxml=$(REPORTS_DIR)/testrun-report.xml
+endif
+
+ifdef DESELECT_FROM_FILE
+	DESELECT_FROM_FILE_ARGS := --deselect-from-file=$(DESELECT_FROM_FILE)
+endif
+
+CLEANUP := yes
+RUN_SKIPS := yes
+
+ifdef PYTEST_ARGS
+	CLEANUP := no
+	RUN_SKIPS := no
+endif
+
+ifdef DESELECT_FROM_FILE
+	RUN_SKIPS := no
 endif
 
 .dirs:
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(REPORTS_DIR)
 
 .run_tests:
-# First just skip all tests so Allure has a list of runable tests. Also delete artifacts from previous runs.
-# Run only if no pytest args were specified.
-ifndef PYTEST_ARGS
-	rm -f $(REPORTS_DIR)/{*-attachment.txt,*-result.json,*-container.json,testrun-report.html}
+# delete artifacts from previous runs
+ifeq ($(CLEANUP),yes)
+	rm -f $(REPORTS_DIR)/{*-attachment.txt,*-result.json,*-container.json,testrun-report.*}
 	rm -f $(COVERAGE_DIR)/cli_coverage_*
+endif
+
+# first just skip all tests so Allure has a list of all tests that were supposed to run
+ifeq ($(RUN_SKIPS),yes)
 	pytest -s cardano_node_tests $(MARKEXPR) --skipall --alluredir=$(REPORTS_DIR) >/dev/null
 endif
+
 # run tests for real and produce Allure results
-	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) $(MARKEXPR) -n $(TEST_THREADS) $(ARTIFACTS_ARGS) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(REPORTS_DIR) $(HTML_REPORT_ARGS)
+	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) $(MARKEXPR) $(DESELECT_FROM_FILE_ARGS) -n $(TEST_THREADS) $(ARTIFACTS_ARGS) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(REPORTS_DIR) $(TESTRUN_REPORT_ARGS)
 
 
 # run all tests, generate allure report

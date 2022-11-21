@@ -51,6 +51,19 @@ on:
         required: false
         type: boolean
         default: false
+      testrun_name:
+        required: false
+        type: string
+        default: ""
+      skip_passed:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      TCACHE_BASIC_AUTH:
+        required: false
+      TCACHE_URL:
+        required: false
 
 jobs:
   reusable_run:
@@ -77,13 +90,28 @@ jobs:
           echo "CI_ENABLE_DBSYNC=${{ inputs.enable_dbsync }}" >> .github_ci_env
           echo "CI_SKIP_LONG=${{ inputs.skip_long }}" >> .github_ci_env
           echo "CI_FAST_CLUSTER=${{ inputs.fast_cluster }}" >> .github_ci_env
+          echo "CI_TESTRUN_NAME=${{ inputs.testrun_name }}" >> .github_ci_env
+          echo "CI_SKIP_PASSED=${{ inputs.skip_passed }}" >> .github_ci_env
           if [ -e "${{ inputs.env-path }}" ]; then cat "${{ inputs.env-path }}" >> .github_ci_env; fi
       - name: Export env variables
         run: |
           cat .github_ci_env
           cat .github_ci_env >> $GITHUB_ENV
+      - name: Get previous test results
+        if: inputs.testrun_name && inputs.skip_passed
+        run: |
+          if [ -n "${{ secrets.TCACHE_BASIC_AUTH }}" ] && [ -n "${{ secrets.TCACHE_URL }}" ]; then
+            curl -s -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${{ inputs.testrun_name }}/pypassed" > deselected_tests.txt
+            echo "DESELECT_FROM_FILE=deselected_tests.txt" >> $GITHUB_ENV
+          fi
       - name: Run CLI regression tests
         run: .github/regression.sh
+      - name: Report test results
+        if: (success() || failure()) && inputs.testrun_name
+        run: |
+          if [ -n "${{ secrets.TCACHE_BASIC_AUTH }}" ] && [ -n "${{ secrets.TCACHE_URL }}" ]; then
+            curl -s -X PUT --fail-with-body -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${{ inputs.testrun_name }}/${{ github.run_number }}/import" -F "junitxml=@testrun-report.xml"
+          fi
       - name: Upload testing artifacts on failure
         uses: actions/upload-artifact@v3
         if: failure()
@@ -113,3 +141,5 @@ jobs:
             cli_coverage.json
             scheduling.log.xz
             errors_all.log
+            testrun-report.xml
+            deselected_tests.txt

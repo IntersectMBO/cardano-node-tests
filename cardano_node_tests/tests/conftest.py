@@ -74,6 +74,12 @@ def pytest_configure(config: Any) -> None:
     config._metadata["cardano-cli exe"] = shutil.which("cardano-cli") or ""
     config._metadata["cardano-node exe"] = shutil.which("cardano-node") or ""
 
+    testrun_name = os.environ.get("CI_TESTRUN_NAME")
+    if testrun_name:
+        skip_passed = os.environ.get("CI_SKIP_PASSED") == "true"
+        config._metadata["CI_TESTRUN_NAME"] = testrun_name
+        config._metadata["CI_SKIP_PASSED"] = str(skip_passed)
+
     network_magic = configuration.NETWORK_MAGIC_LOCAL
     if configuration.BOOTSTRAP_DIR:
         with open(

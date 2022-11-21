@@ -69,8 +69,8 @@ nix develop --accept-flake-config $(node_override) --command bash -c '
 '
 retval="$?"
 
-# move html report to root dir
-mv .reports/testrun-report.html testrun-report.html
+# move reports to root dir
+mv .reports/testrun-report.* ./
 
 # create results archive
 "$REPODIR"/.buildkite/results.sh .

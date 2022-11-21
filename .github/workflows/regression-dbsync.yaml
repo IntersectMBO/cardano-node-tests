@@ -4,16 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       node_rev:
-        description: "cardano-node revision (default: HEAD)"
-        required: false
-      node_branch:
-        description: "cardano-node branch (default: master)"
+        description: "cardano-node revision (default: master HEAD)"
         required: false
       dbsync_rev:
-        description: "db-sync revision (default: HEAD)"
-        required: false
-      dbsync_branch:
-        description: "db-sync branch (default: master)"
+        description: "db-sync revision (default: master HEAD)"
         required: false
       cluster_era:
         type: choice
@@ -44,6 +38,15 @@ on:
         type: boolean
         default: false
         description: "Start cluster directly in target era"
+      testrun_name:
+        required: false
+        description: "Test run name (internal)"
+      skip_passed:
+        type: boolean
+        default: false
+        description: "Skip tests that already passed (internal)"
+
+run-name: ${{ inputs.testrun_name && 'Run:' || ''}} ${{ inputs.testrun_name }} ${{ (inputs.testrun_name && inputs.skip_passed) && ':repeat:' || '' }}
 
 jobs:
   regression_tests:
@@ -51,12 +54,15 @@ jobs:
     uses: ./.github/workflows/regression_reusable.yaml
     with:
       node_rev: ${{ inputs.node_rev }}
-      node_branch: ${{ inputs.node_branch }}
       dbsync_rev: ${{ inputs.dbsync_rev }}
-      dbsync_branch: ${{ inputs.dbsync_branch }}
       cluster_era: ${{ inputs.cluster_era }}
       tx_era: ${{ inputs.tx_era }}
       enable_p2p: ${{ inputs.enable_p2p }}
       enable_dbsync: true
       skip_long: ${{ inputs.skip_long }}
       fast_cluster: ${{ inputs.fast_cluster }}
+      testrun_name: ${{ inputs.testrun_name }}
+      skip_passed: ${{ inputs.skip_passed }}
+    secrets:
+      TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+      TCACHE_URL: ${{ secrets.TCACHE_URL }}
