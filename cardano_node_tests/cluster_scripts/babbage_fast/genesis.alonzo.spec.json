@@ -1,5 +1,5 @@
 {
-    "maxBlockBodySize": 98304,
+    "maxBlockBodySize": 90112,
     "lovelacePerUTxOWord": 34482,
     "executionPrices": {
         "prSteps": {
@@ -12,11 +12,11 @@
         }
     },
     "maxTxExUnits": {
-        "exUnitsMem": 11250000,
+        "exUnitsMem": 14000000,
         "exUnitsSteps": 10000000000
     },
     "maxBlockExUnits": {
-        "exUnitsMem": 80000000,
+        "exUnitsMem": 62000000,
         "exUnitsSteps": 40000000000
     },
     "maxValueSize": 5000,
