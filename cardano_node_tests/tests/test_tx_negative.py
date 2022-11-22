@@ -936,7 +936,10 @@ class TestNegative:
         if "Transaction _ fee not supported in" in err_str:
             pytest.xfail("See node issue #4591 - Transaction _ fee not supported")
 
-        assert "fee must be specified" in err_str, err_str
+        assert (
+            "fee must be specified" in err_str
+            or "Implicit transaction fee not supported" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -983,7 +986,10 @@ class TestNegative:
         if "Transaction validity upper bound not supported" in err_str:
             pytest.xfail("See node issue #4591 - Transaction validity upper bound not supported")
 
-        assert "TTL must be specified" in err_str, err_str
+        assert (
+            "TTL must be specified" in err_str
+            or "Transaction validity upper bound must be specified" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     def test_missing_tx_in(
