@@ -18,6 +18,11 @@ if [ "${CI_ENABLE_DBSYNC:-"false"}" != "false" ]; then
   . "$REPODIR/.github/source_dbsync.sh"
 fi
 
+if [ "${CLUSTER_ERA:-""}" = "babbage_pv8" ]; then
+  export CLUSTER_ERA="babbage"
+  export UPDATE_PV8=1
+fi
+
 echo "::group::Nix env setup"
 
 # function to update cardano-node to specified branch and/or revision, or to the latest available

@@ -11,6 +11,7 @@ on:
         description: "Cluster era"
         options:
         - babbage
+        - babbage_pv8
         default: babbage
       tx_era:
         type: choice

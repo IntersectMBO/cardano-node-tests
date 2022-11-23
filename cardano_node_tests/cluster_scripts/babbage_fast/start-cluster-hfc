@@ -3,6 +3,7 @@
 # controlling environment variables:
 # DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
 # ENABLE_P2P - if set, local cluster will use P2P
+# UPDATE_PV8 - if set, update to PV8 and update Secp256k1 cost model
 
 set -euo pipefail
 sets="$-"
@@ -69,8 +70,8 @@ cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/submit-api-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
-cp "$SCRIPT_DIR"/genesis*.spec.json "$STATE_CLUSTER/shelley/"
 cp "$SCRIPT_DIR"/genesis*.spec.json "$STATE_CLUSTER/create_staked/"
+cp "$SCRIPT_DIR"/plutus-costmodels*.json "$STATE_CLUSTER/shelley/"
 
 if [ -n "${ENABLE_P2P:-""}" ]; then
   # use P2P topology files
@@ -80,6 +81,22 @@ if [ -n "${ENABLE_P2P:-""}" ]; then
   done
 else
   cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
+fi
+
+# update to PV8 and Secp256k1 cost model when indicated
+if [ -n "${UPDATE_PV8:-""}" ]; then
+  jq '
+    .protocolParams.protocolVersion.major = 8' \
+    < "$STATE_CLUSTER/create_staked/genesis.spec.json" > "$STATE_CLUSTER/create_staked/genesis.spec.json_jq"
+  cat "$STATE_CLUSTER/create_staked/genesis.spec.json_jq" > "$STATE_CLUSTER/create_staked/genesis.spec.json"
+  rm -f "$STATE_CLUSTER/create_staked/genesis.spec.json_jq"
+
+  COST_MODEL_PV8="$(<"$STATE_CLUSTER/shelley/plutus-costmodels-secp256k1-enabled.json")"
+  jq --argjson cost_model_pv8 "$COST_MODEL_PV8" \
+    '.costModels = $cost_model_pv8' \
+    < "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json" > "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json_jq"
+  cat "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json_jq" > "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json"
+  rm -f "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json_jq"
 fi
 
 # enable db-sync service
