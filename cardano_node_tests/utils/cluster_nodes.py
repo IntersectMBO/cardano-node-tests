@@ -66,6 +66,11 @@ class ClusterType:
         self.type = "unknown"
         self.cluster_scripts = cluster_scripts.ScriptsTypes()
 
+    @property
+    def uses_shortcut(self) -> bool:
+        """Check if cluster uses shortcut to go from Byron to last supported era."""
+        raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
+
     def get_cluster_obj(
         self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
     ) -> clusterlib.ClusterLib:
@@ -219,6 +224,11 @@ class TestnetCluster(ClusterType):
         # cached values
         self._testnet_type = ""
         self._slots_offset = -1
+
+    @property
+    def uses_shortcut(self) -> bool:
+        """Check if cluster uses shortcut to go from Byron to last supported era."""
+        return False
 
     @property
     def testnet_type(self) -> str:
