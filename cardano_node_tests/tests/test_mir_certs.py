@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
@@ -17,6 +18,9 @@ from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+
+RESERVES = "reserves"
+TREASURY = "treasury"
 
 
 def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> List[dbsync_queries.ADAPotsDBRow]:
@@ -36,73 +40,75 @@ def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> List[dbsync_qu
     return pots_records
 
 
+@pytest.fixture
+def cluster_pots(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    return cluster_manager.get(
+        lock_resources=[
+            cluster_management.Resources.RESERVES,
+            cluster_management.Resources.TREASURY,
+        ]
+    )
+
+
+@pytest.fixture
+def pool_users(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_pots: clusterlib.ClusterLib,
+) -> List[clusterlib.PoolUser]:
+    """Create pool user."""
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+        created_users = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster_pots,
+            name_template=f"test_mir_certs_ci{cluster_manager.cluster_instance_num}",
+            no_of_addr=5,
+        )
+        fixture_cache.value = created_users
+
+    # fund source addresses
+    clusterlib_utils.fund_from_faucet(
+        *created_users,
+        cluster_obj=cluster_pots,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+    )
+
+    return created_users
+
+
+@pytest.fixture
+def registered_users(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_pots: clusterlib.ClusterLib,
+    pool_users: List[clusterlib.PoolUser],
+) -> List[clusterlib.PoolUser]:
+    """Register pool user's stake address."""
+    registered = pool_users[1:3]
+
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+        fixture_cache.value = registered
+
+    for i, pool_user in enumerate(registered):
+        temp_template = f"test_mir_certs_{i}_ci{cluster_manager.cluster_instance_num}"
+        clusterlib_utils.register_stake_address(
+            cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
+        )
+
+    return registered
+
+
+@pytest.mark.skipif(
+    cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+    and cluster_nodes.get_cluster_type().uses_shortcut,
+    reason="MIR certs testing is not supported on local cluster with HF shortcut",
+)
 class TestMIRCerts:
     """Tests for MIR certificates."""
-
-    RESERVES = "reserves"
-    TREASURY = "treasury"
-
-    @pytest.fixture
-    def cluster_pots(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-    ) -> clusterlib.ClusterLib:
-        return cluster_manager.get(
-            lock_resources=[
-                cluster_management.Resources.RESERVES,
-                cluster_management.Resources.TREASURY,
-            ]
-        )
-
-    @pytest.fixture
-    def pool_users(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster_pots: clusterlib.ClusterLib,
-    ) -> List[clusterlib.PoolUser]:
-        """Create pool user."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            created_users = clusterlib_utils.create_pool_users(
-                cluster_obj=cluster_pots,
-                name_template=f"test_mir_certs_ci{cluster_manager.cluster_instance_num}",
-                no_of_addr=5,
-            )
-            fixture_cache.value = created_users
-
-        # fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            *created_users,
-            cluster_obj=cluster_pots,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
-        )
-
-        return created_users
-
-    @pytest.fixture
-    def registered_users(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster_pots: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-    ) -> List[clusterlib.PoolUser]:
-        """Register pool user's stake address."""
-        registered = pool_users[1:3]
-
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-            fixture_cache.value = registered
-
-        for i, pool_user in enumerate(registered):
-            temp_template = f"test_mir_certs_{i}_ci{cluster_manager.cluster_instance_num}"
-            clusterlib_utils.register_stake_address(
-                cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
-            )
-
-        return registered
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -462,7 +468,7 @@ class TestMIRCerts:
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
-            use_treasury=fund_src == self.TREASURY,
+            use_treasury=fund_src == TREASURY,
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -510,7 +516,7 @@ class TestMIRCerts:
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             stash_record = (
-                tx_db_record.treasury[0] if fund_src == self.TREASURY else tx_db_record.reserve[0]
+                tx_db_record.treasury[0] if fund_src == TREASURY else tx_db_record.reserve[0]
             )
             assert stash_record.amount == amount, (
                 "Incorrect amount transferred using MIR certificate "
@@ -554,7 +560,7 @@ class TestMIRCerts:
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
-            use_treasury=fund_src == self.TREASURY,
+            use_treasury=fund_src == TREASURY,
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -608,7 +614,7 @@ class TestMIRCerts:
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             stash_record = (
-                tx_db_record.treasury[0] if fund_src == self.TREASURY else tx_db_record.reserve[0]
+                tx_db_record.treasury[0] if fund_src == TREASURY else tx_db_record.reserve[0]
             )
             assert stash_record.amount == amount, (
                 "Incorrect amount transferred using MIR certificate "
@@ -894,53 +900,6 @@ class TestMIRCerts:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
-    def test_exceed_pay_stake_addr_from(
-        self,
-        cluster_pots: clusterlib.ClusterLib,
-        registered_users: List[clusterlib.PoolUser],
-        fund_src: str,
-    ):
-        """Try to send more funds than available from the reserves or treasury pot to stake address.
-
-        Expect failure.
-
-        * generate an MIR certificate
-        * submit a TX with the MIR certificate
-        * check that submitting the transaction fails with an expected error
-        """
-        temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}"
-        cluster = cluster_pots
-        amount = 30_000_000_000_000_000
-        registered_user = registered_users[0]
-
-        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
-            stake_addr=registered_user.stake.address,
-            reward=amount,
-            tx_name=temp_template,
-            use_treasury=fund_src == self.TREASURY,
-        )
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[mir_cert],
-            signing_key_files=[
-                registered_user.payment.skey_file,
-                *cluster.g_genesis.genesis_keys.delegate_skeys,
-            ],
-        )
-
-        # send the transaction at the beginning of an epoch
-        if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
-            cluster.wait_for_new_epoch()
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.send_tx(
-                src_address=registered_user.payment.address,
-                tx_name=temp_template,
-                tx_files=tx_files,
-            )
-        assert "InsufficientForInstantaneousRewardsDELEG" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.parametrize("addr_history", ("addr_known", "addr_unknown"))
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
@@ -971,7 +930,7 @@ class TestMIRCerts:
         temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}_{addr_history}"
         cluster = cluster_pots
 
-        if fund_src == self.TREASURY:
+        if fund_src == TREASURY:
             amount = 1_500_000_000_000
             pool_user = pool_users[3]
         else:
@@ -984,7 +943,7 @@ class TestMIRCerts:
             stake_addr=pool_user.stake.address,
             reward=amount,
             tx_name=temp_template,
-            use_treasury=fund_src == self.TREASURY,
+            use_treasury=fund_src == TREASURY,
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[mir_cert],
@@ -1001,7 +960,7 @@ class TestMIRCerts:
             )
 
             # deregister the stake address before submitting the Tx with MIR cert
-            if fund_src == self.TREASURY:
+            if fund_src == TREASURY:
                 tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
                 )
@@ -1024,7 +983,7 @@ class TestMIRCerts:
         tx_epoch = cluster.g_query.get_epoch()
 
         # deregister the stake address after submitting the Tx with MIR cert
-        if addr_history == "addr_known" and fund_src != self.TREASURY:
+        if addr_history == "addr_known" and fund_src != TREASURY:
             tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
                 cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
             )
@@ -1040,7 +999,7 @@ class TestMIRCerts:
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
-            if fund_src == self.TREASURY:
+            if fund_src == TREASURY:
                 assert tx_db_record.treasury[0].amount == amount, (
                     "Incorrect amount transferred from treasury "
                     f"({tx_db_record.treasury[0].amount} != {amount})"
@@ -1064,9 +1023,60 @@ class TestMIRCerts:
             # check that the amount was not transferred out of the pot
             pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
 
-            if fund_src == self.TREASURY:
+            if fund_src == TREASURY:
                 # normally `treasury[-1]` > `treasury[-2]`
                 assert abs(pots_records[-1].treasury - pots_records[-2].treasury) < amount
             else:
                 # normally `reserves[-1]` < `reserves[-2]`
                 assert abs(pots_records[-2].reserves - pots_records[-1].reserves) < amount
+
+
+class TestNegativeMIRCerts:
+    """Negative tests for MIR certificates."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
+    def test_exceed_pay_stake_addr_from(
+        self,
+        cluster_pots: clusterlib.ClusterLib,
+        registered_users: List[clusterlib.PoolUser],
+        fund_src: str,
+    ):
+        """Try to send more funds than available from the reserves or treasury pot to stake address.
+
+        Expect failure.
+
+        * generate an MIR certificate
+        * submit a TX with the MIR certificate
+        * check that submitting the transaction fails with an expected error
+        """
+        temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}"
+        cluster = cluster_pots
+        amount = 30_000_000_000_000_000
+        registered_user = registered_users[0]
+
+        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
+            stake_addr=registered_user.stake.address,
+            reward=amount,
+            tx_name=temp_template,
+            use_treasury=fund_src == TREASURY,
+        )
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[mir_cert],
+            signing_key_files=[
+                registered_user.payment.skey_file,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
+            ],
+        )
+
+        # send the transaction at the beginning of an epoch
+        if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
+            cluster.wait_for_new_epoch()
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.send_tx(
+                src_address=registered_user.payment.address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+            )
+        assert "InsufficientForInstantaneousRewardsDELEG" in str(excinfo.value)
