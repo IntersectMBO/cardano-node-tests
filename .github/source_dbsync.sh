@@ -3,7 +3,6 @@
 echo "::group::db-sync setup"
 
 CLUSTERS_COUNT="${CLUSTERS_COUNT:-5}"
-MARKEXPR="${MARKEXPR:-"dbsync"}"
 
 pushd "$WORKDIR" || exit 1
 
