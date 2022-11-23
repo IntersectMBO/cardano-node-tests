@@ -27,14 +27,21 @@ on:
         - allegra
         - shelley
         default: default
+      markexpr:
+        type: choice
+        description: "Selection of tests"
+        options:
+        - all
+        - dbsync
+        - smoke
+        - not long
+        - dbsync and smoke
+        - dbsync and not long
+        default: dbsync
       enable_p2p:
         type: boolean
         default: false
         description: "Enable P2P network topology"
-      skip_long:
-        type: boolean
-        default: false
-        description: "Skip long running tests"
       fast_cluster:
         type: boolean
         default: false
@@ -58,9 +65,9 @@ jobs:
       dbsync_rev: ${{ inputs.dbsync_rev }}
       cluster_era: ${{ inputs.cluster_era }}
       tx_era: ${{ inputs.tx_era }}
+      markexpr: ${{ inputs.markexpr }}
       enable_p2p: ${{ inputs.enable_p2p }}
       enable_dbsync: true
-      skip_long: ${{ inputs.skip_long }}
       fast_cluster: ${{ inputs.fast_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
       skip_passed: ${{ inputs.skip_passed }}

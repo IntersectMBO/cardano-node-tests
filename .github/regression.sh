@@ -38,10 +38,9 @@ export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 export SCHEDULING_LOG=scheduling.log
 
 MARKEXPR="${MARKEXPR:-""}"
-if [ "${CI_SKIP_LONG:-"false"}" != "false" ]; then
-  MARKEXPR="${MARKEXPR:+"${MARKEXPR} and "}not long"
+if [ "${MARKEXPR:-""}" = "all" ]; then
+  unset MARKEXPR
 fi
-export MARKEXPR
 
 if [ -n "${CLUSTERS_COUNT:-""}" ]; then
   export CLUSTERS_COUNT

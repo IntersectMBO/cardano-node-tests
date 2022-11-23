@@ -31,6 +31,10 @@ on:
         required: false
         type: string
         default: ""
+      markexpr:
+        required: false
+        type: string
+        default: ""
       scripts_dirname:
         required: false
         type: string
@@ -40,10 +44,6 @@ on:
         type: boolean
         default: false
       enable_dbsync:
-        required: false
-        type: boolean
-        default: false
-      skip_long:
         required: false
         type: boolean
         default: false
@@ -85,10 +85,10 @@ jobs:
           echo "DBSYNC_BRANCH=${{ inputs.dbsync_branch }}" >> .github_ci_env
           echo "CLUSTER_ERA=${{ inputs.cluster_era }}" >> .github_ci_env
           echo "TX_ERA=${{ inputs.tx_era }}" >> .github_ci_env
+          echo "MARKEXPR=${{ inputs.markexpr }}" >> .github_ci_env
           echo "SCRIPTS_DIRNAME=${{ inputs.scripts_dirname }}" >> .github_ci_env
           echo "CI_ENABLE_P2P=${{ inputs.enable_p2p }}" >> .github_ci_env
           echo "CI_ENABLE_DBSYNC=${{ inputs.enable_dbsync }}" >> .github_ci_env
-          echo "CI_SKIP_LONG=${{ inputs.skip_long }}" >> .github_ci_env
           echo "CI_FAST_CLUSTER=${{ inputs.fast_cluster }}" >> .github_ci_env
           echo "CI_TESTRUN_NAME=${{ inputs.testrun_name }}" >> .github_ci_env
           echo "CI_SKIP_PASSED=${{ inputs.skip_passed }}" >> .github_ci_env
