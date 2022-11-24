@@ -2,6 +2,7 @@
 import logging
 import time
 from pathlib import Path
+from typing import Optional
 from typing import Tuple
 
 import allure
@@ -26,6 +27,7 @@ def _gen_signed_tx(
     out_addr: clusterlib.AddressRecord,
     tx_name: str,
     fee: int,
+    invalid_hereafter: Optional[int] = None,
 ) -> Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, Path]:
     """Generate Tx and return Tx output in a format that can be used as input for next Tx."""
     send_amount = txin.amount - fee
@@ -35,17 +37,17 @@ def _gen_signed_tx(
     txout = clusterlib.TxOut(address=out_addr.address, amount=send_amount)
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-    # send Tx
+    # build Tx
     tx_raw_output = cluster_obj.g_transaction.build_raw_tx_bare(
         out_file=out_file,
         txouts=[txout],
         tx_files=tx_files,
         fee=fee,
         txins=[txin],
-        invalid_hereafter=cluster_obj.g_transaction.calculate_tx_ttl()
-        if VERSIONS.transaction_era < VERSIONS.ALLEGRA
-        else None,
+        invalid_hereafter=invalid_hereafter,
     )
+
+    # sign Tx
     tx_file = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         tx_name=tx_name,
@@ -120,6 +122,12 @@ class TestTxChaining:
             init_utxo.amount - (fee * iterations) >= min_utxo_value
         ), f"Not enough funds to do {iterations} iterations"
 
+        invalid_hereafter = (
+            cluster.g_query.get_slot_no() + 2000
+            if VERSIONS.transaction_era < VERSIONS.ALLEGRA
+            else None
+        )
+
         # generate signed Txs
         generated_txs = []
         tx_raw_outputs = []
@@ -132,6 +140,7 @@ class TestTxChaining:
                 out_addr=payment_addr,
                 tx_name=f"{temp_template}_{idx:04d}",
                 fee=fee,
+                invalid_hereafter=invalid_hereafter,
             )
             generated_txs.append(tx_file)
             tx_raw_outputs.append(tx_raw_output)
