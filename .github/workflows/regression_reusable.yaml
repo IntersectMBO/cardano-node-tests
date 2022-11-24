@@ -79,6 +79,7 @@ jobs:
       - name: Collect env variables
         run: |
           : > .github_ci_env
+          echo "PY_COLORS=1" >> .github_ci_env
           echo "NODE_REV=${{ inputs.node_rev }}" >> .github_ci_env
           echo "NODE_BRANCH=${{ inputs.node_branch }}" >> .github_ci_env
           echo "DBSYNC_REV=${{ inputs.dbsync_rev }}" >> .github_ci_env
