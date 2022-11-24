@@ -185,7 +185,7 @@ class LocalCluster(ClusterType):
         else:
             raise RuntimeError("Faucet address file doesn't exist.")
 
-        # fund new addresses from byron address
+        # fund new addresses from faucet address
         LOGGER.debug("Funding created addresses.")
         to_fund = [d["payment"] for d in new_addrs_data.values()]
         clusterlib_utils.fund_from_faucet(
