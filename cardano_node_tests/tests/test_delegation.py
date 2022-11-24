@@ -72,7 +72,12 @@ def pool_users_cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
     cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
 ) -> List[clusterlib.PoolUser]:
-    """Create pool users using `cluster_and_pool` fixture."""
+    """Create pool users using `cluster_and_pool` fixture.
+
+    .. warning::
+       The cached addresses can be used only for payments, not for delegation!
+       The pool can be different every time the fixture is called.
+    """
     cluster, *__ = cluster_and_pool
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:

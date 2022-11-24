@@ -140,19 +140,22 @@ class ClusterManager:
 
         for instance_num in range(self.num_of_instances):
             instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
-            if (
-                not (instance_dir / common.CLUSTER_RUNNING_FILE).exists()
-                or (instance_dir / common.CLUSTER_STOPPED_FILE).exists()
-            ):
+            cluster_stopped = (instance_dir / common.CLUSTER_STOPPED_FILE).exists()
+            cluster_started_or_dead = (instance_dir / common.CLUSTER_RUNNING_FILE).exists() or (
+                instance_dir / common.CLUSTER_DEAD_FILE
+            ).exists()
+
+            if cluster_stopped or not cluster_started_or_dead:
                 self.log(f"c{instance_num}: cluster instance not running")
                 continue
 
             state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}{instance_num}"
 
-            if (
-                state_dir.exists()
-                and not (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).exists()
-            ):
+            if not state_dir.exists():
+                self.log(f"c{instance_num}: cluster instance state dir '{state_dir}' doesn't exist")
+                continue
+
+            if not (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).exists():
                 self.log(f"c{instance_num}: cluster instance was not started by framework")
                 continue
 

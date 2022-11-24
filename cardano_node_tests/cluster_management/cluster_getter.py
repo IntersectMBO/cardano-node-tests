@@ -240,8 +240,19 @@ class ClusterGetter:
         # Pytest's mktemp adds number to the end of the dir name, so keep the trailing '_'
         # as separator. Resulting dir name is e.g. 'addrs_data_ci3_0'.
         tmp_path = Path(self.tmp_path_factory.mktemp(f"addrs_data_ci{self.cluster_instance_num}_"))
+
         # setup faucet addresses
-        cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=tmp_path)
+        try:
+            cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=tmp_path)
+        except Exception as err:
+            self.log(
+                f"c{self.cluster_instance_num}: failed to setup test addresses:\n{err}\n"
+                "cluster dead"
+            )
+            if not configuration.IS_XDIST:
+                pytest.exit(msg=f"Failed to setup test addresses, exception: {err}", returncode=1)
+            (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
+            return False
 
         # create file that indicates that the cluster is running
         if not cluster_running_file.exists():
