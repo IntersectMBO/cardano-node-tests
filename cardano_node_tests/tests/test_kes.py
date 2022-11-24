@@ -166,6 +166,8 @@ def _check_block_production(
 class TestKES:
     """Basic tests for KES period."""
 
+    MAX_INT_VAL = 2**64
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(5)
     @pytest.mark.long
@@ -781,3 +783,43 @@ class TestKES:
             )
         assert "Missing: --kes-period NATURAL" in str(excinfo.value)
         assert not out_file.exists(), "New operational certificate was generated"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_negative_kes_period_arg(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_manager: cluster_management.ClusterManager,
+    ):
+        """Try to generate new operational certificate with a negative value for `--kes-period`.
+
+        Expect failure.
+        """
+        pool_name = cluster_management.Resources.POOL2
+        pool_rec = cluster_manager.cache.addrs_data[pool_name]
+
+        node_name = pool_name.replace("node-", "")
+
+        # generate new operational certificate with negative value for `--kes-period`
+        invalid_kes_period = -100
+        opcert_file = cluster.g_node.gen_node_operational_cert(
+            node_name=f"{node_name}_invalid_opcert_file",
+            kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+            cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+            cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+            kes_period=invalid_kes_period,
+        )
+
+        kes_period_info = cluster.g_query.get_kes_period_info(opcert_file)
+
+        # TODO: xfail for node issue #3788
+        try:
+            assert not (
+                kes_period_info["metrics"]["qKesEndKesInterval"]
+                == kes_period_info["metrics"]["qKesStartKesInterval"]
+                == self.MAX_INT_VAL
+            )
+        except AssertionError:
+            pytest.xfail(
+                "Possible to create a op cert with a negative value for kes-period - "
+                "see node issue #3788"
+            )
