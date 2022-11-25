@@ -1799,6 +1799,66 @@ class TestNegative:
         err_str = str(excinfo.value)
         assert "The Plutus script evaluation failed" in err_str, err_str
 
+    @allure.link(helpers.get_vcs_link())
+    def test_embed_datum_without_pparams(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test using 'build --tx-out-datum-embed' without provide protocol params.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS["v1"].script_file,
+            datum_file=plutus_common.DATUM_42_TYPED,
+        )
+
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=plutus_op.script_file
+        )
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        txin = cluster.g_query.get_utxo(address=payment_addrs[0].address)
+
+        out_file = f"{temp_template}_tx.body"
+
+        cli_args = [
+            "transaction",
+            "build",
+            "--tx-in",
+            f"{txin[0].utxo_hash}#{txin[0].utxo_ix}",
+            "--tx-out",
+            f"{script_address}+200000000",
+            "--tx-out-datum-embed-file",
+            str(plutus_op.datum_file),
+            "--change-address",
+            payment_addrs[0].address,
+            "--out-file",
+            out_file,
+            "--testnet-magic",
+            str(cluster.network_magic),
+            *cluster.g_transaction.tx_era_arg,
+        ]
+
+        cluster.cli(cli_args)
+
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_signed",
+        )
+
+        try:
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=txin)
+        except clusterlib.CLIError as err:
+            if "PPViewHashesDontMatch" in str(err):
+                pytest.xfail("build cmd requires protocol params - see node issue #4058")
+            raise
+
 
 @common.SKIPIF_PLUTUS_UNUSABLE
 @pytest.mark.testnets
