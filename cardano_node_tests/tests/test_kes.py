@@ -794,6 +794,8 @@ class TestKES:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         pool_name = cluster_management.Resources.POOL2
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
