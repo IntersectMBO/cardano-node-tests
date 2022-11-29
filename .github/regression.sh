@@ -29,8 +29,10 @@ echo "::group::Nix env setup"
 # shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/nix_override_cardano_node.sh"
 
-if [ "${CI_ENABLE_P2P:-"false"}" != "false" ]; then
+if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
   export ENABLE_P2P="true"
+elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
+  export MIXED_P2P="true"
 fi
 
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
