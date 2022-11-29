@@ -616,7 +616,9 @@ class TestBasicTransactions:
             src_record=payment_addrs[0],
             dst_record=payment_addrs[1],
         )
-        txins, __ = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, __ = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         cli_args = [
             "transaction",
@@ -653,7 +655,9 @@ class TestBasicTransactions:
             src_record=payment_addrs[0],
             dst_record=payment_addrs[0],
         )
-        txins, txouts = tx_common.get_txins_txouts(tx_raw_template.txins, tx_raw_template.txouts)
+        txins, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_template.txins, txouts=tx_raw_template.txouts
+        )
         tx_raw_output = tx_raw_template._replace(invalid_hereafter=None)
 
         cluster.cli(
@@ -702,7 +706,9 @@ class TestBasicTransactions:
             src_record=payment_addrs[0],
             dst_record=payment_addrs[0],
         )
-        txins, txouts = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         cluster.cli(
             [
@@ -757,7 +763,9 @@ class TestBasicTransactions:
             dst_record=payment_addrs[1],
             for_build_command=True,
         )
-        txins, txouts = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         cluster.cli(
             [
