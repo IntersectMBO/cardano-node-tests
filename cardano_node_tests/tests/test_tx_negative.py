@@ -914,7 +914,9 @@ class TestNegative:
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
         )
-        txins, txouts = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
@@ -958,7 +960,9 @@ class TestNegative:
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
         )
-        txins, txouts = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
@@ -999,7 +1003,9 @@ class TestNegative:
             src_record=pool_users[0].payment,
             dst_record=pool_users[1].payment,
         )
-        __, txouts = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        __, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
@@ -1039,7 +1045,9 @@ class TestNegative:
             dst_record=pool_users[1].payment,
             for_build_command=True,
         )
-        __, txouts = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        __, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
@@ -1080,7 +1088,9 @@ class TestNegative:
             dst_record=pool_users[1].payment,
             for_build_command=True,
         )
-        txins, txouts = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
@@ -1120,7 +1130,9 @@ class TestNegative:
             dst_record=pool_users[1].payment,
             for_build_command=True,
         )
-        txins, txouts = tx_common.get_txins_txouts(tx_raw_output.txins, tx_raw_output.txouts)
+        txins, txouts = tx_common.get_txins_txouts(
+            txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
+        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
