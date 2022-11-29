@@ -64,6 +64,7 @@ def pytest_configure(config: Any) -> None:
     config._metadata["TX_ERA"] = configuration.TX_ERA
     config._metadata["SCRIPTS_DIRNAME"] = configuration.SCRIPTS_DIRNAME
     config._metadata["ENABLE_P2P"] = str(configuration.ENABLE_P2P)
+    config._metadata["MIXED_P2P"] = str(configuration.MIXED_P2P)
     config._metadata["UPDATE_PV8"] = str(configuration.UPDATE_PV8)
     config._metadata["ghc"] = VERSIONS.ghc
     config._metadata["cardano-node-tests rev"] = helpers.get_current_commit()

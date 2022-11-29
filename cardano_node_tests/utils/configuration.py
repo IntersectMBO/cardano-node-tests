@@ -31,6 +31,8 @@ USE_CDDL = bool(os.environ.get("USE_CDDL"))  # TODO: remove once `--cddl-format`
 
 # used also in startup scripts as `if [ -n "$VAR" ]...`
 ENABLE_P2P = (os.environ.get("ENABLE_P2P") or "") != ""
+# used also in startup scripts as `if [ -n "$VAR" ]...`
+MIXED_P2P = (os.environ.get("MIXED_P2P") or "") != ""
 # TODO: for PlutusV2 cost model, used also in startup scripts as `if [ -n "$VAR" ]...`
 UPDATE_COST_MODEL = (os.environ.get("UPDATE_COST_MODEL") or "") != ""
 # TODO: for PV8 and PlutusV2cost model, used also in startup scripts as `if [ -n "$VAR" ]...`
