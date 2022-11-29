@@ -14,6 +14,7 @@ import hypothesis.strategies as st
 import pytest
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
+from cardano_clusterlib import txtools
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -1434,6 +1435,67 @@ class TestDatum:
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS_VERSION
+    def test_embed_datum_without_pparams(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
+    ):
+        """Test 'build --tx-out-datum-embed' without providing protocol params file."""
+        __: Any  # mypy workaround
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
+            datum_file=plutus_common.DATUM_42_TYPED,
+        )
+
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=plutus_op.script_file
+        )
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        utxos = cluster.g_query.get_utxo(address=payment_addrs[0].address)
+        txin = txtools.filter_utxo_with_highest_amount(utxos=utxos)
+
+        out_file = f"{temp_template}_tx.body"
+
+        cli_args = [
+            "transaction",
+            "build",
+            "--tx-in",
+            f"{txin.utxo_hash}#{txin.utxo_ix}",
+            "--tx-out",
+            f"{script_address}+2000000",
+            "--tx-out-datum-embed-file",
+            str(plutus_op.datum_file),
+            "--change-address",
+            payment_addrs[0].address,
+            "--out-file",
+            out_file,
+            "--testnet-magic",
+            str(cluster.network_magic),
+            *cluster.g_transaction.tx_era_arg,
+        ]
+
+        cluster.cli(cli_args)
+
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_signed",
+        )
+
+        try:
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=[txin])
+        except clusterlib.CLIError as err:
+            if "PPViewHashesDontMatch" in str(err):
+                pytest.xfail("build cmd requires protocol params - see node issue #4058")
+            raise
 
 
 @common.SKIPIF_PLUTUS_UNUSABLE
