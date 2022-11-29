@@ -3,6 +3,7 @@
 # controlling environment variables:
 # DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
 # ENABLE_P2P - if set, local cluster will use P2P
+# MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # UPDATE_PV8 - if set, update to PV8 and update Secp256k1 cost model
 
 set -euo pipefail
@@ -25,6 +26,10 @@ BYRON_INIT_SUPPLY=10020000000
 # TODO: see https://github.com/input-output-hk/cardano-node/issues/4556
 INIT_SUPPLY="$((MAX_SUPPLY / 4))"  # in reality, it will be `INIT_SUPPLY * 1.8`
 DELEG_SUPPLY="$((MAX_SUPPLY / 8))" # in reality, it will be `DELEG_SUPPLY * 1.6`
+
+if [ -n "${MIXED_P2P:-""}" ]; then
+  export ENABLE_P2P=1
+fi
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster-hfc\` first!" >&2
@@ -81,6 +86,12 @@ if [ -n "${ENABLE_P2P:-""}" ]; then
   done
 else
   cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
+fi
+
+if [ -n "${MIXED_P2P:-""}" ]; then
+  # use legacy topology files for some nodes
+  cp -f "$SCRIPT_DIR"/topology-bft1.json "$STATE_CLUSTER"
+  cp -f "$SCRIPT_DIR"/topology-pool3.json "$STATE_CLUSTER"
 fi
 
 # update to PV8 and Secp256k1 cost model when indicated
@@ -199,6 +210,9 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
 
   # enable P2P
   if [ -n "${ENABLE_P2P:-""}" ]; then
+    if [[ -n "${MIXED_P2P:-""}" && ( "$fname" = "config-bft1.json" || "$fname" = "config-pool3.json" ) ]]; then
+      continue
+    fi
     jq \
       '.EnableP2P = true
       | .MaxConcurrencyBulkSync = 2

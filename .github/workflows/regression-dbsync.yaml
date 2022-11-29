@@ -38,10 +38,14 @@ on:
         - dbsync and smoke
         - dbsync and not long
         default: dbsync
-      enable_p2p:
-        type: boolean
-        default: false
-        description: "Enable P2P network topology"
+      topology:
+        type: choice
+        description: "Network topology"
+        options:
+        - legacy
+        - p2p
+        - mixed
+        default: legacy
       fast_cluster:
         type: boolean
         default: false
@@ -66,7 +70,7 @@ jobs:
       cluster_era: ${{ inputs.cluster_era }}
       tx_era: ${{ inputs.tx_era }}
       markexpr: ${{ inputs.markexpr }}
-      enable_p2p: ${{ inputs.enable_p2p }}
+      topology: ${{ inputs.topology }}
       enable_dbsync: true
       fast_cluster: ${{ inputs.fast_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
