@@ -2972,8 +2972,6 @@ class TestCompatibility:
 
 @pytest.mark.testnets
 class TestSECP256k1:
-    MAX_INT_VAL = (2**64) - 1
-
     @pytest.fixture
     def build_fund_script_secp(
         self,
@@ -3143,7 +3141,9 @@ class TestSECP256k1:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("build_fund_script_secp", ("ecdsa", "schnorr"), indirect=True)
-    @hypothesis.given(number_of_iterations=st.integers(min_value=1000300, max_value=MAX_INT_VAL))
+    @hypothesis.given(
+        number_of_iterations=st.integers(min_value=1000300, max_value=common.MAX_UINT64)
+    )
     @common.hypothesis_settings(max_examples=200)
     def test_overspending_execution_budget(
         self,

@@ -1354,8 +1354,6 @@ class TestDatum:
 class TestNegative:
     """Tests for Tx output locking using Plutus smart contracts that are expected to fail."""
 
-    MAX_INT_VAL = 2**63 - 1
-
     @pytest.fixture
     def pparams(self, cluster: clusterlib.ClusterLib) -> dict:
         return cluster.g_query.get_protocol_params()
@@ -1826,14 +1824,14 @@ class TestNegative:
 
         per_time = data.draw(
             st.integers(
-                min_value=pparams["maxTxExecutionUnits"]["steps"] + 1, max_value=self.MAX_INT_VAL
+                min_value=pparams["maxTxExecutionUnits"]["steps"] + 1, max_value=common.MAX_INT64
             )
         )
         assert per_time > pparams["maxTxExecutionUnits"]["steps"]
 
         per_space = data.draw(
             st.integers(
-                min_value=pparams["maxTxExecutionUnits"]["memory"] + 1, max_value=self.MAX_INT_VAL
+                min_value=pparams["maxTxExecutionUnits"]["memory"] + 1, max_value=common.MAX_INT64
             )
         )
         assert per_space > pparams["maxTxExecutionUnits"]["memory"]
@@ -1865,8 +1863,7 @@ class TestNegative:
 class TestNegativeRedeemer:
     """Tests for Tx output locking using Plutus smart contracts with wrong redeemer."""
 
-    MAX_INT_VAL = (2**64) - 1
-    MIN_INT_VAL = -MAX_INT_VAL
+    MIN_INT_VAL = -common.MAX_UINT64
     AMOUNT = 2_000_000
 
     def _fund_script_guessing_game(
@@ -2070,9 +2067,11 @@ class TestNegativeRedeemer:
         assert "Value out of range within the script data" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
+    @hypothesis.given(
+        redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=common.MAX_UINT64)
+    )
     @hypothesis.example(redeemer_value=MIN_INT_VAL)
-    @hypothesis.example(redeemer_value=MAX_INT_VAL)
+    @hypothesis.example(redeemer_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_inside_range(
@@ -2192,8 +2191,8 @@ class TestNegativeRedeemer:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
-    @hypothesis.example(redeemer_value=MAX_INT_VAL + 1)
+    @hypothesis.given(redeemer_value=st.integers(min_value=common.MAX_UINT64 + 1))
+    @hypothesis.example(redeemer_value=common.MAX_UINT64 + 1)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_above_range(

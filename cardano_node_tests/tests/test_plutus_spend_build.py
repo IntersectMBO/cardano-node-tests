@@ -1867,8 +1867,7 @@ class TestNegative:
 class TestNegativeRedeemer:
     """Tests for Tx output locking using Plutus smart contracts with wrong redeemer."""
 
-    MAX_INT_VAL = (2**64) - 1
-    MIN_INT_VAL = -MAX_INT_VAL
+    MIN_INT_VAL = -common.MAX_UINT64
     AMOUNT = 2_000_000
 
     @pytest.fixture
@@ -1971,9 +1970,11 @@ class TestNegativeRedeemer:
         assert "Value out of range within the script data" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=MAX_INT_VAL))
+    @hypothesis.given(
+        redeemer_value=st.integers(min_value=MIN_INT_VAL, max_value=common.MAX_UINT64)
+    )
     @hypothesis.example(redeemer_value=MIN_INT_VAL)
-    @hypothesis.example(redeemer_value=MAX_INT_VAL)
+    @hypothesis.example(redeemer_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_inside_range(
@@ -2032,8 +2033,8 @@ class TestNegativeRedeemer:
         assert "The Plutus script evaluation failed" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_value=st.integers(min_value=MAX_INT_VAL + 1))
-    @hypothesis.example(redeemer_value=MAX_INT_VAL + 1)
+    @hypothesis.given(redeemer_value=st.integers(min_value=common.MAX_UINT64 + 1))
+    @hypothesis.example(redeemer_value=common.MAX_UINT64 + 1)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     def test_wrong_value_above_range(

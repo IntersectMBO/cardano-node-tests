@@ -1392,8 +1392,6 @@ class TestMinting:
 class TestMintingNegative:
     """Tests for minting with Plutus using `transaction build-raw` that are expected to fail."""
 
-    MAX_INT_VAL = 2**63 - 1
-
     @pytest.fixture
     def pparams(self, cluster: clusterlib.ClusterLib) -> dict:
         return cluster.g_query.get_protocol_params()
@@ -1757,14 +1755,14 @@ class TestMintingNegative:
 
         per_time = data.draw(
             st.integers(
-                min_value=pparams["maxTxExecutionUnits"]["steps"] + 1, max_value=self.MAX_INT_VAL
+                min_value=pparams["maxTxExecutionUnits"]["steps"] + 1, max_value=common.MAX_INT64
             )
         )
         assert per_time > pparams["maxTxExecutionUnits"]["steps"]
 
         per_space = data.draw(
             st.integers(
-                min_value=pparams["maxTxExecutionUnits"]["memory"] + 1, max_value=self.MAX_INT_VAL
+                min_value=pparams["maxTxExecutionUnits"]["memory"] + 1, max_value=common.MAX_INT64
             )
         )
         assert per_space > pparams["maxTxExecutionUnits"]["memory"]
