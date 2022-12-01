@@ -2815,14 +2815,13 @@ class TestSECP256k1:
         request: SubRequest,
     ) -> Tuple[str, List[clusterlib.UTXOData], List[clusterlib.UTXOData]]:
         """Fund a Plutus script and create the necessary Tx outputs."""
-        # pylint: disable=too-many-arguments
-        temp_template = common.get_test_id(cluster)
+        algorithm = request.param
+        temp_template = f"{common.get_test_id(cluster)}_{algorithm}"
+
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
 
         amount = 2_000_000
-
-        algorithm = request.param
 
         script_file = (
             plutus_common.SECP256K1_LOOP_ECDSA_PLUTUS_V2
@@ -2884,19 +2883,18 @@ class TestSECP256k1:
         payment_addrs: List[clusterlib.AddressRecord],
         fund_script_secp: Tuple[str, List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
     ):
-        """Test that is possible to spend a locked UTxO by a script that uses a SECP function.
+        """Test that it is possible to spend a locked UTxO by a script that uses a SECP function.
 
         * create the necessary Tx outputs
         * spend the locked UTxO
         * check that script address UTxO was spent
         """
-        temp_template = common.get_test_id(cluster)
-
         amount = 2_000_000
 
         # create the necessary Tx outputs
 
         algorithm, script_utxos, collateral_utxos = fund_script_secp
+        temp_template = f"{common.get_test_id(cluster)}_{algorithm}"
 
         script_file = (
             plutus_common.SECP256K1_LOOP_ECDSA_PLUTUS_V2
@@ -2929,7 +2927,7 @@ class TestSECP256k1:
         assert plutus_op.redeemer_file
         assert plutus_op.execution_cost
 
-        #  spend the "locked" UTxO
+        # spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(

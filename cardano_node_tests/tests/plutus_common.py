@@ -423,7 +423,7 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
 
 
 def check_secp_expected_error_msg(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_msg: str):
-    """Check expected error message when use SECP functions before PV8."""
+    """Check expected error message when using SECP functions."""
     before_pv8 = cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
 
     # the SECP256k1 functions should work from PV8
