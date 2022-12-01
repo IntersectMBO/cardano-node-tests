@@ -1734,12 +1734,12 @@ class TestMintingNegative:
         data: st.DataObject,
         request: FixtureRequest,
     ):
-        """Test minting a token when the execution units are above the limit.
+        """Test minting a token when execution units are above the limit.
 
         Expect failure.
 
         * fund the token issuer and create a UTxO for collateral
-        * try to mint the token when the execution units are set above the limits
+        * try to mint the token when execution units are set above the limits
         * check that the minting failed because the execution units were too big
         """
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
@@ -1752,6 +1752,8 @@ class TestMintingNegative:
         # Step 1: fund the token issuer
 
         mint_utxos, collateral_utxos, plutus_op = fund_execution_units_above_limit
+
+        # Step 2: try to mint the "qacoin"
 
         per_time = data.draw(
             st.integers(
@@ -1782,8 +1784,6 @@ class TestMintingNegative:
 
         # for mypy
         assert plutus_op.execution_cost
-
-        # Step 2: try to mint the "qacoin"
 
         policyid = cluster.g_transaction.get_policyid(plutus_op.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()

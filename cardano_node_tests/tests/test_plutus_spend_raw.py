@@ -1811,12 +1811,12 @@ class TestNegative:
         data: st.DataObject,
         request: FixtureRequest,
     ):
-        """Test spend a locked UTxO with a Plutus script with execution units above the limit.
+        """Test spending a locked UTxO with a Plutus script with execution units above the limit.
 
         Expect failure.
 
         * fund the script address and create a UTxO for collateral
-        * try to spend the locked UTxO when the execution units are set above the limits
+        * try to spend the locked UTxO when execution units are set above the limits
         * check that failed because the execution units were too big
         """
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
