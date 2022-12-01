@@ -16,6 +16,10 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
+MAX_INT64 = (2**63) - 1
+MAX_UINT64 = (2**64) - 1
+
+
 # common `skipif`s
 _BLD_SKIP_REASON = ""
 if VERSIONS.transaction_era <= VERSIONS.ALLEGRA:

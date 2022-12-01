@@ -17,9 +17,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-# TODO: see https://github.com/input-output-hk/cardano-node/issues/2555
-# the value should be 2**64
-MAX_LOVELACE_AMOUNT = 2**64 - 1
+MAX_LOVELACE_AMOUNT = common.MAX_UINT64
 
 
 @pytest.mark.testnets
