@@ -15,6 +15,7 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from _pytest.fixtures import FixtureRequest
+from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -1353,6 +1354,40 @@ class TestDatum:
 class TestNegative:
     """Tests for Tx output locking using Plutus smart contracts that are expected to fail."""
 
+    MAX_INT_VAL = 2**63 - 1
+
+    @pytest.fixture
+    def pparams(self, cluster: clusterlib.ClusterLib) -> dict:
+        return cluster.g_query.get_protocol_params()
+
+    @pytest.fixture
+    def fund_execution_units_above_limit(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        request: SubRequest,
+    ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], plutus_common.PlutusOp]:
+        plutus_version = request.param
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
+        )
+
+        script_utxos, collateral_utxos, __ = _fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+            amount=2_000_000,
+        )
+
+        return script_utxos, collateral_utxos, plutus_op
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.parametrize(
@@ -1755,6 +1790,74 @@ class TestNegative:
 
         err_str = str(excinfo.value)
         assert rf"ScriptHash \"{script2_hash}\") fails" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(data=st.data())
+    @common.hypothesis_settings(100)
+    @pytest.mark.parametrize(
+        "fund_execution_units_above_limit",
+        ("v1", pytest.param("v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE)),
+        ids=("plutus_v1", "plutus_v2"),
+        indirect=True,
+    )
+    def test_execution_units_above_limit(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        fund_execution_units_above_limit: Tuple[
+            List[clusterlib.UTXOData], List[clusterlib.UTXOData], plutus_common.PlutusOp
+        ],
+        pparams: dict,
+        data: st.DataObject,
+        request: FixtureRequest,
+    ):
+        """Test spending a locked UTxO with a Plutus script with execution units above the limit.
+
+        Expect failure.
+
+        * fund the script address and create a UTxO for collateral
+        * try to spend the locked UTxO when execution units are set above the limits
+        * check that failed because the execution units were too big
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        amount = 2_000_000
+
+        script_utxos, collateral_utxos, plutus_op = fund_execution_units_above_limit
+
+        per_time = data.draw(
+            st.integers(
+                min_value=pparams["maxTxExecutionUnits"]["steps"] + 1, max_value=self.MAX_INT_VAL
+            )
+        )
+        assert per_time > pparams["maxTxExecutionUnits"]["steps"]
+
+        per_space = data.draw(
+            st.integers(
+                min_value=pparams["maxTxExecutionUnits"]["memory"] + 1, max_value=self.MAX_INT_VAL
+            )
+        )
+        assert per_space > pparams["maxTxExecutionUnits"]["memory"]
+
+        fixed_cost = pparams["txFeeFixed"]
+
+        high_execution_cost = plutus_common.ExecutionCost(
+            per_time=per_time, per_space=per_space, fixed_cost=fixed_cost
+        )
+
+        plutus_op = plutus_op._replace(execution_cost=high_execution_cost)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                dst_addr=payment_addrs[1],
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                amount=amount,
+            )
+        err_str = str(excinfo.value)
+        assert "ExUnitsTooBigUTxO" in err_str, err_str
 
 
 @common.SKIPIF_PLUTUS_UNUSABLE
