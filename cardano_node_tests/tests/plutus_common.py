@@ -4,6 +4,7 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 
+import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import configuration
@@ -30,6 +31,8 @@ ALWAYS_SUCCEEDS_PLUTUS_V2 = SCRIPTS_V2_DIR / "always-succeeds-spending.plutus"
 ALWAYS_FAILS_PLUTUS_V2 = SCRIPTS_V2_DIR / "always-fails.plutus"
 GUESSING_GAME_PLUTUS_V2 = SCRIPTS_V2_DIR / "custom-guess-42-datum-42.plutus"
 GUESSING_GAME_UNTYPED_PLUTUS_V2 = SCRIPTS_V2_DIR / "guess-42-datum-42-txin.plutus"
+SECP256K1_LOOP_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "ecdsa-secp256k1-loop.plutus"
+SECP256K1_LOOP_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "schnorr-secp256k1-loop.plutus"
 
 MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
 MINTING_TIME_RANGE_PLUTUS_V1 = SCRIPTS_V1_DIR / "time_range.plutus"
@@ -86,7 +89,15 @@ CONTEXT_EQUIVALENCE_COST = ExecutionCost(per_time=100_000_000, per_space=1_000_0
 ALWAYS_FAILS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 GUESSING_GAME_V2_COST = ExecutionCost(per_time=168_868_800, per_space=540_612, fixed_cost=43_369)
-GUESSING_GAME_UNTYPED_V2_COST = ExecutionCost(per_time=4_985_806, per_space=11_368, fixed_cost=1016)
+GUESSING_GAME_UNTYPED_V2_COST = ExecutionCost(
+    per_time=4_985_806, per_space=11_368, fixed_cost=1_016
+)
+SECP256K1_ECDSA_LOOP_COST = ExecutionCost(
+    per_time=397_863_996, per_space=128_584, fixed_cost=36_106
+)
+SECP256K1_SCHNORR_LOOP_COST = ExecutionCost(
+    per_time=430_445_916, per_space=128_584, fixed_cost=38_455
+)
 
 MINTING_COST = ExecutionCost(per_time=259_868_784, per_space=978_434, fixed_cost=74_960)
 MINTING_TIME_RANGE_COST = ExecutionCost(
@@ -409,3 +420,26 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
         tx_raw_output=tx_output,
         collateral_charged=collateral_charged,
     )
+
+
+def check_secp_expected_error_msg(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_msg: str):
+    """Check expected error message when using SECP functions."""
+    before_pv8 = cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
+
+    # the SECP256k1 functions should work from PV8
+    # before PV8 the SECP256k1 is blocked or limited by high cost model
+    is_forbidden = (
+        f"Forbidden builtin function: (builtin "
+        f"verify{algorithm.capitalize()}Secp256k1Signature)" in err_msg
+        or "MalformedScriptWitnesses" in err_msg
+    )
+
+    is_overspending = (
+        "The machine terminated part way through evaluation due to "
+        "overspending the budget." in err_msg
+    )
+
+    if before_pv8 and (is_forbidden or is_overspending):
+        pytest.xfail("The SECP256k1 builtin functions are not allowed before protocol version 8")
+
+    pytest.fail(err_msg)

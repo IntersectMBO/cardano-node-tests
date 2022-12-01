@@ -818,27 +818,9 @@ class TestSECP256k1:
                 redeemer_file=redeemer_file,
             )
         except clusterlib.CLIError as err:
-            before_pv8 = cluster.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
-
-            # the SECP256k1 functions should work from protocol version 8
-            if not before_pv8:
-                raise
-
-            # before protocol version 8 the SECP256k1 is blocked or limited by high cost model
-            err_msg = str(err)
-
-            is_forbidden = "MalformedScriptWitnesses" in err_msg
-
-            is_overspending = (
-                "The machine terminated part way through evaluation due to "
-                "overspending the budget." in err_msg
+            plutus_common.check_secp_expected_error_msg(
+                cluster_obj=cluster, algorithm=algorithm, err_msg=str(err)
             )
-
-            if is_forbidden or is_overspending:
-                pytest.xfail(
-                    "The SECP256k1 builtin functions are not allowed before protocol version 8"
-                )
-            raise
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
