@@ -2970,6 +2970,7 @@ class TestCompatibility:
         assert "Reference inputs cannot be used" in err_str, err_str
 
 
+@common.SKIPIF_PLUTUSV2_UNUSABLE
 @pytest.mark.testnets
 class TestSECP256k1:
     @pytest.fixture
