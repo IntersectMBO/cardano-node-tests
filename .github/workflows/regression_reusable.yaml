@@ -102,7 +102,8 @@ jobs:
         if: inputs.testrun_name && inputs.skip_passed
         run: |
           if [ -n "${{ secrets.TCACHE_BASIC_AUTH }}" ] && [ -n "${{ secrets.TCACHE_URL }}" ]; then
-            curl -s -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${{ inputs.testrun_name }}/pypassed" > deselected_tests.txt
+            testrun_name_strip="$(echo "${{ inputs.testrun_name }}" | sed 's/[^a-zA-Z0-9_-]//g')"
+            curl -s -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/pypassed" > deselected_tests.txt
             echo "DESELECT_FROM_FILE=deselected_tests.txt" >> $GITHUB_ENV
           fi
       - name: Run CLI regression tests
@@ -111,7 +112,8 @@ jobs:
         if: (success() || failure()) && inputs.testrun_name
         run: |
           if [ -n "${{ secrets.TCACHE_BASIC_AUTH }}" ] && [ -n "${{ secrets.TCACHE_URL }}" ]; then
-            curl -s -X PUT --fail-with-body -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${{ inputs.testrun_name }}/${{ github.run_number }}/import" -F "junitxml=@testrun-report.xml"
+            testrun_name_strip="$(echo "${{ inputs.testrun_name }}" | sed 's/[^a-zA-Z0-9_-]//g')"
+            curl -s -X PUT --fail-with-body -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@testrun-report.xml"
           fi
       - name: Upload testing artifacts on failure
         uses: actions/upload-artifact@v3
