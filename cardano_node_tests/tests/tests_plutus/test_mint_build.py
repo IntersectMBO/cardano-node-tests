@@ -1,6 +1,5 @@
 """Tests for minting with Plutus using `transaction build`."""
 import datetime
-import json
 import logging
 import shutil
 from pathlib import Path
@@ -15,6 +14,7 @@ from cardano_clusterlib import clusterlib_helpers
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.tests.tests_plutus import mint_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
@@ -24,7 +24,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-# skip all tests if Tx era < alonzo
 pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
     common.SKIPIF_BUILD_UNUSABLE,
@@ -55,68 +54,6 @@ def payment_addrs(
     return addrs
 
 
-def _fund_issuer(
-    cluster_obj: clusterlib.ClusterLib,
-    temp_template: str,
-    payment_addr: clusterlib.AddressRecord,
-    issuer_addr: clusterlib.AddressRecord,
-    minting_cost: plutus_common.ScriptCost,
-    amount: int,
-    collateral_utxo_num: int = 1,
-) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
-    """Fund the token issuer."""
-    single_collateral_amount = minting_cost.collateral // collateral_utxo_num
-    collateral_amounts = [single_collateral_amount for __ in range(collateral_utxo_num - 1)]
-    collateral_subtotal = sum(collateral_amounts)
-    collateral_amounts.append(minting_cost.collateral - collateral_subtotal)
-
-    issuer_init_balance = cluster_obj.g_query.get_address_balance(issuer_addr.address)
-
-    tx_files = clusterlib.TxFiles(
-        signing_key_files=[payment_addr.skey_file],
-    )
-    txouts = [
-        clusterlib.TxOut(
-            address=issuer_addr.address,
-            amount=amount,
-        ),
-        *[clusterlib.TxOut(address=issuer_addr.address, amount=a) for a in collateral_amounts],
-    ]
-    tx_output = cluster_obj.g_transaction.build_tx(
-        src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
-        tx_files=tx_files,
-        txouts=txouts,
-        fee_buffer=2_000_000,
-        # don't join 'change' and 'collateral' txouts, we need separate UTxOs
-        join_txouts=False,
-    )
-    tx_signed = cluster_obj.g_transaction.sign_tx(
-        tx_body_file=tx_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_step1",
-    )
-    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
-
-    issuer_balance = cluster_obj.g_query.get_address_balance(issuer_addr.address)
-    assert (
-        issuer_balance == issuer_init_balance + amount + minting_cost.collateral
-    ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
-
-    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
-    utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
-
-    mint_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
-
-    txid = out_utxos[0].utxo_hash
-    collateral_utxos = [
-        clusterlib.UTXOData(utxo_hash=txid, utxo_ix=idx, amount=a, address=issuer_addr.address)
-        for idx, a in enumerate(collateral_amounts, start=utxo_ix_offset + 1)
-    ]
-
-    return mint_utxos, collateral_utxos, tx_output
-
-
 class TestBuildMinting:
     """Tests for minting using Plutus smart contracts and `transaction build`."""
 
@@ -142,7 +79,7 @@ class TestBuildMinting:
                 execution_cost=plutus_common.MINTING_WITNESS_REDEEMER_COST,
                 protocol_params=cluster.g_query.get_protocol_params(),
             )
-            mint_utxos, collateral_utxos, tx_raw_output = _fund_issuer(
+            mint_utxos, collateral_utxos, tx_raw_output = mint_build._fund_issuer(
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 payment_addr=payment_addr,
@@ -199,7 +136,7 @@ class TestBuildMinting:
 
         # Step 1: fund the token issuer and create UTXO for collaterals
 
-        mint_utxos, collateral_utxos, tx_output_step1 = _fund_issuer(
+        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
             cluster_obj=cluster,
             temp_template=temp_template,
             payment_addr=payment_addr,
@@ -322,7 +259,7 @@ class TestBuildMinting:
 
         # Step 1: fund the token issuer
 
-        mint_utxos, collateral_utxos, tx_output_step1 = _fund_issuer(
+        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
             cluster_obj=cluster,
             temp_template=temp_template,
             payment_addr=payment_addr,
@@ -722,7 +659,7 @@ class TestBuildMinting:
 
         # Step 1: fund the token issuer
 
-        mint_utxos, collateral_utxos, tx_output_step1 = _fund_issuer(
+        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
             cluster_obj=cluster,
             temp_template=temp_template,
             payment_addr=payment_addr,
@@ -926,7 +863,7 @@ class TestBuildMinting:
 
         # Step 1: fund the token issuer
 
-        mint_utxos, collateral_utxos, tx_output_step1 = _fund_issuer(
+        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
             cluster_obj=cluster,
             temp_template=temp_template,
             payment_addr=payment_addr,
@@ -1139,183 +1076,3 @@ class TestBuildMinting:
             assert (
                 expect_pass
             ), f"TTL too far in the future (offset {ttl_offset} slots) was accepted"
-
-
-class TestBuildMintingNegative:
-    """Tests for minting with Plutus using `transaction build` that are expected to fail."""
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_witness_redeemer_missing_signer(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-    ):
-        """Test minting a token with a Plutus script with invalid signers.
-
-        Expect failure.
-
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint the token using a Plutus script and a TX with signing key missing for
-          the required signer
-        * check that the minting failed because the required signers were not provided
-        """
-        # pylint: disable=too-many-locals
-        temp_template = common.get_test_id(cluster)
-        payment_addr = payment_addrs[0]
-        issuer_addr = payment_addrs[1]
-
-        lovelace_amount = 2_000_000
-        token_amount = 5
-        script_fund = 200_000_000
-
-        minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_WITNESS_REDEEMER_COST,
-            protocol_params=cluster.g_query.get_protocol_params(),
-        )
-
-        # Step 1: fund the token issuer
-
-        mint_utxos, collateral_utxos, __ = _fund_issuer(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            payment_addr=payment_addr,
-            issuer_addr=issuer_addr,
-            minting_cost=minting_cost,
-            amount=script_fund,
-        )
-
-        # Step 2: mint the "qacoin"
-
-        policyid = cluster.g_transaction.get_policyid(
-            plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1
-        )
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
-        token = f"{policyid}.{asset_name}"
-        mint_txouts = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
-        ]
-
-        plutus_mint_data = [
-            clusterlib.Mint(
-                txouts=mint_txouts,
-                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1,
-                collaterals=collateral_utxos,
-                redeemer_file=plutus_common.DATUM_WITNESS_GOLDEN_NORMAL,
-            )
-        ]
-
-        tx_files_step2 = clusterlib.TxFiles(
-            signing_key_files=[issuer_addr.skey_file],
-        )
-        txouts_step2 = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint_txouts,
-        ]
-        tx_output_step2 = cluster.g_transaction.build_tx(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
-            tx_files=tx_files_step2,
-            txins=mint_utxos,
-            txouts=txouts_step2,
-            mint=plutus_mint_data,
-            required_signers=[plutus_common.SIGNING_KEY_GOLDEN],
-        )
-        tx_signed_step2 = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_output_step2.out_file,
-            signing_key_files=tx_files_step2.signing_key_files,
-            tx_name=f"{temp_template}_step2",
-        )
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        assert "MissingRequiredSigners" in str(excinfo.value)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_redeemer_with_simple_minting_script(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-    ):
-        """Test minting a token passing a redeemer for a simple minting script.
-
-        Expect failure.
-
-        * fund the token issuer and create a UTxO for collateral
-        * try to mint the token using a simple script passing a redeemer
-        * check that the minting failed because a Plutus script is expected
-        """
-        temp_template = common.get_test_id(cluster)
-        payment_addr = payment_addrs[0]
-        issuer_addr = payment_addrs[1]
-
-        lovelace_amount = 2_000_000
-        token_amount = 5
-        script_fund = 200_000_000
-
-        minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_COST,
-            protocol_params=cluster.g_query.get_protocol_params(),
-        )
-
-        # Fund the token issuer and create UTXO for collaterals
-
-        mint_utxos, collateral_utxos, __ = _fund_issuer(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            payment_addr=payment_addr,
-            issuer_addr=issuer_addr,
-            minting_cost=minting_cost,
-            amount=script_fund,
-        )
-
-        # Create simple script
-        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
-        script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
-
-        with open(script, "w", encoding="utf-8") as out_json:
-            json.dump(script_content, out_json)
-
-        # Mint the "qacoin"
-        policyid = cluster.g_transaction.get_policyid(script)
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
-        token = f"{policyid}.{asset_name}"
-
-        mint_txouts = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
-        ]
-
-        plutus_mint_data = [
-            clusterlib.Mint(
-                txouts=mint_txouts,
-                script_file=script,
-                collaterals=collateral_utxos,
-                redeemer_file=plutus_common.REDEEMER_42,
-            )
-        ]
-
-        tx_files = clusterlib.TxFiles(
-            signing_key_files=[issuer_addr.skey_file],
-        )
-        txouts = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint_txouts,
-        ]
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.build_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_step2",
-                tx_files=tx_files,
-                txins=mint_utxos,
-                txouts=txouts,
-                mint=plutus_mint_data,
-            )
-
-        err_str = str(excinfo.value)
-        assert (
-            "expected a script in the Plutus script language, but it is actually "
-            "using SimpleScriptLanguage SimpleScriptV1" in err_str
-        ), err_str

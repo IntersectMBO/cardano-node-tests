@@ -26,7 +26,7 @@ pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
 ]
 
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = Path(__file__).parent.parent / "data"
 LOBSTER_DIR = DATA_DIR / "plutus" / "lobster"
 
 LOBSTER_PLUTUS = LOBSTER_DIR / "lobster.plutus"
