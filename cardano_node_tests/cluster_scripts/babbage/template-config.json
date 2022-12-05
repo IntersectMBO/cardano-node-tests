@@ -48,10 +48,10 @@
             "stdout"
         ]
     ],
-    "hasEKG": %%METRICS_PORT_BASE%%0,
+    "hasEKG": %%EKG_PORT%%,
     "hasPrometheus": [
         "127.0.0.1",
-        %%METRICS_PORT_BASE%%1
+        %%PROMETHEUS_PORT%%
     ],
     "minSeverity": "Info",
     "options": {

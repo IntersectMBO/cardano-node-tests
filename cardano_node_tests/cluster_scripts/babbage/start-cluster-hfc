@@ -16,7 +16,7 @@ STATE_CLUSTER="${SOCKET_PATH%/*}"
 STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 
 NUM_BFT_NODES=1
-NUM_POOLS=3
+NUM_POOLS=%%NUM_POOLS%%
 NETWORK_MAGIC=42
 PROPOSAL_DELAY=5
 BYRON_SECURITY_PARAM=10
@@ -29,6 +29,11 @@ fi
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster-hfc\` first!" >&2
+  exit 1
+fi
+
+if [ "$NUM_POOLS" -lt 3 ]; then
+  echo "NUM_POOLS must be at least 3" >&2
   exit 1
 fi
 
@@ -121,12 +126,6 @@ if [ -n "${ENABLE_P2P:-""}" ]; then
   done
 else
   cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
-fi
-
-if [ -n "${MIXED_P2P:-""}" ]; then
-  # use legacy topology files for some nodes
-  cp -f "$SCRIPT_DIR"/topology-bft1.json "$STATE_CLUSTER"
-  cp -f "$SCRIPT_DIR"/topology-pool3.json "$STATE_CLUSTER"
 fi
 
 # enable db-sync service
@@ -224,9 +223,24 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
 
   # enable P2P
   if [ -n "${ENABLE_P2P:-""}" ]; then
-    if [[ -n "${MIXED_P2P:-""}" && ( "$fname" = "config-bft1.json" || "$fname" = "config-pool3.json" ) ]]; then
-      continue
+
+    # setup mix of P2P and legacy
+    if [ -n "${MIXED_P2P:-""}" ]; then
+      if [ "$fname" = "config-bft1.json" ]; then
+        # use legacy topology file for bft1
+        cp -f "$SCRIPT_DIR"/topology-bft1.json "$STATE_CLUSTER"
+        continue
+      fi
+
+      # use legacy topology files for odd numbered pools
+      pool_num="${fname##*-pool}"
+      pool_num="${pool_num%.json}"
+      if [ "$((pool_num % 2))" != 0 ]; then
+        cp -f "$SCRIPT_DIR/topology-pool${pool_num}.json" "$STATE_CLUSTER"
+        continue
+      fi
     fi
+
     jq \
       '.EnableP2P = true
       | .MaxConcurrencyBulkSync = 2
@@ -306,11 +320,11 @@ for i in $(seq 1 $NUM_BFT_NODES); do
     --payment-verification-key-file "$STATE_CLUSTER/byron/payment-keys.$INDEX-converted.vkey" \
     > "$STATE_CLUSTER/byron/address-$INDEX-converted"
 
-  BFT_PORT=$(("%%NODE_PORT_BASE%%0" + i))
+  BFT_PORT=$(("%%NODE_PORT_BASE%%" + (i - 1) * "%%PORTS_PER_NODE%%" ))
   echo "$BFT_PORT" > "$STATE_CLUSTER/nodes/node-bft$i/port"
 done
 
-for i in $(seq 1 $NUM_POOLS); do
+for i in $(seq 1 "$NUM_POOLS"); do
   mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
   echo "Generating Pool $i Secrets"
 
@@ -395,14 +409,14 @@ EoF
     --arg name "$POOL_NAME" \
     --arg description "$POOL_DESC" \
     --arg ticker "$POOL_TICKER" \
-    --arg homepage "http://localhost:%%NODE_PORT_BASE%%0/pool$i.html" \
+    --arg homepage "http://localhost:%%WEBSERVER_PORT%%/pool$i.html" \
     '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
     > "$STATE_CLUSTER/webserver/pool$i.json"
 
-  METADATA_URL="http://localhost:%%NODE_PORT_BASE%%0/pool$i.json"
+  METADATA_URL="http://localhost:%%WEBSERVER_PORT%%/pool$i.json"
   METADATA_HASH=$(cardano_cli_log stake-pool metadata-hash --pool-metadata-file \
     "$STATE_CLUSTER/webserver/pool$i.json")
-  POOL_PORT=$(("%%NODE_PORT_BASE%%0" + "$NUM_BFT_NODES" + i))
+      POOL_PORT=$(("%%NODE_PORT_BASE%%" + ("$NUM_BFT_NODES" + i - 1) * "%%PORTS_PER_NODE%%"))
   echo "$POOL_PORT" > "$STATE_CLUSTER/nodes/node-pool$i/port"
   echo $POOL_PLEDGE > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
 
@@ -556,7 +570,7 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
 TTL="$(get_slot 1000)"
 
 POOL_ARGS=()
-for i in $(seq 1 $NUM_POOLS); do
+for i in $(seq 1 "$NUM_POOLS"); do
   POOL_ARGS+=( \
     "--tx-out" "$(<"$STATE_CLUSTER/nodes/node-pool$i/owner.addr")+$POOL_PLEDGE" \
     "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert" \
@@ -581,7 +595,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 3 \
-        --witness-count 9 \
+        --witness-count "$((5 * NUM_POOLS))" \
         --byron-witness-count 0 \
         --tx-body-file "${ALLEGRA_TX_BASE}-fee-tx.txbody" |
         cut -d' ' -f1)"
@@ -599,7 +613,7 @@ cardano_cli_log transaction build-raw \
   --out-file         "${ALLEGRA_TX_BASE}-tx.txbody"
 
 POOL_SIGNING=()
-for i in $(seq 1 $NUM_POOLS); do
+for i in $(seq 1 "$NUM_POOLS"); do
   POOL_SIGNING+=( \
     "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
     "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
@@ -790,20 +804,8 @@ cardano_cli_log transaction submit \
   --tx-file "${ALONZO_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-# give it some time before restaring the nodes so the update proposal Tx is likely to get through
-echo "Waiting 15 sec before restarting the nodes"
-sleep 15
-NEXT_EPOCH_SLEEP_RESTART="$((NEXT_EPOCH_SLEEP - 15))"
-
-for conf in "$STATE_CLUSTER"/config-*.json; do
-  jq -r '."LastKnownBlockVersion-Major" = 5' < "$conf" > "${conf}_jq"
-  cat "${conf}_jq" > "$conf"
-  rm -f "${conf}_jq"
-done
-supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
-
-echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Alonzo era to start"
-sleep "$NEXT_EPOCH_SLEEP_RESTART"
+echo "Waiting $NEXT_EPOCH_SLEEP sec for Alonzo era to start"
+sleep "$NEXT_EPOCH_SLEEP"
 
 
 #
@@ -886,15 +888,11 @@ cardano_cli_log transaction submit \
   --tx-file "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-# give it some time before restaring the nodes so the update proposal Tx is likely to get through
-echo "Waiting 15 sec before restarting the nodes"
-sleep 15
-supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
 
 ALONZO_EPOCH="$(get_epoch)"
 
-echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Alonzo era with PV6 to start"
-sleep "$NEXT_EPOCH_SLEEP_RESTART"
+echo "Waiting $NEXT_EPOCH_SLEEP sec for Alonzo era with PV6 to start"
+sleep "$NEXT_EPOCH_SLEEP"
 
 
 #
@@ -990,13 +988,8 @@ cardano_cli_log transaction submit \
   --tx-file "${BABBAGE_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-# give it some time before restaring the nodes so the update proposal Tx is likely to get through
-echo "Waiting 15 sec before restarting the nodes"
-sleep 15
-supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
-
-echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Babbage era to start"
-sleep "$NEXT_EPOCH_SLEEP_RESTART"
+echo "Waiting $NEXT_EPOCH_SLEEP sec for Babbage era to start"
+sleep "$NEXT_EPOCH_SLEEP"
 
 
 #
@@ -1082,15 +1075,11 @@ if [ -n "${UPDATE_COST_MODEL:-""}" ]; then
     --tx-file "${COST_UPDATE_PROPOSAL}-tx.tx" \
     --testnet-magic "$NETWORK_MAGIC"
 
-  # give it some time before restaring the nodes so the update proposal Tx is likely to get through
-  echo "Waiting 15 sec before restarting the nodes"
-  sleep 15
-  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
 
   BABBAGE_EPOCH="$(get_epoch)"
 
-  echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Babbage era with updated cost model"
-  sleep "$NEXT_EPOCH_SLEEP_RESTART"
+  echo "Waiting $NEXT_EPOCH_SLEEP sec for Babbage era with updated cost model"
+  sleep "$NEXT_EPOCH_SLEEP"
 
   wait_for_epoch "$((BABBAGE_EPOCH + 1))"
 
@@ -1179,15 +1168,10 @@ if [ -n "${UPDATE_PV8:-""}" ]; then
     --tx-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.tx" \
     --testnet-magic "$NETWORK_MAGIC"
 
-  # give it some time before restaring the nodes so the update proposal Tx is likely to get through
-  echo "Waiting 15 sec before restarting the nodes"
-  sleep 15
-  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:
-
   BABBAGE_EPOCH="$(get_epoch)"
 
-  echo "Waiting $NEXT_EPOCH_SLEEP_RESTART sec for Babbage era with PV8 to start"
-  sleep "$NEXT_EPOCH_SLEEP_RESTART"
+  echo "Waiting $NEXT_EPOCH_SLEEP sec for Babbage era with PV8 to start"
+  sleep "$NEXT_EPOCH_SLEEP"
 
   wait_for_epoch "$((BABBAGE_EPOCH + 1))"
 

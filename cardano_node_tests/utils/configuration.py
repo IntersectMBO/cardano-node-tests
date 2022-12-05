@@ -75,6 +75,10 @@ FORBID_RESTART = bool(os.environ.get("FORBID_RESTART"))
 
 BOOTSTRAP_DIR = os.environ.get("BOOTSTRAP_DIR") or ""
 
+NUM_POOLS = int(os.environ.get("NUM_POOLS") or 3)
+if not BOOTSTRAP_DIR and NUM_POOLS < 3:
+    raise RuntimeError(f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3")
+
 NOPOOLS = bool(os.environ.get("NOPOOLS"))
 
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
