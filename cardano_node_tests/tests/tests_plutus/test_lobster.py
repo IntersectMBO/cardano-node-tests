@@ -21,9 +21,9 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
-# skip all tests if Tx era < alonzo
 pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
+    pytest.mark.plutus,
 ]
 
 DATA_DIR = Path(__file__).parent.parent / "data"

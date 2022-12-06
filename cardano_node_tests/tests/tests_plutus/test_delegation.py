@@ -28,8 +28,10 @@ from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
 
-# skip all tests if Tx era < alonzo
-pytestmark = common.SKIPIF_PLUTUS_UNUSABLE
+pytestmark = [
+    common.SKIPIF_PLUTUS_UNUSABLE,
+    pytest.mark.plutus,
+]
 
 
 @pytest.fixture

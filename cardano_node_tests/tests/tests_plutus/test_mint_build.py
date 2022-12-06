@@ -25,9 +25,10 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
     common.SKIPIF_BUILD_UNUSABLE,
+    common.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.smoke,
+    pytest.mark.plutus,
 ]
 
 

@@ -21,6 +21,7 @@ pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
     common.SKIPIF_BUILD_UNUSABLE,
     pytest.mark.smoke,
+    pytest.mark.plutus,
 ]
 
 

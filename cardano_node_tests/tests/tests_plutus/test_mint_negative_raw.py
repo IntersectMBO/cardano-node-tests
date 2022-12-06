@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.smoke,
+    pytest.mark.plutus,
 ]
 
 
