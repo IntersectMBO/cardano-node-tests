@@ -404,7 +404,6 @@ class TestNegativeReadonlyReferenceInputs:
                 script_txins=plutus_txins,
             )
         err_str = str(excinfo.value)
-        # TODO improve error message cardano-node 4012
         assert (
             "TranslationLogicMissingInput (TxIn (TxId "
             f'{{_unTxId = SafeHash "{reference_input[0].utxo_hash}"}})' in err_str
