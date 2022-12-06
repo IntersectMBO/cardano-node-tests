@@ -18,6 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.smoke,
+    pytest.mark.plutus,
 ]
 
 

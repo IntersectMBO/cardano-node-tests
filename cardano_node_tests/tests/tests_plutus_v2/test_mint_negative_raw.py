@@ -19,6 +19,7 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_PLUTUSV2_UNUSABLE,
     pytest.mark.smoke,
+    pytest.mark.plutus,
 ]
 
 
