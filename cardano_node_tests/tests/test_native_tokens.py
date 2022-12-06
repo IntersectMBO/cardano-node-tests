@@ -2066,7 +2066,9 @@ class TestNegative:
             )
         exc_val = str(excinfo.value)
         assert (
-            "name exceeds 32 bytes" in exc_val or "expecting hexadecimal digit" in exc_val
+            "the bytestring should be no longer than 32 bytes long" in exc_val
+            or "name exceeds 32 bytes" in exc_val
+            or "expecting hexadecimal digit" in exc_val
         ), exc_val
 
     @allure.link(helpers.get_vcs_link())
