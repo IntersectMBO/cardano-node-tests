@@ -34,8 +34,11 @@ on:
         - all
         - dbsync
         - smoke
+        - plutus
+        - plutus and smoke
         - not long
         - dbsync and smoke
+        - dbsync and plutus
         - dbsync and not long
         default: dbsync
       topology:

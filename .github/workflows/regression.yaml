@@ -30,6 +30,8 @@ on:
         options:
         - all
         - smoke
+        - plutus
+        - plutus and smoke
         - not long
         default: all
       topology:
