@@ -12,7 +12,7 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 apidoc:
-	@$(SPHINXAPIDOC) -f -H "Source Documentation" -o "$(SOURCEDIR)" "$(MODDIR)"
+	@$(SPHINXAPIDOC) -f -H "Source Documentation" -o "$(SOURCEDIR)" -d 6 --ext-githubpages "$(MODDIR)"
 
 clean:
 	rm -rf "$(BUILDDIR)"/*
