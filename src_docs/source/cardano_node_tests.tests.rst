@@ -1,6 +1,15 @@
 cardano\_node\_tests.tests package
 ==================================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 6
+
+   cardano_node_tests.tests.tests_plutus
+   cardano_node_tests.tests.tests_plutus_v2
+
 Submodules
 ----------
 
@@ -140,86 +149,6 @@ cardano\_node\_tests.tests.test\_node\_upgrade module
    :undoc-members:
    :show-inheritance:
 
-cardano\_node\_tests.tests.test\_plutus\_delegation module
-----------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_delegation
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_lobster module
--------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_lobster
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_mint\_build module
------------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_mint_build
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_mint\_raw module
----------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_mint_raw
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_spend\_build module
-------------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_spend_build
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_spend\_raw module
-----------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_spend_raw
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_v2\_mint\_build module
----------------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_v2_mint_build
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_v2\_mint\_raw module
--------------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_v2_mint_raw
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_v2\_spend\_build module
-----------------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_v2_spend_build
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cardano\_node\_tests.tests.test\_plutus\_v2\_spend\_raw module
---------------------------------------------------------------
-
-.. automodule:: cardano_node_tests.tests.test_plutus_v2_spend_raw
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 cardano\_node\_tests.tests.test\_pool\_saturation module
 --------------------------------------------------------
 
@@ -276,18 +205,50 @@ cardano\_node\_tests.tests.test\_staking\_rewards module
    :undoc-members:
    :show-inheritance:
 
-cardano\_node\_tests.tests.test\_transaction\_fees module
----------------------------------------------------------
+cardano\_node\_tests.tests.test\_tx\_basic module
+-------------------------------------------------
 
-.. automodule:: cardano_node_tests.tests.test_transaction_fees
+.. automodule:: cardano_node_tests.tests.test_tx_basic
    :members:
    :undoc-members:
    :show-inheritance:
 
-cardano\_node\_tests.tests.test\_transactions module
+cardano\_node\_tests.tests.test\_tx\_fees module
+------------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_tx_fees
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.tests.test\_tx\_many\_utxos module
+-------------------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_tx_many_utxos
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.tests.test\_tx\_metadata module
 ----------------------------------------------------
 
-.. automodule:: cardano_node_tests.tests.test_transactions
+.. automodule:: cardano_node_tests.tests.test_tx_metadata
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.tests.test\_tx\_negative module
+----------------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_tx_negative
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.tests.test\_tx\_unbalanced module
+------------------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.test_tx_unbalanced
    :members:
    :undoc-members:
    :show-inheritance:
@@ -296,6 +257,14 @@ cardano\_node\_tests.tests.test\_update\_proposals module
 ---------------------------------------------------------
 
 .. automodule:: cardano_node_tests.tests.test_update_proposals
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cardano\_node\_tests.tests.tx\_common module
+--------------------------------------------
+
+.. automodule:: cardano_node_tests.tests.tx_common
    :members:
    :undoc-members:
    :show-inheritance:
