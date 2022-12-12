@@ -1706,6 +1706,7 @@ class TestStakePool:
 
 @pytest.mark.order(5)
 @pytest.mark.long
+@pytest.mark.xdist_group(name="minPoolCost")
 class TestPoolCost:
     """Tests for stake pool cost."""
 
