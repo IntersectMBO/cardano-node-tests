@@ -11,14 +11,20 @@ import random
 from pathlib import Path
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 import allure
+import hypothesis
+import hypothesis.strategies as st
 import pytest
+from _pytest.fixtures import FixtureRequest
+from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.tests.common import SKIPIF_BUILD_UNUSABLE
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -864,7 +870,45 @@ class TestNegative:
 class TestTimeLocking:
     """Tests for time locking."""
 
-    # TODO: convert to property-based tests
+    def _fund_script_time_locking(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        temp_template: str,
+        payment_addrs: List[clusterlib.AddressRecord],
+        slot: int,
+        slot_type_arg: str,
+        use_build_cmd: bool,
+    ) -> Tuple[Path, str, clusterlib.TxRawOutput]:
+        """Create and fund script address."""
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster_obj.g_transaction.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=slot,
+            slot_type_arg=slot_type_arg,
+        )
+
+        # create script address
+        script_address = cluster_obj.g_address.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # send funds to script address
+        tx_output = multisig_tx(
+            cluster_obj=cluster_obj,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=4_000_000,
+            payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
+        )
+
+        return multisig_script, script_address, tx_output
 
     @pytest.fixture
     def payment_addrs(
@@ -894,6 +938,106 @@ class TestTimeLocking:
         )
 
         return addrs
+
+    @pytest.fixture
+    def fund_script_before_slot_in_past(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        request: SubRequest,
+    ) -> Tuple[Path, str, clusterlib.TxRawOutput, int]:
+        """Create and fund script address with "before" slot in the past."""
+        temp_template = common.get_test_id(cluster)
+        use_build_cmd = request.param
+
+        last_slot_no = cluster.g_query.get_slot_no()
+        before_slot = last_slot_no - 1
+
+        multisig_script, script_address, tx_output = self._fund_script_time_locking(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addrs=payment_addrs,
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+            use_build_cmd=use_build_cmd,
+        )
+
+        return multisig_script, script_address, tx_output, before_slot
+
+    @pytest.fixture
+    def fund_script_before_slot_in_future(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        request: SubRequest,
+    ) -> Tuple[Path, str, clusterlib.TxRawOutput, int]:
+        """Create and fund script address with "before" slot in the future."""
+        temp_template = common.get_test_id(cluster)
+        use_build_cmd = request.param
+
+        last_slot_no = cluster.g_query.get_slot_no()
+        before_slot = last_slot_no + 10_000
+
+        multisig_script, script_address, tx_output = self._fund_script_time_locking(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addrs=payment_addrs,
+            slot=before_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
+            use_build_cmd=use_build_cmd,
+        )
+
+        return multisig_script, script_address, tx_output, before_slot
+
+    @pytest.fixture
+    def fund_script_after_slot_in_future(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        request: SubRequest,
+    ) -> Tuple[Path, str, clusterlib.TxRawOutput, int]:
+        """Create and fund script address with "after" slot in the future."""
+        temp_template = common.get_test_id(cluster)
+        use_build_cmd = request.param
+
+        last_slot_no = cluster.g_query.get_slot_no()
+        after_slot = last_slot_no + 10_000
+
+        multisig_script, script_address, tx_output = self._fund_script_time_locking(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addrs=payment_addrs,
+            slot=after_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+            use_build_cmd=use_build_cmd,
+        )
+
+        return multisig_script, script_address, tx_output, after_slot
+
+    @pytest.fixture
+    def fund_script_after_slot_in_past(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        request: SubRequest,
+    ) -> Tuple[Path, str, clusterlib.TxRawOutput, int]:
+        """Create and fund script address with "after" slot in the past."""
+        temp_template = common.get_test_id(cluster)
+        use_build_cmd = request.param
+
+        last_slot_no = cluster.g_query.get_slot_no()
+        after_slot = last_slot_no - 1
+
+        multisig_script, script_address, tx_output = self._fund_script_time_locking(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addrs=payment_addrs,
+            slot=after_slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+            use_build_cmd=use_build_cmd,
+        )
+
+        return multisig_script, script_address, tx_output, after_slot
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -1028,67 +1172,52 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize(
+        "fund_script_before_slot_in_past",
+        (False, pytest.param(True, marks=SKIPIF_BUILD_UNUSABLE)),
+        ids=("build_raw", "build"),
+        indirect=True,
+    )
+    @hypothesis.given(slot_no=st.integers(min_value=1, max_value=10_000))
+    @common.hypothesis_settings()
     @pytest.mark.dbsync
     def test_before_past(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        fund_script_before_slot_in_past: Tuple[Path, str, clusterlib.TxRawOutput, int],
+        slot_no: int,
+        request: FixtureRequest,
     ):
         """Check that it's NOT possible to spend from the script address.
 
         The "before" slot is in the past.
         """
+        use_build_cmd = request.node.callspec.params["fund_script_before_slot_in_past"]
+
+        multisig_script, script_address, tx_output, before_slot = fund_script_before_slot_in_past
+
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        last_slot_no = cluster.g_query.get_slot_no()
-        before_slot = last_slot_no - 1
-
-        # create multisig script
-        multisig_script = cluster.g_transaction.build_multisig_script(
-            script_name=temp_template,
-            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
-            payment_vkey_files=payment_vkey_files,
-            slot=before_slot,
-            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
-        )
-
-        # create script address
-        script_address = cluster.g_address.gen_payment_addr(
-            addr_name=temp_template, payment_script_file=multisig_script
-        )
-
-        # send funds to script address
-        tx_raw_output = multisig_tx(
-            cluster_obj=cluster,
-            temp_template=f"{temp_template}_to",
-            src_address=payment_addrs[0].address,
-            dst_address=script_address,
-            amount=4_000_000,
-            payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
-        )
-
         # send funds from script address - valid range, slot is already in the past
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            multisig_tx(
-                cluster_obj=cluster,
-                temp_template=f"{temp_template}_from_fail1",
-                src_address=script_address,
-                dst_address=payment_addrs[0].address,
-                amount=1_500_000,
-                payment_skey_files=payment_skey_files,
-                multisig_script=multisig_script,
-                invalid_before=1,
-                invalid_hereafter=before_slot,
-                use_build_cmd=use_build_cmd,
-            )
-        err_str = str(excinfo.value)
-        assert "OutsideValidityIntervalUTxO" in err_str, err_str
+        if slot_no < before_slot:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                multisig_tx(
+                    cluster_obj=cluster,
+                    temp_template=f"{temp_template}_from_fail1",
+                    src_address=script_address,
+                    dst_address=payment_addrs[0].address,
+                    amount=1_500_000,
+                    payment_skey_files=payment_skey_files,
+                    multisig_script=multisig_script,
+                    invalid_before=1,
+                    invalid_hereafter=before_slot - slot_no,
+                    use_build_cmd=use_build_cmd,
+                )
+            err_str = str(excinfo.value)
+            assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
         # send funds from script address - invalid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1101,58 +1230,42 @@ class TestTimeLocking:
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
-                invalid_hereafter=last_slot_no + 1_000,
+                invalid_hereafter=before_slot + slot_no,
                 use_build_cmd=use_build_cmd,
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize(
+        "fund_script_before_slot_in_future",
+        (False, pytest.param(True, marks=SKIPIF_BUILD_UNUSABLE)),
+        ids=("build_raw", "build"),
+        indirect=True,
+    )
+    @hypothesis.given(slot_no=st.integers(min_value=1, max_value=10_000))
+    @common.hypothesis_settings()
     @pytest.mark.dbsync
     def test_before_future(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        fund_script_before_slot_in_future: Tuple[Path, str, clusterlib.TxRawOutput, int],
+        slot_no: int,
+        request: FixtureRequest,
     ):
         """Check that it's NOT possible to spend from the script address.
 
         The "before" slot is in the future and the given range is invalid.
         """
+        use_build_cmd = request.node.callspec.params["fund_script_before_slot_in_future"]
+        multisig_script, script_address, tx_output, before_slot = fund_script_before_slot_in_future
+
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
-
-        before_slot = cluster.g_query.get_slot_no() + 10_000
-
-        # create multisig script
-        multisig_script = cluster.g_transaction.build_multisig_script(
-            script_name=temp_template,
-            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
-            payment_vkey_files=payment_vkey_files,
-            slot=before_slot,
-            slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
-        )
-
-        # create script address
-        script_address = cluster.g_address.gen_payment_addr(
-            addr_name=temp_template, payment_script_file=multisig_script
-        )
-
-        # send funds to script address
-        tx_raw_output = multisig_tx(
-            cluster_obj=cluster,
-            temp_template=f"{temp_template}_to",
-            src_address=payment_addrs[0].address,
-            dst_address=script_address,
-            amount=4_000_000,
-            payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
-        )
 
         # send funds from script address - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1165,58 +1278,42 @@ class TestTimeLocking:
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
-                invalid_hereafter=before_slot + 1,
+                invalid_hereafter=before_slot + slot_no,
                 use_build_cmd=use_build_cmd,
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize(
+        "fund_script_after_slot_in_future",
+        (False, pytest.param(True, marks=SKIPIF_BUILD_UNUSABLE)),
+        ids=("build_raw", "build"),
+        indirect=True,
+    )
+    @hypothesis.given(slot_no=st.integers(min_value=1, max_value=10_000))
+    @common.hypothesis_settings()
     @pytest.mark.dbsync
     def test_after_future(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        fund_script_after_slot_in_future: Tuple[Path, str, clusterlib.TxRawOutput, int],
+        slot_no: int,
+        request: FixtureRequest,
     ):
         """Check that it's NOT possible to spend from the script address.
 
         The "after" slot is in the future and the given range is invalid.
         """
+        use_build_cmd = request.node.callspec.params["fund_script_after_slot_in_future"]
+        multisig_script, script_address, tx_output, after_slot = fund_script_after_slot_in_future
+
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
-
-        after_slot = cluster.g_query.get_slot_no() + 10_000
-
-        # create multisig script
-        multisig_script = cluster.g_transaction.build_multisig_script(
-            script_name=temp_template,
-            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
-            payment_vkey_files=payment_vkey_files,
-            slot=after_slot,
-            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
-        )
-
-        # create script address
-        script_address = cluster.g_address.gen_payment_addr(
-            addr_name=temp_template, payment_script_file=multisig_script
-        )
-
-        # send funds to script address
-        tx_raw_output = multisig_tx(
-            cluster_obj=cluster,
-            temp_template=f"{temp_template}_to",
-            src_address=payment_addrs[0].address,
-            dst_address=script_address,
-            amount=4_000_000,
-            payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
-        )
 
         # send funds from script address - valid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1229,75 +1326,62 @@ class TestTimeLocking:
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=after_slot,
-                invalid_hereafter=after_slot + 100,
+                invalid_hereafter=after_slot + slot_no,
                 use_build_cmd=use_build_cmd,
             )
         err_str = str(excinfo.value)
         assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
         # send funds from script address - invalid range, slot is in the future
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            multisig_tx(
-                cluster_obj=cluster,
-                temp_template=f"{temp_template}_from_fail2",
-                src_address=script_address,
-                dst_address=payment_addrs[0].address,
-                amount=1_500_000,
-                payment_skey_files=payment_skey_files,
-                multisig_script=multisig_script,
-                invalid_before=1,
-                invalid_hereafter=after_slot,
-                use_build_cmd=use_build_cmd,
-            )
-        err_str = str(excinfo.value)
-        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+        if slot_no < after_slot:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                multisig_tx(
+                    cluster_obj=cluster,
+                    temp_template=f"{temp_template}_from_fail2",
+                    src_address=script_address,
+                    dst_address=payment_addrs[0].address,
+                    amount=1_500_000,
+                    payment_skey_files=payment_skey_files,
+                    multisig_script=multisig_script,
+                    invalid_before=slot_no,
+                    invalid_hereafter=after_slot,
+                    use_build_cmd=use_build_cmd,
+                )
+            err_str = str(excinfo.value)
+            assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize(
+        "fund_script_after_slot_in_past",
+        (False, pytest.param(True, marks=SKIPIF_BUILD_UNUSABLE)),
+        ids=("build_raw", "build"),
+        indirect=True,
+    )
+    @hypothesis.given(slot_no=st.integers(min_value=1, max_value=10_000))
+    @common.hypothesis_settings()
     @pytest.mark.dbsync
     def test_after_past(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        fund_script_after_slot_in_past: Tuple[Path, str, clusterlib.TxRawOutput, int],
+        slot_no: int,
+        request: FixtureRequest,
     ):
         """Check that it's NOT possible to spend from the script address.
 
         The "after" slot is in the past.
         """
+        use_build_cmd = request.node.callspec.params["fund_script_after_slot_in_past"]
+        multisig_script, script_address, tx_output, after_slot = fund_script_after_slot_in_past
+
+        hypothesis.assume(slot_no < after_slot)
+
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
-
-        after_slot = cluster.g_query.get_slot_no() - 1
-
-        # create multisig script
-        multisig_script = cluster.g_transaction.build_multisig_script(
-            script_name=temp_template,
-            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
-            payment_vkey_files=payment_vkey_files,
-            slot=after_slot,
-            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
-        )
-
-        # create script address
-        script_address = cluster.g_address.gen_payment_addr(
-            addr_name=temp_template, payment_script_file=multisig_script
-        )
-
-        # send funds to script address
-        tx_raw_output = multisig_tx(
-            cluster_obj=cluster,
-            temp_template=f"{temp_template}_to",
-            src_address=payment_addrs[0].address,
-            dst_address=script_address,
-            amount=4_000_000,
-            payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
-        )
 
         # send funds from script address - valid slot,
         # invalid range - `invalid_hereafter` is in the past
@@ -1311,13 +1395,13 @@ class TestTimeLocking:
                 payment_skey_files=payment_skey_files,
                 multisig_script=multisig_script,
                 invalid_before=1,
-                invalid_hereafter=after_slot,
+                invalid_hereafter=after_slot - slot_no,
                 use_build_cmd=use_build_cmd,
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
 @pytest.mark.testnets
