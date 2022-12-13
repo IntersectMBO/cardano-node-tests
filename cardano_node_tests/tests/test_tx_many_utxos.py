@@ -25,13 +25,16 @@ LOGGER = logging.getLogger(__name__)
     VERSIONS.cluster_era != VERSIONS.transaction_era,
     reason="expensive test, skip when cluster era is different from TX era",
 )
+@pytest.mark.order(5)
 @pytest.mark.long
+@pytest.mark.xdist_group(name="many_utxos")
 class TestManyUTXOs:
     """Test transaction with many UTxOs and small amounts of Lovelace."""
 
     @pytest.fixture
     def cluster(self, cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
         return cluster_manager.get(
+            mark="many_utxos",
             lock_resources=[cluster_management.Resources.PERF],
         )
 
