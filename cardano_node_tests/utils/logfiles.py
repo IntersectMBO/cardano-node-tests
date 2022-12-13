@@ -32,13 +32,12 @@ ERRORS_IGNORED = [
     "closed when reading data, waiting on next header",
     "MuxIOException writev: resource vanished",
     r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
-    "db-sync-node:.* AsyncCancelled",
     # can happen when single postgres instance is used for multiple db-sync services
-    "db-sync-node:.*could not serialize access",
+    "db-sync-node.*could not serialize access",
     # can happen on p2p when local roots are not up yet
     r"PeerSelection:Info:.* TracePromoteColdFailed .* Network\.Socket\.connect:",
     # can happen on p2p when node is shutting down
-    "TrInboundGovernorError AsyncCancelled",
+    "AsyncCancelled",
     # harmless when whole network is shutting down
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
     # TODO: see node issue #4369
