@@ -203,9 +203,11 @@ class TestKES:
         )
         expire_pool_id_dec = helpers.decode_bech32(expire_pool_id)
 
-        # refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
+        # refresh opcert on all pools except of pool1, so KES doesn't expire on those pools and
         # the pools keep minting blocks
-        refreshed_nodes = ["pool2", "pool3"]
+        refreshed_nodes = [
+            f"pool{i}" for i in range(2, len(cluster_management.Resources.ALL_POOLS) + 1)
+        ]
 
         # use socket of pool2 for this test - once bft1 KES expires, bft1 stops syncing
         cluster_nodes.set_cluster_env(

@@ -4,11 +4,16 @@
 * setup of scripts and their configuration for starting of multiple cluster instances
 """
 import itertools
+import json
+import random
 import shutil
 from pathlib import Path
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Sequence
+from typing import Tuple
+from typing import Union
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.types import FileType
@@ -29,26 +34,34 @@ class StartupFiles(NamedTuple):
     config_glob: str
 
 
+class NodePorts(NamedTuple):
+    num: int
+    node: int
+    ekg: int
+    prometheus: int
+
+
 class InstancePorts(NamedTuple):
     base: int
     webserver: int
-    bft1: int
-    relay1: int
-    pool1: int
-    pool2: int
-    pool3: int
     submit_api: int
     supervisor: int
-    ekg_bft1: int
+    relay1: int
     ekg_relay1: int
-    ekg_pool1: int
-    ekg_pool2: int
-    ekg_pool3: int
-    prometheus_bft1: int
     prometheus_relay1: int
+    bft1: int
+    ekg_bft1: int
+    prometheus_bft1: int
+    pool1: int
+    ekg_pool1: int
     prometheus_pool1: int
+    pool2: int
+    ekg_pool2: int
     prometheus_pool2: int
+    pool3: int
+    ekg_pool3: int
     prometheus_pool3: int
+    node_ports: Union[List[NodePorts], Tuple[()]] = ()
 
 
 class ScriptsTypes:
@@ -83,36 +96,59 @@ class ScriptsTypes:
 class LocalScripts(ScriptsTypes):
     """Local cluster scripts (full cardano mode)."""
 
-    def __init__(self) -> None:
+    def __init__(self, num_pools: int = -1) -> None:
         super().__init__()
         self.type = ScriptsTypes.LOCAL
+        if num_pools == -1:
+            self.num_pools = configuration.NUM_POOLS
 
     def get_instance_ports(self, instance_num: int) -> InstancePorts:
         """Return ports mapping for given cluster instance."""
-        offset = (50 + instance_num) * 10
-        base = 30000 + offset
-        metrics_base = 30300 + offset
+        ports_per_instance = 100
+        ports_per_node = 5
+        offset = instance_num * ports_per_instance
+        base = 32000 + offset
+        last_port = base + ports_per_instance - 1
+
+        node_ports = []
+        for i in range(self.num_pools + 1):  # +1 for BFT node
+            rec_base = base + (i * ports_per_node)
+            node_ports.append(
+                NodePorts(
+                    num=i,
+                    node=rec_base,
+                    ekg=rec_base + 1,
+                    prometheus=rec_base + 2,
+                )
+            )
 
         ports = InstancePorts(
             base=base,
-            webserver=base,
-            bft1=base + 1,
-            relay1=0,
-            pool1=base + 2,
-            pool2=base + 3,
-            pool3=base + 4,
-            submit_api=base + 9,
+            webserver=last_port,
+            submit_api=last_port - 1,
             supervisor=12001 + instance_num,
-            ekg_bft1=metrics_base,
+            # relay1
+            relay1=0,
             ekg_relay1=0,
-            ekg_pool1=metrics_base + 2,
-            ekg_pool2=metrics_base + 4,
-            ekg_pool3=metrics_base + 6,
-            prometheus_bft1=metrics_base + 1,
             prometheus_relay1=0,
-            prometheus_pool1=metrics_base + 3,
-            prometheus_pool2=metrics_base + 5,
-            prometheus_pool3=metrics_base + 7,
+            # bft1
+            bft1=base,
+            ekg_bft1=base + 1,
+            prometheus_bft1=base + 2,
+            # pool1
+            pool1=base + 5,
+            ekg_pool1=base + 6,
+            prometheus_pool1=base + 7,
+            # pool2
+            pool2=base + 10,
+            ekg_pool2=base + 11,
+            prometheus_pool2=base + 12,
+            # pool3
+            pool3=base + 15,
+            ekg_pool3=base + 16,
+            prometheus_pool3=base + 17,
+            # all nodes
+            node_ports=node_ports,
         )
         return ports
 
@@ -133,37 +169,179 @@ class LocalScripts(ScriptsTypes):
             start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
         )
 
+    def _replace_node_template(
+        self, template_file: Path, node_rec: NodePorts, instance_num: int
+    ) -> str:
+        """Replace template variables in given content."""
+        content = template_file.read_text()
+        new_content = content.replace("%%POOL_NUM%%", str(node_rec.num))
+        new_content = new_content.replace("%%INSTANCE_NUM%%", str(instance_num))
+        new_content = new_content.replace("%%NODE_PORT%%", str(node_rec.node))
+        new_content = new_content.replace("%%EKG_PORT%%", str(node_rec.ekg))
+        new_content = new_content.replace("%%PROMETHEUS_PORT%%", str(node_rec.prometheus))
+        return new_content
+
+    def _replace_instance_files(
+        self, infile: Path, instance_ports: InstancePorts, instance_num: int, ports_per_node: int
+    ) -> str:
+        """Replace instance variables in given content."""
+        content = infile.read_text()
+        # replace cluster instance number
+        new_content = content.replace("%%INSTANCE_NUM%%", str(instance_num))
+        # replace number of pools
+        new_content = new_content.replace("%%NUM_POOLS%%", str(self.num_pools))
+        # replace node port number strings
+        new_content = new_content.replace("%%NODE_PORT_BASE%%", str(instance_ports.base))
+        # replace number of reserved ports per node
+        new_content = new_content.replace("%%PORTS_PER_NODE%%", str(ports_per_node))
+        # reconfigure supervisord port
+        new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
+        # reconfigure submit-api port
+        new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
+        # reconfigure webserver port
+        new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
+        return new_content
+
+    def _gen_legacy_topology(self, ports: Sequence[int]) -> dict:
+        """Generate legacy topology for given ports."""
+        producers = [{"addr": "127.0.0.1", "port": port, "valency": 1} for port in ports]
+        topology = {"Producers": producers}
+        return topology
+
+    def _gen_p2p_topology(self, ports: List[int], fixed_ports: List[int]) -> dict:
+        """Generate p2p topology for given ports."""
+        # select fixed ports and several randomly selected ports
+        selected_ports = set(fixed_ports + random.sample(ports, 3))
+        access_points = [{"address": "127.0.0.1", "port": port} for port in selected_ports]
+        topology = {
+            "LocalRoots": {
+                "groups": [
+                    {
+                        "localRoots": {"accessPoints": access_points, "advertise": False},
+                        "valency": len(access_points),
+                    }
+                ]
+            },
+            "PublicRoots": [],
+        }
+        return topology
+
+    def _gen_supervisor_conf(self, instance_num: int, instance_ports: InstancePorts) -> str:
+        """Generate supervisor configuration for given instance."""
+        lines = [
+            "[inet_http_server]",
+            f"port=127.0.0.1:{instance_ports.supervisor}",
+        ]
+
+        programs = []
+        for node_rec in instance_ports.node_ports:
+            node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
+
+            programs.append(node_name)
+
+            lines.extend(
+                [
+                    f"\n[program:{node_name}]",
+                    f"command=./state-cluster{instance_num}/cardano-node-{node_name}",
+                    f"stderr_logfile=./state-cluster{instance_num}/{node_name}.stderr",
+                    f"stdout_logfile=./state-cluster{instance_num}/{node_name}.stdout",
+                    "startsecs=3",
+                ]
+            )
+
+        lines.extend(
+            [
+                "\n[group:nodes]",
+                f"programs={','.join(programs)}",
+                "\n[program:webserver]",
+                f"command=python -m http.server {instance_ports.webserver}",
+                f"directory=./state-cluster{instance_num}/webserver",
+                "\n[rpcinterface:supervisor]",
+                "supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface",
+                "\n[supervisorctl]",
+                "\n[supervisord]",
+                f"logfile=./state-cluster{instance_num}/supervisord.log",
+                f"pidfile=./state-cluster{instance_num}/supervisord.pid",
+            ]
+        )
+
+        return "\n".join(lines)
+
+    def _gen_topology_files(self, destdir: Path, nodes: Sequence[NodePorts]) -> None:
+        """Generate topology files for all nodes."""
+        all_nodes = {p.node for p in nodes}
+        # bft1 and first three pools
+        first_four = {p.node for p in nodes[:4]}
+
+        for node_rec in nodes:
+            all_except = list(all_nodes - {node_rec.node})
+            node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
+
+            # legacy topology
+            topology = self._gen_legacy_topology(ports=all_except)
+            dest_legacy = destdir / f"topology-{node_name}.json"
+            dest_legacy.write_text(f"{json.dumps(topology, indent=4)}\n")
+
+            # p2p topology
+            fixed_ports = list(first_four - {node_rec.node})
+            p2p_topology = self._gen_p2p_topology(ports=all_except, fixed_ports=fixed_ports)
+            dest_p2p = destdir / f"p2p-topology-{node_name}.json"
+            dest_p2p.write_text(f"{json.dumps(p2p_topology, indent=4)}\n")
+
     def _reconfigure_local(self, indir: Path, destdir: Path, instance_num: int) -> None:
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num)
+        ports_per_node = instance_ports.pool1 - instance_ports.bft1
+
+        # reconfigure cluster instance files
         for infile in indir.glob("*"):
             fname = infile.name
+
+            # skip template files
+            if fname.startswith("template-"):
+                continue
+
             dest_file = destdir / fname
-
-            with open(infile, encoding="utf-8") as in_fp:
-                content = in_fp.read()
-
-            # replace cluster instance number
-            new_content = content.replace(
-                "/state-cluster%%INSTANCE_NUM%%", f"/state-cluster{instance_num}"
+            dest_content = self._replace_instance_files(
+                infile=infile,
+                instance_ports=instance_ports,
+                instance_num=instance_num,
+                ports_per_node=ports_per_node,
             )
-            # replace node port number strings, omitting the last digit
-            new_content = new_content.replace("%%NODE_PORT_BASE%%", str(instance_ports.base // 10))
-            # reconfigure supervisord port
-            new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
-            # reconfigure submit-api port
-            new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
-            # replace metrics port number strings, omitting the last digit
-            new_content = new_content.replace(
-                "%%METRICS_PORT_BASE%%", str(instance_ports.ekg_bft1 // 10)
-            )
-
-            with open(dest_file, "w", encoding="utf-8") as out_fp:
-                out_fp.write(new_content)
+            dest_file.write_text(f"{dest_content}\n")
 
             # make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
                 dest_file.chmod(0o755)
+
+        # generate config and topology files from templates
+        for node_rec in instance_ports.node_ports:
+            if node_rec.num != 0:
+                supervisor_script = destdir / f"cardano-node-pool{node_rec.num}"
+                supervisor_script_content = self._replace_node_template(
+                    template_file=indir / "template-cardano-node-pool",
+                    node_rec=node_rec,
+                    instance_num=instance_num,
+                )
+                supervisor_script.write_text(f"{supervisor_script_content}\n")
+                supervisor_script.chmod(0o755)
+
+            node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
+            node_config = destdir / f"config-{node_name}.json"
+            node_config_content = self._replace_node_template(
+                template_file=indir / "template-config.json",
+                node_rec=node_rec,
+                instance_num=instance_num,
+            )
+            node_config.write_text(f"{node_config_content}\n")
+
+        self._gen_topology_files(destdir=destdir, nodes=instance_ports.node_ports)
+
+        supervisor_conf_file = destdir / "supervisor.conf"
+        supervisor_conf_content = self._gen_supervisor_conf(
+            instance_num=instance_num, instance_ports=instance_ports
+        )
+        supervisor_conf_file.write_text(f"{supervisor_conf_content}\n")
 
     def prepare_scripts_files(
         self,
@@ -220,22 +398,22 @@ class TestnetScripts(ScriptsTypes):
         ports = InstancePorts(
             base=base,
             webserver=base,
-            bft1=0,
-            relay1=base + 1,
-            pool1=base + 4,
-            pool2=base + 5,
-            pool3=0,
             submit_api=base + 9,
             supervisor=12001 + instance_num,
-            ekg_bft1=0,
+            relay1=base + 1,
             ekg_relay1=metrics_base,
-            ekg_pool1=metrics_base + 6,
-            ekg_pool2=metrics_base + 8,
-            ekg_pool3=0,
-            prometheus_bft1=0,
             prometheus_relay1=metrics_base + 1,
+            bft1=0,
+            ekg_bft1=0,
+            prometheus_bft1=0,
+            pool1=base + 4,
+            ekg_pool1=metrics_base + 6,
             prometheus_pool1=metrics_base + 7,
+            pool2=base + 5,
+            ekg_pool2=metrics_base + 8,
             prometheus_pool2=metrics_base + 9,
+            pool3=0,
+            ekg_pool3=0,
             prometheus_pool3=0,
         )
         return ports
@@ -405,22 +583,22 @@ class TestnetNopoolsScripts(TestnetScripts):
         ports = InstancePorts(
             base=base,
             webserver=0,
-            bft1=0,
-            relay1=base + 1,
-            pool1=0,
-            pool2=0,
-            pool3=0,
             submit_api=base + 9,
             supervisor=12001 + instance_num,
-            ekg_bft1=0,
+            relay1=base + 1,
             ekg_relay1=metrics_base,
-            ekg_pool1=0,
-            ekg_pool2=0,
-            ekg_pool3=0,
-            prometheus_bft1=0,
             prometheus_relay1=metrics_base + 1,
+            bft1=0,
+            ekg_bft1=0,
+            prometheus_bft1=0,
+            pool1=0,
+            ekg_pool1=0,
             prometheus_pool1=0,
+            pool2=0,
+            ekg_pool2=0,
             prometheus_pool2=0,
+            pool3=0,
+            ekg_pool3=0,
             prometheus_pool3=0,
         )
         return ports
