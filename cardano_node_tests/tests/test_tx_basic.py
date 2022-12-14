@@ -567,6 +567,80 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("file_type", ("tx_body", "tx"))
+    @pytest.mark.dbsync
+    def test_sign_wrong_file(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        file_type: str,
+    ):
+        """Sign other file type than the one specified by command line option (Tx vs Tx body).
+
+        When CDDL format is used, it doesn't matter what CLI option and file type combination
+        is used.
+        Expect failure when cardano-cli CBOR serialization format is used (not CDDL format).
+
+        * specify Tx file and pass Tx body file
+        * specify Tx body file and pass Tx file
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{file_type}"
+        amount = 2_000_000
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        # build and sign a transaction
+        fee = cluster.g_transaction.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+        )
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+        )
+        out_file_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        if file_type == "tx":
+            # call `cardano-cli transaction sign --tx-body-file tx`
+            cli_args = {"tx_body_file": out_file_signed}
+        else:
+            # call `cardano-cli transaction sign --tx-file txbody`
+            cli_args = {"tx_file": tx_raw_output.out_file}
+
+        cddl_is_default = not clusterlib_utils.cli_has("transaction build-raw --cli-format")
+        if cluster.use_cddl or cddl_is_default:
+            tx_signed_again = cluster.g_transaction.sign_tx(
+                **cli_args,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            # check that the Tx can be successfully submitted
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_again, txins=tx_raw_output.txins)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        else:
+            with pytest.raises(clusterlib.CLIError) as exc_body:
+                cluster.g_transaction.sign_tx(
+                    **cli_args,
+                    signing_key_files=tx_files.signing_key_files,
+                    tx_name=f"{temp_template}_err1",
+                )
+            err_str = str(exc_body.value)
+            assert "TextEnvelope error" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_no_txout(
         self,
