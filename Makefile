@@ -1,4 +1,5 @@
 # install cardano_node_tests and its dependencies
+.PHONY: install
 install:
 	python3 -m pip install --upgrade pip
 	python3 -m pip install --upgrade wheel
@@ -7,17 +8,20 @@ install:
 
 
 # install dependencies that are needed for building documentation
+.PHONY: install_doc
 install_doc:
 	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-doc.txt
 
 
 # initialize linters
+.PHONY: init_linters
 init_lint:
 	pre-commit clean
 	pre-commit gc
 	find . -path '*/.mypy_cache/*' -delete
 
 # run linters
+.PHONY: lint
 lint:
 	pre-commit run -a
 	if type pytype >/dev/null 2>&1; then pytype cardano_node_tests; fi
@@ -67,9 +71,11 @@ ifdef DESELECT_FROM_FILE
 	RUN_SKIPS := no
 endif
 
+.PHONY: .dirs
 .dirs:
 	mkdir -p $(ARTIFACTS_DIR) $(COVERAGE_DIR) $(REPORTS_DIR)
 
+.PHONY: .run_tests
 .run_tests:
 # delete artifacts from previous runs
 ifeq ($(CLEANUP),yes)
@@ -86,9 +92,10 @@ endif
 	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) $(MARKEXPR) $(DESELECT_FROM_FILE_ARGS) -n $(TEST_THREADS) --dist loadgroup $(ARTIFACTS_ARGS) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(REPORTS_DIR) $(TESTRUN_REPORT_ARGS)
 
 
-# run all tests, generate allure report
+# run all tests
+.PHONY: tests
 tests: export DbSyncAbortOnPanic=1
-tests: TEST_THREADS := $(or $(TEST_THREADS),15)
+tests: TEST_THREADS := $(or $(TEST_THREADS),20)
 tests: .dirs .run_tests
 
 
@@ -101,7 +108,8 @@ testpr: MARKEXPR := $(or $(MARKEXPR),-m "smoke")
 testpr: .dirs .run_tests
 
 
-# run all enabled tests on testnet, generate allure report
+# run all tests that can run on testnets
+.PHONY: testnets
 testnets: export NOPOOLS=1
 testnets: export CLUSTERS_COUNT=1
 testnets: export FORBID_RESTART=1
