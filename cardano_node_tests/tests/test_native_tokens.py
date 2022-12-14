@@ -109,13 +109,13 @@ def multisig_script_policyid(
 
 @common.SKIPIF_TOKENS_UNUSABLE
 @pytest.mark.testnets
-@pytest.mark.smoke
 class TestMinting:
     """Tests for minting and burning tokens."""
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_and_burning_witnesses(
         self,
@@ -215,6 +215,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_and_burning_sign(
         self,
@@ -299,6 +300,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_multiple_scripts(
         self,
@@ -406,6 +408,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_burning_diff_tokens_single_tx(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
@@ -506,6 +509,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn2)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_burning_same_token_single_tx(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: List[clusterlib.AddressRecord]
@@ -831,6 +835,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_and_partial_burning(
         self,
@@ -922,6 +927,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn2)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_unicode_asset_name(
         self,

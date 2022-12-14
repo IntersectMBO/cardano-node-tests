@@ -732,8 +732,10 @@ class ClusterGetter:
                 cget_status.first_iteration = False
                 self._cluster_instance_num = -1
 
-                # try all existing cluster instances
-                for instance_num in range(self.num_of_instances):
+                # try all existing cluster instances; randomize the order
+                for instance_num in random.sample(
+                    range(self.num_of_instances), k=self.num_of_instances
+                ):
                     # there's only one cluster instance when `DEV_CLUSTER_RUNNING` is set
                     if configuration.DEV_CLUSTER_RUNNING and instance_num != 0:
                         continue
