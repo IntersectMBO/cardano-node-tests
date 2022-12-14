@@ -21,6 +21,10 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
+# TODO: skip all tests for now until manager marks are reworked
+pytestmark = pytest.mark.skip(reason="INTERNAL: manager marks not working as expected")
+
+
 @pytest.mark.skipif(
     VERSIONS.cluster_era != VERSIONS.transaction_era,
     reason="expensive test, skip when cluster era is different from TX era",
