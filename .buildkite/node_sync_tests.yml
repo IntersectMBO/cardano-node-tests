@@ -6,7 +6,7 @@ steps:
     timeout_in_minutes: 5000
     agents:
       system: x86_64-linux
-      queue: benchmark_large
+      queue: benchmark
     artifact_paths:
       - 'logfile_copy.log'
       - 'sync_results.json'
