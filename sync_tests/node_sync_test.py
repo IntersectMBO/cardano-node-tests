@@ -5,6 +5,7 @@ import platform
 import random
 import re
 import shlex
+import shutil
 import signal
 import subprocess
 import tarfile
@@ -659,23 +660,27 @@ def get_data_from_logs(log_file):
     return logs_details_dict
 
 
-def copy_node_executables(src_location, dst_location):
+def copy_node_executables(src_location, dst_location, build_mode):
     platform_system, platform_release, platform_version = get_os_type()
+
     NODE = "cardano-node"
     CLI = "cardano-cli"
     if "windows" in platform_system.lower():
         NODE = "cardano-node.exe"
         CLI = "cardano-cli.exe"
-    print(f"src_location: {src_location}")
-    print(f"dst_location: {dst_location}")
-    print(f"listdir src_location: {os.listdir(src_location)}")
-    print(f"listdir src_location cardano-node-bin: {os.listdir(src_location) / 'cardano-node-bin'}")
-    print(f"listdir src_location cardano-node-bin bin: {os.listdir(src_location) / 'cardano-node-bin' / 'bin'}")
-    print(f"listdir src_location cardano-node-bin bin cardano-node: {os.listdir(src_location) / 'cardano-node-bin' / 'bin' / 'cardano-node'}")
-    print(f"listdir build location: {os.listdir(Path(src_location) / 'cardano-node-bin' / 'bin' / 'cardano-node')}")
-    os.replace(Path(src_location) / "cardano-node-bin" / "bin" / "cardano-node" / NODE, Path(dst_location) / NODE)
-    os.replace(Path(src_location) / "cardano-cli-bin" / "bin" / "cardano-cli" / CLI, Path(dst_location) / CLI)
-    print(f"listdir dst_location: {os.listdir(dst_location)}")
+
+    if build_mode == "nix":
+        node_binary_location = "cardano-node-bin/bin/cardano-node"
+        node_cli_binary_location = "cardano-cli-bin/bin/cardano-cli"
+
+        print(f"src_location: {src_location}")
+        print(f"dst_location: {dst_location}")
+        print(f"listdir node_binary_location: {os.listdir(node_binary_location)}")
+        print(f"listdir node_cli_binary_location: {os.listdir(node_cli_binary_location)}")
+
+        os.replace(Path(src_location) / node_binary_location / NODE, Path(dst_location) / NODE)
+        os.replace(Path(src_location) / node_cli_binary_location / CLI, Path(dst_location) / CLI)
+        print(f"listdir dst_location: {os.listdir(dst_location)}")
 
 
 def get_node_files_using_nix(node_rev):
@@ -688,10 +693,7 @@ def get_node_files_using_nix(node_rev):
     os.chdir(Path(repo_dir))
     execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
     execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
-
-    print("   !!!! nix-build finished")
-
-    copy_node_executables(repo_dir, test_directory)
+    copy_node_executables(repo_dir, test_directory, "nix")
     os.chdir(Path(test_directory))
     print(f"listdir test_directory: {os.listdir(test_directory)}")
 
@@ -734,15 +736,17 @@ def main():
     if "windows" in platform_system.lower():
         NODE = "cardano-node.exe"
         CLI = "cardano-cli.exe"
+        print(f"ERROR: only building with NIX is supported at this moment --> so there is no Windows support")
+        exit(1)
 
     print(f"Get the cardano-node and cardano-cli files")
     start_build_time = get_current_date_time()
-    print(f"  - start_build_time: {start_build_time}")
     if node_build_mode == "nix":
         get_node_files_using_nix(node_rev1)
     else:
         print(f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
     end_build_time = get_current_date_time()
+    print(f"  - start_build_time: {start_build_time}")
     print(f"  - end_build_time: {end_build_time}")
 
     print(" --- node version ---")
