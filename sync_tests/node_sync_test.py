@@ -703,8 +703,8 @@ def copy_node_executables(src_location, dst_location, build_mode):
         print(f"src_location: {Path(src_location)}")
         print(f"dst_location: {Path(dst_location)}")
 
-        shutil.copy2(Path(src_location) / node_binary_location, Path(dst_location) / NODE)
         shutil.copy2(Path(src_location) / node_cli_binary_location, Path(dst_location) / CLI)
+        shutil.copy2(Path(src_location) / node_binary_location, Path(dst_location) / NODE)
         print("---------dst location-----------")
         for path, subdirs, files in os.walk(Path(dst_location)):
             for name in files:
@@ -716,7 +716,7 @@ def get_node_files_using_nix(node_rev):
     print(f"test_directory: {test_directory}")
 
     repo_name = "cardano-node"
-    repo_dir = test_directory / repo_name
+    repo_dir = test_directory / repo_name / f"_dir"
     git_clone_iohk_repo(repo_name, repo_dir, node_rev)
     os.chdir(Path(repo_dir))
     execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
