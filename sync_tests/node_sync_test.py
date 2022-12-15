@@ -675,14 +675,14 @@ def copy_node_executables(src_location, dst_location, build_mode):
         print("------------------------")
         files1 = []
         pattern = "*cardano-cli*"
-        from glob import glob
-        for dir,_,_ in os.walk(Path(src_location)):
-            files1.extend(glob(os.path.join(dir,pattern)))
-        print(f"files: {files1}")
-        print("------------------------")
-        for path, subdirs, files in os.walk(Path(src_location)):
-            for name in files:
-                print(os.path.join(path, name))
+        # from glob import glob
+        # for dir,_,_ in os.walk(Path(src_location)):
+        #     files1.extend(glob(os.path.join(dir,pattern)))
+        # print(f"files: {files1}")
+        # print("------------------------")
+        # for path, subdirs, files in os.walk(Path(src_location)):
+        #     for name in files:
+        #         print(os.path.join(path, name))
         print("------------------------")
         subfolders1 = [f.path for f in os.scandir(src_location) if f.is_dir()]
         print(f"repo subfolders: {subfolders1}")
@@ -692,6 +692,13 @@ def copy_node_executables(src_location, dst_location, build_mode):
         print("------------------------")
         subfolders3 = [f.path for f in os.scandir(Path(src_location) / "cardano-node-bin" / "bin") if f.is_dir()]
         print(f"repo subfolders cardano-node-bin bin: {subfolders3}")
+        for path, subdirs, files in os.walk(Path(src_location) / "cardano-node-bin" / "bin"):
+            for name in files:
+                print(os.path.join(path, name))
+        print("------------------------")
+        for path, subdirs, files in os.walk(Path(src_location) / "cardano-cli-bin" / "bin"):
+            for name in files:
+                print(os.path.join(path, name))
         print("------------------------")
 
         print(f"src_location: {Path(src_location)}")
