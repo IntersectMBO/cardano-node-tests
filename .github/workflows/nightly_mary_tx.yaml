@@ -12,3 +12,7 @@ jobs:
     uses: ./.github/workflows/regression_reusable.yaml
     with:
       env-path: .github/env_nightly_mary_tx
+    secrets:
+      CI_FAIL_MAILS: ${{ secrets.NIGHTLY_FAIL_MAILS }}
+      GMAIL_USERNAME: ${{ secrets.GMAIL_USERNAME }}
+      GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
