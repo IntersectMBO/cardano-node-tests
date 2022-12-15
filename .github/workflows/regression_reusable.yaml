@@ -64,13 +64,24 @@ on:
         required: false
       TCACHE_URL:
         required: false
+      CI_FAIL_MAILS:
+        required: false
+      GMAIL_USERNAME:
+        required: false
+      GMAIL_PASSWORD:
+        required: false
+
+env:
+  CI_FAIL_MAILS: ${{ secrets.CI_FAIL_MAILS }}
 
 jobs:
   reusable_run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v18
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Nix
+        uses: cachix/install-nix-action@v18
         with:
           extra_nix_config: |
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=
@@ -107,6 +118,7 @@ jobs:
             echo "DESELECT_FROM_FILE=deselected_tests.txt" >> $GITHUB_ENV
           fi
       - name: Run CLI regression tests
+        id: testing-step
         run: .github/regression.sh
       - name: Report test results
         if: (success() || failure()) && inputs.testrun_name
@@ -146,3 +158,18 @@ jobs:
             errors_all.log
             testrun-report.xml
             deselected_tests.txt
+      - name: Mail failure report
+        uses: dawidd6/action-send-mail@v3
+        if: (success() || failure()) && steps.testing-step.outcome == 'failure' && env.CI_FAIL_MAILS
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{secrets.GMAIL_USERNAME}}
+          password: ${{secrets.GMAIL_PASSWORD}}
+          subject: "Failed workflow: ${{ github.workflow }}"
+          to: ${{secrets.CI_FAIL_MAILS}}
+          from: Cardano Github Actions
+          body: "Failed run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          reply_to: noreply@github.com
+          attachments: testrun-report.html
