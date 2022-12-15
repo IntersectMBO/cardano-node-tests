@@ -662,7 +662,6 @@ def get_data_from_logs(log_file):
 
 def copy_node_executables(src_location, dst_location, build_mode):
     platform_system, platform_release, platform_version = get_os_type()
-
     NODE = "cardano-node"
     CLI = "cardano-cli"
     if "windows" in platform_system.lower():
@@ -673,10 +672,13 @@ def copy_node_executables(src_location, dst_location, build_mode):
         node_binary_location = "cardano-node-bin/bin/cardano-node"
         node_cli_binary_location = "cardano-cli-bin/bin/cardano-cli"
 
-        print(f"src_location: {src_location}")
-        print(f"dst_location: {dst_location}")
-        print(f"listdir node_binary_location: {os.listdir(node_binary_location)}")
-        print(f"listdir node_cli_binary_location: {os.listdir(node_cli_binary_location)}")
+        subfolders = [f.path for f in os.scandir(src_location) if f.is_dir()]
+        print(f"subfolders: {subfolders}")
+
+        print(f"src_location: {Path(src_location)}")
+        print(f"dst_location: {Path(dst_location)}")
+        print(f"listdir node_binary_location: {os.listdir(Path(src_location) / node_binary_location)}")
+        print(f"listdir node_cli_binary_location: {os.listdir(Path(src_location) / node_cli_binary_location)}")
 
         os.replace(Path(src_location) / node_binary_location / NODE, Path(dst_location) / NODE)
         os.replace(Path(src_location) / node_cli_binary_location / CLI, Path(dst_location) / CLI)
