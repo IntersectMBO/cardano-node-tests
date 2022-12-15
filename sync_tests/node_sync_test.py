@@ -21,7 +21,7 @@ from psutil import process_iter
 
 from explorer_utils import get_epoch_start_datetime_from_explorer
 from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
-from gitpython_utils import git_clone_iohk_repo, git_checkout_branch
+from gitpython_utils import git_clone_iohk_repo
 
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB
@@ -679,9 +679,8 @@ def get_node_files_using_nix(node_rev):
 
     repo_name = "cardano-node"
     repo_dir = current_directory / repo_name
-    git_clone_iohk_repo(repo_name, repo_dir)
+    git_clone_iohk_repo(repo_name, repo_dir, node_rev)
     os.chdir(Path(repo_dir))
-    git_checkout_branch(node_rev)
     execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
     execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
     copy_node_executables(repo_dir, current_directory)

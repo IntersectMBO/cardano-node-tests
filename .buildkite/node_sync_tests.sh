@@ -20,9 +20,10 @@ echo "test: $(python -c 'import sys, sys.prefix == sys.base_prefix')"
 
 echo " ==== install packages into python virtual env"
 python3 -m pip install blockfrost-python
+python3 -m pip install GitPython
 
 echo " ==== importing packages from nix (https://search.nixos.org/packages)"
-python3 -c "import requests, GitPython, pandas, psutil, pymysql;"
+python3 -c "import requests, pandas, psutil, pymysql;"
 
 build_mode=$1
 env=$2
