@@ -45,6 +45,7 @@ def set_repo_paths():
 def execute_command(command):
     try:
         cmd = shlex.split(command)
+        print(f"cmd: {cmd}")
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
         while process.poll() is None:
             nextline, errors = process.communicate()
@@ -671,23 +672,27 @@ def copy_node_executables(src_location, dst_location, build_mode):
     if build_mode == "nix":
         node_binary_location = "cardano-node-bin/bin/cardano-node"
         node_cli_binary_location = "cardano-cli-bin/bin/cardano-cli"
-
-        files = []
-        pattern   = "*cardano-cli*"
+        print("------------------------")
+        files1 = []
+        pattern = "*cardano-cli*"
         from glob import glob
         for dir,_,_ in os.walk(Path(src_location)):
-            files.extend(glob(os.path.join(dir,pattern)))
-        print(f"files: {files}")
-
+            files1.extend(glob(os.path.join(dir,pattern)))
+        print(f"files: {files1}")
+        print("------------------------")
+        for path, subdirs, files in os.walk(Path(src_location)):
+            for name in files:
+                print(os.path.join(path, name))
+        print("------------------------")
         subfolders1 = [f.path for f in os.scandir(src_location) if f.is_dir()]
         print(f"repo subfolders: {subfolders1}")
-
+        print("------------------------")
         subfolders2 = [f.path for f in os.scandir(Path(src_location) / "cardano-node-bin") if f.is_dir()]
         print(f"repo subfolders cardano-node-bin: {subfolders2}")
-
+        print("------------------------")
         subfolders3 = [f.path for f in os.scandir(Path(src_location) / "cardano-node-bin" / "bin") if f.is_dir()]
         print(f"repo subfolders cardano-node-bin bin: {subfolders3}")
-
+        print("------------------------")
 
         print(f"src_location: {Path(src_location)}")
         print(f"dst_location: {Path(dst_location)}")
@@ -697,6 +702,7 @@ def copy_node_executables(src_location, dst_location, build_mode):
         os.replace(Path(src_location) / node_binary_location / NODE, Path(dst_location) / NODE)
         os.replace(Path(src_location) / node_cli_binary_location / CLI, Path(dst_location) / CLI)
         print(f"listdir dst_location: {os.listdir(dst_location)}")
+
 
 def get_node_files_using_nix(node_rev):
     test_directory = Path.cwd()
