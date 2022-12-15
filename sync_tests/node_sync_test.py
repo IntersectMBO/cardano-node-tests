@@ -666,26 +666,31 @@ def copy_node_executables(src_location, dst_location):
     if "windows" in platform_system.lower():
         NODE = "cardano-node.exe"
         CLI = "cardano-cli.exe"
-    os.replace(Path(src_location) / "cardano-node-bin" / "bin" / "cardano-node" / NODE, Path(dst_location) / NODE)
-    os.replace(Path(src_location) / "cardano-cli-bin" / "bin" / "cardano-cli" / CLI, Path(dst_location) / CLI)
+    print(f"src_location: {src_location}")
+    print(f"dst_location: {dst_location}")
     print(f"listdir src_location: {os.listdir(src_location)}")
     print(f"listdir build location: {os.listdir(Path(src_location) / 'cardano-node-bin' / 'bin' / 'cardano-node')}")
+    os.replace(Path(src_location) / "cardano-node-bin" / "bin" / "cardano-node" / NODE, Path(dst_location) / NODE)
+    os.replace(Path(src_location) / "cardano-cli-bin" / "bin" / "cardano-cli" / CLI, Path(dst_location) / CLI)
     print(f"listdir dst_location: {os.listdir(dst_location)}")
 
 
 def get_node_files_using_nix(node_rev):
-    current_directory = Path.cwd()
-    print(f"current_directory: {current_directory}")
+    test_directory = Path.cwd()
+    print(f"test_directory: {test_directory}")
 
     repo_name = "cardano-node"
-    repo_dir = current_directory / repo_name
+    repo_dir = test_directory / repo_name
     git_clone_iohk_repo(repo_name, repo_dir, node_rev)
     os.chdir(Path(repo_dir))
     execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
     execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
-    copy_node_executables(repo_dir, current_directory)
-    os.chdir(Path(current_directory))
-    print(f"listdir current_directory: {os.listdir(current_directory)}")
+
+    print("   !!!! nix-build finished")
+
+    copy_node_executables(repo_dir, test_directory)
+    os.chdir(Path(test_directory))
+    print(f"listdir test_directory: {os.listdir(test_directory)}")
 
 
 def main():
