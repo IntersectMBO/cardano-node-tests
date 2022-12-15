@@ -699,25 +699,12 @@ def copy_node_executables(src_location, dst_location, build_mode):
             for name in files:
                 print(os.path.join(path, name))
         print("------------------------")
-        import stat
-        executable = stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
-        for filename in os.listdir(Path(src_location)):
-            if os.path.isfile(filename):
-                st = os.stat(filename)
-                mode = st.st_mode
-                if mode & executable:
-                    print(filename,oct(mode))
-        print("------------------------")
-
-
 
         print(f"src_location: {Path(src_location)}")
         print(f"dst_location: {Path(dst_location)}")
-        print(f"listdir node_binary_location: {os.listdir(Path(src_location) / node_binary_location)}")
-        print(f"listdir node_cli_binary_location: {os.listdir(Path(src_location) / node_cli_binary_location)}")
 
-        os.replace(Path(src_location) / node_binary_location, Path(dst_location) / NODE)
-        os.replace(Path(src_location) / node_cli_binary_location, Path(dst_location) / CLI)
+        shutil.copy2(Path(src_location) / node_binary_location, Path(dst_location) / NODE)
+        shutil.copy2(Path(src_location) / node_cli_binary_location, Path(dst_location) / CLI)
         print("---------dst location-----------")
         for path, subdirs, files in os.walk(Path(dst_location)):
             for name in files:
