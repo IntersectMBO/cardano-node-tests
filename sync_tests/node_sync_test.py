@@ -672,8 +672,22 @@ def copy_node_executables(src_location, dst_location, build_mode):
         node_binary_location = "cardano-node-bin/bin/cardano-node"
         node_cli_binary_location = "cardano-cli-bin/bin/cardano-cli"
 
-        subfolders = [f.path for f in os.scandir(src_location) if f.is_dir()]
-        print(f"subfolders: {subfolders}")
+        files = []
+        pattern   = "*cardano-cli*"
+        from glob import glob
+        for dir,_,_ in os.walk(Path(src_location)):
+            files.extend(glob(os.path.join(dir,pattern)))
+        print(f"files: {files}")
+
+        subfolders1 = [f.path for f in os.scandir(src_location) if f.is_dir()]
+        print(f"repo subfolders: {subfolders1}")
+
+        subfolders2 = [f.path for f in os.scandir(Path(src_location) / "cardano-node-bin") if f.is_dir()]
+        print(f"repo subfolders cardano-node-bin: {subfolders2}")
+
+        subfolders3 = [f.path for f in os.scandir(Path(src_location) / "cardano-node-bin" / "bin") if f.is_dir()]
+        print(f"repo subfolders cardano-node-bin bin: {subfolders3}")
+
 
         print(f"src_location: {Path(src_location)}")
         print(f"dst_location: {Path(dst_location)}")
@@ -683,7 +697,6 @@ def copy_node_executables(src_location, dst_location, build_mode):
         os.replace(Path(src_location) / node_binary_location / NODE, Path(dst_location) / NODE)
         os.replace(Path(src_location) / node_cli_binary_location / CLI, Path(dst_location) / CLI)
         print(f"listdir dst_location: {os.listdir(dst_location)}")
-
 
 def get_node_files_using_nix(node_rev):
     test_directory = Path.cwd()
