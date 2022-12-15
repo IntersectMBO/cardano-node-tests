@@ -25,12 +25,12 @@ python3 -m pip install GitPython
 echo " ==== importing packages from nix (https://search.nixos.org/packages)"
 python3 -c "import requests, pandas, psutil, pymysql;"
 
-build_mode=$1
-env=$2
-tag_no1=$3
-tag_no2=$4
-node_rev1=$5
-node_rev2=$6
+env=$1
+build_mode=$2
+node_rev1=$3
+node_rev2=$4
+tag_no1=$5
+tag_no2=$6
 node_topology1=$7
 node_topology2=$8
 node_start_arguments1=$9
