@@ -688,8 +688,18 @@ def get_node_files_using_nix(node_rev):
     copy_node_executables(repo_dir, test_directory, "nix")
     os.chdir(Path(test_directory))
     print(f"listdir test_directory: {os.listdir(test_directory)}")
-    os.chmod(NODE, 0o777)
-    os.chmod(CLI, 0o777)
+    print(f"Check for read access -> {os.access(NODE, os.R_OK)}")
+    print(f"Check for write access -> {os.access(NODE, os.W_OK)}")
+    print(f"Check for execution access -> {os.access(NODE, os.X_OK)}")
+    print(f"Check for existence of file -> {os.access(NODE, os.F_OK)}")
+    subprocess.check_call(['chmod', '+x', NODE])
+    subprocess.check_call(['chmod', '+x', CLI])
+    print(f"listdir test_directory: {os.listdir(test_directory)}")
+    print(f"Check for read access -> {os.access(NODE, os.R_OK)}")
+    print(f"Check for write access -> {os.access(NODE, os.W_OK)}")
+    print(f"Check for execution access -> {os.access(NODE, os.X_OK)}")
+    print(f"Check for existence of file -> {os.access(NODE, os.F_OK)}")
+    print(f"files permissions: {subprocess.check_call(['ls', '-la'])}")
 
 
 def main():
