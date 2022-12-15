@@ -671,44 +671,8 @@ def copy_node_executables(src_location, dst_location, build_mode):
     if build_mode == "nix":
         node_binary_location = "cardano-node-bin/bin/cardano-node"
         node_cli_binary_location = "cardano-cli-bin/bin/cardano-cli"
-        print("------------------------")
-        files1 = []
-        pattern = "*cardano-cli*"
-        # from glob import glob
-        # for dir,_,_ in os.walk(Path(src_location)):
-        #     files1.extend(glob(os.path.join(dir,pattern)))
-        # print(f"files: {files1}")
-        # print("------------------------")
-        # for path, subdirs, files in os.walk(Path(src_location)):
-        #     for name in files:
-        #         print(os.path.join(path, name))
-        print("------------------------")
-        subfolders1 = [f.path for f in os.scandir(src_location) if f.is_dir()]
-        print(f"repo subfolders: {subfolders1}")
-        print("------------------------")
-        subfolders2 = [f.path for f in os.scandir(Path(src_location) / "cardano-node-bin") if f.is_dir()]
-        print(f"repo subfolders cardano-node-bin: {subfolders2}")
-        print("------------------------")
-        subfolders3 = [f.path for f in os.scandir(Path(src_location) / "cardano-node-bin" / "bin") if f.is_dir()]
-        print(f"repo subfolders cardano-node-bin bin: {subfolders3}")
-        for path, subdirs, files in os.walk(Path(src_location) / "cardano-node-bin" / "bin"):
-            for name in files:
-                print(os.path.join(path, name))
-        print("------------------------")
-        for path, subdirs, files in os.walk(Path(src_location) / "cardano-cli-bin" / "bin"):
-            for name in files:
-                print(os.path.join(path, name))
-        print("------------------------")
-
-        print(f"src_location: {Path(src_location)}")
-        print(f"dst_location: {Path(dst_location)}")
-
         shutil.copy2(Path(src_location) / node_cli_binary_location, Path(dst_location) / CLI)
         shutil.copy2(Path(src_location) / node_binary_location, Path(dst_location) / NODE)
-        print("---------dst location-----------")
-        for path, subdirs, files in os.walk(Path(dst_location)):
-            for name in files:
-                print(os.path.join(path, name))
 
 
 def get_node_files_using_nix(node_rev):
@@ -724,6 +688,8 @@ def get_node_files_using_nix(node_rev):
     copy_node_executables(repo_dir, test_directory, "nix")
     os.chdir(Path(test_directory))
     print(f"listdir test_directory: {os.listdir(test_directory)}")
+    os.chmod(NODE, 0o777)
+    os.chmod(CLI, 0o777)
 
 
 def main():
