@@ -5,30 +5,46 @@ on:
     branches:
       - sync_tests
     inputs:
-      tag_no1:
-        description: tag number1 - used for initial sync, from clean state (1.33.0-rc2 (tag number) or 1.33.0 (release number - for released versions) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+      build_mode:
+        description: how to get the cardano node/cli files - nix, cabal, prebuilt
         required: true
-      hydra_eval_no1:
-        description: hydra_eval_no1 - used for getting node prebuilt files for the initial sync
-        required: false
+        default: "nix"
+#      environment:
+#        description: the environment on which to run the sync test - shelley-qa, preview, preprod, mainnet
+#        required: true
+#        default: "all"
+      tag_no1:
+        description: rev_label in db/visuals (tags/1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+        required: true
         default: "None"
+      node_rev1:
+        description: desired cardano-node revision (used for initial sync) - cardano-node tag or branch
+        required: true
+        default: "None"
+      node_topology1:
+        description: desired cardano-node topology type (used for initial sync) - legacy, p2p
+        required: true
+        default: "legacy"
       node_start_arguments1:
         description: extra arguments to be used when starting the node using tag_no1 (--a1 --a2 21)
         required: false
         default: "None"
       tag_no2:
-        description: tag number2 - used for final sync, from existing state (1.33.0-rc2 (tag number) or 1.33.0 (release number - for released versions) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
-        required: false
+        description: rev_label in db/visuals (tags/1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+        required: true
         default: "None"
-      hydra_eval_no2:
-        description: hydra_eval_no2 - used for getting node prebuilt files for the final sync
-        required: false
+      node_rev2:
+        description: desired cardano-node revision (used for final sync) - cardano-node tag or branch
+        required: true
         default: "None"
+      node_topology2:
+        description: desired cardano-node topology type (used for final sync) - legacy, p2p
+        required: true
+        default: "legacy"
       node_start_arguments2:
         description: extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21)
         required: false
         default: "None"
-
 jobs:
   node_sync_test_mainnet:
     runs-on: ubuntu-latest
@@ -47,13 +63,17 @@ jobs:
           pipeline: 'input-output-hk/qa-sync-tests'
           message: ':github: Triggered by GitHub Action'
           env: '{
+          "env":"mainnet",
+          "build_mode":"${{ github.event.inputs.build_mode }}",
+          "node_rev1":"${{ github.event.inputs.node_rev1 }}",
+          "node_rev2":"${{ github.event.inputs.node_rev2 }}",          
           "tag_no1":"${{ github.event.inputs.tag_no1 }}",
           "tag_no2":"${{ github.event.inputs.tag_no2 }}",
-          "hydra_eval_no1":"${{ github.event.inputs.hydra_eval_no1 }}",
-          "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}",
+          "node_topology1":"${{ github.event.inputs.node_topology1 }}",
+          "node_topology2":"${{ github.event.inputs.node_topology2 }}",
           "node_start_arguments1":"${{ github.event.inputs.node_start_arguments1 }}",
           "node_start_arguments2":"${{ github.event.inputs.node_start_arguments2 }}",
-          "env":"mainnet",
+          
           "BLOCKFROST_API_KEY":"${{ secrets.BLOCKFROST_API_KEY }}",
           "AWS_DB_USERNAME":"${{ secrets.AWS_DB_USERNAME }}",
           "AWS_DB_PASS":"${{ secrets.AWS_DB_PASS }}",
@@ -65,7 +85,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        env: [shelley-qa, staging, preview, preprod]
+        env: [shelley-qa, preview, preprod]
         branch:
           - sync_tests
       fail-fast: false
@@ -88,6 +108,7 @@ jobs:
           pip install psutil
           pip install pandas
           pip install blockfrost-python
+          pip install GitPython
       - name: run sync test
         env:
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
