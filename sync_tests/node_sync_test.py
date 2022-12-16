@@ -670,8 +670,16 @@ def copy_node_executables(src_location, dst_location, build_mode):
         print(f"  -- files permissions inside cardano-cli-bin/bin folder: {subprocess.check_call(['ls', '-la'])}")
         os.chdir(Path(dst_location))
 
-        shutil.copy2(Path(src_location) / node_binary_location / "cardano-node", Path(dst_location) / "cardano-node")
-        shutil.copy2(Path(src_location) / cli_binary_location / "cardano-cli", Path(dst_location) / "cardano-cli")
+        try:
+            shutil.copy2(Path(src_location) / node_binary_location / "cardano-node",
+                         Path(dst_location) / "cardano-node")
+        except Exception as e:
+            print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+        try:
+            shutil.copy2(Path(src_location) / cli_binary_location / "cardano-cli",
+                         Path(dst_location) / "cardano-cli")
+        except Exception as e:
+            print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
         time.sleep(5)
 
 
@@ -680,14 +688,13 @@ def get_node_files_using_nix(node_rev):
     print(f"test_directory: {test_directory}")
 
     repo_name = "cardano-node"
-    repo_dir = test_directory / repo_name / f"_dir"
+    repo_dir = Path(test_directory) / "cardano_node_dir"
     git_clone_iohk_repo(repo_name, repo_dir, node_rev)
     os.chdir(Path(repo_dir))
     execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
     execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
     copy_node_executables(repo_dir, test_directory, "nix")
     os.chdir(Path(test_directory))
-    print(f"listdir test_directory: {os.listdir(test_directory)}")
     print(f"Check for read access -> {os.access(NODE, os.R_OK)}")
     print(f"Check for write access -> {os.access(NODE, os.W_OK)}")
     print(f"Check for execution access -> {os.access(NODE, os.X_OK)}")
@@ -695,7 +702,6 @@ def get_node_files_using_nix(node_rev):
     subprocess.check_call(['chmod', '+x', NODE])
     subprocess.check_call(['chmod', '+x', CLI])
     time.sleep(5)
-    print(f"listdir test_directory: {os.listdir(test_directory)}")
     print(f"Check for read access -> {os.access(NODE, os.R_OK)}")
     print(f"Check for write access -> {os.access(NODE, os.W_OK)}")
     print(f"Check for execution access -> {os.access(NODE, os.X_OK)}")
@@ -749,7 +755,8 @@ def main():
     if node_build_mode == "nix":
         get_node_files_using_nix(node_rev1)
     else:
-        print(f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
+        print(
+            f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
     end_build_time = get_current_date_time()
     print(f"  - start_build_time: {start_build_time}")
     print(f"  - end_build_time: {end_build_time}")
@@ -816,7 +823,8 @@ def main():
         if node_build_mode == "nix":
             get_node_files_using_nix(node_rev2)
         else:
-            print(f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
+            print(
+                f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
 
         print(" --- node version ---")
         cli_version2, cli_git_rev2 = get_node_version()
