@@ -674,6 +674,12 @@ def copy_node_executables(src_location, dst_location, build_mode):
         shutil.copy2(Path(src_location) / node_cli_binary_location, Path(dst_location) / CLI)
         shutil.copy2(Path(src_location) / node_binary_location, Path(dst_location) / NODE)
 
+        os.chdir(Path(src_location) / "cardano-node-bin/bin/")
+        print(f"files permissions inside cardano-node-bin/bin folder: {subprocess.check_call(['ls', '-la'])}")
+
+        os.chdir(Path(src_location) / "cardano-cli-bin/bin/")
+        print(f"files permissions inside cardano-cli-bin/bin folder: {subprocess.check_call(['ls', '-la'])}")
+
 
 def get_node_files_using_nix(node_rev):
     test_directory = Path.cwd()
