@@ -6,19 +6,15 @@ on:
       - sync_tests
     inputs:
       build_mode:
-        description: how to get the cardano node/cli files - nix, cabal, prebuilt
+        description: how to get the cardano node/cli files - nix(, cabal, prebuilt)
         required: true
         default: "nix"
-#      environment:
-#        description: the environment on which to run the sync test - shelley-qa, preview, preprod, mainnet
-#        required: true
-#        default: "all"
       tag_no1:
-        description: rev_label in db/visuals (tags/1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+        description: rev_label in db/visuals (1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
         required: true
         default: "None"
       node_rev1:
-        description: desired cardano-node revision (used for initial sync) - cardano-node tag or branch
+        description: desired cardano-node revision (used for initial sync) - cardano-node (tags/1.33.0-rc2) tag or branch
         required: true
         default: "None"
       node_topology1:
@@ -30,11 +26,11 @@ on:
         required: false
         default: "None"
       tag_no2:
-        description: rev_label in db/visuals (tags/1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+        description: rev_label in db/visuals (1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
         required: true
         default: "None"
       node_rev2:
-        description: desired cardano-node revision (used for final sync) - cardano-node tag or branch
+        description: desired cardano-node revision (used for final sync) - cardano-node (tags/1.33.0-rc2) tag or branch
         required: true
         default: "None"
       node_topology2:
@@ -103,6 +99,17 @@ jobs:
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=
             substituters = https://cache.nixos.org https://cache.iog.io https://iohk.cachix.org
             allow-import-from-derivation = true
+      - name: "Install secp256k1"
+        run: |
+          git clone https://github.com/bitcoin-core/secp256k1.git
+          ( cd secp256k1
+          git checkout ac83be33
+          ./autogen.sh
+          ./configure --enable-module-schnorrsig --enable-experimental
+          make
+          make check
+          sudo make install
+          )
       - name: run actions/setup-python@v2
         uses: actions/setup-python@v2
         with:

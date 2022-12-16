@@ -8,12 +8,10 @@ import shlex
 import shutil
 import signal
 import subprocess
-import tarfile
 
 import requests
 import time
 import urllib.request
-import zipfile
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
@@ -25,7 +23,8 @@ from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
 from gitpython_utils import git_clone_iohk_repo
 
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
-    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB
+    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, create_mainnet_p2p_topology_file, \
+    delete_file
 
 NODE = "./cardano-node"
 CLI = "./cardano-cli"
@@ -103,17 +102,13 @@ def delete_node_files():
         p.unlink(missing_ok=True)
 
 
-def get_node_config_files(env):
+def get_node_config_files(env, node_topology_type):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
     print("Getting the config.json file...")
     urllib.request.urlretrieve(
         "https://book.world.dev.cardano.org/environments/" + env + "/config.json", "config.json",
-    )
-    print("Getting the topology.json file...")
-    urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/topology.json", "topology.json",
     )
     print("Getting the byron-genesis.json file...")
     urllib.request.urlretrieve(
@@ -127,7 +122,14 @@ def get_node_config_files(env):
     urllib.request.urlretrieve(
         "https://book.world.dev.cardano.org/environments/" + env + "/alonzo-genesis.json", "alonzo-genesis.json",
     )
-
+    if env == "mainnet" and node_topology_type == "p2p":
+        print("Creating the topology.json file...")
+        create_mainnet_p2p_topology_file("topology.json")
+    else:
+        print("Getting the topology.json file...")
+        urllib.request.urlretrieve(
+            "https://book.world.dev.cardano.org/environments/" + env + "/topology.json", "topology.json",
+            )
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
 
@@ -695,18 +697,9 @@ def get_node_files_using_nix(node_rev):
     execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
     copy_node_executables(repo_dir, test_directory, "nix")
     os.chdir(Path(test_directory))
-    print(f"Check for read access -> {os.access(NODE, os.R_OK)}")
-    print(f"Check for write access -> {os.access(NODE, os.W_OK)}")
-    print(f"Check for execution access -> {os.access(NODE, os.X_OK)}")
-    print(f"Check for existence of file -> {os.access(NODE, os.F_OK)}")
     subprocess.check_call(['chmod', '+x', NODE])
     subprocess.check_call(['chmod', '+x', CLI])
-    time.sleep(5)
-    print(f"Check for read access -> {os.access(NODE, os.R_OK)}")
-    print(f"Check for write access -> {os.access(NODE, os.W_OK)}")
-    print(f"Check for execution access -> {os.access(NODE, os.X_OK)}")
-    print(f"Check for existence of file -> {os.access(NODE, os.F_OK)}")
-    print(f"files permissions: {subprocess.check_call(['ls', '-la'])}")
+    print(f"  -- files permissions inside test folder: {subprocess.check_call(['ls', '-la'])}")
 
 
 def main():
@@ -747,6 +740,7 @@ def main():
     if "windows" in platform_system.lower():
         NODE = "cardano-node.exe"
         CLI = "cardano-cli.exe"
+        # TO DO: remove this after the prebuilt files will be avaolable
         print(f"ERROR: only building with NIX is supported at this moment --> so there is no Windows support")
         exit(1)
 
@@ -767,8 +761,8 @@ def main():
     print(f"  - cardano_cli_git_rev1: {cli_git_rev1}")
 
     print("Getting the node configuration files")
-    # TO DO: add support for MAINNET P2P topology
-    get_node_config_files(env)
+    # TO DO: change the default to P2P when full P2P will be supported on Mainnet
+    get_node_config_files(env, node_topology_type1)
 
     print("Enabling the desired cardano node tracers")
     if env == "mainnet":
@@ -819,6 +813,12 @@ def main():
         print("==============================================================================")
         print(f"================= Start sync using node_rev2: {node_rev2} ===================")
         print("==============================================================================")
+        if (env == "mainnet") and (node_topology_type1 != node_topology_type2):
+            print("remove the previous topology.")
+            delete_file(Path(ROOT_TEST_PATH) / "topology.json")
+            print("Getting the node configuration files")
+            get_node_config_files(env, node_topology_type2)
+
         print(f"Get the cardano-node and cardano-cli files")
         if node_build_mode == "nix":
             get_node_files_using_nix(node_rev2)
@@ -893,8 +893,8 @@ def main():
     test_values_dict["total_ram_in_GB"] = get_total_ram_in_GB()
     test_values_dict["epoch_no_d_zero"] = get_epoch_no_d_zero()
     test_values_dict["start_slot_no_d_zero"] = get_start_slot_no_d_zero()
-    # test_values_dict["hydra_eval_no1"] = hydra_eval_no1
-    # test_values_dict["hydra_eval_no2"] = hydra_eval_no2
+    test_values_dict["hydra_eval_no1"] = node_rev1
+    test_values_dict["hydra_eval_no2"] = node_rev2
 
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()

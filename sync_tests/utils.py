@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import zipfile
@@ -73,3 +74,35 @@ def delete_file(file_path):
         file_path.unlink()
     except OSError as e:
         print(f"Error: {file_path} : {e.strerror}")
+
+
+def create_mainnet_p2p_topology_file(filename):
+    data = {
+        "LocalRoots": {
+            "groups": [
+                {
+                    "localRoots": {
+                        "accessPoints": [],
+                        "advertise": False
+                    },
+                    "valency": 1
+                }
+            ]
+        },
+        "PublicRoots": [
+            {
+                "publicRoots": {
+                    "accessPoints": [
+                        {
+                            "address": "relays-new.cardano-mainnet.iohk.io",
+                            "port": 3001
+                        }
+                    ],
+                    "advertise": False
+                }
+            }
+        ],
+        "useLedgerAfterSlot": 29691317
+    }
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
