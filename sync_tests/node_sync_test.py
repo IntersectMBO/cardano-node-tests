@@ -661,24 +661,18 @@ def get_data_from_logs(log_file):
 
 
 def copy_node_executables(src_location, dst_location, build_mode):
-    platform_system, platform_release, platform_version = get_os_type()
-    NODE = "cardano-node"
-    CLI = "cardano-cli"
-    if "windows" in platform_system.lower():
-        NODE = "cardano-node.exe"
-        CLI = "cardano-cli.exe"
-
     if build_mode == "nix":
-        node_binary_location = "cardano-node-bin/bin/cardano-node"
-        node_cli_binary_location = "cardano-cli-bin/bin/cardano-cli"
-        shutil.copy2(Path(src_location) / node_cli_binary_location, Path(dst_location) / CLI)
-        shutil.copy2(Path(src_location) / node_binary_location, Path(dst_location) / NODE)
+        node_binary_location = "cardano-node-bin/bin/"
+        cli_binary_location = "cardano-cli-bin/bin/"
+        os.chdir(Path(src_location) / node_binary_location)
+        print(f"  -- files permissions inside cardano-node-bin/bin folder: {subprocess.check_call(['ls', '-la'])}")
+        os.chdir(Path(src_location) / cli_binary_location)
+        print(f"  -- files permissions inside cardano-cli-bin/bin folder: {subprocess.check_call(['ls', '-la'])}")
+        os.chdir(Path(dst_location))
 
-        os.chdir(Path(src_location) / "cardano-node-bin/bin/")
-        print(f"files permissions inside cardano-node-bin/bin folder: {subprocess.check_call(['ls', '-la'])}")
-
-        os.chdir(Path(src_location) / "cardano-cli-bin/bin/")
-        print(f"files permissions inside cardano-cli-bin/bin folder: {subprocess.check_call(['ls', '-la'])}")
+        shutil.copy2(Path(src_location) / node_binary_location / "cardano-node", Path(dst_location) / "cardano-node")
+        shutil.copy2(Path(src_location) / cli_binary_location / "cardano-cli", Path(dst_location) / "cardano-cli")
+        time.sleep(5)
 
 
 def get_node_files_using_nix(node_rev):
@@ -700,6 +694,7 @@ def get_node_files_using_nix(node_rev):
     print(f"Check for existence of file -> {os.access(NODE, os.F_OK)}")
     subprocess.check_call(['chmod', '+x', NODE])
     subprocess.check_call(['chmod', '+x', CLI])
+    time.sleep(5)
     print(f"listdir test_directory: {os.listdir(test_directory)}")
     print(f"Check for read access -> {os.access(NODE, os.R_OK)}")
     print(f"Check for write access -> {os.access(NODE, os.W_OK)}")
