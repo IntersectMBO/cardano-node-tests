@@ -71,5 +71,6 @@ jobs:
       skip_passed: ${{ inputs.skip_passed }}
       env-path: .github/env_regression
     secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
       TCACHE_URL: ${{ secrets.TCACHE_URL }}

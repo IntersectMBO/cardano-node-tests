@@ -13,6 +13,7 @@ jobs:
     with:
       env-path: .github/env_nightly_alonzo_tx
     secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CI_FAIL_MAILS: ${{ secrets.NIGHTLY_FAIL_MAILS }}
       GMAIL_USERNAME: ${{ secrets.GMAIL_USERNAME }}
       GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
