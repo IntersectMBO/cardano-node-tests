@@ -13,21 +13,21 @@ from utils.utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cor
     zip_file, get_process_info, write_data_as_json_to_file, get_testnet_value, \
     get_node_archive_url, get_and_extract_archive_files, print_n_last_lines_from_file, \
     get_node_config_files, get_node_version, get_db_sync_version, start_node_in_cwd, \
-    get_node_tip, set_node_socket_path_env_var_in_cwd, get_db_sync_tip, \
+    get_node_tip, set_node_socket_path_env_var_in_cwd, get_db_sync_tip, read_env_var, \
     export_epoch_sync_times_from_db, emergency_upload_artifacts, get_total_db_size, \
-    wait_for_db_to_sync, get_db_sync_progress, remove_dir, get_build_meta_data, \
+    wait_for_db_to_sync, get_db_sync_progress, remove_dir, get_buildkite_meta_data, \
     setup_postgres , get_environment, get_node_pr, get_node_branch, get_node_version_from_gh_action, \
     get_db_sync_branch, get_db_sync_start_options, get_db_sync_version_from_gh_action, \
-    start_db_sync, wait_for_node_to_sync, are_errors_present_in_db_sync_logs, get_db_sync_snaphot_size, \
+    start_db_sync, wait_for_node_to_sync, are_errors_present_in_db_sync_logs, get_file_size, \
     are_rollbacks_present_in_db_sync_logs, create_database, wait, create_pgpass_file, \
-    restore_db_sync_from_snapshot, should_skip, \
+    restore_db_sync_from_snapshot, should_skip, execute_command, \
     ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER,\
-    NODE_LOG_FILE_PATH, DB_SYNC_LOG_FILE_PATH \
+    NODE_LOG, DB_SYNC_LOG, ENVIRONMENT \
 
 
 
-TEST_RESULTS_FILE_NAME = 'db_sync_local_snapshot_restoration_test_results.json'
-DB_SYNC_RESTORATION_ARCHIVE = 'cardano_db_sync_restoration.zip'
+TEST_RESULTS = f"db_sync_{ENVIRONMENT}_local_snapshot_restoration_test_results.json"
+DB_SYNC_RESTORATION_ARCHIVE = f"cardano_db_sync_{ENVIRONMENT}_restoration.zip"
 
 
 def main():
@@ -63,14 +63,17 @@ def main():
     print(f"DB sync version: {db_sync_version_from_gh_action}")
 
     # database setup
+    print("--- Local snapshot restoration - postgres and database setup")
     setup_postgres(pg_port='5433')
     create_pgpass_file(env)
     create_database()
+    
 
     # snapshot restoration 
     os.chdir(ROOT_TEST_PATH)
     os.chdir(Path.cwd() / 'cardano-db-sync')
-    snapshot_file = get_build_meta_data("snapshot_file")
+    snapshot_file = get_buildkite_meta_data("snapshot_file")
+    print("--- Local snapshot restoration - restoration process")
     print(f"Snapshot file from key-store: {snapshot_file}")
     restoration_time = restore_db_sync_from_snapshot(env, snapshot_file)
     print(f"Restoration time [sec]: {restoration_time}")
@@ -83,7 +86,7 @@ def main():
     os.chdir(Path.cwd() / 'cardano-node')
     set_node_socket_path_env_var_in_cwd()
     start_node_in_cwd(env)
-    print_file(NODE_LOG_FILE_PATH, 80)
+    print_file(NODE_LOG, 80)
     wait_for_node_to_sync(env)
 
     #start db-sync
@@ -92,14 +95,17 @@ def main():
     os.chdir(Path.cwd() / 'cardano-db-sync')
     export_env_var("PGPORT", '5433')
     start_db_sync(env, start_args="", first_start="False")
+    print_file(DB_SYNC_LOG, 20)
     wait(ONE_MINUTE)
     db_sync_version, db_sync_git_rev = get_db_sync_version()
     db_full_sync_time_in_secs = wait_for_db_to_sync(env)
     end_test_time = get_current_date_time()
-    wait(30 * ONE_MINUTE)
+    wait_time = 20
+    print(f"Waiting for additional {wait_time} minutes to continue syncying...")
+    wait(wait_time * ONE_MINUTE)
     epoch_no, block_no, slot_no = get_db_sync_tip(env)
     print(f"Test end time: {end_test_time}")
-    print_file(DB_SYNC_LOG_FILE_PATH, 30)
+    print_file(DB_SYNC_LOG, 60)
 
     #stop cardano-node and cardano-db-sync
     print("--- Stop cardano services")
@@ -127,7 +133,7 @@ def main():
     test_data["db_total_sync_time_in_sec"] = db_full_sync_time_in_secs
     test_data["db_total_sync_time_in_h_m_s"] = seconds_to_time(int(db_full_sync_time_in_secs))
     test_data["snapshot_name"] = snapshot_file
-    test_data["snapshot_size_in_mb"] = get_db_sync_snaphot_size(snapshot_file)
+    test_data["snapshot_size_in_mb"] = get_file_size(snapshot_file)
     test_data["restoration_time"] = restoration_time
     test_data["snapshot_epoch_no"] = snapshot_epoch_no
     test_data["snapshot_block_no"] = snapshot_block_no
@@ -136,16 +142,16 @@ def main():
     test_data["last_synced_block_no"] = block_no
     test_data["last_synced_slot_no"] = slot_no
     test_data["total_database_size"] = get_total_db_size(env)
-    test_data["rollbacks"] = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH)
-    test_data["errors"] = are_errors_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH)
+    test_data["rollbacks"] = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
+    test_data["errors"] = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
 
-    write_data_as_json_to_file(TEST_RESULTS_FILE_NAME, test_data)
-    print_file(TEST_RESULTS_FILE_NAME)
+    write_data_as_json_to_file(TEST_RESULTS, test_data)
+    print_file(TEST_RESULTS)
 
     # compress & upload artifacts
-    zip_file(DB_SYNC_RESTORATION_ARCHIVE, DB_SYNC_LOG_FILE_PATH)
+    zip_file(DB_SYNC_RESTORATION_ARCHIVE, DB_SYNC_LOG)
     upload_artifact(DB_SYNC_RESTORATION_ARCHIVE)
-    upload_artifact(TEST_RESULTS_FILE_NAME)
+    upload_artifact(TEST_RESULTS)
 
 
 if __name__ == "__main__":

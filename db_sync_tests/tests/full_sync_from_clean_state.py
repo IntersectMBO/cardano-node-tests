@@ -9,32 +9,31 @@ import matplotlib.pyplot as plt
 sys.path.append(os.getcwd())
 
 from utils.utils import seconds_to_time, get_no_of_cpu_cores, get_current_date_time, \
-    get_os_type, get_total_ram_in_GB, upload_artifact, clone_repo, zip_file, \
+    get_os_type, get_total_ram_in_GB, upload_artifact, clone_repo, zip_file, execute_command, \
     print_file, stop_process, export_env_var, create_dir, write_data_as_json_to_file, \
     get_node_archive_url, get_and_extract_archive_files, get_node_config_files, \
     get_node_version, get_db_sync_version, start_node_in_cwd, wait_for_db_to_sync, \
     set_node_socket_path_env_var_in_cwd, get_db_sync_tip, get_db_sync_progress, \
-    get_total_db_size , are_rollbacks_present_in_db_sync_logs, \
+    get_total_db_size , are_rollbacks_present_in_db_sync_logs, copy_node_executables, \
     export_epoch_sync_times_from_db, are_errors_present_in_db_sync_logs, \
     setup_postgres, get_environment, get_node_pr, get_node_branch, get_node_version_from_gh_action, \
     get_db_sync_branch, get_db_sync_start_options, get_db_sync_version_from_gh_action, \
-    start_db_sync, build_db_sync, create_database, upload_node_database, \
-    create_pgpass_file, get_last_perf_stats_point, \
+    start_db_sync, build_db_sync, create_database, create_node_database_archive, \
+    create_pgpass_file, get_last_perf_stats_point, copy_db_sync_executables, \
     db_sync_perf_stats, ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER, \
-    DB_SYNC_PERF_STATS_FILE_NAME, DB_SYNC_PERF_STATS_FILE_PATH, NODE_LOG_FILE_PATH, \
-    DB_SYNC_LOG_FILE_PATH, EPOCH_SYNC_TIMES_FILE_NAME, PERF_STATS_ARCHIVE, \
-    EPOCH_SYNC_TIMES_FILE_PATH, NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE \
+    DB_SYNC_PERF_STATS, NODE_LOG, DB_SYNC_LOG, EPOCH_SYNC_TIMES, PERF_STATS_ARCHIVE, \
+    NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE, \
+    ENVIRONMENT \
     
 from utils.aws_db_utils import get_identifier_last_run_from_table, \
     add_bulk_rows_into_db, add_single_row_into_db
 
 
 
-TEST_RESULTS_FILE_NAME = 'db_sync_full_sync_test_results.json'
+TEST_RESULTS = f"db_sync_{ENVIRONMENT}_full_sync_test_results.json"
+CHART = f"full_sync_{ENVIRONMENT}_stats_chart.png"
 
-def upload_sync_stats_chart():
-    CHART_FILE_NAME = "full_sync_stats_chart.png"
-
+def create_sync_stats_chart():
     os.chdir(ROOT_TEST_PATH)
     os.chdir(Path.cwd() / 'cardano-db-sync')
     fig = plt.figure(figsize = (14, 10))
@@ -44,7 +43,7 @@ def upload_sync_stats_chart():
     ax_epochs.set(xlabel='epochs [number]', ylabel='time [min]')
     ax_epochs.set_title('Epochs Sync Times')
 
-    with open(EPOCH_SYNC_TIMES_FILE_NAME, "r") as json_db_dump_file:
+    with open(EPOCH_SYNC_TIMES, "r") as json_db_dump_file:
         epoch_sync_times = json.load(json_db_dump_file)
 
     epochs = [ e['no'] for e in epoch_sync_times ]
@@ -56,16 +55,14 @@ def upload_sync_stats_chart():
     ax_perf.set(xlabel='time [min]', ylabel='RSS [B]')
     ax_perf.set_title('RSS usage')
 
-    with open(DB_SYNC_PERF_STATS_FILE_NAME, "r") as json_db_dump_file:
+    with open(DB_SYNC_PERF_STATS, "r") as json_db_dump_file:
         perf_stats = json.load(json_db_dump_file)
 
     times = [ e['time']/60 for e in perf_stats ]
     rss_mem_usage = [ e['rss_mem_usage'] for e in perf_stats ]
 
     ax_perf.plot(times, rss_mem_usage)
-    fig.savefig(CHART_FILE_NAME)
-
-    upload_artifact(CHART_FILE_NAME)
+    fig.savefig(CHART)
 
     
 def upload_sync_results_to_aws(env):
@@ -73,7 +70,7 @@ def upload_sync_results_to_aws(env):
     os.chdir(Path.cwd() / 'cardano-db-sync')
 
     print("--- Write full sync results to AWS Database")
-    with open(TEST_RESULTS_FILE_NAME, "r") as json_file:
+    with open(TEST_RESULTS, "r") as json_file:
         sync_test_results_dict = json.load(json_file)
 
     test_summary_table = env + '_db_sync'
@@ -90,7 +87,7 @@ def upload_sync_results_to_aws(env):
         print(f"val_to_insert: {val_to_insert}")
         exit(1)
 
-    with open(EPOCH_SYNC_TIMES_FILE_NAME, "r") as json_db_dump_file:
+    with open(EPOCH_SYNC_TIMES, "r") as json_db_dump_file:
         epoch_sync_times = json.load(json_db_dump_file)
 
     epoch_duration_table = env + '_epoch_duration_db_sync'
@@ -103,7 +100,7 @@ def upload_sync_results_to_aws(env):
         print(f"val_to_insert: {val_to_insert}")
         exit(1)
 
-    with open(DB_SYNC_PERF_STATS_FILE_NAME, "r") as json_perf_stats_file:
+    with open(DB_SYNC_PERF_STATS, "r") as json_perf_stats_file:
         db_sync_performance_stats = json.load(json_perf_stats_file)
 
     db_sync_performance_stats_table = env + '_performance_stats_db_sync'
@@ -148,33 +145,39 @@ def main():
     print(f"DB sync version: {db_sync_version_from_gh_action}")
 
     # cardano-node setup
-    NODE_DIR=create_dir('cardano-node')
+    NODE_DIR=clone_repo('cardano-node', node_branch)
     os.chdir(NODE_DIR)
-    set_node_socket_path_env_var_in_cwd()
+    execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
+    execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
+    print("--- Node setup")
+    copy_node_executables(build_method="nix") 
     get_node_config_files(env)
-    get_and_extract_archive_files(get_node_archive_url(node_pr))
+    set_node_socket_path_env_var_in_cwd()
     cli_version, cli_git_rev = get_node_version()
     start_node_in_cwd(env)
-    print("--- Node startup")
-    print_file(NODE_LOG_FILE_PATH, 80)
+    print("--- Node startup", flush=True)
+    print_file(NODE_LOG, 80)
+
 
     # cardano-db sync setup
-    print("--- Db sync startup")
     os.chdir(ROOT_TEST_PATH)
     DB_SYNC_DIR = clone_repo('cardano-db-sync', db_branch)
     os.chdir(DB_SYNC_DIR)
-    setup_postgres()
-    build_db_sync()
+    print("--- Db sync setup")
+    setup_postgres() # To login use: psql -h /path/to/postgres -p 5432 -e postgres
     create_pgpass_file(env)
     create_database()
+    execute_command("nix-build -A cardano-db-sync -o db-sync-node")
+    execute_command("nix-build -A cardano-db-tool -o db-sync-tool")
+    copy_db_sync_executables(build_method="nix")
+    print("--- Db sync startup", flush=True)
     start_db_sync(env, start_args=db_start_options)
     db_sync_version, db_sync_git_rev = get_db_sync_version()
-    print(f"- cardano-db-sync version: {db_sync_version}")
-    print(f"- cardano-db-sync git revision: {db_sync_git_rev}")
-    print_file(DB_SYNC_LOG_FILE_PATH, 30)
+    print_file(DB_SYNC_LOG, 30)
     db_full_sync_time_in_secs = wait_for_db_to_sync(env)
     epoch_no, block_no, slot_no = get_db_sync_tip(env)
     end_test_time = get_current_date_time()
+
     print("--- Summary & Artifacts uploading")
     print(f"FINAL db-sync progress: {get_db_sync_progress(env)}, epoch: {epoch_no}, block: {block_no}")
     print(f"TOTAL sync time [sec]: {db_full_sync_time_in_secs}")
@@ -211,37 +214,39 @@ def main():
     test_data["cpu_percent_usage"] = last_perf_stats_data_point["cpu_percent_usage"]
     test_data["total_rss_memory_usage_in_B"] = last_perf_stats_data_point["rss_mem_usage"]
     test_data["total_database_size"] = get_total_db_size(env)
-    test_data["rollbacks"] = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH)
-    test_data["errors"] = are_errors_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH)
+    test_data["rollbacks"] = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
+    test_data["errors"] = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
 
-    write_data_as_json_to_file(TEST_RESULTS_FILE_NAME, test_data)
-    write_data_as_json_to_file(DB_SYNC_PERF_STATS_FILE_NAME, db_sync_perf_stats)
-    export_epoch_sync_times_from_db(env, EPOCH_SYNC_TIMES_FILE_NAME)
+    write_data_as_json_to_file(TEST_RESULTS, test_data)
+    write_data_as_json_to_file(DB_SYNC_PERF_STATS, db_sync_perf_stats)
+    export_epoch_sync_times_from_db(env, EPOCH_SYNC_TIMES)
 
-    print_file(TEST_RESULTS_FILE_NAME)
+    print_file(TEST_RESULTS)
 
     # compress artifacts
-    zip_file(NODE_ARCHIVE, NODE_LOG_FILE_PATH)
-    zip_file(DB_SYNC_ARCHIVE, DB_SYNC_LOG_FILE_PATH)
-    zip_file(SYNC_DATA_ARCHIVE, EPOCH_SYNC_TIMES_FILE_PATH)
-    zip_file(PERF_STATS_ARCHIVE, DB_SYNC_PERF_STATS_FILE_PATH)
+    zip_file(NODE_ARCHIVE, NODE_LOG)
+    zip_file(DB_SYNC_ARCHIVE, DB_SYNC_LOG)
+    zip_file(SYNC_DATA_ARCHIVE, EPOCH_SYNC_TIMES)
+    zip_file(PERF_STATS_ARCHIVE, DB_SYNC_PERF_STATS)
 
     # upload artifacts
     upload_artifact(NODE_ARCHIVE)
     upload_artifact(DB_SYNC_ARCHIVE)
     upload_artifact(SYNC_DATA_ARCHIVE)
     upload_artifact(PERF_STATS_ARCHIVE)
-    upload_artifact(TEST_RESULTS_FILE_NAME)
+    upload_artifact(TEST_RESULTS)
 
     # send results to aws database
     upload_sync_results_to_aws(env)
 
     # create and upload plot
-    upload_sync_stats_chart()
+    create_sync_stats_chart()
+    upload_artifact(CHART)
 
     # create and upload compressed node db archive
     if env != "mainnet":
-        upload_node_database(env)
+        node_db = create_node_database_archive(env)
+        upload_artifact (node_db)
 
 
 if __name__ == "__main__":

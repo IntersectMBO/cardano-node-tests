@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 from collections import OrderedDict
 
 sys.path.append(os.getcwd())
@@ -10,23 +11,22 @@ sys.path.append(os.getcwd())
 from utils.utils import seconds_to_time, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_total_ram_in_GB, \
     upload_artifact, print_file, export_env_var, create_dir, \
-    write_data_as_json_to_file, set_build_meta_data, \
-    get_db_sync_archive_url, get_and_extract_archive_files, get_db_sync_version ,\
-    get_environment, get_db_pr, get_db_sync_start_options,  \
+    write_data_as_json_to_file, set_buildkite_meta_data, set_github_env_var, \
+    get_db_sync_version ,get_environment, get_db_pr, get_db_sync_start_options, \
     get_db_sync_branch, get_db_sync_version_from_gh_action, create_db_sync_snapshot_stage_2, \
-    get_db_sync_snaphot_size, create_db_sync_snapshot_stage_1, should_skip, \
-    ROOT_TEST_PATH
+    get_file_size, create_db_sync_snapshot_stage_1, should_skip, \
+    ROOT_TEST_PATH, ENVIRONMENT
 
 from utils.aws_db_utils import get_identifier_last_run_from_table, add_single_row_into_db
 
 
 
-TEST_RESULTS_FILE_NAME = 'snapshot_creation_test_results.json'
+TEST_RESULTS = f"snapshot_creation_{ENVIRONMENT}_test_results.json"
 
 
 def upload_snapshot_creation_results_to_aws(env):
     print("--- Write snapshot creation results to AWS Database")
-    with open(TEST_RESULTS_FILE_NAME, "r") as json_file:
+    with open(TEST_RESULTS, "r") as json_file:
         db_snapshot_creation_test_results_dict = json.load(json_file)
 
     db_snapshot_creation_test_summary_table = env + '_db_sync_snapshot_creation'
@@ -70,12 +70,9 @@ def main():
     db_sync_version_from_gh_action = get_db_sync_version_from_gh_action(args)
     print(f"DB sync GH version: {db_sync_version_from_gh_action}")
 
-    # cardano-db-sync tools setup
-    os.chdir(ROOT_TEST_PATH)
-    DB_TOOLS_DIR = create_dir('db-sync-tools')
-    os.chdir(DB_TOOLS_DIR)
-    get_and_extract_archive_files(get_db_sync_archive_url(db_sync_pr))
 
+    os.chdir(ROOT_TEST_PATH)
+    os.chdir(Path.cwd() / 'cardano-db-sync')
     start_snapshot_creation = time.perf_counter()
     stage_2_cmd = create_db_sync_snapshot_stage_1(env)
     print(f"Stage 2 command: {stage_2_cmd}")
@@ -84,7 +81,7 @@ def main():
     end_snapshot_creation = time.perf_counter()
 
     snapshot_file = stage_2_result.split(" ")[1]
-    set_build_meta_data("snapshot_file", snapshot_file)
+    set_buildkite_meta_data("snapshot_file", snapshot_file)
     print(f"Snapshot file name: {snapshot_file}")
 
     snapshot_creation_time_seconds = int(end_snapshot_creation - start_snapshot_creation)
@@ -109,15 +106,16 @@ def main():
     test_data["end_test_time"] = end_test_time
     test_data["snapshot_creation_time_in_sec"] = snapshot_creation_time_seconds
     test_data["snapshot_creation_time_in_h_m_s"] = seconds_to_time(int(snapshot_creation_time_seconds))
-    test_data["snapshot_size_in_mb"] = get_db_sync_snaphot_size(snapshot_file)
+    test_data["snapshot_size_in_mb"] = get_file_size(snapshot_file)
     test_data["stage_2_cmd"] = stage_2_cmd
     test_data["stage_2_result"] = stage_2_result
 
-    write_data_as_json_to_file(TEST_RESULTS_FILE_NAME, test_data)
-    print_file(TEST_RESULTS_FILE_NAME)
+    write_data_as_json_to_file(TEST_RESULTS, test_data)
+    print_file(TEST_RESULTS)
+
 
     # upload artifacts
-    upload_artifact(TEST_RESULTS_FILE_NAME)
+    upload_artifact(TEST_RESULTS)
     
     if env != "mainnet":
         upload_artifact(snapshot_file)

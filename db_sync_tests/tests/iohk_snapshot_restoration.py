@@ -1,4 +1,3 @@
-
 import os
 import sys
 import json
@@ -9,36 +8,35 @@ from pathlib import Path
 
 sys.path.append(os.getcwd())
 
-from utils.utils import remove_dir, seconds_to_time, get_no_of_cpu_cores, get_current_date_time, \
+from utils.utils import seconds_to_time, get_no_of_cpu_cores, get_current_date_time, \
     get_os_type, get_total_ram_in_GB, upload_artifact, clone_repo, wait, zip_file, \
-    print_file, stop_process, export_env_var, create_dir, write_data_as_json_to_file, \
-    get_node_archive_url, get_and_extract_archive_files, get_node_config_files, \
+    print_file, stop_process, copy_node_executables, write_data_as_json_to_file, \
+    execute_command, get_node_config_files, are_errors_present_in_db_sync_logs, \
     get_node_version, get_db_sync_version, start_node_in_cwd, wait_for_db_to_sync, \
     set_node_socket_path_env_var_in_cwd, get_db_sync_tip, get_db_sync_progress, \
-    get_total_db_size , are_rollbacks_present_in_db_sync_logs, get_snapshot_url, \
-    export_epoch_sync_times_from_db, are_errors_present_in_db_sync_logs, \
-    setup_postgres, get_environment, get_node_pr, get_node_branch, get_node_version_from_gh_action, \
-    get_db_sync_branch, get_db_sync_start_options, get_db_sync_version_from_gh_action, \
-    start_db_sync, build_db_sync, create_database, download_and_extract_node_snapshot, \
+    get_total_db_size , are_rollbacks_present_in_db_sync_logs, \
+    export_epoch_sync_times_from_db, copy_db_sync_executables, \
+    setup_postgres, get_environment, get_node_pr, get_node_branch, \
+    get_db_sync_branch, get_db_sync_version_from_gh_action, get_node_version_from_gh_action, \
+    start_db_sync, create_database, download_and_extract_node_snapshot, \
     wait_for_node_to_sync, list_databases, create_pgpass_file, restore_db_sync_from_snapshot, \
     download_db_sync_snapshot, get_snapshot_sha_256_sum, get_file_sha_256_sum, \
-    get_latest_snapshot_url, is_string_present_in_db_sync_logs, get_last_perf_stats_point, \
+    get_latest_snapshot_url, is_string_present_in_file, get_last_perf_stats_point, \
     db_sync_perf_stats, ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER, \
-    DB_SYNC_PERF_STATS_FILE_NAME, DB_SYNC_PERF_STATS_FILE_PATH, NODE_LOG_FILE_PATH, \
-    DB_SYNC_LOG_FILE_PATH, EPOCH_SYNC_TIMES_FILE_NAME, PERF_STATS_ARCHIVE, \
-    EPOCH_SYNC_TIMES_FILE_PATH, NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE \
+    DB_SYNC_PERF_STATS, NODE_LOG, DB_SYNC_LOG, EPOCH_SYNC_TIMES, PERF_STATS_ARCHIVE, \
+    NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE, ENVIRONMENT \
     
 from utils.aws_db_utils import get_identifier_last_run_from_table, \
     add_bulk_rows_into_db, add_single_row_into_db 
 
 
 
-TEST_RESULTS_FILE_NAME = 'db_sync_iohk_snapshot_restoration_test_results.json'
+TEST_RESULTS = 'db_sync_iohk_snapshot_restoration_test_results.json'
 
 
 def upload_snapshot_restoration_results_to_aws(env):
     print("--- Write IOHK snapshot restoration results to AWS Database")
-    with open(TEST_RESULTS_FILE_NAME, "r") as json_file:
+    with open(TEST_RESULTS, "r") as json_file:
         sync_test_results_dict = json.load(json_file)
 
     test_summary_table = env + '_db_sync_snapshot_restoration'
@@ -58,6 +56,7 @@ def upload_snapshot_restoration_results_to_aws(env):
 
 def main():
 
+    print("--- Db-sync restoration from IOHK official snapshot")
     platform_system, platform_release, platform_version = get_os_type()
     print(f"Platform: {platform_system, platform_release, platform_version}")
 
@@ -86,16 +85,19 @@ def main():
     print(f"Snapshot url: {snapshot_url}")
 
     # cardano-node setup
-    NODE_DIR=create_dir('cardano-node')
+    NODE_DIR=clone_repo('cardano-node', node_branch)
     os.chdir(NODE_DIR)
-    set_node_socket_path_env_var_in_cwd()
+    execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
+    execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
+    print("--- Node setup")
+    copy_node_executables(build_method="nix") 
     get_node_config_files(env)
-    get_and_extract_archive_files(get_node_archive_url(node_pr))
+    set_node_socket_path_env_var_in_cwd()
     cli_version, cli_git_rev = get_node_version()
     download_and_extract_node_snapshot(env)
     start_node_in_cwd(env)
-    print("--- Node startup")
-    print_file(NODE_LOG_FILE_PATH, 80)
+    print("--- Node startup", flush=True)
+    print_file(NODE_LOG, 80)
     node_sync_time_in_secs = wait_for_node_to_sync(env)
 
     # cardano-db sync setup
@@ -104,11 +106,13 @@ def main():
     DB_SYNC_DIR = clone_repo('cardano-db-sync', db_branch)
     os.chdir(DB_SYNC_DIR)
     setup_postgres()
-    build_db_sync()
     create_pgpass_file(env)
-    list_databases()
     create_database()
     list_databases()
+    execute_command("nix-build -A cardano-db-sync -o db-sync-node")
+    execute_command("nix-build -A cardano-db-tool -o db-sync-tool")
+    print("--- Download and check db-sync snapshot", flush=True)
+    copy_db_sync_executables(build_method="nix")
     snapshot_name = download_db_sync_snapshot(snapshot_url)
     expected_snapshot_sha_256_sum = get_snapshot_sha_256_sum(snapshot_url)
     actual_snapshot_sha_256_sum = get_file_sha_256_sum(snapshot_name)
@@ -124,11 +128,12 @@ def main():
     # start db-sync
     print("--- Db sync start")
     start_db_sync(env, start_args="", first_start="True")
+    print_file(DB_SYNC_LOG, 30)
     db_sync_version, db_sync_git_rev = get_db_sync_version()
     db_full_sync_time_in_secs = wait_for_db_to_sync(env)
     end_test_time = get_current_date_time()
     wait(30 * ONE_MINUTE)
-    print_file(DB_SYNC_LOG_FILE_PATH, 30)
+    print_file(DB_SYNC_LOG, 60)
     epoch_no, block_no, slot_no = get_db_sync_tip(env)
 
     # shut down services
@@ -172,46 +177,46 @@ def main():
     test_data["cpu_percent_usage"] = last_perf_stats_data_point["cpu_percent_usage"]
     test_data["total_rss_memory_usage_in_B"] = last_perf_stats_data_point["rss_mem_usage"]
     test_data["total_database_size"] = get_total_db_size(env)
-    test_data["rollbacks"] = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH)
-    test_data["errors"] = are_errors_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH)
+    test_data["rollbacks"] = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
+    test_data["errors"] = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
 
-    write_data_as_json_to_file(TEST_RESULTS_FILE_NAME, test_data)
-    write_data_as_json_to_file(DB_SYNC_PERF_STATS_FILE_NAME, db_sync_perf_stats)
-    export_epoch_sync_times_from_db(env, EPOCH_SYNC_TIMES_FILE_NAME, snapshot_epoch_no)
+    write_data_as_json_to_file(TEST_RESULTS, test_data)
+    write_data_as_json_to_file(DB_SYNC_PERF_STATS, db_sync_perf_stats)
+    export_epoch_sync_times_from_db(env, EPOCH_SYNC_TIMES, snapshot_epoch_no)
 
-    print_file(TEST_RESULTS_FILE_NAME)
+    print_file(TEST_RESULTS)
 
     # compress artifacts
-    zip_file(NODE_ARCHIVE, NODE_LOG_FILE_PATH)
-    zip_file(DB_SYNC_ARCHIVE, DB_SYNC_LOG_FILE_PATH)
-    zip_file(SYNC_DATA_ARCHIVE, EPOCH_SYNC_TIMES_FILE_PATH)
-    zip_file(PERF_STATS_ARCHIVE, DB_SYNC_PERF_STATS_FILE_PATH)
+    zip_file(NODE_ARCHIVE, NODE_LOG)
+    zip_file(DB_SYNC_ARCHIVE, DB_SYNC_LOG)
+    zip_file(SYNC_DATA_ARCHIVE, EPOCH_SYNC_TIMES)
+    zip_file(PERF_STATS_ARCHIVE, DB_SYNC_PERF_STATS)
 
     # upload artifacts
     upload_artifact(NODE_ARCHIVE)
     upload_artifact(DB_SYNC_ARCHIVE)
     upload_artifact(SYNC_DATA_ARCHIVE)
     upload_artifact(PERF_STATS_ARCHIVE)
-    upload_artifact(TEST_RESULTS_FILE_NAME)
+    upload_artifact(TEST_RESULTS)
 
     # send data to aws database
     upload_snapshot_restoration_results_to_aws(env)
 
     # search db-sync log for issues
     print("--- Rollbacks, errors and other isssues")
-    log_errors = are_errors_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH)
+    log_errors = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
     print(f"Are errors present: {log_errors}")
 
-    genesis_rollbacks = is_string_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH, "Rolling back to genesis")
+    genesis_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rolling back to genesis")
     print(f"Are genesis rollbacks present: {genesis_rollbacks}")
     
-    other_rollbacks = is_string_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH, "Rolling back to")
+    other_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rolling back to")
     print(f"Are other rollbacks present: {other_rollbacks}")
     
-    failed_rollbacks = is_string_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH, "Rollback failed")
+    failed_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rollback failed")
     print(f"Are failed rollbacks present: {failed_rollbacks}")
     
-    corrupted_ledger_files = is_string_present_in_db_sync_logs(DB_SYNC_LOG_FILE_PATH, "Failed to parse ledger state")
+    corrupted_ledger_files = is_string_present_in_file(DB_SYNC_LOG, "Failed to parse ledger state")
     print(f"Are corrupted ledger files present: {corrupted_ledger_files}")
 
 

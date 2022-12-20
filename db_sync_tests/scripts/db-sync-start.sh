@@ -1,5 +1,4 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i bash --keep LOG_FILEPATH --keep ENVIRONMENT --keep DB_SYNC_START_ARGS --keep POSTGRES_DIR --keep PGUSER --keep PGPORT --keep FIRST_START -p glibcLocales postgresql lsof procps
+#! /usr/bin/env -S nix develop --accept-flake-config .#postgres -i -k LOG_FILEPATH -k ENVIRONMENT -k DB_SYNC_START_ARGS -k POSTGRES_DIR -k PGUSER -k PGPORT -k FIRST_START -c bash
 # shellcheck shell=bash
 
 
