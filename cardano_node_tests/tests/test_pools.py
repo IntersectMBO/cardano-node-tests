@@ -65,15 +65,6 @@ def pool_cost_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
         return startup_files.start_script
 
 
-@pytest.fixture
-def cluster_mincost(
-    cluster_manager: cluster_management.ClusterManager, pool_cost_start_cluster: Path
-) -> clusterlib.ClusterLib:
-    return cluster_manager.get(
-        mark="minPoolCost", cleanup=True, start_cmd=str(pool_cost_start_cluster)
-    )
-
-
 def _check_pool(
     cluster_obj: clusterlib.ClusterLib,
     stake_pool_id: str,
@@ -1709,6 +1700,17 @@ class TestStakePool:
 @pytest.mark.xdist_group(name="minPoolCost")
 class TestPoolCost:
     """Tests for stake pool cost."""
+
+    @pytest.fixture
+    def cluster_mincost(
+        self, cluster_manager: cluster_management.ClusterManager, pool_cost_start_cluster: Path
+    ) -> clusterlib.ClusterLib:
+        return cluster_manager.get(
+            mark="minPoolCost",
+            lock_resources=[cluster_management.Resources.CLUSTER],
+            cleanup=True,
+            start_cmd=str(pool_cost_start_cluster),
+        )
 
     @pytest.fixture
     def pool_owners(
