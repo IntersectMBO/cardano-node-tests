@@ -541,7 +541,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
                 type=str(r.type),
                 serialised_size=int(r.serialised_size) if r.serialised_size else 0,
             )
-            for r in dbsync_queries.query_plutus_scripts(txhash=txhash)
+            for r in dbsync_queries.query_scripts(txhash=txhash)
         ]
 
     redeemers = []
@@ -875,13 +875,27 @@ def check_tx(
             f"({db_collateral_output_amount} != {tx_collateral_output_amount})"
         )
 
-    db_plutus_scripts = {r for r in response.scripts if r.type == "plutus"}
     # a script is added to `script` table only the first time it is seen, so the record
     # can be empty for the current transaction
-    if db_plutus_scripts:
-        assert all(
-            r.serialised_size > 0 for r in db_plutus_scripts
-        ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
+    tx_script_hashes = {
+        cluster_obj.g_transaction.get_policyid(script_file=r.script_file)
+        for r in (*tx_raw_output.script_txins, *tx_raw_output.mint)
+        if r.script_file
+    }
+    if response.scripts and tx_script_hashes:
+        db_script_hashes = {s.hash for s in response.scripts}
+
+        assert db_script_hashes.issubset(
+            tx_script_hashes
+        ), f"Scripts hashes don't match {tx_script_hashes} != {db_script_hashes} "
+
+        # on plutus scripts we should also check the serialised_size
+        db_plutus_scripts = {r for r in response.scripts if r.type.startswith("plutus")}
+
+        if db_plutus_scripts:
+            assert all(
+                r.serialised_size > 0 for r in db_plutus_scripts
+            ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
 
     # compare redeemers data
     tx_plutus_in_hashes = _tx_scripts_hashes(

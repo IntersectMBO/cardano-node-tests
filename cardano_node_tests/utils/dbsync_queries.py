@@ -393,8 +393,8 @@ def query_collateral_tx_outs(txhash: str) -> Generator[CollateralTxOutDBRow, Non
             yield CollateralTxOutDBRow(*result)
 
 
-def query_plutus_scripts(txhash: str) -> Generator[ScriptDBRow, None, None]:
-    """Query transaction plutus scripts in db-sync."""
+def query_scripts(txhash: str) -> Generator[ScriptDBRow, None, None]:
+    """Query transaction scripts in db-sync."""
     query = (
         "SELECT"
         " script.id, script.tx_id, script.hash, script.type, script.serialised_size "
