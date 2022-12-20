@@ -233,14 +233,14 @@ class ClusterManager:
             if not list(self.instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*")):
                 logfiles.clean_ignore_rules(ignore_file_id=self.worker_id)
 
-            # remove resource locking files created by the worker
+            # remove resource locking files created by the worker, ignore resources that have mark
             resource_locking_files = list(
                 self.instance_dir.glob(f"{common.RESOURCE_LOCKED_GLOB}_@@*@@_{self.worker_id}")
             )
             for f in resource_locking_files:
                 f.unlink()
 
-            # remove "resource in use" files created by the worker
+            # remove "resource in use" files created by the worker, ignore resources that have mark
             resource_in_use_files = list(
                 self.instance_dir.glob(f"{common.RESOURCE_IN_USE_GLOB}_@@*@@_{self.worker_id}")
             )
@@ -248,7 +248,7 @@ class ClusterManager:
                 f.unlink()
 
             # remove file that indicates that a test is running on the worker
-            (self.instance_dir / f"{common.TEST_RUNNING_GLOB}_{self.worker_id}").unlink(
+            list(self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*_{self.worker_id}"))[0].unlink(
                 missing_ok=True
             )
 
@@ -284,7 +284,7 @@ class ClusterManager:
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
         """
-        glob = f"{common.RESOURCE_LOCKED_GLOB}_@@*@@_{worker_id or self.worker_id}"
+        glob = f"{common.RESOURCE_LOCKED_GLOB}_@@*@@_*{worker_id or self.worker_id}"
         return self._get_resources_by_glob(glob=glob, from_set=from_set)
 
     def get_used_resources(
@@ -296,7 +296,7 @@ class ClusterManager:
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
         """
-        glob = f"{common.RESOURCE_IN_USE_GLOB}_@@*@@_{worker_id or self.worker_id}"
+        glob = f"{common.RESOURCE_IN_USE_GLOB}_@@*@@_*{worker_id or self.worker_id}"
         return self._get_resources_by_glob(glob=glob, from_set=from_set)
 
     def _save_cli_coverage(self) -> None:

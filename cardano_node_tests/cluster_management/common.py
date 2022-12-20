@@ -13,7 +13,6 @@ RESPIN_NEEDED_GLOB = ".needs_respin"
 RESPIN_IN_PROGRESS_GLOB = ".respin_in_progress"
 RESPIN_AFTER_MARK_GLOB = ".respin_after_mark"
 TEST_RUNNING_GLOB = ".test_running"
-TEST_MARK_STARTING_GLOB = ".starting_marked_tests"
 
 CLUSTER_DIR_TEMPLATE = "cluster"
 CLUSTER_RUNNING_FILE = ".cluster_running"
