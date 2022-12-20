@@ -7,20 +7,17 @@ from pathlib import Path
 
 sys.path.append(os.getcwd())
 
-from utils.utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
-    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, \
-    upload_artifact, clone_repo, print_file, stop_process, export_env_var, create_dir, \
-    zip_file, get_process_info, write_data_as_json_to_file, get_testnet_value, \
-    get_node_archive_url, get_and_extract_archive_files, print_n_last_lines_from_file, \
-    get_node_config_files, get_node_version, get_db_sync_version, start_node_in_cwd, \
-    get_node_tip, set_node_socket_path_env_var_in_cwd, get_db_sync_tip, read_env_var, \
-    export_epoch_sync_times_from_db, emergency_upload_artifacts, get_total_db_size, \
-    wait_for_db_to_sync, get_db_sync_progress, remove_dir, get_buildkite_meta_data, \
-    setup_postgres , get_environment, get_node_pr, get_node_branch, get_node_version_from_gh_action, \
-    get_db_sync_branch, get_db_sync_start_options, get_db_sync_version_from_gh_action, \
+from utils.utils import seconds_to_time, get_no_of_cpu_cores, \
+    get_current_date_time, get_os_type, get_total_ram_in_GB, \
+    upload_artifact, print_file, stop_process, export_env_var, \
+    zip_file, write_data_as_json_to_file, get_db_sync_version, start_node_in_cwd, \
+    set_node_socket_path_env_var_in_cwd, get_db_sync_tip, get_total_db_size, \
+    wait_for_db_to_sync, get_buildkite_meta_data, get_node_version_from_gh_action, \
+    setup_postgres , get_environment, get_node_pr, get_node_branch, \
+    get_db_sync_branch, get_db_sync_version_from_gh_action, \
     start_db_sync, wait_for_node_to_sync, are_errors_present_in_db_sync_logs, get_file_size, \
     are_rollbacks_present_in_db_sync_logs, create_database, wait, create_pgpass_file, \
-    restore_db_sync_from_snapshot, should_skip, execute_command, \
+    restore_db_sync_from_snapshot, should_skip, \
     ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER,\
     NODE_LOG, DB_SYNC_LOG, ENVIRONMENT \
 

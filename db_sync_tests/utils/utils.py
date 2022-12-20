@@ -317,8 +317,10 @@ def execute_command(command):
 def get_last_perf_stats_point():
     try:
         last_perf_stats_point = db_sync_perf_stats[-1]
-    except:
-        db_sync_perf_stats.append({"cpu_percent_usage": 0}, {"rss_mem_usage": 0})
+    except Exception as e:
+        print(f"Exception in get_last_perf_stats_point: {e}")
+        stats_data_point = {"time": 0, "slot_no": 0, "cpu_percent_usage": 0, "rss_mem_usage": 0}
+        db_sync_perf_stats.append(stats_data_point)
         last_perf_stats_point = db_sync_perf_stats[-1]
 
     return last_perf_stats_point
@@ -407,7 +409,7 @@ def export_epoch_sync_times_from_db(env, file, snapshot_epoch_no = 0):
 
 
 def emergency_upload_artifacts(env):
-    write_data_as_json_to_file(DB_SYNC_PERF_STATS_FILE_NAME, db_sync_perf_stats)
+    write_data_as_json_to_file(DB_SYNC_PERF_STATS, db_sync_perf_stats)
     export_epoch_sync_times_from_db(env, EPOCH_SYNC_TIMES)
 
     zip_file(PERF_STATS_ARCHIVE, DB_SYNC_PERF_STATS)

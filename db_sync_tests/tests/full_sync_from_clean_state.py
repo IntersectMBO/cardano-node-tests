@@ -10,15 +10,14 @@ sys.path.append(os.getcwd())
 
 from utils.utils import seconds_to_time, get_no_of_cpu_cores, get_current_date_time, \
     get_os_type, get_total_ram_in_GB, upload_artifact, clone_repo, zip_file, execute_command, \
-    print_file, stop_process, export_env_var, create_dir, write_data_as_json_to_file, \
-    get_node_archive_url, get_and_extract_archive_files, get_node_config_files, \
+    print_file, stop_process, write_data_as_json_to_file, get_node_config_files, \
     get_node_version, get_db_sync_version, start_node_in_cwd, wait_for_db_to_sync, \
     set_node_socket_path_env_var_in_cwd, get_db_sync_tip, get_db_sync_progress, \
     get_total_db_size , are_rollbacks_present_in_db_sync_logs, copy_node_executables, \
     export_epoch_sync_times_from_db, are_errors_present_in_db_sync_logs, \
     setup_postgres, get_environment, get_node_pr, get_node_branch, get_node_version_from_gh_action, \
     get_db_sync_branch, get_db_sync_start_options, get_db_sync_version_from_gh_action, \
-    start_db_sync, build_db_sync, create_database, create_node_database_archive, \
+    start_db_sync, create_database, create_node_database_archive, \
     create_pgpass_file, get_last_perf_stats_point, copy_db_sync_executables, \
     db_sync_perf_stats, ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER, \
     DB_SYNC_PERF_STATS, NODE_LOG, DB_SYNC_LOG, EPOCH_SYNC_TIMES, PERF_STATS_ARCHIVE, \

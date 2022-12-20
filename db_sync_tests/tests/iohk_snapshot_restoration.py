@@ -13,7 +13,7 @@ from utils.utils import seconds_to_time, get_no_of_cpu_cores, get_current_date_t
     print_file, stop_process, copy_node_executables, write_data_as_json_to_file, \
     execute_command, get_node_config_files, are_errors_present_in_db_sync_logs, \
     get_node_version, get_db_sync_version, start_node_in_cwd, wait_for_db_to_sync, \
-    set_node_socket_path_env_var_in_cwd, get_db_sync_tip, get_db_sync_progress, \
+    set_node_socket_path_env_var_in_cwd, get_db_sync_tip, \
     get_total_db_size , are_rollbacks_present_in_db_sync_logs, \
     export_epoch_sync_times_from_db, copy_db_sync_executables, \
     setup_postgres, get_environment, get_node_pr, get_node_branch, \
@@ -132,7 +132,9 @@ def main():
     db_sync_version, db_sync_git_rev = get_db_sync_version()
     db_full_sync_time_in_secs = wait_for_db_to_sync(env)
     end_test_time = get_current_date_time()
-    wait(30 * ONE_MINUTE)
+    wait_time = 30
+    print(f"Waiting for additional {wait_time} minutes to continue syncying...")
+    wait(wait_time * ONE_MINUTE)
     print_file(DB_SYNC_LOG, 60)
     epoch_no, block_no, slot_no = get_db_sync_tip(env)
 

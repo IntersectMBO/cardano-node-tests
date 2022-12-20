@@ -10,11 +10,11 @@ sys.path.append(os.getcwd())
 
 from utils.utils import seconds_to_time, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_total_ram_in_GB, \
-    upload_artifact, print_file, export_env_var, create_dir, \
-    write_data_as_json_to_file, set_buildkite_meta_data, set_github_env_var, \
-    get_db_sync_version ,get_environment, get_db_pr, get_db_sync_start_options, \
-    get_db_sync_branch, get_db_sync_version_from_gh_action, create_db_sync_snapshot_stage_2, \
-    get_file_size, create_db_sync_snapshot_stage_1, should_skip, \
+    upload_artifact, print_file, create_db_sync_snapshot_stage_2, \
+    write_data_as_json_to_file, set_buildkite_meta_data, \
+    get_db_sync_version ,get_environment, get_db_pr, should_skip, \
+    get_db_sync_branch, get_db_sync_version_from_gh_action, \
+    get_file_size, create_db_sync_snapshot_stage_1, \
     ROOT_TEST_PATH, ENVIRONMENT
 
 from utils.aws_db_utils import get_identifier_last_run_from_table, add_single_row_into_db
