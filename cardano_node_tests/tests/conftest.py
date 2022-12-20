@@ -33,6 +33,9 @@ LOGGER = logging.getLogger(__name__)
 # make sure there's enough time to stop all cluster instances at the end of session
 workermanage.NodeManager.EXIT_TIMEOUT = 30
 
+# use custom xdist scheduler
+pytest_plugins = ("cardano_node_tests.pytest_plugins.xdist_scheduler",)
+
 
 def pytest_addoption(parser: Any) -> None:
     parser.addoption(
