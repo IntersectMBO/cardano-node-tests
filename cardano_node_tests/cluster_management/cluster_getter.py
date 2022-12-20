@@ -71,7 +71,8 @@ class _ClusterGetStatus:
     sleep_delay: int = 1
     respin_here: bool = False
     respin_ready: bool = False
-    first_iteration: bool = True
+    cluster_needs_respin: bool = False
+    tried_all_instances: bool = False
     instance_dir: Path = Path("/nonexistent")
     final_lock_resources: Iterable[str] = ()
     final_use_resources: Iterable[str] = ()
@@ -290,7 +291,7 @@ class ClusterGetter:
             self.log(f"c{instance_num}: found not running services {not_running_services}")
         return not failed_services
 
-    def _is_respin_needed(self, instance_num: int) -> bool:
+    def _cluster_needs_respin(self, instance_num: int) -> bool:
         """Check if it is necessary to respin cluster."""
         instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
         # if cluster instance is not started yet
@@ -302,6 +303,20 @@ class ClusterGetter:
         # if a service failed on cluster instance
         if not self._is_healthy(instance_num):
             return True
+        return False
+
+    def _test_needs_respin(self, cget_status: _ClusterGetStatus) -> bool:
+        """Check if it is necessary to respin cluster for the test."""
+        # if this is non-initial marked test, we can ignore custom start command,
+        # as it was handled by the initial marked test
+        noninitial_marked_test = cget_status.mark and cget_status.marked_ready_sfiles
+        if noninitial_marked_test:
+            return False
+
+        # respin is needed when custom start command was specified
+        if cget_status.start_cmd:
+            return True
+
         return False
 
     def _on_marked_test_stop(self, instance_num: int, mark: str) -> None:
@@ -444,7 +459,7 @@ class ClusterGetter:
 
         return True
 
-    def _is_already_running(self, cget_status: _ClusterGetStatus) -> bool:
+    def _is_already_running(self) -> bool:
         """Check if the test is already setup and running."""
         test_on_worker = list(
             self.pytest_tmp_dir.glob(
@@ -453,7 +468,7 @@ class ClusterGetter:
         )
 
         # test is already running, nothing to set up
-        if cget_status.first_iteration and test_on_worker and self._cluster_instance_num != -1:
+        if test_on_worker and self._cluster_instance_num != -1:
             self.log(f"{test_on_worker[0]} already exists")
             return True
 
@@ -523,16 +538,8 @@ class ClusterGetter:
         if cget_status.respin_here:
             return True
 
-        if not self._is_respin_needed(cget_status.instance_num):
-            # if this is non-initial marked test, we can ignore custom start command,
-            # as it was handled by the initial marked test
-            noninitial_marked_test = cget_status.mark and cget_status.marked_ready_sfiles
-            if noninitial_marked_test:
-                return True
-
-            # respin is needed when custom start command was specified
-            if not cget_status.start_cmd:
-                return True
+        if not (cget_status.cluster_needs_respin or self._test_needs_respin(cget_status)):
+            return True
 
         # if tests are running on the instance, we cannot respin, therefore we cannot continue
         if cget_status.started_tests_sfiles:
@@ -731,16 +738,14 @@ class ClusterGetter:
             if cget_status.respin_ready:
                 self._respin(start_cmd=start_cmd)
 
-            if not cget_status.first_iteration:
+            if cget_status.tried_all_instances:
                 _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
 
             # nothing time consuming can go under this lock as all other workers will need to wait
             with locking.FileLockIfXdist(self.cluster_lock):
-                if self._is_already_running(cget_status):
+                if self._is_already_running():
                     return self.cluster_instance_num
 
-                # needs to be set here, before the first `continue`
-                cget_status.first_iteration = False
                 self._cluster_instance_num = -1
 
                 # try all existing cluster instances; randomize the order
@@ -780,6 +785,10 @@ class ClusterGetter:
                         cget_status.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}_*")
                     )
 
+                    # Does the cluster instance needs respin to continue?
+                    # Cache the result as the check itself can be expensive.
+                    cget_status.cluster_needs_respin = self._cluster_needs_respin(instance_num)
+
                     # "marked tests" = group of tests marked with my mark
                     cget_status.marked_ready_sfiles = list(
                         cget_status.instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_@@{mark}@@_*")
@@ -801,6 +810,19 @@ class ClusterGetter:
                             f"c{instance_num}: in marked tests branch, "
                             f"I have required mark '{mark}'"
                         )
+
+                    # Try next cluster instance when the current one needs respin.
+                    # Respin only if:
+                    # * we are already locked on this instance
+                    # * respin is needed by the current test anyway
+                    # * we already tried all cluster instances and there's no other option
+                    if (
+                        cget_status.cluster_needs_respin
+                        and cget_status.selected_instance != instance_num
+                        and not self._test_needs_respin(cget_status)
+                        and not cget_status.tried_all_instances
+                    ):
+                        continue
 
                     # We don't need to resolve resources availability if there was already a test
                     # with this mark before (the first test already resolved the resources
@@ -843,6 +865,7 @@ class ClusterGetter:
                     break
                 else:
                     # if the test cannot start on any instance, return to top-level loop
+                    cget_status.tried_all_instances = True
                     continue
 
                 self._create_test_status_files(cget_status)
