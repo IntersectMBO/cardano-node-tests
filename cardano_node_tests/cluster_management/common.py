@@ -12,6 +12,7 @@ TEST_CURR_MARK_GLOB = ".curr_test_mark"
 RESPIN_NEEDED_GLOB = ".needs_respin"
 RESPIN_IN_PROGRESS_GLOB = ".respin_in_progress"
 RESPIN_AFTER_MARK_GLOB = ".respin_after_mark"
+PRIO_IN_PROGRESS_GLOB = ".prio_in_progress"
 TEST_RUNNING_GLOB = ".test_running"
 
 CLUSTER_DIR_TEMPLATE = "cluster"

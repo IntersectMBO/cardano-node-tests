@@ -329,6 +329,7 @@ class ClusterManager:
         mark: str = "",
         lock_resources: resources_management.ResourcesType = (),
         use_resources: resources_management.ResourcesType = (),
+        prio: bool = False,
         cleanup: bool = False,
         start_cmd: str = "",
     ) -> None:
@@ -349,6 +350,7 @@ class ClusterManager:
             mark=mark,
             lock_resources=lock_resources,
             use_resources=use_resources,
+            prio=prio,
             cleanup=cleanup,
             start_cmd=start_cmd,
         )
@@ -370,6 +372,7 @@ class ClusterManager:
         mark: str = "",
         lock_resources: resources_management.ResourcesType = (),
         use_resources: resources_management.ResourcesType = (),
+        prio: bool = False,
         cleanup: bool = False,
         start_cmd: str = "",
     ) -> clusterlib.ClusterLib:
@@ -381,6 +384,7 @@ class ClusterManager:
             mark=mark,
             lock_resources=lock_resources,
             use_resources=use_resources,
+            prio=prio,
             cleanup=cleanup,
             start_cmd=start_cmd,
         )
