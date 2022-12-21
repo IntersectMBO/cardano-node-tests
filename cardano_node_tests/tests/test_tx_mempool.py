@@ -90,27 +90,20 @@ class TestMempool:
 
         txid = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
 
-        tx_in_mempool = False
-        txin_queried = False
-
         # we want to submit the Tx and then re-submit it and see the expected error, to make sure
         # the Tx made it to mempool
         for r in range(5):
-            tx_in_mempool = False
             try:
                 cluster.g_transaction.submit_tx_bare(tx_file=out_file_signed)
             except clusterlib.CLIError as exc:
                 if r == 0 or "(BadInputsUTxO" not in str(exc):
                     raise
-                tx_in_mempool = True
-
-            if tx_in_mempool:
                 break
+        else:
+            raise AssertionError("Failed to make sure the Tx is in mempool")
 
         # if the Tx is only in mempool, its txins can still be queried
         txin_queried = bool(cluster.g_query.get_utxo(utxo=tx_raw_output.txins[0]))
-
-        assert tx_in_mempool, "Failed to make sure the Tx is in mempool"
 
         if not txin_queried:
             pytest.skip("the Tx was removed from mempool before running `query utxo`")
