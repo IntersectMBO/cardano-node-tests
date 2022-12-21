@@ -63,15 +63,17 @@ class _ClusterGetStatus:
     mark: str
     lock_resources: resources_management.ResourcesType
     use_resources: resources_management.ResourcesType
+    prio: bool
     cleanup: bool
     start_cmd: str
     current_test: str
     selected_instance: int = -1
     instance_num: int = -1
-    sleep_delay: int = 1
+    sleep_delay: int = 0
     respin_here: bool = False
     respin_ready: bool = False
     cluster_needs_respin: bool = False
+    prio_here: bool = False
     tried_all_instances: bool = False
     instance_dir: Path = Path("/nonexistent")
     final_lock_resources: Iterable[str] = ()
@@ -79,6 +81,7 @@ class _ClusterGetStatus:
     # status files
     started_tests_sfiles: Iterable[Path] = ()
     marked_ready_sfiles: Iterable[Path] = ()
+    marked_running_my_anywhere: Iterable[Path] = ()
 
 
 class ClusterGetter:
@@ -297,12 +300,17 @@ class ClusterGetter:
         # if cluster instance is not started yet
         if not (instance_dir / common.CLUSTER_RUNNING_FILE).exists():
             return True
+
         # if it was indicated that the cluster instance needs to be respun
         if list(instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*")):
             return True
-        # if a service failed on cluster instance
-        if not self._is_healthy(instance_num):
+
+        # If a service failed on cluster instance.
+        # Check only if we are really able to restart the cluster instance, because the check
+        # is expensive.
+        if not (configuration.FORBID_RESTART or self._is_healthy(instance_num)):
             return True
+
         return False
 
     def _test_needs_respin(self, cget_status: _ClusterGetStatus) -> bool:
@@ -474,6 +482,32 @@ class ClusterGetter:
 
         return False
 
+    def _wait_for_prio(self, cget_status: _ClusterGetStatus) -> bool:
+        """Check if there is a priority test waiting for cluster instance."""
+        # A "prio" test has priority in obtaining cluster instance. Non-priority
+        # tests can continue with their setup only if they are already locked to a
+        # cluster instance.
+        if not (
+            cget_status.prio_here
+            or cget_status.selected_instance != -1
+            or cget_status.marked_running_my_anywhere
+        ) and list(self.pytest_tmp_dir.glob(f"{common.PRIO_IN_PROGRESS_GLOB}_*")):
+            self.log("'prio' test setup in progress, cannot continue")
+            return True
+
+        return False
+
+    def _init_prio(self, cget_status: _ClusterGetStatus) -> None:
+        """Set "prio" for this test if indicated."""
+        if not cget_status.prio:
+            return
+
+        prio_status_file = self.pytest_tmp_dir / f"{common.PRIO_IN_PROGRESS_GLOB}_{self.worker_id}"
+        if not prio_status_file.exists():
+            prio_status_file.touch()
+        cget_status.prio_here = True
+        self.log(f"setting 'prio' for '{cget_status.current_test}'")
+
     def _respun_by_other_worker(self, cget_status: _ClusterGetStatus) -> bool:
         """Check if the cluster is currently being respun by worker other than this one."""
         if cget_status.respin_here:
@@ -498,14 +532,7 @@ class ClusterGetter:
             )
             return True
 
-        marked_running_my_anywhere = list(
-            self.pytest_tmp_dir.glob(
-                f"{common.CLUSTER_DIR_TEMPLATE}*/"
-                f"{common.TEST_CURR_MARK_GLOB}_@@{cget_status.mark}@@_*"
-            )
-        )
-
-        if marked_running_my_anywhere:
+        if cget_status.marked_running_my_anywhere:
             self.log(
                 f"c{cget_status.instance_num}: tests marked with my mark '{cget_status.mark}' "
                 "already running on other cluster instance, cannot run"
@@ -669,6 +696,7 @@ class ClusterGetter:
         mark: str = "",
         lock_resources: resources_management.ResourcesType = (),
         use_resources: resources_management.ResourcesType = (),
+        prio: bool = False,
         cleanup: bool = False,
         start_cmd: str = "",
     ) -> int:
@@ -687,6 +715,8 @@ class ClusterGetter:
             use_resources: An iterable of resources (names of resources) that will be used
                 by the test (or marked group of tests). The resources can be shared with other
                 tests, however resources in use cannot be locked by other tests.
+            prio: A boolean indicating that the test has priority in obtaining cluster instance.
+                All other tests that also want to get a cluster instance need to wait.
             cleanup: A boolean indicating if the cluster will be respun after the test (or marked
                 group of tests) is finished. Can be used only for tests that locked whole cluster
                 ("singleton" tests).
@@ -725,6 +755,7 @@ class ClusterGetter:
             mark=mark,
             lock_resources=lock_resources,
             use_resources=use_resources,
+            prio=prio,
             cleanup=cleanup,
             start_cmd=start_cmd,
             current_test=os.environ.get("PYTEST_CURRENT_TEST") or "",
@@ -738,13 +769,34 @@ class ClusterGetter:
             if cget_status.respin_ready:
                 self._respin(start_cmd=start_cmd)
 
-            if cget_status.tried_all_instances:
-                _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
+            # sleep for a while to avoid too many checks in a short time
+            _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
+            # pylint: disable=consider-using-max-builtin
+            if cget_status.sleep_delay < 1:
+                cget_status.sleep_delay = 1
 
             # nothing time consuming can go under this lock as all other workers will need to wait
             with locking.FileLockIfXdist(self.cluster_lock):
                 if self._is_already_running():
                     return self.cluster_instance_num
+
+                if mark:
+                    # check if tests with my mark are already locked to any cluster instance
+                    cget_status.marked_running_my_anywhere = list(
+                        self.pytest_tmp_dir.glob(
+                            f"{common.CLUSTER_DIR_TEMPLATE}*/"
+                            f"{common.TEST_CURR_MARK_GLOB}_@@{mark}@@_*"
+                        )
+                    )
+
+                # A "prio" test has priority in obtaining cluster instance. Check if it is needed
+                # to wait until earlier "prio" test obtains a cluster instance.
+                if self._wait_for_prio(cget_status):
+                    cget_status.sleep_delay = 5
+                    continue
+
+                # set "prio" for this test if indicated
+                self._init_prio(cget_status)
 
                 self._cluster_instance_num = -1
 
@@ -799,17 +851,10 @@ class ClusterGetter:
                         marked_tests_cache=marked_tests_cache, cget_status=cget_status
                     )
 
-                    # test has mark
-                    if mark:
-                        # select this instance for running marked tests if possible
-                        if not self._marked_select_instance(cget_status):
-                            cget_status.sleep_delay = 2
-                            continue
-
-                        self.log(
-                            f"c{instance_num}: in marked tests branch, "
-                            f"I have required mark '{mark}'"
-                        )
+                    # select this instance for running marked tests if possible
+                    if mark and not self._marked_select_instance(cget_status):
+                        cget_status.sleep_delay = 2
+                        continue
 
                     # Try next cluster instance when the current one needs respin.
                     # Respin only if:
@@ -851,6 +896,12 @@ class ClusterGetter:
                     # set environment variables that are needed when respinning the cluster
                     # and running tests
                     cluster_nodes.set_cluster_env(instance_num)
+
+                    # remove "prio" status file
+                    if prio:
+                        (
+                            self.pytest_tmp_dir / f"{common.PRIO_IN_PROGRESS_GLOB}_{self.worker_id}"
+                        ).unlink(missing_ok=True)
 
                     # Create status file for marked tests.
                     # This must be done before the cluster is re-spun, so that other marked tests
