@@ -145,9 +145,22 @@ class TestTxChaining:
             generated_txs.append(tx_file)
             tx_raw_outputs.append(tx_raw_output)
 
+        def _repeat_submit(tx_file: Path):
+            # we want to submit the Tx and then re-submit it and see the expected error, to make
+            # sure the Tx made it to mempool
+            for r in range(5):
+                try:
+                    cluster.g_transaction.submit_tx_bare(tx_file=tx_file)
+                except clusterlib.CLIError as exc:
+                    if r == 0 or "(BadInputsUTxO" not in str(exc):
+                        raise
+                    break
+            else:
+                raise AssertionError("Failed to make sure the Tx is in mempool")
+
         # submit Txs one by one without waiting for them to appear on ledger
         for tx_file in generated_txs:
-            cluster.g_transaction.submit_tx_bare(tx_file=tx_file)
+            _repeat_submit(tx_file)
 
         if configuration.HAS_DBSYNC:
             # wait a bit for all Txs to appear in db-sync
@@ -161,4 +174,4 @@ class TestTxChaining:
             assert block_ids == sorted(block_ids), "Block IDs of Txs are not ordered"
 
             how_many_blocks = block_ids[-1] - block_ids[0]
-            assert how_many_blocks < iterations // 30, "Expected more chained Txs per block"
+            assert how_many_blocks < iterations // 25, "Expected more chained Txs per block"
