@@ -101,6 +101,7 @@ def cluster_kes(
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
+        prio=True,
         cleanup=True,
         start_cmd=str(short_kes_start_cluster),
     )

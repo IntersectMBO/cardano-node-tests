@@ -1708,6 +1708,7 @@ class TestPoolCost:
         return cluster_manager.get(
             mark="minPoolCost",
             lock_resources=[cluster_management.Resources.CLUSTER],
+            prio=True,
             cleanup=True,
             start_cmd=str(pool_cost_start_cluster),
         )
