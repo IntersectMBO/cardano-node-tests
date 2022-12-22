@@ -13,15 +13,15 @@ from utils.utils import seconds_to_time, get_no_of_cpu_cores, get_current_date_t
     print_file, stop_process, write_data_as_json_to_file, get_node_config_files, \
     get_node_version, get_db_sync_version, start_node_in_cwd, wait_for_db_to_sync, \
     set_node_socket_path_env_var_in_cwd, get_db_sync_tip, get_db_sync_progress, \
-    get_total_db_size , are_rollbacks_present_in_db_sync_logs, copy_node_executables, \
-    export_epoch_sync_times_from_db, are_errors_present_in_db_sync_logs, \
+    get_total_db_size , print_color_log, copy_node_executables, are_rollbacks_present_in_db_sync_logs, \
+    export_epoch_sync_times_from_db, are_errors_present_in_db_sync_logs, is_string_present_in_file, \
     setup_postgres, get_environment, get_node_pr, get_node_branch, get_node_version_from_gh_action, \
     get_db_sync_branch, get_db_sync_start_options, get_db_sync_version_from_gh_action, \
-    start_db_sync, create_database, create_node_database_archive, \
-    create_pgpass_file, get_last_perf_stats_point, copy_db_sync_executables, \
-    db_sync_perf_stats, ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER, \
+    start_db_sync, create_database, create_node_database_archive, print_color_log, check_database, \
+    create_pgpass_file, get_last_perf_stats_point, copy_db_sync_executables, get_db_schema, \
+    get_db_indexes, db_sync_perf_stats, sh_colors, ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER, \
     DB_SYNC_PERF_STATS, NODE_LOG, DB_SYNC_LOG, EPOCH_SYNC_TIMES, PERF_STATS_ARCHIVE, \
-    NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE, \
+    NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE, EXPECTED_DB_SCHEMA, EXPECTED_DB_INDEXES, \
     ENVIRONMENT \
     
 from utils.aws_db_utils import get_identifier_last_run_from_table, \
@@ -113,6 +113,30 @@ def upload_sync_results_to_aws(env):
         exit(1)
 
 
+def print_report(db_schema, db_indexes):
+    log_errors = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
+    print_color_log(sh_colors.WARNING, f"Are errors present: {log_errors}")
+    
+    rollbacks = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
+    print_color_log(sh_colors.WARNING, f"Are rollbacks present: {rollbacks}")
+    
+    failed_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rollback failed")
+    print_color_log(sh_colors.WARNING, f"Are failed rollbacks present: {failed_rollbacks}")
+    
+    corrupted_ledger_files = is_string_present_in_file(DB_SYNC_LOG, "Failed to parse ledger state")
+    print_color_log(sh_colors.WARNING, f"Are corrupted ledger files present: {corrupted_ledger_files}")
+
+    if db_schema:
+        print_color_log(sh_colors.WARNING, f"Db schema issues: {db_schema}")
+    else:
+        print_color_log(sh_colors.WARNING, f"NO Db schema issues")
+    if db_indexes:
+        print_color_log(sh_colors.WARNING, f"Db indexes issues: {db_indexes}")
+    else:
+        print_color_log(sh_colors.WARNING, f"NO Db indexes issues")
+
+
+
 def main():
 
     # system and software versions details
@@ -174,6 +198,9 @@ def main():
     db_sync_version, db_sync_git_rev = get_db_sync_version()
     print_file(DB_SYNC_LOG, 30)
     db_full_sync_time_in_secs = wait_for_db_to_sync(env)
+    print("--- Db sync schema and indexes check for erors")
+    db_schema = check_database(get_db_schema, 'DB schema is incorrect', EXPECTED_DB_SCHEMA)
+    db_indexes = check_database(get_db_indexes, 'DB indexes are incorrect', EXPECTED_DB_INDEXES)
     epoch_no, block_no, slot_no = get_db_sync_tip(env)
     end_test_time = get_current_date_time()
 
@@ -246,6 +273,10 @@ def main():
     if env != "mainnet":
         node_db = create_node_database_archive(env)
         upload_artifact (node_db)
+
+    # search db-sync log for issues
+    print("--- Summary: Rollbacks, errors and other isssues")
+    print_report(db_schema, db_indexes)
 
 
 if __name__ == "__main__":

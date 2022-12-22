@@ -9,12 +9,12 @@ sys.path.append(os.getcwd())
 
 from utils.utils import seconds_to_time, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_total_ram_in_GB, \
-    upload_artifact, print_file, stop_process, export_env_var, \
+    upload_artifact, print_file, stop_process, export_env_var, is_string_present_in_file, \
     zip_file, write_data_as_json_to_file, get_db_sync_version, start_node_in_cwd, \
     set_node_socket_path_env_var_in_cwd, get_db_sync_tip, get_total_db_size, \
     wait_for_db_to_sync, get_buildkite_meta_data, get_node_version_from_gh_action, \
     setup_postgres , get_environment, get_node_pr, get_node_branch, \
-    get_db_sync_branch, get_db_sync_version_from_gh_action, \
+    get_db_sync_branch, get_db_sync_version_from_gh_action, print_color_log, sh_colors, \
     start_db_sync, wait_for_node_to_sync, are_errors_present_in_db_sync_logs, get_file_size, \
     are_rollbacks_present_in_db_sync_logs, create_database, wait, create_pgpass_file, \
     restore_db_sync_from_snapshot, should_skip, \
@@ -139,7 +139,7 @@ def main():
     test_data["last_synced_block_no"] = block_no
     test_data["last_synced_slot_no"] = slot_no
     test_data["total_database_size"] = get_total_db_size(env)
-    test_data["rollbacks"] = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
+    test_data["rollbacks"] = is_string_present_in_file(DB_SYNC_LOG, "rolling back to")
     test_data["errors"] = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
 
     write_data_as_json_to_file(TEST_RESULTS, test_data)
@@ -149,6 +149,21 @@ def main():
     zip_file(DB_SYNC_RESTORATION_ARCHIVE, DB_SYNC_LOG)
     upload_artifact(DB_SYNC_RESTORATION_ARCHIVE)
     upload_artifact(TEST_RESULTS)
+
+    # search db-sync log for issues
+    print("--- Summary: Rollbacks, errors and other isssues")
+    
+    log_errors = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
+    print_color_log(sh_colors.WARNING, f"Are errors present: {log_errors}")
+    
+    rollbacks = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
+    print_color_log(sh_colors.WARNING, f"Are rollbacks present: {rollbacks}")
+    
+    failed_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rollback failed")
+    print_color_log(sh_colors.WARNING, f"Are failed rollbacks present: {failed_rollbacks}")
+    
+    corrupted_ledger_files = is_string_present_in_file(DB_SYNC_LOG, "Failed to parse ledger state")
+    print_color_log(sh_colors.WARNING, f"Are corrupted ledger files present: {corrupted_ledger_files}")
 
 
 if __name__ == "__main__":

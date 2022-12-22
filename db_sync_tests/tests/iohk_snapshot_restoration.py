@@ -15,14 +15,14 @@ from utils.utils import seconds_to_time, get_no_of_cpu_cores, get_current_date_t
     get_node_version, get_db_sync_version, start_node_in_cwd, wait_for_db_to_sync, \
     set_node_socket_path_env_var_in_cwd, get_db_sync_tip, \
     get_total_db_size , are_rollbacks_present_in_db_sync_logs, \
-    export_epoch_sync_times_from_db, copy_db_sync_executables, \
+    export_epoch_sync_times_from_db, copy_db_sync_executables, print_color_log, \
     setup_postgres, get_environment, get_node_pr, get_node_branch, \
     get_db_sync_branch, get_db_sync_version_from_gh_action, get_node_version_from_gh_action, \
     start_db_sync, create_database, download_and_extract_node_snapshot, \
     wait_for_node_to_sync, list_databases, create_pgpass_file, restore_db_sync_from_snapshot, \
     download_db_sync_snapshot, get_snapshot_sha_256_sum, get_file_sha_256_sum, \
     get_latest_snapshot_url, is_string_present_in_file, get_last_perf_stats_point, \
-    db_sync_perf_stats, ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER, \
+    db_sync_perf_stats, sh_colors, ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER, \
     DB_SYNC_PERF_STATS, NODE_LOG, DB_SYNC_LOG, EPOCH_SYNC_TIMES, PERF_STATS_ARCHIVE, \
     NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE, ENVIRONMENT \
     
@@ -205,21 +205,19 @@ def main():
     upload_snapshot_restoration_results_to_aws(env)
 
     # search db-sync log for issues
-    print("--- Rollbacks, errors and other isssues")
-    log_errors = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
-    print(f"Are errors present: {log_errors}")
+    print("--- Summary: Rollbacks, errors and other isssues")
 
-    genesis_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rolling back to genesis")
-    print(f"Are genesis rollbacks present: {genesis_rollbacks}")
+    log_errors = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
+    print_color_log(sh_colors.WARNING, f"Are errors present: {log_errors}")
     
-    other_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rolling back to")
-    print(f"Are other rollbacks present: {other_rollbacks}")
+    rollbacks = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
+    print_color_log(sh_colors.WARNING, f"Are rollbacks present: {rollbacks}")
     
     failed_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rollback failed")
-    print(f"Are failed rollbacks present: {failed_rollbacks}")
+    print_color_log(sh_colors.WARNING, f"Are failed rollbacks present: {failed_rollbacks}")
     
     corrupted_ledger_files = is_string_present_in_file(DB_SYNC_LOG, "Failed to parse ledger state")
-    print(f"Are corrupted ledger files present: {corrupted_ledger_files}")
+    print_color_log(sh_colors.WARNING, f"Are corrupted ledger files present: {corrupted_ledger_files}")
 
 
 if __name__ == "__main__":

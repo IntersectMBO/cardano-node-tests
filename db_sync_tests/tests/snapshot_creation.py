@@ -13,8 +13,8 @@ from utils.utils import seconds_to_time, get_no_of_cpu_cores, \
     upload_artifact, print_file, create_db_sync_snapshot_stage_2, \
     write_data_as_json_to_file, set_buildkite_meta_data, \
     get_db_sync_version ,get_environment, get_db_pr, should_skip, \
-    get_db_sync_branch, get_db_sync_version_from_gh_action, \
-    get_file_size, create_db_sync_snapshot_stage_1, \
+    get_db_sync_branch, get_db_sync_version_from_gh_action, sh_colors, \
+    get_file_size, create_db_sync_snapshot_stage_1, print_color_log, \
     ROOT_TEST_PATH, ENVIRONMENT
 
 from utils.aws_db_utils import get_identifier_last_run_from_table, add_single_row_into_db
@@ -122,6 +122,10 @@ def main():
 
     # send results to aws database
     upload_snapshot_creation_results_to_aws(env)
+
+    print('--- Summary: snapshot creation details')
+    snapsot_creation_outcome = test_data["stage_2_result"]
+    print_color_log(sh_colors.WARNING, f"Snapshot creation script result: {snapsot_creation_outcome}")
 
 
 if __name__ == "__main__":
