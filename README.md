@@ -6,6 +6,17 @@ System and end-to-end (E2E) tests for cardano-node.
 
 Check this [documentation](https://input-output-hk.github.io/cardano-node-tests) for more details.
 
+## Running tests using Github Actions
+
+The easiest way to run the tests is by using Github Actions.
+
+* fork this repository
+* enable Github Actions in your fork ("Settings" / "Actions" / "General" / "Actions permissions", check "Allow all actions and reusable workflows")
+* go to "Actions", select "01 Regression tests" (or "02 Regression tests with db-sync")
+* select "Run workflow"
+
+![Run workflow](https://user-images.githubusercontent.com/2352619/209117914-ef3afb38-2b8b-4a4f-a03f-c9b52bccc5ba.png)
+
 ## Installation
 
 Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
