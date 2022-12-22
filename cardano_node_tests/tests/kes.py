@@ -83,7 +83,7 @@ def check_kes_period_info_result(  # noqa: C901
         instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
             cluster_nodes.get_instance_num()
         )
-        prometheus_port = getattr(instance_ports, f"prometheus_pool{pool_num}")
+        prometheus_port = instance_ports.node_ports[pool_num].prometheus
         response = requests.get(f"http://localhost:{prometheus_port}/metrics", timeout=10)
 
         _prometheus_metrics_raw = [m.split() for m in response.text.strip().split("\n")]

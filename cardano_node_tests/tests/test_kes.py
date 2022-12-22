@@ -111,7 +111,7 @@ def _get_forge_stats(pool_num: int) -> List[str]:
     instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
         cluster_nodes.get_instance_num()
     )
-    port = getattr(instance_ports, f"prometheus_pool{pool_num}")
+    port = instance_ports.node_ports[pool_num].prometheus
 
     response = requests.get(f"http://localhost:{port}/metrics", timeout=10)
     assert response, f"Request failed, status code {response.status_code}"
