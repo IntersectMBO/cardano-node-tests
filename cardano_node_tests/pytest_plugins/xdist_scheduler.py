@@ -18,28 +18,31 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
        completion status. One entry of the workqueue is called a work unit.
        In turn, a collection of work unit is called a workload.
        ::
-            workqueue = {
-                '<scope>': {
-                    '<full>/<path>/<to>/test_module.py::test_case1': False,
-                    '<full>/<path>/<to>/test_module.py::test_case2': False,
-                    (...)
-                },
-                (...)
-            }
+
+           workqueue = {
+               '<scope>': {
+                   '<full>/<path>/<to>/test_module.py::test_case1': False,
+                   '<full>/<path>/<to>/test_module.py::test_case2': False,
+                   (...)
+               },
+               (...)
+           }
+
     :assigned_work: Ordered dictionary that maps worker nodes with their
        assigned work units.
        ::
-            assigned_work = {
-                '<scope>': {
-                    '<full>/<path>/<to>/test_module.py': {
-                        '<full>/<path>/<to>/test_module.py::test_case1': False,
-                        '<full>/<path>/<to>/test_module.py::test_case2': False,
-                        (...)
-                    },
-                    (...)
-                },
-                (...)
-            }
+
+           assigned_work = {
+               '<scope>': {
+                   '<full>/<path>/<to>/test_module.py': {
+                       '<full>/<path>/<to>/test_module.py::test_case1': False,
+                       '<full>/<path>/<to>/test_module.py::test_case2': False,
+                       (...)
+                   },
+                   (...)
+               },
+               (...)
+           }
     """
 
     # pylint: disable=abstract-method
