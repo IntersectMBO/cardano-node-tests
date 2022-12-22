@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -xeuo pipefail
+set -euo pipefail
 
 tests_repo="$1"
 reports_dir="$tests_repo/.reports"
@@ -14,3 +14,4 @@ mv "$reports_dir"/{*.json,*.txt,*.properties} "$allure_results_dir"
 echo "Creating results archive $results_tar"
 rm -f "$results_tar"
 tar -C "$tests_repo" -cJf "$results_tar" allure-results
+rm -rf "$allure_results_dir"
