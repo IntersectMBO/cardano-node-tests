@@ -17,7 +17,59 @@ The easiest way to run the tests is by using Github Actions.
 
 ![Run workflow](https://user-images.githubusercontent.com/2352619/209117914-ef3afb38-2b8b-4a4f-a03f-c9b52bccc5ba.png)
 
-## Installation
+## Running tests using Nix
+
+* install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md)
+* clone this repo
+* run `./.github/regression.sh`
+
+The execution can be configured using env variables described in section below.
+
+In addition, you can use
+
+* `NODE_REV` - revison of `cardano-node` (default: master HEAD)
+* `NODE_BRANCH` - branch of `cardano-node` (default: unset)
+* `CI_ENABLE_DBSYNC` - specifies if tests will setup db-sync and perform db-sync checks (default: unset)
+* `DBSYNC_REV` - revison of `cardano-db-sync` (default: master HEAD)
+* `DBSYNC_BRANCH` - branch of `cardano-db-sync` (default: unset)
+
+## Variables for configuring testrun
+
+* `SCHEDULING_LOG` – specifies the path to the file where log messages for tests and cluster instance scheduler are stored
+* `PYTEST_ARGS` – specifies additional arguments for pytest (default: unset)
+* `MARKEXPR` – specifies marker expression for pytest (default: unset)
+* `TEST_THREADS` – specifies the number of pytest workers (default: 20)
+* `CLUSTERS_COUNT` – number of cluster instances that will be started (default: 9)
+* `CLUSTER_ERA` – cluster era for Cardano node – used for selecting the correct cluster start script (default: babbage)
+* `TX_ERA` – era for transactions – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset)
+* `NUM_POOLS` – number of stake pools created in each cluster instance (default: 3)
+* `ENABLE_P2P` – use P2P networking instead of the default legacy networking (default: unset)
+* `MIXED_P2P` – use mix of P2P and legacy networking; half of stake pools using legacy and the other half P2P (default: unset)
+* `UPDATE_PV8` – update protocol version from 7 (default in Babbage) to 8 (default: unset)
+* `SCRIPTS_DIRNAME` – path to a dir with local cluster start/stop scripts and configuration files (default: unset)
+* `BOOTSTRAP_DIR` – path to a bootstrap dir for the given testnet (genesis files, config files, faucet data) (default: unset)
+
+For example:
+
+```sh
+SCHEDULING_LOG=testrun_20221224_1.log NUM_POOLS=6 MIXED_P2P=1 UPDATE_PV8=1 ./.github/regression.sh
+```
+
+or
+
+```sh
+SCHEDULING_LOG=testrun_20221224_1.log TEST_THREADS=15 CLUSTER_ERA=babbage TX_ERA=alonzo SCRIPTS_DIRNAME=babbage_fast PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" make tests
+```
+
+or
+
+```sh
+SCHEDULING_LOG=testrun_20221224_1.log CLUSTER_ERA=babbage BOOTSTRAP_DIR=~/tmp/shelley_qa_config/ make testnets
+```
+
+## Local installation (e.g. for tests development)
+
+Install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md)
 
 Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
 
@@ -25,7 +77,7 @@ Create a Python virtual environment (requires Python v3.8 or newer) and install 
 ./setup_venv.sh
 ```
 
-## Usage
+## Local usage
 
 Preparing the environment:
 
@@ -112,26 +164,6 @@ Running linter:
 make lint
 ```
 
-## Variables for `make tests` and `make testnets`
-
-* `SCHEDULING_LOG` – specifies the path to the file where log messages for tests and cluster instance scheduler are stored
-* `PYTEST_ARGS` – specifies additional arguments for pytest
-* `MARKEXPR` – specifies marker expression for pytest
-* `TEST_THREADS` – specifies the number of pytest workers
-* `CLUSTERS_COUNT` – number of cluster instances that will be started
-* `CLUSTER_ERA` – cluster era for Cardano node – used for selecting the correct cluster start script
-* `TX_ERA` – era for transactions – can be used for creating Shelley-era (Allegra-era, ...) transactions
-* `NOPOOLS` – when running tests on testnet, a cluster with no staking pools will be created
-* `BOOTSTRAP_DIR` – path to a bootstrap dir for the given testnet (genesis files, config files, faucet data)
-* `SCRIPTS_DIRNAME` – path to a dir with local cluster start/stop scripts and configuration files
-
-For example:
-
-```sh
-SCHEDULING_LOG=testrun_20221005_1.log TEST_THREADS=3 CLUSTER_ERA=babbage TX_ERA=alonzo SCRIPTS_DIRNAME=cardano_node_tests/cluster_scripts/babbage/ PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" make tests
-```
-
-
 ## Tests development
 
 When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for test development, as starting a cluster instance takes several epochs (to get from Byron to Babbage). To keep the Cardano cluster running in between test runs, one needs to start it in 'development mode':
@@ -155,7 +187,6 @@ To restart the cluster (eg, after upgrading `cardano-node` and `cardano-cli` bin
 ./scripts/restart_dev_cluster.sh
 ```
 
-
 ## Test coverage of Cardano CLI commands
 
 To get test coverage of Cardano CLI commands, run tests as usual (`make tests`) and generate the coverage report JSON file with:
@@ -163,7 +194,6 @@ To get test coverage of Cardano CLI commands, run tests as usual (`make tests`) 
 ```sh
 cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
 ```
-
 
 ## Building documentation
 
@@ -178,7 +208,6 @@ Build and deploy documentation:
 ```sh
 ./deploy_doc.sh
 ```
-
 
 ## Contributing
 

@@ -6,8 +6,11 @@ CLUSTERS_COUNT="${CLUSTERS_COUNT:-5}"
 
 pushd "$WORKDIR" || exit 1
 
-# clone db-sync
-git clone https://github.com/input-output-hk/cardano-db-sync.git
+# clone db-sync if needed
+if [ ! -e cardano-db-sync ]; then
+  git clone https://github.com/input-output-hk/cardano-db-sync.git
+fi
+
 pushd cardano-db-sync || exit 1
 if [ -n "${DBSYNC_REV:-""}" ]; then
   git fetch
