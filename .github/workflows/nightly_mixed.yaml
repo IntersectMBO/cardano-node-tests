@@ -1,0 +1,20 @@
+# mix of P2P and legacy topologies
+name: Nightly tests mixed
+
+on:
+  schedule:
+    - cron: '15 05 * * *'
+  workflow_dispatch:
+
+jobs:
+  nightly_job_p2p:
+    if: github.repository_owner == 'input-output-hk'
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/regression_reusable.yaml
+    with:
+      env-path: .github/env_nightly_mixed
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CI_FAIL_MAILS: ${{ secrets.NIGHTLY_FAIL_MAILS }}
+      GMAIL_USERNAME: ${{ secrets.GMAIL_USERNAME }}
+      GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
