@@ -5,8 +5,10 @@ set -xeuo pipefail
 
 REPODIR="$PWD"
 
-WORKDIR="$REPODIR/run_workdir"
-rm -rf "$WORKDIR"
+if [ -z "${WORKDIR:-""}" ]; then
+  WORKDIR="$REPODIR/run_workdir"
+  rm -rf "$WORKDIR"
+fi
 mkdir -p "$WORKDIR"
 
 export TMPDIR="$WORKDIR/tmp"
@@ -78,23 +80,26 @@ retval="$?"
 # move reports to root dir
 mv .reports/testrun-report.* ./
 
-# create results archive
-"$REPODIR"/.buildkite/results.sh .
-
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
 . "$REPODIR/.buildkite/grep_errors.sh"
 
-# save testing artifacts
-# shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/save_artifacts.sh"
+# prepare artifacts for upload in Github Actions
+if [ -n "${GITHUB_ACTIONS:-""}" ]; then
+  # create results archive
+  "$REPODIR"/.buildkite/results.sh .
 
-# compress scheduling log
-xz "$SCHEDULING_LOG"
+  # save testing artifacts
+  # shellcheck disable=SC1090,SC1091
+  . "$REPODIR/.buildkite/save_artifacts.sh"
 
-echo
-echo "Dir content:"
-ls -1a
+  # compress scheduling log
+  xz "$SCHEDULING_LOG"
+
+  echo
+  echo "Dir content:"
+  ls -1a
+fi
 
 echo "::endgroup::" # end group for "Collect artifacts"
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -xeuo pipefail
+set -euo pipefail
 
 tests_repo="$1"
 
