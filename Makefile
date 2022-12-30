@@ -1,14 +1,18 @@
 # install cardano_node_tests and its dependencies
 .PHONY: install
+# TODO: for pylint and mypy, see https://github.com/PyCQA/pylint/issues/7306
+install: export SETUPTOOLS_ENABLE_FEATURES="legacy-editable"
 install:
 	python3 -m pip install --upgrade pip
 	python3 -m pip install --upgrade wheel
-	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-dev.txt
+	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-dev.txt $(PIP_INSTALL_ARGS)
 	virtualenv --upgrade-embed-wheels
 
 
 # install dependencies that are needed for building documentation
 .PHONY: install_doc
+# TODO: for pylint and mypy, see https://github.com/PyCQA/pylint/issues/7306
+install_doc: export SETUPTOOLS_ENABLE_FEATURES="legacy-editable"
 install_doc:
 	python3 -m pip install --upgrade --upgrade-strategy eager -r requirements-doc.txt
 
