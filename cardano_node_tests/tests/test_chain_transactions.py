@@ -123,7 +123,7 @@ class TestTxChaining:
         ), f"Not enough funds to do {iterations} iterations"
 
         invalid_hereafter = (
-            cluster.g_query.get_slot_no() + 2000
+            cluster.g_query.get_slot_no() + 4000
             if VERSIONS.transaction_era < VERSIONS.ALLEGRA
             else None
         )
