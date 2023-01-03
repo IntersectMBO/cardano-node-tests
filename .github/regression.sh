@@ -26,6 +26,7 @@ if [ "${CLUSTER_ERA:-""}" = "babbage_pv8" ]; then
 fi
 
 echo "::group::Nix env setup"
+printf "start: %(%H:%M:%S)T\n" -1
 
 # function to update cardano-node to specified branch and/or revision, or to the latest available
 # shellcheck disable=SC1090,SC1091
@@ -65,6 +66,7 @@ rm -rf "${ARTIFACTS_DIR:?}"/*
 set +e
 # shellcheck disable=SC2046,SC2016,SC2119
 nix develop --accept-flake-config $(node_override) --command bash -c '
+  printf "finish: %(%H:%M:%S)T\n" -1
   echo "::endgroup::"  # end group for "Nix env setup"
   echo "::group::Pytest run"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
