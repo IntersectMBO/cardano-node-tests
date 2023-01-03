@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import pickle
+import time
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -410,13 +411,16 @@ def restart_all_nodes(instance_num: Optional[int] = None) -> None:
     try:
         helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:")
     except Exception as exc:
-        LOGGER.debug(f"Failed to restart cluster nodes: {exc}")
+        raise Exception("Failed to restart cluster nodes.") from exc
+
+    # wait for nodes to start
+    time.sleep(5)
 
 
 def services_action(
     service_names: List[str], action: str, instance_num: Optional[int] = None
 ) -> None:
-    """Restart list of services running on the running cluster."""
+    """Perform action on services on the running cluster."""
     LOGGER.info(f"Performing '{action}' action on services {service_names}.")
 
     if instance_num is None:
@@ -429,7 +433,7 @@ def services_action(
                 f"supervisorctl -s http://localhost:{supervisor_port} {action} {service_name}"
             )
         except Exception as exc:
-            LOGGER.debug(f"Failed to restart service `{service_name}`: {exc}")
+            raise Exception(f"Failed to restart service `{service_name}`") from exc
 
 
 def start_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
@@ -448,6 +452,9 @@ def restart_nodes(node_names: List[str], instance_num: Optional[int] = None) -> 
     """Restart list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="restart", instance_num=instance_num)
+
+    # wait for nodes to start
+    time.sleep(5)
 
 
 def services_status(
