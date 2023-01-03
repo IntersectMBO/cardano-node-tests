@@ -74,13 +74,12 @@ def multisig_tx(
             witness_override=witness_count,
         )
     else:
-        ttl = cluster_obj.g_transaction.calculate_tx_ttl()
         fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
             txouts=destinations,
             script_txins=script_txins,
-            invalid_hereafter=invalid_hereafter or ttl,
+            invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
             witness_count_add=witness_count,
         )
@@ -90,8 +89,7 @@ def multisig_tx(
             txouts=destinations,
             script_txins=script_txins,
             fee=fee,
-            ttl=ttl,
-            invalid_hereafter=invalid_hereafter or ttl,
+            invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
         )
 
