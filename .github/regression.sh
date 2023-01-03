@@ -25,13 +25,6 @@ if [ "${CLUSTER_ERA:-""}" = "babbage_pv8" ]; then
   export UPDATE_PV8=1
 fi
 
-echo "::group::Nix env setup"
-printf "start: %(%H:%M:%S)T\n" -1
-
-# function to update cardano-node to specified branch and/or revision, or to the latest available
-# shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/nix_override_cardano_node.sh"
-
 if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
   export ENABLE_P2P="true"
 elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
@@ -39,6 +32,7 @@ elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
 fi
 
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
+rm -rf "${ARTIFACTS_DIR:?}"/*
 
 export SCHEDULING_LOG=scheduling.log
 
@@ -61,8 +55,14 @@ fi
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
+# function to update cardano-node to specified branch and/or revision, or to the latest available
+# shellcheck disable=SC1090,SC1091
+. "$REPODIR/.buildkite/nix_override_cardano_node.sh"
+
+echo "::group::Nix env setup"
+printf "start: %(%H:%M:%S)T\n" -1
+
 # run tests and generate report
-rm -rf "${ARTIFACTS_DIR:?}"/*
 set +e
 # shellcheck disable=SC2046,SC2016,SC2119
 nix develop --accept-flake-config $(node_override) --command bash -c '
