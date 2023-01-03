@@ -691,3 +691,13 @@ def query_datum(datum_hash: str) -> Generator[DatumDBRow, None, None]:
     with execute(query=query, vars=(rf"\x{datum_hash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield DatumDBRow(*result)
+
+
+def query_cost_model() -> Any:
+    """Query last cost-model record in db-sync."""
+    query = "SELECT * FROM cost_model ORDER BY ID DESC LIMIT 1"
+
+    with execute(query=query) as cur:
+        results = cur.fetchone()
+        cost_model = results[1] if results else {}
+        return cost_model

@@ -208,3 +208,25 @@ class TestDBSync:
                 f"protocol major version: {rec.proto_major}; "
                 f"protocol minor version: {rec.proto_minor}"
             )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era <= VERSIONS.ALONZO,
+        reason="runs only with Tx era > Alonzo",
+    )
+    @pytest.mark.testnets
+    def test_cost_model(self, cluster: clusterlib.ClusterLib):
+        """Check expected values in the `cost_model` table in db-sync."""
+        common.get_test_id(cluster)
+
+        protocol_params = cluster.g_query.get_protocol_params()
+
+        pp_cost_models = protocol_params["costModels"]
+        db_cost_models = dbsync_queries.query_cost_model()
+
+        assert (
+            pp_cost_models["PlutusScriptV1"] == db_cost_models["PlutusV1"]
+        ), "PlutusV1 cost model is not the expected"
+        assert (
+            pp_cost_models["PlutusScriptV2"] == db_cost_models["PlutusV2"]
+        ), "PlutusV2 cost model is not the expected"
