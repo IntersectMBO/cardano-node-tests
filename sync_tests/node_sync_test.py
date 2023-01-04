@@ -102,10 +102,10 @@ def delete_node_files():
 
 
 def create_mainnet_p2p_topology_file(filename):
-    data = {
+    data = """{
         "localRoots": [
             { "accessPoints": [],
-              "advertise": False,
+              "advertise": false,
               "valency": 1
               }
         ],
@@ -116,14 +116,14 @@ def create_mainnet_p2p_topology_file(filename):
                     "port": 3001
                 }
             ],
-                "advertise": False
+                "advertise": false
             }
         ],
         "useLedgerAfterSlot": 29691317
-    }
+    }"""
 
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    with open(filename, "w") as text_file:
+        text_file.write(data)
 
 
 def enable_p2p_node_config_file(node_config_filepath):
