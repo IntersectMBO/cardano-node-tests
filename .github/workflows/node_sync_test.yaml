@@ -99,17 +99,6 @@ jobs:
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=
             substituters = https://cache.nixos.org https://cache.iog.io https://iohk.cachix.org
             allow-import-from-derivation = true
-      - name: "Install secp256k1"
-        run: |
-          git clone https://github.com/bitcoin-core/secp256k1.git
-          ( cd secp256k1
-          git checkout ac83be33
-          ./autogen.sh
-          ./configure --enable-module-schnorrsig --enable-experimental
-          make
-          make check
-          sudo make install
-          )
       - name: run actions/setup-python@v2
         uses: actions/setup-python@v2
         with:

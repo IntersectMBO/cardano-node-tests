@@ -23,8 +23,7 @@ from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
 from gitpython_utils import git_clone_iohk_repo
 
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
-    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, create_mainnet_p2p_topology_file, \
-    delete_file
+    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file
 
 NODE = "./cardano-node"
 CLI = "./cardano-cli"
@@ -102,6 +101,46 @@ def delete_node_files():
         p.unlink(missing_ok=True)
 
 
+def create_mainnet_p2p_topology_file(filename):
+    data = {
+        "localRoots": [
+            { "accessPoints": [],
+              "advertise": False,
+              "valency": 1
+              }
+        ],
+        "publicRoots": [
+            { "accessPoints": [
+                {
+                    "address": "relays-new.cardano-mainnet.iohk.io",
+                    "port": 3001
+                }
+            ],
+                "advertise": False
+            }
+        ],
+        "useLedgerAfterSlot": 29691317
+    }
+
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+def enable_p2p_node_config_file(node_config_filepath):
+    os.chdir(Path(ROOT_TEST_PATH))
+    current_directory = Path.cwd()
+    print(f"current_directory: {current_directory}")
+    print(f" - listdir current_directory: {os.listdir(current_directory)}")
+
+    with open(node_config_filepath, "r") as json_file:
+        node_config_json = json.load(json_file)
+
+    node_config_json["EnableP2P"] = True
+
+    with open(node_config_filepath, "w") as json_file:
+        json.dump(node_config_json, json_file, indent=2)
+
+
 def get_node_config_files(env, node_topology_type):
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
@@ -125,6 +164,7 @@ def get_node_config_files(env, node_topology_type):
     if env == "mainnet" and node_topology_type == "p2p":
         print("Creating the topology.json file...")
         create_mainnet_p2p_topology_file("topology.json")
+        enable_p2p_node_config_file("config.json")
     else:
         print("Getting the topology.json file...")
         urllib.request.urlretrieve(
@@ -748,6 +788,8 @@ def main():
     start_build_time = get_current_date_time()
     if node_build_mode == "nix":
         get_node_files_using_nix(node_rev1)
+        # if "darwin" in platform_system.lower():
+        #     install_node_dependencies_macos()
     else:
         print(
             f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")

@@ -9,5 +9,6 @@ steps:
       queue: benchmark
     artifact_paths:
       - 'logfile_copy.log'
+      - 'logfile.log'
       - 'sync_results.json'
       - '*-config.json'
