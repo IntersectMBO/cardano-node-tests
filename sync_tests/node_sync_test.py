@@ -102,7 +102,7 @@ def delete_node_files():
 
 
 def create_mainnet_p2p_topology_file(filename):
-    data = """{
+    data = '''{
         "localRoots": [
             { "accessPoints": [],
               "advertise": false,
@@ -120,7 +120,7 @@ def create_mainnet_p2p_topology_file(filename):
             }
         ],
         "useLedgerAfterSlot": 29691317
-    }"""
+    }'''
 
     with open(filename, "w") as text_file:
         text_file.write(data)
@@ -161,7 +161,7 @@ def get_node_config_files(env, node_topology_type):
     urllib.request.urlretrieve(
         "https://book.world.dev.cardano.org/environments/" + env + "/alonzo-genesis.json", "alonzo-genesis.json",
     )
-    if env == "mainnet" and node_topology_type == "p2p":
+    if node_topology_type == "p2p":
         print("Creating the topology.json file...")
         create_mainnet_p2p_topology_file("topology.json")
         enable_p2p_node_config_file("config.json")
