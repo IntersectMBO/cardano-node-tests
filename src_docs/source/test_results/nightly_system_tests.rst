@@ -31,6 +31,12 @@ Nightly results
    * network in Babbage era
    * Babbage transaction era
    * P2P network topology
+   * protocol version 8
+* `nightly-mixed <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-mixed/>`__:  |nightly-mixed-badge|
+   * network in Babbage era
+   * default transaction era
+   * mixed network topology (two stake pools P2P, two stake pools default topology)
+   * protocol version 8
 * `nightly-alonzo-tx <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-alonzo-tx/>`__:  |nightly-alonzo-tx-badge|
    * network in Babbage era
    * Alonzo transaction era
@@ -56,6 +62,9 @@ Nightly results
 
 .. |nightly-p2p-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-p2p%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-p2p/
+
+.. |nightly-mixed-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-mixed%2Fbadge.json
+   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-mixed/
 
 .. |nightly-alonzo-tx-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-alonzo-tx%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-alonzo-tx/
