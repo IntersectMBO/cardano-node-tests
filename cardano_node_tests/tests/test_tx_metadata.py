@@ -531,7 +531,7 @@ class TestMetadata:
             json_file_metadata1 = json.load(metadata_fp)
         with open(metadata_json_files[1], encoding="utf-8") as metadata_fp:
             json_file_metadata2 = json.load(metadata_fp)
-        json_file_metadata = {**json_file_metadata2, **json_file_metadata1}  # noqa: SIM904
+        json_file_metadata = {**json_file_metadata2, **json_file_metadata1}
         json_file_metadata["5"] = "baz1"
 
         assert (

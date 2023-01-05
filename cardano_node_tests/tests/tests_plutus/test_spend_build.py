@@ -240,7 +240,7 @@ class TestBuildLocking:
             err_msg = str(err)
             if "DeserialiseFailure" in err_msg:
                 pytest.xfail("DeserialiseFailure: see issue #944")
-            if "TextEnvelopeTypeError" in err_msg and cluster.use_cddl:  # noqa: SIM106
+            if "TextEnvelopeTypeError" in err_msg and cluster.use_cddl:
                 pytest.xfail(
                     "TextEnvelopeTypeError: `create-script-context` doesn't work with CDDL format"
                 )
@@ -326,7 +326,7 @@ class TestBuildLocking:
             script_file = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file
             datum_file = plutus_common.DATUM_42
             redeemer_file = plutus_common.REDEEMER_42
-        elif variant == "untyped_cbor":  # noqa: SIM106
+        elif variant == "untyped_cbor":
             script_file = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file
             datum_cbor_file = plutus_common.DATUM_42_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR

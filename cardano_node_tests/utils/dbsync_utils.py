@@ -1146,7 +1146,7 @@ def check_plutus_costs(
         )
 
     errors = []
-    for db_record, cost_record in zip(sorted_db, sorted_costs):
+    for db_record, cost_record in zip(sorted_db, sorted_costs, strict=True):
         try:
             check_plutus_cost(redeemer_record=db_record, cost_record=cost_record)
         except AssertionError as err:

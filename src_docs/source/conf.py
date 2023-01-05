@@ -19,7 +19,7 @@ if not os.environ.get("CARDANO_NODE_SOCKET_PATH"):
     os.environ["PATH"] = f"{mockdir}:{os.environ['PATH']}"
 
 
-import cardano_node_tests  # noqa: E402
+import cardano_node_tests
 
 # -- Path setup --------------------------------------------------------------
 

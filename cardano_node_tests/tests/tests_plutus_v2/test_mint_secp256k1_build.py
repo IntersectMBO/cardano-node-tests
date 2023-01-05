@@ -146,7 +146,6 @@ class TestSECP256k1:
         * check that the token was minted
         """
         # pylint: disable=too-many-locals
-        __: Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_positive_{algorithm}"
 
         script_file = (

@@ -1,6 +1,5 @@
 """Tests for spending with Plutus V2 using `transaction build`."""
 import logging
-from typing import Any
 from typing import List
 
 import allure
@@ -74,7 +73,6 @@ class TestBuildLocking:
         * spend the locked UTxO
         * check that the expected UTxOs were correctly spent
         """
-        __: Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
 
         if use_reference_script and use_inline_datum:
