@@ -2,6 +2,7 @@
 import contextlib
 import decimal
 from typing import Any
+from typing import Dict
 from typing import Generator
 from typing import Iterator
 from typing import List
@@ -693,11 +694,11 @@ def query_datum(datum_hash: str) -> Generator[DatumDBRow, None, None]:
             yield DatumDBRow(*result)
 
 
-def query_cost_model() -> Any:
+def query_cost_model() -> Dict[str, Dict[str, Any]]:
     """Query last cost-model record in db-sync."""
     query = "SELECT * FROM cost_model ORDER BY ID DESC LIMIT 1"
 
     with execute(query=query) as cur:
         results = cur.fetchone()
-        cost_model = results[1] if results else {}
+        cost_model: Dict[str, Dict[str, Any]] = results[1] if results else {}
         return cost_model
