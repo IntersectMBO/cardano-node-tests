@@ -133,7 +133,7 @@ class TestNegative:
         elif variant == "43_42":
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_42_TYPED
-        elif variant == "43_43":  # noqa: SIM106
+        elif variant == "43_43":
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_43_TYPED
         else:

@@ -2,7 +2,6 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any
 from typing import List
 
 import allure
@@ -111,7 +110,6 @@ class TestDatum:
         plutus_version: str,
     ):
         """Test 'build --tx-out-datum-embed' without providing protocol params file."""
-        __: Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
 
         plutus_op = plutus_common.PlutusOp(

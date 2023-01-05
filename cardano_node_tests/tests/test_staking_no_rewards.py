@@ -729,7 +729,7 @@ class TestNoRewards:
         ), f"Pledge is not met for pool '{pool_name}'!"
 
     @allure.link(helpers.get_vcs_link())
-    def test_deregister_reward_addr_retire_pool(  # noqa: C901
+    def test_deregister_reward_addr_retire_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool: Tuple[clusterlib.ClusterLib, str],

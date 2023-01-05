@@ -49,7 +49,7 @@ class TestMempool:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
-    def test_query_mempool_txin(  # noqa: C901
+    def test_query_mempool_txin(
         self,
         cluster_locked: clusterlib.ClusterLib,
         payment_addrs_locked: List[clusterlib.AddressRecord],

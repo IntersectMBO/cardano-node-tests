@@ -691,7 +691,7 @@ class ClusterGetter:
 
         return use_resources
 
-    def get_cluster_instance(  # noqa: C901
+    def get_cluster_instance(
         self,
         mark: str = "",
         lock_resources: resources_management.ResourcesType = (),
