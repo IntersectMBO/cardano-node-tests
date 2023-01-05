@@ -71,6 +71,34 @@ class TestBasicTransactions:
         return addrs
 
     @pytest.fixture
+    def byron_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create 2 new Byron payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            byron_addrs = [
+                clusterlib_utils.gen_byron_addr(
+                    cluster_obj=cluster,
+                    name_template=f"addr_payment_ci{cluster_manager.cluster_instance_num}_{i}",
+                )
+                for i in range(2)
+            ]
+            fixture_cache.value = byron_addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            *byron_addrs,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+        return byron_addrs
+
+    @pytest.fixture
     def payment_addrs_disposable(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -136,57 +164,77 @@ class TestBasicTransactions:
         return cluster_default
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
+    @pytest.mark.parametrize(
+        "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
+    )
+    @pytest.mark.parametrize(
+        "src_addr_type", ("shelley", "byron"), ids=("src_shelley", "src_byron")
+    )
+    @pytest.mark.dbsync
     def test_transfer_funds(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        byron_addrs: List[clusterlib.AddressRecord],
+        src_addr_type: str,
+        dst_addr_type: str,
         amount: int,
     ):
         """Send funds to payment address.
 
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+        temp_template = f"{common.get_test_id(cluster)}_{src_addr_type}_{dst_addr_type}_{amount}"
 
-        src_address = payment_addrs[0].address
-        dst_address = payment_addrs[1].address
+        src_addr = byron_addrs[0] if src_addr_type == "byron" else payment_addrs[0]
+        dst_addr = byron_addrs[1] if dst_addr_type == "byron" else payment_addrs[1]
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
-        tx_raw_output = cluster.g_transaction.send_funds(
-            src_address=src_address,
-            destinations=destinations,
+        tx_raw_output = cluster.g_transaction.send_tx(
+            src_address=src_addr.address,
             tx_name=temp_template,
+            txouts=destinations,
             tx_files=tx_files,
+            witness_count_add=1 if src_addr_type == "byron" else 0,
         )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_addr.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
-        ), f"Incorrect balance for source address `{src_address}`"
+        ), f"Incorrect balance for source address `{src_addr.address}`"
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
-        ), f"Incorrect balance for destination address `{dst_address}`"
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             assert (
-                cluster.g_query.get_address_balance(src_address)
-                == dbsync_utils.get_utxo(address=src_address).amount_sum
-            ), f"Unexpected balance for source address `{src_address}` in db-sync"
+                cluster.g_query.get_address_balance(src_addr.address)
+                == dbsync_utils.get_utxo(address=src_addr.address).amount_sum
+            ), f"Unexpected balance for source address `{src_addr.address}` in db-sync"
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.parametrize(
+        "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
+    )
+    @pytest.mark.parametrize(
+        "src_addr_type", ("shelley", "byron"), ids=("src_shelley", "src_byron")
+    )
     @pytest.mark.dbsync
     def test_build_transfer_funds(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        byron_addrs: List[clusterlib.AddressRecord],
+        src_addr_type: str,
+        dst_addr_type: str,
     ):
         """Send funds to payment address.
 
@@ -194,22 +242,25 @@ class TestBasicTransactions:
 
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{src_addr_type}_{dst_addr_type}"
         amount = 1_500_000
 
-        src_address = payment_addrs[0].address
-        dst_address = payment_addrs[1].address
+        src_addr = byron_addrs[0] if src_addr_type == "byron" else payment_addrs[0]
+        dst_addr = byron_addrs[1] if dst_addr_type == "byron" else payment_addrs[1]
 
-        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
         tx_output = cluster.g_transaction.build_tx(
-            src_address=src_address,
+            src_address=src_addr.address,
             tx_name=temp_template,
             tx_files=tx_files,
             txouts=txouts,
             fee_buffer=1_000_000,
+            # TODO: cardano-node issue #4752
+            witness_override=2 if src_addr_type == "byron" else None,
         )
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -220,14 +271,55 @@ class TestBasicTransactions:
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_addr.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output.txins) - amount - tx_output.fee
-        ), f"Incorrect balance for source address `{src_address}`"
+        ), f"Incorrect balance for source address `{src_addr.address}`"
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
-        ), f"Incorrect balance for destination address `{dst_address}`"
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_BUILD_UNUSABLE
+    def test_byron_fee_too_small(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        byron_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Test cardano-node issue #4752.
+
+        Use `cardano-cli transaction build` command for building a transaction that needs to be
+        signed by Byron skey. Check if calculated fee is too small and if Tx submit fails.
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 1_500_000
+
+        src_addr = byron_addrs[0]
+
+        txouts = [clusterlib.TxOut(address=payment_addrs[1].address, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+
+        tx_output = cluster.g_transaction.build_tx(
+            src_address=src_addr.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            txouts=txouts,
+            fee_buffer=1_000_000,
+        )
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        try:
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        except clusterlib.CLIError as exc:
+            if "FeeTooSmallUTxO" not in str(exc):
+                raise
+            pytest.xfail("FeeTooSmallUTxO: see node issue #4752")
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
