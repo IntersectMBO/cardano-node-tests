@@ -19,9 +19,11 @@ export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 rm -rf "${ARTIFACTS_DIR:?}"/*
+mkdir -p "$ARTIFACTS_DIR"
 
 export COVERAGE_DIR="${COVERAGE_DIR:-".cli_coverage"}"
 rm -rf "${COVERAGE_DIR:?}"/*
+mkdir -p "$COVERAGE_DIR"
 
 export SCHEDULING_LOG=scheduling.log
 true > "$SCHEDULING_LOG"
