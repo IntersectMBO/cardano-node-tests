@@ -70,7 +70,7 @@ nix develop --accept-flake-config $(node_override) --command bash -c '
   echo "::endgroup::"  # end group for "Nix env setup"
   echo "::group::Pytest run"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
-  make tests
+  make "${MAKE_TARGET:-"tests"}"
   retval="$?"
   echo "::endgroup::"
   echo "::group::Collect artifacts"
