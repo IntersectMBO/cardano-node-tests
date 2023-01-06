@@ -1,0 +1,86 @@
+name: Node upgrade tests reusable
+
+on:
+  workflow_call:
+    inputs:
+      env-path:
+        required: true
+        type: string
+    secrets:
+      GH_TOKEN:
+        required: true
+      CI_FAIL_MAILS:
+        required: false
+      GMAIL_USERNAME:
+        required: false
+      GMAIL_PASSWORD:
+        required: false
+
+env:
+  CI_FAIL_MAILS: ${{ secrets.CI_FAIL_MAILS }}
+
+jobs:
+  reusable_run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Nix
+        uses: cachix/install-nix-action@v18
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GH_TOKEN }}
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=
+            substituters = https://cache.nixos.org https://cache.iog.io https://iohk.cachix.org
+            allow-import-from-derivation = true
+      - name: Collect env variables
+        run: |
+          : > .github_ci_env
+          echo "PY_COLORS=1" >> .github_ci_env
+          cat "${{ inputs.env-path }}" >> .github_ci_env
+      - name: Export env variables
+        run: |
+          cat .github_ci_env
+          cat .github_ci_env >> $GITHUB_ENV
+      - name: Run CLI regression tests
+        id: testing-step
+        run: ./.github/node_upgrade.sh
+      - name: Upload testing artifacts on failure
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: testing-artifacts
+          path: testing_artifacts.tar.xz
+      - name: Upload HTML reports
+        uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: testrun-reports
+          path: |
+            testrun-report-step1.html
+            testrun-report-step2.html
+            testrun-report-step3.html
+      - name: Upload testrun files
+        uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: testrun-files
+          path: |
+            cli_coverage.json
+            scheduling.log.xz
+            errors_all.log
+      - name: Mail failure report
+        uses: dawidd6/action-send-mail@v3
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{secrets.GMAIL_USERNAME}}
+          password: ${{secrets.GMAIL_PASSWORD}}
+          subject: "Status: ${{ steps.testing-step.outcome }}; workflow: ${{ github.workflow }}"
+          to: ${{secrets.CI_FAIL_MAILS}}
+          from: Cardano Github Actions
+          body: "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          reply_to: noreply@github.com
+          attachments: testrun-report.html
