@@ -1,0 +1,18 @@
+name: Nightly upgrade tests
+
+on:
+  schedule:
+    - cron: '15 06 * * *'
+  workflow_dispatch:
+
+jobs:
+  nightly_job_default:
+    if: github.repository_owner == 'input-output-hk'
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/upgrade_reusable.yaml
+    with:
+      env-path: .github/env_nightly_upgrade
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GMAIL_USERNAME: ${{ secrets.GMAIL_USERNAME }}
+      GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
