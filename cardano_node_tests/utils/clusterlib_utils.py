@@ -157,7 +157,7 @@ def return_funds_to_faucet(
     with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{faucet_addr}.lock"):
         try:
             logging.disable(logging.ERROR)
-            for addr, amount_rec in zip(src_addrs, amount, strict=True):
+            for addr, amount_rec in zip(src_addrs, amount):
                 fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount_rec)]
                 fund_tx_files = clusterlib.TxFiles(signing_key_files=[addr.skey_file])
                 # try to return funds; don't mind if there's not enough funds for fees etc.
@@ -192,7 +192,7 @@ def fund_from_faucet(
 
     fund_dst = [
         clusterlib.TxOut(address=d.address, amount=a)
-        for d, a in zip(dst_addr_records, amount, strict=True)
+        for d, a in zip(dst_addr_records, amount)
         if force or cluster_obj.g_query.get_address_balance(d.address) < a
     ]
     if not fund_dst:

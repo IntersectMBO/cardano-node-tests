@@ -221,7 +221,7 @@ def check_plutus_costs(
     sorted_expected = sorted(expected_costs, key=lambda x: x.per_space + x.per_time + x.fixed_cost)
 
     errors = []
-    for costs, expected_values in zip(sorted_plutus, sorted_expected, strict=True):
+    for costs, expected_values in zip(sorted_plutus, sorted_expected):
         tx_time = costs["executionUnits"]["steps"]
         tx_space = costs["executionUnits"]["memory"]
         lovelace_cost = costs["lovelaceCost"]
