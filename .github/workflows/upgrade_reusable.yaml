@@ -51,6 +51,26 @@ jobs:
         with:
           name: testing-artifacts
           path: testing_artifacts.tar.xz
+      - name: Upload Allure results for step1
+        uses: actions/upload-artifact@v3
+        # When using `always()`, you lose ability to manually cancel the workflow.
+        # Use `success() || failure()` instead.
+        if: success() || failure()
+        with:
+          name: allure-results-step1
+          path: allure-results-step1.tar.xz
+      - name: Upload Allure results for step2
+        uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: allure-results-step2
+          path: allure-results-step2.tar.xz
+      - name: Upload Allure results for step3
+        uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: allure-results-step3
+          path: allure-results-step3.tar.xz
       - name: Upload HTML reports
         uses: actions/upload-artifact@v3
         if: success() || failure()
