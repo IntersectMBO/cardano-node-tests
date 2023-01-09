@@ -12,6 +12,11 @@ export TX_ERA="babbage"
 CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
 
+# init reports dir before each step
+export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
+rm -rf "${REPORTS_DIR:?}"/*
+mkdir -p "$REPORTS_DIR"
+
 #
 # STEP1 - start local cluster and run smoke tests for the first time
 #
@@ -35,11 +40,15 @@ if [ "$1" = "step1" ]; then
   ln -s "$node_path_step1" "$STATE_CLUSTER"/cardano-node-step1
 
   # run smoke tests
-  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step1.html --self-contained-html
+  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --alluredir="$REPORTS_DIR" --html=testrun-report-step1.html --self-contained-html
   retval="$?"
 
   # stop local cluster if tests failed unexpectedly
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR"/stop-cluster-hfc
+
+  # create results archive for step1
+  ./.github/results.sh .
+  mv allure-results.tar.xz allure-results-step1.tar.xz
 
 #
 # STEP2 - run smoke tests for the second time on the already started local cluster
@@ -92,11 +101,15 @@ elif [ "$1" = "step2" ]; then
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
 
   # run smoke tests
-  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step2.html --self-contained-html
+  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --alluredir="$REPORTS_DIR" --html=testrun-report-step2.html --self-contained-html
   retval="$?"
 
   # stop local cluster if tests failed unexpectedly
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR"/stop-cluster-hfc
+
+  # create results archive for step2
+  ./.github/results.sh .
+  mv allure-results.tar.xz allure-results-step2.tar.xz
 
 
 #
@@ -126,8 +139,12 @@ elif [ "$1" = "step3" ]; then
   [ "$retval" -le 1 ] || exit "$retval"
 
   # run smoke tests
-  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --html=testrun-report-step3.html --self-contained-html
+  pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --alluredir="$REPORTS_DIR" --html=testrun-report-step3.html --self-contained-html
   retval="$?"
+
+  # create results archive for step3
+  ./.github/results.sh .
+  mv allure-results.tar.xz allure-results-step3.tar.xz
 
 #
 # FINISH - teardown cluster, generate reports
