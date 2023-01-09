@@ -31,7 +31,7 @@ true > "$SCHEDULING_LOG"
 BASE_REVISION="${BASE_REVISION:-1.35.4}"
 
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/nix_override_cardano_node.sh"
+. "$REPODIR/.github/nix_override_cardano_node.sh"
 
 # update cardano-node to specified revision
 NODE_OVERRIDE=$(node_override "$BASE_REVISION")
@@ -90,13 +90,13 @@ retval="$?"
 
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/grep_errors.sh"
+. "$REPODIR/.github/grep_errors.sh"
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   # save testing artifacts
   # shellcheck disable=SC1090,SC1091
-  . "$REPODIR/.buildkite/save_artifacts.sh"
+  . "$REPODIR/.github/save_artifacts.sh"
 
   # compress scheduling log
   xz "$SCHEDULING_LOG"

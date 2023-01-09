@@ -138,7 +138,7 @@ elif [ "$1" = "finish" ]; then
   "$CLUSTER_SCRIPTS_DIR"/stop-cluster-hfc
 
   # generate CLI coverage reports
-  ./.buildkite/cli_coverage.sh .
+  ./.github/cli_coverage.sh .
 
   retval=0
 fi
