@@ -35,6 +35,7 @@ export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 rm -rf "${ARTIFACTS_DIR:?}"/*
 
 export SCHEDULING_LOG=scheduling.log
+true > "$SCHEDULING_LOG"
 
 MARKEXPR="${MARKEXPR:-""}"
 if [ "${MARKEXPR:-""}" = "all" ]; then
@@ -57,7 +58,7 @@ export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
 # function to update cardano-node to specified branch and/or revision, or to the latest available
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/nix_override_cardano_node.sh"
+. "$REPODIR/.github/nix_override_cardano_node.sh"
 
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
@@ -74,7 +75,7 @@ nix develop --accept-flake-config $(node_override) --command bash -c '
   retval="$?"
   echo "::endgroup::"
   echo "::group::Collect artifacts"
-  ./.buildkite/cli_coverage.sh .
+  ./.github/cli_coverage.sh .
   exit "$retval"
 '
 retval="$?"
@@ -84,16 +85,16 @@ mv .reports/testrun-report.* ./
 
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.buildkite/grep_errors.sh"
+. "$REPODIR/.github/grep_errors.sh"
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   # create results archive
-  "$REPODIR"/.buildkite/results.sh .
+  "$REPODIR"/.github/results.sh .
 
   # save testing artifacts
   # shellcheck disable=SC1090,SC1091
-  . "$REPODIR/.buildkite/save_artifacts.sh"
+  . "$REPODIR/.github/save_artifacts.sh"
 
   # compress scheduling log
   xz "$SCHEDULING_LOG"

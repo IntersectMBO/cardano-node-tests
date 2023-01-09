@@ -28,10 +28,8 @@ The execution can be configured using env variables described in section below.
 In addition, you can use
 
 * `NODE_REV` - revison of `cardano-node` (default: master HEAD)
-* `NODE_BRANCH` - branch of `cardano-node` (default: unset)
 * `CI_ENABLE_DBSYNC` - specifies if tests will setup db-sync and perform db-sync checks (default: unset)
 * `DBSYNC_REV` - revison of `cardano-db-sync` (default: master HEAD)
-* `DBSYNC_BRANCH` - branch of `cardano-db-sync` (default: unset)
 
 ## Variables for configuring testrun
 

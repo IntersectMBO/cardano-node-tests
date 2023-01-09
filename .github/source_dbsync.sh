@@ -15,9 +15,6 @@ pushd cardano-db-sync || exit 1
 if [ -n "${DBSYNC_REV:-""}" ]; then
   git fetch
   git checkout "$DBSYNC_REV"
-elif [ -n "${DBSYNC_BRANCH:-""}" ]; then
-  git fetch
-  git checkout "$DBSYNC_BRANCH"
 else
   git pull origin master
 fi
