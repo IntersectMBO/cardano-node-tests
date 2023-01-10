@@ -57,6 +57,10 @@ SCHEDULING_LOG: Union[str, Path] = os.environ.get("SCHEDULING_LOG") or ""
 if SCHEDULING_LOG:
     SCHEDULING_LOG = Path(SCHEDULING_LOG).expanduser().resolve()
 
+# resolve BLOCK_PRODUCTION_DB
+BLOCK_PRODUCTION_DB: Union[str, Path] = os.environ.get("BLOCK_PRODUCTION_DB") or ""
+if BLOCK_PRODUCTION_DB:
+    BLOCK_PRODUCTION_DB = Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
 if CLUSTER_ERA not in ("", "babbage"):
