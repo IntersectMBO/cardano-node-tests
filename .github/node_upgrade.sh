@@ -3,7 +3,8 @@
 
 set -xeuo pipefail
 
-REPODIR="$PWD"
+REPODIR="$(readlink -m "${0%/*}/..")"
+cd "$REPODIR"
 
 if [ -z "${WORKDIR:-""}" ]; then
   WORKDIR="$REPODIR/run_workdir"
@@ -31,7 +32,7 @@ true > "$SCHEDULING_LOG"
 BASE_REVISION="${BASE_REVISION:-1.35.4}"
 
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.github/nix_override_cardano_node.sh"
+. .github/nix_override_cardano_node.sh
 
 # update cardano-node to specified revision
 NODE_OVERRIDE=$(node_override "$BASE_REVISION")
@@ -90,13 +91,13 @@ retval="$?"
 
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.github/grep_errors.sh"
+. .github/grep_errors.sh
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   # save testing artifacts
   # shellcheck disable=SC1090,SC1091
-  . "$REPODIR/.github/save_artifacts.sh"
+  . .github/save_artifacts.sh
 
   # compress scheduling log
   xz "$SCHEDULING_LOG"
