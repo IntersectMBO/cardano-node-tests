@@ -3,7 +3,8 @@
 
 set -xeuo pipefail
 
-REPODIR="$PWD"
+REPODIR="$(readlink -m "${0%/*}/..")"
+cd "$REPODIR"
 
 if [ -z "${WORKDIR:-""}" ]; then
   WORKDIR="$REPODIR/run_workdir"
@@ -17,7 +18,7 @@ mkdir -p "$TMPDIR"
 if [ "${CI_ENABLE_DBSYNC:-"false"}" != "false" ]; then
   # setup dbsync
   # shellcheck disable=SC1090,SC1091
-  . "$REPODIR/.github/source_dbsync.sh"
+  . .github/source_dbsync.sh
 fi
 
 if [ "${CLUSTER_ERA:-""}" = "babbage_pv8" ]; then
@@ -58,7 +59,7 @@ export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
 # function to update cardano-node to specified branch and/or revision, or to the latest available
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.github/nix_override_cardano_node.sh"
+. .github/nix_override_cardano_node.sh
 
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
@@ -85,16 +86,16 @@ mv .reports/testrun-report.* ./
 
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
-. "$REPODIR/.github/grep_errors.sh"
+. .github/grep_errors.sh
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   # create results archive
-  "$REPODIR"/.github/results.sh .
+  ./.github/results.sh .
 
   # save testing artifacts
   # shellcheck disable=SC1090,SC1091
-  . "$REPODIR/.github/save_artifacts.sh"
+  . .github/save_artifacts.sh
 
   # compress scheduling log
   xz "$SCHEDULING_LOG"
