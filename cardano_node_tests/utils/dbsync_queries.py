@@ -250,6 +250,42 @@ class SchemaVersionStages(NamedTuple):
     three: int
 
 
+class ParamProposalDBRow(NamedTuple):
+    id: int
+    epoch_no: int
+    key: memoryview
+    min_fee_a: int
+    min_fee_b: int
+    max_block_size: int
+    max_tx_size: int
+    max_bh_size: int
+    key_deposit: int
+    pool_deposit: int
+    max_epoch: int
+    optimal_pool_count: int
+    influence: float
+    monetary_expand_rate: float
+    treasury_growth_rate: float
+    decentralisation: float
+    entropy: memoryview
+    protocol_major: int
+    protocol_minor: int
+    min_utxo_value: int
+    min_pool_cost: int
+    coins_per_utxo_word: int
+    cost_model_id: int
+    price_mem: float
+    price_step: float
+    max_tx_ex_mem: int
+    max_tx_ex_steps: int
+    max_block_ex_mem: int
+    max_block_ex_steps: int
+    max_val_size: int
+    collateral_percent: int
+    max_collateral_inputs: int
+    registered_tx_id: int
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -752,3 +788,23 @@ def query_cost_model() -> Dict[str, Dict[str, Any]]:
         results = cur.fetchone()
         cost_model: Dict[str, Dict[str, Any]] = results[1] if results else {}
         return cost_model
+
+
+def query_param_proposal() -> ParamProposalDBRow:
+    """Query param_proposal last record in db-sync."""
+    query = (
+        "SELECT"
+        " p.id, p.epoch_no, p.key, p.min_fee_a, p.min_fee_b, p.max_block_size,"
+        " p.max_tx_size, p.max_bh_size, p.key_deposit, p.pool_deposit, p.max_epoch,"
+        " p.optimal_pool_count, p.influence, p.monetary_expand_rate, p.treasury_growth_rate,"
+        " p.decentralisation, p.entropy, p.protocol_major, p.protocol_minor, p.min_utxo_value,"
+        " p.min_pool_cost, p.coins_per_utxo_size, p.cost_model_id, p.price_mem, p.price_step,"
+        " p.max_tx_ex_mem, p.max_tx_ex_steps, p.max_block_ex_mem, p.max_block_ex_steps, "
+        " p.max_val_size, p.collateral_percent, p.max_collateral_inputs, p.registered_tx_id"
+        " FROM param_proposal AS p"
+        " ORDER BY ID DESC LIMIT 1"
+    )
+
+    with execute(query=query) as cur:
+        results = cur.fetchone()
+        return ParamProposalDBRow(*results)
