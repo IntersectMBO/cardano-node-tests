@@ -152,7 +152,10 @@ class TestTxChaining:
                 try:
                     cluster.g_transaction.submit_tx_bare(tx_file=tx_file)
                 except clusterlib.CLIError as exc:
-                    if r == 0 or "(BadInputsUTxO" not in str(exc):
+                    err_str = str(exc)
+                    if r == 0 and "(BadInputsUTxO" in err_str:
+                        raise Exception("Tx input is missing, maybe temporary fork?") from exc
+                    if "(BadInputsUTxO" not in err_str:
                         raise
                     break
             else:
