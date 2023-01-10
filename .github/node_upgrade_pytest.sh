@@ -57,6 +57,26 @@ if [ "$1" = "step1" ]; then
 elif [ "$1" = "step2" ]; then
   export UPGRADE_TESTS_STEP=2
 
+  # generate config and topology files for "mixed" mode
+  CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_mixed/state-cluster0/bft1.socket" MIXED_P2P=1 DRY_RUN=1 "$CLUSTER_SCRIPTS_DIR"/start-cluster-hfc
+
+  # copy newly generated topology files to the cluster state dir
+  cp -f "$WORKDIR"/dry_mixed/state-cluster0/topology-*.json "$STATE_CLUSTER"
+
+  # copy newly generated config files to the cluster state dir, but use the original genesis files
+  BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  for conf in "$WORKDIR"/dry_mixed/state-cluster0/config-*.json; do
+    fname="${conf##*/}"
+    jq \
+      --arg byron_hash "$BYRON_GENESIS_HASH" \
+      --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+      --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+      '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
+      "$conf" > "$STATE_CLUSTER/$fname"
+  done
+
   # run pool3 with the original cardano-node binary
   cp -a "$STATE_CLUSTER"/cardano-node-pool3 "$STATE_CLUSTER"/cardano-node-pool3.orig
   sed -i 's/exec cardano-node run/exec .\/state-cluster0\/cardano-node-step1 run/' "$STATE_CLUSTER"/cardano-node-pool3
@@ -119,10 +139,33 @@ elif [ "$1" = "step2" ]; then
 elif [ "$1" = "step3" ]; then
   export UPGRADE_TESTS_STEP=3
 
-  # restart pool3 with upgraded cardano-node binary
+  # generate config and topology files for p2p mode
+  CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_p2p/state-cluster0/bft1.socket" ENABLE_P2P=1 DRY_RUN=1 "$CLUSTER_SCRIPTS_DIR"/start-cluster-hfc
+
+  # copy newly generated topology files to the cluster state dir
+  cp -f "$WORKDIR"/dry_p2p/state-cluster0/topology-*.json "$STATE_CLUSTER"
+
+  # copy newly generated config files to the cluster state dir, but use the original genesis files
+  BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  for conf in "$WORKDIR"/dry_p2p/state-cluster0/config-*.json; do
+    fname="${conf##*/}"
+    jq \
+      --arg byron_hash "$BYRON_GENESIS_HASH" \
+      --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+      --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+      '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
+      "$conf" > "$STATE_CLUSTER/$fname"
+  done
+
+  # use the upgraded cardano-node binary for pool3
   cp -a "$STATE_CLUSTER"/cardano-node-pool3.orig "$STATE_CLUSTER"/cardano-node-pool3
-  "$STATE_CLUSTER"/supervisorctl restart nodes:pool3
+
+  # restart all nodes
+  "$STATE_CLUSTER"/supervisorctl restart nodes:
   sleep 10
+  "$STATE_CLUSTER"/supervisorctl status
 
   # print path to cardano-node binaries
   pool1_pid="$("$STATE_CLUSTER"/supervisorctl pid nodes:pool1)"
