@@ -5,6 +5,7 @@
 # ENABLE_P2P - if set, local cluster will use P2P
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # UPDATE_PV8 - if set, update to PV8 and update Secp256k1 cost model
+# DRY_RUN - if set, will not start the cluster
 
 set -euo pipefail
 sets="$-"
@@ -115,7 +116,9 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
     { echo "The \`$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync\` not found, line $LINENO" >&2; exit 1; }  # assert
 
   # create clean database
-  "$SCRIPT_DIR/postgres-setup.sh"
+  if [ -z "${DRY_RUN:-""}" ]; then
+    "$SCRIPT_DIR/postgres-setup.sh"
+  fi
 
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
@@ -385,6 +388,11 @@ if [ -f "\$SCRIPT_DIR/supervisord.pid" ]; then
 fi
 EoF
 chmod u+x "$STATE_CLUSTER"/{supervisorctl*,supervisord_*}
+
+if [ -n "${DRY_RUN:-""}" ]; then
+  echo "Dry run, not starting cluster"
+  exit 0
+fi
 
 supervisord --config "$STATE_CLUSTER/supervisor.conf"
 
