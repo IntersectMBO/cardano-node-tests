@@ -391,7 +391,7 @@ for i in $(seq 1 "$NUM_POOLS"); do
 
   POOL_NAME="TestPool$i"
   POOL_DESC="Test Pool $i"
-  POOL_TICKER="TEST$i"
+  POOL_TICKER="TP$i"
 
   cat > "$STATE_CLUSTER/webserver/pool$i.html" <<EoF
 <!DOCTYPE html>
