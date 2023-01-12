@@ -541,7 +541,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
                 type=str(r.type),
                 serialised_size=int(r.serialised_size) if r.serialised_size else 0,
             )
-            for r in dbsync_queries.query_plutus_scripts(txhash=txhash)
+            for r in dbsync_queries.query_scripts(txhash=txhash)
         ]
 
     redeemers = []
@@ -639,7 +639,7 @@ def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> List[clusterlib.TxOut
     return list(mint_txouts.values())
 
 
-def _tx_scripts_hashes(
+def _get_scripts_hashes(
     cluster_obj: clusterlib.ClusterLib,
     records: Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint],
 ) -> Dict[str, Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint]]:
@@ -875,22 +875,33 @@ def check_tx(
             f"({db_collateral_output_amount} != {tx_collateral_output_amount})"
         )
 
-    db_plutus_scripts = {r for r in response.scripts if r.type == "plutus"}
-    # a script is added to `script` table only the first time it is seen, so the record
-    # can be empty for the current transaction
-    if db_plutus_scripts:
-        assert all(
-            r.serialised_size > 0 for r in db_plutus_scripts
-        ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
-
-    # compare redeemers data
-    tx_plutus_in_hashes = _tx_scripts_hashes(
+    tx_in_script_hashes = _get_scripts_hashes(
         cluster_obj=cluster_obj, records=tx_raw_output.script_txins
     )
-    tx_plutus_mint_hashes = _tx_scripts_hashes(cluster_obj=cluster_obj, records=tx_raw_output.mint)
+    tx_mint_script_hashes = _get_scripts_hashes(cluster_obj=cluster_obj, records=tx_raw_output.mint)
+
+    # a script is added to `script` table only the first time it is seen, so the record
+    # can be empty for the current transaction
+    tx_script_hashes = {*tx_in_script_hashes, *tx_mint_script_hashes}
+    if response.scripts and tx_script_hashes:
+        db_script_hashes = {s.hash for s in response.scripts}
+
+        assert db_script_hashes.issubset(
+            tx_script_hashes
+        ), f"Scripts hashes don't match: {db_script_hashes} is not subset of {tx_script_hashes}"
+
+        # on plutus scripts we should also check the serialised_size
+        db_plutus_scripts = {r for r in response.scripts if r.type.startswith("plutus")}
+
+        if db_plutus_scripts:
+            assert all(
+                r.serialised_size > 0 for r in db_plutus_scripts
+            ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
+
+    # compare redeemers data
     db_redeemer_hashes = _db_redeemer_hashes(records=response.redeemers)
-    _compare_redeemers(tx_data=tx_plutus_in_hashes, db_data=db_redeemer_hashes, purpose="spend")
-    _compare_redeemers(tx_data=tx_plutus_mint_hashes, db_data=db_redeemer_hashes, purpose="mint")
+    _compare_redeemers(tx_data=tx_in_script_hashes, db_data=db_redeemer_hashes, purpose="spend")
+    _compare_redeemers(tx_data=tx_mint_script_hashes, db_data=db_redeemer_hashes, purpose="mint")
 
     redeemer_fees = functools.reduce(lambda x, y: x + y.fee, response.redeemers, 0)
     assert tx_raw_output.fee > redeemer_fees, "Combined redeemer fees are >= than total TX fee"
