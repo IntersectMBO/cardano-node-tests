@@ -9,6 +9,7 @@
 # pylint: disable=abstract-class-instantiated
 import json
 import logging
+import time
 from pathlib import Path
 from typing import List
 from typing import Optional
@@ -26,12 +27,14 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import tx_view
 
+DATA_DIR = Path(__file__).parent / "data"
 LOGGER = logging.getLogger(__name__)
 DEREG_BUFFER_SEC = 30
 
@@ -639,9 +642,9 @@ class TestStakePool:
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
 
-        pool_name = f"pool_{rand_str}"
+        pool_name = "test_stake_pool_metadata"
         pool_metadata = {
-            "name": pool_name,
+            "name": "test_stake_pool_metadata",
             "description": "cardano-node-tests E2E tests",
             "ticker": "IOG1",
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
@@ -655,7 +658,7 @@ class TestStakePool:
             pool_pledge=1_000,
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
-            pool_metadata_url="https://bit.ly/3bDUg9z",
+            pool_metadata_url="https://bit.ly/3HvWQAy",
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -687,6 +690,19 @@ class TestStakePool:
 
         # check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=pool_creation_out.tx_raw_output)
+
+        # check dbsync `PoolOfflineData` table
+        if configuration.HAS_DBSYNC:
+            pool_params = cluster.g_query.get_pool_params(
+                stake_pool_id=pool_creation_out.stake_pool_id
+            ).pool_params
+
+            # wait a bit for the dbsync thread that fills the `PoolOfflineData` table
+            time.sleep(60)
+
+            dbsync_utils.check_pool_offline_data(
+                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
+            )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -740,7 +756,7 @@ class TestStakePool:
         )
 
         # register pool and delegate stake address
-        _create_register_pool_tx_delegate_stake_tx(
+        pool_creation_out = _create_register_pool_tx_delegate_stake_tx(
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
@@ -749,6 +765,22 @@ class TestStakePool:
             request=request,
             use_build_cmd=use_build_cmd,
         )
+
+        # check dbsync `PoolOfflineFetchError` table
+        # since the metadata url is invalid the dbsync dedicated thread will not fetch the data
+        # and will insert an error on the specific table
+        # https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/pool-offline-data.md
+        if configuration.HAS_DBSYNC:
+            pool_params = cluster.g_query.get_pool_params(
+                stake_pool_id=pool_creation_out.stake_pool_id
+            ).pool_params
+
+            # wait a bit for the dbsync thread that fills the `PoolOfflineFetchError` table
+            time.sleep(60)
+
+            dbsync_utils.check_pool_offline_fetch_error(
+                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
+            )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD

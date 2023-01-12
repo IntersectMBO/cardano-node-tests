@@ -43,6 +43,22 @@ class PoolDataDBRow(NamedTuple):
     retiring_epoch: int
 
 
+class PoolOfflineDataDBRow(NamedTuple):
+    id: int
+    ticker_name: str
+    hash: memoryview
+    json: dict
+    bytes: memoryview
+    pmr_id: int
+
+
+class PoolOfflineFetchErrorDBRow(NamedTuple):
+    id: int
+    pmr_id: int
+    fetch_error: str
+    retry_count: int
+
+
 class TxDBRow(NamedTuple):
     tx_id: int
     tx_hash: memoryview
@@ -640,6 +656,40 @@ def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]
     with execute(query=query, vars=(pool_id_bech32,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield PoolDataDBRow(*result)
+
+
+def query_pool_offline_data(pool_id_bech32: str) -> Generator[PoolOfflineDataDBRow, None, None]:
+    """Query `PoolOfflineData` record in db-sync."""
+    query = (
+        "SELECT"
+        " pool_offline_data.pool_id, pool_offline_data.ticker_name, pool_offline_data.hash,"
+        " pool_offline_data.json, pool_offline_data.bytes, pool_offline_data.pmr_id "
+        "FROM pool_hash "
+        "FULL JOIN pool_offline_data ON pool_hash.id = pool_offline_data.pool_id "
+        "WHERE pool_hash.view = %s;"
+    )
+
+    with execute(query=query, vars=(pool_id_bech32,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield PoolOfflineDataDBRow(*result)
+
+
+def query_pool_offline_fetch_error(
+    pool_id_bech32: str,
+) -> Generator[PoolOfflineFetchErrorDBRow, None, None]:
+    """Query `PoolOfflineFetchError` record in db-sync."""
+    query = (
+        "SELECT"
+        " pool_offline_fetch_error.pool_id, pool_offline_fetch_error.pmr_id,"
+        " pool_offline_fetch_error.fetch_error, pool_offline_fetch_error.retry_count "
+        "FROM pool_hash "
+        "FULL JOIN pool_offline_fetch_error ON pool_hash.id = pool_offline_fetch_error.pool_id "
+        "WHERE pool_hash.view = %s;"
+    )
+
+    with execute(query=query, vars=(pool_id_bech32,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield PoolOfflineFetchErrorDBRow(*result)
 
 
 def query_blocks(
