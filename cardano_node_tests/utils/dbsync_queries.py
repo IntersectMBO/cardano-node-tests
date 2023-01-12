@@ -173,6 +173,7 @@ class RedeemerDBRow(NamedTuple):
     fee: int
     purpose: str
     script_hash: memoryview
+    value: dict
 
 
 class ADAPotsDBRow(NamedTuple):
@@ -413,9 +414,10 @@ def query_redeemers(txhash: str) -> Generator[RedeemerDBRow, None, None]:
     query = (
         "SELECT"
         " redeemer.id, redeemer.tx_id, redeemer.unit_mem, redeemer.unit_steps, redeemer.fee,"
-        " redeemer.purpose, redeemer.script_hash "
+        " redeemer.purpose, redeemer.script_hash, redeemer_data.value "
         "FROM redeemer "
         "LEFT JOIN tx ON tx.id = redeemer.tx_id "
+        "LEFT JOIN redeemer_data ON redeemer_data.id = redeemer.redeemer_data_id "
         "WHERE tx.hash = %s;"
     )
 
