@@ -111,22 +111,6 @@ class PoolDataRecord(NamedTuple):
     retiring_epoch: int
 
 
-class PoolOfflineDataRecord(NamedTuple):
-    id: int
-    ticker_name: str
-    hash: memoryview
-    json: dict
-    bytes: memoryview
-    pmr_id: int
-
-
-class PoolOfflineFetchErrorRecord(NamedTuple):
-    id: int
-    pmr_id: int
-    fetch_error: str
-    retry_count: int
-
-
 class ScriptRecord(NamedTuple):
     hash: str
     type: str
@@ -1129,10 +1113,14 @@ def check_pool_data(ledger_pool_data: dict, pool_id: str) -> Optional[PoolDataRe
     return db_pool_data
 
 
-def check_pool_offline_data(ledger_pool_data: dict, pool_id: str) -> PoolOfflineDataRecord:
+def check_pool_offline_data(
+    ledger_pool_data: dict, pool_id: str
+) -> dbsync_queries.PoolOfflineDataDBRow:
     """Check comparison for pool offline data between ledger and db-sync."""
     db_pool_offline_data = list(dbsync_queries.query_pool_offline_data(pool_id))
-    assert db_pool_offline_data[0].hash, f"No offline data returned from db-sync for pool {pool_id}"
+    assert (
+        db_pool_offline_data and db_pool_offline_data[0].hash
+    ), f"No offline data returned from db-sync for pool {pool_id}"
 
     metadata_hash = (ledger_pool_data.get("metadata") or {}).get("hash") or ""
     db_metadata_hash = db_pool_offline_data[0].hash.hex()
@@ -1142,23 +1130,27 @@ def check_pool_offline_data(ledger_pool_data: dict, pool_id: str) -> PoolOffline
         f"Expected: {metadata_hash} vs Returned: {db_metadata_hash}"
     )
 
-    return PoolOfflineDataRecord(*db_pool_offline_data[0])
+    return db_pool_offline_data[0]
 
 
 def check_pool_offline_fetch_error(
     ledger_pool_data: dict, pool_id: str
-) -> PoolOfflineFetchErrorRecord:
-    """Check expected error on PoolOfflineFetchError."""
+) -> dbsync_queries.PoolOfflineFetchErrorDBRow:
+    """Check expected error on `PoolOfflineFetchError`."""
     metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
 
     db_pool_offline_fetch_error = list(dbsync_queries.query_pool_offline_fetch_error(pool_id))
+    assert (
+        db_pool_offline_fetch_error
+    ), f"No offline fetch error returned from db-sync for pool {pool_id}"
+
     fetch_error_str = db_pool_offline_fetch_error[0].fetch_error or ""
 
     assert (
         f"Connection failure when fetching metadata from {metadata_url}" in fetch_error_str
     ), f"The error is not the expected: {fetch_error_str}"
 
-    return PoolOfflineFetchErrorRecord(*db_pool_offline_fetch_error[0])
+    return db_pool_offline_fetch_error[0]
 
 
 def check_plutus_cost(redeemer_record: RedeemerRecord, cost_record: Dict[str, Any]) -> None:

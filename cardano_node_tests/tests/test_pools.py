@@ -691,16 +691,17 @@ class TestStakePool:
         # check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=pool_creation_out.tx_raw_output)
 
-        # check dbsync PoolOfflineData table
+        # check dbsync `PoolOfflineData` table
         if configuration.HAS_DBSYNC:
-            stake_pool_id = pool_creation_out.stake_pool_id
-            pool_params = cluster.g_query.get_pool_params(stake_pool_id=stake_pool_id).pool_params
+            pool_params = cluster.g_query.get_pool_params(
+                stake_pool_id=pool_creation_out.stake_pool_id
+            ).pool_params
 
-            # wait a bit for the dbsync thread that fills the PoolOfflineData table
+            # wait a bit for the dbsync thread that fills the `PoolOfflineData` table
             time.sleep(60)
 
             dbsync_utils.check_pool_offline_data(
-                ledger_pool_data=pool_params, pool_id=stake_pool_id
+                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
             )
 
     @allure.link(helpers.get_vcs_link())
@@ -765,19 +766,20 @@ class TestStakePool:
             use_build_cmd=use_build_cmd,
         )
 
-        # check dbsync PoolOfflineFetchError table
+        # check dbsync `PoolOfflineFetchError` table
         # since the metadata url is invalid the dbsync dedicated thread will not fetch the data
         # and will insert an error on the specific table
         # https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/pool-offline-data.md
         if configuration.HAS_DBSYNC:
-            stake_pool_id = pool_creation_out.stake_pool_id
-            pool_params = cluster.g_query.get_pool_params(stake_pool_id=stake_pool_id).pool_params
+            pool_params = cluster.g_query.get_pool_params(
+                stake_pool_id=pool_creation_out.stake_pool_id
+            ).pool_params
 
-            # wait a bit for the dbsync thread that fills the PoolOfflineData table
+            # wait a bit for the dbsync thread that fills the `PoolOfflineFetchError` table
             time.sleep(60)
 
             dbsync_utils.check_pool_offline_fetch_error(
-                ledger_pool_data=pool_params, pool_id=stake_pool_id
+                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
             )
 
     @allure.link(helpers.get_vcs_link())

@@ -659,7 +659,7 @@ def query_pool_data(pool_id_bech32: str) -> Generator[PoolDataDBRow, None, None]
 
 
 def query_pool_offline_data(pool_id_bech32: str) -> Generator[PoolOfflineDataDBRow, None, None]:
-    """Query PoolOfflineData record in db-sync."""
+    """Query `PoolOfflineData` record in db-sync."""
     query = (
         "SELECT"
         " pool_offline_data.pool_id, pool_offline_data.ticker_name, pool_offline_data.hash,"
@@ -677,7 +677,7 @@ def query_pool_offline_data(pool_id_bech32: str) -> Generator[PoolOfflineDataDBR
 def query_pool_offline_fetch_error(
     pool_id_bech32: str,
 ) -> Generator[PoolOfflineFetchErrorDBRow, None, None]:
-    """Query PoolOfflineFetchError record in db-sync."""
+    """Query `PoolOfflineFetchError` record in db-sync."""
     query = (
         "SELECT"
         " pool_offline_fetch_error.pool_id, pool_offline_fetch_error.pmr_id,"
