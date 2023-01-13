@@ -18,6 +18,8 @@ Test statuses
 Nightly results
 ---------------
 
+`Results on Github Actions <https://github.com/input-output-hk/cardano-node-tests/actions?query=workflow%3A%22Nightly+tests%22+event%3Aschedule+branch%3Amaster++>`__
+
 * `nightly <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly/>`__:  |nightly-badge|
    * network in Babbage era
    * Babbage transaction era
