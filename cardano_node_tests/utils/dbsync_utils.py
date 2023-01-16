@@ -4,6 +4,7 @@ import itertools
 import logging
 import time
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import NamedTuple
@@ -17,6 +18,8 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 
 LOGGER = logging.getLogger(__name__)
+
+NO_REPONSE_STR = "No response returned from db-sync:"
 
 
 class MetadataRecord(NamedTuple):
@@ -593,6 +596,32 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     return record
 
 
+def retry_query(query_func: Callable, timeout: int = 20) -> Any:
+    """Wait a bit and retry a query until response is returned.
+
+    A generic function that can be used by any query/check that raises `AssertionError` with
+    `NO_REPONSE_STR` until the expected data is returned.
+    """
+    end_time = time.time() + timeout
+    repeat = 0
+
+    while True:
+        if repeat:
+            sleep_time = 2 + repeat * repeat
+            LOGGER.warning(f"Sleeping {sleep_time}s before repeating query for the {repeat} time.")
+            time.sleep(sleep_time)
+        try:
+            response = query_func()
+            break
+        except AssertionError as exc:
+            if NO_REPONSE_STR in str(exc) and time.time() < end_time:
+                repeat += 1
+                continue
+            raise
+
+    return response
+
+
 def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
     """Retry `get_tx_record` when data is anticipated and are not available yet.
 
@@ -604,8 +633,12 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
     # first try + number of retries
     for r in range(1 + retry_num):
         if r > 0:
-            LOGGER.warning(f"Repeating TX SQL query for '{txhash}' for the {r} time.")
-            time.sleep(2 + r * r)
+            sleep_time = 2 + r * r
+            LOGGER.warning(
+                f"Sleeping {sleep_time}s before repeating TX SQL query for '{txhash}' "
+                f"for the {r} time."
+            )
+            time.sleep(sleep_time)
         try:
             response = get_tx_record(txhash=txhash)
             break
@@ -1120,7 +1153,7 @@ def check_pool_offline_data(
     db_pool_offline_data = list(dbsync_queries.query_pool_offline_data(pool_id))
     assert (
         db_pool_offline_data and db_pool_offline_data[0].hash
-    ), f"No offline data returned from db-sync for pool {pool_id}"
+    ), f"{NO_REPONSE_STR} no offline data for pool {pool_id}"
 
     metadata_hash = (ledger_pool_data.get("metadata") or {}).get("hash") or ""
     db_metadata_hash = db_pool_offline_data[0].hash.hex()
@@ -1137,18 +1170,17 @@ def check_pool_offline_fetch_error(
     ledger_pool_data: dict, pool_id: str
 ) -> dbsync_queries.PoolOfflineFetchErrorDBRow:
     """Check expected error on `PoolOfflineFetchError`."""
-    metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
-
     db_pool_offline_fetch_error = list(dbsync_queries.query_pool_offline_fetch_error(pool_id))
     assert (
-        db_pool_offline_fetch_error
-    ), f"No offline fetch error returned from db-sync for pool {pool_id}"
+        db_pool_offline_fetch_error and db_pool_offline_fetch_error[0].fetch_error
+    ), f"{NO_REPONSE_STR} no offline fetch error for pool {pool_id}"
 
     fetch_error_str = db_pool_offline_fetch_error[0].fetch_error or ""
+    metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
 
     assert (
         f"Connection failure when fetching metadata from {metadata_url}" in fetch_error_str
-    ), f"The error is not the expected: {fetch_error_str}"
+    ), f"The error is not the expected one: {fetch_error_str}"
 
     return db_pool_offline_fetch_error[0]
 
