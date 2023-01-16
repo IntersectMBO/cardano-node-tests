@@ -9,7 +9,6 @@
 # pylint: disable=abstract-class-instantiated
 import json
 import logging
-import time
 from pathlib import Path
 from typing import List
 from typing import Optional
@@ -697,12 +696,12 @@ class TestStakePool:
                 stake_pool_id=pool_creation_out.stake_pool_id
             ).pool_params
 
-            # wait a bit for the dbsync thread that fills the `PoolOfflineData` table
-            time.sleep(60)
+            def _query_func():
+                dbsync_utils.check_pool_offline_data(
+                    ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
+                )
 
-            dbsync_utils.check_pool_offline_data(
-                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
-            )
+            dbsync_utils.retry_query(query_func=_query_func, timeout=120)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -775,12 +774,12 @@ class TestStakePool:
                 stake_pool_id=pool_creation_out.stake_pool_id
             ).pool_params
 
-            # wait a bit for the dbsync thread that fills the `PoolOfflineFetchError` table
-            time.sleep(60)
+            def _query_func():
+                dbsync_utils.check_pool_offline_fetch_error(
+                    ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
+                )
 
-            dbsync_utils.check_pool_offline_fetch_error(
-                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
-            )
+            dbsync_utils.retry_query(query_func=_query_func, timeout=120)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
