@@ -1151,9 +1151,7 @@ def check_pool_offline_data(
 ) -> dbsync_queries.PoolOfflineDataDBRow:
     """Check comparison for pool offline data between ledger and db-sync."""
     db_pool_offline_data = list(dbsync_queries.query_pool_offline_data(pool_id))
-    assert (
-        db_pool_offline_data and db_pool_offline_data[0].hash
-    ), f"{NO_REPONSE_STR} no offline data for pool {pool_id}"
+    assert db_pool_offline_data, f"{NO_REPONSE_STR} no offline data for pool {pool_id}"
 
     metadata_hash = (ledger_pool_data.get("metadata") or {}).get("hash") or ""
     db_metadata_hash = db_pool_offline_data[0].hash.hex()
@@ -1172,7 +1170,7 @@ def check_pool_offline_fetch_error(
     """Check expected error on `PoolOfflineFetchError`."""
     db_pool_offline_fetch_error = list(dbsync_queries.query_pool_offline_fetch_error(pool_id))
     assert (
-        db_pool_offline_fetch_error and db_pool_offline_fetch_error[0].fetch_error
+        db_pool_offline_fetch_error
     ), f"{NO_REPONSE_STR} no offline fetch error for pool {pool_id}"
 
     fetch_error_str = db_pool_offline_fetch_error[0].fetch_error or ""

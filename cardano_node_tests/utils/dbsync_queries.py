@@ -664,8 +664,8 @@ def query_pool_offline_data(pool_id_bech32: str) -> Generator[PoolOfflineDataDBR
         "SELECT"
         " pool_offline_data.pool_id, pool_offline_data.ticker_name, pool_offline_data.hash,"
         " pool_offline_data.json, pool_offline_data.bytes, pool_offline_data.pmr_id "
-        "FROM pool_hash "
-        "FULL JOIN pool_offline_data ON pool_hash.id = pool_offline_data.pool_id "
+        "FROM pool_offline_data "
+        "INNER JOIN pool_hash ON pool_hash.id = pool_offline_data.pool_id "
         "WHERE pool_hash.view = %s;"
     )
 
@@ -682,8 +682,8 @@ def query_pool_offline_fetch_error(
         "SELECT"
         " pool_offline_fetch_error.pool_id, pool_offline_fetch_error.pmr_id,"
         " pool_offline_fetch_error.fetch_error, pool_offline_fetch_error.retry_count "
-        "FROM pool_hash "
-        "FULL JOIN pool_offline_fetch_error ON pool_hash.id = pool_offline_fetch_error.pool_id "
+        "FROM pool_offline_fetch_error "
+        "INNER JOIN pool_hash ON pool_hash.id = pool_offline_fetch_error.pool_id "
         "WHERE pool_hash.view = %s;"
     )
 
