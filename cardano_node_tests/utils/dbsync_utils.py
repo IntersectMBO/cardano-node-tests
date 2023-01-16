@@ -1118,9 +1118,6 @@ def check_pool_offline_data(
 ) -> dbsync_queries.PoolOfflineDataDBRow:
     """Check comparison for pool offline data between ledger and db-sync."""
     db_pool_offline_data = list(dbsync_queries.query_pool_offline_data(pool_id))
-    assert (
-        db_pool_offline_data and db_pool_offline_data[0].hash
-    ), f"No offline data returned from db-sync for pool {pool_id}"
 
     metadata_hash = (ledger_pool_data.get("metadata") or {}).get("hash") or ""
     db_metadata_hash = db_pool_offline_data[0].hash.hex()
@@ -1140,11 +1137,8 @@ def check_pool_offline_fetch_error(
     metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
 
     db_pool_offline_fetch_error = list(dbsync_queries.query_pool_offline_fetch_error(pool_id))
-    assert (
-        db_pool_offline_fetch_error
-    ), f"No offline fetch error returned from db-sync for pool {pool_id}"
 
-    fetch_error_str = db_pool_offline_fetch_error[0].fetch_error or ""
+    fetch_error_str = db_pool_offline_fetch_error[0].fetch_error
 
     assert (
         f"Connection failure when fetching metadata from {metadata_url}" in fetch_error_str

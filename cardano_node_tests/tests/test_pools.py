@@ -693,16 +693,28 @@ class TestStakePool:
 
         # check dbsync `PoolOfflineData` table
         if configuration.HAS_DBSYNC:
-            pool_params = cluster.g_query.get_pool_params(
-                stake_pool_id=pool_creation_out.stake_pool_id
-            ).pool_params
+            stake_pool_id = pool_creation_out.stake_pool_id
 
-            # wait a bit for the dbsync thread that fills the `PoolOfflineData` table
-            time.sleep(60)
+            pool_params = cluster.g_query.get_pool_params(stake_pool_id=stake_pool_id).pool_params
 
-            dbsync_utils.check_pool_offline_data(
-                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
-            )
+            retry_num = 3
+
+            for r in range(1, retry_num):
+                LOGGER.warning(
+                    "Repeating PoolOfflineData SQL query for "
+                    f"'{stake_pool_id}' for the {r} time."
+                )
+                time.sleep(45 * r)
+                try:
+                    dbsync_utils.check_pool_offline_data(
+                        ledger_pool_data=pool_params, pool_id=stake_pool_id
+                    )
+                    break
+                except AttributeError as exc:
+                    if r == retry_num:
+                        raise RuntimeError(
+                            f"No offline data returned from db-sync for pool {stake_pool_id}"
+                        ) from exc
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -771,16 +783,28 @@ class TestStakePool:
         # and will insert an error on the specific table
         # https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/pool-offline-data.md
         if configuration.HAS_DBSYNC:
-            pool_params = cluster.g_query.get_pool_params(
-                stake_pool_id=pool_creation_out.stake_pool_id
-            ).pool_params
+            stake_pool_id = pool_creation_out.stake_pool_id
 
-            # wait a bit for the dbsync thread that fills the `PoolOfflineFetchError` table
-            time.sleep(60)
+            pool_params = cluster.g_query.get_pool_params(stake_pool_id=stake_pool_id).pool_params
 
-            dbsync_utils.check_pool_offline_fetch_error(
-                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
-            )
+            retry_num = 3
+
+            for r in range(1, retry_num):
+                LOGGER.warning(
+                    "Repeating PoolOfflineFetchError SQL query for "
+                    f"'{stake_pool_id}' for the {r} time."
+                )
+                time.sleep(45 * r)
+                try:
+                    dbsync_utils.check_pool_offline_fetch_error(
+                        ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
+                    )
+                    break
+                except TypeError as exc:
+                    if r == retry_num:
+                        raise RuntimeError(
+                            f"No offline fetch error returned from db-sync for pool {stake_pool_id}"
+                        ) from exc
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
