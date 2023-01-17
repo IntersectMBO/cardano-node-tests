@@ -8,6 +8,8 @@ from typing import Tuple
 from typing import Union
 
 import allure
+import hypothesis
+import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
 
@@ -1763,3 +1765,72 @@ class TestRewards:
                 stake_address=delegation_out.pool_user.stake.address,
                 rewards=reward_records,
             )
+
+
+class TestNegativeWithdrawal:
+    """Tests for rewards withdrawal that are expected to fail."""
+
+    @pytest.fixture()
+    def pool_users(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
+    ) -> Tuple[clusterlib.PoolUser, clusterlib.PoolUser]:
+        cluster, pool_name = cluster_use_pool
+
+        pool_rec = cluster_manager.cache.addrs_data[pool_name]
+        pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
+        pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
+
+        # make sure there are rewards already available
+        clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
+
+        return pool_owner, pool_reward
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(
+        amount=st.integers(
+            min_value=1,
+            # don't set to `MAX_UINT64` as change value of balanced Tx would exceed that value
+            max_value=common.MAX_UINT64 // 2,
+        ),
+    )
+    @common.hypothesis_settings(max_examples=300)
+    def test_withdrawal_wrong_amount(
+        self,
+        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
+        pool_users: Tuple[clusterlib.PoolUser, clusterlib.PoolUser],
+        amount: int,
+    ):
+        """Test that it is not possible to withdraw other amount than the total reward amount.
+
+        Expect failure. Property-based test.
+        """
+        cluster, __ = cluster_use_pool
+        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+
+        pool_owner, pool_reward = pool_users
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[
+                pool_owner.payment.skey_file,
+                pool_reward.stake.skey_file,
+            ],
+        )
+
+        try:
+            cluster.g_transaction.send_tx(
+                src_address=pool_owner.payment.address,
+                tx_name=f"{temp_template}_withdrawal",
+                tx_files=tx_files,
+                fee=0,  # set fee too low to make 100% sure the transaction can't be accepted
+                withdrawals=[clusterlib.TxOut(address=pool_reward.stake.address, amount=amount)],
+            )
+            raise AssertionError("The Tx submit succeeded unexpectedly.")
+        except clusterlib.CLIError as exc:
+            if "(WithdrawalsNotInRewardsDELEGS" not in str(exc):
+                reward_balance = cluster.g_query.get_stake_addr_info(
+                    stake_addr=pool_reward.stake.address
+                ).reward_account_balance
+                if reward_balance != amount:
+                    raise
