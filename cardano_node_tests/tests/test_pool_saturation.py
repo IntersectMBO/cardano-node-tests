@@ -153,6 +153,9 @@ class TestPoolSaturation:
         faucet_rec = cluster_manager.cache.addrs_data["faucet"]
         pool_records: Dict[int, PoolRecord] = {}
 
+        # make sure there are rewards already available
+        clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
+
         # make sure we have enough time to finish the delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER

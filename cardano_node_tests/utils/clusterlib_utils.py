@@ -276,14 +276,15 @@ def create_pool_users(
     return pool_users
 
 
-def wait_for_stake_distribution(cluster_obj: clusterlib.ClusterLib) -> dict:
-    """Wait to 3rd epoch (if necessary) and return stake distribution info."""
+def wait_for_rewards(cluster_obj: clusterlib.ClusterLib) -> None:
+    """Wait until 4th epoch, if necessary, for first reward distribution."""
     epoch = cluster_obj.g_query.get_epoch()
-    if epoch < 3:
-        new_epochs = 3 - epoch
-        LOGGER.info(f"Waiting {new_epochs} epoch(s) to get stake distribution.")
-        cluster_obj.wait_for_new_epoch(new_epochs)
-    return cluster_obj.g_query.get_stake_distribution()
+    if epoch >= 4:
+        return
+
+    new_epochs = 4 - epoch
+    LOGGER.info(f"Waiting {new_epochs} epoch(s) to get first rewards.")
+    cluster_obj.wait_for_new_epoch(new_epochs, padding_seconds=10)
 
 
 def load_registered_pool_data(
