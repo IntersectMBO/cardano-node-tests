@@ -348,11 +348,19 @@ class TestPoolSaturation:
                 # transfer funds back to faucet so the pools are no longer (over)saturated
                 # and staked amount is +- same as the `initial_balance`
                 if this_epoch >= init_epoch + epoch_withdrawal:
-                    _withdraw_rewards(
-                        *[p.delegation_out.pool_user for p in pool_records.values()],
-                        cluster_obj=cluster,
-                        tx_name=f"{temp_template}_ep{this_epoch}",
-                    )
+                    try:
+                        _withdraw_rewards(
+                            *[p.delegation_out.pool_user for p in pool_records.values()],
+                            cluster_obj=cluster,
+                            tx_name=f"{temp_template}_ep{this_epoch}",
+                        )
+                    except clusterlib.CLIError as exc:
+                        if "(WithdrawalsNotInRewardsDELEGS" in str(exc):
+                            raise Exception(
+                                "Withdrawal likely happened at epoch boundary and the reward "
+                                "amounts no longer match"
+                            ) from exc
+                        raise
 
                     return_to_addrs = []
                     return_amounts = []
