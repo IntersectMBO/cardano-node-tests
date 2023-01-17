@@ -361,6 +361,9 @@ class TestRewards:
         __: Any  # mypy workaround
         cluster, pool_name = cluster_use_pool
 
+        # make sure there are rewards already available
+        clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
+
         temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -691,6 +694,9 @@ class TestRewards:
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool_and_pots
+
+        # make sure there are rewards already available
+        clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
 
         mir_reward = 50_000_000_000
 
