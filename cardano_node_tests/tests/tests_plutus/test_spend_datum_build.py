@@ -272,7 +272,7 @@ class TestNegativeDatum:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         datum_file = f"{temp_template}.datum"
         with open(datum_file, "w", encoding="utf-8") as outfile:
@@ -454,7 +454,7 @@ class TestNegativeDatum:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         datum_file = f"{temp_template}.datum"
         with open(datum_file, "w", encoding="utf-8") as outfile:

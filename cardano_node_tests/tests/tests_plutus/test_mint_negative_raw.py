@@ -401,7 +401,9 @@ class TestMintingNegative:
         * try to mint the token when execution units are set above the limits
         * check that the minting failed because the execution units were too big
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = (
+            f"{common.get_test_id(cluster)}_{request.node.callspec.id}_{common.unique_time_str()}"
+        )
 
         issuer_addr = payment_addrs[1]
 

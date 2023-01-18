@@ -1911,7 +1911,7 @@ class TestTransfer:
         token_amount: int,
     ):
         """Test sending an invalid amount of tokens to payment address."""
-        temp_template = f"{common.get_test_id(cluster)}_{token_amount}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -2047,7 +2047,7 @@ class TestNegative:
 
         The name can also contain characters that are not allowed. Expect failure.
         """
-        temp_template = f"test_long_name_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         script, policyid = simple_script_policyid
         asset_name_enc = asset_name.encode("utf-8").hex()
@@ -2087,7 +2087,7 @@ class TestNegative:
         token_amount: int,
     ):
         """Test minting a token amount above the maximum allowed."""
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         asset_name_enc = temp_template.encode("utf-8").hex()
 

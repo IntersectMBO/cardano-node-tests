@@ -98,6 +98,7 @@ class TestNegative:
         cluster_obj: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
+        temp_template: str,
         use_build_cmd=False,
     ):
         """Send funds from payment address to invalid address."""
@@ -109,7 +110,7 @@ class TestNegative:
             if use_build_cmd:
                 cluster_obj.g_transaction.build_tx(
                     src_address=pool_users[0].payment.address,
-                    tx_name="to_invalid",
+                    tx_name=f"{temp_template}_to_invalid",
                     txouts=destinations,
                     tx_files=tx_files,
                     fee_buffer=1_000_000,
@@ -117,7 +118,7 @@ class TestNegative:
             else:
                 cluster_obj.g_transaction.build_raw_tx(
                     src_address=pool_users[0].payment.address,
-                    tx_name="to_invalid",
+                    tx_name=f"{temp_template}_to_invalid",
                     txouts=destinations,
                     tx_files=tx_files,
                     fee=0,
@@ -130,6 +131,7 @@ class TestNegative:
         cluster_obj: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
+        temp_template: str,
         use_build_cmd=False,
     ):
         """Send funds from invalid payment address."""
@@ -141,7 +143,7 @@ class TestNegative:
             if use_build_cmd:
                 cluster_obj.g_transaction.build_tx(
                     src_address=addr,
-                    tx_name="from_invalid",
+                    tx_name=f"{temp_template}_from_invalid",
                     txouts=destinations,
                     tx_files=tx_files,
                     fee_buffer=1_000_000,
@@ -149,7 +151,7 @@ class TestNegative:
             else:
                 cluster_obj.g_transaction.build_raw_tx(
                     src_address=addr,
-                    tx_name="from_invalid",
+                    tx_name=f"{temp_template}_from_invalid",
                     txouts=destinations,
                     tx_files=tx_files,
                     fee=0,
@@ -161,6 +163,7 @@ class TestNegative:
         cluster_obj: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
         addr: str,
+        temp_template: str,
     ):
         """Send funds with invalid change address."""
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
@@ -170,7 +173,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.g_transaction.build_tx(
                 src_address=pool_users[0].payment.address,
-                tx_name="invalid_change",
+                tx_name=f"{temp_template}_invalid_change",
                 txouts=destinations,
                 change_address=addr,
                 tx_files=tx_files,
@@ -450,11 +453,15 @@ class TestNegative:
 
         Expect failure.
         """
-        common.get_test_id(cluster)
+        temp_template = common.get_test_id(cluster)
 
         addr = pool_users[0].stake.address
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=use_build_cmd
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            use_build_cmd=use_build_cmd,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -469,12 +476,16 @@ class TestNegative:
 
         Expect failure.
         """
-        common.get_test_id(cluster)
+        temp_template = common.get_test_id(cluster)
 
         dst_addr = pool_users[1].payment.address
         utxo_addr = cluster.g_query.get_utxo(address=dst_addr)[0].utxo_hash
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=utxo_addr, use_build_cmd=use_build_cmd
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=utxo_addr,
+            temp_template=temp_template,
+            use_build_cmd=use_build_cmd,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -490,8 +501,12 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -509,9 +524,15 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            use_build_cmd=True,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -527,8 +548,12 @@ class TestNegative:
 
         Expect failure. Property-based test.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -546,9 +571,15 @@ class TestNegative:
 
         Expect failure. Property-based test.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            use_build_cmd=True,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -566,8 +597,12 @@ class TestNegative:
 
         Expect failure. Property-based test.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+        self._send_funds_to_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -587,9 +622,15 @@ class TestNegative:
 
         Expect failure. Property-based test.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            use_build_cmd=True,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -605,8 +646,12 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -624,9 +669,15 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            use_build_cmd=True,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -642,8 +693,12 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -661,9 +716,15 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            use_build_cmd=True,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -681,8 +742,12 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(cluster_obj=cluster, pool_users=pool_users, addr=addr)
+        self._send_funds_from_invalid_address(
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -702,9 +767,15 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, use_build_cmd=True
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            use_build_cmd=True,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -723,9 +794,11 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_invalid_change_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -746,9 +819,11 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_invalid_change_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -767,9 +842,11 @@ class TestNegative:
 
         Expect failure.
         """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         addr = f"addr_test1{addr}"
         self._send_funds_invalid_change_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr
+            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -850,7 +927,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"test_invalid_length_utxo_hash_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)
@@ -879,7 +956,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"test_build_invalid_length_utxo_hash_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_hash=utxo_hash)

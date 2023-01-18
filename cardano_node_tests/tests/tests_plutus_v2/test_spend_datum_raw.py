@@ -68,7 +68,7 @@ class TestNegativeInlineDatum:
 
         Expect failure.
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         amount = 2_000_000
 
         datum_file = f"{temp_template}.datum"
@@ -206,7 +206,7 @@ class TestNegativeInlineDatum:
         Expect failure.
         """
         hypothesis.assume(datum_content)
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(

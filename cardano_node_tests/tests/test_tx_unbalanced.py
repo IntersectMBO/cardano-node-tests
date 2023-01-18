@@ -170,7 +170,7 @@ class TestUnbalanced:
 
         Check that it is not possible to build such transaction.
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -211,7 +211,7 @@ class TestUnbalanced:
         * build an unbalanced transaction
         * check that it is not possible to submit such transaction
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -266,7 +266,7 @@ class TestUnbalanced:
         change_amount: int,
     ):
         """Try to build a transaction with output Lovelace amount that is out of bounds."""
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         fee = 200_000
 
         out_file_tx = f"{temp_template}_tx.body"
@@ -313,7 +313,8 @@ class TestUnbalanced:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         self._build_transfer_amount_bellow_minimum(
             cluster=cluster,
             temp_template=temp_template,
@@ -341,7 +342,8 @@ class TestUnbalanced:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
         self._build_transfer_amount_bellow_minimum(
             cluster=cluster,
             temp_template=temp_template,
@@ -370,7 +372,7 @@ class TestUnbalanced:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
@@ -432,7 +434,7 @@ class TestUnbalanced:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address

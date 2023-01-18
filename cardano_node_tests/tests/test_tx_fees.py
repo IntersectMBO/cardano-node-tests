@@ -63,7 +63,7 @@ class TestFee:
 
         Expect failure.
         """
-        temp_template = f"test_negative_fee_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str}"
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
