@@ -379,7 +379,7 @@ class TestAdvancedQueries:
 
     @allure.link(helpers.get_vcs_link())
     def test_ledger_state(self, cluster: clusterlib.ClusterLib):
-        """Test `query stake-snapshot`."""
+        """Test `query ledger-state`."""
         try:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
         except AssertionError as err:
