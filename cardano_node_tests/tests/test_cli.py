@@ -391,21 +391,74 @@ class TestAdvancedQueries:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    def test_stake_snapshot(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
+    @pytest.mark.parametrize("option", ("single_pool", "multiple_pool", "all_pools", "total_stake"))
+    def test_stake_snapshot(  # noqa: C901
+        self,
+        cluster: clusterlib.ClusterLib,
+        option: str,
+        pool_ids: List[str],
+    ):
         """Test `query stake-snapshot`."""
         try:
-            stake_snapshot = cluster.g_query.get_stake_snapshot(stake_pool_id=pool_ids[0])
+            if option == "single_pool":
+                expected_pool_ids = [pool_ids[0]]
+                stake_snapshot = cluster.g_query.get_stake_snapshot(
+                    stake_pool_ids=expected_pool_ids
+                )
+            elif option == "multiple_pool":
+                expected_pool_ids = [pool_ids[0], pool_ids[1]]
+                stake_snapshot = cluster.g_query.get_stake_snapshot(
+                    stake_pool_ids=expected_pool_ids
+                )
+            elif option == "all_pools":
+                expected_pool_ids = pool_ids
+                stake_snapshot = cluster.g_query.get_stake_snapshot(all_stake_pools=True)
+            else:
+                expected_pool_ids = []
+                stake_snapshot = cluster.g_query.get_stake_snapshot()
         except json.decoder.JSONDecodeError as err:
             pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
+        except clusterlib.CLIError as err:
+            if "Missing" in str(err) or "Invalid option" in str(err):
+                pytest.xfail("Some options are not available in older versions of the command.")
+            raise
 
-        assert {
-            "activeStakeGo",
-            "activeStakeMark",
-            "activeStakeSet",
-            "poolStakeGo",
-            "poolStakeMark",
-            "poolStakeSet",
-        }.issubset(stake_snapshot)
+        if stake_snapshot.get("pools"):
+            assert {
+                "stakeGo",
+                "stakeMark",
+                "stakeSet",
+            }.issubset(stake_snapshot["total"])
+
+            total_stake_go = 0
+            total_stake_mark = 0
+            total_stake_set = 0
+
+            for pool_id in expected_pool_ids:
+                pool_data = stake_snapshot["pools"][helpers.decode_bech32(bech32=pool_id)]
+                assert {
+                    "stakeGo",
+                    "stakeMark",
+                    "stakeSet",
+                }.issubset(pool_data)
+
+                total_stake_go += pool_data["stakeGo"]
+                total_stake_mark += pool_data["stakeMark"]
+                total_stake_set += pool_data["stakeSet"]
+
+            if option == "all_pools":
+                assert total_stake_go == stake_snapshot["total"]["stakeGo"]
+                assert total_stake_mark == stake_snapshot["total"]["stakeMark"]
+                assert total_stake_set == stake_snapshot["total"]["stakeSet"]
+        else:
+            assert {
+                "activeStakeGo",
+                "activeStakeMark",
+                "activeStakeSet",
+                "poolStakeGo",
+                "poolStakeMark",
+                "poolStakeSet",
+            }.issubset(stake_snapshot)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets

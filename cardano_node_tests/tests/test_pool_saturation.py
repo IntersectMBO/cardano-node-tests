@@ -56,7 +56,13 @@ def _get_saturation_threshold(
     k_param = cluster_obj.g_query.get_protocol_params()["stakePoolTargetNum"]
     saturation_amount = int(active_supply / k_param)
 
-    pool_stake = int(cluster_obj.g_query.get_stake_snapshot(pool_id)["poolStakeMark"])
+    stake_snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=[pool_id])
+
+    if stake_snapshot.get("pools"):
+        d_pool_id = helpers.decode_bech32(bech32=pool_id)
+        pool_stake = int(stake_snapshot["pools"][d_pool_id]["stakeMark"])
+    else:
+        pool_stake = int(stake_snapshot["poolStakeMark"])
     saturation_threshold = saturation_amount - pool_stake
     return saturation_threshold
 
@@ -321,9 +327,17 @@ class TestPoolSaturation:
                     assert (
                         pool_records[2].saturation_amounts[this_epoch] > 0
                     ), "Pool is already saturated"
-                    current_stake = int(
-                        cluster.g_query.get_stake_snapshot(pool_records[2].id)["poolStakeMark"]
+
+                    stake_snapshot = cluster.g_query.get_stake_snapshot(
+                        stake_pool_ids=[pool_records[2].id]
                     )
+
+                    if stake_snapshot.get("pools"):
+                        d_pool_id = helpers.decode_bech32(bech32=pool_records[2].id)
+                        current_stake = stake_snapshot["pools"][d_pool_id]["stakeMark"]
+                    else:
+                        current_stake = int(stake_snapshot["poolStakeMark"])
+
                     overstaturate_amount = current_stake * 2
                     saturation_threshold = pool_records[2].saturation_amounts[this_epoch]
                     assert overstaturate_amount > saturation_threshold, (
