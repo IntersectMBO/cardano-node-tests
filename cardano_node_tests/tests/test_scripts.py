@@ -1192,7 +1192,7 @@ class TestTimeLocking:
         The "before" slot is in the past.
         """
         use_build_cmd = request.node.callspec.params["fund_script_before_slot_in_past"]
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
 
         multisig_script, script_address, tx_output, before_slot = fund_script_before_slot_in_past
 
@@ -1259,7 +1259,7 @@ class TestTimeLocking:
         The "before" slot is in the future and the given range is invalid.
         """
         use_build_cmd = request.node.callspec.params["fund_script_before_slot_in_future"]
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
 
         multisig_script, script_address, tx_output, before_slot = fund_script_before_slot_in_future
 
@@ -1307,7 +1307,7 @@ class TestTimeLocking:
         The "after" slot is in the future and the given range is invalid.
         """
         use_build_cmd = request.node.callspec.params["fund_script_after_slot_in_future"]
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
 
         multisig_script, script_address, tx_output, after_slot = fund_script_after_slot_in_future
 
@@ -1374,7 +1374,7 @@ class TestTimeLocking:
         The "after" slot is in the past.
         """
         use_build_cmd = request.node.callspec.params["fund_script_after_slot_in_past"]
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
 
         multisig_script, script_address, tx_output, after_slot = fund_script_after_slot_in_past
 

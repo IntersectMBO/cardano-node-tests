@@ -179,7 +179,7 @@ class TestNegativeInlineDatum:
 
         Expect failure.
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         datum_file = f"{temp_template}.datum"
         with open(datum_file, "w", encoding="utf-8") as outfile:
@@ -288,8 +288,7 @@ class TestNegativeInlineDatum:
 
         Expect failure.
         """
-        hypothesis.assume(datum_content)
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2,

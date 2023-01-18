@@ -1807,7 +1807,7 @@ class TestNegativeWithdrawal:
         Expect failure. Property-based test.
         """
         cluster, __ = cluster_use_pool
-        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         pool_owner, pool_reward = pool_users
 

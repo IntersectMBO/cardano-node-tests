@@ -1790,8 +1790,9 @@ class TestPoolCost:
         Expect failure. Property-based test.
         """
         cluster = cluster_mincost
-        rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"test_stake_pool_low_cost_ci{cluster.cluster_id}"
+        rand_str = common.unique_time_str()
+
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -2244,7 +2245,7 @@ class TestNegative:
 
         Expect failure. Property-based test.
         """
-        temp_template = f"test_stake_pool_metadata_long_name_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         pool_metadata = {
             "name": pool_name,
@@ -2276,7 +2277,7 @@ class TestNegative:
 
         Expect failure. Property-based test.
         """
-        temp_template = f"test_stake_pool_metadata_long_description_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -2310,7 +2311,7 @@ class TestNegative:
         """
         hypothesis.assume(not (3 <= len(pool_ticker) <= 5))
 
-        temp_template = f"test_stake_pool_metadata_long_ticker_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         pool_metadata = {
             "name": "cardano-node-tests",
@@ -2342,7 +2343,7 @@ class TestNegative:
 
         Expect failure. Property-based test.
         """
-        temp_template = f"test_stake_pool_metadata_long_homepage_ci{cluster.cluster_id}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         pool_metadata = {
             "name": "CND",
@@ -2376,6 +2377,8 @@ class TestNegative:
 
         Expect failure. Property-based test.
         """
+        common.get_test_id(cluster)
+
         pool_name, pool_metadata_hash, node_vrf, node_cold = gen_pool_registration_cert_data
 
         pool_data = clusterlib.PoolData(

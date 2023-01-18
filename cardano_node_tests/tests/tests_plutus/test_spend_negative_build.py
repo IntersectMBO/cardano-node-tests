@@ -543,7 +543,7 @@ class TestNegativeRedeemer:
         """
         hypothesis.assume(redeemer_value != 42)
 
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -601,7 +601,7 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -637,7 +637,7 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -672,7 +672,7 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -723,7 +723,7 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -775,7 +775,7 @@ class TestNegativeRedeemer:
         Redeemer is in typed format and the value doesn't comply to JSON schema.
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -829,7 +829,7 @@ class TestNegativeRedeemer:
         Redeemer is in untyped format and the value doesn't comply to JSON schema.
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -883,7 +883,7 @@ class TestNegativeRedeemer:
         Redeemer is in typed format and the value doesn't comply to JSON schema.
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -938,7 +938,7 @@ class TestNegativeRedeemer:
         Redeemer is in untyped format and the value doesn't comply to JSON schema.
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -992,7 +992,7 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -1043,7 +1043,7 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
@@ -1096,7 +1096,7 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2

@@ -108,6 +108,14 @@ def hypothesis_settings(max_examples: int = 100) -> Any:
     )
 
 
+def unique_time_str() -> str:
+    """Return unique string based on current timestamp.
+
+    Useful for property-based tests as it isn't possible to use `random` module in hypothesis tests.
+    """
+    return str(time.time()).replace(".", "")[-8:]
+
+
 def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
     """Return unique test ID - function name + assigned cluster instance + random string.
 

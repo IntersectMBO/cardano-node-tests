@@ -240,7 +240,7 @@ class TestSECP256k1:
         # create the necessary Tx outputs
 
         algorithm, script_utxos, collateral_utxos = build_fund_script_secp
-        temp_template = f"{common.get_test_id(cluster)}_{algorithm}"
+        temp_template = f"{common.get_test_id(cluster)}_{algorithm}_{common.unique_time_str()}"
 
         # the redeemer file will define the number of loops on the script
         redeemer_dir = (
