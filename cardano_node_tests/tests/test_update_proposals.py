@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -64,6 +65,7 @@ class TestUpdateProposals:
         return addr
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_update_proposal(
         self,
         cluster_update_proposal: clusterlib.ClusterLib,
@@ -82,6 +84,7 @@ class TestUpdateProposals:
         * check that parameters were updated with the values submitted in the second
           update proposal, i.e. the second update proposal overwritten the first one
         """
+        # pylint: disable=too-many-statements
         cluster = cluster_update_proposal
         temp_template = common.get_test_id(cluster)
 
@@ -185,6 +188,9 @@ class TestUpdateProposals:
             if VERSIONS.cluster_era == VERSIONS.BABBAGE and not utxo_cost.name:
                 # the resulting number will be multiple of 8, i.e. 8000
                 assert protocol_params["utxoCostPerWord"] == math.floor(utxo_cost.value / 8) * 8
+
+            # check param proposal on dbsync
+            dbsync_utils.check_param_proposal(protocol_params=protocol_params)
 
         # Check that only one update proposal can be applied each epoch and that the last
         # update proposal cancels the previous one. Following parameter values will be
@@ -347,6 +353,9 @@ class TestUpdateProposals:
         clusterlib_utils.check_updated_params(
             update_proposals=update_proposals, protocol_params=protocol_params
         )
+
+        # check param proposal on dbsync
+        dbsync_utils.check_param_proposal(protocol_params=protocol_params)
 
         if VERSIONS.cluster_era >= VERSIONS.BABBAGE:
             assert protocol_params["decentralization"] is None
