@@ -161,10 +161,15 @@ class TestLedgerState:
             pstake_sum_go = functools.reduce(lambda x, y: x + y, pstake_amounts_go, 0)
 
             # get stake info from `stake-snapshot` command
-            stake_snapshot = cluster.g_query.get_stake_snapshot(stake_pool_id=pool_id)
-            pstake_mark_cmd = stake_snapshot["poolStakeMark"]
-            pstake_set_cmd = stake_snapshot["poolStakeSet"]
-            pstake_go_cmd = stake_snapshot["poolStakeGo"]
+            stake_snapshot = cluster.g_query.get_stake_snapshot(stake_pool_ids=[pool_id])
+            if "pools" in stake_snapshot:
+                pstake_mark_cmd = stake_snapshot["pools"][pool_id_dec]["stakeMark"]
+                pstake_set_cmd = stake_snapshot["pools"][pool_id_dec]["stakeSet"]
+                pstake_go_cmd = stake_snapshot["pools"][pool_id_dec]["stakeGo"]
+            else:
+                pstake_mark_cmd = stake_snapshot["poolStakeMark"]
+                pstake_set_cmd = stake_snapshot["poolStakeSet"]
+                pstake_go_cmd = stake_snapshot["poolStakeGo"]
 
             if pstake_sum_mark != pstake_mark_cmd:
                 errors.append(f"pool: {pool_id}, mark:\n  {pstake_sum_mark} != {pstake_mark_cmd}")
@@ -200,12 +205,20 @@ class TestLedgerState:
 
         # active stake can be lower than sum of stakes, as some pools may not be running
         # and minting blocks
-        if sum_mark < stake_snapshot["activeStakeMark"]:
-            errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
-        if sum_set < stake_snapshot["activeStakeSet"]:
-            errors.append(f"active_set: {sum_set} < {stake_snapshot['activeStakeSet']}")
-        if sum_go < stake_snapshot["activeStakeGo"]:
-            errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
+        if "pools" in stake_snapshot:
+            if sum_mark < stake_snapshot["total"]["stakeMark"]:
+                errors.append(f"active_mark: {sum_mark} < {stake_snapshot['total']['stakeMark']}")
+            if sum_set < stake_snapshot["total"]["stakeSet"]:
+                errors.append(f"active_set: {sum_set} < {stake_snapshot['total']['stakeSet']}")
+            if sum_go < stake_snapshot["total"]["stakeGo"]:
+                errors.append(f"active_go: {sum_go} < {stake_snapshot['total']['stakeGo']}")
+        else:
+            if sum_mark < stake_snapshot["activeStakeMark"]:
+                errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
+            if sum_set < stake_snapshot["activeStakeSet"]:
+                errors.append(f"active_set: {sum_set} < {stake_snapshot['activeStakeSet']}")
+            if sum_go < stake_snapshot["activeStakeGo"]:
+                errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
 
         if errors:
             err_joined = "\n".join(errors)
