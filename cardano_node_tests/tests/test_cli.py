@@ -391,7 +391,9 @@ class TestAdvancedQueries:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @pytest.mark.parametrize("option", ("single_pool", "multiple_pool", "all_pools", "total_stake"))
+    @pytest.mark.parametrize(
+        "option", ("single_pool", "multiple_pools", "all_pools", "total_stake")
+    )
     def test_stake_snapshot(  # noqa: C901
         self,
         cluster: clusterlib.ClusterLib,
@@ -405,7 +407,7 @@ class TestAdvancedQueries:
                 stake_snapshot = cluster.g_query.get_stake_snapshot(
                     stake_pool_ids=expected_pool_ids
                 )
-            elif option == "multiple_pool":
+            elif option == "multiple_pools":
                 expected_pool_ids = [pool_ids[0], pool_ids[1]]
                 stake_snapshot = cluster.g_query.get_stake_snapshot(
                     stake_pool_ids=expected_pool_ids
@@ -413,17 +415,20 @@ class TestAdvancedQueries:
             elif option == "all_pools":
                 expected_pool_ids = pool_ids
                 stake_snapshot = cluster.g_query.get_stake_snapshot(all_stake_pools=True)
-            else:
+            elif option == "total_stake":
                 expected_pool_ids = []
                 stake_snapshot = cluster.g_query.get_stake_snapshot()
+            else:
+                raise ValueError(f"Unknown option: {option}")
         except json.decoder.JSONDecodeError as err:
             pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
         except clusterlib.CLIError as err:
-            if "Missing" in str(err) or "Invalid option" in str(err):
-                pytest.xfail("Some options are not available in older versions of the command.")
+            err_str = str(err)
+            if "Missing" in err_str or "Invalid option" in err_str:
+                pytest.skip(f"The '{option}' scenario not available with this cardano-cli version.")
             raise
 
-        if stake_snapshot.get("pools"):
+        if "pools" in stake_snapshot:
             assert {
                 "stakeGo",
                 "stakeMark",

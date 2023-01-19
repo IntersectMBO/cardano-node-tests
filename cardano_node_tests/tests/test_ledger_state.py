@@ -162,11 +162,10 @@ class TestLedgerState:
 
             # get stake info from `stake-snapshot` command
             stake_snapshot = cluster.g_query.get_stake_snapshot(stake_pool_ids=[pool_id])
-            if stake_snapshot.get("pools"):
-                d_pool_id = helpers.decode_bech32(bech32=pool_id)
-                pstake_mark_cmd = stake_snapshot["pools"][d_pool_id]["stakeMark"]
-                pstake_set_cmd = stake_snapshot["pools"][d_pool_id]["stakeSet"]
-                pstake_go_cmd = stake_snapshot["pools"][d_pool_id]["stakeGo"]
+            if "pools" in stake_snapshot:
+                pstake_mark_cmd = stake_snapshot["pools"][pool_id_dec]["stakeMark"]
+                pstake_set_cmd = stake_snapshot["pools"][pool_id_dec]["stakeSet"]
+                pstake_go_cmd = stake_snapshot["pools"][pool_id_dec]["stakeGo"]
             else:
                 pstake_mark_cmd = stake_snapshot["poolStakeMark"]
                 pstake_set_cmd = stake_snapshot["poolStakeSet"]
@@ -206,7 +205,7 @@ class TestLedgerState:
 
         # active stake can be lower than sum of stakes, as some pools may not be running
         # and minting blocks
-        if stake_snapshot.get("pools"):
+        if "pools" in stake_snapshot:
             if sum_mark < stake_snapshot["total"]["stakeMark"]:
                 errors.append(f"active_mark: {sum_mark} < {stake_snapshot['total']['stakeMark']}")
             if sum_set < stake_snapshot["total"]["stakeSet"]:

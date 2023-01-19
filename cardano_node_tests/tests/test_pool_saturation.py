@@ -58,9 +58,9 @@ def _get_saturation_threshold(
 
     stake_snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=[pool_id])
 
-    if stake_snapshot.get("pools"):
-        d_pool_id = helpers.decode_bech32(bech32=pool_id)
-        pool_stake = int(stake_snapshot["pools"][d_pool_id]["stakeMark"])
+    if "pools" in stake_snapshot:
+        pool_id_dec = helpers.decode_bech32(bech32=pool_id)
+        pool_stake = int(stake_snapshot["pools"][pool_id_dec]["stakeMark"])
     else:
         pool_stake = int(stake_snapshot["poolStakeMark"])
     saturation_threshold = saturation_amount - pool_stake
@@ -332,9 +332,8 @@ class TestPoolSaturation:
                         stake_pool_ids=[pool_records[2].id]
                     )
 
-                    if stake_snapshot.get("pools"):
-                        d_pool_id = helpers.decode_bech32(bech32=pool_records[2].id)
-                        current_stake = stake_snapshot["pools"][d_pool_id]["stakeMark"]
+                    if "pools" in stake_snapshot:
+                        current_stake = stake_snapshot["pools"][pool_records[2].id_dec]["stakeMark"]
                     else:
                         current_stake = int(stake_snapshot["poolStakeMark"])
 
