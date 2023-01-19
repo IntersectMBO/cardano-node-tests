@@ -791,7 +791,7 @@ def query_cost_model() -> Dict[str, Dict[str, Any]]:
 
 
 def query_param_proposal() -> ParamProposalDBRow:
-    """Query param_proposal last record in db-sync."""
+    """Query last param proposal record in db-sync."""
     query = (
         "SELECT"
         " p.id, p.epoch_no, p.key, p.min_fee_a, p.min_fee_b, p.max_block_size,"
@@ -799,10 +799,10 @@ def query_param_proposal() -> ParamProposalDBRow:
         " p.optimal_pool_count, p.influence, p.monetary_expand_rate, p.treasury_growth_rate,"
         " p.decentralisation, p.entropy, p.protocol_major, p.protocol_minor, p.min_utxo_value,"
         " p.min_pool_cost, p.coins_per_utxo_size, p.cost_model_id, p.price_mem, p.price_step,"
-        " p.max_tx_ex_mem, p.max_tx_ex_steps, p.max_block_ex_mem, p.max_block_ex_steps, "
-        " p.max_val_size, p.collateral_percent, p.max_collateral_inputs, p.registered_tx_id"
-        " FROM param_proposal AS p"
-        " ORDER BY ID DESC LIMIT 1"
+        " p.max_tx_ex_mem, p.max_tx_ex_steps, p.max_block_ex_mem, p.max_block_ex_steps,"
+        " p.max_val_size, p.collateral_percent, p.max_collateral_inputs, p.registered_tx_id "
+        "FROM param_proposal AS p "
+        "ORDER BY ID DESC LIMIT 1"
     )
 
     with execute(query=query) as cur:

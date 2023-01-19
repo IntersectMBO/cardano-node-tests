@@ -1244,7 +1244,7 @@ def check_param_proposal(protocol_params: dict) -> Optional[dbsync_queries.Param
 
     param_proposal_db = dbsync_queries.query_param_proposal()
 
-    params_to_check = {
+    params_mapping = {
         "coins_per_utxo_word": protocol_params["utxoCostPerByte"],
         "collateral_percent": protocol_params["collateralPercentage"],
         "influence": protocol_params["poolPledgeInfluence"],
@@ -1269,13 +1269,13 @@ def check_param_proposal(protocol_params: dict) -> Optional[dbsync_queries.Param
 
     failures = []
 
-    for param_db, param_protocol in params_to_check.items():
+    for param_db, protocol_value in params_mapping.items():
         db_value = getattr(param_proposal_db, param_db)
-        if db_value and (db_value != param_protocol):
-            failures.append(f"Param value for {param_db}: {db_value}. Expected: {param_protocol}")
+        if db_value and (db_value != protocol_value):
+            failures.append(f"Param value for {param_db}: {db_value}. Expected: {protocol_value}")
 
     if failures:
         failures_str = "\n".join(failures)
-        raise AssertionError(f"The changed params are not the expected.\n{failures_str}")
+        raise AssertionError(f"Unexpected parameter proposal values in db-sync:\n{failures_str}")
 
     return param_proposal_db
