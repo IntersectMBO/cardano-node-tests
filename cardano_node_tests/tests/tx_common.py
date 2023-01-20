@@ -62,6 +62,7 @@ def get_raw_tx_values(
         tx_files=tx_files,
         out_file=out_file,
         fee=fee,
+        build_args=[],
         invalid_hereafter=ttl,
     )
 
