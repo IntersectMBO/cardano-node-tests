@@ -1077,3 +1077,124 @@ class TestBuildMinting:
             assert (
                 expect_pass
             ), f"TTL too far in the future (offset {ttl_offset} slots) was accepted"
+
+
+@pytest.mark.testnets
+class TestCollateralOutput:
+    """Tests for collateral output."""
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS_VERSION
+    def test_duplicated_collateral(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        plutus_version: str,
+    ):
+        """Test minting a token with a Plutus script while using the same collateral input twice.
+
+        Tests https://github.com/input-output-hk/cardano-node/issues/4744
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * fund the token issuer and create a UTxO for collateral and possibly reference script
+        * check that the expected amount was transferred to token issuer's address
+        * mint the token using a Plutus script and the same collateral UTxO listed twice
+        * check that the token was minted and collateral UTxO was not spent
+        """
+        # pylint: disable=too-many-locals
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+        script_fund = 200_000_000
+
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_v_record.execution_cost,
+            protocol_params=cluster.g_query.get_protocol_params(),
+        )
+
+        # Step 1: fund the token issuer and create UTxOs for collaterals
+
+        mint_utxos, collateral_utxos, *__ = mint_build._fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=script_fund,
+        )
+
+        # Step 2: mint the "qacoin"
+
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_v_record.script_file,
+                collaterals=collateral_utxos,
+                redeemer_file=plutus_common.REDEEMER_42,
+                policyid=policyid,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+        tx_output_step2 = cluster.g_transaction.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+        )
+
+        altered_build_args = tx_output_step2.build_args[:]
+
+        # add a duplicate collateral
+        collateral_idx = altered_build_args.index("--tx-in-collateral") + 1
+        altered_build_args.insert(collateral_idx + 1, "--tx-in-collateral")
+        altered_build_args.insert(collateral_idx + 2, altered_build_args[collateral_idx])
+
+        # change the output file
+        tx_body_step2 = Path(f"{tx_output_step2.out_file.stem}_altered.body")
+        out_file_idx = altered_build_args.index("--out-file") + 1
+        altered_build_args[out_file_idx] = str(tx_body_step2)
+
+        # build the transaction using altered arguments
+        cluster.cli(altered_build_args)
+
+        tx_signed_step2 = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_body_step2,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        try:
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        except clusterlib.CLIError as exc:
+            if "IncorrectTotalCollateralField" not in str(exc):
+                raise
+            pytest.xfail("`IncorrectTotalCollateralField` error, see node issue #4744")
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
+        assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
