@@ -146,11 +146,16 @@ jobs:
         with:
           name: testrun-files
           path: |
-            cli_coverage.json
             scheduling.log.xz
             errors_all.log
             testrun-report.xml
             deselected_tests.txt
+      - name: Upload CLI coverage
+        uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: cli-coverage
+          path: cli_coverage.json
       - name: Mail failure report
         uses: dawidd6/action-send-mail@v3
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS
