@@ -54,6 +54,7 @@ Nightly results
    * Shelley transaction era
    * default (legacy) network topology
    * skip long-running tests
+   * cluster starts directly in Babbage era
 
 Nightly upgrade testing
 ^^^^^^^^^^^^^^^^^^^^^^^
