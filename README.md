@@ -23,11 +23,21 @@ The easiest way to run the tests is by using Github Actions.
 * clone this repo
 * run `./.github/regression.sh`
 
-The execution can be configured using env variables described in section below.
+---
+**NOTE** <!-- markdownlint-disable-line MD036 -->
+
+It takes ~ 30 mins for local cluster instance to get from Byron to Babbage. If it seems that tests are stuck, they are likely just waiting for local cluster instances to be fully started.
+
+---
+
+To start local cluster directly in Babbage, set `CI_FAST_CLUSTER=1`.
+
+The execution can be configured using env variables described in the section below.
 
 In addition, you can use
 
 * `NODE_REV` - revison of `cardano-node` (default: master HEAD)
+* `CI_FAST_CLUSTER` - start local cluster directly in Babbage era, without going from Byron -> ... -> Babbage (same effect as `SCRIPTS_DIRNAME=babbage_fast`)
 * `CI_ENABLE_DBSYNC` - specifies if tests will setup db-sync and perform db-sync checks (default: unset)
 * `DBSYNC_REV` - revison of `cardano-db-sync` (default: master HEAD)
 
