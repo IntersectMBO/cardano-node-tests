@@ -542,6 +542,14 @@ class ClusterGetter:
         # if here, this will be the first test with the mark
         return True
 
+    def _fail_on_all_dead(self) -> None:
+        """Fail if all cluster instances are dead."""
+        dead_clusters = list(
+            self.pytest_tmp_dir.glob(f"{common.CLUSTER_DIR_TEMPLATE}*/{common.CLUSTER_DEAD_FILE}")
+        )
+        if len(dead_clusters) == self.num_of_instances:
+            raise RuntimeError("All clusters are dead, cannot run.")
+
     def _cleanup_dead_clusters(self, cget_status: _ClusterGetStatus) -> None:
         """Cleanup if the selected cluster instance failed to start."""
         # move on to other cluster instance
@@ -552,12 +560,6 @@ class ClusterGetter:
         # remove status files that are checked by other workers
         for sf in cget_status.instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_*"):
             sf.unlink()
-
-        dead_clusters = list(
-            self.pytest_tmp_dir.glob(f"{common.CLUSTER_DIR_TEMPLATE}*/{common.CLUSTER_DEAD_FILE}")
-        )
-        if len(dead_clusters) == self.num_of_instances:
-            raise RuntimeError("All clusters are dead, cannot run.")
 
     def _init_respin(self, cget_status: _ClusterGetStatus) -> bool:
         """Initialize respin of this cluster instance on this worker."""
@@ -779,6 +781,9 @@ class ClusterGetter:
             with locking.FileLockIfXdist(self.cluster_lock):
                 if self._is_already_running():
                     return self.cluster_instance_num
+
+                # fail if all cluster instances are dead
+                self._fail_on_all_dead()
 
                 if mark:
                     # check if tests with my mark are already locked to any cluster instance
