@@ -34,7 +34,7 @@
         {
           devShells = rec {
             base = pkgs.mkShell {
-              nativeBuildInputs = with pkgs; [ bash nix gnugrep gnumake gnutar coreutils git xz ];
+              nativeBuildInputs = with pkgs; [ bash nix gnugrep gnumake gnutar coreutils git xz python3Packages.supervisor ];
             };
             python = pkgs.mkShell {
               nativeBuildInputs = with pkgs; with python39Packages; [ python39Full virtualenv pip matplotlib pandas requests xmltodict psutil GitPython pymysql ];

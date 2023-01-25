@@ -6,8 +6,19 @@ set -xeuo pipefail
 REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"
 
+ORIG_WORKDIR="${WORKDIR:-""}"
 if [ -z "${WORKDIR:-""}" ]; then
   WORKDIR="$REPODIR/run_workdir"
+fi
+
+# stop all running clusters
+for sc in "$WORKDIR"/state-cluster*; do
+  [ -d "$sc" ] || continue
+  "$sc/supervisord_stop" || true
+done
+
+# create clean workdir if using the default one
+if [ -z "${ORIG_WORKDIR:-""}" ]; then
   rm -rf "$WORKDIR"
 fi
 mkdir -p "$WORKDIR"
