@@ -400,7 +400,10 @@ class TestAdvancedQueries:
         option: str,
         pool_ids: List[str],
     ):
-        """Test `query stake-snapshot`."""
+        """Test `query stake-snapshot`.
+
+        See also `TestLedgerState.test_stake_snapshot` for more scenarios.
+        """
         try:
             if option == "single_pool":
                 expected_pool_ids = [pool_ids[0]]
@@ -413,7 +416,8 @@ class TestAdvancedQueries:
                     stake_pool_ids=expected_pool_ids
                 )
             elif option == "all_pools":
-                expected_pool_ids = pool_ids
+                # get up-to-date list of available pools
+                expected_pool_ids = cluster.g_query.get_stake_pools()
                 stake_snapshot = cluster.g_query.get_stake_snapshot(all_stake_pools=True)
             elif option == "total_stake":
                 expected_pool_ids = []
@@ -439,8 +443,11 @@ class TestAdvancedQueries:
             total_stake_mark = 0
             total_stake_set = 0
 
+            expected_pool_ids_mapping = {}
             for pool_id in expected_pool_ids:
-                pool_data = stake_snapshot["pools"][helpers.decode_bech32(bech32=pool_id)]
+                pool_dec = helpers.decode_bech32(bech32=pool_id)
+                expected_pool_ids_mapping[pool_dec] = pool_id
+                pool_data = stake_snapshot["pools"][pool_dec]
                 assert {
                     "stakeGo",
                     "stakeMark",
@@ -452,9 +459,20 @@ class TestAdvancedQueries:
                 total_stake_set += pool_data["stakeSet"]
 
             if option == "all_pools":
-                assert total_stake_go == stake_snapshot["total"]["stakeGo"]
-                assert total_stake_mark == stake_snapshot["total"]["stakeMark"]
-                assert total_stake_set == stake_snapshot["total"]["stakeSet"]
+                expected_pool_ids_dec = set(expected_pool_ids_mapping.keys())
+                out_pool_ids_dec = set(stake_snapshot["pools"].keys())
+                # potentially there can be a race condition when a pool is (de)registered while
+                # this test is running
+                assert expected_pool_ids_dec == out_pool_ids_dec, (
+                    f"Expected pools: {expected_pool_ids_dec}\nVS\n"
+                    f"Reported pools: {out_pool_ids_dec}\n"
+                    f"Difference: {expected_pool_ids_dec.symmetric_difference(out_pool_ids_dec)}"
+                )
+                # active stake can be lower than sum of stakes, as some pools may not be running
+                # and minting blocks
+                assert total_stake_go >= stake_snapshot["total"]["stakeGo"]
+                assert total_stake_mark >= stake_snapshot["total"]["stakeMark"]
+                assert total_stake_set >= stake_snapshot["total"]["stakeSet"]
         else:
             assert {
                 "activeStakeGo",
