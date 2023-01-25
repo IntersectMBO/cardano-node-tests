@@ -1052,7 +1052,7 @@ class TestNegativeMIRCerts:
         """
         temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}"
         cluster = cluster_pots
-        amount = 30_000_000_000_000_000
+        amount = 50_000_000_000_000_000
         registered_user = registered_users[0]
 
         mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
@@ -1079,4 +1079,5 @@ class TestNegativeMIRCerts:
                 tx_name=temp_template,
                 tx_files=tx_files,
             )
-        assert "InsufficientForInstantaneousRewardsDELEG" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert "InsufficientForInstantaneousRewardsDELEG" in err_str, err_str
