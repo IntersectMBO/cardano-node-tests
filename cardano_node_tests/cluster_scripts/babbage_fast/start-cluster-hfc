@@ -379,13 +379,28 @@ cat > "$STATE_CLUSTER/supervisord_stop" <<EoF
 set -uo pipefail
 
 SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
+PID_FILE="\$SCRIPT_DIR/supervisord.pid"
 
 supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
 
-if [ -f "\$SCRIPT_DIR/supervisord.pid" ]; then
-  kill "\$(<"\$SCRIPT_DIR/supervisord.pid")"
-  rm -f "\$SCRIPT_DIR/supervisord.pid"
+if [ ! -f "\$PID_FILE" ]; then
+  echo "Cluster is not running!"
+  exit 0
 fi
+
+PID="\$(<"\$PID_FILE")"
+for _ in {1..5}; do
+  if ! kill "\$PID"; then
+    break
+  fi
+  sleep 1
+  if [ ! -f "\$PID_FILE" ]; then
+    break
+  fi
+done
+
+rm -f "\$PID_FILE"
+echo "Cluster terminated!"
 EoF
 chmod u+x "$STATE_CLUSTER"/{supervisorctl*,supervisord_*}
 
