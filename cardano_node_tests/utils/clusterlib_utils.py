@@ -800,15 +800,20 @@ def filtered_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
 ) -> str:
     """Get filtered output of `query ledger-state`."""
-    cardano_cmd = " ".join(
-        [
-            "cardano-cli",
-            "query",
-            "ledger-state",
-            *cluster_obj.magic_args,
-            f"--{cluster_obj.protocol}-mode",
-        ]
+    cardano_cli_args = [
+        "cardano-cli",
+        "query",
+        "ledger-state",
+        *cluster_obj.magic_args,
+        f"--{cluster_obj.protocol}-mode",
+    ]
+    cardano_cmd = " ".join(cardano_cli_args)
+
+    # record cli coverage
+    clusterlib.record_cli_coverage(
+        cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
     )
+
     # get rid of a huge amount of data we don't have any use for
     cmd = (
         f"{cardano_cmd} | jq -n --stream -c "
@@ -822,15 +827,20 @@ def get_blocks_before(
     cluster_obj: clusterlib.ClusterLib,
 ) -> Dict[str, int]:
     """Get `blocksBefore` section of ledger state with bech32 encoded pool ids."""
-    cardano_cmd = " ".join(
-        [
-            "cardano-cli",
-            "query",
-            "ledger-state",
-            *cluster_obj.magic_args,
-            f"--{cluster_obj.protocol}-mode",
-        ]
+    cardano_cli_args = [
+        "cardano-cli",
+        "query",
+        "ledger-state",
+        *cluster_obj.magic_args,
+        f"--{cluster_obj.protocol}-mode",
+    ]
+    cardano_cmd = " ".join(cardano_cli_args)
+
+    # record cli coverage
+    clusterlib.record_cli_coverage(
+        cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
     )
+
     # get rid of a huge amount of data we don't have any use for
     cmd = (
         f"{cardano_cmd} | jq -n --stream -c "
