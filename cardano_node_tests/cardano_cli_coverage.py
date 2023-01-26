@@ -20,16 +20,17 @@ LOGGER = logging.getLogger(__name__)
 SKIPPED = (
     "build-script",
     "byron",
-    "convert-byron-key",
     "convert-byron-genesis-vkey",
-    "convert-itn-key",
-    "convert-itn-extended-key",
     "convert-itn-bip32-key",
+    "convert-itn-extended-key",
+    "convert-itn-key",
+    "help",
     "version",
     "--byron-era",
     "--byron-key",
     "--byron-mode",
     "--epoch-slots",
+    "--icarus-payment-key",
     "--mainnet",
     "--shelley-mode",
     "--version",
@@ -195,7 +196,7 @@ def get_report(
             continue
         if len(value) != 1:
             ret_db, ret_covered_count, ret_uncovered_count = get_report(
-                key, value, uncovered_only=uncovered_only
+                arg_name=key, coverage=value, uncovered_only=uncovered_only
             )
             covered_count += ret_covered_count
             uncovered_count += ret_uncovered_count
@@ -257,7 +258,9 @@ def main() -> int:
         LOGGER.error(str(exc))
         return 1
 
-    report, *__ = get_report("cardano-cli", coverage, uncovered_only=args.uncovered_only)
+    report, *__ = get_report(
+        arg_name="cardano-cli", coverage=coverage, uncovered_only=args.uncovered_only
+    )
 
     if args.output_file:
         helpers.write_json(args.output_file, report)
