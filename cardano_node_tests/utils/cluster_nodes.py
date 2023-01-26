@@ -88,7 +88,7 @@ class ClusterType:
 class LocalCluster(ClusterType):
     """Local cluster type (full cardano mode)."""
 
-    NODES = {"bft1", "pool1", "pool2", "pool3"}
+    NODES = {"bft1", *(f"pool{i}" for i in range(1, configuration.NUM_POOLS + 1))}
 
     def __init__(self) -> None:
         super().__init__()
