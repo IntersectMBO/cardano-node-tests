@@ -102,11 +102,18 @@ def registered_users(
     return registered
 
 
-@pytest.mark.skipif(
-    cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
-    and cluster_nodes.get_cluster_type().uses_shortcut,
-    reason="MIR certs testing is not supported on local cluster with HF shortcut",
-)
+@pytest.fixture
+def skip_on_hf_shortcut(
+    cluster_pots: clusterlib.ClusterLib,  # pylint: disable=unused-argument
+) -> None:
+    """Skip test if HF shortcut is used."""
+    if (
+        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+        and cluster_nodes.get_cluster_type().uses_shortcut
+    ):
+        pytest.skip("MIR certs testing is not supported on local cluster with HF shortcut.")
+
+
 class TestMIRCerts:
     """Tests for MIR certificates."""
 
@@ -114,6 +121,7 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     def test_transfer_to_treasury(
         self,
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
