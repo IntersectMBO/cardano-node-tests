@@ -99,6 +99,9 @@ class LocalCluster(ClusterType):
     def uses_shortcut(self) -> bool:
         """Check if cluster uses shortcut to go from Byron to last supported era."""
         byron_dir = get_cluster_env().state_dir / "byron"
+        if not byron_dir.exists():
+            raise RuntimeError("Can't check, cluster instance was not started yet.")
+
         _uses_shortcut = not (byron_dir / "address-000-converted").exists()
         return _uses_shortcut
 
