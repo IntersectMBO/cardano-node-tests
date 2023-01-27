@@ -31,19 +31,12 @@ pytestmark = [
 
 
 @pytest.fixture
-def cluster_locked(
-    cluster_manager: cluster_management.ClusterManager,
-) -> clusterlib.ClusterLib:
-    return cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
-
-
-@pytest.fixture
 def payment_addrs_locked(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_locked: clusterlib.ClusterLib,
+    cluster_singleton: clusterlib.ClusterLib,
 ) -> List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    cluster = cluster_locked
+    cluster = cluster_singleton
     temp_template = common.get_test_id(cluster)
 
     with cluster_manager.cache_fixture() as fixture_cache:
@@ -101,11 +94,11 @@ class TestSetup:
     @pytest.mark.skipif(UPGRADE_TESTS_STEP < 2, reason="runs only on step >= 2 of upgrade testing")
     def test_ignore_log_errors(
         self,
-        cluster_locked: clusterlib.ClusterLib,
+        cluster_singleton: clusterlib.ClusterLib,
         worker_id: str,
     ):
         """Ignore selected errors in log right after node upgrade."""
-        cluster = cluster_locked
+        cluster = cluster_singleton
         common.get_test_id(cluster)
 
         # Ignore ledger replay when upgrading from node version 1.34.1.
@@ -122,11 +115,11 @@ class TestSetup:
     @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
     def test_update_to_babbage_pv8(
         self,
-        cluster_locked: clusterlib.ClusterLib,
+        cluster_singleton: clusterlib.ClusterLib,
         payment_addrs_locked: List[clusterlib.AddressRecord],
     ):
         """Update cluster to Babbage PV8."""
-        cluster = cluster_locked
+        cluster = cluster_singleton
         common.get_test_id(cluster)
         src_addr = payment_addrs_locked[0]
 

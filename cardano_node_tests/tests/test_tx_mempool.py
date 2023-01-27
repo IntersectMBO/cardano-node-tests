@@ -19,31 +19,24 @@ class TestMempool:
     """Tests for transactions in mempool."""
 
     @pytest.fixture
-    def cluster_locked(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-    ) -> clusterlib.ClusterLib:
-        return cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
-
-    @pytest.fixture
     def payment_addrs_locked(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_locked: clusterlib.ClusterLib,
+        cluster_singleton: clusterlib.ClusterLib,
     ) -> List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses for 'test_query_mempool_txin'."""
-        temp_template = common.get_test_id(cluster_locked)
+        temp_template = common.get_test_id(cluster_singleton)
 
         addrs = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_addr_0",
             f"{temp_template}_addr_1",
-            cluster_obj=cluster_locked,
+            cluster_obj=cluster_singleton,
         )
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
-            cluster_obj=cluster_locked,
+            cluster_obj=cluster_singleton,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
         return addrs
@@ -51,7 +44,7 @@ class TestMempool:
     @allure.link(helpers.get_vcs_link())
     def test_query_mempool_txin(
         self,
-        cluster_locked: clusterlib.ClusterLib,
+        cluster_singleton: clusterlib.ClusterLib,
         payment_addrs_locked: List[clusterlib.AddressRecord],
     ):
         """Test that is possible to query txin of a transaction that is still in mempool.
@@ -59,7 +52,7 @@ class TestMempool:
         * check if 'query tx-mempool next-tx' is returning a TxId
         * check if 'query tx-mempool exists <TxId>' found the expected TxId
         """
-        cluster = cluster_locked
+        cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
