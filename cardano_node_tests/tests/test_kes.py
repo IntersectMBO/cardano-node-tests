@@ -49,11 +49,6 @@ if configuration.UPDATE_PV8 and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
 pytestmark = common.SKIPIF_WRONG_ERA
 
 
-@pytest.fixture
-def cluster_singleton(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
-    return cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
-
-
 @pytest.fixture(scope="module")
 def short_kes_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
     """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""

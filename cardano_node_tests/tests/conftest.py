@@ -328,9 +328,18 @@ def cluster(
 
 
 @pytest.fixture
+def cluster_singleton(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    """Lock whole cluster instance and return instance of `clusterlib.ClusterLib`."""
+    return cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
+
+
+@pytest.fixture
 def cluster_lock_pool(
     cluster_manager: cluster_management.ClusterManager,
 ) -> Tuple[clusterlib.ClusterLib, str]:
+    """Lock any pool and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         lock_resources=[
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
@@ -346,6 +355,7 @@ def cluster_lock_pool(
 def cluster_use_pool(
     cluster_manager: cluster_management.ClusterManager,
 ) -> Tuple[clusterlib.ClusterLib, str]:
+    """Mark any pool as "in use" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=[
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
