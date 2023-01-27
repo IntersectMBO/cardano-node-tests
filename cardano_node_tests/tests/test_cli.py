@@ -150,6 +150,7 @@ class TestCLI:
         assert utxo_out == expected_out
 
     @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_WRONG_ERA
     def test_txid_with_process_substitution(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to pass Tx file using process substitution."""
         common.get_test_id(cluster)
@@ -169,6 +170,7 @@ class TestCLI:
             raise
 
     @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_WRONG_ERA
     def test_sign_tx_with_process_substitution(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to pass skey file using process substitution."""
         temp_template = common.get_test_id(cluster)
@@ -204,6 +206,7 @@ class TestCLI:
             assert tx == tx_body
 
 
+@common.SKIPIF_WRONG_ERA
 class TestAddressInfo:
     """Tests for cardano-cli address info."""
 
@@ -211,7 +214,7 @@ class TestAddressInfo:
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
     def test_address_info_payment(self, cluster: clusterlib.ClusterLib, addr_gen: str):
         """Check payment address info."""
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{addr_gen}"
 
         if addr_gen == "static":
             address = "addr_test1vzp4kj0rmnl5q5046e2yy697fndej56tm35jekemj6ew2gczp74wk"
@@ -234,7 +237,7 @@ class TestAddressInfo:
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
     def test_address_info_stake(self, cluster: clusterlib.ClusterLib, addr_gen: str):
         """Check stake address info."""
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{addr_gen}"
 
         if addr_gen == "static":
             address = "stake_test1uz5mstpskyhpcvaw2enlfk8fa5k335cpd0lfz6chd5c2xpck3nld4"
@@ -307,6 +310,7 @@ class TestAddressInfo:
         ), "Address information doesn't match"
 
 
+@common.SKIPIF_WRONG_ERA
 class TestKey:
     """Tests for cardano-cli key."""
 
@@ -487,6 +491,8 @@ class TestAdvancedQueries:
     @pytest.mark.testnets
     def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
         """Test `query pool-params`."""
+        common.get_test_id(cluster)
+
         try:
             pool_params = cluster.g_query.get_pool_params(stake_pool_id=pool_ids[0])
         except json.decoder.JSONDecodeError as err:
@@ -507,6 +513,8 @@ class TestAdvancedQueries:
         """
         if not clusterlib_utils.cli_has("query tx-mempool"):
             pytest.skip("CLI command `query tx-mempool` is not available")
+
+        common.get_test_id(cluster)
 
         for __ in range(5):
             tx_mempool = cluster.g_query.get_mempool_info()
