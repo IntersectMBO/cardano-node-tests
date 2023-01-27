@@ -6,12 +6,23 @@ set -xeuo pipefail
 REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"
 
+ORIG_WORKDIR="${WORKDIR:-""}"
 if [ -z "${WORKDIR:-""}" ]; then
   WORKDIR="$REPODIR/run_workdir"
-  rm -rf "$WORKDIR"
+fi
+export WORKDIR
+
+# shellcheck disable=SC1090,SC1091
+. .github/stop_cluster_instances.sh
+
+# stop all running cluster instances
+stop_instances "$WORKDIR"
+
+# create clean workdir if using the default one
+if [ -z "${ORIG_WORKDIR:-""}" ]; then
+  rm -rf "${WORKDIR:?}"
 fi
 mkdir -p "$WORKDIR"
-export WORKDIR
 
 export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
@@ -19,11 +30,11 @@ mkdir -p "$TMPDIR"
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
-rm -rf "${ARTIFACTS_DIR:?}"/*
+rm -rf "${ARTIFACTS_DIR:?}"
 mkdir -p "$ARTIFACTS_DIR"
 
 export COVERAGE_DIR="${COVERAGE_DIR:-".cli_coverage"}"
-rm -rf "${COVERAGE_DIR:?}"/*
+rm -rf "${COVERAGE_DIR:?}"
 mkdir -p "$COVERAGE_DIR"
 
 export SCHEDULING_LOG=scheduling.log
@@ -93,6 +104,9 @@ retval="$?"
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
 . .github/grep_errors.sh
+
+# stop all running cluster instances
+stop_instances "$WORKDIR"
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then

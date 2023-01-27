@@ -10,16 +10,17 @@ ORIG_WORKDIR="${WORKDIR:-""}"
 if [ -z "${WORKDIR:-""}" ]; then
   WORKDIR="$REPODIR/run_workdir"
 fi
+export WORKDIR
 
-# stop all running clusters
-for sc in "$WORKDIR"/state-cluster*; do
-  [ -d "$sc" ] || continue
-  "$sc/supervisord_stop" || true
-done
+# shellcheck disable=SC1090,SC1091
+. .github/stop_cluster_instances.sh
+
+# stop all running cluster instances
+stop_instances "$WORKDIR"
 
 # create clean workdir if using the default one
 if [ -z "${ORIG_WORKDIR:-""}" ]; then
-  rm -rf "$WORKDIR"
+  rm -rf "${WORKDIR:?}"
 fi
 mkdir -p "$WORKDIR"
 
@@ -44,7 +45,7 @@ elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
 fi
 
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
-rm -rf "${ARTIFACTS_DIR:?}"/*
+rm -rf "${ARTIFACTS_DIR:?}"
 
 export SCHEDULING_LOG=scheduling.log
 true > "$SCHEDULING_LOG"
@@ -98,6 +99,9 @@ mv .reports/testrun-report.* ./
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
 . .github/grep_errors.sh
+
+# stop all running cluster instances
+stop_instances "$WORKDIR"
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then

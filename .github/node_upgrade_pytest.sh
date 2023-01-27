@@ -14,7 +14,7 @@ STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
 
 # init reports dir before each step
 export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
-rm -rf "${REPORTS_DIR:?}"/*
+rm -rf "${REPORTS_DIR:?}"
 mkdir -p "$REPORTS_DIR"
 
 #
