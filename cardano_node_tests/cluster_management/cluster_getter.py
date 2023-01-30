@@ -670,7 +670,9 @@ class ClusterGetter:
         test_running_file = (
             self.instance_dir / f"{common.TEST_RUNNING_GLOB}{mark_run_str}_{self.worker_id}"
         )
-        test_running_file.touch()
+        # write the name of the test that is starting on this cluster instance, leave out the
+        # '(setup)' part
+        test_running_file.write_text(cget_status.current_test.split(" ")[0])
 
     def _init_use_resources(
         self,
