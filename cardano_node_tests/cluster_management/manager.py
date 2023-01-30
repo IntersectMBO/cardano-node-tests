@@ -252,10 +252,12 @@ class ClusterManager:
                 missing_ok=True
             )
 
-            # log how many tests keep running on the cluster instance
-            num_tests_running = len(list(self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}_*")))
-            if num_tests_running:
-                self.log(f"c{self._cluster_instance_num}: {num_tests_running} running tests")
+            # log names of tests that keep running on the cluster instance
+            tnames = [
+                tf.read_text().strip()
+                for tf in self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*")
+            ]
+            self.log(f"c{self._cluster_instance_num}: running tests: {tnames}")
 
         if errors:
             logfiles.report_artifacts_errors(errors)
