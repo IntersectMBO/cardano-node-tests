@@ -7,9 +7,12 @@ import pytest
 from cardano_clusterlib import clusterlib
 from packaging import version
 
+from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -230,3 +233,58 @@ class TestDBSync:
         assert (
             pp_cost_models["PlutusScriptV2"] == db_cost_models["PlutusV2"]
         ), "PlutusV2 cost model is not the expected"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_reconnect_dbsync(
+        self,
+        cluster_singleton: clusterlib.ClusterLib,
+        cluster_manager: cluster_management.ClusterManager,
+    ):
+        """
+        Check that db-sync reconnects to the node after the node is restarted.
+
+        * restart all nodes of the running cluster
+        * submit a transaction
+        * check that the transaction is present on dbsync
+        """
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+
+        cluster_nodes.restart_all_nodes()
+
+        # create source and destination payment addresses
+        payment_addrs = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_src",
+            f"{temp_template}_dst",
+            cluster_obj=cluster,
+        )
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            payment_addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=10_000_000,
+        )
+
+        src_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=1_500_000)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+
+        tx_output = cluster.g_transaction.build_tx(
+            src_address=src_addr.address,
+            tx_name=temp_template,
+            tx_files=tx_files,
+            txouts=txouts,
+            fee_buffer=1_000_000,
+        )
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
