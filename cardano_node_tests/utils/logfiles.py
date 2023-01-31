@@ -34,8 +34,8 @@ ERRORS_IGNORED = [
     r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
     # can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
-    # can happen on p2p when local roots are not up yet
-    r"PeerSelection:Info:.* TracePromoteColdFailed",
+    # errors can happen on p2p when local roots are not up yet
+    r"PeerSelection:Info:",
     # can happen on p2p when node is shutting down
     "AsyncCancelled",
     # harmless when whole network is shutting down
@@ -47,11 +47,37 @@ if VERSIONS.cluster_era >= VERSIONS.ALONZO:
     ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
+# errors that are ignored if there are expected messages in the log file before the error
+ERRORS_LOOK_BACK_LINES = 10
+ERRORS_LOOK_BACK_MAP = {
+    "TraceNoLedgerState": "Switched to a fork",  # can happen when chain switched to a fork
+}
+ERRORS_LOOK_BACK_RE = re.compile("|".join(ERRORS_LOOK_BACK_MAP.keys()))
+
 
 class RotableLog(NamedTuple):
     logfile: Path
     seek: int
     timestamp: float
+
+
+def _look_back_found(buffer: List[str]) -> bool:
+    """Look back to the buffer to see if there is an expected message.
+
+    If the expected message is found, the error can be ignored.
+    """
+    # find the look back regex that corresponds to the error message
+    err_line = buffer[-1]
+    look_back_re = ""
+    for err_re, look_re in ERRORS_LOOK_BACK_MAP.items():
+        if re.search(err_re, err_line):
+            look_back_re = look_re
+            break
+    else:
+        raise KeyError(f"Look back regex not found for error line: {err_line}")
+
+    # check if the look back regex matches any of the previous log messages
+    return any(re.search(look_back_re, line) for line in buffer[:-1])
 
 
 def _get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> List[RotableLog]:
@@ -221,12 +247,18 @@ def search_cluster_artifacts() -> List[Tuple[Path, str]]:
                 outfile.write(str(helpers.get_eof_offset(logfile)))
 
             for logfile_rec in _get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp):
+                look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
                 with open(logfile_rec.logfile, encoding="utf-8") as infile:
                     infile.seek(seek)
                     for line in infile:
+                        look_back_buf.append(line)
+                        look_back_buf.pop(0)
                         if ERRORS_RE.search(line) and not (
                             errors_ignored and errors_ignored_re.search(line)
                         ):
+                            # skip if expected message is in the look back buffer
+                            if ERRORS_LOOK_BACK_RE.search(line) and _look_back_found(look_back_buf):
+                                continue
                             errors.append((logfile, line))
 
     return errors
