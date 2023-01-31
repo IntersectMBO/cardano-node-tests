@@ -34,8 +34,8 @@ ERRORS_IGNORED = [
     r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
     # can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
-    # can happen on p2p when local roots are not up yet
-    r"PeerSelection:Info:.* TracePromoteColdFailed",
+    # errors can happen on p2p when local roots are not up yet
+    r"PeerSelection:Info:",
     # can happen on p2p when node is shutting down
     "AsyncCancelled",
     # harmless when whole network is shutting down
