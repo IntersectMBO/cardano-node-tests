@@ -58,7 +58,7 @@
                 }).devops
               )
             ).overrideAttrs (oldAttrs: rec {
-              nativeBuildInputs = base.nativeBuildInputs ++ oldAttrs.nativeBuildInputs ++ [
+              nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ oldAttrs.nativeBuildInputs ++ [
                 (python3.withPackages (ps: with ps; [
                   pytest
                   allure
