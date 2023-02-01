@@ -326,7 +326,7 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
         assert not return_collateral_utxos, "Return collateral UTxO was unexpectedly created"
         return
 
-    tx_view_out = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_output)
+    tx_view_out = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_output.out_file)
 
     # TODO: automatic return collateral is not supported on 1.35.3 and older
     if not (
