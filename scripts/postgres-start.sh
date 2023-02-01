@@ -32,6 +32,8 @@ fi
 # start postgres
 postgres -D "$POSTGRES_DIR/data" -k "$POSTGRES_DIR" > "$POSTGRES_DIR/postgres.log" 2>&1 &
 PSQL_PID="$!"
+echo "$PSQL_PID" > "$POSTGRES_DIR/postgres.pid"
+
 sleep 5
 cat "$POSTGRES_DIR/postgres.log"
 echo
