@@ -103,6 +103,9 @@ mv .reports/testrun-report.* ./
 # stop all running cluster instances
 stop_instances "$WORKDIR"
 
+# stop postgres if running
+stop_postgres || true
+
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   # create results archive
