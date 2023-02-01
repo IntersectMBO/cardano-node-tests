@@ -408,6 +408,14 @@ class TestNoRewards:
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
+        # withdraw rewards from owner's stake address if there are any
+        if cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance:
+            cluster.g_stake_address.withdraw_reward(
+                stake_addr_record=pool_owner.stake,
+                dst_addr_record=pool_owner.payment,
+                tx_name=temp_template,
+            )
+
         # deregister stake address - owner's stake is lower than pledge
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0", stake_vkey_file=pool_owner.stake.vkey_file
