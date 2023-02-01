@@ -1107,6 +1107,7 @@ class TestCollateralOutput:
         * check that the expected amount was transferred to token issuer's address
         * mint the token using a Plutus script and the same collateral UTxO listed twice
         * check that the token was minted and collateral UTxO was not spent
+        * check that the return collateral amount is the expected
         """
         # pylint: disable=too-many-locals
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
@@ -1204,3 +1205,14 @@ class TestCollateralOutput:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        # check return collateral amount
+
+        tx_loaded = tx_view.load_tx_view(cluster_obj=cluster, tx_body_file=tx_body_step2)
+
+        return_collateral = tx_loaded["return collateral"]["amount"]["lovelace"]
+        total_collateral = tx_loaded["total collateral"]
+
+        assert (
+            return_collateral + total_collateral == collateral_utxos[0].amount
+        ), "Return collateral amount is wrong"
