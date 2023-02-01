@@ -23,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.needs_dbsync
 
 
-@pytest.mark.smoke
 class TestDBSync:
     """General db-sync tests."""
 
@@ -81,6 +80,7 @@ class TestDBSync:
         reason="needs db-sync version >= 12.0.1",
     )
     @pytest.mark.testnets
+    @pytest.mark.smoke
     def test_table_names(self, cluster: clusterlib.ClusterLib):
         """Check that all the expected tables are present in db-sync."""
         common.get_test_id(cluster)
@@ -89,6 +89,7 @@ class TestDBSync:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(-10)
     @pytest.mark.testnets
+    @pytest.mark.smoke
     def test_blocks(self, cluster: clusterlib.ClusterLib):  # noqa: C901
         """Check expected values in the `block` table in db-sync."""
         # pylint: disable=too-many-branches
@@ -222,10 +223,14 @@ class TestDBSync:
         """Check expected values in the `cost_model` table in db-sync."""
         common.get_test_id(cluster)
 
-        protocol_params = cluster.g_query.get_protocol_params()
-
-        pp_cost_models = protocol_params["costModels"]
         db_cost_models = dbsync_queries.query_cost_model()
+        # wait till next epoch if the cost models are not yet available
+        if not db_cost_models:
+            cluster.wait_for_new_epoch(padding_seconds=5)
+            db_cost_models = dbsync_queries.query_cost_model()
+
+        protocol_params = cluster.g_query.get_protocol_params()
+        pp_cost_models = protocol_params["costModels"]
 
         assert (
             pp_cost_models["PlutusScriptV1"] == db_cost_models["PlutusV1"]
