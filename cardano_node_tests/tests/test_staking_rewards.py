@@ -1091,6 +1091,12 @@ class TestRewards:
 
         temp_template = common.get_test_id(cluster)
 
+        if (
+            cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+            and cluster_nodes.get_cluster_type().uses_shortcut
+        ):
+            pytest.skip("Cannot run on local cluster with HF shortcut, see node issue #4556.")
+
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )

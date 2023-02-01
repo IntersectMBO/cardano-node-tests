@@ -12,6 +12,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -148,12 +149,21 @@ class TestPoolSaturation:
           saturated and oversaturated
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
+        cluster = cluster_lock_pools
+        temp_template = common.get_test_id(cluster)
+
+        if (
+            cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+            and cluster_nodes.get_cluster_type().uses_shortcut
+        ):
+            # TODO: would need more investigation and changes to initial setup of local cluster
+            # to make this test work with HF shortcut
+            pytest.skip("Cannot run on local cluster with HF shortcut.")
+
         epoch_saturate = 2
         epoch_oversaturate = 4
         epoch_withdrawal = 6
 
-        cluster = cluster_lock_pools
-        temp_template = common.get_test_id(cluster)
         initial_balance = 1_000_000_000
 
         faucet_rec = cluster_manager.cache.addrs_data["faucet"]

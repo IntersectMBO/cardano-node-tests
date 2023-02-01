@@ -49,6 +49,15 @@ if configuration.UPDATE_PV8 and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
 pytestmark = common.SKIPIF_WRONG_ERA
 
 
+# TODO: It would be better to use `cluster_nodes.get_cluster_type().uses_shortcut`, but we would
+# need to get a cluster instance first. That would be too expensive in this module, as we are using
+# custom startup scripts.
+SKIPIF_HF_SHORTCUT = pytest.mark.skipif(
+    "_fast" in configuration.SCRIPTS_DIRNAME,
+    reason="cannot run on local cluster with HF shortcut",
+)
+
+
 @pytest.fixture(scope="module")
 def short_kes_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
     """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""
@@ -165,6 +174,7 @@ class TestKES:
     MAX_INT_VAL = 2**64
 
     @allure.link(helpers.get_vcs_link())
+    @SKIPIF_HF_SHORTCUT
     @pytest.mark.order(5)
     @pytest.mark.long
     def test_expired_kes(
