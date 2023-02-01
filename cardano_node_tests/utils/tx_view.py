@@ -3,6 +3,7 @@ import itertools
 import json
 import logging
 import re
+from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
@@ -202,12 +203,10 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     ), "Return collateral address mismatch"
 
 
-def load_tx_view(
-    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
-) -> Dict[str, Any]:
+def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: Path) -> Dict[str, Any]:
     # TODO: see https://github.com/input-output-hk/cardano-node/issues/4039
     try:
-        tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_raw_output.out_file)
+        tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_body_file)
     except clusterlib.CLIError as exc:
         if "TODO: Babbage" in str(exc):
             return {}
@@ -223,14 +222,7 @@ def check_tx_view(  # noqa: C901
     """Check output of the `transaction view` command."""
     # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 
-    # TODO: see https://github.com/input-output-hk/cardano-node/issues/4039
-    try:
-        tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_raw_output.out_file)
-    except clusterlib.CLIError as exc:
-        if "TODO: Babbage" in str(exc):
-            return {}
-
-    tx_loaded: Dict[str, Any] = load_raw(tx_view=tx_view_raw)
+    tx_loaded = load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_raw_output.out_file)
 
     # check inputs
     loaded_txins = set(tx_loaded.get("inputs") or [])
