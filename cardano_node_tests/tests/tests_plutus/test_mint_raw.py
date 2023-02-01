@@ -450,7 +450,7 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=minting_cost.fee + mint_raw.FEE_MINT_TXSIZE,
-            invalid_before=slot_step2 - slots_offset,
+            invalid_before=max(1, slot_step2 - slots_offset),
             invalid_hereafter=slot_step2 + slots_offset,
         )
         tx_signed_step2 = cluster.g_transaction.sign_tx(
@@ -668,7 +668,7 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=fee_step2_total,
-            invalid_before=slot_step2 - slots_offset,
+            invalid_before=max(1, slot_step2 - slots_offset),
             invalid_hereafter=slot_step2 + slots_offset,
         )
         tx_signed_step2 = cluster.g_transaction.sign_tx(

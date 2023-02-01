@@ -328,6 +328,7 @@ class TestBuildMinting:
             invalid_before=invalid_before,
             invalid_hereafter=slot_step2 + slots_offset,
         )
+
         tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
@@ -552,6 +553,8 @@ class TestBuildMinting:
             *mint_txouts1,
             *mint_txouts2,
         ]
+
+        invalid_before = max(1, slot_step2 - slots_offset)
         tx_output_step2 = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
@@ -559,7 +562,7 @@ class TestBuildMinting:
             txins=mint_utxos,
             txouts=txouts_step2,
             mint=plutus_mint_data,
-            invalid_before=slot_step2 - slots_offset,
+            invalid_before=invalid_before,
             invalid_hereafter=slot_step2 + slots_offset,
         )
         plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
@@ -569,9 +572,10 @@ class TestBuildMinting:
             txins=mint_utxos,
             txouts=txouts_step2,
             mint=plutus_mint_data,
-            invalid_before=slot_step2 - slots_offset,
+            invalid_before=invalid_before,
             invalid_hereafter=slot_step2 + slots_offset,
         )
+
         tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
