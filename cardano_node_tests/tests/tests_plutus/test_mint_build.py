@@ -1206,13 +1206,14 @@ class TestCollateralOutput:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        # check return collateral amount
+        # check return collateral amount, this is only available on Babbage+ TX
 
-        tx_loaded = tx_view.load_tx_view(cluster_obj=cluster, tx_body_file=tx_body_step2)
+        if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+            tx_loaded = tx_view.load_tx_view(cluster_obj=cluster, tx_body_file=tx_body_step2)
 
-        return_collateral = tx_loaded["return collateral"]["amount"]["lovelace"]
-        total_collateral = tx_loaded["total collateral"]
+            return_collateral = tx_loaded["return collateral"]["amount"]["lovelace"]
+            total_collateral = tx_loaded["total collateral"]
 
-        assert (
-            return_collateral + total_collateral == collateral_utxos[0].amount
-        ), "Return collateral amount is wrong"
+            assert (
+                return_collateral + total_collateral == collateral_utxos[0].amount
+            ), "Return collateral amount is wrong"
