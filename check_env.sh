@@ -112,6 +112,8 @@ printf "using dbsync (optional): $USE_DBSYNC\n"
 if [ "$USE_DBSYNC" = "$true" ]; then
   HAS_DBSYNC="$([ -e "${DBSYNC_REPO:-}/db-sync-node/bin/cardano-db-sync" ]; process_result)" || exit_code=1
   printf "dbsync available: $HAS_DBSYNC\n"
+  HAS_PSQL="$([ -n "$(command -v psql)" ]; process_result)" || exit_code=1
+  printf "'psql' available: $HAS_PSQL\n"
 fi
 
 printf "P2P network (optional): $P2P_NET\n"
