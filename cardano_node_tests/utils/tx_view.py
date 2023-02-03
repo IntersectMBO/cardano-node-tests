@@ -210,6 +210,7 @@ def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: Path) -> Dict
     except clusterlib.CLIError as exc:
         if "TODO: Babbage" in str(exc):
             return {}
+        raise
 
     tx_loaded: Dict[str, Any] = load_raw(tx_view=tx_view_raw)
 
