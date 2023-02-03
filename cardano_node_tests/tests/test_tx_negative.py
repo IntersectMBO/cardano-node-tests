@@ -6,7 +6,11 @@ import logging
 import re
 import string
 import time
+from pathlib import Path
+from typing import Any
 from typing import List
+from typing import Optional
+from typing import Tuple
 
 import allure
 import hypothesis
@@ -22,6 +26,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -214,52 +219,305 @@ class TestNegative:
                 )
         return str(excinfo.value)
 
-    @allure.link(helpers.get_vcs_link())
-    def test_past_ttl(
+    def _submit_wrong_validity(
         self,
-        cluster: clusterlib.ClusterLib,
+        cluster_obj: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-    ):
-        """Try to send a transaction with ttl in the past.
-
-        Expect failure.
-        """
-        temp_template = common.get_test_id(cluster)
-
+        temp_template: str,
+        invalid_before: Optional[int] = None,
+        invalid_hereafter: Optional[int] = None,
+        use_build_cmd=False,
+    ) -> Tuple[int, str, clusterlib.TxRawOutput]:
+        """Try to submit a transaction with wrong validity interval."""
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
 
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
-        ttl = cluster.g_query.get_slot_no() - 1
-        fee = cluster.g_transaction.calculate_tx_fee(
-            src_address=src_address,
-            tx_name=temp_template,
-            txouts=destinations,
-            tx_files=tx_files,
-            ttl=ttl,
-        )
 
-        # it should be possible to build and sign a transaction with ttl in the past
-        tx_raw_output = cluster.g_transaction.build_raw_tx(
-            src_address=src_address,
-            tx_name=temp_template,
-            txouts=destinations,
-            tx_files=tx_files,
-            fee=fee,
-            ttl=ttl,
-        )
-        out_file_signed = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
+        if use_build_cmd:
+            tx_output = cluster_obj.g_transaction.build_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=destinations,
+                tx_files=tx_files,
+                invalid_before=invalid_before,
+                invalid_hereafter=invalid_hereafter,
+                fee_buffer=1_000_000,
+            )
+        else:
+            tx_output = cluster_obj.g_transaction.build_raw_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=destinations,
+                tx_files=tx_files,
+                fee=1_000_000,
+                invalid_before=invalid_before,
+                invalid_hereafter=invalid_hereafter,
+            )
+
+        out_file_signed = cluster_obj.g_transaction.sign_tx(
+            tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
 
-        # it should NOT be possible to submit a transaction with ttl in the past
+        # it should NOT be possible to submit a transaction with negative ttl
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.submit_tx_bare(out_file_signed)
+            cluster_obj.g_transaction.submit_tx_bare(out_file_signed)
         exc_val = str(excinfo.value)
-        assert "ExpiredUTxO" in exc_val or "ValidityIntervalUTxO" in exc_val
+
+        assert "ExpiredUTxO" in exc_val or "OutsideValidityIntervalUTxO" in exc_val, exc_val
+
+        slot_no = int(
+            re.search(r"ValidityInterval .*SJust \(SlotNo ([0-9]*)", exc_val).group(  # type: ignore
+                1
+            )
+        )
+
+        return slot_no, exc_val, tx_output
+
+    def _get_validity_range(
+        self, cluster_obj: clusterlib.ClusterLib, tx_body_file: Path
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """Get validity range from a transaction body."""
+        tx_loaded = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_body_file)
+
+        validity_range = tx_loaded.get("validity range") or {}
+
+        loaded_invalid_before = validity_range.get("lower bound")
+        loaded_invalid_hereafter = validity_range.get("upper bound") or validity_range.get(
+            "time to live"
+        )
+
+        return loaded_invalid_before, loaded_invalid_hereafter
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    def test_past_ttl(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
+    ):
+        """Try to send a transaction with ttl in the past.
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        self._submit_wrong_validity(
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            temp_template=temp_template,
+            invalid_hereafter=cluster.g_query.get_slot_no() - 1,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    def test_before_negative_overflow(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
+    ):
+        """Try to send a transaction with negative `invalid_before` and check for int overflow.
+
+        Expect failure.
+        """
+        __: Any  # mypy workaround
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+
+        # Negative values overflow to positive `common.MAX_UINT64`.
+        # Valid values are <= `common.MAX_INT64`.
+        # So in order for submit to fail, we must overflow by value < `common.MAX_INT64`.
+        # E.g. '-5' will become `common.MAX_UINT64 - 5`.
+        before_value = -5
+
+        slot_no, __, tx_output = self._submit_wrong_validity(
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            temp_template=temp_template,
+            invalid_before=before_value,
+            use_build_cmd=True,
+        )
+
+        invalid_before, __ = self._get_validity_range(
+            cluster_obj=cluster, tx_body_file=tx_output.out_file
+        )
+        assert invalid_before == slot_no, f"SlotNo: {slot_no}, `invalid_before`: {invalid_before}"
+
+        if slot_no > 0:
+            pytest.xfail("UINT64 overflow, see node issue #4863")
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    def test_before_positive_overflow(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
+    ):
+        """Try to send a transaction with `invalid_before` > `MAX_UINT64`.
+
+        Check for int overflow. Expect failure.
+        """
+        __: Any  # mypy workaround
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+
+        # Valid values are <= `common.MAX_INT64`, and overflow happens for
+        # values > `common.MAX_UINT64`.
+        # So in order for submit to fail, we must overflow by value > `common.MAX_INT64`.
+        # E.g. `common.MAX_UINT64 + common.MAX_INT64 + 5` will become `common.MAX_INT64 + 5 - 1`.
+        before_value = common.MAX_INT64 + 5
+        over_before_value = common.MAX_UINT64 + before_value
+
+        slot_no, __, tx_output = self._submit_wrong_validity(
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            temp_template=temp_template,
+            invalid_before=over_before_value,
+            use_build_cmd=True,
+        )
+
+        invalid_before, __ = self._get_validity_range(
+            cluster_obj=cluster, tx_body_file=tx_output.out_file
+        )
+        assert invalid_before == slot_no, f"SlotNo: {slot_no}, `invalid_before`: {invalid_before}"
+
+        if slot_no == before_value - 1:
+            pytest.xfail("UINT64 overflow, see node issue #4863")
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    def test_before_too_high(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        use_build_cmd: bool,
+    ):
+        """Try to send a transaction with `invalid_before` > `MAX_INT64`.
+
+        Expect failure.
+        """
+        __: Any  # mypy workaround
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+
+        # valid values are <= `common.MAX_INT64`
+        before_value = common.MAX_INT64 + 5
+
+        __, err_str, *__ = self._submit_wrong_validity(
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            temp_template=temp_template,
+            invalid_before=before_value,
+            use_build_cmd=True,
+        )
+
+        if "transaction submit" in err_str:
+            pytest.xfail("Value not checked, see node issue #4863")
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(before_value=st.integers(min_value=1, max_value=common.MAX_INT64))
+    @hypothesis.example(before_value=1)
+    @hypothesis.example(before_value=common.MAX_INT64)
+    @common.hypothesis_settings(max_examples=200)
+    @common.PARAM_USE_BUILD_CMD
+    def test_pbt_before_negative_overflow(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        before_value: int,
+        use_build_cmd: bool,
+    ):
+        """Try to send a transaction with negative `invalid_before` and check for int overflow.
+
+        Expect failure.
+        """
+        temp_template = (
+            f"{common.get_test_id(cluster)}_{before_value}_{use_build_cmd}_"
+            f"{common.unique_time_str()}"
+        )
+        slot_no, *__ = self._submit_wrong_validity(
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            temp_template=temp_template,
+            invalid_before=-before_value,
+        )
+
+        # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
+        # a regular test `test_before_negative_overflow`
+        assert slot_no > 0, f"SlotNo: {slot_no}, `before_value`: {before_value}"
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(
+        before_value=st.integers(min_value=common.MAX_INT64 + 1, max_value=common.MAX_UINT64)
+    )
+    @hypothesis.example(before_value=common.MAX_INT64 + 1)
+    @hypothesis.example(before_value=common.MAX_UINT64)
+    @common.hypothesis_settings(max_examples=200)
+    @common.PARAM_USE_BUILD_CMD
+    def test_pbt_before_positive_overflow(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        before_value: int,
+        use_build_cmd: bool,
+    ):
+        """Try to send a transaction with `invalid_before` > `MAX_UINT64`.
+
+        Check for int overflow. Expect failure.
+        """
+        temp_template = (
+            f"{common.get_test_id(cluster)}_{before_value}_{use_build_cmd}_"
+            f"{common.unique_time_str()}"
+        )
+
+        over_before_value = common.MAX_UINT64 + before_value
+        slot_no, *__ = self._submit_wrong_validity(
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            temp_template=temp_template,
+            invalid_before=over_before_value,
+        )
+
+        # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
+        # a regular test `test_before_positive_overflow`
+        assert slot_no == before_value - 1, f"SlotNo: {slot_no}, `before_value`: {before_value}"
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(
+        before_value=st.integers(min_value=common.MAX_INT64 + 1, max_value=common.MAX_UINT64)
+    )
+    @hypothesis.example(before_value=common.MAX_INT64 + 1)
+    @hypothesis.example(before_value=common.MAX_UINT64)
+    @common.hypothesis_settings(max_examples=200)
+    @common.PARAM_USE_BUILD_CMD
+    def test_pbt_before_too_high(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+        before_value: int,
+        use_build_cmd: bool,
+    ):
+        """Try to send a transaction with `invalid_before` > `MAX_INT64`.
+
+        Expect failure.
+        """
+        temp_template = (
+            f"{common.get_test_id(cluster)}_{before_value}_{use_build_cmd}_"
+            f"{common.unique_time_str()}"
+        )
+
+        slot_no, *__ = self._submit_wrong_validity(
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            temp_template=temp_template,
+            invalid_before=before_value,
+        )
+
+        # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
+        # a regular test `test_before_too_high`
+        assert slot_no == before_value, f"SlotNo: {slot_no}, `before_value`: {before_value}"
 
     @allure.link(helpers.get_vcs_link())
     def test_duplicated_tx(
