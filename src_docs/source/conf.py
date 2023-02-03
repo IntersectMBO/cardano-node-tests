@@ -33,7 +33,9 @@ sys.path.insert(0, os.path.abspath(".."))
 
 project = "cardano-node-tests"
 author = "Cardano Test Engineering Team"
-copyright = author
+# copyright is overriden by 'css/copyright.css'
+# see https://github.com/readthedocs/sphinx_rtd_theme/issues/828
+copyright = ""
 
 
 # -- General configuration ---------------------------------------------------
@@ -103,6 +105,12 @@ html_context = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_css_files = [
+    "css/copyright.css",
+]
 
 # Resolve function for the linkcode extension.
 
