@@ -295,6 +295,11 @@ class ParamProposalDBRow(NamedTuple):
     registered_tx_id: int
 
 
+class ExtraKeyWitnessDBRow(NamedTuple):
+    tx_hash: memoryview
+    witness_hash: memoryview
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -837,3 +842,18 @@ def query_param_proposal() -> ParamProposalDBRow:
     with execute(query=query) as cur:
         results = cur.fetchone()
         return ParamProposalDBRow(*results)
+
+
+def query_extra_key_witness(txhash: str) -> Generator[ExtraKeyWitnessDBRow, None, None]:
+    """Query extra key witness records in db-sync."""
+    query = (
+        "SELECT"
+        " tx.hash, extra_key_witness.hash "
+        "FROM extra_key_witness "
+        "INNER JOIN tx ON tx.id = extra_key_witness.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield ExtraKeyWitnessDBRow(*result)

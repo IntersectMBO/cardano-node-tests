@@ -130,6 +130,11 @@ class RedeemerRecord(NamedTuple):
     value: dict
 
 
+class ExtraKeyWitnessRecord(NamedTuple):
+    tx_hash: str
+    witness_hash: str
+
+
 class TxRecord(NamedTuple):
     tx_id: int
     tx_hash: str
@@ -157,6 +162,7 @@ class TxRecord(NamedTuple):
     stake_deregistration: List[str]
     stake_delegation: List[DelegationRecord]
     withdrawals: List[clusterlib.TxOut]
+    extra_key_witness: List[ExtraKeyWitnessRecord]
 
     def _convert_metadata(self) -> dict:
         """Convert list of `MetadataRecord`s to metadata dictionary."""
@@ -563,6 +569,11 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
             for r in dbsync_queries.query_redeemers(txhash=txhash)
         ]
 
+    extra_key_witness = [
+        ExtraKeyWitnessRecord(tx_hash=r.tx_hash.hex(), witness_hash=r.witness_hash.hex())
+        for r in dbsync_queries.query_extra_key_witness(txhash=txhash)
+    ]
+
     record = TxRecord(
         tx_id=int(txdata.last_row.tx_id),
         tx_hash=txdata.last_row.tx_hash.hex(),
@@ -594,6 +605,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
         stake_deregistration=stake_deregistration,
         stake_delegation=stake_delegation,
         withdrawals=withdrawals,
+        extra_key_witness=extra_key_witness,
     )
 
     return record
@@ -1030,6 +1042,15 @@ def check_tx(
         "Reference scripts don't match "
         f"({tx_reference_script_hashes} != {db_reference_script_hashes})"
     )
+
+    # check required signers
+    if tx_raw_output.required_signers:
+        assert len(tx_raw_output.required_signers) == len(response.extra_key_witness)
+
+    if tx_raw_output.required_signer_hashes:
+        db_required_signer_hashes = [r.witness_hash for r in response.extra_key_witness]
+
+        assert tx_raw_output.required_signer_hashes == db_required_signer_hashes
 
     return response
 
