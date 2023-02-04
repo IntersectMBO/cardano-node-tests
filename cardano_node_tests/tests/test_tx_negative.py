@@ -310,9 +310,14 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_hereafter=cluster.g_query.get_slot_no() - 1,
+            use_build_cmd=use_build_cmd,
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        reason="runs only with Allegra+ TX",
+    )
     @common.PARAM_USE_BUILD_CMD
     def test_before_negative_overflow(
         self,
@@ -338,7 +343,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
-            use_build_cmd=True,
+            use_build_cmd=use_build_cmd,
         )
 
         invalid_before, __ = self._get_validity_range(
@@ -350,6 +355,10 @@ class TestNegative:
             pytest.xfail("UINT64 overflow, see node issue #4863")
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        reason="runs only with Allegra+ TX",
+    )
     @common.PARAM_USE_BUILD_CMD
     def test_before_positive_overflow(
         self,
@@ -376,7 +385,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=over_before_value,
-            use_build_cmd=True,
+            use_build_cmd=use_build_cmd,
         )
 
         invalid_before, __ = self._get_validity_range(
@@ -388,6 +397,10 @@ class TestNegative:
             pytest.xfail("UINT64 overflow, see node issue #4863")
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        reason="runs only with Allegra+ TX",
+    )
     @common.PARAM_USE_BUILD_CMD
     def test_before_too_high(
         self,
@@ -410,13 +423,17 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
-            use_build_cmd=True,
+            use_build_cmd=use_build_cmd,
         )
 
         if "transaction submit" in err_str:
             pytest.xfail("Value not checked, see node issue #4863")
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        reason="runs only with Allegra+ TX",
+    )
     @hypothesis.given(before_value=st.integers(min_value=1, max_value=common.MAX_INT64))
     @hypothesis.example(before_value=1)
     @hypothesis.example(before_value=common.MAX_INT64)
@@ -442,6 +459,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=-before_value,
+            use_build_cmd=use_build_cmd,
         )
 
         # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
@@ -449,6 +467,10 @@ class TestNegative:
         assert slot_no > 0, f"SlotNo: {slot_no}, `before_value`: {before_value}"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        reason="runs only with Allegra+ TX",
+    )
     @hypothesis.given(
         before_value=st.integers(min_value=common.MAX_INT64 + 1, max_value=common.MAX_UINT64)
     )
@@ -478,6 +500,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=over_before_value,
+            use_build_cmd=use_build_cmd,
         )
 
         # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
@@ -485,6 +508,10 @@ class TestNegative:
         assert slot_no == before_value - 1, f"SlotNo: {slot_no}, `before_value`: {before_value}"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        reason="runs only with Allegra+ TX",
+    )
     @hypothesis.given(
         before_value=st.integers(min_value=common.MAX_INT64 + 1, max_value=common.MAX_UINT64)
     )
@@ -513,6 +540,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
+            use_build_cmd=use_build_cmd,
         )
 
         # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
