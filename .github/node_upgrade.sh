@@ -3,6 +3,8 @@
 
 set -xeuo pipefail
 
+nix --version
+
 REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"
 
