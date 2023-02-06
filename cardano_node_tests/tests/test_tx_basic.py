@@ -1383,3 +1383,165 @@ class TestMultiInOut:
             amount=amount,
             use_build_cmd=use_build_cmd,
         )
+
+
+@pytest.mark.testnets
+@pytest.mark.smoke
+class TestIncrementalSigning:
+    """Test incremental signing of transactions."""
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[
+                    f"multi_addr_inc_signing_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(10)
+                ],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addrs
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
+    @pytest.mark.dbsync
+    def test_incremental_signing(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        tx_is: str,
+    ):
+        """Test sending funds using Tx that is signed incrementally.
+
+        Test with Tx body created by both `transaction build` and `transaction build-raw`.
+        Test with Tx created by both `transaction sign` and `transaction assemble`.
+
+        * create a transaction
+        * sign the transaction incrementally with part of the signing keys
+        * sign the transaction incrementally with the rest of the signing keys, except of
+          the required one
+        * sign the transaction multiple times with the same skey to see that it doesn't affect
+          the Tx fee
+        * check that the transaction cannot be submitted
+        * sign the transaction with the required signing key
+        * check that the transaction can be submitted
+        * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_is}"
+        amount = 2_000_000
+
+        src_addr = payment_addrs[0]
+        dst_addr = payment_addrs[1]
+
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=payment_skey_files,
+        )
+
+        if use_build_cmd:
+            tx_output = cluster.g_transaction.build_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                txouts=destinations,
+                fee_buffer=1_000_000,
+                witness_override=len(payment_skey_files),
+            )
+        else:
+            fee = cluster.g_transaction.calculate_tx_fee(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                txouts=destinations,
+                tx_files=tx_files,
+                witness_count_add=len(payment_skey_files),
+            )
+            tx_output = cluster.g_transaction.build_raw_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                txouts=destinations,
+                tx_files=tx_files,
+                fee=fee,
+            )
+
+        # sign or witness Tx body with part of the skeys and thus create Tx file that will be used
+        # for incremental signing
+        if tx_is == "signed":
+            tx_signed = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_output.out_file,
+                signing_key_files=payment_skey_files[5:],
+                tx_name=f"{temp_template}_from0",
+            )
+        else:
+            # sign Tx body using witness files
+            witness_files = [
+                cluster.g_transaction.witness_tx(
+                    tx_body_file=tx_output.out_file,
+                    witness_name=f"{temp_template}_from_skey{idx}",
+                    signing_key_files=[skey],
+                )
+                for idx, skey in enumerate(payment_skey_files[5:])
+            ]
+            tx_signed = cluster.g_transaction.assemble_tx(
+                tx_body_file=tx_output.out_file,
+                witness_files=witness_files,
+                tx_name=f"{temp_template}_from0",
+            )
+
+        # incrementally sign the already signed Tx with rest of the skeys, excluding the
+        # required skey
+        for idx, skey in enumerate(payment_skey_files[1:5], start=1):
+            # sign multiple times with the same skey to see that it doesn't affect Tx fee
+            for r in range(5):
+                tx_signed = cluster.g_transaction.sign_tx(
+                    tx_file=tx_signed,
+                    signing_key_files=[skey],
+                    tx_name=f"{temp_template}_from{idx}_r{r}",
+                )
+
+        # it is not possible to submit Tx with missing required skey
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        err_str = str(excinfo.value)
+        assert "(MissingVKeyWitnessesUTXOW" in err_str, err_str
+
+        # incrementally sign the already signed Tx with the required skey
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_file=tx_signed,
+            signing_key_files=[payment_skey_files[0]],
+            tx_name=f"{temp_template}_from_final",
+        )
+
+        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_addr.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
+        ), f"Incorrect balance for source address `{src_addr.address}`"
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
+        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
