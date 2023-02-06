@@ -2642,3 +2642,95 @@ class TestNested:
         assert expected_err in err_str, err_str
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+
+@pytest.mark.testnets
+@pytest.mark.smoke
+class TestCompatibility:
+    """Tests for checking compatibility with previous Tx eras."""
+
+    @pytest.fixture
+    def payment_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> List[clusterlib.AddressRecord]:
+        """Create new payment addresses."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = clusterlib_utils.create_payment_addr_records(
+                *[f"test_compat_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(5)],
+                cluster_obj=cluster,
+            )
+            fixture_cache.value = addrs
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addrs
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era != VERSIONS.SHELLEY,
+        reason="runs only with Shelley TX",
+    )
+    @common.PARAM_USE_BUILD_CMD
+    def test_script_v2(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+    ):
+        """Check that it is not possible to use 'SimpleScriptV2' in Shelley-era Tx."""
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster.g_transaction.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=100,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+
+        # create script address
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=4_000_000,
+            payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
+        )
+
+        # try to send funds from script address
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_address,
+                dst_address=payment_addrs[0].address,
+                amount=2_000_000,
+                payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
+                invalid_before=100,
+                invalid_hereafter=150,
+                use_build_cmd=use_build_cmd,
+            )
+        err_str = str(excinfo.value)
+        assert "SimpleScriptV2 is not supported" in err_str, err_str
