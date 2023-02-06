@@ -1,5 +1,6 @@
 """Tests for db-sync."""
 import logging
+import time
 from typing import List
 
 import allure
@@ -240,6 +241,7 @@ class TestDBSync:
         ), "PlutusV2 cost model is not the expected"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_reconnect_dbsync(
         self,
         cluster_singleton: clusterlib.ClusterLib,
@@ -291,5 +293,7 @@ class TestDBSync:
             tx_name=temp_template,
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        time.sleep(60)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
