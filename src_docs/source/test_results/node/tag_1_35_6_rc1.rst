@@ -1,0 +1,188 @@
+1.35.6-rc1
+===========
+
+* release page -
+* tag link -
+* tag PR -
+
+
+Changelogs
+----------
+
+* cardano-api:
+* cardano-cli:
+* cardano-node:
+* submit-api:
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: protocol version 8 and SECP256K1 cost model
+   :header-rows: 0
+
+   * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_default_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_default_legacy_01/>`__
+     - |:hourglass_flowing_sand:|
+   * - Mix P2P and Legacy - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_default_mixed_01/>`__
+     - |:hourglass_flowing_sand:|
+   * - P2P ON - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_alonzo_p2p_01/>`__
+     - |:hourglass_flowing_sand:|
+   * - Mix P2P and Legacy - `Babbage with Mary TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_mary_mixed_01/>`__
+     - |:hourglass_flowing_sand:|
+   * - P2P ON - `Babbage with Shelley TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_shelley_p2p_01/>`__
+     - |:hourglass_flowing_sand:|
+
+.. list-table:: protocol version 7
+   :header-rows: 0
+
+   * - P2P OFF - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv7_babbage_legacy_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv7_alonzo_p2p_01/>`__
+     - |:hourglass_flowing_sand:|
+
+.. list-table:: other testing
+   :header-rows: 0
+
+   * - upgrade job (1.35.5 to 1.35.6-rc1) (including the intra-era hard fork)
+     - |:heavy_check_mark:|
+   * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production.db>`__
+     - |:hourglass_flowing_sand:|
+   * - sanity check submit-api REST service
+     - |:hourglass_flowing_sand:|
+
+
+Release testing checklist
+----------------------------
+
+.. list-table::
+   :header-rows: 0
+
+   * - `1.35.6-rc1` pushed to `shelley-qa`
+     - |:hourglass_flowing_sand:|
+   * - Grafana metrics OK
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/1.35.6-rc1/shelley_qa/>`__
+     - |:hourglass_flowing_sand:|
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+     - |:hourglass_flowing_sand:|
+   * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+     - |:hourglass_flowing_sand:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:hourglass_flowing_sand:|
+   * - Check build instructions changes
+     - |:hourglass_flowing_sand:|
+   * - Benchmarking - Report
+     - |:hourglass_flowing_sand:|
+   * - sanity check release notes
+     - |:hourglass_flowing_sand:|
+
+
+New functionalities in this tag
+-------------------------------
+
+New issues
+----------
+
+
+Breaking changes
+----------------
+
+
+P2P Single Relay & Release Test Tracking
+-----------------------------------------
+
+.. list-table:: Test Definition and Status
+   :header-rows: 1
+
+   * - Required Tests
+     - Owner
+     - Status
+     - Link to tests
+     - Comments
+   * - Component level tests
+     -
+      - Jared Corduan
+      - Damian Nadales
+      - Marcin Szamotulski
+      - Iñigo Querejeta Azurmendi
+      - |:question:|
+      - |:question:|
+     - |:hourglass_flowing_sand:|
+     -
+       - `Ledger <>`__
+       - `Consensus <>`__
+       - `Network <>`__
+       - `Crypto <>`__
+       - `Plutus <>`__
+       - `Base <>`__
+     - All these tests are run automatically at PR level in their respective repositories
+   * - Integration level tests (cardano-node)
+     - |:question:|
+     - |:hourglass_flowing_sand:|
+     - |:question:|
+     - there are no specific P2P integrations tests on cardano-node
+   * - Benchmarks
+     - Serge Kosyrev
+     - |:hourglass_flowing_sand:|
+     - `link to tests <>`__
+     -
+   * - System level tests (cardano-node-tests)
+     - Dorin Solomon
+     - |:hourglass_flowing_sand:|
+     - `link to tests <>`__
+     -
+   * - UAT (community)
+     - |:question:|
+     - |:hourglass_flowing_sand:|
+     - `link to tests <>`__
+     -
+      - scenarios with different node versions, different P2P settings (only with Legacy/P2P relays, with a mix of relays)
+      - tests confirming that stake pools with P2P Single Relay does not have a competitive (dis)advantage
+      - tests with stake pools having different node versions and P2P settings (1 relay with 1.35.4 and another one with 1.35.6 + P2P Single Relay)
+      - renewal of certificates and restart of the nodes
+   * - Audits
+     - |:question:|
+     - |:hourglass_flowing_sand:|
+     - `link to tests <>`__
+     - are any audits required?
+   * - Mixed settings/versions tests
+     - DevOps, |:question:|
+     - -
+     - -
+     - Not planned (complex/insufficient tooling)
+
+**Notes**:
+   * **unit/property tests** → Do we have enough unit/property test coverage and where are the results of these tests?
+      * There are unit/property/gold/integration tests at the network level/repo. All these are run automatically in CI at the PR level.
+   * **integration tests** → Do we need additional integration tests, in cardano-node, for this feature?
+   * **audits** → Is there a need for an external or internal security/legal audit for the features being released?
+   * **benchmarks** → is there any performance degradation as a result of implementing/merging the new functionality?
+   * **uat** → What are we asking the community to test for this release? (e.g. in the case of p2p would be to upgrade preview nodes to 1.35.6 and remove development network features from their configuration file since p2p network protocols are default enabled now)
+   * **system tests** → what tests (specific to the new functionality) should be covered in cardano-node-tests?
+
+**Procedure**:
+   * The owner of each line/activity from the above decision table is responsible for keeping the status updated (:heavy_check_mark: or :x:) based on the confidence they have from the provided evidence.
+   * *Recommendation*: the provided evidence should be in a form understandable outside the team (by anybody interested - developers from other teams, technical community members)
+
+**Open Questions**:
+   * do we have any documentation/guides explaining the expectations, from the end user’s perspective, related to the P2P Single Relay functionality?
+      * we don’t have any official P2P documentation yet but we definitely need to create one, including:
+         * what are the exact changes a stake pool should do
+         * what are some metrics a pool can look at
+   * who are the Personas, and what configurations/changes should they make to use the new functionality?
+      * Stake Pool Operators, wallets |:question:|
+      * we will need to include this info in the P2P documentation/guidelines
+   * how the end users would know if the new functionality is working ok or not for them (on their setup)?
+      * there is no way to find this - under normal conditions, the pool will continue to create and adopt blocks but there will not be any way to find if the blocks are adopted through the P2P or the non-P2P relay
+   * how would we/IOG/community know if the new functionality is working ok or not at the system/blockchain level?
+      * there is no way to find this
+   * how would we/IOG/community know how many nodes updated to P2P Single Relay functionality?
+      * there is no way to find this
+   * what are the default settings for the P2P Single Relay? Do these settings have any effect on the performance or resource requirements for the node/stake pool?
+      * the default settings will be included and explained into the documentation
+   * do we expect any regression on the resource consumption (on relays)
+      * we will need to check this by running Relays with P2P set to ON and OF on Mainnet, for a longer period, and compare the resource consumption
+   * With what Protocol Version should P2P Single Relay be compatible?
+      * @Marcin Szamotulski to confirm this (if P2P Single Relay would be compatible with node 1.35.x)
