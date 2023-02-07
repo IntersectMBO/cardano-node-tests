@@ -429,8 +429,10 @@ def check_secp_expected_error_msg(cluster_obj: clusterlib.ClusterLib, algorithm:
     # the SECP256k1 functions should work from PV8
     # before PV8 the SECP256k1 is blocked or limited by high cost model
     is_forbidden = (
-        f"Forbidden builtin function: (builtin "
+        "Forbidden builtin function: (builtin "
         f"verify{algorithm.capitalize()}Secp256k1Signature)" in err_msg
+        or f"Builtin function Verify{algorithm.capitalize()}Secp256k1Signature "
+        "is not available in language PlutusV2 at and protocol version 7.0" in err_msg
         or "MalformedScriptWitnesses" in err_msg
     )
 

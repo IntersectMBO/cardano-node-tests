@@ -181,8 +181,10 @@ class TestSECP256k1:
             err_msg = str(err)
 
             is_forbidden = (
-                f"Forbidden builtin function: (builtin "
+                "Forbidden builtin function: (builtin "
                 f"verify{algorithm.capitalize()}Secp256k1Signature)" in err_msg
+                or f"Builtin function Verify{algorithm.capitalize()}Secp256k1Signature "
+                "is not available in language PlutusV2 at and protocol version 7.0" in err_msg
             )
 
             is_overspending = (
@@ -245,8 +247,10 @@ class TestSECP256k1:
         # before protocol version 8 the SECP256k1 is blocked
         # after that the usage is limited by high cost model
         is_forbidden = (
-            f"Forbidden builtin function: (builtin "
+            "Forbidden builtin function: (builtin "
             f"verify{algorithm.capitalize()}Secp256k1Signature)" in err_msg
+            or f"Builtin function Verify{algorithm.capitalize()}Secp256k1Signature "
+            "is not available in language PlutusV2 at and protocol version 7.0" in err_msg
         )
 
         is_overspending = (
