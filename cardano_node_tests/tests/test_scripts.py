@@ -1692,8 +1692,8 @@ class TestIncrementalSigning:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.MARY,
-        reason="runs only with Mary+ TX",
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        reason="runs only with Allegra+ TX",
     )
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
