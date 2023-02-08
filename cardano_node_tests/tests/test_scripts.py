@@ -2734,3 +2734,39 @@ class TestCompatibility:
             )
         err_str = str(excinfo.value)
         assert "SimpleScriptV2 is not supported" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era != VERSIONS.SHELLEY,
+        reason="runs only with Shelley TX",
+    )
+    def test_auxiliary_scripts(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+    ):
+        """Check that it is not possible to use auxiliary script in Shelley-era Tx."""
+        temp_template = common.get_test_id(cluster)
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster.g_transaction.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=10,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file],
+            auxiliary_script_files=[multisig_script],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.send_tx(
+                src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
+            )
+        err_str = str(excinfo.value)
+        assert "Transaction auxiliary scripts are not supported" in err_str, err_str
