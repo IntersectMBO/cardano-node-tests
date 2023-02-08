@@ -541,6 +541,12 @@ cardano_cli_log transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
+# start cardano-submit-api
+if type cardano-submit-api >/dev/null 2>&1; then
+  echo "Starting cardano-submit-api"
+  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start submit_api
+fi
+
 sleep 3
 for _ in {1..20}; do
   if ! cardano_cli_log query utxo "${TXINS[@]}" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
