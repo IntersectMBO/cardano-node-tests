@@ -45,6 +45,24 @@ class TxMetadata(NamedTuple):
     aux_data: list
 
 
+@helpers.callonce
+def _cli_has_query_pool_state() -> bool:
+    """Return if `query pool-state` is available."""
+    return cli_has("query pool-state")
+
+
+def get_pool_state(
+    cluster_obj: clusterlib.ClusterLib,
+    pool_id: str,
+) -> clusterlib.PoolParamsTop:
+    """Get pool state using the available command."""
+    return (
+        cluster_obj.g_query.get_pool_state(pool_id)
+        if _cli_has_query_pool_state()
+        else cluster_obj.g_query.get_pool_params(pool_id)
+    )
+
+
 def register_stake_address(
     cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
 ) -> clusterlib.TxRawOutput:
@@ -294,7 +312,7 @@ def load_registered_pool_data(
     if pool_id.startswith("pool"):
         pool_id = helpers.decode_bech32(pool_id)
 
-    pool_state: dict = cluster_obj.g_query.get_pool_params(pool_id).pool_params
+    pool_state: dict = get_pool_state(cluster_obj=cluster_obj, pool_id=pool_id).pool_params
     metadata = pool_state.get("metadata") or {}
 
     # TODO: extend to handle more relays records

@@ -608,3 +608,14 @@ class TestAdvancedQueries:
             "The output to file doesn't match the expected output:\n"
             f"{tx_mempool_file}\nvs\n{tx_mempool}"
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
+        """Test `query pool-state`."""
+        if not clusterlib_utils.cli_has("query pool-state"):
+            pytest.skip("CLI command `query pool-state` is not available")
+
+        pool_params = cluster.g_query.get_pool_state(stake_pool_id=pool_ids[0])
+
+        assert hasattr(pool_params, "retiring")

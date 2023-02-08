@@ -73,7 +73,7 @@ def cluster_and_pool(
         pool_ids_s = sorted(blocks_before, key=blocks_before.get, reverse=True)  # type: ignore
         # select a pool with reasonable margin
         for pool_id in pool_ids_s:
-            pool_params = cluster_obj.g_query.get_pool_params(pool_id)
+            pool_params = clusterlib_utils.get_pool_state(cluster_obj=cluster_obj, pool_id=pool_id)
             if pool_params.pool_params["margin"] <= 0.5 and not pool_params.retiring:
                 break
         else:
