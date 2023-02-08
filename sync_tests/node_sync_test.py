@@ -20,10 +20,10 @@ from psutil import process_iter
 
 from explorer_utils import get_epoch_start_datetime_from_explorer
 from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
-from gitpython_utils import git_clone_iohk_repo
+from gitpython_utils import git_clone_iohk_repo, git_checkout
 
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
-    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file
+    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir
 
 NODE = "./cardano-node"
 CLI = "./cardano-cli"
@@ -731,7 +731,12 @@ def get_node_files_using_nix(node_rev):
 
     repo_name = "cardano-node"
     repo_dir = Path(test_directory) / "cardano_node_dir"
-    git_clone_iohk_repo(repo_name, repo_dir, node_rev)
+
+    if is_dir(repo_dir) is True:
+        git_checkout(repo, node_rev)
+    else:
+        git_clone_iohk_repo(repo_name, repo_dir, node_rev)
+
     os.chdir(Path(repo_dir))
     execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
     execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
@@ -740,6 +745,7 @@ def get_node_files_using_nix(node_rev):
     subprocess.check_call(['chmod', '+x', NODE])
     subprocess.check_call(['chmod', '+x', CLI])
     print(f"  -- files permissions inside test folder: {subprocess.check_call(['ls', '-la'])}")
+    return repo
 
 
 def main():
@@ -762,6 +768,7 @@ def main():
     node_topology_type2 = str(vars(args)["node_topology2"]).strip()
     node_start_arguments1 = vars(args)["node_start_arguments1"]
     node_start_arguments2 = vars(args)["node_start_arguments2"]
+    repo = None
     print(f"- env: {env}")
     print(f"- node_build_mode: {node_build_mode}")
     print(f"- tag_no1: {tag_no1}")
@@ -787,7 +794,7 @@ def main():
     print(f"Get the cardano-node and cardano-cli files")
     start_build_time = get_current_date_time()
     if node_build_mode == "nix":
-        get_node_files_using_nix(node_rev1)
+        repo = get_node_files_using_nix(node_rev1)
         # if "darwin" in platform_system.lower():
         #     install_node_dependencies_macos()
     else:
