@@ -24,15 +24,15 @@ Regression testing on a local cluster
    * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_default_p2p_01/>`__
      - |:heavy_check_mark:|
    * - P2P OFF - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_default_legacy_01/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Mix P2P and Legacy - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_default_mixed_01/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - P2P ON - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_alonzo_p2p_01/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Mix P2P and Legacy - `Babbage with Mary TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_mary_mixed_01/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - P2P ON - `Babbage with Shelley TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv8_shelley_p2p_01/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 .. list-table:: protocol version 7
    :header-rows: 0
@@ -40,15 +40,15 @@ Regression testing on a local cluster
    * - P2P OFF - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv7_babbage_legacy_01/>`__
      - |:heavy_check_mark:|
    * - P2P ON - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc1-pv7_alonzo_p2p_01/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 .. list-table:: other testing
    :header-rows: 0
 
    * - upgrade job (1.35.5 to 1.35.6-rc1) (including the intra-era hard fork)
      - |:heavy_check_mark:|
-   * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production.db>`__
-     - |:hourglass_flowing_sand:|
+   * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_1.35.6rc1.db>`__
+     - |:heavy_check_mark:|
    * - sanity check submit-api REST service
      - |:hourglass_flowing_sand:|
 
