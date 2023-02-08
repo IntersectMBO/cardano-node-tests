@@ -272,7 +272,7 @@ class TestBuildMinting:
         # Step 2: mint the "qacoin"
 
         slot_step2 = cluster.g_query.get_slot_no()
-        slots_offset = 200
+        slots_offset = 300
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
@@ -509,7 +509,7 @@ class TestBuildMinting:
         ]
 
         # "time range" qacoin
-        slots_offset = 200
+        slots_offset = 300
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         protocol_version = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
