@@ -50,7 +50,7 @@ Regression testing on a local cluster
    * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_1.35.6rc1.db>`__
      - |:heavy_check_mark:|
    * - sanity check submit-api REST service
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 
 Release testing checklist
