@@ -725,17 +725,18 @@ def copy_node_executables(src_location, dst_location, build_mode):
         time.sleep(5)
 
 
-def get_node_files_using_nix(node_rev):
+def get_node_files_using_nix(node_rev, repository = None):
     test_directory = Path.cwd()
+    repo = None
     print(f"test_directory: {test_directory}")
 
     repo_name = "cardano-node"
     repo_dir = Path(test_directory) / "cardano_node_dir"
 
     if is_dir(repo_dir) is True:
-        git_checkout(repo, node_rev)
+        repo = git_checkout(repository, node_rev)
     else:
-        git_clone_iohk_repo(repo_name, repo_dir, node_rev)
+        repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
 
     os.chdir(Path(repo_dir))
     execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
@@ -768,7 +769,7 @@ def main():
     node_topology_type2 = str(vars(args)["node_topology2"]).strip()
     node_start_arguments1 = vars(args)["node_start_arguments1"]
     node_start_arguments2 = vars(args)["node_start_arguments2"]
-    repo = None
+    repository = None
     print(f"- env: {env}")
     print(f"- node_build_mode: {node_build_mode}")
     print(f"- tag_no1: {tag_no1}")
@@ -794,7 +795,7 @@ def main():
     print(f"Get the cardano-node and cardano-cli files")
     start_build_time = get_current_date_time()
     if node_build_mode == "nix":
-        repo = get_node_files_using_nix(node_rev1)
+        repository = get_node_files_using_nix(node_rev1)
         # if "darwin" in platform_system.lower():
         #     install_node_dependencies_macos()
     else:
@@ -870,7 +871,7 @@ def main():
 
         print(f"Get the cardano-node and cardano-cli files")
         if node_build_mode == "nix":
-            get_node_files_using_nix(node_rev2)
+            get_node_files_using_nix(node_rev2, repository)
         else:
             print(
                 f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
@@ -882,9 +883,9 @@ def main():
         print(f"   ================ Start node using node_rev2: {node_rev2} ====================")
         start_sync_time2 = get_current_date_time()
         if "linux" in platform_system.lower() or "darwin" in platform_system.lower():
-            secs_to_start2 = start_node_unix(env, tag_no2, node_start_arguments2)
+            secs_to_start2 = start_node_unix(NODE, tag_no2, node_start_arguments2)
         elif "windows" in platform_system.lower():
-            secs_to_start2 = start_node_windows(env, tag_no2, node_start_arguments2)
+            secs_to_start2 = start_node_windows(NODE, tag_no2, node_start_arguments2)
 
         print(f" - waiting for the node to sync - using node_rev2: {node_rev2}")
         sync_time_seconds2, last_slot_no2, latest_chunk_no2, era_details_dict2, epoch_details_dict2 = wait_for_node_to_sync(

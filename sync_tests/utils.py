@@ -45,7 +45,7 @@ def get_file_creation_date(path_to_file):
     return time.ctime(os.path.getmtime(path_to_file))
 
 
-def is_dir(dir)
+def is_dir(dir):
     return os.path.isdir(dir)
 
 

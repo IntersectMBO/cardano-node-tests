@@ -8,5 +8,5 @@ def git_clone_iohk_repo(repo_name, repo_dir, repo_branch):
     return repo
 
 
-def git_checkout(repo_name, rev)
+def git_checkout(repo_name, rev):
     repo_name.git.checkout(rev)
