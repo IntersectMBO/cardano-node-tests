@@ -1032,7 +1032,9 @@ class TestRewards:
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=mir_tx_raw_treasury)
 
         # check pool records in db-sync
-        pool_params: dict = cluster.g_query.get_pool_params(pool_id).pool_params
+        pool_params: dict = clusterlib_utils.get_pool_state(
+            cluster_obj=cluster, pool_id=pool_id
+        ).pool_params
         dbsync_utils.check_pool_data(ledger_pool_data=pool_params, pool_id=pool_id)
 
         # check rewards in db-sync
@@ -1389,9 +1391,13 @@ class TestRewards:
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_update_pool)
 
         # check pool records in db-sync
-        pool1_params: dict = cluster.g_query.get_pool_params(pool1_id).pool_params
+        pool1_params: dict = clusterlib_utils.get_pool_state(
+            cluster_obj=cluster, pool_id=pool1_id
+        ).pool_params
         dbsync_utils.check_pool_data(ledger_pool_data=pool1_params, pool_id=pool1_id)
-        pool2_params: dict = cluster.g_query.get_pool_params(pool2_id).pool_params
+        pool2_params: dict = clusterlib_utils.get_pool_state(
+            cluster_obj=cluster, pool_id=pool2_id
+        ).pool_params
         dbsync_utils.check_pool_data(ledger_pool_data=pool2_params, pool_id=pool2_id)
 
         # check rewards in db-sync
