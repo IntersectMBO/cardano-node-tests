@@ -1,6 +1,7 @@
 """Functionality for interacting with db-sync."""
 import functools
 import itertools
+import json
 import logging
 import time
 from typing import Any
@@ -126,6 +127,7 @@ class RedeemerRecord(NamedTuple):
     fee: int
     purpose: str
     script_hash: str
+    value: dict
 
 
 class TxRecord(NamedTuple):
@@ -556,6 +558,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
                 fee=int(r.fee),
                 purpose=str(r.purpose),
                 script_hash=r.script_hash.hex(),
+                value=r.value,
             )
             for r in dbsync_queries.query_redeemers(txhash=txhash)
         ]
@@ -709,12 +712,36 @@ def _db_redeemer_hashes(
     return hashes_db
 
 
+def _compare_redeemer_value(
+    tx_rec: Union[clusterlib.ScriptTxIn, clusterlib.Mint], db_redeemer: dict
+) -> bool:
+    """Compare the value of the tx redeemer with the value stored on dbsync."""
+    if not (tx_rec.redeemer_file or tx_rec.redeemer_value):
+        return True
+
+    redeemer_value = None
+
+    if tx_rec.redeemer_file:
+        with open(tx_rec.redeemer_file, encoding="utf-8") as r:
+            redeemer_value = json.loads(r.read())
+    elif tx_rec.redeemer_value and db_redeemer.get("int"):
+        redeemer_value = {"int": int(tx_rec.redeemer_value)}
+    elif tx_rec.redeemer_value and db_redeemer.get("bytes"):
+        # we should ignore the first and last 2 chars because they represent
+        # the double quotes
+        tx_redeemer_bytes = tx_rec.redeemer_value.encode("utf-8").hex()[2:-2]
+        redeemer_value = {"bytes": tx_redeemer_bytes}
+
+    return bool(db_redeemer == redeemer_value) if redeemer_value else True
+
+
 def _compare_redeemers(
     tx_data: Dict[str, Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint]],
     db_data: Dict[str, List[RedeemerRecord]],
     purpose: str,
 ) -> None:
     """Compare redeemers data available in Tx data with data in db-sync."""
+    # pylint: disable=too-many-branches
     for script_hash, tx_recs in tx_data.items():
         if not tx_recs:
             return
@@ -739,15 +766,19 @@ def _compare_redeemers(
         ), f"Number of TX redeemers doesn't match ({len_tx_recs} != {db_redeemer_recs})"
 
         for tx_rec in tx_recs:
-            if not tx_rec.execution_units:
-                continue
+            tx_unit_steps = tx_rec.execution_units[0] if tx_rec.execution_units else None
+            tx_unit_mem = tx_rec.execution_units[1] if tx_rec.execution_units else None
 
-            tx_unit_steps = tx_rec.execution_units[0]
-            tx_unit_mem = tx_rec.execution_units[1]
+            missing_tx_unit_steps = not (tx_unit_steps and tx_unit_mem)
+
             for db_redeemer in db_redeemer_recs:
                 if db_redeemer.purpose != purpose:
                     continue
-                if tx_unit_steps == db_redeemer.unit_steps and tx_unit_mem == db_redeemer.unit_mem:
+                if not _compare_redeemer_value(tx_rec=tx_rec, db_redeemer=db_redeemer.value):
+                    continue
+                if missing_tx_unit_steps or (
+                    tx_unit_steps == db_redeemer.unit_steps and tx_unit_mem == db_redeemer.unit_mem
+                ):
                     break
             else:
                 raise AssertionError(
