@@ -24,7 +24,7 @@
     "TraceDNSSubscription": true,
     "TraceErrorPolicy": true,
     "TraceForge": true,
-    "TraceHandshake": false,
+    "TraceHandshake": true,
     "TraceIpSubscription": true,
     "TraceLocalChainSyncProtocol": false,
     "TraceLocalErrorPolicy": true,
@@ -32,7 +32,12 @@
     "TraceLocalTxSubmissionProtocol": false,
     "TraceLocalTxSubmissionServer": false,
     "TraceMempool": true,
-    "TraceMux": false,
+    "TraceMux": true,
+    "TraceConnectionManager": true,
+    "TraceConnectionManagerTransitions": true,
+    "TracePeerSelection": true,
+    "TracePeerSelectionActions": true,
+    "TraceDebugPeerSelection": true,
     "TraceTxInbound": false,
     "TraceTxOutbound": false,
     "TraceTxSubmissionProtocol": false,
@@ -55,6 +60,18 @@
     ],
     "minSeverity": "Info",
     "options": {
+        "mapSeverity": {
+            "cardano.node.ConnectionManager": "Debug",
+            "cardano.node.ConnectionManagerTransition": "Debug",
+            "cardano.node.PeerSelection": "Info",
+            "cardano.node.DebugPeerSelection": "Debug",
+            "cardano.node.PeerSelectionActions": "Debug",
+            "cardano.node.Handshake": "Debug",
+            "cardano.node.Mux": "Info",
+            "cardano.node.ChainSyncProtocol": "Error",
+            "cardano.node.InboundGovernor": "Debug",
+            "cardano.node.resources": "Notice"
+        },
         "mapBackends": {
             "cardano.node-metrics": [
                 "EKGViewBK"
