@@ -571,9 +571,15 @@ class TestAdvancedQueries:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.parametrize(
+        "with_out_file",
+        (True, False),
+        ids=("with_out_file", "without_out_file"),
+    )
     def test_tx_mempool_info(
         self,
         cluster: clusterlib.ClusterLib,
+        with_out_file: bool,
     ):
         """Test 'query tx-mempool info'.
 
@@ -586,7 +592,15 @@ class TestAdvancedQueries:
         common.get_test_id(cluster)
 
         for __ in range(5):
-            tx_mempool = cluster.g_query.get_mempool_info()
+            if with_out_file:
+                out_file = "/dev/stdout"
+                cli_out = cluster.cli(
+                    ["query", "tx-mempool", "info", "--out-file", out_file, *cluster.magic_args]
+                )
+                tx_mempool = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
+            else:
+                tx_mempool = cluster.g_query.get_mempool_info()
+
             last_ledger_slot = cluster.g_query.get_slot_no()
 
             if last_ledger_slot + 1 == tx_mempool["slot"]:
@@ -596,18 +610,7 @@ class TestAdvancedQueries:
                 f"Expected slot number '{last_ledger_slot + 1}', got '{tx_mempool['slot']}'"
             )
 
-        out_file = "/dev/stdout"
-        cli_out = cluster.cli(
-            ["query", "tx-mempool", "info", "--out-file", out_file, *cluster.magic_args]
-        )
-        tx_mempool_file = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
-
-        assert {"capacityInBytes", "numberOfTxs", "sizeInBytes", "slot"}.issubset(
-            tx_mempool
-        ) and tx_mempool == tx_mempool_file, (
-            "The output to file doesn't match the expected output:\n"
-            f"{tx_mempool_file}\nvs\n{tx_mempool}"
-        )
+        assert {"capacityInBytes", "numberOfTxs", "sizeInBytes", "slot"}.issubset(tx_mempool)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
