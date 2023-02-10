@@ -250,7 +250,7 @@ class TestPoolSaturation:
 
             # sleep till the end of epoch
             clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=-50, stop=common.EPOCH_STOP_SEC_BUFFER, force_epoch=True
+                cluster_obj=cluster, start=-70, stop=-60, force_epoch=True
             )
             this_epoch = cluster.g_query.get_epoch()
 
