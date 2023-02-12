@@ -60,6 +60,8 @@ def save_cluster_artifacts(save_dir: Path, state_dir: Path) -> None:
     files_list = [
         *state_dir.glob("*.stdout"),
         *state_dir.glob("*.stderr"),
+        *state_dir.glob("*.stdout.[0-9]*"),
+        *state_dir.glob("*.stderr.[0-9]*"),
         *state_dir.glob("*.json"),
         *state_dir.glob("*.log"),
     ]
