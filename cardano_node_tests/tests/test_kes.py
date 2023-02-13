@@ -217,7 +217,7 @@ class TestKES:
                 _save_metrics(pool_num=pool_num, temp_template=temp_template)
 
         def _save_all_period_info(temp_template: str) -> None:
-            for pool_name in cluster_management.Resources.ALL_POOLS:
+            for pool_num, pool_name in enumerate(cluster_management.Resources.ALL_POOLS, start=1):
                 pool_rec = cluster_manager.cache.addrs_data[pool_name]
                 cluster.g_query.query_cli(
                     [
@@ -225,7 +225,7 @@ class TestKES:
                         "--op-cert-file",
                         str(pool_rec["pool_operational_cert"]),
                         "--out-file",
-                        f"{temp_template}_{pool_name}_kes_info.txt",
+                        f"{temp_template}_pool{pool_num}_kes_info.txt",
                     ]
                 )
 
