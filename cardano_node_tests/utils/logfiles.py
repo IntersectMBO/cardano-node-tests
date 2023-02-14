@@ -214,8 +214,8 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], ignore_file_id: str) -> It
         raise AssertionError(errors_joined) from None
 
 
-def search_cluster_artifacts() -> List[Tuple[Path, str]]:
-    """Search cluster artifacts for errors."""
+def search_cluster_logs() -> List[Tuple[Path, str]]:
+    """Search cluster logs for errors."""
     cluster_env = cluster_nodes.get_cluster_env()
     lock_file = temptools.get_basetemp() / f"search_artifacts_{cluster_env.instance_num}.lock"
 
@@ -279,8 +279,12 @@ def clean_ignore_rules(ignore_file_id: str) -> None:
         rules_file.unlink(missing_ok=True)
 
 
-def report_artifacts_errors(errors: List[Tuple[Path, str]]) -> None:
-    """Report errors found in artifacts."""
+def get_logfiles_errors() -> str:
+    """Get errors found in cluster artifacts."""
+    errors = search_cluster_logs()
+    if not errors:
+        return ""
+
     err = [f"{e[0]}: {e[1]}" for e in errors]
     err_joined = "\n".join(err)
-    raise AssertionError(f"Errors found in cluster log files:\n{err_joined}") from None
+    return err_joined

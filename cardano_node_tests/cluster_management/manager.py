@@ -208,6 +208,14 @@ class ClusterManager:
         if container.value != cached_value:
             self.cache.test_data[curline_hash] = container.value
 
+    def get_logfiles_errors(self) -> str:
+        """Get errors found in cluster artifacts."""
+        if self._cluster_instance_num == -1:
+            return ""
+
+        self.log(f"c{self._cluster_instance_num}: called `get_logfiles_errors`")
+        return logfiles.get_logfiles_errors()
+
     def on_test_stop(self) -> None:
         """Perform actions after a test is finished."""
         if self._cluster_instance_num == -1:
@@ -215,9 +223,6 @@ class ClusterManager:
 
         current_test = os.environ.get("PYTEST_CURRENT_TEST") or ""
         self.log(f"c{self._cluster_instance_num}: called `on_test_stop` for '{current_test}'")
-
-        # search for errors in cluster logfiles
-        errors = logfiles.search_cluster_artifacts()
 
         with locking.FileLockIfXdist(self.cluster_lock):
             # There's only one test running on a worker at a time. Deleting the corresponding rules
@@ -258,9 +263,6 @@ class ClusterManager:
                 for tf in self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*")
             ]
             self.log(f"c{self._cluster_instance_num}: running tests: {tnames}")
-
-        if errors:
-            logfiles.report_artifacts_errors(errors)
 
     def _get_resources_by_glob(
         self,
