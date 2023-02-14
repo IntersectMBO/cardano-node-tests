@@ -8,7 +8,6 @@ import time
 from pathlib import Path
 from typing import Any
 from typing import Dict
-from typing import List
 from typing import Tuple
 
 import allure
@@ -111,7 +110,7 @@ def cluster_kes(
     )
 
 
-def _get_forge_stats(pool_num: int) -> List[str]:
+def _save_metrics(pool_num: int, temp_template: str) -> None:
     instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
         cluster_nodes.get_instance_num()
     )
@@ -120,16 +119,14 @@ def _get_forge_stats(pool_num: int) -> List[str]:
     response = requests.get(f"http://localhost:{port}/metrics", timeout=10)
     assert response, f"Request failed, status code {response.status_code}"
 
-    forge_lines = [line for line in response.text.strip().split("\n") if "Forge" in line]
-
-    return forge_lines
+    with open(f"{temp_template}_pool{pool_num}_metrics.txt", "w", encoding="utf-8") as fp_out:
+        fp_out.write(response.text.strip())
 
 
 def _check_block_production(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
     pool_id_dec: str,
-    pool_num: int,
     in_epoch: int,
 ) -> Tuple[int, bool]:
     epoch = cluster_obj.g_query.get_epoch()
@@ -154,12 +151,6 @@ def _check_block_production(
         state_name=f"{temp_template}_{epoch}",
         ledger_state=ledger_state,
     )
-
-    forge_stats = _get_forge_stats(pool_num=pool_num)
-    with open(
-        f"{temp_template}_{epoch}_pool{pool_num}_forge_stats.txt", "w", encoding="utf-8"
-    ) as fp_out:
-        fp_out.write("\n".join(forge_stats))
 
     # check if the pool is minting any blocks
     blocks_made = ledger_state["blocksCurrent"] or {}
@@ -195,6 +186,7 @@ class TestKES:
         * check KES period info command with an operational certificate with an expired KES
         * check KES period info command with operational certificates with a valid KES
         """
+        # pylint: disable=too-many-statements
         cluster = cluster_kes
         kes_period_info_errors_list = []
         temp_template = common.get_test_id(cluster)
@@ -220,6 +212,23 @@ class TestKES:
             instance_num=cluster_nodes.get_instance_num(), socket_file_name="pool2.socket"
         )
 
+        def _save_all_metrics(temp_template: str) -> None:
+            for pool_num in range(1, len(cluster_management.Resources.ALL_POOLS) + 1):
+                _save_metrics(pool_num=pool_num, temp_template=temp_template)
+
+        def _save_all_period_info(temp_template: str) -> None:
+            for pool_num, pool_name in enumerate(cluster_management.Resources.ALL_POOLS, start=1):
+                pool_rec = cluster_manager.cache.addrs_data[pool_name]
+                cluster.g_query.query_cli(
+                    [
+                        "kes-period-info",
+                        "--op-cert-file",
+                        str(pool_rec["pool_operational_cert"]),
+                        "--out-file",
+                        f"{temp_template}_pool{pool_num}_kes_info.txt",
+                    ]
+                )
+
         def _refresh_opcerts() -> Dict[str, int]:
             refreshed_nodes_kes_period = {}
 
@@ -239,6 +248,15 @@ class TestKES:
 
             cluster_nodes.restart_all_nodes()
             return refreshed_nodes_kes_period
+
+        this_epoch = cluster.g_query.get_epoch()
+        clusterlib_utils.save_ledger_state(
+            cluster_obj=cluster,
+            state_name=f"{temp_template}_{this_epoch}",
+        )
+
+        _save_all_metrics(temp_template=f"{temp_template}_{this_epoch}_before_refresh")
+        _save_all_period_info(temp_template=f"{temp_template}_{this_epoch}_before_refresh")
 
         _refresh_opcerts()
 
@@ -272,13 +290,18 @@ class TestKES:
                 f"{datetime.datetime.now()}: KES expired (?); tip: '{cluster.g_query.get_tip()}'."
             )
 
+            _save_all_metrics(temp_template=f"{temp_template}_after_expire")
+            _save_all_period_info(temp_template=f"{temp_template}_after_expire")
+
             this_epoch, is_minting = _check_block_production(
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 pool_id_dec=expire_pool_id_dec,
-                pool_num=expire_pool_num,
                 in_epoch=cluster.g_query.get_epoch() + 1,
             )
+
+            _save_all_metrics(temp_template=f"{temp_template}_{this_epoch}_before_refresh")
+            _save_all_period_info(temp_template=f"{temp_template}_{this_epoch}_before_refresh")
 
             # check that the pool is not minting any blocks
             assert (
@@ -293,6 +316,9 @@ class TestKES:
                 "make it to log files."
             )
             time.sleep(120)
+
+            _save_all_metrics(temp_template=f"{temp_template}_{this_epoch}_after_refresh")
+            _save_all_period_info(temp_template=f"{temp_template}_{this_epoch}_after_refresh")
 
         # check kes-period-info with an operational certificate with KES expired
         kes_info_expired = cluster.g_query.get_kes_period_info(
@@ -417,9 +443,9 @@ class TestKES:
                         cluster_obj=cluster,
                         temp_template=temp_template,
                         pool_id_dec=pool_id_dec,
-                        pool_num=pool_num,
                         in_epoch=this_epoch + 1,
                     )
+                    _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
                     # check that the pool is not minting any blocks
                     assert (
@@ -513,9 +539,9 @@ class TestKES:
                     cluster_obj=cluster,
                     temp_template=temp_template,
                     pool_id_dec=pool_id_dec,
-                    pool_num=pool_num,
                     in_epoch=this_epoch + 1,
                 )
+                _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
                 # check that the pool is minting blocks
                 if is_minting:
@@ -684,9 +710,9 @@ class TestKES:
                     cluster_obj=cluster,
                     temp_template=temp_template,
                     pool_id_dec=pool_id_dec,
-                    pool_num=pool_num,
                     in_epoch=this_epoch + 1,
                 )
+                _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
                 # check that the pool is minting blocks
                 if is_minting:
