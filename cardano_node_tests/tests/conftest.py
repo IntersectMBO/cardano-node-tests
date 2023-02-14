@@ -37,6 +37,10 @@ workermanage.NodeManager.EXIT_TIMEOUT = 30
 pytest_plugins = ("cardano_node_tests.pytest_plugins.xdist_scheduler",)
 
 
+class LogsError(Exception):
+    pass
+
+
 def pytest_addoption(parser: Any) -> None:
     parser.addoption(
         artifacts.CLI_COVERAGE_ARG,
@@ -305,6 +309,13 @@ def function_autouse(cd_testfile_temp_dir: Generator[Path, None, None]) -> None:
     pass
 
 
+def _raise_logs_error(errors: str) -> None:
+    """Report errors found in cluster log files by raising `LogsError` with errors details."""
+    if not errors:
+        return
+    raise LogsError(f"Errors found in cluster log files:\n{errors}") from None
+
+
 @pytest.fixture
 def cluster_manager(
     tmp_path_factory: TempPathFactory,
@@ -312,11 +323,18 @@ def cluster_manager(
     request: FixtureRequest,
 ) -> Generator[cluster_management.ClusterManager, None, None]:
     """Return instance of `cluster_management.ClusterManager`."""
+    # hide from traceback to make logs errors more readable
+    __tracebackhide__ = True  # pylint: disable=unused-variable
+
     cluster_manager_obj = cluster_management.ClusterManager(
         tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
     )
+
     yield cluster_manager_obj
+
+    errors = cluster_manager_obj.get_logfiles_errors()
     cluster_manager_obj.on_test_stop()
+    _raise_logs_error(errors)
 
 
 @pytest.fixture
