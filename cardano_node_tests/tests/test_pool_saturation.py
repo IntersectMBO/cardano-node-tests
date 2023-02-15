@@ -125,6 +125,83 @@ def _withdraw_rewards(
     return tx_raw_withdrawal_output
 
 
+def _check_pool_records(pool_records: Dict[int, PoolRecord]) -> None:
+    """Check that pool records has expected values."""
+    pool1_user_rewards_per_block = _get_reward_per_block(pool_records[1])
+    pool2_user_rewards_per_block = _get_reward_per_block(pool_records[2])
+    pool3_user_rewards_per_block = _get_reward_per_block(pool_records[3])
+
+    pool1_owner_rewards_per_block = _get_reward_per_block(pool_records[1], owner_rewards=True)
+    pool2_owner_rewards_per_block = _get_reward_per_block(pool_records[2], owner_rewards=True)
+    pool3_owner_rewards_per_block = _get_reward_per_block(pool_records[3], owner_rewards=True)
+
+    oversaturated_epoch = max(e for e, r in pool_records[2].saturation_amounts.items() if r < 0)
+    saturated_epoch = oversaturated_epoch - 2
+    nonsaturated_epoch = oversaturated_epoch - 4
+
+    # check that rewards per block per stake for "pool2" in the epoch where the pool is
+    # oversaturated is lower than in epochs where pools are not oversaturated
+    assert (
+        pool1_user_rewards_per_block[nonsaturated_epoch]
+        > pool2_user_rewards_per_block[oversaturated_epoch]
+    )
+    assert (
+        pool2_user_rewards_per_block[nonsaturated_epoch]
+        > pool2_user_rewards_per_block[oversaturated_epoch]
+    )
+    assert (
+        pool3_user_rewards_per_block[nonsaturated_epoch]
+        > pool2_user_rewards_per_block[oversaturated_epoch]
+    )
+
+    assert (
+        pool1_user_rewards_per_block[saturated_epoch]
+        > pool2_user_rewards_per_block[oversaturated_epoch]
+    )
+    assert (
+        pool2_user_rewards_per_block[saturated_epoch]
+        > pool2_user_rewards_per_block[oversaturated_epoch]
+    )
+    assert (
+        pool3_user_rewards_per_block[saturated_epoch]
+        > pool2_user_rewards_per_block[oversaturated_epoch]
+    )
+
+    # check that oversaturated pool doesn't lead to increased rewards for pool owner
+    # when compared to saturated pool, i.e. total pool margin amount is not increased
+    pool1_rew_fraction_sat = pool1_owner_rewards_per_block[saturated_epoch]
+    pool2_rew_fraction_sat = pool2_owner_rewards_per_block[saturated_epoch]
+    pool3_rew_fraction_sat = pool3_owner_rewards_per_block[saturated_epoch]
+
+    pool2_rew_fraction_over = pool2_owner_rewards_per_block[oversaturated_epoch]
+
+    assert pool2_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
+        pool2_rew_fraction_sat,
+        pool2_rew_fraction_over,
+        frac=0.4,
+    )
+    assert pool1_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
+        pool1_rew_fraction_sat,
+        pool2_rew_fraction_over,
+        frac=0.4,
+    )
+    assert pool3_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
+        pool3_rew_fraction_sat,
+        pool2_rew_fraction_over,
+        frac=0.4,
+    )
+
+    # Compare rewards in last (non-saturated) epoch to rewards in next-to-last
+    # (saturated / over-saturated) epoch.
+    # This way check that staked amount for each pool was restored to `initial_balance`
+    # and that rewards correspond to the restored amounts.
+    for pool_rec in pool_records.values():
+        assert (
+            pool_rec.user_rewards[-1].reward_per_epoch * 100
+            < pool_rec.user_rewards[-2].reward_per_epoch
+        )
+
+
 @pytest.mark.order(5)
 @pytest.mark.long
 class TestPoolSaturation:
@@ -443,80 +520,8 @@ class TestPoolSaturation:
             _save_pool_records()
             raise
 
-        pool1_user_rewards_per_block = _get_reward_per_block(pool_records[1])
-        pool2_user_rewards_per_block = _get_reward_per_block(pool_records[2])
-        pool3_user_rewards_per_block = _get_reward_per_block(pool_records[3])
-
-        pool1_owner_rewards_per_block = _get_reward_per_block(pool_records[1], owner_rewards=True)
-        pool2_owner_rewards_per_block = _get_reward_per_block(pool_records[2], owner_rewards=True)
-        pool3_owner_rewards_per_block = _get_reward_per_block(pool_records[3], owner_rewards=True)
-
-        oversaturated_epoch = max(e for e, r in pool_records[2].saturation_amounts.items() if r < 0)
-        saturated_epoch = oversaturated_epoch - 2
-        nonsaturated_epoch = oversaturated_epoch - 4
-
         try:
-            # check that rewards per block per stake for "pool2" in the epoch where the pool is
-            # oversaturated is lower than in epochs where pools are not oversaturated
-            assert (
-                pool1_user_rewards_per_block[nonsaturated_epoch]
-                > pool2_user_rewards_per_block[oversaturated_epoch]
-            )
-            assert (
-                pool2_user_rewards_per_block[nonsaturated_epoch]
-                > pool2_user_rewards_per_block[oversaturated_epoch]
-            )
-            assert (
-                pool3_user_rewards_per_block[nonsaturated_epoch]
-                > pool2_user_rewards_per_block[oversaturated_epoch]
-            )
-
-            assert (
-                pool1_user_rewards_per_block[saturated_epoch]
-                > pool2_user_rewards_per_block[oversaturated_epoch]
-            )
-            assert (
-                pool2_user_rewards_per_block[saturated_epoch]
-                > pool2_user_rewards_per_block[oversaturated_epoch]
-            )
-            assert (
-                pool3_user_rewards_per_block[saturated_epoch]
-                > pool2_user_rewards_per_block[oversaturated_epoch]
-            )
-
-            # check that oversaturated pool doesn't lead to increased rewards for pool owner
-            # when compared to saturated pool, i.e. total pool margin amount is not increased
-            pool1_rew_fraction_sat = pool1_owner_rewards_per_block[saturated_epoch]
-            pool2_rew_fraction_sat = pool2_owner_rewards_per_block[saturated_epoch]
-            pool3_rew_fraction_sat = pool3_owner_rewards_per_block[saturated_epoch]
-
-            pool2_rew_fraction_over = pool2_owner_rewards_per_block[oversaturated_epoch]
-
-            assert pool2_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
-                pool2_rew_fraction_sat,
-                pool2_rew_fraction_over,
-                frac=0.4,
-            )
-            assert pool1_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
-                pool1_rew_fraction_sat,
-                pool2_rew_fraction_over,
-                frac=0.4,
-            )
-            assert pool3_rew_fraction_sat > pool2_rew_fraction_over or helpers.is_in_interval(
-                pool3_rew_fraction_sat,
-                pool2_rew_fraction_over,
-                frac=0.4,
-            )
-
-            # Compare rewards in last (non-saturated) epoch to rewards in next-to-last
-            # (saturated / over-saturated) epoch.
-            # This way check that staked amount for each pool was restored to `initial_balance`
-            # and that rewards correspond to the restored amounts.
-            for pool_rec in pool_records.values():
-                assert (
-                    pool_rec.user_rewards[-1].reward_per_epoch * 100
-                    < pool_rec.user_rewards[-2].reward_per_epoch
-                )
+            _check_pool_records(pool_records=pool_records)
         except Exception:
             _save_pool_records()
             raise
