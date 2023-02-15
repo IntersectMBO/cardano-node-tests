@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -423,7 +424,11 @@ class TestAdvancedQueries:
         expected_pool_ids_mapping = {p: helpers.decode_bech32(bech32=p) for p in expected_pool_ids}
 
         def _dump_on_error():
-            clusterlib_utils.save_ledger_state(cluster_obj=cluster_obj, state_name=temp_template)
+            if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL:
+                clusterlib_utils.save_ledger_state(
+                    cluster_obj=cluster_obj, state_name=temp_template
+                )
+
             with open(f"{temp_template}_stake_snapshot.json", "w", encoding="utf-8") as fp_out:
                 json.dump(stake_snapshot, fp_out, indent=2)
 
@@ -442,14 +447,7 @@ class TestAdvancedQueries:
             sum_set = 0
             sum_go = 0
 
-            for pool_id in expected_pool_ids:
-                pool_id_dec = expected_pool_ids_mapping[pool_id]
-                pool_data = stake_snapshot["pools"].get(pool_id_dec)
-
-                if pool_data is None:
-                    errors.append(f"Missing snapshot data for pool ID: {pool_id_dec}")
-                    continue
-
+            for pool_data in stake_snapshot["pools"].values():
                 if not {
                     "stakeGo",
                     "stakeMark",
@@ -466,9 +464,8 @@ class TestAdvancedQueries:
             if option == "all_pools":
                 expected_pool_ids_dec = set(expected_pool_ids_mapping.values())
                 out_pool_ids_dec = set(stake_snapshot["pools"].keys())
-                # potentially there can be a race condition when a pool is (de)registered while
-                # this test is running
-                if expected_pool_ids_dec != out_pool_ids_dec:
+                # retired pools and newly created ones may not yet be on the snapshot
+                if not out_pool_ids_dec.issubset(expected_pool_ids_dec):
                     errors.append(
                         f"Expected pools: {expected_pool_ids_dec}\nVS\n"
                         f"Reported pools: {out_pool_ids_dec}\n"
@@ -524,7 +521,9 @@ class TestAdvancedQueries:
         assert "lastEpoch" in ledger_state
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("option", ("single_pool", "multiple_pools", "total_stake"))
+    @pytest.mark.parametrize(
+        "option", ("single_pool", "multiple_pools", "total_stake", "all_pools")
+    )
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_stake_snapshot(
@@ -538,21 +537,6 @@ class TestAdvancedQueries:
         """
         temp_template = f"{common.get_test_id(cluster)}_{option}"
         self._check_stake_snapshot(cluster_obj=cluster, option=option, temp_template=temp_template)
-
-    @allure.link(helpers.get_vcs_link())
-    def test_all_pools_stake_snapshot(
-        self,
-        cluster_singleton: clusterlib.ClusterLib,
-    ):
-        """Test `query stake-snapshot --all-stake-pools`.
-
-        See also `TestLedgerState.test_stake_snapshot` for more scenarios.
-        """
-        cluster = cluster_singleton
-        temp_template = common.get_test_id(cluster)
-        self._check_stake_snapshot(
-            cluster_obj=cluster, option="all_pools", temp_template=temp_template
-        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
