@@ -203,15 +203,15 @@ class TestLedgerState:
                 f"{delegated_hashes_go.difference(seen_hashes_go)}"
             )
 
+        if "pools" in stake_snapshot:
+            if sum_mark != stake_snapshot["total"]["stakeMark"]:
+                errors.append(f"total_mark: {sum_mark} != {stake_snapshot['total']['stakeMark']}")
+            if sum_set != stake_snapshot["total"]["stakeSet"]:
+                errors.append(f"total_set: {sum_set} != {stake_snapshot['total']['stakeSet']}")
+            if sum_go != stake_snapshot["total"]["stakeGo"]:
+                errors.append(f"total_go: {sum_go} != {stake_snapshot['total']['stakeGo']}")
         # active stake can be lower than sum of stakes, as some pools may not be running
         # and minting blocks
-        if "pools" in stake_snapshot:
-            if sum_mark < stake_snapshot["total"]["stakeMark"]:
-                errors.append(f"active_mark: {sum_mark} < {stake_snapshot['total']['stakeMark']}")
-            if sum_set < stake_snapshot["total"]["stakeSet"]:
-                errors.append(f"active_set: {sum_set} < {stake_snapshot['total']['stakeSet']}")
-            if sum_go < stake_snapshot["total"]["stakeGo"]:
-                errors.append(f"active_go: {sum_go} < {stake_snapshot['total']['stakeGo']}")
         else:
             if sum_mark < stake_snapshot["activeStakeMark"]:
                 errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
