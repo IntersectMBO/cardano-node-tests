@@ -40,6 +40,11 @@ UPDATE_PV8 = (os.environ.get("UPDATE_PV8") or "") != ""
 # TODO: uses old Alonzo PlutusV1 cost model - remove once it is not needed
 ALONZO_COST_MODEL = (os.environ.get("ALONZO_COST_MODEL") or "") != ""
 
+# used also in startup scripts
+DB_BACKEND = os.environ.get("DB_BACKEND") or ""
+if DB_BACKEND not in ("", "mem", "lmdb"):
+    raise RuntimeError(f"Invalid DB_BACKEND: {DB_BACKEND}")
+
 TESTNET_POOL_IDS = (
     "pool18yslg3q320jex6gsmetukxvzm7a20qd90wsll9anlkrfua38flr",
     "pool15sfcpy4tps5073gmra0e6tm2dgtrn004yr437qmeh44sgjlg2ex",
