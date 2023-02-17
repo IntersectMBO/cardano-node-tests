@@ -6,6 +6,7 @@
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # UPDATE_COST_MODEL - if set, PlutusV2 cost model will be made available through update proposal
 # UPDATE_PV8 - if set, update to PV8 and update Secp256k1 cost model
+# DB_BACKEND - 'mem' or 'lmdb', default is 'mem' (or legacy) if unset
 # DRY_RUN - if set, will not start the cluster
 
 set -euo pipefail
@@ -128,6 +129,16 @@ if [ -n "${ENABLE_P2P:-""}" ]; then
 else
   cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 fi
+
+case "${DB_BACKEND:=""}" in
+  "" | mem | lmdb)
+    echo "$DB_BACKEND" > "$STATE_CLUSTER/db_backend"
+    ;;
+  *)
+    echo "Unknown \`DB_BACKEND\`: '$DB_BACKEND', line $LINENO" >&2
+    exit 1
+    ;;
+esac
 
 # enable db-sync service
 if [ -n "${DBSYNC_REPO:-""}" ]; then
