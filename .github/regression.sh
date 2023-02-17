@@ -35,11 +35,6 @@ if [ "${CI_ENABLE_DBSYNC:-"false"}" != "false" ]; then
   . .github/source_dbsync.sh
 fi
 
-if [ "${CLUSTER_ERA:-""}" = "babbage_pv8" ]; then
-  export CLUSTER_ERA="babbage"
-  export UPDATE_PV8=1
-fi
-
 if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
   export ENABLE_P2P="true"
 elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then

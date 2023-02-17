@@ -111,58 +111,6 @@ class TestSetup:
                 ignore_file_id=worker_id,
             )
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
-    def test_update_to_babbage_pv8(
-        self,
-        cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs_locked: List[clusterlib.AddressRecord],
-    ):
-        """Update cluster to Babbage PV8."""
-        cluster = cluster_singleton
-        common.get_test_id(cluster)
-        src_addr = payment_addrs_locked[0]
-
-        cluster.wait_for_new_epoch()
-
-        # update to Babbage PV8 + update cost model
-
-        update_proposal_pv8 = [
-            clusterlib_utils.UpdateProposal(
-                arg="--protocol-major-version",
-                value=8,
-                name="",  # needs custom check
-            ),
-            clusterlib_utils.UpdateProposal(
-                arg="--protocol-minor-version",
-                value=0,
-                name="",  # needs custom check
-            ),
-            clusterlib_utils.UpdateProposal(
-                arg="--cost-model-file",
-                value=str(COST_MODEL_FILE),
-                name="",  # needs custom check
-            ),
-        ]
-
-        clusterlib_utils.update_params(
-            cluster_obj=cluster,
-            src_addr_record=src_addr,
-            update_proposals=update_proposal_pv8,
-        )
-
-        cluster.wait_for_new_epoch(padding_seconds=3)
-
-        protocol_params = cluster.g_query.get_protocol_params()
-        assert protocol_params["protocolVersion"]["major"] == 8
-        assert protocol_params["protocolVersion"]["minor"] == 0
-        assert (
-            protocol_params["costModels"]["PlutusScriptV2"][
-                "verifyEcdsaSecp256k1Signature-cpu-arguments"
-            ]
-            == 35892428
-        )
-
 
 @pytest.mark.upgrade
 class TestUpgrade:

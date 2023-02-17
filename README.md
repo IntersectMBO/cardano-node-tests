@@ -53,7 +53,6 @@ In addition, you can use
 * `NUM_POOLS` – number of stake pools created in each cluster instance (default: 3)
 * `ENABLE_P2P` – use P2P networking instead of the default legacy networking (default: unset)
 * `MIXED_P2P` – use mix of P2P and legacy networking; half of stake pools using legacy and the other half P2P (default: unset)
-* `UPDATE_PV8` – update protocol version from 7 (default in Babbage) to 8 (default: unset)
 * `DB_BACKEND` – 'mem' or 'lmdb', default is 'mem' (or legacy) backend if unset (default: unset)
 * `SCRIPTS_DIRNAME` – path to a dir with local cluster start/stop scripts and configuration files (default: unset)
 * `BOOTSTRAP_DIR` – path to a bootstrap dir for the given testnet (genesis files, config files, faucet data) (default: unset)
@@ -61,7 +60,7 @@ In addition, you can use
 For example:
 
 ```sh
-SCHEDULING_LOG=testrun_20221224_1.log NUM_POOLS=6 MIXED_P2P=1 UPDATE_PV8=1 ./.github/regression.sh
+SCHEDULING_LOG=testrun_20221224_1.log NUM_POOLS=6 MIXED_P2P=1 ./.github/regression.sh
 ```
 
 or

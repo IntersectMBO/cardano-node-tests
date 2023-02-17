@@ -2,4 +2,3 @@ CLUSTER_ERA=babbage
 TX_ERA=alonzo
 MARKEXPR=not long
 CLUSTERS_COUNT=3
-UPDATE_PV8=true
