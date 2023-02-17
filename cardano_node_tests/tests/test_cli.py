@@ -433,6 +433,7 @@ class TestAdvancedQueries:
                 json.dump(stake_snapshot, fp_out, indent=2)
 
         errors = []
+        total_stake_errors = []
         if "pools" in stake_snapshot:
             if not {
                 "stakeGo",
@@ -475,13 +476,18 @@ class TestAdvancedQueries:
                 # active stake can be lower than sum of stakes, as some pools may not be running
                 # and minting blocks
                 if sum_mark < stake_snapshot["total"]["stakeMark"]:
-                    errors.append(
+                    total_stake_errors.append(
                         f"active_mark: {sum_mark} < {stake_snapshot['total']['stakeMark']}"
                     )
                 if sum_set < stake_snapshot["total"]["stakeSet"]:
-                    errors.append(f"active_set: {sum_set} < {stake_snapshot['total']['stakeSet']}")
+                    total_stake_errors.append(
+                        f"active_set: {sum_set} < {stake_snapshot['total']['stakeSet']}"
+                    )
                 if sum_go < stake_snapshot["total"]["stakeGo"]:
-                    errors.append(f"active_go: {sum_go} < {stake_snapshot['total']['stakeGo']}")
+                    total_stake_errors.append(
+                        f"active_go: {sum_go} < {stake_snapshot['total']['stakeGo']}"
+                    )
+
         else:
             if not {
                 "activeStakeGo",
@@ -497,6 +503,9 @@ class TestAdvancedQueries:
             _dump_on_error()
             err_joined = "\n".join(errors)
             pytest.fail(f"Errors:\n{err_joined}")
+        elif total_stake_errors:
+            err_joined = "\n".join(total_stake_errors)
+            pytest.xfail(f"Unexpected values for total stake:\n{err_joined} - see node issue #4895")
 
     @pytest.fixture
     def pool_ids(self, cluster: clusterlib.ClusterLib) -> List[str]:
