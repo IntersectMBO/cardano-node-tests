@@ -249,7 +249,14 @@ def search_cluster_logs() -> List[Tuple[Path, str]]:
             for logfile_rec in _get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp):
                 look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
                 with open(logfile_rec.logfile, encoding="utf-8") as infile:
-                    infile.seek(seek)
+                    if seek > 0:
+                        # seek to the byte that comes right before the recorded offset
+                        infile.seek(seek - 1)
+                        # check if the byte is a newline, which means that the offset starts at
+                        # the beginning of a line
+                        if infile.read(1) != "\n":
+                            # skip the first line if the line is not complete
+                            infile.readline()
                     for line in infile:
                         look_back_buf.append(line)
                         look_back_buf.pop(0)
