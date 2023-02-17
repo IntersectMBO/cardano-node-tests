@@ -3,3 +3,4 @@ TX_ERA=shelley
 MARKEXPR=not long
 CLUSTERS_COUNT=3
 CI_FAST_CLUSTER=true
+UPDATE_PV8=true
