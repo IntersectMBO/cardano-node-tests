@@ -62,21 +62,18 @@ Nightly upgrade testing
    * network in Babbage era
    * Babbage transaction era
    * default (legacy) network topology
-   * protocol version 7
    * smoke tests
 * `Step 2 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step2/>`__:  |nightly-upgrade-step2-badge|
    * upgrade all nodes except one to latest cardano-node master
    * network in Babbage era
    * Babbage transaction era
    * mixed network topology (half nodes P2P, half nodes legacy topology)
-   * protocol version 7
    * smoke tests
 * `Step 3 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step3/>`__:  |nightly-upgrade-step3-badge|
    * upgrade the last remaining node to latest cardano-node master
    * network in Babbage era
    * Babbage transaction era
    * P2P network topology
-   * protocol version 8
    * smoke tests
 
 .. |nightly-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly%2Fbadge.json

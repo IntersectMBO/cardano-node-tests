@@ -1,4 +1,3 @@
 CLUSTER_ERA=babbage
 TX_ERA=babbage
 ENABLE_P2P=true
-UPDATE_PV8=true

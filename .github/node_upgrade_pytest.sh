@@ -51,7 +51,7 @@ if [ "$1" = "step1" ]; then
   mv allure-results.tar.xz allure-results-step1.tar.xz
 
 #
-# STEP2 - run smoke tests for the second time on the already started local cluster
+# STEP2 - partly update local cluster and run smoke tests for the second time
 #
 
 elif [ "$1" = "step2" ]; then
@@ -133,7 +133,7 @@ elif [ "$1" = "step2" ]; then
 
 
 #
-# STEP3 - update local cluster to Babbage PV8, run smoke tests for the third time
+# STEP3 - finish update of local cluster and run smoke tests for the third time
 #
 
 elif [ "$1" = "step3" ]; then
@@ -175,11 +175,6 @@ elif [ "$1" = "step3" ]; then
 
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
-
-  # update to Babbage
-  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_to_babbage
-  retval="$?"
-  [ "$retval" -le 1 ] || exit "$retval"
 
   # run smoke tests
   pytest cardano_node_tests -n "$TEST_THREADS" -m "smoke or upgrade" --artifacts-base-dir="$ARTIFACTS_DIR" --cli-coverage-dir="$COVERAGE_DIR" --alluredir="$REPORTS_DIR" --html=testrun-report-step3.html --self-contained-html

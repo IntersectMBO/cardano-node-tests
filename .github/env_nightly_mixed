@@ -1,4 +1,3 @@
 CLUSTER_ERA=babbage
 MIXED_P2P=true
 NUM_POOLS=4
-UPDATE_PV8=true

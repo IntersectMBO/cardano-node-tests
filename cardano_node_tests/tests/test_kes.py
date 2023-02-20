@@ -35,13 +35,11 @@ LOGGER = logging.getLogger(__name__)
 if VERSIONS.cluster_era == VERSIONS.ALONZO:
     NUM_OF_EPOCHS = 6
 elif VERSIONS.cluster_era == VERSIONS.BABBAGE:
-    NUM_OF_EPOCHS = 7
+    NUM_OF_EPOCHS = 8  # PV7 + PV8
 else:
     raise AssertionError(f"Unsupported era '{VERSIONS.cluster_era_name}'")
 
 if configuration.UPDATE_COST_MODEL and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
-    NUM_OF_EPOCHS += 1
-if configuration.UPDATE_PV8 and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
     NUM_OF_EPOCHS += 1
 
 

@@ -72,7 +72,6 @@ def pytest_configure(config: Any) -> None:
     config._metadata["SCRIPTS_DIRNAME"] = configuration.SCRIPTS_DIRNAME
     config._metadata["ENABLE_P2P"] = str(configuration.ENABLE_P2P)
     config._metadata["MIXED_P2P"] = str(configuration.MIXED_P2P)
-    config._metadata["UPDATE_PV8"] = str(configuration.UPDATE_PV8)
     config._metadata["NUM_POOLS"] = str(configuration.NUM_POOLS)
     config._metadata["DB_BACKEND"] = configuration.DB_BACKEND
     config._metadata["ghc"] = VERSIONS.ghc
