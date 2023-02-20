@@ -8,11 +8,7 @@ nix --version
 REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"
 
-ORIG_WORKDIR="${WORKDIR:-""}"
-if [ -z "${WORKDIR:-""}" ]; then
-  WORKDIR="$REPODIR/run_workdir"
-fi
-export WORKDIR
+export WORKDIR="$REPODIR/run_workdir"
 
 # shellcheck disable=SC1090,SC1091
 . .github/stop_cluster_instances.sh
@@ -20,10 +16,8 @@ export WORKDIR
 # stop all running cluster instances
 stop_instances "$WORKDIR"
 
-# create clean workdir if using the default one
-if [ -z "${ORIG_WORKDIR:-""}" ]; then
-  rm -rf "${WORKDIR:?}"
-fi
+# create clean workdir
+rm -rf "${WORKDIR:?}"
 mkdir -p "$WORKDIR"
 
 export TMPDIR="$WORKDIR/tmp"
@@ -59,6 +53,7 @@ printf "start: %(%H:%M:%S)T\n" -1
 set +e
 # shellcheck disable=SC2086,SC2016
 nix develop --accept-flake-config $NODE_OVERRIDE --command bash -c '
+  : > "$WORKDIR/.nix_step1"
   printf "finish: %(%H:%M:%S)T\n" -1
   echo "::endgroup::"  # end group for "Nix env setup"
 
@@ -67,6 +62,11 @@ nix develop --accept-flake-config $NODE_OVERRIDE --command bash -c '
   ./.github/node_upgrade_pytest.sh step1
 '
 retval="$?"
+
+if [ ! -e "$WORKDIR/.nix_step1" ]; then
+  echo "Nix env setup failed, exiting"
+  exit 1
+fi
 
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
 [ "$retval" -le 1 ] || exit "$retval"
@@ -83,6 +83,8 @@ fi
 
 # shellcheck disable=SC2086,SC2016
 nix develop --accept-flake-config $NODE_OVERRIDE --command bash -c '
+  : > "$WORKDIR/.nix_step2"
+
   # update cluster nodes, run smoke tests
   ./.github/node_upgrade_pytest.sh step2
   retval="$?"
@@ -102,6 +104,11 @@ nix develop --accept-flake-config $NODE_OVERRIDE --command bash -c '
   exit $retval
 '
 retval="$?"
+
+if [ ! -e "$WORKDIR/.nix_step2" ]; then
+  echo "Nix env setup failed, exiting"
+  exit 1
+fi
 
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
