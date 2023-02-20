@@ -8,11 +8,7 @@ nix --version
 REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"
 
-ORIG_WORKDIR="${WORKDIR:-""}"
-if [ -z "${WORKDIR:-""}" ]; then
-  WORKDIR="$REPODIR/run_workdir"
-fi
-export WORKDIR
+export WORKDIR="$REPODIR/run_workdir"
 
 # shellcheck disable=SC1090,SC1091
 . .github/stop_cluster_instances.sh
@@ -20,10 +16,8 @@ export WORKDIR
 # stop all running cluster instances
 stop_instances "$WORKDIR"
 
-# create clean workdir if using the default one
-if [ -z "${ORIG_WORKDIR:-""}" ]; then
-  rm -rf "${WORKDIR:?}"
-fi
+# create clean workdir
+rm -rf "${WORKDIR:?}"
 mkdir -p "$WORKDIR"
 
 export TMPDIR="$WORKDIR/tmp"
