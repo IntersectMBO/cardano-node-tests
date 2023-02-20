@@ -23,7 +23,8 @@ from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
 from gitpython_utils import git_clone_iohk_repo, git_checkout
 
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
-    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir
+    get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir, \
+    list_absolute_file_paths
 
 NODE = "./cardano-node"
 CLI = "./cardano-cli"
@@ -58,11 +59,12 @@ def execute_command(command):
             print(f"Command {cmd} returned exitCode: {exitCode}")
 
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(
-            "command '{}' return with error (code {}): {}".format(
-                e.cmd, e.returncode, " ".join(str(e.output).split())
-            )
-        )
+        print(e)
+        #raise RuntimeError(
+        #    "command '{}' return with error (code {}): {}".format(
+        #        e.cmd, e.returncode, " ".join(str(e.output).split())
+        #    )
+        #)
 
 
 def git_get_last_closed_pr_cardano_node():
@@ -702,6 +704,29 @@ def get_data_from_logs(log_file):
     return logs_details_dict
 
 
+def get_node_cabal_build_files():
+    node_build_files = list_absolute_file_paths('dist-newstyle/build')
+    return node_build_files
+
+
+def get_node_executable_path_built_with_cabal():
+    for f in get_node_cabal_build_files():
+        if "\\x\\cardano-node\\build\\" in f and 'cardano-node-tmp' not in f and 'autogen' not in f:
+            print(f"printing found node executable: {f}")
+            global NODE   
+            NODE = f;    
+            return f
+
+
+def get_cli_executable_path_built_with_cabal():
+    for f in get_node_cabal_build_files():
+        if "\\x\\cardano-cli\\build\\" in f and 'cardano-cli-tmp' not in f and 'autogen' not in f:
+            print(f"printing found node-cli executable: {f}")
+            global CLI
+            CLI = f 
+            return f
+
+
 def copy_node_executables(src_location, dst_location, build_mode):
     if build_mode == "nix":
         node_binary_location = "cardano-node-bin/bin/"
@@ -720,6 +745,24 @@ def copy_node_executables(src_location, dst_location, build_mode):
         try:
             shutil.copy2(Path(src_location) / cli_binary_location / "cardano-cli",
                          Path(dst_location) / "cardano-cli")
+        except Exception as e:
+            print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+        time.sleep(5)
+    if build_mode == "cabal":
+        node_binary_location = get_node_executable_path_built_with_cabal()
+        cli_binary_location = get_cli_executable_path_built_with_cabal()
+        #os.chdir(Path(node_binary_location).parents[0])
+        #print(f"  -- files permissions inside cardano-node bin folder: {subprocess.check_call(['ls', '-la'])}")
+        #os.chdir(Path(cli_binary_location).parents[0])
+        #print(f"  -- files permissions inside cardano-cli bin folder: {subprocess.check_call(['ls', '-la'])}")
+        #os.chdir(Path(dst_location))
+
+        try:
+            shutil.copy2(node_binary_location, Path(dst_location) / "cardano-node")
+        except Exception as e:
+            print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+        try:
+            shutil.copy2(cli_binary_location, Path(dst_location) / "cardano-cli")
         except Exception as e:
             print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
         time.sleep(5)
@@ -746,6 +789,59 @@ def get_node_files_using_nix(node_rev, repository = None):
     subprocess.check_call(['chmod', '+x', NODE])
     subprocess.check_call(['chmod', '+x', CLI])
     print(f"  -- files permissions inside test folder: {subprocess.check_call(['ls', '-la'])}")
+    return repo
+
+
+def get_node_files_using_cabal(node_rev, repository = None):
+    test_directory = Path.cwd()
+    repo = None
+    print(f"test_directory: {test_directory}")
+    print(f" - listdir test_directory: {os.listdir(test_directory)}")
+
+    os.chdir(Path(ROOT_TEST_PATH))  
+    print(f" - listdir ROOT_TEST_PATH: {os.listdir(ROOT_TEST_PATH)}")
+
+    repo_name = "cardano-node"
+    repo_dir = Path(test_directory) / "cardano_node_dir"
+
+    if is_dir(repo_dir) is True:
+        repo = git_checkout(repository, node_rev)
+    else:
+        repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
+
+    cabal_local_file = Path(ROOT_TEST_PATH) / 'sync_tests' / 'cabal.project.local'
+    cabal_project_file = Path(ROOT_TEST_PATH) / 'sync_tests' / 'cabal.project'
+    shutil.copy2(cabal_local_file , Path(repo_dir))   
+    shutil.copy2(cabal_project_file , Path(repo_dir))   
+    os.chdir(Path(repo_dir))
+    print(f" - listdir repo_dir: {os.listdir(repo_dir)}") 
+
+    print('cabal.project :')
+
+    with open('cabal.project', 'r') as f:
+        print(f.read()) 
+
+    print('*   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   ')
+    print('cabal.project.local :')
+
+    with open('cabal.project.local', 'r') as f:
+        print(f.read())
+
+    execute_command("cabal update")
+    execute_command("cabal build cardano-node cardano-cli")
+    print(f" - listdir repo_dir after cabal build: {os.listdir(repo_dir)}") 
+    copy_node_executables(repo_dir, test_directory, "cabal")
+    #node_cli_dir = Path(test_directory) / "cardano-cli"
+    #node_executable_dir = Path(test_directory) / "cardano-node"
+
+    #execute_command(f"$env:PATH+={node_cli_dir}")
+    #execute_command(f"$env:PATH+={node_executable_dir}")
+
+    os.chdir(Path(test_directory))
+    print(f" - listdir test_directory after copying executables: {os.listdir(test_directory)}") 
+    #subprocess.check_call(['chmod', '+x', NODE])
+    #subprocess.check_call(['chmod', '+x', CLI])
+    #print(f"  -- files permissions inside test folder: {subprocess.check_call(['ls', '-la'])}")
     return repo
 
 
@@ -786,18 +882,20 @@ def main():
     print("===================================================================================")
     print(f"Get the cardano-node and cardano-cli files using - {node_build_mode}")
     if "windows" in platform_system.lower():
-        NODE = "cardano-node.exe"
-        CLI = "cardano-cli.exe"
+        ## Artur uncomment if error: NODE = "cardano-node.exe"
+        ## Artur uncomment if error: CLI = "cardano-cli.exe"
         # TO DO: remove this after the prebuilt files will be avaolable
         print(f"ERROR: only building with NIX is supported at this moment --> so there is no Windows support")
-        exit(1)
+        #exit(1)
 
     print(f"Get the cardano-node and cardano-cli files")
     start_build_time = get_current_date_time()
-    if node_build_mode == "nix":
+    if node_build_mode == "nix" and "windows" not in platform_system.lower():
         repository = get_node_files_using_nix(node_rev1)
         # if "darwin" in platform_system.lower():
         #     install_node_dependencies_macos()
+    if node_build_mode == "nix" and "windows" in platform_system.lower():
+        repository = get_node_files_using_cabal(node_rev1)
     else:
         print(
             f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")

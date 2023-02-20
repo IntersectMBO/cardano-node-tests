@@ -49,6 +49,15 @@ def is_dir(dir):
     return os.path.isdir(dir)
 
 
+def list_absolute_file_paths(directory):
+    files_paths = []
+    for dirpath,_,filenames in os.walk(directory):
+        for f in filenames:
+            abs_filepath = os.path.abspath(os.path.join(dirpath, f))
+            files_paths.append(abs_filepath)
+    return files_paths
+
+
 def get_directory_size(start_path='.'):
     # returns directory size in bytes
     total_size = 0
