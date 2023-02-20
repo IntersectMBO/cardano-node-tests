@@ -77,6 +77,8 @@ New functionalities in this tag
 New issues
 ----------
 
+* `[BUG] - connection is not recreated after mux stops <https://github.com/input-output-hk/cardano-node/issues/4900>`__
+
 
 Breaking changes
 ----------------
