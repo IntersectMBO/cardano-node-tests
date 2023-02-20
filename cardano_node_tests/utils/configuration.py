@@ -35,8 +35,6 @@ ENABLE_P2P = (os.environ.get("ENABLE_P2P") or "") != ""
 MIXED_P2P = (os.environ.get("MIXED_P2P") or "") != ""
 # TODO: for PlutusV2 cost model, used also in startup scripts as `if [ -n "$VAR" ]...`
 UPDATE_COST_MODEL = (os.environ.get("UPDATE_COST_MODEL") or "") != ""
-# TODO: uses old Alonzo PlutusV1 cost model - remove once it is not needed
-ALONZO_COST_MODEL = (os.environ.get("ALONZO_COST_MODEL") or "") != ""
 
 # used also in startup scripts
 DB_BACKEND = os.environ.get("DB_BACKEND") or ""

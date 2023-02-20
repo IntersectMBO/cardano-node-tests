@@ -203,12 +203,7 @@ class TestDBSync:
 
         # if cardano-node knows about Babbage and network is in Alonzo or higher era, check that
         # the highest known protocol major version matches the expected value
-        if (
-            rec
-            and VERSIONS.cluster_era >= VERSIONS.ALONZO
-            and clusterlib_utils.cli_has("transaction build --babbage-era")
-            and not (rec.proto_major == 7 and rec.proto_minor == 2)
-        ):
+        if rec and not (rec.proto_major == 8 and rec.proto_minor == 0):
             pytest.xfail(
                 f"protocol major version: {rec.proto_major}; "
                 f"protocol minor version: {rec.proto_minor}"

@@ -1686,12 +1686,9 @@ class TestRewards:
                 )
 
             if this_epoch == init_epoch + 5:
-                if VERSIONS.cluster_era <= VERSIONS.ALONZO:
-                    assert reward_total == 0, "Unexpected reward was received by stake address"
-                else:
-                    # rewards should be received even when the stake credential was
-                    # re-registered after reward calculation have already started
-                    assert reward_total > 0, "Reward was NOT received by stake address"
+                # rewards should be received even when the stake credential was
+                # re-registered after reward calculation have already started
+                assert reward_total > 0, "Reward was NOT received by stake address"
 
             if this_epoch >= init_epoch + 6:
                 assert (

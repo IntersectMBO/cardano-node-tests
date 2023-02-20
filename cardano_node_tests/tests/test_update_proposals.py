@@ -100,97 +100,86 @@ class TestUpdateProposals:
             json.dump(protocol_params, fp_out, indent=4)
 
         # update Alonzo+ specific parameters in separate update proposal
-        if VERSIONS.cluster_era >= VERSIONS.ALONZO:
-            if VERSIONS.cluster_era >= VERSIONS.BABBAGE and clusterlib_utils.cli_has(
-                "governance create-update-proposal --utxo-cost-per-byte"
-            ):
-                utxo_cost = clusterlib_utils.UpdateProposal(
-                    arg="--utxo-cost-per-byte",
-                    value=4300,
-                    name="utxoCostPerByte",
-                )
-            elif VERSIONS.cluster_era == VERSIONS.BABBAGE:
-                utxo_cost = clusterlib_utils.UpdateProposal(
-                    arg="--utxo-cost-per-word",
-                    value=8001,
-                    name="",  # needs custom check
-                )
-            else:
-                utxo_cost = clusterlib_utils.UpdateProposal(
-                    arg="--utxo-cost-per-word",
-                    value=8001,
-                    name="utxoCostPerWord",
-                )
-
-            update_proposals_alonzo = [
-                utxo_cost,
-                clusterlib_utils.UpdateProposal(
-                    arg="--max-value-size",
-                    value=5000,
-                    name="maxValueSize",
-                ),
-                clusterlib_utils.UpdateProposal(
-                    arg="--collateral-percent",
-                    value=90,
-                    name="collateralPercentage",
-                ),
-                clusterlib_utils.UpdateProposal(
-                    arg="--max-collateral-inputs",
-                    value=4,
-                    name="maxCollateralInputs",
-                ),
-                clusterlib_utils.UpdateProposal(
-                    arg="--max-tx-execution-units",
-                    value=f"({max_tx_execution_units},{max_tx_execution_units})",
-                    name="",  # needs custom check
-                ),
-                clusterlib_utils.UpdateProposal(
-                    arg="--max-block-execution-units",
-                    value=f"({max_block_execution_units},{max_block_execution_units})",
-                    name="",  # needs custom check
-                ),
-                clusterlib_utils.UpdateProposal(
-                    arg="--price-execution-steps",
-                    value=price_execution_steps,
-                    name="",  # needs custom check
-                ),
-                clusterlib_utils.UpdateProposal(
-                    arg="--price-execution-memory",
-                    value=price_execution_memory,
-                    name="",  # needs custom check
-                ),
-            ]
-
-            clusterlib_utils.update_params_build(
-                cluster_obj=cluster,
-                src_addr_record=payment_addr,
-                update_proposals=update_proposals_alonzo,
+        if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
+            utxo_cost = clusterlib_utils.UpdateProposal(
+                arg="--utxo-cost-per-byte",
+                value=4300,
+                name="utxoCostPerByte",
+            )
+        else:
+            utxo_cost = clusterlib_utils.UpdateProposal(
+                arg="--utxo-cost-per-word",
+                value=8001,
+                name="",  # needs custom check
             )
 
-            this_epoch = cluster.wait_for_new_epoch()
+        update_proposals_alonzo = [
+            utxo_cost,
+            clusterlib_utils.UpdateProposal(
+                arg="--max-value-size",
+                value=5000,
+                name="maxValueSize",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--collateral-percent",
+                value=90,
+                name="collateralPercentage",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-collateral-inputs",
+                value=4,
+                name="maxCollateralInputs",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-tx-execution-units",
+                value=f"({max_tx_execution_units},{max_tx_execution_units})",
+                name="",  # needs custom check
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-block-execution-units",
+                value=f"({max_block_execution_units},{max_block_execution_units})",
+                name="",  # needs custom check
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--price-execution-steps",
+                value=price_execution_steps,
+                name="",  # needs custom check
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--price-execution-memory",
+                value=price_execution_memory,
+                name="",  # needs custom check
+            ),
+        ]
 
-            protocol_params = cluster.g_query.get_protocol_params()
-            with open(
-                f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8"
-            ) as fp_out:
-                json.dump(protocol_params, fp_out, indent=4)
+        clusterlib_utils.update_params_build(
+            cluster_obj=cluster,
+            src_addr_record=payment_addr,
+            update_proposals=update_proposals_alonzo,
+        )
 
-            clusterlib_utils.check_updated_params(
-                update_proposals=update_proposals_alonzo, protocol_params=protocol_params
-            )
-            assert protocol_params["maxTxExecutionUnits"]["memory"] == max_tx_execution_units
-            assert protocol_params["maxTxExecutionUnits"]["steps"] == max_tx_execution_units
-            assert protocol_params["maxBlockExecutionUnits"]["memory"] == max_block_execution_units
-            assert protocol_params["maxBlockExecutionUnits"]["steps"] == max_block_execution_units
-            assert protocol_params["executionUnitPrices"]["priceSteps"] == 1.2
-            assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
+        this_epoch = cluster.wait_for_new_epoch()
 
-            if VERSIONS.cluster_era == VERSIONS.BABBAGE and not utxo_cost.name:
-                # the resulting number will be multiple of 8, i.e. 8000
-                assert protocol_params["utxoCostPerWord"] == math.floor(utxo_cost.value / 8) * 8
+        protocol_params = cluster.g_query.get_protocol_params()
+        with open(f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8") as fp_out:
+            json.dump(protocol_params, fp_out, indent=4)
 
-            # check param proposal on dbsync
-            dbsync_utils.check_param_proposal(protocol_params=protocol_params)
+        clusterlib_utils.check_updated_params(
+            update_proposals=update_proposals_alonzo, protocol_params=protocol_params
+        )
+        assert protocol_params["maxTxExecutionUnits"]["memory"] == max_tx_execution_units
+        assert protocol_params["maxTxExecutionUnits"]["steps"] == max_tx_execution_units
+        assert protocol_params["maxBlockExecutionUnits"]["memory"] == max_block_execution_units
+        assert protocol_params["maxBlockExecutionUnits"]["steps"] == max_block_execution_units
+        assert protocol_params["executionUnitPrices"]["priceSteps"] == 1.2
+        assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
+
+        if not utxo_cost.name:
+            # the resulting number will be multiple of 8, i.e. 8000
+            assert protocol_params["utxoCostPerWord"] == math.floor(utxo_cost.value / 8) * 8
+
+        # check param proposal on dbsync
+        dbsync_utils.check_param_proposal(protocol_params=protocol_params)
 
         # Check that only one update proposal can be applied each epoch and that the last
         # update proposal cancels the previous one. Following parameter values will be
@@ -329,14 +318,6 @@ class TestUpdateProposals:
                 name="poolPledgeInfluence",
             ),
         ]
-        if VERSIONS.cluster_era < VERSIONS.ALONZO:
-            update_proposals.append(
-                clusterlib_utils.UpdateProposal(
-                    arg="--min-utxo-value",
-                    value=2,
-                    name="minUTxOValue",
-                )
-            )
 
         clusterlib_utils.update_params(
             cluster_obj=cluster,
@@ -357,7 +338,4 @@ class TestUpdateProposals:
         # check param proposal on dbsync
         dbsync_utils.check_param_proposal(protocol_params=protocol_params)
 
-        if VERSIONS.cluster_era >= VERSIONS.BABBAGE:
-            assert protocol_params["decentralization"] is None
-        else:
-            assert protocol_params["decentralization"] == decentralization.value
+        assert protocol_params["decentralization"] is None

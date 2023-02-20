@@ -11,7 +11,6 @@ import requests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -122,20 +121,13 @@ def check_kes_period_info_result(  # noqa: C901
                 f"{value} vs {prometheus_metrics[metric]}"
             )
 
-    if VERSIONS.cluster_era > VERSIONS.ALONZO:
-        # in eras > Alonzo, the on-disk counter must be equal or +1 to the on-chain counter
-        valid_counter_metrics = (
-            0
-            <= command_metrics["qKesOnDiskOperationalCertificateNumber"]
-            - command_metrics["qKesNodeStateOperationalCertificateNumber"]
-            <= 1
-        )
-    else:
-        # in eras <= Alonzo, the on-disk counter must be >= than the on-chain counter
-        valid_counter_metrics = (
-            command_metrics["qKesNodeStateOperationalCertificateNumber"]
-            <= command_metrics["qKesOnDiskOperationalCertificateNumber"]
-        )
+    # in eras > Alonzo, the on-disk counter must be equal or +1 to the on-chain counter
+    valid_counter_metrics = (
+        0
+        <= command_metrics["qKesOnDiskOperationalCertificateNumber"]
+        - command_metrics["qKesNodeStateOperationalCertificateNumber"]
+        <= 1
+    )
 
     valid_kes_period_metrics = (
         command_metrics["qKesStartKesInterval"]

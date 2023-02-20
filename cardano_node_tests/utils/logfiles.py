@@ -16,7 +16,6 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,6 +30,7 @@ ERRORS_IGNORED = [
     "failedScripts",
     "closed when reading data, waiting on next header",
     "MuxIOException writev: resource vanished",
+    r"cardano\.node\.Mempool:Info",
     r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
     # can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
@@ -43,8 +43,6 @@ ERRORS_IGNORED = [
     # TODO: see node issue #4369
     "MAIN THREAD FAILED",
 ]
-if VERSIONS.cluster_era >= VERSIONS.ALONZO:
-    ERRORS_IGNORED.append(r"cardano\.node\.Mempool:Info")
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 # errors that are ignored if there are expected messages in the log file before the error

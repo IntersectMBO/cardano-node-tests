@@ -26,8 +26,10 @@ if VERSIONS.transaction_era <= VERSIONS.ALLEGRA:
     _BLD_SKIP_REASON = "node issue #4286"
 elif VERSIONS.transaction_era == VERSIONS.MARY:
     _BLD_SKIP_REASON = "node issue #4287"
+BUILD_UNUSABLE = bool(_BLD_SKIP_REASON)
+
 SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
-    bool(_BLD_SKIP_REASON),
+    BUILD_UNUSABLE,
     reason=(
         f"cannot use `build` with Tx era '{VERSIONS.transaction_era_name}', "
         f"see {_BLD_SKIP_REASON}"

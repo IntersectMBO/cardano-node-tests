@@ -7,12 +7,10 @@ from typing import Optional
 import pytest
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.types import FileType
-from cardano_node_tests.utils.versions import VERSIONS
 
 DATA_DIR = Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
@@ -126,19 +124,6 @@ MINTING_V2_CHECK_REF_SCRIPTS_COST = ExecutionCost(
 MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
     per_time=208_093_920, per_space=674_744, fixed_cost=53_937
 )
-
-# TODO: cost in old Alonzo cost model
-if configuration.ALONZO_COST_MODEL or VERSIONS.cluster_era == VERSIONS.ALONZO:
-    ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
-    GUESSING_GAME_COST = ExecutionCost(per_time=327_365_461, per_space=870_842, fixed_cost=73_851)
-    GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_034_678, per_space=11_368, fixed_cost=947)
-    MINTING_COST = ExecutionCost(per_time=358_849_733, per_space=978_434, fixed_cost=82_329)
-    MINTING_TIME_RANGE_COST = ExecutionCost(
-        per_time=379_793_656, per_space=1_044_064, fixed_cost=87_626
-    )
-    MINTING_WITNESS_REDEEMER_COST = ExecutionCost(
-        per_time=369_725_712, per_space=1_013_630, fixed_cost=85_144
-    )
 
 
 class PlutusScriptData(NamedTuple):

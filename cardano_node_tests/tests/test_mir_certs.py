@@ -15,7 +15,6 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -149,17 +148,6 @@ class TestMIRCerts:
         # send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
-
-        # fail is expected when Era < Alonzo
-        if VERSIONS.cluster_era < VERSIONS.ALONZO:
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.g_transaction.send_tx(
-                    src_address=pool_user.payment.address,
-                    tx_name=temp_template,
-                    tx_files=tx_files,
-                )
-            assert "MIRTransferNotCurrentlyAllowed" in str(excinfo.value)
-            return
 
         LOGGER.info(
             "Submitting MIR cert for transferring funds to treasury in "
@@ -315,17 +303,6 @@ class TestMIRCerts:
         # send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
-
-        # fail is expected when Era < Alonzo
-        if VERSIONS.cluster_era < VERSIONS.ALONZO:
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.g_transaction.send_tx(
-                    src_address=pool_user.payment.address,
-                    tx_name=temp_template,
-                    tx_files=tx_files,
-                )
-            assert "MIRTransferNotCurrentlyAllowed" in str(excinfo.value)
-            return
 
         LOGGER.info(
             "Submitting MIR cert for transferring funds to reserves in "
