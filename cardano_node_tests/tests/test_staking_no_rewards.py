@@ -15,7 +15,6 @@ from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import kes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -606,18 +605,15 @@ class TestNoRewards:
 
         # withdraw pool rewards to payment address
         # use `transaction build` if possible
-        if (
-            VERSIONS.transaction_era >= VERSIONS.ALONZO
-            and VERSIONS.transaction_era == VERSIONS.cluster_era
-        ):
-            clusterlib_utils.withdraw_reward_w_build(
-                cluster_obj=cluster,
+        if common.BUILD_UNUSABLE:
+            cluster.g_stake_address.withdraw_reward(
                 stake_addr_record=pool_reward.stake,
                 dst_addr_record=pool_reward.payment,
                 tx_name=temp_template,
             )
         else:
-            cluster.g_stake_address.withdraw_reward(
+            clusterlib_utils.withdraw_reward_w_build(
+                cluster_obj=cluster,
                 stake_addr_record=pool_reward.stake,
                 dst_addr_record=pool_reward.payment,
                 tx_name=temp_template,

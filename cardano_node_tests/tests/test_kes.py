@@ -32,14 +32,12 @@ LOGGER = logging.getLogger(__name__)
 
 # number of epochs traversed during local cluster startup
 # NOTE: must be kept up-to-date
-if VERSIONS.cluster_era == VERSIONS.ALONZO:
-    NUM_OF_EPOCHS = 6
-elif VERSIONS.cluster_era == VERSIONS.BABBAGE:
+if VERSIONS.cluster_era == VERSIONS.BABBAGE:
     NUM_OF_EPOCHS = 8  # PV7 + PV8
 else:
     raise AssertionError(f"Unsupported era '{VERSIONS.cluster_era_name}'")
 
-if configuration.UPDATE_COST_MODEL and VERSIONS.cluster_era >= VERSIONS.BABBAGE:
+if configuration.UPDATE_COST_MODEL:
     NUM_OF_EPOCHS += 1
 
 
@@ -401,15 +399,14 @@ class TestKES:
             (f"{node_name}.stdout", "PraosCannotForgeKeyNotUsableYet"),
         ]
 
-        if VERSIONS.cluster_era > VERSIONS.ALONZO:
-            expected_errors.append((f"{node_name}.stdout", "CounterOverIncrementedOCERT"))
-            # In Babbage we get `CounterOverIncrementedOCERT` error if counter for new opcert
-            # is not exactly +1 from last used opcert. We'll backup the original counter
-            # file so we can use it for issuing next valid opcert.
-            cold_counter_file_orig = Path(
-                f"{cold_counter_file.stem}_orig{cold_counter_file.suffix}"
-            ).resolve()
-            shutil.copy(cold_counter_file, cold_counter_file_orig)
+        expected_errors.append((f"{node_name}.stdout", "CounterOverIncrementedOCERT"))
+        # In Babbage we get `CounterOverIncrementedOCERT` error if counter for new opcert
+        # is not exactly +1 from last used opcert. We'll backup the original counter
+        # file so we can use it for issuing next valid opcert.
+        cold_counter_file_orig = Path(
+            f"{cold_counter_file.stem}_orig{cold_counter_file.suffix}"
+        ).resolve()
+        shutil.copy(cold_counter_file, cold_counter_file_orig)
 
         logfiles.add_ignore_rule(
             files_glob="*.stdout",
@@ -467,7 +464,7 @@ class TestKES:
 
                     # test the `CounterOverIncrementedOCERT` error - the counter will now be +2 from
                     # last used opcert counter value
-                    if invalid_opcert_epoch == 2 and VERSIONS.cluster_era > VERSIONS.ALONZO:
+                    if invalid_opcert_epoch == 2:
                         overincrement_kes_period = cluster.g_query.get_kes_period()
                         overincrement_opcert_file = cluster.g_node.gen_node_operational_cert(
                             node_name=f"{node_name}_overincrement_opcert_file",
@@ -512,8 +509,7 @@ class TestKES:
 
             # in Babbage we'll use the original counter for issuing new valid opcert so the counter
             # value of new valid opcert equals to counter value of the original opcert +1
-            if VERSIONS.cluster_era > VERSIONS.ALONZO:
-                shutil.copy(cold_counter_file_orig, cold_counter_file)
+            shutil.copy(cold_counter_file_orig, cold_counter_file)
 
             # generate new operational certificate with valid `--kes-period`
             valid_kes_period = cluster.g_query.get_kes_period()
@@ -586,9 +582,7 @@ class TestKES:
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
                 kes_output=kes_period_info,
-                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD
-                if VERSIONS.cluster_era > VERSIONS.ALONZO
-                else kes.KesScenarios.ALL_INVALID,
+                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
                 check_id="5",
                 expected_start_kes=invalid_kes_period,
                 pool_num=pool_num,

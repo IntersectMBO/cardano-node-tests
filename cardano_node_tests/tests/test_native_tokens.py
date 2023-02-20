@@ -1576,10 +1576,7 @@ class TestTransfer:
             destinations.append(clusterlib.TxOut(address=src_address, amount=2_000_000))
 
             # TODO: see node issue #4297
-            if (
-                VERSIONS.cluster_era == VERSIONS.BABBAGE
-                and VERSIONS.transaction_era == VERSIONS.ALONZO
-            ):
+            if VERSIONS.transaction_era == VERSIONS.ALONZO:
                 err_str = ""
                 try:
                     cluster.g_transaction.build_tx(
@@ -1748,10 +1745,7 @@ class TestTransfer:
             destinations.append(clusterlib.TxOut(address=src_address, amount=4_000_000))
 
             # TODO: see node issue #4297
-            if (
-                VERSIONS.cluster_era == VERSIONS.BABBAGE
-                and VERSIONS.transaction_era == VERSIONS.ALONZO
-            ):
+            if VERSIONS.transaction_era == VERSIONS.ALONZO:
                 err_str = ""
                 try:
                     cluster.g_transaction.build_tx(

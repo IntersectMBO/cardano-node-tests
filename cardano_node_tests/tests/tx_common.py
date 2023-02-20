@@ -6,15 +6,10 @@ from typing import Tuple
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-MIN_UTXO_VALUE_ALONZO = 999_978
-MIN_UTXO_VALUE_BABBAGE = 857_690
-MIN_UTXO_VALUE = (
-    MIN_UTXO_VALUE_BABBAGE if VERSIONS.cluster_era >= VERSIONS.BABBAGE else MIN_UTXO_VALUE_ALONZO
-)
+MIN_UTXO_VALUE = 857_690
 
 
 def get_raw_tx_values(
