@@ -1039,15 +1039,19 @@ class TestTimeLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize(
+        "use_tx_validity", (True, False), ids=("tx_validity", "no_tx_validity")
+    )
     @pytest.mark.dbsync
     def test_script_after(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         use_build_cmd: bool,
+        use_tx_validity: bool,
     ):
         """Check that it is possible to spend from script address after given slot."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{use_tx_validity}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1078,7 +1082,7 @@ class TestTimeLocking:
         )
 
         # send funds from script address
-        invalid_hereafter = cluster.g_query.get_slot_no() + 1_000
+        invalid_hereafter = cluster.g_query.get_slot_no() + 1_000 if use_tx_validity else None
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
@@ -1106,15 +1110,19 @@ class TestTimeLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize(
+        "use_tx_validity", (True, False), ids=("tx_validity", "no_tx_validity")
+    )
     @pytest.mark.dbsync
     def test_script_before(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         use_build_cmd: bool,
+        use_tx_validity: bool,
     ):
         """Check that it is possible to spend from script address before given slot."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{use_tx_validity}"
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1155,7 +1163,7 @@ class TestTimeLocking:
             amount=2_000_000,
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
-            invalid_before=100,
+            invalid_before=100 if use_tx_validity else None,
             invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
             use_build_cmd=use_build_cmd,
         )
@@ -1168,6 +1176,74 @@ class TestTimeLocking:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("slot_type", ("before", "after"))
+    def test_tx_missing_validity(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        slot_type: str,
+    ):
+        """Check that it is NOT possible to spend from script address.
+
+        The transaction validity interval is not specified.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{slot_type}"
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        if slot_type == "before":
+            slot_num = cluster.g_query.get_slot_no() + 10_000
+            slot_type_arg = clusterlib.MultiSlotTypeArgs.BEFORE
+        else:
+            slot_num = 100
+            slot_type_arg = clusterlib.MultiSlotTypeArgs.AFTER
+
+        # create multisig script
+        multisig_script = cluster.g_transaction.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=slot_num,
+            slot_type_arg=slot_type_arg,
+        )
+
+        # create script address
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=4_000_000,
+            payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
+        )
+
+        # send funds from script address - missing required validity interval
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_address,
+                dst_address=payment_addrs[0].address,
+                amount=2_000_000,
+                payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
+                invalid_before=None,  # missing required validity interval for "after"
+                invalid_hereafter=None,  # missing required validity interval for "before"
+                use_build_cmd=use_build_cmd,
+            )
+        err_str = str(excinfo.value)
+        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
