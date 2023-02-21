@@ -322,13 +322,9 @@ class TestCollateralOutput:
 
         # check "transaction view"
         tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
-        # TODO: "return collateral" is not present in the transaction view in 1.35.3 and older
-        if "return collateral" in tx_view_out:
-            policyid, asset_name = token[0].token.split(".")
-            tx_view_policy_key = f"policy {policyid}"
-            tx_view_token_rec = tx_view_out["return collateral"]["amount"][tx_view_policy_key]
-            tx_view_asset_key = next(iter(tx_view_token_rec))
-            assert (
-                asset_name in tx_view_asset_key
-            ), "Token is missing from tx view return collateral"
-            assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"
+        policyid, asset_name = token[0].token.split(".")
+        tx_view_policy_key = f"policy {policyid}"
+        tx_view_token_rec = tx_view_out["return collateral"]["amount"][tx_view_policy_key]
+        tx_view_asset_key = next(iter(tx_view_token_rec))
+        assert asset_name in tx_view_asset_key, "Token is missing from tx view return collateral"
+        assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"

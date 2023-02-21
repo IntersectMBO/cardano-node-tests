@@ -98,27 +98,18 @@ class TestCollateralOutput:
             if not (r.datum_hash or r.inline_datum_hash)
         ][:1]
 
-        err_str = ""
-        try:
-            tx_output_redeem = cluster.g_transaction.build_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_step2",
-                txins=txins,
-                tx_files=tx_files_redeem,
-                txouts=txouts_redeem,
-                script_txins=plutus_txins,
-                return_collateral_txouts=return_collateral_txouts,
-                total_collateral_amount=total_collateral_amount,
-                change_address=payment_addr.address,
-                script_valid=False,
-            )
-        except clusterlib.CLIError as err:
-            err_str = str(err)
-
-        # TODO: broken on node 1.35.0 and 1.35.1
-        if "ScriptWitnessIndexTxIn 0 is missing from the execution units" in err_str:
-            pytest.xfail("See cardano-node issue #4013")
-
+        tx_output_redeem = cluster.g_transaction.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            txins=txins,
+            tx_files=tx_files_redeem,
+            txouts=txouts_redeem,
+            script_txins=plutus_txins,
+            return_collateral_txouts=return_collateral_txouts,
+            total_collateral_amount=total_collateral_amount,
+            change_address=payment_addr.address,
+            script_valid=False,
+        )
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
@@ -310,13 +301,9 @@ class TestCollateralOutput:
 
         # check "transaction view"
         tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
-        # TODO: "return collateral" is not present in the transaction view in 1.35.3 and older
-        if "return collateral" in tx_view_out:
-            policyid, asset_name = token[0].token.split(".")
-            tx_view_policy_key = f"policy {policyid}"
-            tx_view_token_rec = tx_view_out["return collateral"]["amount"][tx_view_policy_key]
-            tx_view_asset_key = next(iter(tx_view_token_rec))
-            assert (
-                asset_name in tx_view_asset_key
-            ), "Token is missing from tx view return collateral"
-            assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"
+        policyid, asset_name = token[0].token.split(".")
+        tx_view_policy_key = f"policy {policyid}"
+        tx_view_token_rec = tx_view_out["return collateral"]["amount"][tx_view_policy_key]
+        tx_view_asset_key = next(iter(tx_view_token_rec))
+        assert asset_name in tx_view_asset_key, "Token is missing from tx view return collateral"
+        assert tx_view_token_rec[tx_view_asset_key] == token_amount, "Incorrect token amount"

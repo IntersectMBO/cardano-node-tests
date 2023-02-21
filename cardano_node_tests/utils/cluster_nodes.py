@@ -143,7 +143,7 @@ class LocalCluster(ClusterType):
             slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
-        cluster_obj._min_change_value = 2000_000  # TODO: hardcoded `minUTxOValue`
+        cluster_obj._min_change_value = 2_000_000  # TODO: hardcoded `minUTxOValue`
         return cluster_obj
 
     def create_addrs_data(
@@ -290,7 +290,7 @@ class TestnetCluster(ClusterType):
             slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
-        cluster_obj._min_change_value = 2000_000  # TODO: hardcoded `minUTxOValue`
+        cluster_obj._min_change_value = 2_000_000  # TODO: hardcoded `minUTxOValue`
         return cluster_obj
 
     def create_addrs_data(

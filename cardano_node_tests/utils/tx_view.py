@@ -204,16 +204,8 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
 
 
 def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: Path) -> Dict[str, Any]:
-    # TODO: see https://github.com/input-output-hk/cardano-node/issues/4039
-    try:
-        tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_body_file)
-    except clusterlib.CLIError as exc:
-        if "TODO: Babbage" in str(exc):
-            return {}
-        raise
-
+    tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_body_file)
     tx_loaded: Dict[str, Any] = load_raw(tx_view=tx_view_raw)
-
     return tx_loaded
 
 
@@ -288,12 +280,8 @@ def check_tx_view(  # noqa: C901
     loaded_withdrawals = set()
     if tx_loaded_withdrawals:
         for withdrawal in tx_loaded_withdrawals:
-            withdrawal_key = (
-                withdrawal.get("stake credential key hash")
-                or withdrawal.get("stake credential script hash")
-                # TODO: legacy for backwards compatibility with 1.34.1
-                or withdrawal.get("credential", {}).get("key hash")
-                or withdrawal.get("credential", {}).get("script hash")
+            withdrawal_key = withdrawal.get("stake credential key hash") or withdrawal.get(
+                "stake credential script hash"
             )
             withdrawal_amount = int(withdrawal["amount"].split()[0] or 0)
             loaded_withdrawals.add((withdrawal_key, withdrawal_amount))

@@ -9,7 +9,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.types import FileType
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -311,14 +310,7 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
         assert not return_collateral_utxos, "Return collateral UTxO was unexpectedly created"
         return
 
-    tx_view_out = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_output.out_file)
-
-    # TODO: automatic return collateral is not supported on 1.35.3 and older
-    if not (
-        tx_output.return_collateral_txouts
-        or tx_output.total_collateral_amount
-        or "return collateral" in tx_view_out
-    ):
+    if not (tx_output.return_collateral_txouts or tx_output.total_collateral_amount):
         return
 
     # check that correct return collateral UTxO was created

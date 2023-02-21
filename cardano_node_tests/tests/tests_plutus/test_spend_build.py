@@ -733,26 +733,19 @@ class TestBuildLocking:
         ][:1]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        try:
-            __, tx_output, __ = spend_build._build_spend_locked_txin(
-                temp_template=temp_template,
-                cluster_obj=cluster,
-                payment_addr=payment_addrs[0],
-                dst_addr=payment_addrs[1],
-                script_utxos=script_utxos,
-                collateral_utxos=collateral_utxos,
-                plutus_op=plutus_op,
-                amount=2_000_000,
-                txins=txins,
-                tx_files=tx_files,
-                script_valid=False,
-            )
-        except clusterlib.CLIError as err:
-            # TODO: broken on node 1.35.0 and 1.35.1
-            if "ScriptWitnessIndexTxIn 0 is missing from the execution units" in str(err):
-                pytest.xfail("See cardano-node issue #4013")
-            else:
-                raise
+        __, tx_output, __ = spend_build._build_spend_locked_txin(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            script_utxos=script_utxos,
+            collateral_utxos=collateral_utxos,
+            plutus_op=plutus_op,
+            amount=2_000_000,
+            txins=txins,
+            tx_files=tx_files,
+            script_valid=False,
+        )
 
         # check expected fees
         expected_fee_fund = 168_845
