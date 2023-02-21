@@ -27,8 +27,6 @@ NETWORK_MAGIC_LOCAL = 42
 DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
-USE_CDDL = bool(os.environ.get("USE_CDDL"))  # TODO: remove once `--cddl-format` is deprecated
-
 # used also in startup scripts as `if [ -n "$VAR" ]...`
 ENABLE_P2P = (os.environ.get("ENABLE_P2P") or "") != ""
 # used also in startup scripts as `if [ -n "$VAR" ]...`
