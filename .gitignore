@@ -3,6 +3,9 @@
 .cli_coverage/
 .reports/
 
+# Workdir for running tests
+run_workdir/
+
 # Local temporary files
 tmp/
 
