@@ -129,7 +129,8 @@ class TestNegative:
                     fee=0,
                 )
         exc_val = str(excinfo.value)
-        assert "invalid address" in exc_val or "An error occurred" in exc_val  # TODO: better match
+        # TODO: better match
+        assert "invalid address" in exc_val or "An error occurred" in exc_val, exc_val
 
     def _send_funds_from_invalid_address(
         self,

@@ -55,9 +55,9 @@ class TestLedgerState:
         try:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
         except AssertionError as err:
-            if "Invalid numeric literal at line" in str(err):
-                pytest.xfail("expected JSON, got CBOR - see node issue #3859")
-            raise
+            if "Invalid numeric literal at line" not in str(err):
+                raise
+            pytest.xfail("expected JSON, got CBOR - see node issue #3859")
 
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,
