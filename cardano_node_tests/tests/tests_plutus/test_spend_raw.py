@@ -273,15 +273,9 @@ class TestLocking:
                 tx_file=tx_file_dummy,
             )
         except AssertionError as err:
-            err_msg = str(err)
-            if "DeserialiseFailure" in err_msg:
-                pytest.xfail("DeserialiseFailure: see issue #944")
-            if "TextEnvelopeTypeError" in err_msg and cluster.use_cddl:
-                pytest.xfail(
-                    "TextEnvelopeTypeError: `create-script-context` doesn't work with CDDL format"
-                )
-            else:
+            if "DeserialiseFailure" not in str(err):
                 raise
+            pytest.xfail("DeserialiseFailure: see issue #944")
 
         plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 

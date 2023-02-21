@@ -2230,9 +2230,6 @@ class TestCLITxOutSyntax:
             str(out_file),
         ]
 
-        if cluster.use_cddl:
-            build_raw_args.append("--cddl-format")
-
         # build transaction body
         cluster.cli(build_raw_args)
 
