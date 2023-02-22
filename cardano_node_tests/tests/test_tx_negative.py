@@ -1394,6 +1394,41 @@ class TestNegative:
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era != VERSIONS.SHELLEY,
+        reason="runs only with Shelley TX",
+    )
+    def test_lower_bound_not_supported(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: List[clusterlib.PoolUser],
+    ):
+        """Try to build a Shelley era TX with an `--invalid-before` argument.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        src_addr = pool_users[0].payment
+        dst_addr = pool_users[1].payment
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=2_000_000)]
+
+        # TODO: add test version that uses `cardano-cli transaction build` command once node
+        # issue #4286 is fixed
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.build_raw_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                txouts=txouts,
+                tx_files=tx_files,
+                fee=1_000,
+                invalid_before=10,  # the unsupported argument
+            )
+        assert "validity lower bound not supported" in str(excinfo.value)
+
+    @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     def test_build_missing_tx_in(
         self,
