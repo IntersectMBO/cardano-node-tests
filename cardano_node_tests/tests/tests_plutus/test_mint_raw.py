@@ -407,13 +407,8 @@ class TestMinting:
         slots_offset = 300
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
-        protocol_version = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
-        if protocol_version > 5:
-            # POSIX timestamp + offset
-            redeemer_value = int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
-        else:
-            # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
-            redeemer_value = 1_000_000_000_000
+        # POSIX timestamp + offset
+        redeemer_value = int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
 
         policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
@@ -449,7 +444,6 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=minting_cost.fee + mint_raw.FEE_MINT_TXSIZE,
-            invalid_before=max(1, slot_step2 - slots_offset),
             invalid_hereafter=slot_step2 + slots_offset,
         )
         tx_signed_step2 = cluster.g_transaction.sign_tx(
@@ -603,15 +597,10 @@ class TestMinting:
         slots_offset = 300
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
-        protocol_version = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
-        if protocol_version > 5:
-            # POSIX timestamp + offset
-            redeemer_value_timerange = (
-                int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
-            )
-        else:
-            # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
-            redeemer_value_timerange = 1_000_000_000_000
+        # POSIX timestamp + offset
+        redeemer_value_timerange = (
+            int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
+        )
 
         policyid2 = cluster.g_transaction.get_policyid(script_file2)
         asset_name2 = f"qacoint{clusterlib.get_rand_str(4)}".encode().hex()
@@ -659,7 +648,6 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=fee_step2_total,
-            invalid_before=max(1, slot_step2 - slots_offset),
             invalid_hereafter=slot_step2 + slots_offset,
         )
         tx_signed_step2 = cluster.g_transaction.sign_tx(

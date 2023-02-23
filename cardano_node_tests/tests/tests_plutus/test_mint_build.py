@@ -274,13 +274,8 @@ class TestBuildMinting:
         slots_offset = 300
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
-        protocol_version = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
-        if protocol_version > 5:
-            # POSIX timestamp + offset
-            redeemer_value = int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
-        else:
-            # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
-            redeemer_value = 1_000_000_000_000
+        # POSIX timestamp + offset
+        redeemer_value = int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
 
         policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
@@ -306,7 +301,6 @@ class TestBuildMinting:
             *mint_txouts,
         ]
 
-        invalid_before = max(1, slot_step2 - slots_offset)
         tx_output_step2 = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
@@ -314,7 +308,6 @@ class TestBuildMinting:
             txins=mint_utxos,
             txouts=txouts_step2,
             mint=plutus_mint_data,
-            invalid_before=invalid_before,
             invalid_hereafter=slot_step2 + slots_offset,
         )
         plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
@@ -324,7 +317,6 @@ class TestBuildMinting:
             txins=mint_utxos,
             txouts=txouts_step2,
             mint=plutus_mint_data,
-            invalid_before=invalid_before,
             invalid_hereafter=slot_step2 + slots_offset,
         )
 
@@ -503,15 +495,10 @@ class TestBuildMinting:
         slots_offset = 300
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
-        protocol_version = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
-        if protocol_version > 5:
-            # POSIX timestamp + offset
-            redeemer_value_timerange = (
-                int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
-            )
-        else:
-            # BUG: https://github.com/input-output-hk/cardano-node/issues/3090
-            redeemer_value_timerange = 1_000_000_000_000
+        # POSIX timestamp + offset
+        redeemer_value_timerange = (
+            int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
+        )
 
         policyid2 = cluster.g_transaction.get_policyid(script_file2)
         asset_name2 = f"qacoint{clusterlib.get_rand_str(4)}".encode().hex()
@@ -545,7 +532,6 @@ class TestBuildMinting:
             *mint_txouts2,
         ]
 
-        invalid_before = max(1, slot_step2 - slots_offset)
         tx_output_step2 = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
@@ -553,7 +539,6 @@ class TestBuildMinting:
             txins=mint_utxos,
             txouts=txouts_step2,
             mint=plutus_mint_data,
-            invalid_before=invalid_before,
             invalid_hereafter=slot_step2 + slots_offset,
         )
         plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
@@ -563,7 +548,6 @@ class TestBuildMinting:
             txins=mint_utxos,
             txouts=txouts_step2,
             mint=plutus_mint_data,
-            invalid_before=invalid_before,
             invalid_hereafter=slot_step2 + slots_offset,
         )
 
