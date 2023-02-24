@@ -342,6 +342,23 @@ class TestKey:
         assert extended_vkey.startswith(non_extended_vkey)
 
     @allure.link(helpers.get_vcs_link())
+    def test_stake_non_extended_key(self, cluster: clusterlib.ClusterLib):
+        """Get a stake non-extended-key from a stake extended key."""
+        temp_template = common.get_test_id(cluster)
+
+        stake_extended_key_file = DATA_DIR / "stake.evkey"
+
+        # Get a stake non-extended-key from a stake extended key
+        try:
+            cluster.g_key.gen_non_extended_verification_key(
+                key_name=temp_template, extended_verification_key_file=stake_extended_key_file
+            )
+        except clusterlib.CLIError as err:
+            if "key non-extended-key  Error: Invalid key." in str(err):
+                pytest.xfail("See cardano-node issue #4914")
+            raise
+
+    @allure.link(helpers.get_vcs_link())
     def test_non_extended_key_error(self, cluster: clusterlib.ClusterLib):
         """Try to get a non-extended verification key with a signing key file.
 
