@@ -59,6 +59,14 @@ class PoolOfflineFetchErrorDBRow(NamedTuple):
     retry_count: int
 
 
+class EpochStakeDBRow(NamedTuple):
+    id: int
+    hash: memoryview
+    view: str
+    amount: int
+    epoch_number: int
+
+
 class TxDBRow(NamedTuple):
     tx_id: int
     tx_hash: memoryview
@@ -728,6 +736,25 @@ def query_pool_offline_fetch_error(
     with execute(query=query, vars=(pool_id_bech32,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield PoolOfflineFetchErrorDBRow(*result)
+
+
+def query_epoch_stake(
+    pool_id_bech32: str, epoch_number: int
+) -> Generator[EpochStakeDBRow, None, None]:
+    """Query epoch stake record for a pool in db-sync."""
+    query = (
+        "SELECT "
+        " epoch_stake.id, pool_hash.hash_raw, pool_hash.view, epoch_stake.amount,"
+        " epoch_stake.epoch_no "
+        "FROM epoch_stake "
+        "INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id "
+        "WHERE pool_hash.view = %s AND epoch_stake.epoch_no = %s "
+        "ORDER BY epoch_stake.epoch_no DESC;"
+    )
+
+    with execute(query=query, vars=(pool_id_bech32, epoch_number)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield EpochStakeDBRow(*result)
 
 
 def query_blocks(

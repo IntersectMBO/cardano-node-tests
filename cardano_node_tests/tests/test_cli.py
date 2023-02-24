@@ -13,6 +13,8 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -406,6 +408,13 @@ class TestAdvancedQueries:
 
         try:
             if option == "single_pool":
+                # make sure the queries can be finished in single epoch
+                clusterlib_utils.wait_for_epoch_interval(
+                    cluster_obj=cluster_obj,
+                    start=1,
+                    stop=-3,
+                )
+
                 expected_pool_ids = [pool_ids[0]]
                 stake_snapshot = cluster_obj.g_query.get_stake_snapshot(
                     stake_pool_ids=expected_pool_ids
@@ -504,7 +513,40 @@ class TestAdvancedQueries:
                     total_stake_errors.append(
                         f"active_go: {sum_go} < {stake_snapshot['total']['stakeGo']}"
                     )
+            # Check stake distribution on dbsync
+            # The stake distribution is extracted from the "set" snapshot of the ledger
+            elif option == "single_pool" and configuration.HAS_DBSYNC:
+                current_epoch = cluster_obj.g_query.get_epoch()
 
+                pool_stake_snapshots = next(iter(stake_snapshot["pools"].values()))
+
+                # Check stake 'set' snapshot
+                db_set_sum = sum(
+                    r.amount
+                    for r in dbsync_queries.query_epoch_stake(
+                        pool_id_bech32=pool_ids[0], epoch_number=current_epoch
+                    )
+                )
+                snapshot_set_sum = pool_stake_snapshots["stakeSet"] or 0
+
+                if not db_set_sum == snapshot_set_sum:
+                    errors.append(
+                        "The epoch stake distribution in dbsync doesn't match stake 'set' snapshot"
+                    )
+
+                # Check stake 'go' snapshot
+                db_go_sum = sum(
+                    r.amount
+                    for r in dbsync_queries.query_epoch_stake(
+                        pool_id_bech32=pool_ids[0], epoch_number=current_epoch - 1
+                    )
+                )
+                snapshot_go_sum = pool_stake_snapshots["stakeGo"] or 0
+
+                if not db_go_sum == snapshot_go_sum:
+                    errors.append(
+                        "The epoch stake distribution in dbsync doesn't match stake 'go' snapshot"
+                    )
         else:
             if not {
                 "activeStakeGo",
@@ -550,6 +592,7 @@ class TestAdvancedQueries:
     @pytest.mark.parametrize(
         "option", ("single_pool", "multiple_pools", "total_stake", "all_pools")
     )
+    @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_stake_snapshot(
