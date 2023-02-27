@@ -8,7 +8,7 @@ on:
 
 jobs:
   nightly_job_p2p:
-    if: github.repository_owner == 'input-output-hk'
+    if: github.repository_owner == 'input-output-hk' || github.event_name != 'schedule'
     # reusable workflow from local repo and same branch as this config
     uses: ./.github/workflows/regression_reusable.yaml
     with:
