@@ -2845,4 +2845,7 @@ class TestCompatibility:
                 src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
             )
         err_str = str(excinfo.value)
-        assert "Transaction auxiliary scripts are not supported" in err_str, err_str
+        assert (
+            "Transaction auxiliary scripts are not supported" in err_str
+            or "Auxiliary scripts cannot be used" in err_str  # node <= 1.35.6
+        ), err_str
