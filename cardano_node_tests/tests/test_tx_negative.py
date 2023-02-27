@@ -1426,7 +1426,11 @@ class TestNegative:
                 fee=1_000,
                 invalid_before=10,  # the unsupported argument
             )
-        assert "validity lower bound not supported" in str(excinfo.value)
+        err_str = str(excinfo.value)
+        assert (
+            "validity lower bound not supported" in err_str
+            or "validity lower bound cannot be used" in err_str  # node <= 1.35.6
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
