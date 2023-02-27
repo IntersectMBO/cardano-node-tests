@@ -2,8 +2,9 @@
 ===========
 
 * release page -
-* tag link -
+* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.6-rc2>
 * tag PR -
+* tag commits - <https://github.com/input-output-hk/cardano-node/compare/1.35.5...1.35.6-rc2>
 
 
 Changelogs
@@ -32,7 +33,7 @@ Regression testing on a local cluster
    * - Mix P2P and Legacy - `Babbage with Mary TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc2-mary_mixed_01/>`__
      - |:heavy_check_mark:|
    * - P2P ON - `Babbage with Shelley TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc2-shelley_p2p_01/>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 .. list-table:: other testing
    :header-rows: 0
@@ -40,7 +41,7 @@ Regression testing on a local cluster
    * - upgrade job (1.35.5 to 1.35.6-rc2)
      - |:heavy_check_mark:|
    * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - sanity check submit-api REST service
      - |:heavy_check_mark:|
 
@@ -74,10 +75,11 @@ Release testing checklist
 New functionalities in this tag
 -------------------------------
 
+* `Filter out duplicate collateral inputs in transaction build commands <https://github.com/input-output-hk/cardano-node/pull/4839>`__ |:heavy_check_mark:|
+
+
 New issues
 ----------
-
-* `[BUG] - connection is not recreated after mux stops <https://github.com/input-output-hk/cardano-node/issues/4900>`__
 
 
 Breaking changes
