@@ -9,9 +9,9 @@
 Changelogs
 ----------
 
-* cardano-api:
-* cardano-cli:
-* cardano-node:
+* cardano-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-api/ChangeLog.md
+* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-node/ChangeLog.md
+* cardano-node: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-node/ChangeLog.md
 * submit-api:
 
 
