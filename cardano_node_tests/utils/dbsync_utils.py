@@ -569,10 +569,12 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
             for r in dbsync_queries.query_redeemers(txhash=txhash)
         ]
 
-    extra_key_witness = [
-        ExtraKeyWitnessRecord(tx_hash=r.tx_hash.hex(), witness_hash=r.witness_hash.hex())
-        for r in dbsync_queries.query_extra_key_witness(txhash=txhash)
-    ]
+    extra_key_witness = []
+    if txdata.last_row.extra_key_witness_count:
+        extra_key_witness = [
+            ExtraKeyWitnessRecord(tx_hash=r.tx_hash.hex(), witness_hash=r.witness_hash.hex())
+            for r in dbsync_queries.query_extra_key_witness(txhash=txhash)
+        ]
 
     record = TxRecord(
         tx_id=int(txdata.last_row.tx_id),
@@ -1045,12 +1047,18 @@ def check_tx(
 
     # check required signers
     if tx_raw_output.required_signers:
-        assert len(tx_raw_output.required_signers) == len(response.extra_key_witness)
+        assert len(tx_raw_output.required_signers) == len(response.extra_key_witness), (
+            "Number of required signers doesn't match "
+            f"({len(tx_raw_output.required_signers)} != {len(response.extra_key_witness)})"
+        )
 
     if tx_raw_output.required_signer_hashes:
         db_required_signer_hashes = [r.witness_hash for r in response.extra_key_witness]
 
-        assert tx_raw_output.required_signer_hashes == db_required_signer_hashes
+        assert tx_raw_output.required_signer_hashes == db_required_signer_hashes, (
+            "Required signer hashes don't match "
+            f"({tx_raw_output.required_signer_hashes} != {db_required_signer_hashes})"
+        )
 
     return response
 
