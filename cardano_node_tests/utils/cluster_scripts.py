@@ -214,6 +214,19 @@ class LocalScripts(ScriptsTypes):
         selected_ports = set(fixed_ports + random.sample(ports, 3))
         access_points = [{"address": "127.0.0.1", "port": port} for port in selected_ports]
         topology = {
+            "localRoots": [
+                {"accessPoints": access_points, "advertise": False, "valency": len(access_points)},
+            ],
+            "publicRoots": [],
+        }
+        return topology
+
+    def _gen_p2p_topology_old(self, ports: List[int], fixed_ports: List[int]) -> dict:
+        """Generate p2p topology for given ports in the old topology format."""
+        # select fixed ports and several randomly selected ports
+        selected_ports = set(fixed_ports + random.sample(ports, 3))
+        access_points = [{"address": "127.0.0.1", "port": port} for port in selected_ports]
+        topology = {
             "LocalRoots": {
                 "groups": [
                     {
@@ -277,14 +290,26 @@ class LocalScripts(ScriptsTypes):
             all_except = list(all_nodes - {node_rec.node})
             node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
 
-            # legacy topology
+            # Legacy topology
+
             topology = self._gen_legacy_topology(ports=all_except)
             dest_legacy = destdir / f"topology-{node_name}.json"
             dest_legacy.write_text(f"{json.dumps(topology, indent=4)}\n")
 
-            # p2p topology
+            # P2P topology
+
             fixed_ports = list(first_four - {node_rec.node})
-            p2p_topology = self._gen_p2p_topology(ports=all_except, fixed_ports=fixed_ports)
+
+            # Use both old and new format for P2P topology.
+            # When testing mix of legacy and P2P topologies, odd numbered pools use legacy
+            # topology. Here, for that reason, the decision cannot be based on oddity, otherwise
+            # we would use just single P2P topology format for all pools. At the same time we
+            # want the selection process to be deterministic, so we don't want to use random.
+            if node_rec.num % 3 == 0:
+                p2p_topology = self._gen_p2p_topology_old(ports=all_except, fixed_ports=fixed_ports)
+            else:
+                p2p_topology = self._gen_p2p_topology(ports=all_except, fixed_ports=fixed_ports)
+
             dest_p2p = destdir / f"p2p-topology-{node_name}.json"
             dest_p2p.write_text(f"{json.dumps(p2p_topology, indent=4)}\n")
 
