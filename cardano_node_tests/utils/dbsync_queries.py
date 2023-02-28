@@ -100,6 +100,7 @@ class TxDBRow(NamedTuple):
     collateral_out_count: int
     script_count: int
     redeemer_count: int
+    extra_key_witness_count: int
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -295,6 +296,11 @@ class ParamProposalDBRow(NamedTuple):
     registered_tx_id: int
 
 
+class ExtraKeyWitnessDBRow(NamedTuple):
+    tx_hash: memoryview
+    witness_hash: memoryview
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -360,6 +366,7 @@ def query_tx(txhash: str) -> Generator[TxDBRow, None, None]:
         " (SELECT COUNT(id) FROM collateral_tx_out WHERE tx_id=tx.id) AS collateral_out_count,"
         " (SELECT COUNT(id) FROM script WHERE tx_id=tx.id) AS script_count,"
         " (SELECT COUNT(id) FROM redeemer WHERE tx_id=tx.id) AS redeemer_count,"
+        " (SELECT COUNT(id) FROM extra_key_witness WHERE tx_id=tx.id) AS extra_key_witness_count,"
         " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity,"
         " ma_tx_mint.id, join_ma_mint.policy, join_ma_mint.name, ma_tx_mint.quantity "
         "FROM tx "
@@ -837,3 +844,17 @@ def query_param_proposal() -> ParamProposalDBRow:
     with execute(query=query) as cur:
         results = cur.fetchone()
         return ParamProposalDBRow(*results)
+
+
+def query_extra_key_witness(txhash: str) -> Generator[ExtraKeyWitnessDBRow, None, None]:
+    """Query extra key witness records in db-sync."""
+    query = (
+        "SELECT tx.hash, extra_key_witness.hash "
+        "FROM extra_key_witness "
+        "INNER JOIN tx ON tx.id = extra_key_witness.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield ExtraKeyWitnessDBRow(*result)
