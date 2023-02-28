@@ -1,7 +1,6 @@
 1.35.6-rc2
 ===========
 
-* release page -
 * tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.6-rc2>
 * tag PR -
 * tag commits - <https://github.com/input-output-hk/cardano-node/compare/1.35.5...1.35.6-rc2>
@@ -11,9 +10,9 @@ Changelogs
 ----------
 
 * cardano-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-api/ChangeLog.md
-* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-node/ChangeLog.md
+* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-cli/ChangeLog.md
 * cardano-node: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-node/ChangeLog.md
-* submit-api:
+* submit-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-submit-api/CHANGELOG.md
 
 
 Regression testing on a local cluster
@@ -76,6 +75,8 @@ New functionalities in this tag
 -------------------------------
 
 * `Filter out duplicate collateral inputs in transaction build commands <https://github.com/input-output-hk/cardano-node/pull/4839>`__ |:heavy_check_mark:|
+* New P2P topology file format, see issue #4563 or the config files documentation. The old p2p topology format will be supported for next two major releases of the node (the last major version which will support it is 1.37). (#4563) |:hourglass_flowing_sand:|
+* 'EnableP2P' configuration option does not require 'TestEnableDevelopmentNetworkProtocols' any more. |:hourglass_flowing_sand:|
 
 
 New issues
@@ -86,8 +87,8 @@ Breaking changes
 ----------------
 
 
-P2P Single Relay & Release Test Tracking
------------------------------------------
+Component Level Test Tracking
+------------------------------
 
 .. list-table:: Test Definition and Status
    :header-rows: 1
@@ -105,7 +106,7 @@ P2P Single Relay & Release Test Tracking
       - Iñigo Querejeta Azurmendi
       - |:question:|
       - |:question:|
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
      -
        - `Ledger <>`__
        - `Consensus <>`__
@@ -113,19 +114,19 @@ P2P Single Relay & Release Test Tracking
        - `Crypto <>`__
        - `Plutus <>`__
        - `Base <>`__
-     - All these tests are run automatically at PR level in their respective repositories
+     - All of these tests are run automatically in their respective repositories at the PR level.
    * - Integration level tests (cardano-node)
      - |:question:|
      - |:hourglass_flowing_sand:|
      - |:question:|
-     - there are no specific P2P integrations tests on cardano-node
+     - There are no specific P2P integrations tests on cardano-node
    * - Benchmarks
      - Serge Kosyrev
      - |:hourglass_flowing_sand:|
      - `link to tests <>`__
      -
    * - System level tests (cardano-node-tests)
-     - Dorin Solomon
+     - Martin Kourim
      - |:hourglass_flowing_sand:|
      - `link to tests <>`__
      -
@@ -134,6 +135,7 @@ P2P Single Relay & Release Test Tracking
      - |:hourglass_flowing_sand:|
      - `link to tests <>`__
      -
+      - We encourage our early adopters to look into the below scenarios as part of the UAT for the current tag:
       - scenarios with different node versions, different P2P settings (only with Legacy/P2P relays, with a mix of relays)
       - tests confirming that stake pools with P2P Single Relay does not have a competitive (dis)advantage
       - tests with stake pools having different node versions and P2P settings (1 relay with 1.35.4 and another one with 1.35.6 + P2P Single Relay)
@@ -148,37 +150,3 @@ P2P Single Relay & Release Test Tracking
      - -
      - -
      - Not planned (complex/insufficient tooling)
-
-**Notes**:
-   * **unit/property tests** → Do we have enough unit/property test coverage and where are the results of these tests?
-      * There are unit/property/gold/integration tests at the network level/repo. All these are run automatically in CI at the PR level.
-   * **integration tests** → Do we need additional integration tests, in cardano-node, for this feature?
-   * **audits** → Is there a need for an external or internal security/legal audit for the features being released?
-   * **benchmarks** → is there any performance degradation as a result of implementing/merging the new functionality?
-   * **uat** → What are we asking the community to test for this release? (e.g. in the case of p2p would be to upgrade preview nodes to 1.35.6 and remove development network features from their configuration file since p2p network protocols are default enabled now)
-   * **system tests** → what tests (specific to the new functionality) should be covered in cardano-node-tests?
-
-**Procedure**:
-   * The owner of each line/activity from the above decision table is responsible for keeping the status updated (:heavy_check_mark: or :x:) based on the confidence they have from the provided evidence.
-   * *Recommendation*: the provided evidence should be in a form understandable outside the team (by anybody interested - developers from other teams, technical community members)
-
-**Open Questions**:
-   * do we have any documentation/guides explaining the expectations, from the end user’s perspective, related to the P2P Single Relay functionality?
-      * we don’t have any official P2P documentation yet but we definitely need to create one, including:
-         * what are the exact changes a stake pool should do
-         * what are some metrics a pool can look at
-   * who are the Personas, and what configurations/changes should they make to use the new functionality?
-      * Stake Pool Operators, wallets |:question:|
-      * we will need to include this info in the P2P documentation/guidelines
-   * how the end users would know if the new functionality is working ok or not for them (on their setup)?
-      * there is no way to find this - under normal conditions, the pool will continue to create and adopt blocks but there will not be any way to find if the blocks are adopted through the P2P or the non-P2P relay
-   * how would we/IOG/community know if the new functionality is working ok or not at the system/blockchain level?
-      * there is no way to find this
-   * how would we/IOG/community know how many nodes updated to P2P Single Relay functionality?
-      * there is no way to find this
-   * what are the default settings for the P2P Single Relay? Do these settings have any effect on the performance or resource requirements for the node/stake pool?
-      * the default settings will be included and explained into the documentation
-   * do we expect any regression on the resource consumption (on relays)
-      * we will need to check this by running Relays with P2P set to ON and OF on Mainnet, for a longer period, and compare the resource consumption
-   * With what Protocol Version should P2P Single Relay be compatible?
-      * @Marcin Szamotulski to confirm this (if P2P Single Relay would be compatible with node 1.35.x)
