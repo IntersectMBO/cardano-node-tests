@@ -75,9 +75,8 @@ New functionalities in this tag
 -------------------------------
 
 * `Filter out duplicate collateral inputs in transaction build commands <https://github.com/input-output-hk/cardano-node/pull/4839>`__ |:heavy_check_mark:|
-* New P2P topology file format, see issue #4563 or the config files documentation. The old p2p topology format will be supported for next two major releases of the node (the last major version which will support it is 1.37). (#4563) |:hourglass_flowing_sand:|
-* 'EnableP2P' configuration option does not require 'TestEnableDevelopmentNetworkProtocols' any more. |:hourglass_flowing_sand:|
-
+* New P2P topology file format, see issue #4563 or the config files documentation. The old p2p topology format will be supported for next two major releases of the node (the last major version which will support it is 1.37). (`#4563 <https://github.com/input-output-hk/cardano-node/pull/4563>`__) |:heavy_check_mark:|
+* 'EnableP2P' configuration option does not require 'TestEnableDevelopmentNetworkProtocols' any more. |:heavy_check_mark:|
 
 New issues
 ----------
