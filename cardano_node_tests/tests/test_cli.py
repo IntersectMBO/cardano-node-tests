@@ -1,10 +1,13 @@
 """Tests for cardano-cli that doesn't fit into any other test file."""
 import json
 import logging
+import string
 from pathlib import Path
 from typing import List
 
 import allure
+import hypothesis
+import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
 
@@ -20,6 +23,8 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
+
+ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
 @pytest.mark.smoke
@@ -311,6 +316,21 @@ class TestAddressInfo:
         assert (
             address_info_no_outfile == address_info_with_outfile
         ), "Address information doesn't match"
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(address=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_address_info_with_invalid_address(self, cluster: clusterlib.ClusterLib, address: str):
+        """Try to use 'address info' with invalid address (property-based test).
+
+        Expect failure.
+        """
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_address.get_address_info(address=address)
+
+        err_str = str(excinfo.value)
+
+        assert "Invalid address" in err_str, err_str
 
 
 @common.SKIPIF_WRONG_ERA
