@@ -58,18 +58,19 @@ Release testing checklist
    * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/1.35.6-rc2/shelley_qa/>`__
      - |:hourglass_flowing_sand:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
-     - |:hourglass_flowing_sand:|
+     - |:x:|*
    * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Backward compatibility testing (Node with version N-1)
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Check build instructions changes
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Benchmarking - Report
      - |:hourglass_flowing_sand:|
    * - sanity check release notes
      - |:hourglass_flowing_sand:|
 
+\* RAM usage for `1.35.6-rc2` is between 2 to 3 GB higher than for `1.35.5`.
 
 New functionalities in this tag
 -------------------------------
