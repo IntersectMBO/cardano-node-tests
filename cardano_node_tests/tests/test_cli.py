@@ -397,6 +397,7 @@ class TestAdvancedQueries:
 
     def _check_stake_snapshot(  # noqa: C901
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_obj: clusterlib.ClusterLib,
         option: str,
         temp_template: str,
@@ -432,7 +433,12 @@ class TestAdvancedQueries:
                     stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
                 )
                 # get up-to-date list of available pools
-                expected_pool_ids = cluster_obj.g_query.get_stake_pools()
+                expected_pool_ids = [
+                    cluster_obj.g_stake_pool.get_stake_pool_id(
+                        cluster_manager.cache.addrs_data[p]["cold_key_pair"].vkey_file
+                    )
+                    for p in cluster_management.Resources.ALL_POOLS
+                ]
                 stake_snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
             elif option == "total_stake":
                 expected_pool_ids = []
@@ -490,9 +496,10 @@ class TestAdvancedQueries:
 
             if option == "all_pools":
                 expected_pool_ids_dec = set(expected_pool_ids_mapping.values())
+
                 out_pool_ids_dec = set(stake_snapshot["pools"].keys())
                 # retired pools and newly created ones may not yet be on the snapshot
-                if not out_pool_ids_dec.issubset(expected_pool_ids_dec):
+                if not expected_pool_ids_dec.issubset(out_pool_ids_dec):
                     errors.append(
                         f"Expected pools: {expected_pool_ids_dec}\nVS\n"
                         f"Reported pools: {out_pool_ids_dec}\n"
@@ -597,6 +604,7 @@ class TestAdvancedQueries:
     @pytest.mark.smoke
     def test_stake_snapshot(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         option: str,
     ):
@@ -605,7 +613,12 @@ class TestAdvancedQueries:
         See also `TestLedgerState.test_stake_snapshot` for more scenarios.
         """
         temp_template = f"{common.get_test_id(cluster)}_{option}"
-        self._check_stake_snapshot(cluster_obj=cluster, option=option, temp_template=temp_template)
+        self._check_stake_snapshot(
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            option=option,
+            temp_template=temp_template,
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
