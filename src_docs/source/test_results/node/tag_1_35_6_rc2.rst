@@ -58,7 +58,7 @@ Release testing checklist
    * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/1.35.6-rc2/shelley_qa/>`__
      - |:hourglass_flowing_sand:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
-     - |:x:|*
+     - |:x:|\*
    * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
      - |:heavy_check_mark:|
    * - Backward compatibility testing (Node with version N-1)
@@ -122,13 +122,15 @@ Component Level Test Tracking
      - There are no specific P2P integrations tests on cardano-node
    * - Benchmarks
      - Serge Kosyrev
-     - |:hourglass_flowing_sand:|
-     - `link to tests <>`__
+     - |:question:|
+     -
+       - `Value-only tests results <https://input-output-rnd.slack.com/files/U03A639T0DN/F04SF663PUJ/1.35.6-rc2.value.pdf>`__
+       - `Plutus tests results <https://input-output-rnd.slack.com/files/U03A639T0DN/F04S0KYE6F9/1.35.6-rc2.plutus.pdf>`__
      -
    * - System level tests (cardano-node-tests)
      - Martin Kourim
-     - |:hourglass_flowing_sand:|
-     - `link to tests <>`__
+     - |:heavy_check_mark:|
+     - `link to tests <https://github.com/input-output-hk/cardano-node-tests>`__
      -
    * - UAT (community)
      - |:question:|
