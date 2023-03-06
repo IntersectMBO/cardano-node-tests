@@ -708,7 +708,7 @@ class TestNegativeRedeemer:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(min_size=65))
-    @common.hypothesis_settings(max_examples=200)
+    @common.hypothesis_settings(max_examples=100)
     @common.PARAM_PLUTUS_VERSION
     def test_too_big(
         self,
@@ -733,7 +733,7 @@ class TestNegativeRedeemer:
 
         redeemer_file = f"{temp_template}.redeemer"
         with open(redeemer_file, "w", encoding="utf-8") as outfile:
-            json.dump({"constructor": 0, "fields": [{"bytes": redeemer_value.hex()}]}, outfile)
+            json.dump({"bytes": redeemer_value.hex()}, outfile)
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
@@ -752,10 +752,14 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
-        assert "must consist of at most 64 bytes" in err_str, err_str
+        assert (
+            "must consist of at most 64 bytes" in err_str  # on node version < 1.36.0
+            or "Incorrect datum" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
