@@ -811,6 +811,7 @@ class TestKES:
         assert not out_file.exists(), "New operational certificate was generated"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_negative_kes_period_arg(
         self,
         cluster: clusterlib.ClusterLib,
@@ -829,24 +830,19 @@ class TestKES:
 
         # generate new operational certificate with negative value for `--kes-period`
         invalid_kes_period = -100
-        opcert_file = cluster.g_node.gen_node_operational_cert(
-            node_name=f"{node_name}_invalid_opcert_file",
-            kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
-            cold_skey_file=pool_rec["cold_key_pair"].skey_file,
-            cold_counter_file=pool_rec["cold_key_pair"].counter_file,
-            kes_period=invalid_kes_period,
-        )
 
-        kes_period_info = cluster.g_query.get_kes_period_info(opcert_file)
-
-        # TODO: xfail for node issue #3788
         try:
-            assert not (
-                kes_period_info["metrics"]["qKesEndKesInterval"]
-                == kes_period_info["metrics"]["qKesStartKesInterval"]
-                == self.MAX_INT_VAL
+            cluster.g_node.gen_node_operational_cert(
+                node_name=f"{node_name}_invalid_opcert_file",
+                kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+                cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+                cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+                kes_period=invalid_kes_period,
             )
-        except AssertionError:
+        except clusterlib.CLIError as exc:
+            if "KES_PERIOD must not be less than 0" not in str(exc):
+                raise
+        else:
             pytest.xfail(
                 "Possible to create a op cert with a negative value for kes-period - "
                 "see node issue #3788"
