@@ -122,7 +122,7 @@ Component Level Test Tracking
      - There are no specific P2P integrations tests on cardano-node
    * - Benchmarks
      - Serge Kosyrev
-     - |:question:|
+     - |:heavy_check_mark:|
      -
        - `Value-only tests results <https://input-output-rnd.slack.com/files/U03A639T0DN/F04SF663PUJ/1.35.6-rc2.value.pdf>`__
        - `Plutus tests results <https://input-output-rnd.slack.com/files/U03A639T0DN/F04S0KYE6F9/1.35.6-rc2.plutus.pdf>`__
