@@ -166,6 +166,23 @@ class TestInlineDatum:
 class TestNegativeInlineDatum:
     """Tests for Tx output with inline datum that are expected to fail."""
 
+    @pytest.fixture
+    def pbt_script_address(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ) -> str:
+        """Get Plutus script address.
+
+        Meant for property-based tests, so this expensive operation gets executed only once.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        script_address_v2 = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template,
+            payment_script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2,
+        )
+        return script_address_v2
+
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings()
@@ -277,16 +294,17 @@ class TestNegativeInlineDatum:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_content=st.text(alphabet=string.ascii_letters, min_size=65))
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=100)
     def test_lock_tx_big_datum(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        pbt_script_address: str,
         datum_content: str,
     ):
         """Test locking a Tx output with a datum bigger than the allowed size.
 
-        Expect failure.
+        Expect failure on node version < 1.36.0.
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -296,19 +314,36 @@ class TestNegativeInlineDatum:
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_V2_COST,
         )
+        assert plutus_op.execution_cost  # for mypy
 
-        # create a Tx output with an inline datum at the script address
+        # create a Tx output with a datum hash at the script address
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            spend_build._build_fund_script(
-                temp_template=temp_template,
-                cluster=cluster,
-                payment_addr=payment_addrs[0],
-                dst_addr=payment_addrs[1],
-                plutus_op=plutus_op,
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file],
+        )
+
+        script_txout = plutus_common.txout_factory(
+            address=pbt_script_address,
+            amount=4_500_000,
+            plutus_op=plutus_op,
+            inline_datum=True,
+        )
+
+        err_str = ""
+        try:
+            cluster.g_transaction.build_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=f"{temp_template}_step1",
+                tx_files=tx_files,
+                txouts=[script_txout],
+                fee_buffer=2_000_000,
             )
-        err_str = str(excinfo.value)
-        assert "Byte strings in script data must consist of at most 64 bytes" in err_str, err_str
+        except clusterlib.CLIError as exc:
+            err_str = str(exc)
+
+        assert (
+            not err_str or "must consist of at most 64 bytes" in err_str  # in node version < 1.36.0
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

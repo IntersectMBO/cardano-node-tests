@@ -2,6 +2,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import Dict
 from typing import List
 
 import allure
@@ -165,6 +166,27 @@ class TestDatum:
 @pytest.mark.testnets
 class TestNegativeDatum:
     """Tests for Tx output locking using Plutus smart contracts with wrong datum."""
+
+    @pytest.fixture
+    def pbt_script_addresses(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ) -> Dict[str, str]:
+        """Get Plutus script addresses.
+
+        Meant for property-based tests, so this expensive operation gets executed only once.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        script_address_v1 = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template,
+            payment_script_file=plutus_common.ALWAYS_SUCCEEDS["v1"].script_file,
+        )
+        script_address_v2 = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template,
+            payment_script_file=plutus_common.ALWAYS_SUCCEEDS["v2"].script_file,
+        )
+        return {"v1": script_address_v1, "v2": script_address_v2}
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
@@ -441,18 +463,19 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.binary(min_size=65))
-    @common.hypothesis_settings(max_examples=200)
+    @common.hypothesis_settings(max_examples=100)
     @common.PARAM_PLUTUS_VERSION
     def test_too_big(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
+        pbt_script_addresses: Dict[str, str],
         datum_value: bytes,
         plutus_version: str,
     ):
         """Try to lock a UTxO with datum that is too big.
 
-        Expect failure.
+        Expect failure on node version < 1.36.0.
         """
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
@@ -466,15 +489,34 @@ class TestNegativeDatum:
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
+        assert plutus_op.execution_cost  # for mypy
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            spend_build._build_fund_script(
-                temp_template=temp_template,
-                cluster_obj=cluster,
-                payment_addr=payment_addrs[0],
-                dst_addr=payment_addrs[1],
-                plutus_op=plutus_op,
+        script_address = pbt_script_addresses[plutus_version]
+
+        # create a Tx output with a datum hash at the script address
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file],
+        )
+
+        script_txout = plutus_common.txout_factory(
+            address=script_address,
+            amount=4_500_000,
+            plutus_op=plutus_op,
+        )
+
+        err_str = ""
+        try:
+            cluster.g_transaction.build_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=f"{temp_template}_step1",
+                tx_files=tx_files,
+                txouts=[script_txout],
+                fee_buffer=2_000_000,
             )
+        except clusterlib.CLIError as exc:
+            err_str = str(exc)
 
-        err_str = str(excinfo.value)
-        assert "must consist of at most 64 bytes" in err_str, err_str
+        assert (
+            not err_str or "must consist of at most 64 bytes" in err_str  # in node version < 1.36.0
+        ), err_str

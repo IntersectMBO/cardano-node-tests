@@ -1028,7 +1028,7 @@ class TestNegativeRedeemer:
     ):
         """Try to spend a locked UTxO using redeemer that is too big.
 
-        Expect failure.
+        Expect failure on node version < 1.36.0.
         """
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
@@ -1043,17 +1043,51 @@ class TestNegativeRedeemer:
         )
 
         # try to build a Tx for spending the "locked" UTxO
-        err = self._failed_tx_build(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            redeemer_content=redeemer_content,
-            dst_addr=payment_addrs[1],
-            cost_per_unit=cost_per_unit,
-            plutus_version=plutus_version,
+
+        redeemer_file = f"{temp_template}.redeemer"
+        with open(redeemer_file, "w", encoding="utf-8") as outfile:
+            outfile.write(redeemer_content)
+
+        per_time = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_time
+        per_space = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_space
+
+        fee_redeem = (
+            round(per_time * cost_per_unit.per_time + per_space * cost_per_unit.per_space)
+            + plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.fixed_cost
         )
-        assert "must consist of at most 64 bytes" in err, err
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
+        txouts = [clusterlib.TxOut(address=payment_addrs[1].address, amount=self.AMOUNT)]
+
+        plutus_txins = [
+            clusterlib.ScriptTxIn(
+                txins=script_utxos,
+                script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    per_time,
+                    per_space,
+                ),
+                datum_file=plutus_common.DATUM_42,
+                redeemer_file=Path(redeemer_file),
+            )
+        ]
+
+        err_msg = ""
+        try:
+            cluster.g_transaction.build_raw_tx_bare(
+                out_file=f"{temp_template}_step2_tx.body",
+                txouts=txouts,
+                tx_files=tx_files,
+                fee=fee_redeem + spend_raw.FEE_REDEEM_TXSIZE,
+                script_txins=plutus_txins,
+            )
+        except clusterlib.CLIError as exc:
+            err_msg = str(exc)
+
+        assert (
+            not err_msg or "must consist of at most 64 bytes" in err_msg  # on node version < 1.36.0
+        ), err_msg
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
