@@ -266,7 +266,7 @@ class TestNegative:
                 raise
             return slot_no, exc_val, tx_output
 
-        # Prior to node 1.36.0 it was possible to build a transaction with invalid interval,
+        # Prior to node 1.36.0, it was possible to build a transaction with invalid interval,
         # but it was not possible to submit it.
 
         out_file_signed = cluster_obj.g_transaction.sign_tx(
@@ -359,9 +359,12 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
 
+        # In node versions >= 1.36.0 we are checking error from
+        # `cardano-cli transaction build/build-raw`
         if "SLOT must not be less than" in err_str:
             return
 
+        # In node versions < 1.36.0 we were checking error from `cardano-cli transaction submit`
         assert slot_no is not None
         assert tx_output is not None
 
@@ -407,9 +410,12 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
 
+        # In node versions >= 1.36.0 we are checking error from
+        # `cardano-cli transaction build/build-raw`
         if "SLOT must not greater than" in err_str:
             return
 
+        # In node versions < 1.36.0 we were checking error from `cardano-cli transaction submit`
         assert slot_no is not None
         assert tx_output is not None
 
@@ -487,9 +493,12 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
 
+        # In node versions >= 1.36.0 we are checking error from
+        # `cardano-cli transaction build/build-raw`
         if "SLOT must not be less than" in err_str:
             return
 
+        # In node versions < 1.36.0 we were checking error from `cardano-cli transaction submit`
         assert slot_no is not None
 
         # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
@@ -533,9 +542,12 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
 
+        # In node versions >= 1.36.0 we are checking error from
+        # `cardano-cli transaction build/build-raw`
         if "SLOT must not greater than" in err_str:
             return
 
+        # In node versions < 1.36.0 we were checking error from `cardano-cli transaction submit`
         assert slot_no is not None
 
         # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
