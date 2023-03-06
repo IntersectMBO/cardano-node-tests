@@ -228,34 +228,46 @@ class TestNegative:
         invalid_before: Optional[int] = None,
         invalid_hereafter: Optional[int] = None,
         use_build_cmd=False,
-    ) -> Tuple[int, str, clusterlib.TxRawOutput]:
-        """Try to submit a transaction with wrong validity interval."""
+    ) -> Tuple[Optional[int], str, Optional[clusterlib.TxRawOutput]]:
+        """Try to build and submit a transaction with wrong validity interval."""
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
 
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
 
-        if use_build_cmd:
-            tx_output = cluster_obj.g_transaction.build_tx(
-                src_address=src_address,
-                tx_name=temp_template,
-                txouts=destinations,
-                tx_files=tx_files,
-                invalid_before=invalid_before,
-                invalid_hereafter=invalid_hereafter,
-                fee_buffer=1_000_000,
-            )
-        else:
-            tx_output = cluster_obj.g_transaction.build_raw_tx(
-                src_address=src_address,
-                tx_name=temp_template,
-                txouts=destinations,
-                tx_files=tx_files,
-                fee=1_000_000,
-                invalid_before=invalid_before,
-                invalid_hereafter=invalid_hereafter,
-            )
+        exc_val = ""
+        slot_no = tx_output = None
+
+        try:
+            if use_build_cmd:
+                tx_output = cluster_obj.g_transaction.build_tx(
+                    src_address=src_address,
+                    tx_name=temp_template,
+                    txouts=destinations,
+                    tx_files=tx_files,
+                    invalid_before=invalid_before,
+                    invalid_hereafter=invalid_hereafter,
+                    fee_buffer=1_000_000,
+                )
+            else:
+                tx_output = cluster_obj.g_transaction.build_raw_tx(
+                    src_address=src_address,
+                    tx_name=temp_template,
+                    txouts=destinations,
+                    tx_files=tx_files,
+                    fee=1_000_000,
+                    invalid_before=invalid_before,
+                    invalid_hereafter=invalid_hereafter,
+                )
+        except clusterlib.CLIError as exc:
+            exc_val = str(exc)
+            if "SLOT must not" not in exc_val:
+                raise
+            return slot_no, exc_val, tx_output
+
+        # Prior to node 1.36.0 it was possible to build a transaction with invalid interval,
+        # but it was not possible to submit it.
 
         out_file_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -339,13 +351,19 @@ class TestNegative:
         # E.g. '-5' will become `common.MAX_UINT64 - 5`.
         before_value = -5
 
-        slot_no, __, tx_output = self._submit_wrong_validity(
+        slot_no, err_str, tx_output = self._submit_wrong_validity(
             cluster_obj=cluster,
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
             use_build_cmd=use_build_cmd,
         )
+
+        if "SLOT must not be less than" in err_str:
+            return
+
+        assert slot_no is not None
+        assert tx_output is not None
 
         invalid_before, __ = self._get_validity_range(
             cluster_obj=cluster, tx_body_file=tx_output.out_file
@@ -381,13 +399,19 @@ class TestNegative:
         before_value = common.MAX_INT64 + 5
         over_before_value = common.MAX_UINT64 + before_value
 
-        slot_no, __, tx_output = self._submit_wrong_validity(
+        slot_no, err_str, tx_output = self._submit_wrong_validity(
             cluster_obj=cluster,
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=over_before_value,
             use_build_cmd=use_build_cmd,
         )
+
+        if "SLOT must not greater than" in err_str:
+            return
+
+        assert slot_no is not None
+        assert tx_output is not None
 
         invalid_before, __ = self._get_validity_range(
             cluster_obj=cluster, tx_body_file=tx_output.out_file
@@ -427,8 +451,7 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
 
-        if "transaction submit" in err_str:
-            pytest.xfail("Value not checked, see node issue #4863")
+        assert "(OutsideValidityIntervalUTxO" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -455,13 +478,19 @@ class TestNegative:
             f"{common.get_test_id(cluster)}_{before_value}_{use_build_cmd}_"
             f"{common.unique_time_str()}"
         )
-        slot_no, *__ = self._submit_wrong_validity(
+
+        slot_no, err_str, __ = self._submit_wrong_validity(
             cluster_obj=cluster,
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=-before_value,
             use_build_cmd=use_build_cmd,
         )
+
+        if "SLOT must not be less than" in err_str:
+            return
+
+        assert slot_no is not None
 
         # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
         # a regular test `test_before_negative_overflow`
@@ -496,13 +525,18 @@ class TestNegative:
         )
 
         over_before_value = common.MAX_UINT64 + before_value
-        slot_no, *__ = self._submit_wrong_validity(
+        slot_no, err_str, __ = self._submit_wrong_validity(
             cluster_obj=cluster,
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=over_before_value,
             use_build_cmd=use_build_cmd,
         )
+
+        if "SLOT must not greater than" in err_str:
+            return
+
+        assert slot_no is not None
 
         # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
         # a regular test `test_before_positive_overflow`
@@ -536,7 +570,7 @@ class TestNegative:
             f"{common.unique_time_str()}"
         )
 
-        slot_no, *__ = self._submit_wrong_validity(
+        slot_no, err_str, __ = self._submit_wrong_validity(
             cluster_obj=cluster,
             pool_users=pool_users,
             temp_template=temp_template,
@@ -544,8 +578,7 @@ class TestNegative:
             use_build_cmd=use_build_cmd,
         )
 
-        # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
-        # a regular test `test_before_too_high`
+        assert "(OutsideValidityIntervalUTxO" in err_str, err_str
         assert slot_no == before_value, f"SlotNo: {slot_no}, `before_value`: {before_value}"
 
     @allure.link(helpers.get_vcs_link())
