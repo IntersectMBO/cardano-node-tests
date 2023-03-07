@@ -8,6 +8,7 @@
 import json
 import logging
 import random
+import re
 from pathlib import Path
 from typing import List
 from typing import Optional
@@ -1244,6 +1245,78 @@ class TestTimeLocking:
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    def test_tx_negative_validity(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+    ):
+        """Check that it is NOT possible to spend from script address when validity is negative."""
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+
+        payment_vkey_files = [p.vkey_file for p in payment_addrs]
+        payment_skey_files = [p.skey_file for p in payment_addrs]
+
+        # create multisig script
+        multisig_script = cluster.g_transaction.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files,
+            slot=1_000,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+
+        # create script address
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # send funds to script address
+        multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=4_000_000,
+            payment_skey_files=[payment_skey_files[0]],
+            use_build_cmd=use_build_cmd,
+        )
+
+        # send funds from script address - negative validity interval
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            multisig_tx(
+                cluster_obj=cluster,
+                temp_template=f"{temp_template}_from",
+                src_address=script_address,
+                dst_address=payment_addrs[0].address,
+                amount=2_000_000,
+                payment_skey_files=payment_skey_files,
+                multisig_script=multisig_script,
+                invalid_before=-2,
+                invalid_hereafter=-1,
+                use_build_cmd=use_build_cmd,
+            )
+        err_str = str(excinfo.value)
+
+        # In node versions >= 1.36.0 we are checking error from
+        # `cardano-cli transaction build/build-raw`
+        if "SLOT must not be less than" in err_str:
+            return
+
+        # In node versions < 1.36.0 we were checking error from `cardano-cli transaction submit`
+        assert "OutsideValidityIntervalUTxO" in err_str, err_str
+
+        slot_no = 0
+        _slot_search = re.search(
+            r"ValidityInterval {invalidBefore = SJust \(SlotNo ([0-9]*)", err_str
+        )
+        if _slot_search is not None:
+            slot_no = int(_slot_search.group(1))
+        if slot_no > 0:
+            pytest.xfail("UINT64 overflow, see node issue #4863")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
