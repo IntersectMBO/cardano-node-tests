@@ -207,6 +207,63 @@ class TestCLI:
         elif "witnesses:" not in tx:
             assert tx == tx_body
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_query_tip(self, cluster: clusterlib.ClusterLib):
+        """Test `query tip`."""
+        tip_out = cluster.g_query.get_tip()
+
+        errors = []
+
+        # Prior to node 1.36.0 the fields 'slotInEpoch' and 'slotsToEpochEnd' did not exist
+        if not tip_out.get("slotInEpoch"):
+            expected_out = {
+                "block",
+                "epoch",
+                "era",
+                "hash",
+                "slot",
+                "syncProgress",
+            }
+        else:
+            expected_out = {
+                "block",
+                "epoch",
+                "era",
+                "hash",
+                "slot",
+                "slotInEpoch",
+                "slotsToEpochEnd",
+                "syncProgress",
+            }
+
+            # Check that 'slotInEpoch' is never greater than epoch length
+            if tip_out["slotInEpoch"] > cluster.epoch_length:
+                errors.append("'slotInEpoch' is greater than epoch length")
+
+            # Check that 'slotsToEpochEnd' is the difference between epoch length and 'slotInEpoch'
+            if tip_out["slotsToEpochEnd"] > cluster.epoch_length - tip_out["slotInEpoch"]:
+                errors.append("'slotsToEpochEnd' doesn't have the expected value")
+
+        # Check that 'query tip' is returning the expected fields
+        if set(tip_out.keys()) != expected_out:
+            errors.append("Unexpected fields in 'query tip' output")
+
+        # Check that 'slot' is never greater than the total number of slots
+        if tip_out["slot"] > tip_out["epoch"] * cluster.epoch_length:
+            errors.append("'slot' is greater than total number of slots")
+
+        # Check that 'era' is the expected
+        expected_era = VERSIONS.cluster_era_name.title()
+        if tip_out["era"] != expected_era:
+            errors.append(
+                f"'era' doesn't have the expected value: {tip_out['era']} != {expected_era}"
+            )
+
+        if errors:
+            errors_str = "\n".join(errors)
+            raise AssertionError(errors_str)
+
 
 @common.SKIPIF_WRONG_ERA
 @pytest.mark.smoke
