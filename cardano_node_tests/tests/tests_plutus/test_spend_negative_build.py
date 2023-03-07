@@ -172,6 +172,7 @@ class TestNegative:
                 collateral_utxos=script_utxos,
                 plutus_op=plutus_op,
                 amount=2_000_000,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -256,6 +257,7 @@ class TestNegative:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=2_000_000,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -515,6 +517,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -578,6 +581,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -701,6 +705,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -808,6 +813,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -862,6 +868,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -916,6 +923,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -971,6 +979,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -1025,6 +1034,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -1076,6 +1086,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -1129,6 +1140,7 @@ class TestNegativeRedeemer:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=self.AMOUNT,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
