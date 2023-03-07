@@ -264,6 +264,7 @@ class TestNegativeDatum:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=amount,
+                submit_tx=False,
             )
         err_str = str(excinfo.value)
 
@@ -366,6 +367,7 @@ class TestNegativeDatum:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op_2,
                 amount=2_000_000,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
@@ -456,6 +458,7 @@ class TestNegativeDatum:
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=amount_redeem,
+                submit_tx=False,
             )
 
         err_str = str(excinfo.value)
