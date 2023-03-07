@@ -436,6 +436,21 @@ class TestAddressInfo:
             address_info_no_outfile == address_info_with_outfile
         ), "Address information doesn't match"
 
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(address=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_address_info_with_invalid_address(self, cluster: clusterlib.ClusterLib, address: str):
+        """Try to use 'address info' with invalid address (property-based test).
+
+        Expect failure.
+        """
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_address.get_address_info(address=address)
+
+        err_str = str(excinfo.value)
+
+        assert "Invalid address" in err_str, err_str
+
 
 @common.SKIPIF_WRONG_ERA
 @pytest.mark.smoke
