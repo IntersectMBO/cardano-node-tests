@@ -42,7 +42,7 @@ Please follow these steps to have your contribution considered by the maintainer
 2. Follow the [style guides](#style guides)
 3. After submitting your pull request, verify that all [status checks](https://help.github.com/articles/about-status-checks/) have passed. If a status check is failing, and you believe the failure is unrelated to your change, comment on the pull request explaining why you believe it is unrelated. A maintainer will re-run the status check for you. If we conclude that the failure was a false positive, we will open an issue to track that problem with our status check suite.
 
-While the above prerequisites must be satisfied prior to the pull request review,  reviewer(s) may ask you to complete additional design work, tests, or other changes before the pull request acceptance.
+While the above prerequisites must be satisfied prior to the pull request review, reviewer(s) may ask you to complete additional design work, tests, or other changes before the pull request acceptance.
 
 ## Style guides
 
@@ -58,3 +58,7 @@ While the above prerequisites must be satisfied prior to the pull request review
 Run `pre-commit install` to set up git hook scripts that will check your changes before every commit. Alternatively, run `make lint` manually before pushing your changes.
 
 Follow the Google Python style guide but note that formatting is handled automatically by Black (through `pre-commit` command).
+
+## Roles and Responsibilities
+
+We maintain a [CODEOWNERS file](https://github.com/input-output-hk/cardano-node-tests/blob/master/.github/CODEOWNERS) which provides information who should review your code if it touches given projects.  Note that you need to get approvals from all code owners (even though GitHub doesn't give a way to enforce it).

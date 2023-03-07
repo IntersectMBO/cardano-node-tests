@@ -1,1 +1,1 @@
-.. mdinclude:: ../../../doc/contributing.md
+.. mdinclude:: ../../../CONTRIBUTING.md
