@@ -301,6 +301,15 @@ class ExtraKeyWitnessDBRow(NamedTuple):
     witness_hash: memoryview
 
 
+class EpochDBRow(NamedTuple):
+    id: int
+    out_sum: int
+    fees: int
+    tx_count: int
+    blk_count: int
+    epoch_number: int
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: Sequence = ()) -> Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -858,3 +867,19 @@ def query_extra_key_witness(txhash: str) -> Generator[ExtraKeyWitnessDBRow, None
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield ExtraKeyWitnessDBRow(*result)
+
+
+def query_epoch(epoch_from: int = 0, epoch_to: int = 99999999) -> Generator[EpochDBRow, None, None]:
+    """Query epoch records in db-sync."""
+    query_vars = (epoch_from, epoch_to)
+
+    query = (
+        "SELECT"
+        " epoch.id, epoch.out_sum, epoch.fees, epoch.tx_count, epoch.blk_count, epoch.no "
+        "FROM epoch "
+        "WHERE (no BETWEEN %s AND %s);"
+    )
+
+    with execute(query=query, vars=query_vars) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield EpochDBRow(*result)

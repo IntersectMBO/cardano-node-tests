@@ -292,3 +292,39 @@ class TestDBSync:
         time.sleep(60)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(-10)
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_epoch(self, cluster: clusterlib.ClusterLib):
+        """Check expected values in the `epoch` table in db-sync."""
+        common.get_test_id(cluster)
+
+        current_epoch = cluster.g_query.get_epoch()
+        epoch = current_epoch - 20 if current_epoch >= 20 else current_epoch
+
+        blocks_data_blk_count = 0
+        blocks_data_tx_count = 0
+
+        for b in dbsync_queries.query_blocks(epoch_from=epoch, epoch_to=epoch):
+            blocks_data_blk_count += 1
+            blocks_data_tx_count += b.tx_count if b.tx_count else 0
+
+        epoch_data_blk_count = 0
+        epoch_data_tx_count = 0
+
+        for e in dbsync_queries.query_epoch(epoch_from=epoch, epoch_to=epoch):
+            epoch_data_blk_count += e.blk_count
+            epoch_data_tx_count += e.tx_count
+
+        try:
+            assert blocks_data_blk_count == epoch_data_blk_count
+        except AssertionError:
+            if blocks_data_blk_count == epoch_data_blk_count + 1:
+                pytest.xfail("Blocks count don't match between tables, see dbsync issue #1363")
+            raise
+
+        assert (
+            blocks_data_tx_count == epoch_data_tx_count
+        ), "Transactions count don't match between tables"
