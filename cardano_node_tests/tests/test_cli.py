@@ -1,10 +1,13 @@
 """Tests for cardano-cli that doesn't fit into any other test file."""
 import json
 import logging
+import string
 from pathlib import Path
 from typing import List
 
 import allure
+import hypothesis
+import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
 
@@ -20,6 +23,8 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent / "data"
+
+ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
 @pytest.mark.smoke
@@ -150,6 +155,68 @@ class TestCLI:
         ]
 
         assert utxo_out == expected_out
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_WRONG_ERA
+    @pytest.mark.parametrize("invalid_param", ("tx_hash", "tx_ix"))
+    @hypothesis.given(filter_str=st.text(alphabet=string.ascii_letters, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_tx_in_invalid_data(
+        self, cluster: clusterlib.ClusterLib, filter_str: str, invalid_param: str
+    ):
+        """Try to use 'query utxo' with invalid 'tx-in' (property-based test).
+
+        Expect failure.
+        """
+        common.get_test_id(cluster)
+
+        tx_hash = "a4c141cfae907aa1c4b418f65f384a6d860d52786b412481bc63733acfab1541"
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "query",
+                    "utxo",
+                    "--tx-in",
+                    f"{filter_str}#0" if invalid_param == "tx_hash" else f"{tx_hash}#{filter_str}",
+                    *cluster.magic_args,
+                ]
+            )
+
+        err_str = str(excinfo.value)
+
+        if invalid_param == "tx_hash":
+            assert (
+                "expecting hexadecimal digit" in err_str
+                or "expecting transaction id (hexadecimal)" in err_str
+            ), err_str
+        else:
+            assert "expecting digit" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_WRONG_ERA
+    @hypothesis.given(filter_str=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_address_invalid_data(self, cluster: clusterlib.ClusterLib, filter_str: str):
+        """Try to use 'query utxo' with invalid 'address' (property-based test).
+
+        Expect failure.
+        """
+        common.get_test_id(cluster)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "query",
+                    "utxo",
+                    "--address",
+                    filter_str,
+                    *cluster.magic_args,
+                ]
+            )
+
+        err_str = str(excinfo.value)
+        assert "invalid address" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_WRONG_ERA
