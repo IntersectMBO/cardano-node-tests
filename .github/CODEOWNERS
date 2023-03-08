@@ -1,0 +1,20 @@
+# Note: later rules override earlier rules.
+
+# Default
+#                                  Martin  Sara
+*                                  @mkoura @saratomaz
+
+# Cardano Node Testing Team
+
+doc                                @mkoura @saratomaz @dorin100 @ArturWieczorek
+src_docs                           @mkoura @saratomaz @dorin100 @ArturWieczorek
+cabal_build_tests                  @ArturWieczorek
+
+
+# CICD
+
+nix/                               @input-output-hk/devops @mkoura
+*.nix                              @input-output-hk/devops @mkoura
+.github/workflows/db_sync_*        @ArturWieczorek
+.github/workflows/node_sync_*      @ArturWieczorek
+.github/workflows/smash_*          @ArturWieczorek
