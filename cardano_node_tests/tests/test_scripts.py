@@ -2289,7 +2289,13 @@ class TestReferenceUTxO:
             and reference_utxo.reference_script["script"]["type"] == "SimpleScriptV2"
         ):
             pytest.xfail("Reported 'SimpleScriptV2', see node issue #4261")
-        assert reference_utxo.reference_script["script"]["type"] == script_type_str
+
+        # In node >= 1.36.0 it is not necessary to distinguish between MultiSig and Timelock
+        # scripts, both now report as "SimpleScript".
+        assert reference_utxo.reference_script["script"]["type"] in (
+            script_type_str,
+            "SimpleScript",
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
