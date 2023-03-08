@@ -675,7 +675,7 @@ class TestAdvancedQueries:
                 )
                 snapshot_set_sum = pool_stake_snapshots["stakeSet"] or 0
 
-                if not db_set_sum == snapshot_set_sum:
+                if db_set_sum != snapshot_set_sum:
                     errors.append(
                         "The epoch stake distribution in dbsync doesn't match stake 'set' snapshot"
                     )
@@ -689,20 +689,19 @@ class TestAdvancedQueries:
                 )
                 snapshot_go_sum = pool_stake_snapshots["stakeGo"] or 0
 
-                if not db_go_sum == snapshot_go_sum:
+                if db_go_sum != snapshot_go_sum:
                     errors.append(
                         "The epoch stake distribution in dbsync doesn't match stake 'go' snapshot"
                     )
-        else:
-            if not {
-                "activeStakeGo",
-                "activeStakeMark",
-                "activeStakeSet",
-                "poolStakeGo",
-                "poolStakeMark",
-                "poolStakeSet",
-            }.issubset(stake_snapshot):
-                errors.append(f"Missing some expected keys: {stake_snapshot.keys()}")
+        elif not {
+            "activeStakeGo",
+            "activeStakeMark",
+            "activeStakeSet",
+            "poolStakeGo",
+            "poolStakeMark",
+            "poolStakeSet",
+        }.issubset(stake_snapshot):
+            errors.append(f"Missing some expected keys: {stake_snapshot.keys()}")
 
         if errors:
             _dump_on_error()

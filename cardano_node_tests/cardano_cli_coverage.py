@@ -127,10 +127,10 @@ def parse_cmd_output(output: str) -> List[str]:
             # skip line with subsection description
             if not line.startswith(" "):
                 continue
-            line = line.strip()
-            if not line:
+            line_s = line.strip()
+            if not line_s:
                 continue
-            item = line.split()[0]
+            item = line_s.split()[0]
             cli_args.append(item)
 
     return cli_args
