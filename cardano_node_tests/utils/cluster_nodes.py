@@ -49,6 +49,7 @@ class Testnets:
     shelley_qa = "shelley_qa"
     testnet = "testnet"
     staging = "staging"
+    preview = "preview"
     preprod = "preprod"
     mainnet = "mainnet"
 
@@ -212,6 +213,7 @@ class TestnetCluster(ClusterType):
         1506450213: {"type": Testnets.staging, "shelley_start": "2020-08-01T18:23:33Z"},
         1506203091: {"type": Testnets.mainnet, "shelley_start": "2020-07-29T21:44:51Z"},
         1654041600: {"type": Testnets.preprod, "byron_epochs": 4},
+        1666656000: {"type": Testnets.preview, "byron_epochs": 0},
     }
 
     NODES = {"relay1", "pool1", "pool2"}
