@@ -69,6 +69,10 @@ class ClusterType:
         self.cluster_scripts = cluster_scripts.ScriptsTypes()
 
     @property
+    def testnet_type(self) -> str:
+        return ""
+
+    @property
     def uses_shortcut(self) -> bool:
         """Check if cluster uses shortcut to go from Byron to last supported era."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
