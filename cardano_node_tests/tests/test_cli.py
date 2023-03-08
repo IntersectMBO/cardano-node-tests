@@ -317,7 +317,7 @@ class TestCLI:
             errors.append("Unexpected fields in 'query tip' output")
 
         # Check that 'slot' is never greater than the total number of slots
-        if tip_out["slot"] > tip_out["epoch"] * cluster.epoch_length:
+        if tip_out["slot"] > (tip_out["epoch"] + 1) * cluster.epoch_length - cluster.slots_offset:
             errors.append("'slot' is greater than total number of slots")
 
         # Check that 'era' is the expected
