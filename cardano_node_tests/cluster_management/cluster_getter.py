@@ -50,8 +50,8 @@ def _kill_supervisor(instance_num: int) -> None:
     for line in netstat:
         if port_str not in line:
             continue
-        line = line.replace("  ", " ").strip()
-        pid = line.split()[-1].split("/")[0]
+        line_p = line.replace("  ", " ").strip()
+        pid = line_p.split()[-1].split("/")[0]
         os.kill(int(pid), 15)
         return
 

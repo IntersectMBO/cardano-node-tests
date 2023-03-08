@@ -56,12 +56,14 @@ def load_raw(tx_view: str) -> dict:
 def _load_assets(assets: Dict[str, Dict[str, int]]) -> List[Tuple[int, str]]:
     loaded_data = []
 
-    for policy_key, policy_rec in assets.items():
-        if policy_key == clusterlib.DEFAULT_COIN:
+    for policy_key_rec, policy_rec in assets.items():
+        if policy_key_rec == clusterlib.DEFAULT_COIN:
             continue
-        if "policy " in policy_key:
-            policy_key = policy_key.replace("policy ", "")
-        for asset_name, amount in policy_rec.items():
+        policy_key = (
+            policy_key_rec.replace("policy ", "") if "policy " in policy_key_rec else policy_key_rec
+        )
+        for asset_name_rec, amount in policy_rec.items():
+            asset_name = asset_name_rec
             if "asset " in asset_name:
                 asset_name = re.search(r"asset ([0-9a-f]*)", asset_name).group(1)  # type: ignore
             elif asset_name == "default asset":
