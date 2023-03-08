@@ -7,7 +7,7 @@ repos:
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
     language_version: python3
 - repo: https://github.com/ambv/black
-  rev: 22.12.0
+  rev: 23.1.0
   hooks:
   - id: black
     args: [--safe, --quiet]
@@ -39,22 +39,20 @@ repos:
   - id: pyupgrade
     language_version: python3
 - repo: https://github.com/pycqa/pydocstyle
-  rev: 6.2.2
+  rev: 6.3.0
   hooks:
   - id: pydocstyle
     language_version: python3
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.211
+  rev: v0.0.254
   hooks:
     - id: ruff
-      # Respect `exclude` and `extend-exclude` settings.
-      args: [--force-exclude]
 - repo: https://github.com/shellcheck-py/shellcheck-py
   rev: v0.9.0.2
   hooks:
   - id: shellcheck
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.32.2
+  rev: v0.33.0
   hooks:
   - id: markdownlint
 - repo: https://github.com/rstcheck/rstcheck
