@@ -258,7 +258,7 @@ class TestBuildMintingNegative:
         err_str = str(excinfo.value)
         assert (
             "expected a script in the Plutus script language, but it is actually "
-            "using SimpleScriptLanguage SimpleScriptV1" in err_str
+            "using SimpleScriptLanguage" in err_str
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
