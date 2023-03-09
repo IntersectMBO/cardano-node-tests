@@ -2888,7 +2888,10 @@ class TestCompatibility:
                 use_build_cmd=use_build_cmd,
             )
         err_str = str(excinfo.value)
-        assert "SimpleScriptV2 is not supported" in err_str, err_str
+        assert (
+            "SimpleScriptV2 is not supported" in err_str
+            or "Transaction validity lower bound not supported in Shelley" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
