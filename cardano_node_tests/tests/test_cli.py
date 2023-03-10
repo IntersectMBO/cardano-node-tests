@@ -735,7 +735,19 @@ class TestAdvancedQueries:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
-        "option", ("single_pool", "multiple_pools", "total_stake", "all_pools")
+        "option",
+        (
+            "single_pool",
+            "multiple_pools",
+            "total_stake",
+            pytest.param(
+                "all_pools",
+                marks=pytest.mark.skipif(
+                    cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
+                    reason="not supposed to run on testnet",
+                ),
+            ),
+        ),
     )
     @pytest.mark.dbsync
     @pytest.mark.testnets
