@@ -148,7 +148,7 @@ def _mark_needs_dbsync_tests(items: list) -> bool:
     return True
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config: Any, items: list) -> None:
     # prevent on slave nodes (xdist)
     if hasattr(config, "slaveinput"):

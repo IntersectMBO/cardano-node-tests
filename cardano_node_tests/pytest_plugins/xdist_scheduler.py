@@ -139,7 +139,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         node.send_runtest_some(nodeids_indexes)
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(items: list) -> None:
     for item in items:
         group_marker = item.get_closest_marker("xdist_group")
