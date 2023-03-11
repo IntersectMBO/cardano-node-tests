@@ -52,11 +52,11 @@ Release testing checklist
    :header-rows: 0
 
    * - `1.35.6-rc2` pushed to `shelley-qa`
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Grafana metrics OK
      - |:hourglass_flowing_sand:|
-   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/1.35.6-rc2/shelley_qa/>`__
-     - |:hourglass_flowing_sand:|
+   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/1.35.6-rc2/>`__
+     - |:heavy_check_mark:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
      - |:x:|\*
    * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
