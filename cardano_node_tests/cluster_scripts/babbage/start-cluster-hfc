@@ -234,6 +234,18 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
     "$conf" > "$STATE_CLUSTER/$fname"
 
+  # conway genesis is not present on node < 1.36.0
+  if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
+    CONWAY_GENESIS_HASH="${CONWAY_GENESIS_HASH:-"$(cardano_cli_log genesis hash --genesis \
+      "$STATE_CLUSTER/shelley/genesis.conway.json")"}"
+    jq \
+      --arg conway_hash "$CONWAY_GENESIS_HASH" \
+      '.ConwayGenesisFile = "shelley/genesis.conway.json" | .ConwayGenesisHash = $conway_hash' \
+      "$STATE_CLUSTER/$fname" > "$STATE_CLUSTER/${fname}_jq"
+    cat "$STATE_CLUSTER/${fname}_jq" > "$STATE_CLUSTER/$fname"
+    rm -f "$STATE_CLUSTER/${fname}_jq"
+  fi
+
   # enable P2P
   if [ -n "${ENABLE_P2P:-""}" ]; then
 
