@@ -1,3 +1,4 @@
 CLUSTER_ERA=babbage
 MIXED_P2P=true
 NUM_POOLS=4
+CI_FAST_CLUSTER=true
