@@ -67,21 +67,51 @@ elif [ "$1" = "step2" ]; then
   # copy newly generated topology files to the cluster state dir
   cp -f "$WORKDIR"/dry_mixed/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
+  BASE_REV_HAS_CONWAY=false
+  if [ -f "$STATE_CLUSTER/genesis.conway.json" ]; then
+    BASE_REV_HAS_CONWAY=true
+  fi
+
+  UPGRADE_REV_HAS_CONWAY=false
+  if [ -f "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.conway.json" ]; then
+    UPGRADE_REV_HAS_CONWAY=true
+  fi
+
+  # copy newly generated conway genesis file to the cluster state dir
+  if [ "$BASE_REV_HAS_CONWAY" = false ] && [ "$UPGRADE_REV_HAS_CONWAY" = true ]; then
+    cp -f "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley"
+  fi
+
   # copy newly generated config files to the cluster state dir, but use the original genesis files
   BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   for conf in "$WORKDIR"/dry_mixed/state-cluster0/config-*.json; do
     fname="${conf##*/}"
-    jq \
-      --arg byron_hash "$BYRON_GENESIS_HASH" \
-      --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
-      --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
-      '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
-      "$conf" > "$STATE_CLUSTER/$fname"
+
+    # The "pool3" will continue running with the original cardano-node binary.
+    # If the upgrade revision doesn't have conway genesis, or if the base revision doesn't have
+    # conway genesis and the config file is for pool3, then don't add conway hash
+    if [[ "$UPGRADE_REV_HAS_CONWAY" = false || ( "$fname" = "config-pool3.json" && "$BASE_REV_HAS_CONWAY" = false ) ]]; then
+      jq \
+        --arg byron_hash "$BYRON_GENESIS_HASH" \
+        --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+        --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+        '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
+        "$conf" > "$STATE_CLUSTER/$fname"
+    else
+      jq \
+        --arg byron_hash "$BYRON_GENESIS_HASH" \
+        --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+        --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+        --arg conway_hash "$CONWAY_GENESIS_HASH" \
+        '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash | .ConwayHash = $conway_hash' \
+        "$conf" > "$STATE_CLUSTER/$fname"
+    fi
   done
 
-  # run pool3 with the original cardano-node binary
+  # run the "pool3" with the original cardano-node binary
   cp -a "$STATE_CLUSTER"/cardano-node-pool3 "$STATE_CLUSTER"/cardano-node-pool3.orig
   sed -i 's/exec cardano-node run/exec .\/state-cluster0\/cardano-node-step1 run/' "$STATE_CLUSTER"/cardano-node-pool3
 
@@ -149,18 +179,36 @@ elif [ "$1" = "step3" ]; then
   # copy newly generated topology files to the cluster state dir
   cp -f "$WORKDIR"/dry_p2p/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
+  UPGRADE_REV_HAS_CONWAY=false
+  if [ -f "$WORKDIR/dry_p2p/state-cluster0/shelley/genesis.conway.json" ]; then
+    UPGRADE_REV_HAS_CONWAY=true
+  fi
+
   # copy newly generated config files to the cluster state dir, but use the original genesis files
   BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   for conf in "$WORKDIR"/dry_p2p/state-cluster0/config-*.json; do
     fname="${conf##*/}"
-    jq \
-      --arg byron_hash "$BYRON_GENESIS_HASH" \
-      --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
-      --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
-      '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
-      "$conf" > "$STATE_CLUSTER/$fname"
+
+    # don't add conway hash if the upgrade revision doesn't have conway genesis
+    if [ "$UPGRADE_REV_HAS_CONWAY" = false ]; then
+      jq \
+        --arg byron_hash "$BYRON_GENESIS_HASH" \
+        --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+        --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+        '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
+        "$conf" > "$STATE_CLUSTER/$fname"
+    else
+      jq \
+        --arg byron_hash "$BYRON_GENESIS_HASH" \
+        --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+        --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+        --arg conway_hash "$CONWAY_GENESIS_HASH" \
+        '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash | .ConwayHash = $conway_hash' \
+        "$conf" > "$STATE_CLUSTER/$fname"
+    fi
   done
 
   # use the upgraded cardano-node binary for pool3
