@@ -115,6 +115,15 @@ def pool_users_disposable_cluster_and_pool(
     return pool_users
 
 
+@pytest.fixture(scope="class")
+def stake_address_option_unusable() -> bool:
+    return not (
+        clusterlib_utils.cli_has("stake-address registration-certificate --stake-address")
+        or clusterlib_utils.cli_has("stake-address deregistration-certificate --stake-address")
+        or clusterlib_utils.cli_has("stake-address delegation-certificate --stake-address")
+    )
+
+
 @pytest.mark.testnets
 @pytest.mark.order(8)
 class TestDelegateAddr:
@@ -602,13 +611,19 @@ class TestDelegateAddr:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
+    @pytest.mark.parametrize(
+        "stake_cert",
+        ("vkey_file", "stake_address"),
+    )
     @pytest.mark.smoke
     def test_addr_delegation_deregistration(
         self,
         cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
         pool_users_cluster_and_pool: List[clusterlib.PoolUser],
         pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
+        stake_cert: str,
         use_build_cmd: bool,
+        stake_address_option_unusable: bool,
     ):
         """Submit delegation and deregistration certificates in single TX.
 
@@ -622,6 +637,11 @@ class TestDelegateAddr:
         * check that the stake address was NOT delegated
         * (optional) check records in db-sync
         """
+        if stake_cert == "stake_address" and stake_address_option_unusable:
+            pytest.skip(
+                "`stake-address` option is not available on `stake-address` certificates commands"
+            )
+
         cluster, pool_id = cluster_and_pool
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
@@ -629,14 +649,21 @@ class TestDelegateAddr:
         user_payment = pool_users_cluster_and_pool[0].payment
         src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
+        stake_vkey_file = user_registered.stake.vkey_file if stake_cert == "vkey_file" else None
+        stake_address = user_registered.stake.address if stake_cert == "stake_address" else None
+
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=stake_vkey_file,
+            stake_address=stake_address,
         )
 
         # create stake address deregistration cert
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
-            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=stake_vkey_file,
+            stake_address=stake_address,
         )
 
         # register stake address
@@ -670,7 +697,8 @@ class TestDelegateAddr:
         # create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
+            stake_vkey_file=stake_vkey_file,
+            stake_address=stake_address,
             stake_pool_id=pool_id,
         )
 
