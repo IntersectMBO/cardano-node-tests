@@ -22,6 +22,8 @@ mkdir -p "$REPORTS_DIR"
 #
 
 if [ "$1" = "step1" ]; then
+  printf "STEP1 start: %(%H:%M:%S)T\n" -1
+
   export UPGRADE_TESTS_STEP=1
 
   if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ] && [ -z "${SCRIPTS_DIRNAME:-""}" ]; then
@@ -54,11 +56,15 @@ if [ "$1" = "step1" ]; then
   ./.github/results.sh .
   mv allure-results.tar.xz allure-results-step1.tar.xz
 
+  printf "STEP1 finish: %(%H:%M:%S)T\n" -1
+
 #
 # STEP2 - partly update local cluster and run smoke tests for the second time
 #
 
 elif [ "$1" = "step2" ]; then
+  printf "STEP2 start: %(%H:%M:%S)T\n" -1
+
   export UPGRADE_TESTS_STEP=2
 
   # generate config and topology files for "mixed" mode
@@ -165,12 +171,16 @@ elif [ "$1" = "step2" ]; then
   ./.github/results.sh .
   mv allure-results.tar.xz allure-results-step2.tar.xz
 
+  printf "STEP2 finish: %(%H:%M:%S)T\n" -1
+
 
 #
 # STEP3 - finish update of local cluster and run smoke tests for the third time
 #
 
 elif [ "$1" = "step3" ]; then
+  printf "STEP3 start: %(%H:%M:%S)T\n" -1
+
   export UPGRADE_TESTS_STEP=3
 
   # generate config and topology files for p2p mode
@@ -235,6 +245,8 @@ elif [ "$1" = "step3" ]; then
   # create results archive for step3
   ./.github/results.sh .
   mv allure-results.tar.xz allure-results-step3.tar.xz
+
+  printf "STEP3 finish: %(%H:%M:%S)T\n" -1
 
 #
 # FINISH - teardown cluster, generate reports
