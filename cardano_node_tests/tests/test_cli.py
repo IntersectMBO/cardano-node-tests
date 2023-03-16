@@ -58,168 +58,6 @@ class TestCLI:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_WRONG_ERA
-    def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
-        """Check that it is possible to return the whole UTxO on local cluster."""
-        if cluster.protocol != clusterlib.Protocols.CARDANO:
-            pytest.skip("runs on cluster in full cardano mode")
-
-        common.get_test_id(cluster)
-
-        cluster.cli(
-            [
-                "query",
-                "utxo",
-                "--whole-utxo",
-                *cluster.magic_args,
-            ]
-        )
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.LAST_KNOWN_ERA,
-        reason="works only with the latest TX era",
-    )
-    def test_pretty_utxo(
-        self, cluster_manager: cluster_management.ClusterManager, cluster: clusterlib.ClusterLib
-    ):
-        """Check that pretty printed `query utxo` output looks as expected."""
-        temp_template = common.get_test_id(cluster)
-        amount1 = 2_000_000
-        amount2 = 2_500_000
-
-        # create source and destination payment addresses
-        payment_addrs = clusterlib_utils.create_payment_addr_records(
-            f"{temp_template}_src",
-            f"{temp_template}_dst",
-            cluster_obj=cluster,
-        )
-
-        # fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            payment_addrs[0],
-            cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
-            amount=amount1 + amount2 + 10_000_000,
-        )
-
-        src_address = payment_addrs[0].address
-        dst_address = payment_addrs[1].address
-
-        txouts = [
-            clusterlib.TxOut(address=dst_address, amount=amount1),
-            clusterlib.TxOut(address=dst_address, amount=amount2),
-        ]
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        tx_raw_output = cluster.g_transaction.send_tx(
-            src_address=src_address,
-            tx_name=temp_template,
-            txouts=txouts,
-            tx_files=tx_files,
-            join_txouts=False,
-        )
-
-        utxo_out = (
-            cluster.cli(
-                [
-                    "query",
-                    "utxo",
-                    "--address",
-                    dst_address,
-                    *cluster.magic_args,
-                ]
-            )
-            .stdout.decode("utf-8")
-            .split()
-        )
-
-        txid = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
-        expected_out = [
-            "TxHash",
-            "TxIx",
-            "Amount",
-            "--------------------------------------------------------------------------------"
-            "------",
-            txid,
-            "0",
-            str(amount1),
-            "lovelace",
-            "+",
-            "TxOutDatumNone",
-            txid,
-            "1",
-            str(amount2),
-            "lovelace",
-            "+",
-            "TxOutDatumNone",
-        ]
-
-        assert utxo_out == expected_out
-
-    @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
-    @pytest.mark.parametrize("invalid_param", ("tx_hash", "tx_ix"))
-    @hypothesis.given(filter_str=st.text(alphabet=string.ascii_letters, min_size=1))
-    @common.hypothesis_settings(max_examples=300)
-    def test_tx_in_invalid_data(
-        self, cluster: clusterlib.ClusterLib, filter_str: str, invalid_param: str
-    ):
-        """Try to use 'query utxo' with invalid 'tx-in' (property-based test).
-
-        Expect failure.
-        """
-        common.get_test_id(cluster)
-
-        tx_hash = "a4c141cfae907aa1c4b418f65f384a6d860d52786b412481bc63733acfab1541"
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "query",
-                    "utxo",
-                    "--tx-in",
-                    f"{filter_str}#0" if invalid_param == "tx_hash" else f"{tx_hash}#{filter_str}",
-                    *cluster.magic_args,
-                ]
-            )
-
-        err_str = str(excinfo.value)
-
-        if invalid_param == "tx_hash":
-            assert (
-                "expecting hexadecimal digit" in err_str
-                or "expecting transaction id (hexadecimal)" in err_str
-            ), err_str
-        else:
-            assert "expecting digit" in err_str, err_str
-
-    @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
-    @hypothesis.given(filter_str=st.text(alphabet=ADDR_ALPHABET, min_size=1))
-    @common.hypothesis_settings(max_examples=300)
-    def test_address_invalid_data(self, cluster: clusterlib.ClusterLib, filter_str: str):
-        """Try to use 'query utxo' with invalid 'address' (property-based test).
-
-        Expect failure.
-        """
-        common.get_test_id(cluster)
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "query",
-                    "utxo",
-                    "--address",
-                    filter_str,
-                    *cluster.magic_args,
-                ]
-            )
-
-        err_str = str(excinfo.value)
-        assert "invalid address" in err_str, err_str
-
-    @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
     def test_txid_with_process_substitution(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to pass Tx file using process substitution."""
         common.get_test_id(cluster)
@@ -523,6 +361,173 @@ class TestKey:
             "TextEnvelope type error:  Expected one of:" in err_str
             or "key non-extended-key  Error: Invalid key." in err_str
         ), err_str
+
+
+@pytest.mark.smoke
+class TestQueryUTxO:
+    """Tests for cardano-cli query utxo."""
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_WRONG_ERA
+    def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
+        """Check that it is possible to return the whole UTxO on local cluster."""
+        if cluster.protocol != clusterlib.Protocols.CARDANO:
+            pytest.skip("runs on cluster in full cardano mode")
+
+        common.get_test_id(cluster)
+
+        cluster.cli(
+            [
+                "query",
+                "utxo",
+                "--whole-utxo",
+                *cluster.magic_args,
+            ]
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era != VERSIONS.LAST_KNOWN_ERA,
+        reason="works only with the latest TX era",
+    )
+    def test_pretty_utxo(
+        self, cluster_manager: cluster_management.ClusterManager, cluster: clusterlib.ClusterLib
+    ):
+        """Check that pretty printed `query utxo` output looks as expected."""
+        temp_template = common.get_test_id(cluster)
+        amount1 = 2_000_000
+        amount2 = 2_500_000
+
+        # create source and destination payment addresses
+        payment_addrs = clusterlib_utils.create_payment_addr_records(
+            f"{temp_template}_src",
+            f"{temp_template}_dst",
+            cluster_obj=cluster,
+        )
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            payment_addrs[0],
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            amount=amount1 + amount2 + 10_000_000,
+        )
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        txouts = [
+            clusterlib.TxOut(address=dst_address, amount=amount1),
+            clusterlib.TxOut(address=dst_address, amount=amount2),
+        ]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        tx_raw_output = cluster.g_transaction.send_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            join_txouts=False,
+        )
+
+        utxo_out = (
+            cluster.cli(
+                [
+                    "query",
+                    "utxo",
+                    "--address",
+                    dst_address,
+                    *cluster.magic_args,
+                ]
+            )
+            .stdout.decode("utf-8")
+            .split()
+        )
+
+        txid = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
+        expected_out = [
+            "TxHash",
+            "TxIx",
+            "Amount",
+            "--------------------------------------------------------------------------------"
+            "------",
+            txid,
+            "0",
+            str(amount1),
+            "lovelace",
+            "+",
+            "TxOutDatumNone",
+            txid,
+            "1",
+            str(amount2),
+            "lovelace",
+            "+",
+            "TxOutDatumNone",
+        ]
+
+        assert utxo_out == expected_out
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_WRONG_ERA
+    @pytest.mark.parametrize("invalid_param", ("tx_hash", "tx_ix"))
+    @hypothesis.given(filter_str=st.text(alphabet=string.ascii_letters, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_tx_in_invalid_data(
+        self, cluster: clusterlib.ClusterLib, filter_str: str, invalid_param: str
+    ):
+        """Try to use 'query utxo' with invalid 'tx-in' (property-based test).
+
+        Expect failure.
+        """
+        common.get_test_id(cluster)
+
+        tx_hash = "a4c141cfae907aa1c4b418f65f384a6d860d52786b412481bc63733acfab1541"
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "query",
+                    "utxo",
+                    "--tx-in",
+                    f"{filter_str}#0" if invalid_param == "tx_hash" else f"{tx_hash}#{filter_str}",
+                    *cluster.magic_args,
+                ]
+            )
+
+        err_str = str(excinfo.value)
+
+        if invalid_param == "tx_hash":
+            assert (
+                "expecting hexadecimal digit" in err_str
+                or "expecting transaction id (hexadecimal)" in err_str
+            ), err_str
+        else:
+            assert "expecting digit" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_WRONG_ERA
+    @hypothesis.given(filter_str=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_address_invalid_data(self, cluster: clusterlib.ClusterLib, filter_str: str):
+        """Try to use 'query utxo' with invalid 'address' (property-based test).
+
+        Expect failure.
+        """
+        common.get_test_id(cluster)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "query",
+                    "utxo",
+                    "--address",
+                    filter_str,
+                    *cluster.magic_args,
+                ]
+            )
+
+        err_str = str(excinfo.value)
+        assert "invalid address" in err_str, err_str
 
 
 @common.SKIPIF_WRONG_ERA
