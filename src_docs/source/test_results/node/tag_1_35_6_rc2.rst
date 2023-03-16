@@ -1,5 +1,5 @@
 1.35.6-rc2
-===========
+==========
 
 * tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.6-rc2>
 * tag PR -
@@ -57,6 +57,8 @@ Release testing checklist
      - |:hourglass_flowing_sand:|
    * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/1.35.6-rc2/>`__
      - |:heavy_check_mark:|
+   * - Regression testing against `preview`
+     - |:heavy_check_mark:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
      - |:x:|\*
    * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
@@ -68,7 +70,7 @@ Release testing checklist
    * - Benchmarking - Report
      - |:heavy_check_mark:|
    * - sanity check release notes
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 \* RAM usage for `1.35.6-rc2` is between 2 to 3 GB higher than for `1.35.5`.
 
@@ -146,7 +148,7 @@ Component Level Test Tracking
      - Kevin Hammond
      - |:heavy_check_mark:|
      -
-     - All rewuired audits for this release were successfully finalized.
+     - All reviewed audits for this release were successfully finalized.
    * - Mixed settings/versions tests
      - Moritz Angermann, Jean-Baptiste Giraudeau
      -
