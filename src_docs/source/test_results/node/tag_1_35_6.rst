@@ -1,0 +1,156 @@
+1.35.6
+======
+
+* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.6>
+* tag PR -
+* tag commits - <https://github.com/input-output-hk/cardano-node/compare/1.35.5...1.35.6>
+
+
+Changelogs
+----------
+
+* cardano-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6/cardano-api/ChangeLog.md
+* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.6/cardano-cli/ChangeLog.md
+* cardano-node: https://github.com/input-output-hk/cardano-node/blob/1.35.6/cardano-node/ChangeLog.md
+* submit-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6/cardano-submit-api/CHANGELOG.md
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: protocol version 8 and SECP256K1 cost model
+   :header-rows: 0
+
+   * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc2-babbage_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with default (Babbage) TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc2-default_legacy_01/>`__
+     - |:heavy_check_mark:|
+   * - Mix P2P and Legacy - `Babbage with default (Babbage) TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc2-default_mixed_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc2-alonzo_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - Mix P2P and Legacy - `Babbage with Mary TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc2-mary_mixed_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Babbage with Shelley TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.6rc2-shelley_p2p_01/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: other testing
+   :header-rows: 0
+
+   * - upgrade job (1.35.5 to 1.35.6-rc2)
+     - |:heavy_check_mark:|
+   * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
+     - |:heavy_check_mark:|
+   * - sanity check submit-api REST service
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+----------------------------
+
+.. list-table::
+   :header-rows: 0
+
+   * - `1.35.6-rc2` pushed to `shelley-qa`
+     - |:heavy_check_mark:|
+   * - Grafana metrics OK
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/1.35.6-rc2/>`__
+     - |:heavy_check_mark:|
+   * - Regression testing against `preview`
+     - |:heavy_check_mark:|
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+     - |:x:|\*
+   * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+     - |:heavy_check_mark:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:heavy_check_mark:|
+   * - Benchmarking - Report
+     - |:heavy_check_mark:|
+   * - sanity check release notes
+     - |:heavy_check_mark:|
+
+\* RAM usage for `1.35.6-rc2` is between 2 to 3 GB higher than for `1.35.5`.
+
+New functionalities in this tag
+-------------------------------
+
+* `Filter out duplicate collateral inputs in transaction build commands <https://github.com/input-output-hk/cardano-node/pull/4839>`__ |:heavy_check_mark:|
+* New P2P topology file format, see issue #4563 or the config files documentation. The old p2p topology format will be supported for next two major releases of the node (the last major version which will support it is 1.37). (`#4563 <https://github.com/input-output-hk/cardano-node/pull/4563>`__) |:heavy_check_mark:|
+* 'EnableP2P' configuration option does not require 'TestEnableDevelopmentNetworkProtocols' any more. |:heavy_check_mark:|
+
+New issues
+----------
+
+
+Breaking changes
+----------------
+
+
+Component Level Test Tracking
+------------------------------
+
+.. list-table:: Test Definition and Status
+   :header-rows: 1
+
+   * - Quality Control
+     - Owner
+     - Status
+     - Link to tests
+     - Comments
+   * - Component level tests
+     -
+      - Jared Corduan
+      - Damian Nadales
+      - Marcin Szamotulski
+      - Iñigo Querejeta Azurmendi
+      - Andrew Sutherland
+      - Alexey Kuleshevich
+     - |:heavy_check_mark:|
+     -
+       - `Ledger <https://github.com/input-output-hk/cardano-ledger/blob/master/CONTRIBUTING.md>`__
+       - `Consensus <https://github.com/input-output-hk/ouroboros-network/blob/master/CONTRIBUTING.md>`__
+       - `Network <https://github.com/input-output-hk/ouroboros-network/blob/master/CONTRIBUTING.md>`__
+       - `Crypto <https://github.com/input-output-hk/cardano-base>`__
+       - `Plutus Core <https://github.com/input-output-hk/plutus/blob/master/CONTRIBUTING.adoc>`__
+       - `Base <https://github.com/input-output-hk/cardano-base>`__
+     - Each component version that is integrated in Cardano Node is tested separately, as detailed in the component repository.
+   * - Integration level tests (cardano-node)
+     - Jordan Millar
+     - |:heavy_check_mark:|
+     - `Cardano Node <https://github.com/input-output-hk/cardano-node>`__
+     - The quality control performed when any component is integrated into the cardano-node is described in the cardano-node repository.
+   * - Benchmarks
+     - Serge Kosyrev
+     - |:heavy_check_mark:|
+     -
+       - `Value-only tests results <https://input-output-rnd.slack.com/files/U03A639T0DN/F04SF663PUJ/1.35.6-rc2.value.pdf>`__
+       - `Plutus tests results <https://input-output-rnd.slack.com/files/U03A639T0DN/F04S0KYE6F9/1.35.6-rc2.plutus.pdf>`__
+     -
+   * - System level tests (cardano-node-tests)
+     - Martin Kourim
+     - |:heavy_check_mark:|
+     - `link to tests <https://github.com/input-output-hk/cardano-node-tests>`__
+     - The System-level tests executed for any node version can be found on the cardano-node-tests webpage (this page)
+   * - UAT (community)
+     - Samuel Leathers
+     - |:hourglass_flowing_sand:|
+     -
+     -
+      - We encourage our early adopters to look into the below scenarios as part of the UAT for the current tag:
+      - scenarios with different node versions, different P2P settings (only with Legacy/P2P relays, with a mix of relays)
+      - tests confirming that stake pools with P2P Single Relay does not have a competitive (dis)advantage
+      - tests with stake pools having different node versions and P2P settings (1 relay with 1.35.4 and another one with 1.35.6 + P2P Single Relay)
+      - renewal of certificates and restart of the nodes
+   * - Audits
+     - Kevin Hammond
+     - |:heavy_check_mark:|
+     -
+     - All reviewed audits for this release were successfully finalized.
+   * - Mixed settings/versions tests
+     - Moritz Angermann, Jean-Baptiste Giraudeau
+     -
+     -
+     - Not planned (complex/insufficient tooling)
