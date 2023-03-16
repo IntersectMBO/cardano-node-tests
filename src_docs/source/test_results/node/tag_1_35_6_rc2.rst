@@ -1,18 +1,18 @@
-1.35.6-rc2
-==========
+1.35.6
+======
 
-* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.6-rc2>
+* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.6>
 * tag PR -
-* tag commits - <https://github.com/input-output-hk/cardano-node/compare/1.35.5...1.35.6-rc2>
+* tag commits - <https://github.com/input-output-hk/cardano-node/compare/1.35.5...1.35.6>
 
 
 Changelogs
 ----------
 
-* cardano-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-api/ChangeLog.md
-* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-cli/ChangeLog.md
-* cardano-node: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-node/ChangeLog.md
-* submit-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6-rc2/cardano-submit-api/CHANGELOG.md
+* cardano-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6/cardano-api/ChangeLog.md
+* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.6/cardano-cli/ChangeLog.md
+* cardano-node: https://github.com/input-output-hk/cardano-node/blob/1.35.6/cardano-node/ChangeLog.md
+* submit-api: https://github.com/input-output-hk/cardano-node/blob/1.35.6/cardano-submit-api/CHANGELOG.md
 
 
 Regression testing on a local cluster
