@@ -35,9 +35,17 @@ ERRORS_IGNORED = [
     # can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
     # errors can happen on p2p when local roots are not up yet
-    r"PeerSelection:Info:",
+    "PeerSelection:Info:",
     # can happen on p2p when node is shutting down
     "AsyncCancelled",
+    # TODO: p2p failures on testnet
+    "PeerStatusChangeFailure",
+    # TODO: p2p failures on testnet - PeerMonitoringError
+    "DeactivationTimeout",
+    # TODO: p2p failures on testnet
+    "PeerMonitoringError .* MuxError",
+    # p2p info messages on testnet
+    "PublicRootPeers:Info:",
     # harmless when whole network is shutting down
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
     # TODO: see node issue #4369

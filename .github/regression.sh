@@ -60,6 +60,12 @@ fi
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
+# assume we run tests on testnet when `BOOTSTRAP_DIR` is set
+if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
+  export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/relay1.socket"
+  export MAKE_TARGET="${MAKE_TARGET:-"testnets"}"
+fi
+
 # function to update cardano-node to specified branch and/or revision, or to the latest available
 # shellcheck disable=SC1090,SC1091
 . .github/nix_override_cardano_node.sh
