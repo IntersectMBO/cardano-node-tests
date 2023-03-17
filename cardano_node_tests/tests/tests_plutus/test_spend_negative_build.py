@@ -1091,7 +1091,10 @@ class TestNegativeRedeemer:
 
         err_str = str(excinfo.value)
         assert (
+            # On node version < 1.36.0
             'Expected a single field named "int", "bytes", "string", "list" or "map".' in err_str
+            # See node commit ac662d8e46554c1ed02d485bfdd69e7ec04d8613
+            or 'Expected a single field named "int", "bytes", "list" or "map".' in err_str
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
@@ -1145,5 +1148,8 @@ class TestNegativeRedeemer:
 
         err_str = str(excinfo.value)
         assert (
+            # On node version < 1.36.0
             'Expected a single field named "int", "bytes", "string", "list" or "map".' in err_str
+            # See node commit ac662d8e46554c1ed02d485bfdd69e7ec04d8613
+            or 'Expected a single field named "int", "bytes", "list" or "map".' in err_str
         ), err_str
