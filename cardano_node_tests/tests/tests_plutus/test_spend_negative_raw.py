@@ -728,7 +728,7 @@ class TestNegativeRedeemer:
         dst_addr: clusterlib.AddressRecord,
         cost_per_unit: plutus_common.ExecutionCost,
         plutus_version: str,
-    ):
+    ) -> str:
         """Try to spend a locked UTxO with redeemer int value that is not in allowed range."""
         redeemer_content = {}
         if redeemer_value % 2 == 0:
@@ -765,7 +765,8 @@ class TestNegativeRedeemer:
             )
         ]
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        err_str = ""
+        try:
             cluster_obj.g_transaction.build_raw_tx_bare(
                 out_file=f"{temp_template}_step2_tx.body",
                 txouts=txouts,
@@ -773,8 +774,10 @@ class TestNegativeRedeemer:
                 fee=fee_redeem + spend_raw.FEE_REDEEM_TXSIZE,
                 script_txins=plutus_txins,
             )
-        err_str = str(excinfo.value)
-        assert "Value out of range within the script data" in err_str, err_str
+        except clusterlib.CLIError as exc:
+            err_str = str(exc)
+
+        return err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -880,7 +883,7 @@ class TestNegativeRedeemer:
     ):
         """Try to spend a locked UTxO with a redeemer int value < minimum allowed value.
 
-        Expect failure.
+        Expect failure on node version < 1.36.0.
         """
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
@@ -889,7 +892,7 @@ class TestNegativeRedeemer:
         )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        self._int_out_of_range(
+        err_str = self._int_out_of_range(
             cluster_obj=cluster,
             temp_template=temp_template,
             script_utxos=script_utxos,
@@ -899,6 +902,13 @@ class TestNegativeRedeemer:
             cost_per_unit=cost_per_unit,
             plutus_version=plutus_version,
         )
+
+        assert (
+            # See node commit 2efdd2c173bee8f2463937cebb20614adf6180f0
+            not err_str
+            # On node version < 1.36.0
+            or "Value out of range within the script data" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=common.MAX_UINT64 + 1))
@@ -916,7 +926,7 @@ class TestNegativeRedeemer:
     ):
         """Try to spend a locked UTxO with a redeemer int value > maximum allowed value.
 
-        Expect failure.
+        Expect failure on node version < 1.36.0.
         """
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
 
@@ -925,7 +935,7 @@ class TestNegativeRedeemer:
         )
 
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
-        self._int_out_of_range(
+        err_str = self._int_out_of_range(
             cluster_obj=cluster,
             temp_template=temp_template,
             script_utxos=script_utxos,
@@ -935,6 +945,13 @@ class TestNegativeRedeemer:
             cost_per_unit=cost_per_unit,
             plutus_version=plutus_version,
         )
+
+        assert (
+            # See node commit 2efdd2c173bee8f2463937cebb20614adf6180f0
+            not err_str
+            # On node version < 1.36.0
+            or "Value out of range within the script data" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))

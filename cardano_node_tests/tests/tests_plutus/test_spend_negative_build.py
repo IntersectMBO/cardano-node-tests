@@ -521,7 +521,12 @@ class TestNegativeRedeemer:
             )
 
         err_str = str(excinfo.value)
-        assert "Value out of range within the script data" in err_str, err_str
+        assert (
+            # On node version < 1.36.0
+            "Value out of range within the script data" in err_str
+            # See node commit 2efdd2c173bee8f2463937cebb20614adf6180f0
+            or "Incorrect datum" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
