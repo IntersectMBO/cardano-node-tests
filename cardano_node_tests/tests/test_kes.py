@@ -182,7 +182,7 @@ class TestKES:
         * check KES period info command with an operational certificate with an expired KES
         * check KES period info command with operational certificates with a valid KES
         """
-        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-statements,too-many-locals
         cluster = cluster_kes
         kes_period_info_errors_list = []
         temp_template = common.get_test_id(cluster)
@@ -320,6 +320,8 @@ class TestKES:
         kes_info_expired = cluster.g_query.get_kes_period_info(
             opcert_file=expire_pool_rec["pool_operational_cert"]
         )
+        with open(f"{temp_template}_kes_period_info_1.json", "w", encoding="utf-8") as out_fp:
+            json.dump(kes_info_expired, out_fp, indent=2)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
@@ -336,12 +338,17 @@ class TestKES:
             kes_info_valid = cluster.g_query.get_kes_period_info(
                 opcert_file=refreshed_pool_rec["pool_operational_cert"]
             )
+            check_id = str(2 + idx)
+            with open(
+                f"{temp_template}_kes_period_info_{check_id}.json", "w", encoding="utf-8"
+            ) as out_fp:
+                json.dump(kes_info_valid, out_fp, indent=2)
             kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
                     cluster_obj=cluster,
                     kes_output=kes_info_valid,
                     expected_scenario=kes.KesScenarios.ALL_VALID,
-                    check_id=str(2 + idx),
+                    check_id=check_id,
                     expected_start_kes=refreshed_nodes_kes_period[n],
                 )
             )
@@ -451,6 +458,10 @@ class TestKES:
                         # check kes-period-info with operational certificate with
                         # invalid `--kes-period`
                         kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
+                        with open(
+                            f"{temp_template}_kes_period_info_1.json", "w", encoding="utf-8"
+                        ) as out_fp:
+                            json.dump(kes_period_info, out_fp, indent=2)
                         kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
                                 cluster_obj=cluster,
@@ -481,6 +492,10 @@ class TestKES:
                         kes_period_info = cluster.g_query.get_kes_period_info(
                             overincrement_opcert_file
                         )
+                        with open(
+                            f"{temp_template}_kes_period_info_2.json", "w", encoding="utf-8"
+                        ) as out_fp:
+                            json.dump(kes_period_info, out_fp, indent=2)
                         kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
                                 cluster_obj=cluster,
@@ -496,6 +511,10 @@ class TestKES:
                         # check kes-period-info with operational certificate with
                         # invalid kes-period
                         kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
+                        with open(
+                            f"{temp_template}_kes_period_info_3.json", "w", encoding="utf-8"
+                        ) as out_fp:
+                            json.dump(kes_period_info, out_fp, indent=2)
                         kes_period_info_errors_list.extend(
                             kes.check_kes_period_info_result(
                                 cluster_obj=cluster,
@@ -565,6 +584,8 @@ class TestKES:
 
         # check kes-period-info with valid operational certificate
         kes_period_info = cluster.g_query.get_kes_period_info(valid_opcert_file)
+        with open(f"{temp_template}_kes_period_info_4.json", "w", encoding="utf-8") as out_fp:
+            json.dump(kes_period_info, out_fp, indent=2)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
@@ -576,8 +597,10 @@ class TestKES:
             )
         )
 
-        # check kes-period-info with operational certificate with invalid counter and kes-period
+        # check kes-period-info with operational certificate with invalid kes-period
         kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
+        with open(f"{temp_template}_kes_period_info_5.json", "w", encoding="utf-8") as out_fp:
+            json.dump(kes_period_info, out_fp, indent=2)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
@@ -661,6 +684,8 @@ class TestKES:
 
             # check kes-period-info while the pool is not minting blocks
             kes_period_info_new = cluster.g_query.get_kes_period_info(opcert_file)
+            with open(f"{temp_template}_kes_period_info_1.json", "w", encoding="utf-8") as out_fp:
+                json.dump(kes_period_info_new, out_fp, indent=2)
             kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
                     cluster_obj=cluster,
@@ -671,6 +696,8 @@ class TestKES:
                 )
             )
             kes_period_info_old = cluster.g_query.get_kes_period_info(opcert_file_old)
+            with open(f"{temp_template}_kes_period_info_2.json", "w", encoding="utf-8") as out_fp:
+                json.dump(kes_period_info_old, out_fp, indent=2)
             kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
                     cluster_obj=cluster,
@@ -735,6 +762,8 @@ class TestKES:
         # check that metrics reported by kes-period-info got updated once the pool started
         # minting blocks again
         kes_period_info_updated = cluster.g_query.get_kes_period_info(opcert_file)
+        with open(f"{temp_template}_kes_period_info_3.json", "w", encoding="utf-8") as out_fp:
+            json.dump(kes_period_info_updated, out_fp, indent=2)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
@@ -757,6 +786,8 @@ class TestKES:
 
         # check kes-period-info with operational certificate with a wrong counter
         kes_period_info_invalid = cluster.g_query.get_kes_period_info(opcert_file_old)
+        with open(f"{temp_template}_kes_period_info_4.json", "w", encoding="utf-8") as out_fp:
+            json.dump(kes_period_info_invalid, out_fp, indent=2)
         kes_period_info_errors_list.extend(
             kes.check_kes_period_info_result(
                 cluster_obj=cluster,
