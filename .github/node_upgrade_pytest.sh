@@ -7,7 +7,7 @@ retval=1
 export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
 
 export CLUSTER_ERA="${CLUSTER_ERA:-"babbage"}"
-export TX_ERA="babbage"
+export TX_ERA="$CLUSTER_ERA"
 
 CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
@@ -26,9 +26,12 @@ if [ "$1" = "step1" ]; then
 
   export UPGRADE_TESTS_STEP=1
 
-  if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ] && [ -z "${SCRIPTS_DIRNAME:-""}" ]; then
-    export SCRIPTS_DIRNAME="${CLUSTER_ERA:-"babbage"}_fast"
+  if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ]; then
+    : "${SCRIPTS_DIRNAME:="${CLUSTER_ERA}_fast"}"
+  else
+    : "${SCRIPTS_DIRNAME:="$CLUSTER_ERA"}"
   fi
+  export SCRIPTS_DIRNAME
 
   # generate local cluster scripts
   PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py -s "cardano_node_tests/cluster_scripts/$SCRIPTS_DIRNAME" -d "$CLUSTER_SCRIPTS_DIR"
