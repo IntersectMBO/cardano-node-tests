@@ -316,7 +316,7 @@ class TestNegativeInlineDatum:
         )
         assert plutus_op.execution_cost  # for mypy
 
-        # create a Tx output with a datum hash at the script address
+        # Create a Tx output with a datum hash at the script address
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
@@ -324,7 +324,7 @@ class TestNegativeInlineDatum:
 
         script_txout = plutus_common.txout_factory(
             address=pbt_script_address,
-            amount=4_500_000,
+            amount=8_000_000,
             plutus_op=plutus_op,
             inline_datum=True,
         )
