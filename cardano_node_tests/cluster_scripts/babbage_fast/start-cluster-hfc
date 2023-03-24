@@ -17,13 +17,14 @@ STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 
 NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
-NETWORK_MAGIC=42
 SETTLE_DELAY=20
-BYRON_SECURITY_PARAM=10
 POOL_PLEDGE=1000000000000
-
-MAX_SUPPLY=45000000000000000
 BYRON_INIT_SUPPLY=10020000000
+
+SECURITY_PARAM="$(jq '.securityParam' < "$SCRIPT_DIR/genesis.spec.json")"
+NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
+MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
+
 # TODO: see https://github.com/input-output-hk/cardano-node/issues/4556
 INIT_SUPPLY="$((MAX_SUPPLY / 4))"  # in reality, it will be `INIT_SUPPLY * 1.8`
 DELEG_SUPPLY="$((MAX_SUPPLY / 8))" # in reality, it will be `DELEG_SUPPLY * 1.6`
@@ -145,7 +146,7 @@ echo "$START_TIME" > "$STATE_CLUSTER/cluster_start_time"
 
 cardano_cli_log byron genesis genesis \
   --protocol-magic "$NETWORK_MAGIC" \
-  --k "$BYRON_SECURITY_PARAM" \
+  --k "$SECURITY_PARAM" \
   --n-poor-addresses 0 \
   --n-delegate-addresses "$NUM_POOLS" \
   --total-balance "$BYRON_INIT_SUPPLY" \
