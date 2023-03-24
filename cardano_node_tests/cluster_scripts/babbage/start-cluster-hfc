@@ -18,11 +18,12 @@ STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 
 NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
-NETWORK_MAGIC=42
 PROPOSAL_DELAY=5
-BYRON_SECURITY_PARAM=10
 POOL_PLEDGE=1000000000000
-INIT_SUPPLY=45000000000000000
+
+SECURITY_PARAM="$(jq '.securityParam' < "$SCRIPT_DIR/genesis.spec.json")"
+NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
+MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
 
 if [ -n "${MIXED_P2P:-""}" ]; then
   export ENABLE_P2P=1
@@ -175,7 +176,7 @@ startsecs=3
 EoF
 fi
 
-FUNDS_PER_GENESIS_ADDRESS="$((INIT_SUPPLY / NUM_BFT_NODES))"
+FUNDS_PER_GENESIS_ADDRESS="$((MAX_SUPPLY / NUM_BFT_NODES))"
 FUNDS_PER_BYRON_ADDRESS="$((FUNDS_PER_GENESIS_ADDRESS * 8 / 10))"
 
 START_TIME_SHELLEY=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="5 seconds")
@@ -184,10 +185,10 @@ echo "$START_TIME" > "$STATE_CLUSTER/cluster_start_time"
 
 cardano_cli_log byron genesis genesis \
   --protocol-magic "$NETWORK_MAGIC" \
-  --k "$BYRON_SECURITY_PARAM" \
+  --k "$SECURITY_PARAM" \
   --n-poor-addresses 0 \
   --n-delegate-addresses "$NUM_BFT_NODES" \
-  --total-balance "$INIT_SUPPLY" \
+  --total-balance "$MAX_SUPPLY" \
   --delegate-share 1 \
   --avvm-entry-count 0 \
   --avvm-entry-balance 0 \
