@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+STATE_CLUSTER="${SOCKET_PATH%/*}"
+PID_FILE="${STATE_CLUSTER}/supervisord.pid"
+
+supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
+
+if [ ! -f "$PID_FILE" ]; then
+  echo "Cluster is not running!"
+  exit 0
+fi
+
+PID="$(<"$PID_FILE")"
+for _ in {1..5}; do
+  if ! kill "$PID"; then
+    break
+  fi
+  sleep 1
+  if [ ! -f "$PID_FILE" ]; then
+    break
+  fi
+done
+
+rm -f "$PID_FILE"
+echo "Cluster terminated!"

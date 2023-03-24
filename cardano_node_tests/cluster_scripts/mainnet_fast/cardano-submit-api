@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
+
+testnet_magic="$(<./state-cluster%%INSTANCE_NUM%%/db-bft1/protocolMagicId)"
+
+echo "Starting cardano-submit-api: cardano-submit-api"
+  echo "--config ./state-cluster%%INSTANCE_NUM%%/submit-api-config.yaml"
+  echo "--socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket"
+  echo "--listen-address 127.0.0.1"
+  echo "--port %%SUBMIT_API_PORT%%"
+  echo --testnet-magic "$testnet_magic"
+echo "..or, once again, in a single line:"
+echo cardano-submit-api --config ./state-cluster%%INSTANCE_NUM%%/submit-api-config.yaml --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --listen-address 127.0.0.1 --port %%SUBMIT_API_PORT%% --testnet-magic "$testnet_magic"
+
+
+exec cardano-submit-api --config ./state-cluster%%INSTANCE_NUM%%/submit-api-config.yaml --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --listen-address 127.0.0.1 --port %%SUBMIT_API_PORT%% --testnet-magic "$testnet_magic"
