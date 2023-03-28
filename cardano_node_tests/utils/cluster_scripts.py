@@ -8,9 +8,9 @@ import json
 import random
 import shutil
 from pathlib import Path
+from typing import Iterable
 from typing import List
 from typing import NamedTuple
-from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import Union
@@ -78,7 +78,7 @@ class ScriptsTypes:
         """Return ports mapping for given cluster instance."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
-    def copy_scripts_files(self, destdir: Path) -> StartupFiles:
+    def copy_scripts_files(self, destdir: FileType) -> StartupFiles:
         """Make copy of cluster scripts files."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
@@ -99,6 +99,7 @@ class LocalScripts(ScriptsTypes):
     def __init__(self, num_pools: int = -1) -> None:
         super().__init__()
         self.type = ScriptsTypes.LOCAL
+        self.num_pools = num_pools
         if num_pools == -1:
             self.num_pools = configuration.NUM_POOLS
 
@@ -152,9 +153,10 @@ class LocalScripts(ScriptsTypes):
         )
         return ports
 
-    def copy_scripts_files(self, destdir: Path, scripts_dir: Optional[Path] = None) -> StartupFiles:
+    def copy_scripts_files(self, destdir: FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
-        scripts_dir = scripts_dir or configuration.SCRIPTS_DIR
+        destdir = Path(destdir).expanduser().resolve()
+        scripts_dir = configuration.SCRIPTS_DIR
 
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
@@ -202,7 +204,7 @@ class LocalScripts(ScriptsTypes):
         new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
         return new_content
 
-    def _gen_legacy_topology(self, ports: Sequence[int]) -> dict:
+    def _gen_legacy_topology(self, ports: Iterable[int]) -> dict:
         """Generate legacy topology for given ports."""
         producers = [{"addr": "127.0.0.1", "port": port, "valency": 1} for port in ports]
         topology = {"Producers": producers}
@@ -211,7 +213,8 @@ class LocalScripts(ScriptsTypes):
     def _gen_p2p_topology(self, ports: List[int], fixed_ports: List[int]) -> dict:
         """Generate p2p topology for given ports."""
         # select fixed ports and several randomly selected ports
-        selected_ports = set(fixed_ports + random.sample(ports, 3))
+        sample_ports = random.sample(ports, 3) if len(ports) > 3 else ports
+        selected_ports = set(fixed_ports + sample_ports)
         access_points = [{"address": "127.0.0.1", "port": port} for port in selected_ports]
         topology = {
             "localRoots": [
@@ -282,12 +285,11 @@ class LocalScripts(ScriptsTypes):
 
     def _gen_topology_files(self, destdir: Path, nodes: Sequence[NodePorts]) -> None:
         """Generate topology files for all nodes."""
-        all_nodes = {p.node for p in nodes}
-        # bft1 and first three pools
-        first_four = {p.node for p in nodes[:4]}
+        all_nodes = [p.node for p in nodes]
 
         for node_rec in nodes:
-            all_except = list(all_nodes - {node_rec.node})
+            all_except = all_nodes[:]
+            all_except.remove(node_rec.node)
             node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
 
             # Legacy topology
@@ -298,7 +300,8 @@ class LocalScripts(ScriptsTypes):
 
             # P2P topology
 
-            fixed_ports = list(first_four - {node_rec.node})
+            # bft1 and first three pools
+            fixed_ports = all_except[:4]
 
             # Use both old and new format for P2P topology.
             # When testing mix of legacy and P2P topologies, odd numbered pools use legacy
@@ -443,8 +446,9 @@ class TestnetScripts(ScriptsTypes):
         )
         return ports
 
-    def copy_scripts_files(self, destdir: Path) -> StartupFiles:
+    def copy_scripts_files(self, destdir: FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
+        destdir = Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
