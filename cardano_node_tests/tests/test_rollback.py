@@ -169,6 +169,23 @@ class TestRollback:
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
 
+    def node_wait_for_block(
+        self,
+        cluster_obj: clusterlib.ClusterLib,
+        node: str,
+        block_no: int,
+    ) -> int:
+        """Wait for block number on given node."""
+        orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
+        assert orig_socket
+        new_socket = Path(orig_socket).parent / f"{node}.socket"
+
+        try:
+            os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
+            return cluster_obj.wait_for_block(block=block_no)
+        finally:
+            os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
+
     @allure.link(helpers.get_vcs_link())
     def test_consensus_reached(
         self,
@@ -303,3 +320,127 @@ class TestRollback:
         assert not (
             utxo_tx2_cluster1 and utxo_tx3_cluster1
         ), "Neither Tx number 2 nor Tx number 3 was rolled back"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
+    def test_permanent_fork(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        backup_topology: Path,
+        split_topology_dir: Path,
+    ):
+        """Test that global consensus is NOT reached and the result is permanent fork.
+
+        The original cluster is split into two clusters, and after `securityParam`
+        number of blocks is produced, the original cluster topology gets restored.
+
+        * Submit Tx number 1
+        * Split the cluster into two separate clusters
+        * Submit a Tx number 2 on the first cluster
+        * Submit a Tx number 3 on the second cluster
+        * Wait until `securityParam` number of blocks is produced on both clusters
+        * Restore the cluster topology
+        * Check that global consensus was NOT restored
+        """
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+
+        tx_outputs = []
+
+        # Submit Tx number 1
+        tx_outputs.append(
+            self.node_submit_tx(
+                cluster_obj=cluster,
+                node="pool1",
+                temp_template=temp_template,
+                src_addr=payment_addrs[0],
+                dst_addr=payment_addrs[0],
+            )
+        )
+
+        # The `securityParam` specifies after how many blocks is the blockchain considered to be
+        # final, and thus can no longer be rolled back (i.e. what is the maximum allowable length
+        # of any chain fork).
+        split_block = cluster.g_query.get_block_no()
+        final_block = split_block + cluster.genesis["securityParam"] + 1
+
+        # Split the cluster into two separate clusters
+        self.split_cluster(split_topology_dir=split_topology_dir)
+
+        # The cluster needs respin after this point
+        cluster_manager.set_needs_respin()
+
+        # Submit a Tx number 2 on the first cluster
+        tx_outputs.append(
+            self.node_submit_tx(
+                cluster_obj=cluster,
+                node="pool1",
+                temp_template=temp_template,
+                src_addr=payment_addrs[1],
+                dst_addr=payment_addrs[1],
+            )
+        )
+
+        # Submit a Tx number 3 on the second cluster
+        tx_outputs.append(
+            self.node_submit_tx(
+                cluster_obj=cluster,
+                node=LAST_POOL_NAME,
+                temp_template=temp_template,
+                src_addr=payment_addrs[2],
+                dst_addr=payment_addrs[2],
+            )
+        )
+
+        # After both clusters has produced more than `securityParam` number of blocks while the
+        # topology was fragmented, it is not be possible to bring the the clusters back
+        # into global consensus.
+        self.node_wait_for_block(cluster_obj=cluster, node="pool1", block_no=final_block)
+        self.node_wait_for_block(cluster_obj=cluster, node=LAST_POOL_NAME, block_no=final_block)
+
+        # Restore the cluster topology
+        self.restore_cluster(backup_topology=backup_topology)
+        time.sleep(10)
+
+        # Wait for new blocks to let chains progress
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # Check that global consensus was NOT restored
+        utxo_tx1_cluster1 = self.node_query_utxo(
+            cluster_obj=cluster, node="pool1", tx_raw_output=tx_outputs[0]
+        )
+        utxo_tx1_cluster2 = self.node_query_utxo(
+            cluster_obj=cluster, node=LAST_POOL_NAME, tx_raw_output=tx_outputs[0]
+        )
+        utxo_tx2_cluster1 = self.node_query_utxo(
+            cluster_obj=cluster, node="pool1", tx_raw_output=tx_outputs[1]
+        )
+        utxo_tx2_cluster2 = self.node_query_utxo(
+            cluster_obj=cluster, node=LAST_POOL_NAME, tx_raw_output=tx_outputs[1]
+        )
+        utxo_tx3_cluster1 = self.node_query_utxo(
+            cluster_obj=cluster, node="pool1", tx_raw_output=tx_outputs[2]
+        )
+        utxo_tx3_cluster2 = self.node_query_utxo(
+            cluster_obj=cluster, node=LAST_POOL_NAME, tx_raw_output=tx_outputs[2]
+        )
+
+        assert utxo_tx1_cluster1 == utxo_tx1_cluster2, "UTxOs from Tx 1 are not identical"
+
+        assert (
+            utxo_tx2_cluster1 != utxo_tx2_cluster2
+        ), "UTxOs are identical, consensus was restored?"
+
+        assert (
+            utxo_tx3_cluster1 != utxo_tx3_cluster2
+        ), "UTxOs are identical, consensus was restored?"
+
+        assert (
+            utxo_tx2_cluster1 and not utxo_tx2_cluster2
+        ), "Tx number 2 is supposed to exist only on the first cluster"
+
+        assert (
+            not utxo_tx3_cluster1 and utxo_tx3_cluster2
+        ), "Tx number 3 is supposed to exist only on the second cluster"
