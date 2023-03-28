@@ -3,6 +3,7 @@
 * copying scripts and their configuration, so it can be atered by tests
 * setup of scripts and their configuration for starting of multiple cluster instances
 """
+# pylint: disable=abstract-method
 import itertools
 import json
 import random
@@ -90,6 +91,10 @@ class ScriptsTypes:
         stop_script: FileType = "",
     ) -> InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
+        raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
+
+    def gen_split_topology_files(self, destdir: FileType, instance_num: int) -> None:
+        """Generate topology files for split network."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
 
@@ -399,6 +404,46 @@ class LocalScripts(ScriptsTypes):
             start_script_args=[],
             dir=destdir,
         )
+
+    def gen_split_topology_files(self, destdir: FileType, instance_num: int) -> None:
+        """Generate topology files for split network."""
+        if self.num_pools % 2 != 0:
+            raise ValueError(
+                f"Number of pools ({configuration.NUM_POOLS}) must be even for split topology"
+            )
+        if self.num_pools < 4:
+            raise ValueError(
+                "There must be at least 4 pools for split topology "
+                f"(current number: {configuration.NUM_POOLS})"
+            )
+
+        destdir = Path(destdir).expanduser().resolve()
+        instance_ports = self.get_instance_ports(instance_num)
+        nodes = instance_ports.node_ports
+
+        all_nodes = [p.node for p in nodes]
+
+        # half of nodes (+1 for bft node)
+        half_idx = len(all_nodes) // 2 + 1
+        first_half = all_nodes[:half_idx]
+        second_half = all_nodes[half_idx:]
+
+        for node_rec in nodes:
+            ports_group = first_half if node_rec.node in first_half else second_half
+            all_except = ports_group[:]
+            all_except.remove(node_rec.node)
+            node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
+
+            # Legacy topology
+            topology = self._gen_legacy_topology(ports=all_except)
+            dest_legacy = destdir / f"split-topology-{node_name}.json"
+            dest_legacy.write_text(f"{json.dumps(topology, indent=4)}\n")
+
+            # P2P topology
+            fixed_ports = all_except[:4]
+            p2p_topology = self._gen_p2p_topology(ports=all_except, fixed_ports=fixed_ports)
+            dest_p2p = destdir / f"p2p-split-topology-{node_name}.json"
+            dest_p2p.write_text(f"{json.dumps(p2p_topology, indent=4)}\n")
 
 
 class TestnetScripts(ScriptsTypes):
