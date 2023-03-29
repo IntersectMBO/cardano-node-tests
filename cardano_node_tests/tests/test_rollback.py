@@ -24,6 +24,7 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
+ROLLBACK_PAUSE = os.environ.get("ROLLBACK_PAUSE") is not None
 LAST_POOL_NAME = f"pool{configuration.NUM_POOLS}"
 
 
@@ -47,13 +48,17 @@ class TestRollback:
     ) -> List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
+        num_addrs = 4 if ROLLBACK_PAUSE else 3
 
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
             addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"addr_rollback_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(3)],
+                *[
+                    f"addr_rollback_ci{cluster_manager.cluster_instance_num}_{i}"
+                    for i in range(num_addrs)
+                ],
                 cluster_obj=cluster,
             )
             fixture_cache.value = addrs
@@ -213,6 +218,13 @@ class TestRollback:
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
 
+        cluster1_socket = str(
+            configuration.STARTUP_CARDANO_NODE_SOCKET_PATH.parent / "pool1.socket"
+        )
+        cluster2_socket = str(
+            configuration.STARTUP_CARDANO_NODE_SOCKET_PATH.parent / f"{LAST_POOL_NAME}.socket"
+        )
+
         tx_outputs = []
 
         # Submit Tx number 1
@@ -225,6 +237,17 @@ class TestRollback:
                 dst_addr=payment_addrs[0],
             )
         )
+
+        if ROLLBACK_PAUSE:
+            print(f"PHASE1: single cluster with {configuration.NUM_POOLS} pools")
+            print(f"  CARDANO_NODE_SOCKET_PATH: {configuration.STARTUP_CARDANO_NODE_SOCKET_PATH}")
+            print(
+                f"  Funding address: {payment_addrs[-1].address}, "
+                f"skey: {payment_addrs[-1].skey_file.absolute()}, "
+                f"vkey: {payment_addrs[-1].vkey_file.absolute()}"
+            )
+            print(f"  Addresses: {[p.address for p in payment_addrs[:-1]]}")
+            input("Press Enter to continue...")
 
         with cluster_manager.respin_on_failure():
             # Split the cluster into two separate clusters
@@ -283,11 +306,21 @@ class TestRollback:
             # the value of `securityParam` is 10.
             cluster.wait_for_new_block()
 
+            if ROLLBACK_PAUSE:
+                print("PHASE2: cluster with separated into cluster1 and cluster2")
+                print(f"  Cluster 1 CARDANO_NODE_SOCKET_PATH: {cluster1_socket}")
+                print(f"  Cluster 2 CARDANO_NODE_SOCKET_PATH: {cluster2_socket}")
+                input("Press Enter to continue...")
+
             # Restore the cluster topology
             self.restore_cluster(backup_topology=backup_topology)
 
             # Wait a bit for rollback to happen
             time.sleep(10)
+
+            if ROLLBACK_PAUSE:
+                print("PHASE3: single cluster with restored topology")
+                input("Press Enter to continue...")
 
             # Check that global consensus was restored
             utxo_tx2_cluster1 = self.node_query_utxo(
