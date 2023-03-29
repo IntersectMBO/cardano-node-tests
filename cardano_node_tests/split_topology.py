@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate topology files for split network.
+"""Generate topology files for split cluster.
 
 For settings it uses the same env variables as when running the tests.
 """
@@ -30,6 +30,14 @@ def get_args() -> argparse.Namespace:
         default=0,
         help="Instance number in the sequence of cluster instances (default: 0)",
     )
+    parser.add_argument(
+        "-o",
+        "--offset",
+        required=False,
+        type=int,
+        default=0,
+        help="Difference in number of nodes in cluster 1 vs cluster 2 (default: 0)",
+    )
     return parser.parse_args()
 
 
@@ -47,6 +55,7 @@ def main() -> int:
         cluster_nodes.get_cluster_type().cluster_scripts.gen_split_topology_files(
             destdir=destdir,
             instance_num=args.instance_num,
+            offset=args.offset,
         )
     except Exception as exc:
         LOGGER.error(str(exc))

@@ -93,7 +93,9 @@ class ScriptsTypes:
         """Prepare scripts files for starting and stopping cluster instance."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
-    def gen_split_topology_files(self, destdir: FileType, instance_num: int) -> None:
+    def gen_split_topology_files(
+        self, destdir: FileType, instance_num: int, offset: int = 0
+    ) -> None:
         """Generate topology files for split network."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
@@ -405,16 +407,14 @@ class LocalScripts(ScriptsTypes):
             dir=destdir,
         )
 
-    def gen_split_topology_files(self, destdir: FileType, instance_num: int) -> None:
+    def gen_split_topology_files(
+        self, destdir: FileType, instance_num: int, offset: int = 0
+    ) -> None:
         """Generate topology files for split network."""
-        if self.num_pools % 2 != 0:
-            raise ValueError(
-                f"Number of pools ({configuration.NUM_POOLS}) must be even for split topology"
-            )
         if self.num_pools < 4:
             raise ValueError(
                 "There must be at least 4 pools for split topology "
-                f"(current number: {configuration.NUM_POOLS})"
+                f"(current number: {self.num_pools})"
             )
 
         destdir = Path(destdir).expanduser().resolve()
@@ -423,10 +423,16 @@ class LocalScripts(ScriptsTypes):
 
         all_nodes = [p.node for p in nodes]
 
-        # half of nodes (+1 for bft node)
-        half_idx = len(all_nodes) // 2 + 1
-        first_half = all_nodes[:half_idx]
-        second_half = all_nodes[half_idx:]
+        # Split nodes index (+1 for bft node, which is not block producer)
+        split_idx = len(all_nodes) // 2 + 1 + offset
+        first_half = all_nodes[:split_idx]
+        second_half = all_nodes[split_idx:]
+
+        if min(len(first_half), len(second_half)) < 2:
+            raise ValueError(
+                "There must be at least 2 nodes on each side of split "
+                f"(number of pools: {self.num_pools})"
+            )
 
         for node_rec in nodes:
             ports_group = first_half if node_rec.node in first_half else second_half

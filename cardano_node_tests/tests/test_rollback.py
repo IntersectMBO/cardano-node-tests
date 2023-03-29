@@ -25,6 +25,7 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 ROLLBACK_PAUSE = os.environ.get("ROLLBACK_PAUSE") is not None
+ROLLBACK_NODES_OFFSET = int(os.environ.get("ROLLBACK_NODES_OFFSET") or 1)
 LAST_POOL_NAME = f"pool{configuration.NUM_POOLS}"
 
 
@@ -32,7 +33,6 @@ LAST_POOL_NAME = f"pool{configuration.NUM_POOLS}"
     cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
     reason="runs only on local cluster",
 )
-@pytest.mark.skipif(configuration.NUM_POOLS % 2 != 0, reason="`NUM_POOLS` must be even")
 @pytest.mark.skipif(configuration.NUM_POOLS < 4, reason="`NUM_POOLS` must be at least 4")
 @pytest.mark.skipif(
     configuration.MIXED_P2P, reason="Works only when all nodes have the same topology type"
@@ -85,6 +85,7 @@ class TestRollback:
         cluster_nodes.get_cluster_type().cluster_scripts.gen_split_topology_files(
             destdir=destdir,
             instance_num=instance_num,
+            offset=ROLLBACK_NODES_OFFSET,
         )
 
         return destdir
@@ -347,7 +348,7 @@ class TestRollback:
                 utxo_tx2_cluster1 or utxo_tx3_cluster1
             ), "Neither Tx number 2 nor Tx number 3 exists on chain"
 
-            # At this point we know that the cluster is not plit, so we don't need to respin
+            # At this point we know that the cluster is not split, so we don't need to respin
             # the cluster if the test fails.
 
         assert not (
