@@ -772,7 +772,7 @@ def new_tokens(
 ) -> List[TokenRecord]:
     """Mint new token, sign using skeys."""
     # create simple script
-    keyhash = cluster_obj.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+    keyhash = cluster_obj.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = Path(f"{temp_template}.script")
     with open(f"{temp_template}.script", "w", encoding="utf-8") as out_json:

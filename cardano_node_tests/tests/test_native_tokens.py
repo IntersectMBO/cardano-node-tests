@@ -71,7 +71,7 @@ def simple_script_policyid(
     issuer_addr = issuers_addrs[1]
 
     # create simple script
-    keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+    keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = Path(f"{temp_template}.script")
     with open(script, "w", encoding="utf-8") as out_json:
@@ -251,7 +251,7 @@ class TestMinting:
             )[0]
 
         # create simple script
-        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
@@ -334,7 +334,9 @@ class TestMinting:
         tokens_mint = []
         for i in range(num_of_scripts):
             # create simple script
-            keyhash = cluster.g_address.get_payment_vkey_hash(i_addrs[i].vkey_file)
+            keyhash = cluster.g_address.get_payment_vkey_hash(
+                payment_vkey_file=i_addrs[i].vkey_file
+            )
             script_content = {"keyHash": keyhash, "type": "sig"}
             script = Path(f"{temp_template}_{i}.script")
             with open(script, "w", encoding="utf-8") as out_json:
@@ -433,7 +435,7 @@ class TestMinting:
         issuer_addr = issuers_addrs[1]
 
         # create simple script
-        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
@@ -536,7 +538,7 @@ class TestMinting:
         issuer_addr = issuers_addrs[1]
 
         # create simple script
-        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
@@ -954,7 +956,7 @@ class TestMinting:
         issuer_addr = issuers_addrs[1]
 
         # create simple script
-        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
@@ -2148,7 +2150,7 @@ class TestCLITxOutSyntax:
         issuer_addr = issuers_addrs[1]
 
         # create simple script
-        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
@@ -2308,7 +2310,9 @@ class TestReferenceUTxO:
 
             reference_type = clusterlib.ScriptTypes.SIMPLE_V1
 
-            keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+            keyhash = cluster.g_address.get_payment_vkey_hash(
+                payment_vkey_file=issuer_addr.vkey_file
+            )
             script_content = {"keyHash": keyhash, "type": "sig"}
             script = Path(f"{temp_template}.script")
             with open(script, "w", encoding="utf-8") as out_json:

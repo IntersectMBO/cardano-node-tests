@@ -2052,7 +2052,9 @@ class TestDatum:
         if script_version == "simple_v1":
             multisig_script = Path(f"{temp_template}_multisig.script")
             script_content = {
-                "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr.vkey_file),
+                "keyHash": cluster.g_address.get_payment_vkey_hash(
+                    payment_vkey_file=dst_addr.vkey_file
+                ),
                 "type": "sig",
             }
             with open(multisig_script, "w", encoding="utf-8") as fp_out:
@@ -2175,7 +2177,9 @@ class TestReferenceUTxO:
 
             multisig_script = Path(f"{temp_template}_multisig.script")
             script_content = {
-                "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr.vkey_file),
+                "keyHash": cluster.g_address.get_payment_vkey_hash(
+                    payment_vkey_file=dst_addr.vkey_file
+                ),
                 "type": "sig",
             }
             with open(multisig_script, "w", encoding="utf-8") as fp_out:
@@ -2333,7 +2337,9 @@ class TestReferenceUTxO:
         if script_version == "simple_v1":
             multisig_script = Path(f"{temp_template}_multisig.script")
             script_content = {
-                "keyHash": cluster.g_address.get_payment_vkey_hash(payment_addr.vkey_file),
+                "keyHash": cluster.g_address.get_payment_vkey_hash(
+                    payment_vkey_file=payment_addr.vkey_file
+                ),
                 "type": "sig",
             }
             with open(multisig_script, "w", encoding="utf-8") as fp_out:
@@ -2463,7 +2469,9 @@ class TestNested:
             "scripts": [
                 {
                     "type": "sig",
-                    "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr1.vkey_file),
+                    "keyHash": cluster.g_address.get_payment_vkey_hash(
+                        payment_vkey_file=dst_addr1.vkey_file
+                    ),
                 },
                 {
                     "type": type_nested,
@@ -2471,11 +2479,15 @@ class TestNested:
                         {"type": "after", "slot": 100},
                         {
                             "type": "sig",
-                            "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr2.vkey_file),
+                            "keyHash": cluster.g_address.get_payment_vkey_hash(
+                                payment_vkey_file=dst_addr2.vkey_file
+                            ),
                         },
                         {
                             "type": "sig",
-                            "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr3.vkey_file),
+                            "keyHash": cluster.g_address.get_payment_vkey_hash(
+                                payment_vkey_file=dst_addr3.vkey_file
+                            ),
                         },
                     ],
                 },
@@ -2551,7 +2563,9 @@ class TestNested:
             "scripts": [
                 {
                     "type": "sig",
-                    "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr1.vkey_file),
+                    "keyHash": cluster.g_address.get_payment_vkey_hash(
+                        payment_vkey_file=dst_addr1.vkey_file
+                    ),
                 },
                 {
                     "type": "all",
@@ -2560,7 +2574,9 @@ class TestNested:
                         *[
                             {
                                 "type": "sig",
-                                "keyHash": cluster.g_address.get_payment_vkey_hash(r.vkey_file),
+                                "keyHash": cluster.g_address.get_payment_vkey_hash(
+                                    payment_vkey_file=r.vkey_file
+                                ),
                             }
                             for r in payment_addrs[2:]
                         ],
@@ -2742,7 +2758,9 @@ class TestNested:
             "scripts": [
                 {
                     "type": "sig",
-                    "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr1.vkey_file),
+                    "keyHash": cluster.g_address.get_payment_vkey_hash(
+                        payment_vkey_file=dst_addr1.vkey_file
+                    ),
                 },
                 *script_top,
                 {
@@ -2751,11 +2769,15 @@ class TestNested:
                         *script_nested,
                         {
                             "type": "sig",
-                            "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr2.vkey_file),
+                            "keyHash": cluster.g_address.get_payment_vkey_hash(
+                                payment_vkey_file=dst_addr2.vkey_file
+                            ),
                         },
                         {
                             "type": "sig",
-                            "keyHash": cluster.g_address.get_payment_vkey_hash(dst_addr3.vkey_file),
+                            "keyHash": cluster.g_address.get_payment_vkey_hash(
+                                payment_vkey_file=dst_addr3.vkey_file
+                            ),
                         },
                     ],
                 },
