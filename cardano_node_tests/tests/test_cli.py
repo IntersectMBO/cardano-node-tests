@@ -290,6 +290,67 @@ class TestAddressInfo:
         assert "Invalid address" in err_str, err_str
 
 
+@pytest.mark.smoke
+class TestAddressKeyHash:
+    """Tests for cardano-cli address key-hash."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
+    def test_valid_verification_key(self, cluster: clusterlib.ClusterLib, option: str):
+        """Check `address key-hash` with valid verification key."""
+        common.get_test_id(cluster)
+
+        vkey_file = DATA_DIR / "golden_payment.vkey"
+
+        expected_hash = "0dc8e171258165131d45451bf9e2a1be44a97d684ce2f775b7734263"
+
+        if option == "vkey":
+            with open(vkey_file, encoding="utf-8") as infile:
+                # Ignore the first 4 chars, just an informative keyword
+                vkey = helpers.encode_bech32(
+                    prefix="addr_vk", data=json.loads(infile.read().strip()).get("cborHex", "")[4:]
+                )
+
+        vkey_hash = cluster.g_address.get_payment_vkey_hash(
+            payment_vkey=vkey if option == "vkey" else None,
+            payment_vkey_file=vkey_file if option == "vkey_file" else None,
+        )
+
+        assert vkey_hash == expected_hash, f"Unexpected vkey hash: {vkey_hash} != {expected_hash}"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
+    @hypothesis.given(vkey=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_invalid_verification_key(self, cluster: clusterlib.ClusterLib, option: str, vkey: str):
+        """Try to use `address key-hash` with invalid verification key (property-based test).
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{option}_{common.unique_time_str()}"
+
+        if option == "vkey_file":
+            vkey_file = f"{temp_template}.redeemer"
+            vkey_file_content = {
+                "type": "PaymentVerificationKeyShelley_ed25519",
+                "description": "Payment Verification Key",
+                "cborHex": vkey,
+            }
+
+            with open(vkey_file, "w", encoding="utf-8") as outfile:
+                json.dump(vkey_file_content, outfile)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_address.get_payment_vkey_hash(
+                payment_vkey=vkey if option == "vkey" else None,
+                payment_vkey_file=vkey_file if option == "vkey_file" else None,
+            )
+
+        err_str = str(excinfo.value)
+
+        assert "Invalid key" in err_str, err_str
+
+
 @common.SKIPIF_WRONG_ERA
 @pytest.mark.smoke
 class TestKey:

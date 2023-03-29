@@ -212,7 +212,7 @@ class TestBuildMintingNegative:
         )
 
         # Create simple script
-        keyhash = cluster.g_address.get_payment_vkey_hash(issuer_addr.vkey_file)
+        keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = Path(f"{temp_template}.script")
 
