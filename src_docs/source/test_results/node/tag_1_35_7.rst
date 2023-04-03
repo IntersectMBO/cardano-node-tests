@@ -72,7 +72,16 @@ Release testing checklist
    * - sanity check release notes
      - |:heavy_check_mark:|
 
-\* RAM usage for `1.35.7-rc2` is between 2 to 3 GB higher than for `1.35.5`.
+\* RAM usage for `1.35.7-rc2` is between 3 to 4GB higher than for `1.35.5`.
+
+.. warning::
+    There is a clearly visible pattern of significantly higher `cardano-node` RAM usage since release `1.35.5`.
+
+    RAM usage for `1.35.6` was on average 2GB bigger than for `1.35.5`. 
+    Now with release `1.35.7` difference grew to values between 3 to 4GB higher than for `1.35.5`.
+
+    Release `1.35.7` (legacy topology) requires more than 20GB of RAM which is much more than officially recommended RAM amount (16GB).
+
 
 New functionalities in this tag
 -------------------------------
