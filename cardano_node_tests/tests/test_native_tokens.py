@@ -1587,6 +1587,7 @@ class TestTransfer:
                         txouts=destinations,
                         fee_buffer=2_000_000,
                         tx_files=tx_files,
+                        skip_asset_balancing=common.SKIP_ASSET_BALANCING,
                     )
                 except clusterlib.CLIError as err:
                     err_str = str(err)
@@ -1785,6 +1786,7 @@ class TestTransfer:
                 txouts=destinations,
                 fee_buffer=2_000_000,
                 tx_files=tx_files,
+                skip_asset_balancing=common.SKIP_ASSET_BALANCING,
             )
             tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
@@ -1945,7 +1947,11 @@ class TestTransfer:
                     logging.disable(logging.NOTSET)
 
             exc_val = str(excinfo.value)
-            assert "Non-Ada assets are unbalanced" in exc_val, exc_val
+            assert (
+                "Non-Ada assets are unbalanced" in exc_val
+                or f"Negative quantity ({self.NEW_TOKENS_NUM - token_amount}) in transaction output"
+                in exc_val
+            ), exc_val
         else:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 try:

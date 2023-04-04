@@ -6,6 +6,7 @@ from typing import Tuple
 
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.utils import cluster_nodes
@@ -59,6 +60,9 @@ SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.BABBAGE,
     reason="Plutus V2 is available only in Babbage+ eras",
 )
+
+
+SKIP_ASSET_BALANCING = VERSIONS.node >= version.parse("1.36.0")
 
 
 # common parametrization

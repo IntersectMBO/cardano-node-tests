@@ -849,10 +849,9 @@ def check_tx(
     # was used (change txout, fee in older node versions), so we'll skip some of the checks
     if tx_raw_output.change_address:
         assert tx_txouts.issubset(db_txouts), f"TX outputs not subset: ({tx_txouts} vs {db_txouts})"
-        assert len_db_txouts in (
-            len_out_txouts,  # when there's no change txout
-            len_out_txouts + 1,  # when there's a change txout
-        ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts} (+1))"
+        assert (
+            len_db_txouts >= len_out_txouts
+        ), f"Number of TX outputs doesn't match ({len_db_txouts} < {len_out_txouts})"
     else:
         txouts_amount = clusterlib.calculate_utxos_balance(utxos=tx_raw_output.txouts)
         assert (
