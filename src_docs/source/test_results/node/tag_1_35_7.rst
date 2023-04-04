@@ -37,7 +37,7 @@ Regression testing on a local cluster
 .. list-table:: other testing
    :header-rows: 0
 
-   * - upgrade job (1.35.6 to 1.35.7-rc2)
+   * - upgrade job (1.35.6 to 1.35.7-rc1)
      - |:heavy_check_mark:|
    * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
      - |:heavy_check_mark:|
@@ -51,11 +51,11 @@ Release testing checklist
 .. list-table::
    :header-rows: 0
 
-   * - `1.35.7-rc2` pushed to `shelley-qa`
+   * - `1.35.7-rc1` pushed to `shelley-qa`
      - |:hourglass_flowing_sand:|
    * - Grafana metrics OK
      - |:hourglass_flowing_sand:|
-   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/1.35.7-rc2/>`__
+   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/1.35.7-rc1/>`__
      - |:hourglass_flowing_sand:|
    * - Regression testing against `preview`
      - |:hourglass_flowing_sand:|
@@ -72,12 +72,12 @@ Release testing checklist
    * - sanity check release notes
      - |:heavy_check_mark:|
 
-\* RAM usage for `1.35.7-rc2` is between 3 to 4GB higher than for `1.35.5`.
+\* RAM usage for `1.35.7-rc1` is between 3 to 4GB higher than for `1.35.5`.
 
 .. warning::
     There is a clearly visible pattern of significantly higher `cardano-node` RAM usage since release `1.35.5`.
 
-    RAM usage for `1.35.6` was on average 2GB bigger than for `1.35.5`. 
+    RAM usage for `1.35.6` was on average 2GB bigger than for `1.35.5`.
     Now with release `1.35.7` difference grew to values between 3 to 4GB higher than for `1.35.5`.
 
     Release `1.35.7` (legacy topology) requires more than 20GB of RAM which is much more than officially recommended RAM amount (16GB).
