@@ -591,6 +591,67 @@ class TestQueryUTxO:
         assert "invalid address" in err_str, err_str
 
 
+@pytest.mark.smoke
+class TestStakeAddressKeyHash:
+    """Tests for cardano-cli stake-address key-hash."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
+    def test_valid_verification_key(self, cluster: clusterlib.ClusterLib, option: str):
+        """Check `stake-address key-hash` with valid verification key."""
+        common.get_test_id(cluster)
+
+        vkey_file = DATA_DIR / "golden_stake.vkey"
+
+        expected_hash = "a8b8c13cc0b863bc077e0bc6eafdc6f32f43a4513b70378b30ceb7b9"
+
+        if option == "vkey":
+            with open(vkey_file, encoding="utf-8") as infile:
+                # Ignore the first 4 chars, just an informative keyword
+                vkey = helpers.encode_bech32(
+                    prefix="stake_vk", data=json.loads(infile.read().strip()).get("cborHex", "")[4:]
+                )
+
+        vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
+            stake_vkey=vkey if option == "vkey" else None,
+            stake_vkey_file=vkey_file if option == "vkey_file" else None,
+        )
+
+        assert vkey_hash == expected_hash, f"Unexpected vkey hash: {vkey_hash} != {expected_hash}"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
+    @hypothesis.given(vkey=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_invalid_verification_key(self, cluster: clusterlib.ClusterLib, option: str, vkey: str):
+        """Try to use `stake-address key-hash` with invalid verification key (property-based test).
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{option}_{common.unique_time_str()}"
+
+        if option == "vkey_file":
+            vkey_file = f"{temp_template}.redeemer"
+            vkey_file_content = {
+                "type": "StakeVerificationKeyShelley_ed25519",
+                "description": "Stake Verification Key",
+                "cborHex": vkey,
+            }
+
+            with open(vkey_file, "w", encoding="utf-8") as outfile:
+                json.dump(vkey_file_content, outfile)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_stake_address.get_stake_vkey_hash(
+                stake_vkey=vkey if option == "vkey" else None,
+                stake_vkey_file=vkey_file if option == "vkey_file" else None,
+            )
+
+        err_str = str(excinfo.value)
+
+        assert "Invalid key" in err_str, err_str
+
+
 @common.SKIPIF_WRONG_ERA
 class TestAdvancedQueries:
     """Basic sanity tests for advanced cardano-cli query commands.
