@@ -1503,27 +1503,21 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
     ) -> clusterlib_utils.TokenRecord:
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+        rand = clusterlib.get_rand_str(4)
+        temp_template = f"test_tx_new_token_ci{cluster_manager.cluster_instance_num}_{rand}"
+        asset_name_dec = f"couttscoin{rand}"
+        asset_name = asset_name_dec.encode("utf-8").hex()
 
-            rand = clusterlib.get_rand_str(4)
-            temp_template = f"test_tx_new_token_ci{cluster_manager.cluster_instance_num}_{rand}"
-            asset_name_dec = f"couttscoin{rand}"
-            asset_name = asset_name_dec.encode("utf-8").hex()
+        new_tokens = clusterlib_utils.new_tokens(
+            asset_name,
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            token_mint_addr=payment_addrs[0],
+            issuer_addr=payment_addrs[1],
+            amount=self.NEW_TOKENS_NUM,
+        )
 
-            new_tokens = clusterlib_utils.new_tokens(
-                asset_name,
-                cluster_obj=cluster,
-                temp_template=temp_template,
-                token_mint_addr=payment_addrs[0],
-                issuer_addr=payment_addrs[1],
-                amount=self.NEW_TOKENS_NUM,
-            )
-            new_token = new_tokens[0]
-            fixture_cache.value = new_token
-
-        return new_token
+        return new_tokens[0]
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
