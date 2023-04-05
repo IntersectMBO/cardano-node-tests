@@ -8,7 +8,6 @@ from typing import NamedTuple
 import requests
 
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 
 
@@ -21,22 +20,16 @@ class SubmitApiOut(NamedTuple):
     response: requests.Response
 
 
-@helpers.callonce
-def has_submit_api() -> bool:
-    """Check if `cardano-submit-api` REST service is available.
-
-    Assumes that if available, the service is available on all local cluster instances.
-    """
-    submit_api_port = (
-        cluster_nodes.get_cluster_type()
-        .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())
-        .submit_api
-    )
-    if shutil.which("cardano-submit-api") and helpers.is_port_open(
-        host="127.0.0.1", port=submit_api_port
-    ):
-        return True
-    return False
+def is_running() -> bool:
+    """Check if `cardano-submit-api` REST service is running."""
+    if not shutil.which("cardano-submit-api"):
+        return False
+    # TODO: `--metrics-port` is not available in older cardano-node releases, see node issue #4280
+    # If the metrics port is not available, we can start the `cardano-submit-api` only on the first
+    # cluster instance.
+    if cluster_nodes.services_status(service_names=["submit_api"])[0].status != "RUNNING":
+        return False
+    return True
 
 
 def tx2cbor(tx_file: FileType, destination_dir: FileType = ".") -> Path:

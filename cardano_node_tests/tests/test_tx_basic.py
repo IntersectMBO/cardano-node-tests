@@ -2,6 +2,7 @@
 import itertools
 import logging
 import re
+import shutil
 from typing import List
 
 import allure
@@ -31,7 +32,7 @@ param_submit_method = pytest.mark.parametrize(
         pytest.param(
             "submit_api",
             marks=pytest.mark.skipif(
-                not submit_api.has_submit_api(),
+                not shutil.which("cardano-submit-api"),
                 reason="`cardano-submit-api` is not available",
             ),
         ),
@@ -408,6 +409,9 @@ class TestBasicTransactions:
         * check output of the `transaction view` command
         """
         temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+
+        if submit_method == "submit_api" and not submit_api.is_running():
+            pytest.skip("The cardano-submit-api REST service is not running.")
 
         src_address = payment_addrs_disposable[1].address
         dst_address = payment_addrs_disposable[0].address
