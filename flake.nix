@@ -59,6 +59,7 @@
               )
             ).overrideAttrs (oldAttrs: rec {
               nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ oldAttrs.nativeBuildInputs ++ [
+                cardano-node.packages.${system}.cardano-submit-api
                 (python3.withPackages (ps: with ps; [
                   pytest
                   allure
