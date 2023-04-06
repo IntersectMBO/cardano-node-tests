@@ -45,6 +45,7 @@ class NodePorts(NamedTuple):
 class InstancePorts(NamedTuple):
     base: int
     webserver: int
+    metrics_submit_api: int
     submit_api: int
     supervisor: int
     relay1: int
@@ -133,7 +134,8 @@ class LocalScripts(ScriptsTypes):
         ports = InstancePorts(
             base=base,
             webserver=last_port,
-            submit_api=last_port - 1,
+            metrics_submit_api=last_port - 1,
+            submit_api=last_port - 2,
             supervisor=12001 + instance_num,
             # relay1
             relay1=0,
@@ -207,6 +209,10 @@ class LocalScripts(ScriptsTypes):
         new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
         # reconfigure submit-api port
         new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
+        # reconfigure submit-api metrics port
+        new_content = new_content.replace(
+            "%%METRICS_SUBMIT_API_PORT%%", str(instance_ports.metrics_submit_api)
+        )
         # reconfigure webserver port
         new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
         return new_content
@@ -477,11 +483,12 @@ class TestnetScripts(ScriptsTypes):
         ports = InstancePorts(
             base=base,
             webserver=base,
+            metrics_submit_api=metrics_base,
             submit_api=base + 9,
             supervisor=12001 + instance_num,
             relay1=base + 1,
-            ekg_relay1=metrics_base,
-            prometheus_relay1=metrics_base + 1,
+            ekg_relay1=metrics_base + 1,
+            prometheus_relay1=metrics_base + 2,
             bft1=0,
             ekg_bft1=0,
             prometheus_bft1=0,
@@ -548,6 +555,10 @@ class TestnetScripts(ScriptsTypes):
             new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
             # reconfigure submit-api port
             new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
+            # reconfigure submit-api metrics port
+            new_content = new_content.replace(
+                "%%METRICS_SUBMIT_API_PORT%%", str(instance_ports.metrics_submit_api)
+            )
             # replace metrics port number strings, omitting the last digit
             new_content = new_content.replace(
                 "%%METRICS_PORT_BASE%%", str(instance_ports.ekg_relay1 // 10)
@@ -663,11 +674,12 @@ class TestnetNopoolsScripts(TestnetScripts):
         ports = InstancePorts(
             base=base,
             webserver=0,
+            metrics_submit_api=metrics_base,
             submit_api=base + 9,
             supervisor=12001 + instance_num,
             relay1=base + 1,
-            ekg_relay1=metrics_base,
-            prometheus_relay1=metrics_base + 1,
+            ekg_relay1=metrics_base + 1,
+            prometheus_relay1=metrics_base + 2,
             bft1=0,
             ekg_bft1=0,
             prometheus_bft1=0,
