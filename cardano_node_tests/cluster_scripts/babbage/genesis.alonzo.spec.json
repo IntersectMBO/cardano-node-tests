@@ -1,5 +1,4 @@
 {
-    "maxBlockBodySize": 90112,
     "lovelacePerUTxOWord": 34482,
     "executionPrices": {
         "prSteps": {
