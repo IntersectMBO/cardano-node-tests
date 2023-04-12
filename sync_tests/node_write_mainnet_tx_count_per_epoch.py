@@ -6,14 +6,14 @@ from blockfrost_utils import get_tx_count_per_epoch_from_blockfrost, \
 
 
 def update_mainnet_tx_count_per_epoch():
-    env, table_name = "mainnet", "mainnet_tx_count"
+    env, table_name = 'mainnet', 'mainnet_tx_count'
     current_epoch_no = get_current_epoch_no_from_blockfrost()
     print(f"current_epoch_no   : {current_epoch_no}")
 
     last_added_epoch_no = int(get_last_epoch_no_from_table(table_name))
     print(f"last_added_epoch_no: {last_added_epoch_no}")
 
-    df_column_names = ["epoch_no", "tx_count"]
+    df_column_names = ['epoch_no', 'tx_count']
     df = pd.DataFrame(columns=df_column_names)
 
     if current_epoch_no > last_added_epoch_no + 1:
@@ -22,9 +22,8 @@ def update_mainnet_tx_count_per_epoch():
             print(f"Getting values for epoch {epoch_no}")
             tx_count = get_tx_count_per_epoch_from_blockfrost(epoch_no)
             print(f"  - tx_count: {tx_count}")
-            new_row = {"epoch_no": epoch_no,
-                       "tx_count": tx_count}
-            df = df.append(new_row, ignore_index=True)
+            new_row = pd.Series({'epoch_no': epoch_no, 'tx_count': tx_count})
+            pd.concat([df, new_row.to_frame()], ignore_index=True)
 
         col_to_insert = list(df.columns)
         val_to_insert = df.values.tolist()
