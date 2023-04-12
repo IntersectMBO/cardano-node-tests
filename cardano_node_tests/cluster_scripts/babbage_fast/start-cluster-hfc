@@ -209,19 +209,31 @@ SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.json")"
 ALONZO_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
+
+CONWAY_GENESIS_HASH=""
+EXP_PROTOCOLS_KEY="TestEnableDevelopmentNetworkProtocols"
+
+# conway genesis is not present on node < 1.36.0
+if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
+  CONWAY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+    "$STATE_CLUSTER/shelley/genesis.conway.json")"
+  EXP_PROTOCOLS_KEY="ExperimentalProtocolsEnabled"
+fi
+
 for conf in "$SCRIPT_DIR"/config-*.json; do
   fname="${conf##*/}"
   jq \
     --arg byron_hash "$BYRON_GENESIS_HASH" \
     --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
     --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+    --arg exp_protocols_key "$EXP_PROTOCOLS_KEY" \
     '.ByronGenesisHash = $byron_hash
     | .ShelleyGenesisHash = $shelley_hash
-    | .AlonzoGenesisHash = $alonzo_hash' \
+    | .AlonzoGenesisHash = $alonzo_hash
+    | .[$exp_protocols_key] = true' \
     "$conf" > "$STATE_CLUSTER/$fname"
 
-  # conway genesis is not present on node < 1.36.0
-  if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
+  if [ -n "$CONWAY_GENESIS_HASH" ]; then
     CONWAY_GENESIS_HASH="${CONWAY_GENESIS_HASH:-"$(cardano_cli_log genesis hash --genesis \
       "$STATE_CLUSTER/shelley/genesis.conway.json")"}"
     jq \
