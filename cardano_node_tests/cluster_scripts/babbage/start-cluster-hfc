@@ -242,6 +242,17 @@ SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.json")"
 ALONZO_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
+
+CONWAY_GENESIS_HASH=""
+EXP_PROTOCOLS_KEY="TestEnableDevelopmentNetworkProtocols"
+
+# conway genesis is not present on node < 1.36.0
+if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
+  CONWAY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+    "$STATE_CLUSTER/shelley/genesis.conway.json")"
+  EXP_PROTOCOLS_KEY="ExperimentalProtocolsEnabled"
+fi
+
 for conf in "$SCRIPT_DIR"/config-*.json; do
   fname="${conf##*/}"
   jq \
@@ -251,10 +262,7 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
     "$conf" > "$STATE_CLUSTER/$fname"
 
-  # conway genesis is not present on node < 1.36.0
-  if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
-    CONWAY_GENESIS_HASH="${CONWAY_GENESIS_HASH:-"$(cardano_cli_log genesis hash --genesis \
-      "$STATE_CLUSTER/shelley/genesis.conway.json")"}"
+  if [ -n "$CONWAY_GENESIS_HASH" ]; then
     jq \
       --arg conway_hash "$CONWAY_GENESIS_HASH" \
       '.ConwayGenesisFile = "shelley/genesis.conway.json" | .ConwayGenesisHash = $conway_hash' \
@@ -283,7 +291,7 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
       fi
     fi
 
-    jq \
+    jq --arg exp_protocols_key "$EXP_PROTOCOLS_KEY" \
       '.EnableP2P = true
       | .MaxConcurrencyBulkSync = 2
       | .MaxConcurrencyDeadline = 4
@@ -291,7 +299,7 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
       | .TargetNumberOfKnownPeers = 100
       | .TargetNumberOfEstablishedPeers = 50
       | .TargetNumberOfActivePeers = 20
-      | .TestEnableDevelopmentNetworkProtocols = true
+      | .[$exp_protocols_key] = true
       | .TraceBlockFetchClient = true
       | .TraceChainSyncClient = true' \
       "$STATE_CLUSTER/$fname" > "$STATE_CLUSTER/${fname}_jq"
