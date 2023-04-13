@@ -1,5 +1,6 @@
 """Tests for ro reference inputs while spending with Plutus V2 using `transaction build`."""
 import logging
+import re
 from typing import Any
 from typing import List
 
@@ -496,11 +497,14 @@ class TestNegativeReadonlyReferenceInputs:
             )
         err_str = str(excinfo.value)
         assert (
+            # TODO: in 1.35.3 and older - cardano-node issue #4012
             "following tx input(s) were not present in the UTxO: \n"
             f"{reference_input[0].utxo_hash}" in err_str
-            # in 1.35.3 and older - cardano-node issue #4012
-            or "TranslationLogicMissingInput (TxIn (TxId "
-            f'{{_unTxId = SafeHash "{reference_input[0].utxo_hash}"}})' in err_str
+            or re.search(
+                "TranslationLogicMissingInput .*unTxId = SafeHash "
+                f'"{reference_input[0].utxo_hash}"',
+                err_str,
+            )
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
