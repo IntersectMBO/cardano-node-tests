@@ -37,9 +37,6 @@ if VERSIONS.cluster_era == VERSIONS.BABBAGE:
 else:
     raise AssertionError(f"Unsupported era '{VERSIONS.cluster_era_name}'")
 
-if configuration.UPDATE_COST_MODEL:
-    NUM_OF_EPOCHS += 1
-
 
 pytestmark = common.SKIPIF_WRONG_ERA
 
