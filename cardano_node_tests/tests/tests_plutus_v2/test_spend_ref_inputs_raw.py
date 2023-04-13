@@ -1,5 +1,6 @@
 """Tests for ro reference inputs while spending with Plutus V2 using `transaction build-raw`."""
 import logging
+import re
 from typing import Any
 from typing import List
 
@@ -404,9 +405,9 @@ class TestNegativeReadonlyReferenceInputs:
                 script_txins=plutus_txins,
             )
         err_str = str(excinfo.value)
-        assert (
-            "TranslationLogicMissingInput (TxIn (TxId "
-            f'{{_unTxId = SafeHash "{reference_input[0].utxo_hash}"}})' in err_str
+        assert re.search(
+            f'TranslationLogicMissingInput .*unTxId = SafeHash "{reference_input[0].utxo_hash}"',
+            err_str,
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
