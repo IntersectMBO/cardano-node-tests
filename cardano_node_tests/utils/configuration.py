@@ -31,8 +31,6 @@ IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 ENABLE_P2P = (os.environ.get("ENABLE_P2P") or "") != ""
 # used also in startup scripts as `if [ -n "$VAR" ]...`
 MIXED_P2P = (os.environ.get("MIXED_P2P") or "") != ""
-# for PlutusV2 cost model update by HF, used also in startup scripts as `if [ -n "$VAR" ]...`
-UPDATE_COST_MODEL = (os.environ.get("UPDATE_COST_MODEL") or "") != ""
 
 # used also in startup scripts
 DB_BACKEND = os.environ.get("DB_BACKEND") or ""
