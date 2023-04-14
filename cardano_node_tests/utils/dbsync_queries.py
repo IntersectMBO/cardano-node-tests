@@ -243,7 +243,7 @@ class BlockDBRow(NamedTuple):
     tx_count: Optional[int]
     proto_major: Optional[int]
     proto_minor: Optional[int]
-    pool_id: str
+    pool_id: Optional[str]
 
 
 class DatumDBRow(NamedTuple):
@@ -791,7 +791,7 @@ def query_blocks(
         " pool_hash.view "
         "FROM block "
         "INNER JOIN slot_leader ON slot_leader.id = block.slot_leader_id "
-        "INNER JOIN pool_hash ON pool_hash.id = slot_leader.pool_hash_id "
+        "LEFT JOIN pool_hash ON pool_hash.id = slot_leader.pool_hash_id "
         f"WHERE {pool_query} (epoch_no BETWEEN %s AND %s) "
         "ORDER BY block.id;"
     )

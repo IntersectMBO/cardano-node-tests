@@ -302,7 +302,10 @@ class TestDBSync:
         common.get_test_id(cluster)
 
         current_epoch = cluster.g_query.get_epoch()
-        epoch = current_epoch - 20 if current_epoch >= 20 else current_epoch
+        epoch = current_epoch - 1 if current_epoch >= 1 else current_epoch
+
+        if epoch == 0:
+            pytest.skip("Not meant to run in epoch 0")
 
         blocks_data_blk_count = 0
         blocks_data_tx_count = 0
@@ -327,4 +330,4 @@ class TestDBSync:
 
         assert (
             blocks_data_tx_count == epoch_data_tx_count
-        ), "Transactions count don't match between tables"
+        ), f"Transactions count don't match between tables for epoch {epoch}"
