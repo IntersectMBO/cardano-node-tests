@@ -260,25 +260,23 @@ class ClusterGetter:
 
     def _is_dev_cluster_ready(self) -> bool:
         """Check if development cluster instance is ready to be used."""
-        work_dir = cluster_nodes.get_cluster_env().work_dir
-        state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}0"
+        state_dir = cluster_nodes.get_cluster_env().state_dir
         if (state_dir / cluster_nodes.ADDRS_DATA).exists():
             return True
         return False
 
     def _setup_dev_cluster(self) -> None:
         """Set up cluster instance that was already started outside of test framework."""
-        work_dir = cluster_nodes.get_cluster_env().work_dir
-        state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}0"
-        if (state_dir / cluster_nodes.ADDRS_DATA).exists():
+        cluster_env = cluster_nodes.get_cluster_env()
+        if (cluster_env.state_dir / cluster_nodes.ADDRS_DATA).exists():
             return
 
-        self.log("c0: setting up dev cluster")
+        self.log(f"c{cluster_env.instance_num}: setting up dev cluster")
 
         # Create "addrs_data" directly in the cluster state dir, so it can be reused
         # (in normal non-`DEV_CLUSTER_RUNNING` setup we want "addrs_data" stored among
         # tests artifacts, so it can be used during cleanup etc.).
-        tmp_path = state_dir / "addrs_data"
+        tmp_path = cluster_env.state_dir / "addrs_data"
         tmp_path.mkdir(exist_ok=True, parents=True)
         cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
         cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=tmp_path)
@@ -736,11 +734,16 @@ class ClusterGetter:
                     f"Ignoring the '{start_cmd}' cluster start command as "
                     "'DEV_CLUSTER_RUNNING' is set."
                 )
+
             # check if the development cluster instance is ready by now so we don't need to obtain
             # cluster lock when it is not necessary
             if not self._is_dev_cluster_ready():
                 with locking.FileLockIfXdist(self.cluster_lock):
                     self._setup_dev_cluster()
+
+            available_instances = [cluster_nodes.get_cluster_env().instance_num]
+        else:
+            available_instances = list(range(self.num_of_instances))
 
         if configuration.FORBID_RESTART and start_cmd:
             raise RuntimeError("Cannot use custom start command when 'FORBID_RESTART' is set.")
@@ -808,13 +811,7 @@ class ClusterGetter:
                 self._cluster_instance_num = -1
 
                 # try all existing cluster instances; randomize the order
-                for instance_num in random.sample(
-                    range(self.num_of_instances), k=self.num_of_instances
-                ):
-                    # there's only one cluster instance when `DEV_CLUSTER_RUNNING` is set
-                    if configuration.DEV_CLUSTER_RUNNING and instance_num != 0:
-                        continue
-
+                for instance_num in random.sample(available_instances, k=self.num_of_instances):
                     # if instance to run the test on was already decided, skip all other instances
                     # pylint: disable=consider-using-in
                     if (
