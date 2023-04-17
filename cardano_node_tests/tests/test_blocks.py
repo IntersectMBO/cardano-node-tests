@@ -39,7 +39,7 @@ class TestLeadershipSchedule:
     @pytest.mark.parametrize("for_epoch", ("current", "next"))
     def test_pool_blocks(
         self,
-        skip_leadership_schedule: None,
+        skip_leadership_schedule: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
         for_epoch: str,
@@ -130,7 +130,7 @@ class TestLeadershipSchedule:
     @allure.link(helpers.get_vcs_link())
     def test_unstable_stake_distribution(
         self,
-        skip_leadership_schedule: None,
+        skip_leadership_schedule: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ):

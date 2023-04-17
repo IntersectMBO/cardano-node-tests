@@ -18,6 +18,6 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.mark.order(1)
 @pytest.mark.parametrize("for_worker", tuple(range(PYTEST_XDIST_WORKER_COUNT)))
-def test_dummy(for_worker: int) -> None:
+def test_dummy(for_worker: int) -> None:  # noqa: ARG001
     # pylint: disable=unused-argument
     pytest.skip("Dummy helper for `pytest-xdist` scheduling")

@@ -7,7 +7,7 @@ repos:
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
     language_version: python3
 - repo: https://github.com/ambv/black
-  rev: 23.1.0
+  rev: 23.3.0
   hooks:
   - id: black
     args: [--safe, --quiet]
@@ -26,25 +26,8 @@ repos:
     language_version: python3
   - id: debug-statements
     language_version: python3
-- repo: https://github.com/pycqa/flake8.git
-  rev: 6.0.0
-  hooks:
-  - id: flake8
-    language_version: python3
-    additional_dependencies:
-    - flake8-use-pathlib
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.3.1
-  hooks:
-  - id: pyupgrade
-    language_version: python3
-- repo: https://github.com/pycqa/pydocstyle
-  rev: 6.3.0
-  hooks:
-  - id: pydocstyle
-    language_version: python3
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.254
+  rev: v0.0.261
   hooks:
     - id: ruff
 - repo: https://github.com/shellcheck-py/shellcheck-py
@@ -56,7 +39,7 @@ repos:
   hooks:
   - id: markdownlint
 - repo: https://github.com/rstcheck/rstcheck
-  rev: v6.1.1
+  rev: v6.1.2
   hooks:
   - id: rstcheck
     additional_dependencies: [sphinx]

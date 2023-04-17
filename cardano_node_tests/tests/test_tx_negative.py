@@ -59,9 +59,9 @@ class TestNegative:
     @pytest.fixture
     def cluster_wrong_tx_era(
         self,
-        skip_on_last_era: None,
-        skip_unknown_last_era: None,
-        cluster: clusterlib.ClusterLib,
+        skip_on_last_era: None,  # noqa: ARG002
+        skip_unknown_last_era: None,  # noqa: ARG002
+        cluster: clusterlib.ClusterLib,  # noqa: ARG002
     ) -> clusterlib.ClusterLib:
         # pylint: disable=unused-argument
         # the `cluster` argument (representing the `cluster` fixture) needs to be present

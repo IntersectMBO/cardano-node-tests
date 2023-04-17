@@ -157,7 +157,7 @@ def group_files(file_paths: Generator[Path, None, None]) -> List[List[Path]]:
     return path_groups
 
 
-def cleanup(  # noqa: C901
+def cleanup(
     cluster_obj: clusterlib.ClusterLib,
     location: FileType,
 ) -> None:

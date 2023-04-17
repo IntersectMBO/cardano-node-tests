@@ -26,7 +26,7 @@ import cardano_node_tests
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath(".."))  # noqa: PTH100
 
 
 # -- Project information -----------------------------------------------------
@@ -151,7 +151,7 @@ def linkcode_resolve(domain, info):
         obj = inspect.unwrap(obj)
 
         fn = inspect.getsourcefile(obj)
-        fn = os.path.relpath(fn, start=os.path.dirname(cardano_node_tests.__file__))
+        fn = os.path.relpath(fn, start=os.path.dirname(cardano_node_tests.__file__))  # noqa: PTH120
         source, lineno = inspect.getsourcelines(obj)
         return fn, lineno, lineno + len(source) - 1
 
