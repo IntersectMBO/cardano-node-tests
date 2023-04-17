@@ -190,8 +190,8 @@ gen_genesis() {
 if ! gen_genesis; then
   echo "Failed to generate Alonzo genesis, retrying with a different genesis.alonzo.spec.json"
   mv "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json" \
-    "$STATE_CLUSTER/create_staked/release-genesis.alonzo.spec.json"
-  mv "$STATE_CLUSTER/create_staked/master-genesis.alonzo.spec.json" \
+    "$STATE_CLUSTER/create_staked/master-genesis.alonzo.spec.json"
+  mv "$STATE_CLUSTER/create_staked/release-genesis.alonzo.spec.json" \
     "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json"
   gen_genesis
 fi
