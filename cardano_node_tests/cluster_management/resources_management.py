@@ -24,7 +24,7 @@ class BaseFilter:
 class OneOf(BaseFilter):
     """Filter that returns one usable resource out of list of resources."""
 
-    def filter(self, unavailable: Iterable[str], **kwargs: Any) -> List[str]:
+    def filter(self, unavailable: Iterable[str], **kwargs: Any) -> List[str]:  # noqa: ARG002
         assert not isinstance(unavailable, str), "`unavailable` can't be single string"
 
         usable = [r for r in self.resources if r not in unavailable]

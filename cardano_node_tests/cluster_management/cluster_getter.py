@@ -34,7 +34,7 @@ if configuration.IS_XDIST:
     _xdist_sleep = time.sleep
 else:
 
-    def _xdist_sleep(secs: float) -> None:
+    def _xdist_sleep(secs: float) -> None:  # noqa: ARG001
         """No need to sleep if tests are running on a single worker."""
         # pylint: disable=unused-argument,unnecessary-pass
         pass
@@ -695,7 +695,7 @@ class ClusterGetter:
 
         return use_resources
 
-    def get_cluster_instance(
+    def get_cluster_instance(  # noqa: C901
         self,
         mark: str = "",
         lock_resources: resources_management.ResourcesType = (),

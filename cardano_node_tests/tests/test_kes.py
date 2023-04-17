@@ -361,7 +361,7 @@ class TestKES:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
     @pytest.mark.long
-    def test_opcert_invalid_kes_period(
+    def test_opcert_invalid_kes_period(  # noqa: C901
         self,
         cluster_singleton: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,

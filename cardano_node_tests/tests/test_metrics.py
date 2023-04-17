@@ -104,7 +104,7 @@ class TestPrometheus:
     @allure.link(helpers.get_vcs_link())
     def test_available_metrics(
         self,
-        wait_epochs,
+        wait_epochs,  # noqa: ARG002
     ):
         """Test that list of available metrics == list of expected metrics."""
         # pylint: disable=unused-argument
@@ -128,7 +128,7 @@ class TestEKG:
     @allure.link(helpers.get_vcs_link())
     def test_available_metrics(
         self,
-        wait_epochs,
+        wait_epochs,  # noqa: ARG002
     ):
         """Test that available EKG metrics matches the expected schema."""
         # pylint: disable=unused-argument

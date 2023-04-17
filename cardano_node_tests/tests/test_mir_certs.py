@@ -103,7 +103,7 @@ def registered_users(
 
 @pytest.fixture
 def skip_on_hf_shortcut(
-    cluster_pots: clusterlib.ClusterLib,  # pylint: disable=unused-argument
+    cluster_pots: clusterlib.ClusterLib,  # pylint: disable=unused-argument # noqa: ARG001
 ) -> None:
     """Skip test if HF shortcut is used."""
     if (
@@ -120,7 +120,7 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     def test_transfer_to_treasury(
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
@@ -195,7 +195,7 @@ class TestMIRCerts:
     @common.SKIPIF_BUILD_UNUSABLE
     def test_build_transfer_to_treasury(
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
@@ -275,7 +275,7 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     def test_transfer_to_reserves(
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
@@ -350,7 +350,7 @@ class TestMIRCerts:
     @common.SKIPIF_BUILD_UNUSABLE
     def test_build_transfer_to_reserves(
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
@@ -431,7 +431,7 @@ class TestMIRCerts:
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_stake_addr_from(
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_users: List[clusterlib.PoolUser],
@@ -522,7 +522,7 @@ class TestMIRCerts:
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_build_pay_stake_addr_from(
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_users: List[clusterlib.PoolUser],
@@ -619,7 +619,7 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     def test_pay_stake_addr_from_both(
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_users: List[clusterlib.PoolUser],
@@ -752,7 +752,7 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     def test_pay_multi_stake_addrs(
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_users: List[clusterlib.PoolUser],
@@ -897,7 +897,7 @@ class TestMIRCerts:
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     def test_pay_unregistered_stake_addr_from(  # noqa: C901
         self,
-        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument
+        skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
