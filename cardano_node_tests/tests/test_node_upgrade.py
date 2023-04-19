@@ -2,12 +2,12 @@
 import logging
 import os
 import shutil
-from pathlib import Path
 from typing import List
 
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -18,12 +18,9 @@ from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
-BABBAGE_DIR = Path(__file__).parent.parent / "cluster_scripts" / "babbage"
-COST_MODEL_FILE = BABBAGE_DIR / "plutus-costmodels-secp256k1-enabled.json"
-
 UPGRADE_TESTS_STEP = int(os.environ.get("UPGRADE_TESTS_STEP") or 0)
-BASE_REVISION = os.environ.get("BASE_REVISION")
-UPGRADE_REVISION = os.environ.get("UPGRADE_REVISION")
+BASE_REVISION = version.parse(os.environ.get("BASE_REVISION") or "0.0.0")
+UPGRADE_REVISION = version.parse(os.environ.get("UPGRADE_REVISION") or "0.0.0")
 
 pytestmark = [
     pytest.mark.skipif(not UPGRADE_TESTS_STEP, reason="not upgrade testing"),
@@ -104,10 +101,16 @@ class TestSetup:
         # Ignore ledger replay when upgrading from node version 1.34.1.
         # The error message appears only right after the node is upgraded. This ignore rule has
         # effect only in this test.
-        if BASE_REVISION == "1.34.1":
+        if version.parse("1.34.1") == BASE_REVISION:
             logfiles.add_ignore_rule(
                 files_glob="*.stdout",
-                regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure 168",
+                regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure 168 ",
+                ignore_file_id=worker_id,
+            )
+        elif version.parse("1.36.0") > BASE_REVISION:
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure 5 ",
                 ignore_file_id=worker_id,
             )
 
