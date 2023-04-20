@@ -1,7 +1,6 @@
 """Tests for update proposals."""
 import json
 import logging
-import math
 import time
 
 import allure
@@ -73,7 +72,7 @@ class TestUpdateProposals:
     ):
         """Test changing protocol parameters using update proposal.
 
-        * if era >= Alonzo, update Alonzo-specific parameters and:
+        * update parameters specific to Alonzo+ eras and:
 
            - wait for next epoch
            - check that parameters were updated
@@ -100,21 +99,12 @@ class TestUpdateProposals:
             json.dump(protocol_params, fp_out, indent=4)
 
         # update Alonzo+ specific parameters in separate update proposal
-        if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
-            utxo_cost = clusterlib_utils.UpdateProposal(
+        update_proposals_babbage = [
+            clusterlib_utils.UpdateProposal(
                 arg="--utxo-cost-per-byte",
                 value=4300,
                 name="utxoCostPerByte",
-            )
-        else:
-            utxo_cost = clusterlib_utils.UpdateProposal(
-                arg="--utxo-cost-per-word",
-                value=8001,
-                name="",  # needs custom check
-            )
-
-        update_proposals_alonzo = [
-            utxo_cost,
+            ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-value-size",
                 value=5000,
@@ -155,7 +145,7 @@ class TestUpdateProposals:
         clusterlib_utils.update_params_build(
             cluster_obj=cluster,
             src_addr_record=payment_addr,
-            update_proposals=update_proposals_alonzo,
+            update_proposals=update_proposals_babbage,
         )
 
         this_epoch = cluster.wait_for_new_epoch()
@@ -165,7 +155,7 @@ class TestUpdateProposals:
             json.dump(protocol_params, fp_out, indent=4)
 
         clusterlib_utils.check_updated_params(
-            update_proposals=update_proposals_alonzo, protocol_params=protocol_params
+            update_proposals=update_proposals_babbage, protocol_params=protocol_params
         )
         assert protocol_params["maxTxExecutionUnits"]["memory"] == max_tx_execution_units
         assert protocol_params["maxTxExecutionUnits"]["steps"] == max_tx_execution_units
@@ -173,10 +163,6 @@ class TestUpdateProposals:
         assert protocol_params["maxBlockExecutionUnits"]["steps"] == max_block_execution_units
         assert protocol_params["executionUnitPrices"]["priceSteps"] == 1.2
         assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
-
-        if not utxo_cost.name:
-            # the resulting number will be multiple of 8, i.e. 8000
-            assert protocol_params["utxoCostPerWord"] == math.floor(utxo_cost.value / 8) * 8
 
         # check param proposal on dbsync
         dbsync_utils.check_param_proposal(protocol_params=protocol_params)
