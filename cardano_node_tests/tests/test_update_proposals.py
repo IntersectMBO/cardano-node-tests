@@ -1,8 +1,8 @@
 """Tests for update proposals."""
 import json
 import logging
-import math
 import time
+from pathlib import Path
 
 import allure
 import pytest
@@ -10,12 +10,14 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+DATA_DIR = Path(__file__).parent / "data"
 
 
 @pytest.mark.order(8)
@@ -73,7 +75,7 @@ class TestUpdateProposals:
     ):
         """Test changing protocol parameters using update proposal.
 
-        * if era >= Alonzo, update Alonzo-specific parameters and:
+        * update parameters specific for Alonzo+ eras, and:
 
            - wait for next epoch
            - check that parameters were updated
@@ -88,6 +90,9 @@ class TestUpdateProposals:
         cluster = cluster_update_proposal
         temp_template = common.get_test_id(cluster)
 
+        state_dir = cluster_nodes.get_cluster_env().state_dir
+        has_conway = (state_dir / "shelley" / "genesis.conway.json").exists()
+
         max_tx_execution_units = 11_000_000_000
         max_block_execution_units = 110_000_000_000
         price_execution_steps = "12/10"
@@ -100,21 +105,18 @@ class TestUpdateProposals:
             json.dump(protocol_params, fp_out, indent=4)
 
         # update Alonzo+ specific parameters in separate update proposal
-        if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
-            utxo_cost = clusterlib_utils.UpdateProposal(
+
+        # TODO: On node >= 1.36.0 the cost models are lists. On older versions they are dicts.
+        cost_proposal_file = (
+            DATA_DIR / "cost_models_list.json" if has_conway else DATA_DIR / "cost_models_dict.json"
+        )
+
+        update_proposals_babbage = [
+            clusterlib_utils.UpdateProposal(
                 arg="--utxo-cost-per-byte",
                 value=4300,
                 name="utxoCostPerByte",
-            )
-        else:
-            utxo_cost = clusterlib_utils.UpdateProposal(
-                arg="--utxo-cost-per-word",
-                value=8001,
-                name="",  # needs custom check
-            )
-
-        update_proposals_alonzo = [
-            utxo_cost,
+            ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-value-size",
                 value=5000,
@@ -150,12 +152,17 @@ class TestUpdateProposals:
                 value=price_execution_memory,
                 name="",  # needs custom check
             ),
+            clusterlib_utils.UpdateProposal(
+                arg="--cost-model-file",
+                value=str(cost_proposal_file),
+                name="",  # needs custom check
+            ),
         ]
 
         clusterlib_utils.update_params_build(
             cluster_obj=cluster,
             src_addr_record=payment_addr,
-            update_proposals=update_proposals_alonzo,
+            update_proposals=update_proposals_babbage,
         )
 
         this_epoch = cluster.wait_for_new_epoch()
@@ -165,7 +172,7 @@ class TestUpdateProposals:
             json.dump(protocol_params, fp_out, indent=4)
 
         clusterlib_utils.check_updated_params(
-            update_proposals=update_proposals_alonzo, protocol_params=protocol_params
+            update_proposals=update_proposals_babbage, protocol_params=protocol_params
         )
         assert protocol_params["maxTxExecutionUnits"]["memory"] == max_tx_execution_units
         assert protocol_params["maxTxExecutionUnits"]["steps"] == max_tx_execution_units
@@ -174,9 +181,18 @@ class TestUpdateProposals:
         assert protocol_params["executionUnitPrices"]["priceSteps"] == 1.2
         assert protocol_params["executionUnitPrices"]["priceMemory"] == 1.3
 
-        if not utxo_cost.name:
-            # the resulting number will be multiple of 8, i.e. 8000
-            assert protocol_params["utxoCostPerWord"] == math.floor(utxo_cost.value / 8) * 8
+        cost_model_v1 = protocol_params["costModels"]["PlutusV1"]
+        cost_model_v2 = protocol_params["costModels"]["PlutusV2"]
+        if has_conway:
+            with open(cost_proposal_file, encoding="utf-8") as fp_in:
+                cost_model_prop_content = json.load(fp_in)
+
+            assert cost_model_v1 == cost_model_prop_content["PlutusV1"]
+            assert cost_model_v2 == cost_model_prop_content["PlutusV2"]
+        else:
+            # check only selected expected value as some key names don't necessarily match
+            assert cost_model_v1["verifyEd25519Signature-memory-arguments"] == 11
+            assert cost_model_v2["verifyEd25519Signature-memory-arguments"] == 11
 
         # check param proposal on dbsync
         dbsync_utils.check_param_proposal(protocol_params=protocol_params)
