@@ -291,6 +291,209 @@ class TestAddressInfo:
 
 
 @pytest.mark.smoke
+class TestAddressBuild:
+    """Tests for cardano-cli address build."""
+
+    @pytest.fixture(scope="class")
+    def stake_address_option_unusable(self) -> bool:
+        return not clusterlib_utils.cli_has("address build --stake-address")
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("payment", ("vkey", "vkey_file", "script_file"))
+    @pytest.mark.parametrize(
+        "stake",
+        (
+            None,
+            "vkey",
+            "vkey_file",
+            "script_file",
+            "address",
+        ),
+    )
+    def test_address_build(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment: str,
+        stake: str,
+        stake_address_option_unusable: bool,
+    ):
+        """Check `address build` with all valid input options."""
+        if stake == "address" and stake_address_option_unusable:
+            pytest.skip("`stake-address` option is not available on `address build` command")
+
+        temp_template = (
+            f"{common.get_test_id(cluster)}_{payment}_{stake}_{common.unique_time_str()}"
+        )
+
+        payment_vkey_file = DATA_DIR / "golden_payment.vkey"
+
+        stake_vkey_file = DATA_DIR / "golden_stake.vkey"
+        stake_address = "stake_test1uz5mstpskyhpcvaw2enlfk8fa5k335cpd0lfz6chd5c2xpck3nld4"
+
+        script_file = DATA_DIR / "golden_sig.script"
+
+        if payment == "vkey":
+            with open(payment_vkey_file, encoding="utf-8") as infile:
+                # Ignore the first 4 chars, just an informative keyword
+                payment_vkey = helpers.encode_bech32(
+                    prefix="addr_vk", data=json.loads(infile.read().strip()).get("cborHex", "")[4:]
+                )
+
+        if stake == "vkey":
+            with open(stake_vkey_file, encoding="utf-8") as infile:
+                # Ignore the first 4 chars, just an informative keyword
+                stake_vkey = helpers.encode_bech32(
+                    prefix="stake_vk", data=json.loads(infile.read().strip()).get("cborHex", "")[4:]
+                )
+
+        address = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template,
+            payment_vkey=payment_vkey if payment == "vkey" else None,
+            payment_vkey_file=payment_vkey_file if payment == "vkey_file" else None,
+            payment_script_file=script_file if payment == "script_file" else None,
+            stake_vkey=stake_vkey if stake == "vkey" else None,
+            stake_vkey_file=stake_vkey_file if stake == "vkey_file" else None,
+            stake_script_file=script_file if stake == "script_file" else None,
+            stake_address=stake_address if stake == "address" else None,
+        )
+
+        expected_address = {
+            "addr_test1vqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycc95yzhp",
+            "addr_test1wzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2ggggmzy",
+            "addr_test1qqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycaghrqnes"
+            "9cvw7qwlstcm40m3hn9ap6g5fmwqmckvxwk7usca596d",
+            "addr_test1zzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2dghrqnes"
+            "9cvw7qwlstcm40m3hn9ap6g5fmwqmckvxwk7ustneaan",
+            "addr_test1yqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycufm5hdxq"
+            "4k2703gp5067jvm4js7q7ps7gys0svl7965z5sdkur7k",
+            "addr_test1xzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2vfm5hdxq"
+            "4k2703gp5067jvm4js7q7ps7gys0svl7965z5s7c3meg",
+            "addr_test1qqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycafhqkrpv"
+            "fwrse6u4n87nvwnmfdrrfsz6l7j943wmfs5vrsr9mps4",
+            "addr_test1zzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2dfhqkrpv"
+            "fwrse6u4n87nvwnmfdrrfsz6l7j943wmfs5vrsstkeht",
+        }
+
+        assert address in expected_address, "The generated address doesn't have the expected value"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("option", ("vkey", "vkey_file", "script_file"))
+    @hypothesis.given(key=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_invalid_payment_info(
+        self,
+        cluster: clusterlib.ClusterLib,
+        option: str,
+        key: str,
+    ):
+        """Try to use 'address build' with invalid payment information (property-based test).
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{option}_{common.unique_time_str()}"
+
+        if option == "vkey_file":
+            vkey_file = f"{temp_template}.vkey"
+            vkey_file_content = {
+                "type": "PaymentVerificationKeyShelley_ed25519",
+                "description": "Payment Verification Key",
+                "cborHex": key,
+            }
+
+            with open(vkey_file, "w", encoding="utf-8") as outfile:
+                json.dump(vkey_file_content, outfile)
+
+        if option == "script_file":
+            script_file = f"{temp_template}.script"
+            script_file_content = {
+                "type": "sig",
+                "keyHash": key,
+            }
+
+            with open(script_file, "w", encoding="utf-8") as outfile:
+                json.dump(script_file_content, outfile)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_address.gen_payment_addr(
+                addr_name=temp_template,
+                payment_vkey=key if option == "vkey" else None,
+                payment_vkey_file=vkey_file if option == "vkey_file" else None,
+                payment_script_file=script_file if option == "script_file" else None,
+            )
+
+        err_str = str(excinfo.value)
+
+        assert "Invalid key" in err_str or "Syntax error in script" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "option",
+        (
+            "vkey",
+            "vkey_file",
+            "script_file",
+            "address",
+        ),
+    )
+    @hypothesis.given(key=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @common.hypothesis_settings(max_examples=300)
+    def test_invalid_stake_info(
+        self,
+        cluster: clusterlib.ClusterLib,
+        option: str,
+        key: str,
+        stake_address_option_unusable: bool,
+    ):
+        """Try to use 'address build' with invalid stake address information (property-based test).
+
+        Expect failure.
+        """
+        if option == "address" and stake_address_option_unusable:
+            pytest.skip("`stake-address` option is not available on `address build` command")
+
+        temp_template = f"{common.get_test_id(cluster)}_{option}_{common.unique_time_str()}"
+
+        if option == "vkey_file":
+            vkey_file = f"{temp_template}.vkey"
+            vkey_file_content = {
+                "type": "StakeVerificationKeyShelley_ed25519",
+                "description": "Stake Verification Key",
+                "cborHex": key,
+            }
+
+            with open(vkey_file, "w", encoding="utf-8") as outfile:
+                json.dump(vkey_file_content, outfile)
+
+        if option == "script_file":
+            script_file = f"{temp_template}.script"
+            script_file_content = {
+                "type": "sig",
+                "keyHash": key,
+            }
+
+            with open(script_file, "w", encoding="utf-8") as outfile:
+                json.dump(script_file_content, outfile)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_address.gen_payment_addr(
+                addr_name=temp_template,
+                payment_vkey="addr_vk1rauy20dp8fu7zgnw9asmehg55n38l9n4pj7xv9clx8vduyylwgtsyl0n9m",
+                stake_vkey=key if option == "vkey" else None,
+                stake_vkey_file=vkey_file if option == "vkey_file" else None,
+                stake_script_file=script_file if option == "script_file" else None,
+                stake_address=key if option == "address" else None,
+            )
+
+        err_str = str(excinfo.value)
+
+        assert (
+            "Invalid key" in err_str
+            or "Syntax error in script" in err_str
+            or "invalid address" in err_str
+        ), err_str
+
+
+@pytest.mark.smoke
 class TestAddressKeyHash:
     """Tests for cardano-cli address key-hash."""
 
