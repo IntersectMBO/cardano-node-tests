@@ -21,6 +21,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +33,10 @@ LAST_POOL_NAME = f"pool{configuration.NUM_POOLS}"
 @pytest.mark.skipif(
     cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
     reason="runs only on local cluster",
+)
+@pytest.mark.skipif(
+    VERSIONS.cluster_era != VERSIONS.transaction_era,
+    reason="runs only with same cluster and Tx era",
 )
 @pytest.mark.skipif(configuration.NUM_POOLS < 4, reason="`NUM_POOLS` must be at least 4")
 @pytest.mark.skipif(
