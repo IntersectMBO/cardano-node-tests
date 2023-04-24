@@ -1,12 +1,80 @@
+[tool.poetry]
+name = "cardano-node-tests"
+version = "0.1.0"
+description = "Functional tests for cardano-node"
+license = "Apache License 2.0"
+authors = [
+    "Martin Kourim <martin.kourim@iohk.io>",
+    "Sara Tomaz <sara.tomaz@iohk.io>",
+    "Artur Wieczorek <artur.wieczorek@iohk.io>",
+    "Dorin Solomon <dorin.solomon@iohk.io>",
+]
+readme = "README.md"
+homepage = "https://input-output-hk.github.io/cardano-node-tests/"
+repository = "https://github.com/input-output-hk/cardano-node-tests"
+documentation = "https://input-output-hk.github.io/cardano-node-tests/"
+keywords = ["cardano", "cardano-node", "cardano-cli", "cardano-node-tests"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Software Development :: Testing",
+]
+packages = [{include = "cardano_node_tests"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+allure-pytest = "^2.13.1"
+cardano-clusterlib = "^0.4.5"
+cbor2 = "^5.4.6"
+filelock = "^3.12.0"
+hypothesis = "^6.72.1"
+psycopg2-binary = "^2.9.6"
+pydantic = "^1.10.7"
+pytest = "~7.2.0"
+pytest-html = "^3.2.0"
+pytest-metadata = "^2.0.4"
+pytest-order = "^1.1.0"
+pytest-select = "^0.1.2"
+pytest-xdist = "~3.1.0"
+PyYAML = "^6.0"
+requests = "^2.28.2"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.2.2"
+pylint = "2.15.5"
+types-PyYAML = "^6.0.12.9"
+types-requests = "^2.28.11.17"
+mypy = "^1.2.0"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+Sphinx = "^4.5.0"
+m2r2 = "^0.3.2"
+sphinx-rtd-theme = "^1.2.0"
+sphinxemoji = "^0.2.0"
+
+[tool.poetry.scripts]
+testnet-cleanup = "cardano_node_tests.testnet_cleanup:main"
+prepare-cluster-scripts = "cardano_node_tests.prepare_cluster_scripts:main"
+split-topology = "cardano_node_tests.split_topology:main"
+cardano-cli-coverage = "cardano_node_tests.cardano_cli_coverage:main"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/input-output-hk/cardano-node-tests/issues"
+
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 100
-
-[tool.isort]
-force_single_line = true
 
 [tool.ruff]
 line-length = 100
