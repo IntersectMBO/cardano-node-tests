@@ -98,7 +98,7 @@ fi
 
 printf "socket path set: $SOCKET_PATH_SET\n"
 if [ "$SOCKET_PATH_SET" = "$true" ]; then
-  CORRECT_SOCKET_PATH="$([[ "${CARDANO_NODE_SOCKET_PATH:-}" == *state-cluster0* ]]; process_result)" || exit_code=1
+  CORRECT_SOCKET_PATH="$([[ "${CARDANO_NODE_SOCKET_PATH:-}" == */state-cluster* ]]; process_result)" || exit_code=1
   printf "socket path correct: $CORRECT_SOCKET_PATH\n"
 
   IS_SOCKET="$([ -S "${CARDANO_NODE_SOCKET_PATH:-}" ]; process_result)" || exit_code=1
