@@ -103,11 +103,22 @@ def cluster_slot_length(
 
 
 def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
-    end_sec = 20
-    end_sec_padded = end_sec + 20  # padded to make sure tip got updated
+    end_sec = 30
+    end_sec_padded = end_sec + 30  # padded to make sure tip got updated
 
-    epoch = cluster_obj.wait_for_new_epoch()
-    time.sleep(cluster_obj.epoch_length_sec - end_sec)
+    sleep_time = 0
+
+    tip = cluster_obj.g_query.get_tip()
+    # TODO: "slotsToEpochEnd" is not present in cardano-node < 1.35.6
+    if tip.get("slotsToEpochEnd") is not None:
+        epoch = int(tip["epoch"])
+        sleep_time = int(tip["slotsToEpochEnd"]) * cluster_obj.slot_length - end_sec
+
+    if sleep_time <= 5:
+        epoch = cluster_obj.wait_for_new_epoch()
+        sleep_time = cluster_obj.epoch_length_sec - end_sec
+
+    time.sleep(sleep_time)
     assert epoch == cluster_obj.g_query.get_epoch()
 
     time.sleep(end_sec_padded)
