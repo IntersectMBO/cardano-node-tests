@@ -1,5 +1,0 @@
-# documentation requirements
-Sphinx==4.5.0
-m2r2
-sphinx_rtd_theme
-sphinxemoji

@@ -77,7 +77,8 @@ SCHEDULING_LOG=testrun_20221224_1.log CLUSTER_ERA=babbage BOOTSTRAP_DIR=~/tmp/sh
 
 ## Local installation (e.g. for tests development)
 
-Install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md)
+Install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md).
+Install and configure poetry, follow [Poetry documentation](https://python-poetry.org/docs/#installation).
 
 Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
 
@@ -103,7 +104,7 @@ nix develop .#devops
 # cd to tests repo
 cd <your path to cardano-node-test repo>
 # activate virtual env
-. .env/bin/activate
+poetry shell
 # add virtual env to PYTHONPATH
 export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
 # set env variables
@@ -167,7 +168,7 @@ Running linter:
 
 ```sh
 # activate virtual env
-. .env/bin/activate
+poetry shell
 # run linter
 make lint
 ```
@@ -178,7 +179,7 @@ When running tests, the testing framework starts and stops cluster instances as 
 
 ```sh
 # activate virtual env
-. .env/bin/activate
+poetry shell
 # prepare cluster scripts
 prepare-cluster-scripts -d <destination dir>/babbage -s cardano_node_tests/cluster_scripts/babbage/
 # set env variables
@@ -205,15 +206,10 @@ cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/cover
 
 ## Building documentation
 
-Install Sphinx into your virtual environment:
-
 ```sh
-make install_doc
-```
-
-Build and deploy documentation:
-
-```sh
+# activate virtual env
+poetry shell
+# build and deploy documentation
 ./deploy_doc.sh
 ```
 
