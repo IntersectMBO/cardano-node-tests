@@ -27,6 +27,8 @@ if VERSIONS.transaction_era <= VERSIONS.ALLEGRA:
     _BLD_SKIP_REASON = "node issue #4286"
 elif VERSIONS.transaction_era == VERSIONS.MARY:
     _BLD_SKIP_REASON = "node issue #4287"
+elif VERSIONS.transaction_era == VERSIONS.ALONZO:
+    _BLD_SKIP_REASON = "node issue #5109"
 BUILD_UNUSABLE = bool(_BLD_SKIP_REASON)
 
 SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
