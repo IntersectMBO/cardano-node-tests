@@ -1168,3 +1168,43 @@ class TestAdvancedQueries:
         pool_params = cluster.g_query.get_pool_state(stake_pool_id=pool_ids[0])
 
         assert hasattr(pool_params, "retiring")
+
+
+@common.SKIPIF_WRONG_ERA
+@pytest.mark.smoke
+class TestPing:
+    """Tests for `cardano-cli ping`."""
+
+    @pytest.fixture(scope="class")
+    def ping_available(self) -> None:
+        if not clusterlib_utils.cli_has("ping"):
+            pytest.skip("CLI command `ping` is not available")
+
+    @allure.link(helpers.get_vcs_link())
+    def test_ping_mainnet(
+        self, cluster: clusterlib.ClusterLib, ping_available: None  # noqa: ARG002
+    ):
+        """Test `cardano-cli ping` on mainnet."""
+        # pylint: disable=unused-argument
+        common.get_test_id(cluster)
+        counts = 5
+
+        cli_out = cluster.cli(
+            [
+                "ping",
+                "--count",
+                str(counts),
+                "--host",
+                "relays-new.cardano-mainnet.iohk.io",
+                "--port",
+                "3001",
+                "--magic",
+                str(clusterlib.MAINNET_MAGIC),
+                "--json",
+                "--quiet",
+            ]
+        )
+        ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
+
+        last_pong = ping_data["pongs"][-1]
+        assert last_pong["cookie"] == counts - 1, f"Expected cookie {counts - 1}, got {last_pong}"
