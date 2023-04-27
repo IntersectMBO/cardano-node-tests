@@ -30,11 +30,11 @@ SKIPPED = (
     "--byron-key",
     "--byron-mode",
     "--epoch-slots",
+    "--help",
     "--icarus-payment-key",
     "--mainnet",
     "--shelley-mode",
     "--version",
-    "-h,--help",
 )
 
 
@@ -131,7 +131,9 @@ def parse_cmd_output(output: str) -> List[str]:
             if not line_s:
                 continue
             item = line_s.split()[0]
-            cli_args.append(item)
+            # in case the item looks like "-h,--help", take only the long option
+            arg = item.split(",")[-1].strip()
+            cli_args.append(arg)
 
     return cli_args
 
