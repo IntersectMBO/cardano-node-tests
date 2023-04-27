@@ -27,6 +27,9 @@ DATA_DIR = Path(__file__).parent / "data"
 ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
+pytestmark = common.SKIPIF_WRONG_ERA
+
+
 @pytest.mark.smoke
 class TestCLI:
     """Tests for cardano-cli."""
@@ -37,7 +40,6 @@ class TestCLI:
     TX_OUT = DATA_DIR / "test_tx_metadata_both_tx.out"
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
     @pytest.mark.testnets
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check the default protocol mode - command works even without specifying protocol mode."""
@@ -57,7 +59,6 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
     def test_txid_with_process_substitution(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to pass Tx file using process substitution."""
         common.get_test_id(cluster)
@@ -77,7 +78,6 @@ class TestCLI:
             raise
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
     def test_sign_tx_with_process_substitution(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to pass skey file using process substitution."""
         temp_template = common.get_test_id(cluster)
@@ -92,7 +92,6 @@ class TestCLI:
         helpers.run_in_bash(command=cmd)
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
         common.get_test_id(cluster)
@@ -170,7 +169,6 @@ class TestCLI:
             raise AssertionError(errors_str)
 
 
-@common.SKIPIF_WRONG_ERA
 @pytest.mark.smoke
 class TestAddressInfo:
     """Tests for cardano-cli address info."""
@@ -554,7 +552,6 @@ class TestAddressKeyHash:
         assert "Invalid key" in err_str, err_str
 
 
-@common.SKIPIF_WRONG_ERA
 @pytest.mark.smoke
 class TestKey:
     """Tests for cardano-cli key."""
@@ -632,7 +629,6 @@ class TestQueryUTxO:
     """Tests for cardano-cli query utxo."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on local cluster."""
         if cluster.protocol != clusterlib.Protocols.CARDANO:
@@ -732,7 +728,6 @@ class TestQueryUTxO:
         assert utxo_out == expected_out
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
     @pytest.mark.parametrize("invalid_param", ("tx_hash", "tx_ix"))
     @hypothesis.given(filter_str=st.text(alphabet=string.ascii_letters, min_size=1))
     @common.hypothesis_settings(max_examples=300)
@@ -769,7 +764,6 @@ class TestQueryUTxO:
             assert "expecting digit" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
     @hypothesis.given(filter_str=st.text(alphabet=ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
     def test_address_invalid_data(self, cluster: clusterlib.ClusterLib, filter_str: str):
@@ -855,7 +849,6 @@ class TestStakeAddressKeyHash:
         assert "Invalid key" in err_str, err_str
 
 
-@common.SKIPIF_WRONG_ERA
 class TestAdvancedQueries:
     """Basic sanity tests for advanced cardano-cli query commands.
 
@@ -1170,7 +1163,6 @@ class TestAdvancedQueries:
         assert hasattr(pool_params, "retiring")
 
 
-@common.SKIPIF_WRONG_ERA
 @pytest.mark.smoke
 class TestPing:
     """Tests for `cardano-cli ping`."""
