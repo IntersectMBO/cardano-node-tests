@@ -115,6 +115,8 @@ class TestCLI:
     @pytest.mark.testnets
     def test_query_tip(self, cluster: clusterlib.ClusterLib):
         """Test `query tip`."""
+        common.get_test_id(cluster)
+
         tip_out = cluster.g_query.get_tip()
 
         errors = []
@@ -253,6 +255,8 @@ class TestAddressInfo:
     @allure.link(helpers.get_vcs_link())
     def test_address_info_payment_with_outfile(self, cluster: clusterlib.ClusterLib):
         """Compare payment address info with and without outfile provided."""
+        common.get_test_id(cluster)
+
         # just a static address to preform the test
         address = "addr_test1vzp4kj0rmnl5q5046e2yy697fndej56tm35jekemj6ew2gczp74wk"
 
@@ -280,6 +284,8 @@ class TestAddressInfo:
 
         Expect failure.
         """
+        common.get_test_id(cluster)
+
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_address.get_address_info(address=address)
 
@@ -1157,6 +1163,8 @@ class TestAdvancedQueries:
         """Test `query pool-state`."""
         if not clusterlib_utils.cli_has("query pool-state"):
             pytest.skip("CLI command `query pool-state` is not available")
+
+        common.get_test_id(cluster)
 
         pool_params = cluster.g_query.get_pool_state(stake_pool_id=pool_ids[0])
 
