@@ -6,8 +6,11 @@
 # Workdir for running tests
 run_workdir/
 
+# Status files of cluster instances
+/state-cluster*/
+
 # Local temporary files
-tmp/
+/tmp*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -90,4 +93,3 @@ ENV/
 
 # mkdocs documentation
 /site
-state-cluster
