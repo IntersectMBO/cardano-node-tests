@@ -1,0 +1,5 @@
+{
+    "type": "GovernancePoll",
+    "description": "An on-chain poll for SPOs: An on-chain poll for SPOs: Pineapples on pizza?",
+    "cborHex": "a1185ea20081782f416e206f6e2d636861696e20706f6c6c20666f722053504f733a2050696e656170706c6573206f6e2070697a7a613f0182816359657381624e6f"
+}
