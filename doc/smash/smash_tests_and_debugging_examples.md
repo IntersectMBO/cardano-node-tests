@@ -580,7 +580,7 @@ select id, pool_id, json from pool_offline_data where pool_id=103;
 
  id  | pool_id | json
 ---- | ------- | ----------------------------------------------------------------------------------------------------
- 138 | 103     | {"name": "Lpool", "ticker": "LPO", "homepage": "https://LLCJ.com", "description": "L pool is cool"}
+ 138 | 103     | `{"name": "Lpool", "ticker": "LPO", "homepage": "https://LLCJ.com", "description": "L pool is cool"}`
 
 
 but this is not the last entry in **pool_metadata_ref** which has `id=301` and  `homepage=https://git.io/JTUAD`.

@@ -39,5 +39,15 @@ jobs:
       with:
         path: ~/.cache/pre-commit
         key: pre-commit-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
+    - name: Install pre-commit hooks
+      run: |
+        mkdir -p ~/.cache/pre-commit
+        true > ~/.cache/pre-commit/pre-commit.log
+        poetry run pre-commit install-hooks --color=always
+        retval="$?"
+        if [ "$retval" -ne 0 ]; then
+          cat ~/.cache/pre-commit/pre-commit.log
+        fi
+        exit "$retval"
     - name: Run pre-commit
       run: poetry run pre-commit run -a --show-diff-on-failure --color=always
