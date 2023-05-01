@@ -245,12 +245,15 @@ ALONZO_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
 
 CONWAY_GENESIS_HASH=""
 EXP_PROTOCOLS_KEY="TestEnableDevelopmentNetworkProtocols"
+EXP_PROTOCOLS_VAL="true"
 
 # conway genesis is not present on node < 1.36.0
 if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
   CONWAY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
     "$STATE_CLUSTER/shelley/genesis.conway.json")"
   EXP_PROTOCOLS_KEY="ExperimentalProtocolsEnabled"
+  # experimental protocols are not needed for P2P on node >= 1.36.0
+  EXP_PROTOCOLS_VAL="false"
 fi
 
 for conf in "$SCRIPT_DIR"/config-*.json; do
@@ -291,7 +294,9 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
       fi
     fi
 
-    jq --arg exp_protocols_key "$EXP_PROTOCOLS_KEY" \
+    jq \
+      --arg exp_protocols_key "$EXP_PROTOCOLS_KEY" \
+      --argjson exp_protocols_val "$EXP_PROTOCOLS_VAL" \
       '.EnableP2P = true
       | .MaxConcurrencyBulkSync = 2
       | .MaxConcurrencyDeadline = 4
@@ -299,7 +304,7 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
       | .TargetNumberOfKnownPeers = 100
       | .TargetNumberOfEstablishedPeers = 50
       | .TargetNumberOfActivePeers = 20
-      | .[$exp_protocols_key] = true
+      | .[$exp_protocols_key] = $exp_protocols_val
       | .TraceBlockFetchClient = true
       | .TraceChainSyncClient = true' \
       "$STATE_CLUSTER/$fname" > "$STATE_CLUSTER/${fname}_jq"
