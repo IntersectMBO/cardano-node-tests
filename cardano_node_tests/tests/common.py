@@ -52,11 +52,15 @@ SKIPIF_TOKENS_UNUSABLE = pytest.mark.skipif(
     reason="native tokens are available only in Mary+ eras",
 )
 
+_PLUTUS_SKIP_REASON = ""
+if VERSIONS.transaction_era < VERSIONS.ALONZO:
+    _PLUTUS_SKIP_REASON = "Plutus is available only in Alonzo+ eras"
+elif VERSIONS.transaction_era == VERSIONS.ALONZO:
+    _PLUTUS_SKIP_REASON = "Plutus unusable due to node issue #5109"
 SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALONZO,
-    reason="Plutus is available only in Alonzo+ eras",
+    bool(_PLUTUS_SKIP_REASON),
+    reason=_PLUTUS_SKIP_REASON,
 )
-
 
 SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.BABBAGE,

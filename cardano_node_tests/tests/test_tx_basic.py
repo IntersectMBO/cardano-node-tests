@@ -912,7 +912,10 @@ class TestBasicTransactions:
         assert tx_raw_output.out_file.exists()
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_PLUTUS_UNUSABLE
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        reason="doesn't run with TX era < Alonzo",
+    )
     @pytest.mark.dbsync
     def test_utxo_with_datum_hash(
         self,
