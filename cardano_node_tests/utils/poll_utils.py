@@ -18,11 +18,6 @@ class PollFiles(NamedTuple):
     metadata: Path
 
 
-class PollVrf(NamedTuple):
-    is_valid: bool
-    signers: Tuple[str, ...]
-
-
 def create_poll(
     cluster_obj: clusterlib.ClusterLib, question: str, answers: List[str], name_template: str
 ) -> PollFiles:
@@ -79,7 +74,9 @@ def answer_poll(
     return answer_file
 
 
-def verify_poll(cluster_obj: clusterlib.ClusterLib, poll_file: Path, tx_signed: Path) -> PollVrf:
+def verify_poll(
+    cluster_obj: clusterlib.ClusterLib, poll_file: Path, tx_signed: Path
+) -> Tuple[str, ...]:
     """Verify an answer to the poll."""
     cli_out = cluster_obj.cli(
         [
@@ -94,8 +91,7 @@ def verify_poll(cluster_obj: clusterlib.ClusterLib, poll_file: Path, tx_signed: 
 
     stderr_out = cli_out.stderr.decode("utf-8")
     if "Found valid poll answer, signed by:" not in stderr_out:
-        return PollVrf(is_valid=False, signers=())
+        raise clusterlib.CLIError(f"Unexpected output from `governance verify-poll`: {stderr_out}")
 
-    signers = tuple(json.loads(cli_out.stdout.decode("utf-8")))
-
-    return PollVrf(is_valid=True, signers=signers)
+    signers = json.loads(cli_out.stdout.decode("utf-8"))
+    return tuple(signers)
