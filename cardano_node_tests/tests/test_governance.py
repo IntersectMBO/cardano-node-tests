@@ -62,22 +62,27 @@ class TestPoll:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
-    def test_create_poll(
+    def test_create_and_answer_poll(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         governance_poll_available: None,  # noqa: ARG002
         use_build_cmd: bool,
     ):
-        """Test creating new SPO poll.
+        """Test creating and answering new SPO poll.
 
         * create the poll
-        * check that the expected outfile is created
         * publish the poll on chain
-        * check that the created tx has the expected metadata
+        * check that the created Tx has the expected metadata
+        * answer the poll
+        * publish the answer on chain
+        * verify poll answer
         """
         # pylint: disable=unused-argument
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+
+        # Publish the poll on chain
 
         poll_question = f"Poll {clusterlib.get_rand_str(4)}: Pineapples on pizza?"
 
@@ -88,8 +93,7 @@ class TestPoll:
             name_template=temp_template,
         )
 
-        # Publish poll
-        tx_files = clusterlib.TxFiles(
+        tx_files_poll = clusterlib.TxFiles(
             signing_key_files=[
                 payment_addr.skey_file,
                 *cluster.g_genesis.genesis_keys.delegate_skeys,
@@ -99,61 +103,120 @@ class TestPoll:
         )
 
         if use_build_cmd:
-            tx_output = cluster.g_transaction.build_tx(
+            tx_output_poll = cluster.g_transaction.build_tx(
                 src_address=payment_addr.address,
-                tx_name=f"{temp_template}_publish_poll_build",
-                tx_files=tx_files,
-                witness_override=len(tx_files.signing_key_files),
+                tx_name=f"{temp_template}_poll",
+                tx_files=tx_files_poll,
+                witness_override=len(tx_files_poll.signing_key_files),
             )
 
-            tx_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_output.out_file,
-                signing_key_files=tx_files.signing_key_files,
-                tx_name=temp_template,
+            tx_signed_poll = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_output_poll.out_file,
+                signing_key_files=tx_files_poll.signing_key_files,
+                tx_name=f"{temp_template}_poll",
             )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_poll, txins=tx_output_poll.txins)
         else:
-            tx_output = cluster.g_transaction.send_tx(
+            tx_output_poll = cluster.g_transaction.send_tx(
                 src_address=payment_addr.address,
-                tx_name=f"{temp_template}_publish_poll_build_raw",
-                tx_files=tx_files,
+                tx_name=f"{temp_template}_poll",
+                tx_files=tx_files_poll,
             )
 
         expected_metadata = {"94": [[0, [poll_question]], [1, [["Yes"], ["No"]]]]}
 
-        tx_data = tx_view.load_tx_view(cluster_obj=cluster, tx_body_file=tx_output.out_file)
+        tx_data = tx_view.load_tx_view(cluster_obj=cluster, tx_body_file=tx_output_poll.out_file)
 
         assert tx_data["metadata"] == expected_metadata
 
+        out_utxos_poll = cluster.g_query.get_utxo(tx_raw_output=tx_output_poll)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_poll, address=payment_addr.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output_poll.txins) - tx_output_poll.fee
+        ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+        # Publish the answer on chain
+
+        node_cold = cluster_manager.cache.addrs_data[cluster_management.Resources.POOL1][
+            "cold_key_pair"
+        ]
+        pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
+        pool_id_dec = helpers.decode_bech32(bech32=pool_id)
+
+        answer_file = poll_utils.answer_poll(
+            cluster_obj=cluster, poll_file=poll_files.poll, answer=1, name_template=temp_template
+        )
+
+        tx_files_answer = clusterlib.TxFiles(
+            signing_key_files=[payment_addr.skey_file, node_cold.skey_file],
+            metadata_json_files=[answer_file],
+            metadata_json_detailed_schema=True,
+        )
+
+        if use_build_cmd:
+            tx_output_answer = cluster.g_transaction.build_tx(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_answer",
+                tx_files=tx_files_answer,
+                required_signers=[node_cold.skey_file],
+                witness_override=len(tx_files_answer.signing_key_files),
+            )
+            tx_signed_answer = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_output_answer.out_file,
+                signing_key_files=tx_files_answer.signing_key_files,
+                tx_name=f"{temp_template}_answer",
+            )
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_answer, txins=tx_output_answer.txins)
+        else:
+            tx_output_answer = cluster.g_transaction.send_tx(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_answer",
+                tx_files=tx_files_answer,
+                required_signers=[node_cold.skey_file],
+            )
+
+        out_utxos_answer = cluster.g_query.get_utxo(tx_raw_output=tx_output_answer)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_answer, address=payment_addr.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output_answer.txins) - tx_output_answer.fee
+        ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+        # Verify the answer to the poll
+        signers = poll_utils.verify_poll(
+            cluster_obj=cluster, poll_file=poll_files.poll, tx_signed=tx_output_answer.out_file
+        )
+        assert pool_id_dec == signers[0], "The command returned unexpected signers."
+
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
-    def test_answer_poll(
+    @pytest.mark.parametrize("tx_file_type", ("body", "signed"))
+    def test_answer_golden_poll(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         governance_poll_available: None,  # noqa: ARG002
+        tx_file_type: str,
         use_build_cmd: bool,
     ):
-        """Test answering an SPO poll.
+        """Test answering a golden SPO poll.
 
-        * create answer
-        * check if the answer was created successfully
-        * publish answer on chain
+        * create an answer to a poll
+        * create Tx with the answer
         * verify poll answer
         """
         # pylint: disable=unused-argument
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_file_type}"
 
         poll_file = DATA_DIR / "governance_poll.json"
         spo_signing_key = DATA_DIR / "golden_stake_pool.skey"
         stake_pool_id = "f8db28823f8ebd01a2d9e24efb2f0d18e387665770274513e370b5d5"
 
-        # Create answer
+        # Create an answer to the poll
         answer_file = poll_utils.answer_poll(
             cluster_obj=cluster, poll_file=poll_file, answer=1, name_template=temp_template
         )
 
-        # Publish answer
+        # Create Tx with the answer
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file, spo_signing_key],
             metadata_json_files=[answer_file],
@@ -163,35 +226,41 @@ class TestPoll:
         if use_build_cmd:
             tx_output = cluster.g_transaction.build_tx(
                 src_address=payment_addr.address,
-                tx_name=f"{temp_template}_publish_answer_build",
+                tx_name=f"{temp_template}_answer",
                 tx_files=tx_files,
                 required_signers=[spo_signing_key],
             )
+        else:
+            tx_output = cluster.g_transaction.build_raw_tx(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_answer",
+                tx_files=tx_files,
+                fee=10_000,
+                required_signers=[spo_signing_key],
+            )
 
-            tx_signed = cluster.g_transaction.sign_tx(
+        if tx_file_type == "body":
+            check_tx_file = tx_output.out_file
+        else:
+            check_tx_file = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
             )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
-        else:
-            tx_output = cluster.g_transaction.send_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_publish_answer_build_raw",
-                tx_files=tx_files,
-                required_signers=[spo_signing_key],
-            )
 
-        # Verify an answer to the poll
-        poll_vrf = poll_utils.verify_poll(
-            cluster_obj=cluster, poll_file=poll_file, tx_signed=tx_output.out_file
+        # Verify the answer to the poll
+        signers = poll_utils.verify_poll(
+            cluster_obj=cluster, poll_file=poll_file, tx_signed=check_tx_file
         )
-        assert poll_vrf.is_valid, "The answer is invalid."
-        assert stake_pool_id == poll_vrf.signers[0], "The signers are unexpected."
+        assert stake_pool_id == signers[0], "The command returned unexpected signers."
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(answer_index=st.integers(min_value=2, max_value=common.MAX_INT64))
-    @common.hypothesis_settings(max_examples=300)
+    @hypothesis.given(
+        answer_index=st.integers(min_value=-common.MAX_INT64, max_value=common.MAX_INT64)
+    )
+    @hypothesis.example(answer_index=-common.MAX_INT64)
+    @hypothesis.example(answer_index=common.MAX_INT64)
+    @common.hypothesis_settings(max_examples=1000)
     def test_create_invalid_answer(
         self,
         cluster: clusterlib.ClusterLib,
@@ -203,6 +272,8 @@ class TestPoll:
         Expect failure.
         """
         # pylint: disable=unused-argument
+        hypothesis.assume(answer_index not in (0, 1))
+
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         poll_file = DATA_DIR / "governance_poll.json"
 
@@ -215,15 +286,17 @@ class TestPoll:
             )
 
         err_str = str(excinfo.value)
-        assert "Poll answer out of bounds" in err_str, err_str
+        assert "Poll answer out of bounds" in err_str or "negative index" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("tx_file_type", ("body", "signed"))
     def test_verify_answer_without_required_signer(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         governance_poll_available: None,  # noqa: ARG002
+        tx_file_type: str,
         use_build_cmd: bool,
     ):
         """Test verifying an answer to an SPO poll without valid required signer.
@@ -231,7 +304,7 @@ class TestPoll:
         Expect failure.
         """
         # pylint: disable=unused-argument
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_file_type}"
         poll_file = DATA_DIR / "governance_poll.json"
 
         # Create answer
@@ -239,7 +312,7 @@ class TestPoll:
             cluster_obj=cluster, poll_file=poll_file, answer=1, name_template=temp_template
         )
 
-        # Publish answer
+        # Create Tx with an answer to the poll
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file],
             metadata_json_files=[answer_file],
@@ -253,24 +326,27 @@ class TestPoll:
                 tx_files=tx_files,
                 witness_override=len(tx_files.signing_key_files),
             )
+        else:
+            tx_output = cluster.g_transaction.build_raw_tx(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_answer",
+                tx_files=tx_files,
+                fee=10_000,
+            )
 
-            tx_signed = cluster.g_transaction.sign_tx(
+        if tx_file_type == "body":
+            check_tx_file = tx_output.out_file
+        else:
+            check_tx_file = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=temp_template,
-            )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
-        else:
-            tx_output = cluster.g_transaction.send_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_publish_answer_build_raw",
-                tx_files=tx_files,
             )
 
         # Verify answer without required signers
         with pytest.raises(clusterlib.CLIError) as excinfo:
             poll_utils.verify_poll(
-                cluster_obj=cluster, poll_file=poll_file, tx_signed=tx_output.out_file
+                cluster_obj=cluster, poll_file=poll_file, tx_signed=check_tx_file
             )
 
         err_str = str(excinfo.value)
