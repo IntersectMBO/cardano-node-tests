@@ -1,5 +1,12 @@
-"""Tests for governance commands."""
-import json
+"""Tests for governance functionality.
+
+Tests for update proposals are in separate file `test_update_proposals.py`.
+
+This file tests:
+* poll creation
+* poll answer
+* poll verification
+"""
 import logging
 from pathlib import Path
 
@@ -13,6 +20,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import poll_utils
 from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
@@ -20,19 +28,13 @@ DATA_DIR = Path(__file__).parent / "data"
 
 
 @pytest.mark.smoke
-class TestGovernancePoll:
-    """Tests for cardano-cli governance poll commands."""
-
-    MAX_INT64 = (2**63) - 1
+class TestPoll:
+    """Tests for SPO poll."""
 
     @pytest.fixture(scope="class")
     def governance_poll_available(self) -> None:
-        if not (
-            clusterlib_utils.cli_has("governance create-poll")
-            or clusterlib_utils.cli_has("governance answer-poll")
-            or clusterlib_utils.cli_has("governance verify-poll")
-        ):
-            pytest.skip("CLI commands `governance` poll are not available")
+        if not clusterlib_utils.cli_has("governance create-poll"):
+            pytest.skip("The `cardano-cli governance` poll commands are not available.")
 
     @pytest.fixture
     def payment_addr(
@@ -67,7 +69,7 @@ class TestGovernancePoll:
         governance_poll_available: None,  # noqa: ARG002
         use_build_cmd: bool,
     ):
-        """Test 'governance create-poll'.
+        """Test creating new SPO poll.
 
         * create the poll
         * check that the expected outfile is created
@@ -77,38 +79,22 @@ class TestGovernancePoll:
         # pylint: disable=unused-argument
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
-        poll_file = f"{temp_template}_poll.json"
-
         poll_question = f"Poll {clusterlib.get_rand_str(4)}: Pineapples on pizza?"
 
-        cli_out = cluster.cli(
-            [
-                "governance",
-                "create-poll",
-                "--question",
-                poll_question,
-                "--answer",
-                "Yes",
-                "--answer",
-                "No",
-                "--out-file",
-                poll_file,
-            ]
+        poll_files = poll_utils.create_poll(
+            cluster_obj=cluster,
+            question=poll_question,
+            answers=["Yes", "No"],
+            name_template=temp_template,
         )
 
-        assert "Poll created successfully" in cli_out.stderr.decode("utf-8")
-
         # Publish poll
-        poll_metadata_file = Path(f"{temp_template}_poll_metadata.json")
-        with open(poll_metadata_file, "w", encoding="utf-8") as out_json:
-            json.dump(json.loads(cli_out.stdout.rstrip().decode("utf-8")), out_json)
-
         tx_files = clusterlib.TxFiles(
             signing_key_files=[
                 payment_addr.skey_file,
                 *cluster.g_genesis.genesis_keys.delegate_skeys,
             ],
-            metadata_json_files=[poll_metadata_file],
+            metadata_json_files=[poll_files.metadata],
             metadata_json_detailed_schema=True,
         )
 
@@ -148,7 +134,7 @@ class TestGovernancePoll:
         governance_poll_available: None,  # noqa: ARG002
         use_build_cmd: bool,
     ):
-        """Test 'governance answer-poll' and 'governance verify-poll'.
+        """Test answering an SPO poll.
 
         * create answer
         * check if the answer was created successfully
@@ -163,22 +149,9 @@ class TestGovernancePoll:
         stake_pool_id = "f8db28823f8ebd01a2d9e24efb2f0d18e387665770274513e370b5d5"
 
         # Create answer
-        answer_output = cluster.cli(
-            [
-                "governance",
-                "answer-poll",
-                "--poll-file",
-                str(poll_file),
-                "--answer",
-                "1",
-            ]
+        answer_file = poll_utils.answer_poll(
+            cluster_obj=cluster, poll_file=poll_file, answer=1, name_template=temp_template
         )
-
-        assert "Poll answer created successfully" in answer_output.stderr.decode("utf-8")
-
-        answer_file = Path(f"{temp_template}.json")
-        with open(answer_file, "w", encoding="utf-8") as out_json:
-            json.dump(json.loads(answer_output.stdout.rstrip().decode("utf-8")), out_json)
 
         # Publish answer
         tx_files = clusterlib.TxFiles(
@@ -209,25 +182,15 @@ class TestGovernancePoll:
                 required_signers=[spo_signing_key],
             )
 
-        # Verify answer
-        answer_verified = cluster.cli(
-            [
-                "governance",
-                "verify-poll",
-                "--poll-file",
-                str(poll_file),
-                "--signed-tx-file",
-                str(tx_output.out_file),
-            ]
+        # Verify an answer to the poll
+        poll_vrf = poll_utils.verify_poll(
+            cluster_obj=cluster, poll_file=poll_file, tx_signed=tx_output.out_file
         )
-
-        assert (
-            "Found valid poll answer, signed by:" in answer_verified.stderr.decode("utf-8")
-            and stake_pool_id == json.loads(answer_verified.stdout.decode("utf-8"))[0]
-        ), "The answer is invalid."
+        assert poll_vrf.is_valid, "The answer is invalid."
+        assert stake_pool_id == poll_vrf.signers[0], "The signers are unexpected."
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(answer_index=st.integers(min_value=2, max_value=MAX_INT64))
+    @hypothesis.given(answer_index=st.integers(min_value=2, max_value=common.MAX_INT64))
     @common.hypothesis_settings(max_examples=300)
     def test_create_invalid_answer(
         self,
@@ -235,30 +198,23 @@ class TestGovernancePoll:
         governance_poll_available: None,  # noqa: ARG002
         answer_index: int,
     ):
-        """Test 'governance answer-poll' with invalid answer.
+        """Test answering an SPO poll with invalid answer.
 
-        * Expect failure.
+        Expect failure.
         """
         # pylint: disable=unused-argument
-        common.get_test_id(cluster)
-
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         poll_file = DATA_DIR / "governance_poll.json"
 
-        # Create answer
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "governance",
-                    "answer-poll",
-                    "--poll-file",
-                    str(poll_file),
-                    "--answer",
-                    str(answer_index),
-                ]
+            poll_utils.answer_poll(
+                cluster_obj=cluster,
+                poll_file=poll_file,
+                answer=answer_index,
+                name_template=temp_template,
             )
 
         err_str = str(excinfo.value)
-
         assert "Poll answer out of bounds" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
@@ -270,32 +226,18 @@ class TestGovernancePoll:
         governance_poll_available: None,  # noqa: ARG002
         use_build_cmd: bool,
     ):
-        """Test 'governance verify-poll' with an answer without valid required signer.
+        """Test verifying an answer to an SPO poll without valid required signer.
 
-        * Expect failure.
+        Expect failure.
         """
         # pylint: disable=unused-argument
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
-
         poll_file = DATA_DIR / "governance_poll.json"
 
         # Create answer
-        answer_output = cluster.cli(
-            [
-                "governance",
-                "answer-poll",
-                "--poll-file",
-                str(poll_file),
-                "--answer",
-                "1",
-            ]
+        answer_file = poll_utils.answer_poll(
+            cluster_obj=cluster, poll_file=poll_file, answer=1, name_template=temp_template
         )
-
-        assert "Poll answer created successfully" in answer_output.stderr.decode("utf-8")
-
-        answer_file = Path(f"{temp_template}.json")
-        with open(answer_file, "w", encoding="utf-8") as out_json:
-            json.dump(json.loads(answer_output.stdout.rstrip().decode("utf-8")), out_json)
 
         # Publish answer
         tx_files = clusterlib.TxFiles(
@@ -327,19 +269,11 @@ class TestGovernancePoll:
 
         # Verify answer without required signers
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "governance",
-                    "verify-poll",
-                    "--poll-file",
-                    str(poll_file),
-                    "--signed-tx-file",
-                    str(tx_output.out_file),
-                ]
+            poll_utils.verify_poll(
+                cluster_obj=cluster, poll_file=poll_file, tx_signed=tx_output.out_file
             )
 
         err_str = str(excinfo.value)
-
         assert (
             "Signatories MUST be specified as extra signatories on the transaction "
             "and cannot be mere payment keys"
