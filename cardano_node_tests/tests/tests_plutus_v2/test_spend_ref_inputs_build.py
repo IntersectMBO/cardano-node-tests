@@ -174,6 +174,7 @@ class TestReadonlyReferenceInputs:
         * create the necessary Tx outputs
         * use a reference input that is also a regular input and spend the locked UTxO
         * check that input was spent
+        * check "transaction view"
         """
         __: Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -253,7 +254,8 @@ class TestReadonlyReferenceInputs:
             utxo=reference_input[0]
         ), f"The reference input was NOT spent `{reference_input[0]}`"
 
-        # TODO check command 'transaction view' bug on cardano-node 4045
+        # check "transaction view"
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
     def test_use_same_reference_input_multiple_times(
