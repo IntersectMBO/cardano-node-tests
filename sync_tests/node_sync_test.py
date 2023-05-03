@@ -22,9 +22,12 @@ from explorer_utils import get_epoch_start_datetime_from_explorer
 from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
 from gitpython_utils import git_clone_iohk_repo, git_checkout
 
+import utils
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir, \
     list_absolute_file_paths
+
+DATA_DIR = Path(__file__).parent / "data"
 
 NODE = "./cardano-node"
 CLI = "./cardano-cli"
@@ -143,35 +146,49 @@ def enable_p2p_node_config_file(node_config_filepath):
         json.dump(node_config_json, json_file, indent=2)
 
 
-def get_node_config_files(env, node_topology_type):
+def rm_node_config_files() -> None:
+    os.chdir(Path(ROOT_TEST_PATH))
+    for gen in Path(".").glob("*-genesis.json"):
+        Path(gen).unlink(missing_ok=True)
+    for f in ("config.json", "topology.json"):
+        Path(f).unlink(missing_ok=True)
+
+
+def download_env_file(env: str, file_name: str) -> None:
+    if Path(file_name).exists():
+        return
+
+    print(f"Getting the {file_name} file...")
+    urllib.request.urlretrieve(
+        f"https://book.world.dev.cardano.org/environments/{env}/{file_name}",
+        file_name,
+    )
+
+
+def get_node_config_files(env, node_topology_type) -> None:
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
-    print("Getting the config.json file...")
-    urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/config.json", "config.json",
-    )
-    print("Getting the byron-genesis.json file...")
-    urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/byron-genesis.json", "byron-genesis.json",
-    )
-    print("Getting the shelley-genesis.json file...")
-    urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/shelley-genesis.json", "shelley-genesis.json",
-    )
-    print("Getting the alonzo-genesis.json file...")
-    urllib.request.urlretrieve(
-        "https://book.world.dev.cardano.org/environments/" + env + "/alonzo-genesis.json", "alonzo-genesis.json",
-    )
+    download_env_file(env, "config.json")
+    download_env_file(env, "byron-genesis.json")
+    download_env_file(env, "shelley-genesis.json")
+    download_env_file(env, "alonzo-genesis.json")
     if node_topology_type == "p2p":
         print("Creating the topology.json file...")
         create_mainnet_p2p_topology_file("topology.json")
         enable_p2p_node_config_file("config.json")
     else:
-        print("Getting the topology.json file...")
-        urllib.request.urlretrieve(
-            "https://book.world.dev.cardano.org/environments/" + env + "/topology.json", "topology.json",
-            )
+        download_env_file(env, "topology.json")
+
+    if utils.cli_has(f"{CLI} governance create-poll"):
+        shutil.copy2(DATA_DIR / "conway-genesis.json", "conway-genesis.json")
+        conway_genesis_hash = utils.run_cardano_cli([CLI, "genesis", "hash", "--genesis", "conway-genesis.json"]).stdout.decode("utf-8").strip()
+        with open("config.json", "r", encoding="utf-8") as fp_in:
+            node_config_json = json.load(fp_in)
+        node_config_json["ConwayGenesisHash"] = conway_genesis_hash
+        node_config_json["ConwayGenesisFile"] = "conway-genesis.json"
+        with open("config.json", "w", encoding="utf-8") as fp_out:
+            json.dump(node_config_json, fp_out, indent=2)
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
 
@@ -913,6 +930,7 @@ def main():
     print(f"  - cardano_cli_git_rev1: {cli_git_rev1}")
 
     print("Getting the node configuration files")
+    rm_node_config_files()
     # TO DO: change the default to P2P when full P2P will be supported on Mainnet
     get_node_config_files(env, node_topology_type1)
 
@@ -965,18 +983,18 @@ def main():
         print("==============================================================================")
         print(f"================= Start sync using node_rev2: {node_rev2} ===================")
         print("==============================================================================")
-        if (env == "mainnet") and (node_topology_type1 != node_topology_type2):
-            print("remove the previous topology.")
-            delete_file(Path(ROOT_TEST_PATH) / "topology.json")
-            print("Getting the node configuration files")
-            get_node_config_files(env, node_topology_type2)
-
-        print(f"Get the cardano-node and cardano-cli files")
+        print("Get the cardano-node and cardano-cli files")
         if node_build_mode == "nix":
             get_node_files_using_nix(node_rev2, repository)
         else:
             print(
                 f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
+
+        if (env == "mainnet") and (node_topology_type1 != node_topology_type2):
+            print("remove the previous topology.")
+            delete_file(Path(ROOT_TEST_PATH) / "topology.json")
+        print("Getting the node configuration files")
+        get_node_config_files(env, node_topology_type2)
 
         print(" --- node version ---")
         cli_version2, cli_git_rev2 = get_node_version()
