@@ -742,11 +742,13 @@ def copy_node_executables(src_location, dst_location, build_mode):
                          Path(dst_location) / "cardano-node")
         except Exception as e:
             print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+            exit(1)
         try:
             shutil.copy2(Path(src_location) / cli_binary_location / "cardano-cli",
                          Path(dst_location) / "cardano-cli")
         except Exception as e:
             print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+            exit(1)
         time.sleep(5)
     if build_mode == "cabal":
         node_binary_location = get_node_executable_path_built_with_cabal()
@@ -782,8 +784,10 @@ def get_node_files_using_nix(node_rev, repository = None):
         repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
 
     os.chdir(Path(repo_dir))
-    execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
-    execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
+    Path("cardano-node-bin").unlink(missing_ok=True)
+    Path("cardano-cli-bin").unlink(missing_ok=True)
+    execute_command("nix build .#cardano-node -o cardano-node-bin")
+    execute_command("nix build .#cardano-cli -o cardano-cli-bin")
     copy_node_executables(repo_dir, test_directory, "nix")
     os.chdir(Path(test_directory))
     subprocess.check_call(['chmod', '+x', NODE])
