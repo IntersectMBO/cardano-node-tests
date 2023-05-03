@@ -90,7 +90,7 @@ def verify_poll(
     )
 
     stderr_out = cli_out.stderr.decode("utf-8")
-    if "Found valid poll answer, signed by:" not in stderr_out:
+    if "Found valid poll answer" not in stderr_out:
         raise clusterlib.CLIError(f"Unexpected output from `governance verify-poll`: {stderr_out}")
 
     signers = json.loads(cli_out.stdout.decode("utf-8"))
