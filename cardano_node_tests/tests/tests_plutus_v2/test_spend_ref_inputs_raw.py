@@ -163,6 +163,7 @@ class TestReadonlyReferenceInputs:
         * create the necessary Tx outputs
         * use a reference input that is also a regular input and spend the locked UTxO
         * check that the input was spent
+        # check "transaction view"
         """
         __: Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -224,7 +225,7 @@ class TestReadonlyReferenceInputs:
             clusterlib.TxOut(address=payment_addrs[1].address, amount=amount),
         ]
 
-        cluster.g_transaction.send_tx(
+        tx_output_redeem = cluster.g_transaction.send_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
             txins=reference_input,
@@ -241,7 +242,8 @@ class TestReadonlyReferenceInputs:
             utxo=reference_input[0]
         ), f"The reference input was NOT spent `{reference_input[0]}`"
 
-        # TODO check command 'transaction view' bug on cardano-node 4045
+        # check "transaction view"
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
