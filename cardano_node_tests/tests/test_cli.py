@@ -153,7 +153,9 @@ class TestCLI:
 
         # Check that 'query tip' is returning the expected fields
         if set(tip_out.keys()) != expected_out:
-            errors.append("Unexpected fields in 'query tip' output")
+            errors.append(
+                f"Unexpected fields in 'query tip' output: {set(tip_out.keys())} != {expected_out}"
+            )
 
         # Check that 'slot' is never greater than the total number of slots
         if tip_out["slot"] > (tip_out["epoch"] + 1) * cluster.epoch_length - cluster.slots_offset:
