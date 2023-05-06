@@ -75,7 +75,7 @@ class _ClusterGetStatus:
     cluster_needs_respin: bool = False
     prio_here: bool = False
     tried_all_instances: bool = False
-    instance_dir: Path = Path("/nonexistent")  # noqa: RUF009
+    instance_dir: Path = Path("/nonexistent")
     final_lock_resources: Iterable[str] = ()
     final_use_resources: Iterable[str] = ()
     # status files
