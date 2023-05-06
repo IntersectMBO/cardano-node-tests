@@ -45,12 +45,6 @@ class TxMetadata(NamedTuple):
     aux_data: list
 
 
-@helpers.callonce
-def _cli_has_query_pool_state() -> bool:
-    """Return if `query pool-state` is available."""
-    return cli_has("query pool-state")
-
-
 def get_pool_state(
     cluster_obj: clusterlib.ClusterLib,
     pool_id: str,
@@ -58,7 +52,7 @@ def get_pool_state(
     """Get pool state using the available command."""
     return (
         cluster_obj.g_query.get_pool_state(pool_id)
-        if _cli_has_query_pool_state()
+        if cli_has("query pool-state")
         else cluster_obj.g_query.get_pool_params(pool_id)
     )
 
