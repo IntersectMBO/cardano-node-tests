@@ -8,6 +8,7 @@ from typing import Tuple
 
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -78,13 +79,22 @@ def verify_poll(
     cluster_obj: clusterlib.ClusterLib, poll_file: Path, tx_signed: Path
 ) -> Tuple[str, ...]:
     """Verify an answer to the poll."""
+    # TODO: Node 8.0.0-rc1 uses the old `--signed-tx-file` argument.
+    # Can be removed if 8.0.0 is released with the new `--tx-file` argument,
+    # as there is no other release that uses the old argument.
+    verify_poll_tx_arg = (
+        "--tx-file"
+        if clusterlib_utils.cli_has(command="governance verify-poll --tx-file")
+        else "--signed-tx-file"
+    )
+
     cli_out = cluster_obj.cli(
         [
             "governance",
             "verify-poll",
             "--poll-file",
             str(poll_file),
-            "--signed-tx-file",
+            verify_poll_tx_arg,
             str(tx_signed),
         ]
     )
