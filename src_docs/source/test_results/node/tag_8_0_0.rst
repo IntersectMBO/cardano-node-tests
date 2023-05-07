@@ -86,6 +86,7 @@ New functionalities in this tag
 * Versioned serialization formats for ledger.  (nothing to test on node/CLI side)  |:arrow_right:|
 * A ledger API.  (nothing to test on node/CLI side)  |:arrow_right:|
 * Changed deposit tracking.  |:hourglass_flowing_sand:|
+* Possibility for socket to be defined via '--socket-path' CLI option instead of 'CARDANO_NODE_SOCKET_PATH' env var.  |:X:| (`issue #5199 <https://github.com/input-output-hk/cardano-node/issues/5199>`__)
 
 
 New issues
