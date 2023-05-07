@@ -92,7 +92,7 @@ New functionalities in this tag
 New issues
 ----------
 
-`Up-to-date list <https://github.com/input-output-hk/cardano-node/labels/8.0.0>`__
+`Up-to-date list <https://github.com/input-output-hk/cardano-node/issues?q=label%3A8.0.0+>`__
 
 * `[BUG] - building Alonzo-era tx on Babbage fails due to missing 'protocolParamUTxOCostPerWord' <https://github.com/input-output-hk/cardano-node/issues/5109>`__
 * `[BUG] - Unclear / inconsistent error message from 'governance answer-poll' <Unclear / inconsistent error message from governance answer-poll>`__
