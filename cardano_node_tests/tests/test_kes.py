@@ -356,7 +356,7 @@ class TestKES:
             if xfails:
                 pytest.xfail(" ".join(xfails))
             else:
-                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
+                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
@@ -615,7 +615,7 @@ class TestKES:
             if xfails:
                 pytest.xfail("; ".join(xfails))
             else:
-                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
+                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}")
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
@@ -801,7 +801,7 @@ class TestKES:
             if xfails:
                 pytest.xfail(" ".join(xfails))
             else:
-                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
+                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}")
 
     @allure.link(helpers.get_vcs_link())
     def test_no_kes_period_arg(
