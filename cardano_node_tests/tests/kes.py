@@ -59,7 +59,7 @@ def check_kes_period_info_result(  # noqa: C901
         errors.append(f"The kes expiration date is `null` in check '{check_id}'")
     else:
         expected_expiration_date = (
-            datetime.datetime.now()
+            datetime.datetime.now(tz=datetime.timezone.utc)
             + datetime.timedelta(
                 seconds=command_metrics["qKesRemainingSlotsInKesPeriod"] * cluster_obj.slot_length
             )
