@@ -52,12 +52,17 @@ def _setup_scenarios(
         cluster_obj.socket_args[-1] = "/nonexistent"
 
 
-def _get_expected_error(env_scenario: str, socket_scenario: str) -> str:
-    """Get expected error message based on scenarios."""
-    expected_err = "Network.Socket.connect:"
+def _assert_expected_err(env_scenario: str, socket_scenario: str, err_msg: str) -> None:
+    """Check expected error message based on scenarios."""
+    expected_err = ["Network.Socket.connect:"]
     if socket_scenario == "socket_path_missing" and env_scenario == "env_missing":
-        expected_err = "Missing: --socket-path SOCKET_PATH"
-    return expected_err
+        expected_err = [
+            "Missing: --socket-path SOCKET_PATH",
+            # TODO: In 8.0.0-untested the error message is different:
+            "Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH",
+        ]
+
+    assert any(msg in err_msg for msg in expected_err), f"{expected_err} not in {err_msg}"
 
 
 @pytest.fixture(scope="module")
@@ -290,14 +295,12 @@ class TestNegativeSocketPath:
         _setup_scenarios(
             cluster_obj=cluster, env_scenario=env_scenario, socket_scenario=socket_scenario
         )
-        expected_err = _get_expected_error(
-            env_scenario=env_scenario, socket_scenario=socket_scenario
-        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_protocol_state()
-        err_msg = str(excinfo.value)
-        assert expected_err in err_msg, f"Incorrect error message, got: `{err_msg}`"
+        _assert_expected_err(
+            env_scenario=env_scenario, socket_scenario=socket_scenario, err_msg=str(excinfo.value)
+        )
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
@@ -320,14 +323,12 @@ class TestNegativeSocketPath:
         _setup_scenarios(
             cluster_obj=cluster, env_scenario=env_scenario, socket_scenario=socket_scenario
         )
-        expected_err = _get_expected_error(
-            env_scenario=env_scenario, socket_scenario=socket_scenario
-        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_stake_distribution()
-        err_msg = str(excinfo.value)
-        assert expected_err in err_msg, f"Incorrect error message, got: `{err_msg}`"
+        _assert_expected_err(
+            env_scenario=env_scenario, socket_scenario=socket_scenario, err_msg=str(excinfo.value)
+        )
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
@@ -350,14 +351,12 @@ class TestNegativeSocketPath:
         _setup_scenarios(
             cluster_obj=cluster, env_scenario=env_scenario, socket_scenario=socket_scenario
         )
-        expected_err = _get_expected_error(
-            env_scenario=env_scenario, socket_scenario=socket_scenario
-        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_protocol_params()
-        err_msg = str(excinfo.value)
-        assert expected_err in err_msg, f"Incorrect error message, got: `{err_msg}`"
+        _assert_expected_err(
+            env_scenario=env_scenario, socket_scenario=socket_scenario, err_msg=str(excinfo.value)
+        )
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
@@ -380,14 +379,12 @@ class TestNegativeSocketPath:
         _setup_scenarios(
             cluster_obj=cluster, env_scenario=env_scenario, socket_scenario=socket_scenario
         )
-        expected_err = _get_expected_error(
-            env_scenario=env_scenario, socket_scenario=socket_scenario
-        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_pool_state(stake_pool_id=POOL_ID)
-        err_msg = str(excinfo.value)
-        assert expected_err in err_msg, f"Incorrect error message, got: `{err_msg}`"
+        _assert_expected_err(
+            env_scenario=env_scenario, socket_scenario=socket_scenario, err_msg=str(excinfo.value)
+        )
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
@@ -410,14 +407,12 @@ class TestNegativeSocketPath:
         _setup_scenarios(
             cluster_obj=cluster, env_scenario=env_scenario, socket_scenario=socket_scenario
         )
-        expected_err = _get_expected_error(
-            env_scenario=env_scenario, socket_scenario=socket_scenario
-        )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_stake_addr_info(stake_addr=STAKE_ADDR)
-        err_msg = str(excinfo.value)
-        assert expected_err in err_msg, f"Incorrect error message, got: `{err_msg}`"
+        _assert_expected_err(
+            env_scenario=env_scenario, socket_scenario=socket_scenario, err_msg=str(excinfo.value)
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -436,9 +431,6 @@ class TestNegativeSocketPath:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * send funds from 1 source address to 1 destination address
-        * check expected balances for both source and destination addresses
-
         Expect failure.
         """
         # pylint: disable=unused-argument
@@ -446,9 +438,6 @@ class TestNegativeSocketPath:
 
         _setup_scenarios(
             cluster_obj=cluster, env_scenario=env_scenario, socket_scenario=socket_scenario
-        )
-        expected_err = _get_expected_error(
-            env_scenario=env_scenario, socket_scenario=socket_scenario
         )
 
         src_addr = payment_addrs[0]
@@ -466,5 +455,6 @@ class TestNegativeSocketPath:
                 txouts=txouts,
                 fee_buffer=1_000_000,
             )
-        err_msg = str(excinfo.value)
-        assert expected_err in err_msg, f"Incorrect error message, got: `{err_msg}`"
+        _assert_expected_err(
+            env_scenario=env_scenario, socket_scenario=socket_scenario, err_msg=str(excinfo.value)
+        )
