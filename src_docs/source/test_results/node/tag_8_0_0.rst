@@ -80,7 +80,7 @@ New functionalities in this tag
 * Governance action for SPO polls (`cardano-cli governance *-poll`) that the Cardano Foundation will use to conduct an SPO survey.  |:heavy_check_mark:|
 * Fairness improvement into the mempool logic.  |:hourglass_flowing_sand:|
 * Query commands for inspecting metrics and data in mempool.  |:heavy_check_mark:|
-* Possibility for the network to be defined via `CARDANO_NODE_NETWORK_ID` instead of needing to be passed in every CLI query.  |:hourglass_flowing_sand:|
+* Possibility for the network to be defined via `CARDANO_NODE_NETWORK_ID` instead of needing to be passed in every CLI query.  |:heavy_check_mark:|
 * More detailed output in the `query tip` CLI command.  |:heavy_check_mark:|
 * Possibility for modification of connection limits via configuration file.  |:hourglass_flowing_sand:|
 * Versioned serialization formats for ledger.  |:arrow_right:| (nothing to test on node/CLI side)
