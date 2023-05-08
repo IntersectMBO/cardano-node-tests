@@ -10,8 +10,8 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -73,14 +73,21 @@ def has_socket_path() -> None:
 
 @pytest.fixture
 def set_socket_path(
+    cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
 ) -> Generator[None, None, None]:
     """Unset `CARDANO_NODE_SOCKET_PATH` and set path for `cardano-cli ... --socket-path`."""
     if os.environ.get("CARDANO_NODE_SOCKET_PATH"):
         del os.environ["CARDANO_NODE_SOCKET_PATH"]
-    cluster.set_socket_path(socket_path=configuration.STARTUP_CARDANO_NODE_SOCKET_PATH)
+
+    socket_path = cluster_nodes.get_cardano_node_socket_path(
+        instance_num=cluster_manager.cluster_instance_num
+    )
+    cluster.set_socket_path(socket_path=socket_path)
+
     yield
-    os.environ["CARDANO_NODE_SOCKET_PATH"] = str(configuration.STARTUP_CARDANO_NODE_SOCKET_PATH)
+
+    os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
     cluster.set_socket_path(socket_path=cluster._init_socket_path)
 
 
