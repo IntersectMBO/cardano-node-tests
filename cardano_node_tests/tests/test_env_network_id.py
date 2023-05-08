@@ -12,6 +12,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 
 LOGGER = logging.getLogger(__name__)
 
@@ -89,6 +90,16 @@ def set_network_id_env(
     if os.environ.get("CARDANO_NODE_NETWORK_ID"):
         del os.environ["CARDANO_NODE_NETWORK_ID"]
     cluster.magic_args = magic_args
+
+
+@pytest.fixture
+def ignore_log_errors(worker_id: str) -> None:
+    """Ignore expected handshake errors in the log files."""
+    logfiles.add_ignore_rule(
+        files_glob="*.stdout",
+        regex="HandshakeError.*Refused NodeToClient",
+        ignore_file_id=worker_id,
+    )
 
 
 @pytest.fixture
@@ -250,6 +261,7 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
+        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -277,6 +289,7 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
+        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -303,6 +316,7 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
+        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -329,6 +343,7 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
+        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -355,6 +370,7 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
+        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -382,6 +398,7 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
+        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         env_scenario: str,
