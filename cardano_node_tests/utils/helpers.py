@@ -299,6 +299,7 @@ def is_port_open(host: str, port: int) -> bool:
     return False
 
 
+@functools.lru_cache(maxsize=100)
 def tool_has(command: str) -> bool:
     """Check if a tool has a subcommand or argument available.
 
