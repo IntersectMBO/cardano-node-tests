@@ -83,10 +83,10 @@ New functionalities in this tag
 * Possibility for the network to be defined via `CARDANO_NODE_NETWORK_ID` instead of needing to be passed in every CLI query.  |:hourglass_flowing_sand:|
 * More detailed output in the `query tip` CLI command.  |:heavy_check_mark:|
 * Possibility for modification of connection limits via configuration file.  |:hourglass_flowing_sand:|
-* Versioned serialization formats for ledger.  (nothing to test on node/CLI side)  |:arrow_right:|
-* A ledger API.  (nothing to test on node/CLI side)  |:arrow_right:|
+* Versioned serialization formats for ledger.  |:arrow_right:| (nothing to test on node/CLI side)
+* A ledger API.  |:arrow_right:| (nothing to test on node/CLI side)
 * Changed deposit tracking.  |:hourglass_flowing_sand:|
-* Possibility for socket to be defined via '--socket-path' CLI option instead of 'CARDANO_NODE_SOCKET_PATH' env var.  |:X:| (`issue #5199 <https://github.com/input-output-hk/cardano-node/issues/5199>`__)
+* Possibility for socket to be defined via '--socket-path' CLI option instead of 'CARDANO_NODE_SOCKET_PATH' env var.  |:x:| (`issue #5199 <https://github.com/input-output-hk/cardano-node/issues/5199>`__)
 
 
 New issues
