@@ -1006,4 +1006,4 @@ class TestNoRewards:
             if xfails:
                 pytest.xfail(" ".join(xfails))
             else:
-                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}.")
+                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}")
