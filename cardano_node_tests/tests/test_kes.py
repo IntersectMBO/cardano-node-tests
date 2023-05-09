@@ -125,10 +125,15 @@ def _check_block_production(
     epoch = cluster_obj.g_query.get_epoch()
     if epoch < in_epoch:
         new_epochs = in_epoch - epoch
-        LOGGER.info(f"{datetime.datetime.now()}: Waiting for {new_epochs} new epoch(s).")
+        LOGGER.info(
+            f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
+            f"Waiting for {new_epochs} new epoch(s)."
+        )
         cluster_obj.wait_for_new_epoch(new_epochs=new_epochs)
 
-    LOGGER.info(f"{datetime.datetime.now()}: Waiting for the end of current epoch.")
+    LOGGER.info(
+        f"{datetime.datetime.now(tz=datetime.timezone.utc)}: Waiting for the end of current epoch."
+    )
     clusterlib_utils.wait_for_epoch_interval(
         cluster_obj=cluster_obj,
         start=common.EPOCH_START_SEC_LEDGER_STATE,
@@ -276,11 +281,13 @@ class TestKES:
 
         with logfiles.expect_errors(expected_errors, ignore_file_id=worker_id):
             LOGGER.info(
-                f"{datetime.datetime.now()}: Waiting for {expire_timeout} sec for KES expiration."
+                f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
+                f"Waiting for {expire_timeout} sec for KES expiration."
             )
             time.sleep(expire_timeout)
             LOGGER.info(
-                f"{datetime.datetime.now()}: KES expired (?); tip: '{cluster.g_query.get_tip()}'."
+                f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
+                f"KES expired (?); tip: '{cluster.g_query.get_tip()}'."
             )
 
             _save_all_metrics(temp_template=f"{temp_template}_after_expire")
@@ -305,8 +312,8 @@ class TestKES:
             refreshed_nodes_kes_period = _refresh_opcerts()
 
             LOGGER.info(
-                f"{datetime.datetime.now()}: Waiting 120 secs to make sure the expected errors "
-                "make it to log files."
+                f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
+                "Waiting 120 secs to make sure the expected errors make it to log files."
             )
             time.sleep(120)
 

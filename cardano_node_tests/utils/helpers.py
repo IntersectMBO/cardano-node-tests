@@ -177,7 +177,7 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
     >>> len(get_timestamped_rand_str()) == len("200801_002401314_cinf")
     True
     """
-    timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S%f")[:-3]
+    timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%y%m%d_%H%M%S%f")[:-3]
     rand_str_component = get_rand_str(rand_str_length)
     rand_str_component = rand_str_component and f"_{rand_str_component}"
     return f"{timestamp}{rand_str_component}"
