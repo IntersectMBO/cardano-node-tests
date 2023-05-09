@@ -7,6 +7,7 @@ import re
 import shlex
 import shutil
 import signal
+import fileinput
 import subprocess
 
 import requests
@@ -22,6 +23,7 @@ from explorer_utils import get_epoch_start_datetime_from_explorer
 from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
 from gitpython_utils import git_clone_iohk_repo, git_checkout
 
+import utils
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir, \
     list_absolute_file_paths
@@ -163,6 +165,10 @@ def get_node_config_files(env, node_topology_type):
     urllib.request.urlretrieve(
         "https://book.world.dev.cardano.org/environments/" + env + "/alonzo-genesis.json", "alonzo-genesis.json",
     )
+    print("Getting the conway-genesis.json file...")
+    urllib.request.urlretrieve(
+        "https://book.world.dev.cardano.org/environments/" + env + "/conway-genesis.json", "conway-genesis.json",
+    )
     if node_topology_type == "p2p":
         print("Creating the topology.json file...")
         create_mainnet_p2p_topology_file("topology.json")
@@ -172,6 +178,15 @@ def get_node_config_files(env, node_topology_type):
         urllib.request.urlretrieve(
             "https://book.world.dev.cardano.org/environments/" + env + "/topology.json", "topology.json",
             )
+    if not utils.cli_has(f"{CLI} governance create-poll"):
+        Path('conway-genesis.json').unlink(missing_ok=True)
+        with open("config.json", "r") as f:
+            lines = f.readlines()
+        with open("config.json", "w") as f:
+            for line in lines:
+                if 'ConwayGenesis' not in line.strip("\n"):
+                    f.write(line)
+        
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
 
@@ -753,20 +768,17 @@ def copy_node_executables(src_location, dst_location, build_mode):
     if build_mode == "cabal":
         node_binary_location = get_node_executable_path_built_with_cabal()
         cli_binary_location = get_cli_executable_path_built_with_cabal()
-        #os.chdir(Path(node_binary_location).parents[0])
-        #print(f"  -- files permissions inside cardano-node bin folder: {subprocess.check_call(['ls', '-la'])}")
-        #os.chdir(Path(cli_binary_location).parents[0])
-        #print(f"  -- files permissions inside cardano-cli bin folder: {subprocess.check_call(['ls', '-la'])}")
-        #os.chdir(Path(dst_location))
 
         try:
             shutil.copy2(node_binary_location, Path(dst_location) / "cardano-node")
         except Exception as e:
             print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+            exit(1)
         try:
             shutil.copy2(cli_binary_location, Path(dst_location) / "cardano-cli")
         except Exception as e:
             print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+            exit(1)
         time.sleep(5)
 
 
@@ -814,38 +826,26 @@ def get_node_files_using_cabal(node_rev, repository = None):
         repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
 
     cabal_local_file = Path(ROOT_TEST_PATH) / 'sync_tests' / 'cabal.project.local'
-    cabal_project_file = Path(ROOT_TEST_PATH) / 'sync_tests' / 'cabal.project'
     shutil.copy2(cabal_local_file , Path(repo_dir))   
-    shutil.copy2(cabal_project_file , Path(repo_dir))   
     os.chdir(Path(repo_dir))
     print(f" - listdir repo_dir: {os.listdir(repo_dir)}") 
+
+    for line in fileinput.input("cabal.project", inplace=True):
+        print(line.replace("tests: True", "tests: False"), end="")
 
     print('cabal.project :')
 
     with open('cabal.project', 'r') as f:
         print(f.read()) 
 
-    print('*   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   ')
-    print('cabal.project.local :')
-
-    with open('cabal.project.local', 'r') as f:
-        print(f.read())
 
     execute_command("cabal update")
     execute_command("cabal build cardano-node cardano-cli")
     print(f" - listdir repo_dir after cabal build: {os.listdir(repo_dir)}") 
     copy_node_executables(repo_dir, test_directory, "cabal")
-    #node_cli_dir = Path(test_directory) / "cardano-cli"
-    #node_executable_dir = Path(test_directory) / "cardano-node"
-
-    #execute_command(f"$env:PATH+={node_cli_dir}")
-    #execute_command(f"$env:PATH+={node_executable_dir}")
 
     os.chdir(Path(test_directory))
     print(f" - listdir test_directory after copying executables: {os.listdir(test_directory)}") 
-    #subprocess.check_call(['chmod', '+x', NODE])
-    #subprocess.check_call(['chmod', '+x', CLI])
-    #print(f"  -- files permissions inside test folder: {subprocess.check_call(['ls', '-la'])}")
     return repo
 
 
