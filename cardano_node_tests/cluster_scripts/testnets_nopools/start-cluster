@@ -71,7 +71,8 @@ EoF
 fi
 
 # enable cardano-submit-api service
-if type cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ]; then
+# TODO: disable for now until cardano-submit-api initalization is fixed for testnets
+if false && type cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ]; then
   # copy cardano-submit-api config file
   cp "$TESTNET_CONF_DIR/submit-api-config.json" "$STATE_CLUSTER/submit-api-config.json"
 
