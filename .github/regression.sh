@@ -33,6 +33,7 @@ if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
   export ENABLE_P2P="true"
 elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
   export MIXED_P2P="true"
+  export NUM_POOLS="${NUM_POOLS:-4}"
 fi
 
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
