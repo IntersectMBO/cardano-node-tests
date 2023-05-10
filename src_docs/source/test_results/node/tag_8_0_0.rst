@@ -52,13 +52,13 @@ Release testing checklist
    :header-rows: 0
 
    * - `8.0.0-rc1` pushed to `shelley-qa`
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Grafana metrics OK
      - |:hourglass_flowing_sand:|
    * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/8.0.0-rc1/>`__
      - |:hourglass_flowing_sand:|
    * - Regression testing against `preview`
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
      - |:heavy_check_mark:|
    * - DB re-validation testing (ledger snapshots compatibility)
@@ -66,11 +66,11 @@ Release testing checklist
    * - Backward compatibility testing (Node with version N-1)
      - |:heavy_check_mark:|
    * - Check build instructions changes
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Benchmarking - Report
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - sanity check release notes
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 
 New functionalities in this tag
