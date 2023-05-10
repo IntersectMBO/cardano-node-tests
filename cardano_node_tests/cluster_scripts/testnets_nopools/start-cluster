@@ -6,6 +6,7 @@ TESTNET_DIR="${1:?"Testnet dir needed"}"
 SCRIPT_DIR="$(readlink -m "${0%/*}")"
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
+STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster\` first!" >&2
@@ -57,13 +58,12 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
   # copy db-sync state
   cp -r "$TESTNET_DIR/db-sync" "$STATE_CLUSTER/db-sync"
 
-  state_cluster_name="${STATE_CLUSTER##*/}"
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:dbsync]
 command=$SCRIPT_DIR/run_dbsync.sh
-stderr_logfile=./$state_cluster_name/dbsync.stderr
-stdout_logfile=./$state_cluster_name/dbsync.stdout
+stderr_logfile=./$STATE_CLUSTER_NAME/dbsync.stderr
+stdout_logfile=./$STATE_CLUSTER_NAME/dbsync.stdout
 autostart=false
 autorestart=false
 startsecs=3
@@ -71,7 +71,8 @@ EoF
 fi
 
 # enable cardano-submit-api service
-if type cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ]; then
+# TODO: disable for now until cardano-submit-api initalization is fixed for testnets
+if false && type cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ]; then
   # copy cardano-submit-api config file
   cp "$TESTNET_CONF_DIR/submit-api-config.json" "$STATE_CLUSTER/submit-api-config.json"
 
@@ -79,8 +80,8 @@ if type cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api
 
 [program:submit_api]
 command=$SCRIPT_DIR/cardano-submit-api
-stderr_logfile=./$state_cluster_name/submit_api.stderr
-stdout_logfile=./$state_cluster_name/submit_api.stdout
+stderr_logfile=./$STATE_CLUSTER_NAME/submit_api.stderr
+stdout_logfile=./$STATE_CLUSTER_NAME/submit_api.stdout
 autostart=false
 autorestart=false
 startsecs=3
