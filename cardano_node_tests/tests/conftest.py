@@ -65,6 +65,10 @@ def pytest_addoption(parser: Any) -> None:
 
 
 def pytest_configure(config: Any) -> None:
+    # don't bother collecting metadata if all tests are skipped
+    if config.getvalue("skipall"):
+        return
+
     config._metadata["cardano-node"] = str(VERSIONS.node)
     config._metadata["cardano-node rev"] = VERSIONS.git_rev
     config._metadata["CLUSTER_ERA"] = configuration.CLUSTER_ERA
@@ -107,7 +111,9 @@ def pytest_configure(config: Any) -> None:
         config._metadata["db-sync exe"] = str(configuration.DBSYNC_BIN)
 
     if "nix/store" not in config._metadata["cardano-cli exe"]:
-        LOGGER.warning("WARNING: Not using `cardano-cli` from nix!")
+        LOGGER.warning("WARNING: Not using `cardano-cli` from nix store!")
+    if "nix/store" not in config._metadata["cardano-node exe"]:
+        LOGGER.warning("WARNING: Not using `cardano-node` from nix store!")
 
 
 def _skip_all_tests(config: Any, items: list) -> bool:
