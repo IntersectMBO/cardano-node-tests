@@ -127,11 +127,9 @@ Now you are ready to run the preparation script (which is described in detail in
 
 Inside `cardano-node-tests/cardano_node_tests/cluster_scripts` there are folders with all the data and scripts necessary for starting the cluster in various eras and setups:
 
-- `Alonzo` - prepare files to start the cluster in `Byron` era and transition it through update proposals to `Alonzo` era. Once the cluster is ready it will be in `Alonzo` era and the decentralization parameter is set to: `d = 0`.
+- `babbage` - prepare files to start the cluster in `Byron` era and transition it through update proposals to `Babbage` era. Once the cluster is ready it will be in `Alonzo` era and the decentralization parameter is set to: `d = 0`.
 
-- `testnets_nopools` - prepare files so the cluster will run on the real network but without setting up our own pool there.
-
-- `testnets` - prepare files so the cluster will run on the real network and will also have a stake pool configured there. The tests that require pool presence will be run there.
+- `testnets` - prepare files so the cluster will run on the real network.
 
 **The procedure for setting up a local cluster on a real network will be described in a separate document and a link will be added here later.**
 

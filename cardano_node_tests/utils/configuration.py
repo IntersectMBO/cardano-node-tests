@@ -98,7 +98,7 @@ SCRIPTS_DIRNAME = os.environ.get("SCRIPTS_DIRNAME") or ""
 if SCRIPTS_DIRNAME:
     pass
 elif BOOTSTRAP_DIR:
-    SCRIPTS_DIRNAME = "testnets_nopools"
+    SCRIPTS_DIRNAME = "testnets"
 else:
     SCRIPTS_DIRNAME = CLUSTER_ERA or "babbage"
 
