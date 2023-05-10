@@ -163,7 +163,7 @@ class TestReadonlyReferenceInputs:
         * create the necessary Tx outputs
         * use a reference input that is also a regular input and spend the locked UTxO
         * check that the input was spent
-        # check "transaction view"
+        * check "transaction view"
         """
         __: Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
