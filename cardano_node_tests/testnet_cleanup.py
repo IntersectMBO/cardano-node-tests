@@ -7,6 +7,8 @@
 """
 import argparse
 import logging
+import os
+import sys
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
@@ -34,6 +36,13 @@ def main() -> None:
         level=logging.INFO,
     )
     args = get_args()
+
+    if not os.environ.get("CARDANO_NODE_SOCKET_PATH"):
+        LOGGER.error("The `CARDANO_NODE_SOCKET_PATH` environment variable is not set.")
+        sys.exit(1)
+    if not os.environ.get("BOOTSTRAP_DIR"):
+        LOGGER.error("The `BOOTSTRAP_DIR` environment variable is not set.")
+        sys.exit(1)
 
     cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
     testnet_cleanup.cleanup(cluster_obj=cluster_obj, location=args.artifacts_base_dir)
