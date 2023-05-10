@@ -192,7 +192,7 @@ def _stop_all_cluster_instances(
 
 def _testnet_cleanup(pytest_root_tmp: Path) -> None:
     """Perform testnet cleanup at the end of session."""
-    if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET_NOPOOLS:
+    if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET:
         return
 
     # there's only one cluster instance for testnets, so we don't need to use cluster manager

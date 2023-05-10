@@ -177,7 +177,7 @@ class TestDelegateAddr:
     @pytest.mark.dbsync
     @pytest.mark.smoke
     @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET_NOPOOLS,
+        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET,
         reason="supposed to run on cluster with pools",
     )
     def test_delegate_using_vkey(

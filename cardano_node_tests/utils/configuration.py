@@ -83,8 +83,6 @@ NUM_POOLS = int(os.environ.get("NUM_POOLS") or 3)
 if not BOOTSTRAP_DIR and NUM_POOLS < 3:
     raise RuntimeError(f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3")
 
-NOPOOLS = bool(os.environ.get("NOPOOLS"))
-
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
 if HAS_DBSYNC:
     DBSYNC_BIN = (
@@ -99,10 +97,8 @@ DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 SCRIPTS_DIRNAME = os.environ.get("SCRIPTS_DIRNAME") or ""
 if SCRIPTS_DIRNAME:
     pass
-elif BOOTSTRAP_DIR and NOPOOLS:
-    SCRIPTS_DIRNAME = "testnets_nopools"
 elif BOOTSTRAP_DIR:
-    SCRIPTS_DIRNAME = "testnets"
+    SCRIPTS_DIRNAME = "testnets_nopools"
 else:
     SCRIPTS_DIRNAME = CLUSTER_ERA or "babbage"
 
