@@ -96,9 +96,9 @@ New issues
 
 * `[BUG] - building Alonzo-era tx on Babbage fails due to missing 'protocolParamUTxOCostPerWord' <https://github.com/input-output-hk/cardano-node/issues/5109>`__
 * `[BUG] - Unclear / inconsistent error message from 'governance answer-poll' <Unclear / inconsistent error message from governance answer-poll>`__
-* `[BUG] - Unclear '--signed-tx-file' argument to 'governance verify-poll' <https://github.com/input-output-hk/cardano-node/issues/5183>`__
+* `[BUG] - Unclear '--signed-tx-file' argument to 'governance verify-poll' <https://github.com/input-output-hk/cardano-node/issues/5183>`__  (fixed in final 8.0.0)
 * `[BUG] - 'CARDANO_NODE_SOCKET_PATH' env var needed even when '--socket-path' is used with 'transaction build' <https://github.com/input-output-hk/cardano-node/issues/5199>`__
-* `[FR] - Allow usage of delegate keys for '--required-signers' <https://github.com/input-output-hk/cardano-node/issues/5203>`__
+* `[FR] - Allow usage of delegate keys for '--required-signers' <https://github.com/input-output-hk/cardano-node/issues/5203>`__  (fixed in final 8.0.0)
 
 
 Breaking changes
