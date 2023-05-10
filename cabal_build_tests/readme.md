@@ -2,6 +2,10 @@
 
 ## Prerequisites
 
+Podman or Docker are installed on the system.
+
+When using Docker:
+
 - Docker Engine is installed
 - User is in group 'docker'
 
