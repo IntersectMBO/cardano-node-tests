@@ -21,6 +21,8 @@ LOGGER = logging.getLogger(__name__)
 
 ROTATED_RE = re.compile(r".+\.[0-9]+")  # detect rotated log file
 ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
+ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
+
 ERRORS_IGNORED = [
     "Connection Attempt Exception",
     "EKGServerStartupError",
@@ -51,7 +53,9 @@ ERRORS_IGNORED = [
     # TODO: see node issue #4369
     "MAIN THREAD FAILED",
 ]
-ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
+if (os.environ.get("GITHUB_ACTIONS") or "").lower() == "true":
+    # We sometimes see this error on CI. It seems time is not synced properly on GitHub runners.
+    ERRORS_IGNORED.append("TraceBlockFromFuture")
 
 # errors that are ignored if there are expected messages in the log file before the error
 ERRORS_LOOK_BACK_LINES = 10
