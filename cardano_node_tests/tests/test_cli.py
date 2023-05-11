@@ -1183,6 +1183,7 @@ class TestPing:
             pytest.skip("CLI command `ping` is not available")
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skip(reason="TODO: `cardano-cli ping` can hang, implement timeout")
     def test_ping_mainnet(
         self, cluster: clusterlib.ClusterLib, ping_available: None  # noqa: ARG002
     ):
