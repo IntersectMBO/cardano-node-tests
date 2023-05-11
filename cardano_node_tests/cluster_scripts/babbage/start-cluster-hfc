@@ -252,8 +252,11 @@ if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
   CONWAY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
     "$STATE_CLUSTER/shelley/genesis.conway.json")"
   EXP_PROTOCOLS_KEY="ExperimentalProtocolsEnabled"
-  # experimental protocols are not needed for P2P on node >= 1.36.0
-  EXP_PROTOCOLS_VAL="false"
+  # Experimental protocols are not needed for P2P on node >= 1.36.0
+  # TODO: However experimental protocols are needed for "QueryStakeDelegDeposits"
+  # experimental feature that is for some reason on by default. See node issue
+  # https://github.com/input-output-hk/cardano-node/issues/5233
+  EXP_PROTOCOLS_VAL="true"
 fi
 
 for conf in "$SCRIPT_DIR"/config-*.json; do
