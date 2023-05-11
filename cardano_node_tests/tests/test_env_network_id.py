@@ -1,6 +1,7 @@
 """Tests for `CARDANO_NODE_NETWORK_ID` environment variable."""
 import logging
 import os
+import time
 from typing import Generator
 from typing import List
 
@@ -93,13 +94,21 @@ def set_network_id_env(
 
 
 @pytest.fixture
-def ignore_log_errors(worker_id: str) -> None:
+def ignore_log_errors(
+    # Depend on `cluster` just for correct ordering of fixtures
+    cluster: clusterlib.ClusterLib,  # noqa: ARG001
+    worker_id: str,
+) -> Generator[None, None, None]:
     """Ignore expected handshake errors in the log files."""
+    # pylint: disable=unused-argument
     logfiles.add_ignore_rule(
         files_glob="*.stdout",
         regex="HandshakeError.*Refused NodeToClient",
         ignore_file_id=worker_id,
     )
+    yield
+    # give enough time for the log messages to be written to the log files
+    time.sleep(1.5)
 
 
 @pytest.fixture
