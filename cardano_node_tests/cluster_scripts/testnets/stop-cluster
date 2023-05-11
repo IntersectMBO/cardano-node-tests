@@ -4,15 +4,6 @@ set -uo pipefail
 
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
-SCRIPT_DIR="$(readlink -m "${0%/*}")"
-EPOCH_SEC="$(jq '.epochLength * .slotLength' < "$STATE_CLUSTER/shelley/genesis.json")"
-
-if "$SCRIPT_DIR/deregister-pools"; then
-  # wait two epochs after successful deregistration before stopping the nodes
-  if [ "${1:-""}" != "nowait" ]; then
-    sleep "$((EPOCH_SEC * 2))"
-  fi
-fi
 
 supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
 

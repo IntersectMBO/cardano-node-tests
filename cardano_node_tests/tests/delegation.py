@@ -57,7 +57,7 @@ def cluster_and_pool(
     single fixture.
     """
     cluster_type = cluster_nodes.get_cluster_type()
-    if cluster_type.type == cluster_nodes.ClusterType.TESTNET_NOPOOLS:
+    if cluster_type.type == cluster_nodes.ClusterType.TESTNET:
         cluster_obj: clusterlib.ClusterLib = cluster_manager.get()
 
         # getting ledger state on official testnet is too expensive,
@@ -78,14 +78,6 @@ def cluster_and_pool(
                 break
         else:
             pytest.skip("Cannot find any usable pool.")
-    elif cluster_type.type == cluster_nodes.ClusterType.TESTNET:
-        # the "testnet" cluster has just single pool, "node-pool1"
-        cluster_obj = cluster_manager.get(use_resources=[cluster_management.Resources.POOL1])
-        pool_id = get_pool_id(
-            cluster_obj=cluster_obj,
-            addrs_data=cluster_manager.cache.addrs_data,
-            pool_name=cluster_management.Resources.POOL1,
-        )
     else:
         cluster_obj = cluster_manager.get(
             use_resources=[

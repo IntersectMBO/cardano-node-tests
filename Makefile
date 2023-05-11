@@ -101,7 +101,6 @@ testpr: .dirs .run_tests
 
 # run all tests that can run on testnets
 .PHONY: testnets
-testnets: export NOPOOLS=1
 testnets: export CLUSTERS_COUNT=1
 testnets: export FORBID_RESTART=1
 testnets: TEST_THREADS := $(or $(TEST_THREADS),20)

@@ -282,21 +282,10 @@ class TestRewards:
         """
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
-        # check pool rewards only when own pool is available
-        check_pool_rewards = (
-            cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET
-        )
 
         # make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-300)
         init_epoch = cluster.g_query.get_epoch()
-
-        if check_pool_rewards:
-            pool_rec = cluster_manager.cache.addrs_data[cluster_management.Resources.POOL1]
-            pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
-            init_owner_rewards = cluster.g_query.get_stake_addr_info(
-                pool_reward.stake.address
-            ).reward_account_balance
 
         # submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
@@ -320,14 +309,6 @@ class TestRewards:
                 break
         else:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
-
-        if check_pool_rewards:
-            assert (
-                cluster.g_query.get_stake_addr_info(
-                    pool_reward.stake.address
-                ).reward_account_balance
-                > init_owner_rewards
-            ), f"Owner of pool '{pool_id}' hasn't received any rewards"
 
         # withdraw rewards to payment address, make sure we have enough time to finish
         # the withdrawal in one epoch

@@ -71,7 +71,6 @@ class ScriptsTypes:
 
     LOCAL = "local"
     TESTNET = "testnet"
-    TESTNET_NOPOOLS = "testnet_nopools"
 
     def __init__(self) -> None:
         self.type = "unknown"
@@ -482,7 +481,7 @@ class TestnetScripts(ScriptsTypes):
 
         ports = InstancePorts(
             base=base,
-            webserver=base,
+            webserver=0,
             metrics_submit_api=metrics_base,
             submit_api=base + 9,
             supervisor=12001 + instance_num,
@@ -492,12 +491,12 @@ class TestnetScripts(ScriptsTypes):
             bft1=0,
             ekg_bft1=0,
             prometheus_bft1=0,
-            pool1=base + 4,
-            ekg_pool1=metrics_base + 6,
-            prometheus_pool1=metrics_base + 7,
-            pool2=base + 5,
-            ekg_pool2=metrics_base + 8,
-            prometheus_pool2=metrics_base + 9,
+            pool1=0,
+            ekg_pool1=0,
+            prometheus_pool1=0,
+            pool2=0,
+            ekg_pool2=0,
+            prometheus_pool2=0,
             pool3=0,
             ekg_pool3=0,
             prometheus_pool3=0,
@@ -656,41 +655,3 @@ class TestnetScripts(ScriptsTypes):
             start_script_args=[configuration.BOOTSTRAP_DIR],
             dir=destdir,
         )
-
-
-class TestnetNopoolsScripts(TestnetScripts):
-    """Testnet cluster scripts (full cardano mode), no pools."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.type = ScriptsTypes.TESTNET_NOPOOLS
-
-    def get_instance_ports(self, instance_num: int) -> InstancePorts:
-        """Return ports mapping for given cluster instance."""
-        offset = (50 + instance_num) * 10
-        base = 30000 + offset
-        metrics_base = 30300 + offset
-
-        ports = InstancePorts(
-            base=base,
-            webserver=0,
-            metrics_submit_api=metrics_base,
-            submit_api=base + 9,
-            supervisor=12001 + instance_num,
-            relay1=base + 1,
-            ekg_relay1=metrics_base + 1,
-            prometheus_relay1=metrics_base + 2,
-            bft1=0,
-            ekg_bft1=0,
-            prometheus_bft1=0,
-            pool1=0,
-            ekg_pool1=0,
-            prometheus_pool1=0,
-            pool2=0,
-            ekg_pool2=0,
-            prometheus_pool2=0,
-            pool3=0,
-            ekg_pool3=0,
-            prometheus_pool3=0,
-        )
-        return ports

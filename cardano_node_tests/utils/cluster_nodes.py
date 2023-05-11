@@ -59,7 +59,6 @@ class ClusterType:
 
     LOCAL = "local"
     TESTNET = "testnet"
-    TESTNET_NOPOOLS = "testnet_nopools"
     test_addr_records = ("user1",)
 
     NODES: Set[str] = set()
@@ -220,7 +219,7 @@ class TestnetCluster(ClusterType):
         1666656000: {"type": Testnets.preview, "byron_epochs": 0},
     }
 
-    NODES = {"relay1", "pool1", "pool2"}
+    NODES = {"relay1"}
 
     def __init__(self) -> None:
         super().__init__()
@@ -319,24 +318,9 @@ class TestnetCluster(ClusterType):
         return addrs_data
 
 
-class TestnetNopoolsCluster(TestnetCluster):
-    """Testnet cluster type (full cardano mode)."""
-
-    NODES = {"relay1"}
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.type = ClusterType.TESTNET_NOPOOLS
-        self.cluster_scripts: cluster_scripts.TestnetNopoolsScripts = (
-            cluster_scripts.TestnetNopoolsScripts()
-        )
-
-
 @helpers.callonce
 def get_cluster_type() -> ClusterType:
     """Return instance of the cluster type indicated by configuration."""
-    if configuration.BOOTSTRAP_DIR and configuration.NOPOOLS:
-        return TestnetNopoolsCluster()
     if configuration.BOOTSTRAP_DIR:
         return TestnetCluster()
     return LocalCluster()
