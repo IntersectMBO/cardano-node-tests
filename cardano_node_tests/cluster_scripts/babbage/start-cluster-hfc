@@ -245,18 +245,13 @@ ALONZO_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
 
 CONWAY_GENESIS_HASH=""
 EXP_PROTOCOLS_KEY="TestEnableDevelopmentNetworkProtocols"
-EXP_PROTOCOLS_VAL="true"
+EXP_PROTOCOLS_VAL="false"
 
-# conway genesis is not present on node < 1.36.0
+# conway genesis is not present on node < 1.36.0, so this can be used for checking node version
 if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
   CONWAY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
     "$STATE_CLUSTER/shelley/genesis.conway.json")"
   EXP_PROTOCOLS_KEY="ExperimentalProtocolsEnabled"
-  # Experimental protocols are not needed for P2P on node >= 1.36.0
-  # TODO: However experimental protocols are needed for "QueryStakeDelegDeposits"
-  # experimental feature that is for some reason on by default. See node issue
-  # https://github.com/input-output-hk/cardano-node/issues/5233
-  EXP_PROTOCOLS_VAL="true"
 fi
 
 for conf in "$SCRIPT_DIR"/config-*.json; do
@@ -265,13 +260,24 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     --arg byron_hash "$BYRON_GENESIS_HASH" \
     --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
     --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
-    '.ByronGenesisHash = $byron_hash | .ShelleyGenesisHash = $shelley_hash | .AlonzoGenesisHash = $alonzo_hash' \
+    '.ByronGenesisHash = $byron_hash
+    | .ShelleyGenesisHash = $shelley_hash
+    | .AlonzoGenesisHash = $alonzo_hash' \
     "$conf" > "$STATE_CLUSTER/$fname"
 
   if [ -n "$CONWAY_GENESIS_HASH" ]; then
+    # TODO: Experimental protocols are needed for "QueryStakeDelegDeposits"
+    # experimental feature that is for some reason on by default. See node issue
+    # https://github.com/input-output-hk/cardano-node/issues/5233
+    EXP_PROTOCOLS_VAL="true"
+
     jq \
       --arg conway_hash "$CONWAY_GENESIS_HASH" \
-      '.ConwayGenesisFile = "shelley/genesis.conway.json" | .ConwayGenesisHash = $conway_hash' \
+      --arg exp_protocols_key "$EXP_PROTOCOLS_KEY" \
+      --argjson exp_protocols_val "$EXP_PROTOCOLS_VAL" \
+      '.ConwayGenesisFile = "shelley/genesis.conway.json"
+      | .ConwayGenesisHash = $conway_hash
+      | .[$exp_protocols_key] = $exp_protocols_val' \
       "$STATE_CLUSTER/$fname" > "$STATE_CLUSTER/${fname}_jq"
     cat "$STATE_CLUSTER/${fname}_jq" > "$STATE_CLUSTER/$fname"
     rm -f "$STATE_CLUSTER/${fname}_jq"
@@ -279,6 +285,10 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
 
   # enable P2P
   if [ -n "${ENABLE_P2P:-""}" ]; then
+    # experimental protocols are needed for P2P on node < 1.36.0
+    if [ -z "$CONWAY_GENESIS_HASH" ]; then
+      EXP_PROTOCOLS_VAL="true"
+    fi
 
     # setup mix of P2P and legacy
     if [ -n "${MIXED_P2P:-""}" ]; then
