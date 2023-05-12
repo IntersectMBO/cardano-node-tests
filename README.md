@@ -86,6 +86,31 @@ Create a Python virtual environment (requires Python v3.8 or newer) and install 
 ./setup_venv.sh
 ```
 
+### Installing cardano-clusterlib in development mode
+
+Sometimes it is useful to test local changes made to [cardano-clusterlib](https://github.com/input-output-hk/cardano-clusterlib-py).
+To install cardano-clusterlib in development mode:
+
+```sh
+# activate virtual env
+poetry shell
+# update virtual env
+# (answer 'y' to question "Install into the current virtual env? [y/N]")
+./setup_venv.sh
+# uninstall cardano-clusterlib installed by poetry
+pip uninstall cardano-clusterlib
+# cd to 'cardano-clusterlib-py' repo
+cd ../cardano-clusterlib-py
+# install cardano-clusterlib in development mode
+pip install -e .
+# cd back to 'cardano-node-tests' repo
+cd -
+# check that you are really using cardano-clusterlib files from your local repo
+python -c 'from cardano_clusterlib import clusterlib_klass; print(clusterlib_klass.__file__)'
+```
+
+Note that after you run `poetry install` (eg through running `./setup_venv.sh`), poetry will reinstall cardano-clusterlib. If you want to keep using cardano-clusterlib in development mode, you'll need to repeat the steps above.
+
 ## Local usage
 
 Preparing the environment:
