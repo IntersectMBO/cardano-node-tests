@@ -14,7 +14,6 @@ from typing import List
 from typing import NamedTuple
 from typing import Sequence
 from typing import Tuple
-from typing import Union
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.types import FileType
@@ -63,7 +62,7 @@ class InstancePorts(NamedTuple):
     pool3: int
     ekg_pool3: int
     prometheus_pool3: int
-    node_ports: Union[List[NodePorts], Tuple[()]] = ()
+    node_ports: Tuple[NodePorts, ...]
 
 
 class ScriptsTypes:
@@ -118,17 +117,16 @@ class LocalScripts(ScriptsTypes):
         base = 32000 + offset
         last_port = base + ports_per_instance - 1
 
-        node_ports = []
-        for i in range(self.num_pools + 1):  # +1 for BFT node
-            rec_base = base + (i * ports_per_node)
-            node_ports.append(
-                NodePorts(
-                    num=i,
-                    node=rec_base,
-                    ekg=rec_base + 1,
-                    prometheus=rec_base + 2,
-                )
+        def _get_node_ports(num: int) -> NodePorts:
+            rec_base = base + (num * ports_per_node)
+            return NodePorts(
+                num=num,
+                node=rec_base,
+                ekg=rec_base + 1,
+                prometheus=rec_base + 2,
             )
+
+        node_ports = tuple(_get_node_ports(i) for i in range(self.num_pools + 1))  # +1 for BFT node
 
         ports = InstancePorts(
             base=base,
@@ -479,15 +477,22 @@ class TestnetScripts(ScriptsTypes):
         base = 30000 + offset
         metrics_base = 30300 + offset
 
+        relay1_ports = NodePorts(
+            num=0,
+            node=base + 1,
+            ekg=metrics_base + 1,
+            prometheus=metrics_base + 2,
+        )
+
         ports = InstancePorts(
             base=base,
             webserver=0,
             metrics_submit_api=metrics_base,
             submit_api=base + 9,
             supervisor=12001 + instance_num,
-            relay1=base + 1,
-            ekg_relay1=metrics_base + 1,
-            prometheus_relay1=metrics_base + 2,
+            relay1=relay1_ports.node,
+            ekg_relay1=relay1_ports.ekg,
+            prometheus_relay1=relay1_ports.prometheus,
             bft1=0,
             ekg_bft1=0,
             prometheus_bft1=0,
@@ -500,6 +505,7 @@ class TestnetScripts(ScriptsTypes):
             pool3=0,
             ekg_pool3=0,
             prometheus_pool3=0,
+            node_ports=(relay1_ports,),
         )
         return ports
 
