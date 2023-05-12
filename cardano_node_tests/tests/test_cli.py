@@ -1183,31 +1183,37 @@ class TestPing:
             pytest.skip("CLI command `ping` is not available")
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skip(reason="TODO: `cardano-cli ping` can hang, implement timeout")
-    def test_ping_mainnet(
+    @pytest.mark.testnets
+    def test_ping_localhost(
         self, cluster: clusterlib.ClusterLib, ping_available: None  # noqa: ARG002
     ):
-        """Test `cardano-cli ping` on mainnet."""
+        """Test `cardano-cli ping` on local node."""
         # pylint: disable=unused-argument
         common.get_test_id(cluster)
-        counts = 5
+
+        count = 5
+        instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
+            instance_num=cluster_nodes.get_instance_num()
+        )
+        port = instance_ports.pool1 or instance_ports.relay1
 
         cli_out = cluster.cli(
             [
                 "ping",
                 "--count",
-                str(counts),
+                str(count),
                 "--host",
-                "relays-new.cardano-mainnet.iohk.io",
+                "localhost",
                 "--port",
-                "3001",
+                str(port),
                 "--magic",
-                str(clusterlib.MAINNET_MAGIC),
+                str(cluster.network_magic),
                 "--json",
                 "--quiet",
-            ]
+            ],
+            timeout=30,
         )
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
         last_pong = ping_data["pongs"][-1]
-        assert last_pong["cookie"] == counts - 1, f"Expected cookie {counts - 1}, got {last_pong}"
+        assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
