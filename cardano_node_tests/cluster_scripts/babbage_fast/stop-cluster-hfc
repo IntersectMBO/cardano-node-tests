@@ -6,6 +6,12 @@ SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 PID_FILE="${STATE_CLUSTER}/supervisord.pid"
 
+INSTANCE_NUM="%%INSTANCE_NUM%%"
+if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
+  echo "CARDANO_NODE_SOCKET_PATH must be set to a path containing 'state-cluster${INSTANCE_NUM}', line $LINENO" >&2
+  exit 1
+fi
+
 supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
 
 if [ ! -f "$PID_FILE" ]; then

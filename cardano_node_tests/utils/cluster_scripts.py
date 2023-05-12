@@ -100,7 +100,7 @@ class ScriptsTypes:
 
 
 class LocalScripts(ScriptsTypes):
-    """Local cluster scripts (full cardano mode)."""
+    """Scripts for starting local cluster."""
 
     def __init__(self, num_pools: int = -1) -> None:
         super().__init__()
@@ -328,7 +328,7 @@ class LocalScripts(ScriptsTypes):
 
     def _reconfigure_local(self, indir: Path, destdir: Path, instance_num: int) -> None:
         """Reconfigure cluster scripts and config files."""
-        instance_ports = self.get_instance_ports(instance_num)
+        instance_ports = self.get_instance_ports(instance_num=instance_num)
         ports_per_node = instance_ports.pool1 - instance_ports.bft1
 
         # reconfigure cluster instance files
@@ -339,18 +339,18 @@ class LocalScripts(ScriptsTypes):
             if fname.startswith("template-"):
                 continue
 
-            dest_file = destdir / fname
+            outfile = destdir / fname
             dest_content = self._replace_instance_files(
                 infile=infile,
                 instance_ports=instance_ports,
                 instance_num=instance_num,
                 ports_per_node=ports_per_node,
             )
-            dest_file.write_text(f"{dest_content}\n")
+            outfile.write_text(f"{dest_content}\n")
 
             # make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
-                dest_file.chmod(0o755)
+                outfile.chmod(0o755)
 
         # generate config and topology files from templates
         for node_rec in instance_ports.node_ports:
@@ -421,7 +421,7 @@ class LocalScripts(ScriptsTypes):
             )
 
         destdir = Path(destdir).expanduser().resolve()
-        instance_ports = self.get_instance_ports(instance_num)
+        instance_ports = self.get_instance_ports(instance_num=instance_num)
         nodes = instance_ports.node_ports
 
         all_nodes = [p.node for p in nodes]
@@ -456,7 +456,7 @@ class LocalScripts(ScriptsTypes):
 
 
 class TestnetScripts(ScriptsTypes):
-    """Testnet cluster scripts (full cardano mode)."""
+    """Scripts for starting a node on testnet."""
 
     TESTNET_GLOBS = (
         "config*.json",
@@ -520,7 +520,7 @@ class TestnetScripts(ScriptsTypes):
         start_script = destdir / "start-cluster"
         assert start_script.exists()
 
-        bootstrap_conf_dir = self.get_bootstrap_conf_dir(bootstrap_dir=destdir)
+        bootstrap_conf_dir = self._get_bootstrap_conf_dir(bootstrap_dir=destdir)
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir()
         _infiles = [list(bootstrap_conf_dir.glob(g)) for g in self.TESTNET_GLOBS]
@@ -540,22 +540,20 @@ class TestnetScripts(ScriptsTypes):
         self, indir: Path, destdir: Path, instance_num: int, globs: List[str]
     ) -> None:
         """Reconfigure cluster scripts and config files."""
-        instance_ports = self.get_instance_ports(instance_num)
+        instance_ports = self.get_instance_ports(instance_num=instance_num)
         _infiles = [list(indir.glob(g)) for g in globs]
         infiles = list(itertools.chain.from_iterable(_infiles))
         for infile in infiles:
             fname = infile.name
-            dest_file = destdir / fname
+            outfile = destdir / fname
 
             with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
             # replace cluster instance number
-            new_content = content.replace(
-                "/state-cluster%%INSTANCE_NUM%%", f"/state-cluster{instance_num}"
-            )
-            # replace node port number strings, omitting the last digit
-            new_content = new_content.replace("%%NODE_PORT_BASE%%", str(instance_ports.base // 10))
+            new_content = content.replace("%%INSTANCE_NUM%%", str(instance_num))
+            # replace node port number strings
+            new_content = new_content.replace("%%NODE_PORT_RELAY1%%", str(instance_ports.relay1))
             # reconfigure supervisord port
             new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
             # reconfigure submit-api port
@@ -564,55 +562,49 @@ class TestnetScripts(ScriptsTypes):
             new_content = new_content.replace(
                 "%%METRICS_SUBMIT_API_PORT%%", str(instance_ports.metrics_submit_api)
             )
-            # replace metrics port number strings, omitting the last digit
+            # reconfigure EKG metrics port
+            new_content = new_content.replace("%%EKG_PORT_RELAY1%%", str(instance_ports.ekg_relay1))
+            # reconfigure prometheus metrics port
             new_content = new_content.replace(
-                "%%METRICS_PORT_BASE%%", str(instance_ports.ekg_relay1 // 10)
+                "%%PROMETHEUS_PORT_RELAY1%%", str(instance_ports.prometheus_relay1)
             )
 
-            with open(dest_file, "w", encoding="utf-8") as out_fp:
+            with open(outfile, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
 
             # make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
-                dest_file.chmod(0o755)
+                outfile.chmod(0o755)
 
-    def _reconfigure_bootstrap(
-        self, indir: Path, destdir: Path, instance_num: int, globs: List[str]
-    ) -> None:
-        """Copy and reconfigure config files from bootstrap dir.
+    def _reconfigure_submit_api_config(self, infile: Path, outfile: Path) -> None:
+        """Reconfigure submit-api config file."""
+        with open(infile, encoding="utf-8") as in_fp:
+            content = in_fp.readlines()
 
-        .. warning::
-           This can be fragile as we are changing real port numbers, not just string tokens.
-        """
-        instance_ports = self.get_instance_ports(instance_num)
+        # Delete the line that contains "PrometheusPort"
+        new_content = [line for line in content if "PrometheusPort" not in line]
+
+        with open(outfile, "w", encoding="utf-8") as out_fp:
+            out_fp.write("".join(new_content))
+
+    def _reconfigure_bootstrap(self, indir: Path, destdir: Path, globs: List[str]) -> None:
+        """Copy and reconfigure config files from bootstrap dir."""
         _infiles = [list(indir.glob(g)) for g in globs]
         infiles = list(itertools.chain.from_iterable(_infiles))
         for infile in infiles:
             fname = infile.name
-            dest_file = destdir / fname
+            outfile = destdir / fname
 
-            # copy genesis and topology files without changing them
-            if "config" not in fname:
-                shutil.copy(infile, dest_file)
+            if "submit-api-config" in fname:
+                self._reconfigure_submit_api_config(infile=infile, outfile=outfile)
                 continue
 
-            with open(infile, encoding="utf-8") as in_fp:
-                content = in_fp.read()
-
-            # replace node port number strings, omitting the last digit
-            new_content = content.replace("3000", str(instance_ports.base // 10))
-            # replace metrics port number strings, omitting the last digit
-            new_content = new_content.replace("3030", str(instance_ports.ekg_relay1 // 10))
-            # reconfigure submit-api port
-            new_content = new_content.replace("8090", str(instance_ports.submit_api))
-
-            with open(dest_file, "w", encoding="utf-8") as out_fp:
-                out_fp.write(new_content)
+            shutil.copy(infile, outfile)
 
     def _is_bootstrap_conf_dir(self, bootstrap_dir: Path) -> bool:
         return all(list(bootstrap_dir.glob(g)) for g in self.TESTNET_GLOBS)
 
-    def get_bootstrap_conf_dir(self, bootstrap_dir: Path) -> Path:
+    def _get_bootstrap_conf_dir(self, bootstrap_dir: Path) -> Path:
         bootstrap_conf_dir = bootstrap_dir / self.BOOTSTRAP_CONF
         if not self._is_bootstrap_conf_dir(bootstrap_conf_dir):
             if not configuration.BOOTSTRAP_DIR:
@@ -629,7 +621,11 @@ class TestnetScripts(ScriptsTypes):
         start_script: FileType = "",
         stop_script: FileType = "",
     ) -> InstanceFiles:
-        """Prepare scripts files for starting and stopping cluster instance."""
+        """Prepare scripts files for starting and stopping cluster instance.
+
+        There is just one cluster instance running for a given testnet. We keep the `instance_num`
+        support anyway, as this makes it possible to run multiple testnets on the same machine.
+        """
         destdir = Path(destdir).expanduser().resolve()
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir(exist_ok=True)
@@ -640,7 +636,7 @@ class TestnetScripts(ScriptsTypes):
         start_script = Path(_start_script).expanduser().resolve()
         stop_script = Path(_stop_script).expanduser().resolve()
 
-        bootstrap_conf_dir = self.get_bootstrap_conf_dir(bootstrap_dir=start_script.parent)
+        bootstrap_conf_dir = self._get_bootstrap_conf_dir(bootstrap_dir=start_script.parent)
 
         self._reconfigure_testnet(
             indir=start_script.parent, destdir=destdir, instance_num=instance_num, globs=["*"]
@@ -651,7 +647,6 @@ class TestnetScripts(ScriptsTypes):
         self._reconfigure_bootstrap(
             indir=bootstrap_conf_dir,
             destdir=destdir_bootstrap,
-            instance_num=instance_num,
             globs=list(self.TESTNET_GLOBS),
         )
 
