@@ -92,6 +92,9 @@ class TestPoll:
 
         poll_question = f"Poll {clusterlib.get_rand_str(4)}: Pineapples on pizza?"
 
+        # The poll should be signed with the delegateKey so that SPOS can verify it is a legit poll
+        required_signer = cluster.g_genesis.genesis_keys.delegate_skeys[0]
+
         poll_files = poll_utils.create_poll(
             cluster_obj=cluster,
             question=poll_question,
@@ -102,7 +105,7 @@ class TestPoll:
         tx_files_poll = clusterlib.TxFiles(
             signing_key_files=[
                 payment_addr.skey_file,
-                *cluster.g_genesis.genesis_keys.delegate_skeys,
+                required_signer,
             ],
             metadata_json_files=[poll_files.metadata],
             metadata_json_detailed_schema=True,
@@ -114,6 +117,7 @@ class TestPoll:
                 tx_name=f"{temp_template}_poll",
                 tx_files=tx_files_poll,
                 witness_override=len(tx_files_poll.signing_key_files),
+                required_signers=[required_signer],
             )
 
             tx_signed_poll = cluster.g_transaction.sign_tx(
@@ -127,6 +131,7 @@ class TestPoll:
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_poll",
                 tx_files=tx_files_poll,
+                required_signers=[required_signer],
             )
 
         expected_metadata = {"94": [[0, [poll_question]], [1, [["Yes"], ["No"]]]]}
@@ -134,6 +139,19 @@ class TestPoll:
         tx_data = tx_view.load_tx_view(cluster_obj=cluster, tx_body_file=tx_output_poll.out_file)
 
         assert tx_data["metadata"] == expected_metadata
+
+        # Check required signers
+        required_signer_vkey = required_signer.parent / f"{required_signer.stem}.vkey"
+        required_signer_vkey_hash = cluster.g_genesis.get_genesis_vkey_hash(
+            vkey_file=required_signer_vkey
+        )
+
+        assert (
+            tx_data["required signers (payment key hashes needed for scripts)"][0]
+            == required_signer_vkey_hash
+        ), "The Tx has unexpected required signers."
+
+        # TODO: check required signers on dbsync
 
         out_utxos_poll = cluster.g_query.get_utxo(tx_raw_output=tx_output_poll)
         assert (
