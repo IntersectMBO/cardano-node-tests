@@ -108,7 +108,7 @@ def ignore_log_errors(
     )
     yield
     # give enough time for the log messages to be written to the log files
-    time.sleep(1.5)
+    time.sleep(2.5)
 
 
 @pytest.fixture
