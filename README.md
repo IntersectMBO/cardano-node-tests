@@ -10,18 +10,24 @@ Check this [documentation](https://input-output-hk.github.io/cardano-node-tests)
 
 The easiest way to run the tests is by using Github Actions.
 
-* fork this repository
-* enable Github Actions in your fork ("Settings" / "Actions" / "General" / "Actions permissions", check "Allow all actions and reusable workflows")
-* go to "Actions", select "01 Regression tests" (or "02 Regression tests with db-sync")
-* select "Run workflow"
+1. fork this repository
+1. enable Github Actions in your fork ("Settings" / "Actions" / "General" / "Actions permissions", check "Allow all actions and reusable workflows")
+1. go to "Actions", select "01 Regression tests" (or "02 Regression tests with db-sync")
+1. select "Run workflow"
 
 ![Run workflow](https://user-images.githubusercontent.com/2352619/209117914-ef3afb38-2b8b-4a4f-a03f-c9b52bccc5ba.png)
 
 ## Running tests using Nix
 
-* install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md)
-* clone this repo
-* run `./.github/regression.sh`
+1. install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md)
+
+1. clone this repo
+
+1. run the tests
+
+    ```sh
+    ./.github/regression.sh
+    ```
 
 ---
 **NOTE** <!-- markdownlint-disable-line MD036 -->
@@ -127,7 +133,7 @@ When running tests, the testing framework starts and stops cluster instances as 
     poetry shell
     ```
 
-1. add virtual env to PYTHONPATH
+1. add virtual env to `PYTHONPATH`
 
     ```sh
     export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
@@ -209,15 +215,15 @@ It is sufficient to activate the Python virtual environment before running linte
 
 1. activate virtual env
 
-```sh
-poetry shell
-```
+    ```sh
+    poetry shell
+    ```
 
 1. run linters
 
-```sh
-make lint
-```
+    ```sh
+    make lint
+    ```
 
 ### Installing `cardano-clusterlib` in development mode
 
@@ -276,7 +282,7 @@ Note that after you run `poetry install` (eg through running `./setup_venv.sh`),
 
 ### Building documentation
 
- Build and deploy documentation:
+Build and deploy documentation:
 
 ```sh
 ./deploy_doc.sh
