@@ -1,6 +1,7 @@
 """Tests for cardano-cli that doesn't fit into any other test file."""
 import json
 import logging
+import os
 import string
 from pathlib import Path
 from typing import List
@@ -1187,7 +1188,7 @@ class TestPing:
     def test_ping_localhost(
         self, cluster: clusterlib.ClusterLib, ping_available: None  # noqa: ARG002
     ):
-        """Test `cardano-cli ping` on local node."""
+        """Test `cardano-cli ping` on local node using host and port."""
         # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
@@ -1213,6 +1214,41 @@ class TestPing:
             ],
             timeout=30,
         )
+        ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
+
+        last_pong = ping_data["pongs"][-1]
+        assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_ping_unix_socket(
+        self, cluster: clusterlib.ClusterLib, ping_available: None  # noqa: ARG002
+    ):
+        """Test `cardano-cli ping` on local node using unix socket."""
+        # pylint: disable=unused-argument
+        common.get_test_id(cluster)
+        count = 5
+
+        try:
+            cli_out = cluster.cli(
+                [
+                    "ping",
+                    "--count",
+                    str(count),
+                    "--unixsock",
+                    os.environ.get("CARDANO_NODE_SOCKET_PATH") or "",
+                    "--magic",
+                    str(cluster.network_magic),
+                    "--json",
+                    "--quiet",
+                ],
+                timeout=30,
+            )
+        except clusterlib.CLIError as exc:
+            if "MuxError MuxBearerClosed" in str(exc):
+                pytest.xfail("`MuxError MuxBearerClosed` error, see node issue #5245")
+            raise
+
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
         last_pong = ping_data["pongs"][-1]
