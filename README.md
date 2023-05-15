@@ -32,11 +32,11 @@ The easiest way to run the tests is by using Github Actions.
 ---
 **NOTE** <!-- markdownlint-disable-line MD036 -->
 
-It takes ~ 30 mins for local cluster instance to get from Byron to Babbage. If it seems that tests are stuck, they are likely just waiting for local cluster instances to be fully started.
+It takes ~ 30 minutes for local cluster instance to get from Byron to Babbage. If it seems that tests are stuck, they are likely just waiting for local cluster instances to be fully started.
 
 ---
 
-To start local cluster directly in Babbage, set `CI_FAST_CLUSTER=1`.
+To start local cluster directly in Babbage era, set `CI_FAST_CLUSTER=1`.
 
 The execution can be configured using env variables described in the section below.
 
@@ -71,7 +71,7 @@ For example:
     NUM_POOLS=6 MIXED_P2P=1 ./.github/regression.sh
     ```
 
-* running tests on local cluster intances using 15 pytest workers, Babbage cluster era, Alonzo transaction era, cluster scripts that start a cluster directly in Babbage, selecting only tests without 'long' marker that also match given `-k` pytest argument
+* running tests on local cluster intances using 15 pytest workers, Babbage cluster era, Alonzo transaction era, cluster scripts that start a cluster directly in Babbage era, and selecting only tests without 'long' marker that also match the given `-k` pytest argument
 
     ```sh
     TEST_THREADS=15 CLUSTER_ERA=babbage TX_ERA=alonzo SCRIPTS_DIRNAME=babbage_fast PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" ./.github/regression.sh
@@ -98,7 +98,7 @@ Create a Python virtual environment (requires Python v3.8 or newer) and install 
 
 ### Running development cluster
 
-When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for test development, as starting a cluster instance takes several epochs (to get from Byron to Babbage). To keep the Cardano cluster running in between test runs, one needs to start it in 'development mode':
+When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for test development, as starting a cluster instance can take up to several epochs (to get from Byron to Babbage). To keep the Cardano cluster running in between test runs, one needs to start it in 'development mode':
 
 1. cd to 'cardano-node' repo
 
@@ -139,7 +139,7 @@ When running tests, the testing framework starts and stops cluster instances as 
     export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
     ```
 
-1. prepare cluster scripts
+1. prepare cluster scripts for starting local cluster directly in Babbage era
 
     ```sh
     prepare-cluster-scripts -d <destination dir>/babbage_fast -s cardano_node_tests/cluster_scripts/babbage_fast/
@@ -159,11 +159,20 @@ When running tests, the testing framework starts and stops cluster instances as 
 
 After the cluster starts, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pool-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.
 
-To restart the cluster (eg, after upgrading `cardano-node` and `cardano-cli` binaries), run:
+### Restarting development cluster
+
+To restart the running cluster (eg, after upgrading `cardano-node` and `cardano-cli` binaries), run:
 
 ```sh
 ./scripts/restart_dev_cluster.sh
 ```
+
+---
+**NOTE** <!-- markdownlint-disable-line MD036 -->
+
+Restaring the running development cluster is useful mainly when using the "babbage" start scripts (not the "babbage_fast" version). It takes ~ 30 minutes for the local cluster instance to get from Byron to Babbage. Starting local cluster using the "babbage_fast" version takes less than 1 minute.
+
+---
 
 ### Checking the development environment
 
