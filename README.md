@@ -34,13 +34,6 @@ To start local cluster directly in Babbage, set `CI_FAST_CLUSTER=1`.
 
 The execution can be configured using env variables described in the section below.
 
-In addition, you can use
-
-* `NODE_REV` - revison of `cardano-node` (default: master HEAD)
-* `CI_FAST_CLUSTER` - start local cluster directly in Babbage era, without going from Byron -> ... -> Babbage (same effect as `SCRIPTS_DIRNAME=babbage_fast`)
-* `CI_ENABLE_DBSYNC` - specifies if tests will setup db-sync and perform db-sync checks (default: unset)
-* `DBSYNC_REV` - revison of `cardano-db-sync` (default: master HEAD)
-
 ## Variables for configuring testrun
 
 * `SCHEDULING_LOG` – specifies the path to the file where log messages for tests and cluster instance scheduler are stored
@@ -57,28 +50,39 @@ In addition, you can use
 * `SCRIPTS_DIRNAME` – path to a dir with local cluster start/stop scripts and configuration files (default: unset)
 * `BOOTSTRAP_DIR` – path to a bootstrap dir for the given testnet (genesis files, config files, faucet data) (default: unset)
 
+When running tests using the `./.github/regression.sh` script, you can also use
+
+* `NODE_REV` - revison of `cardano-node` (default: master HEAD)
+* `CI_FAST_CLUSTER` - start local cluster directly in Babbage era, without going from Byron -> ... -> Babbage (same effect as `SCRIPTS_DIRNAME=babbage_fast`)
+* `CI_ENABLE_DBSYNC` - specifies if tests will setup db-sync and perform db-sync checks (default: unset)
+* `DBSYNC_REV` - revison of `cardano-db-sync` (default: master HEAD)
+
 For example:
 
-```sh
-SCHEDULING_LOG=testrun_20221224_1.log NUM_POOLS=6 MIXED_P2P=1 ./.github/regression.sh
-```
+* running tests on local cluster intances, each with 6 stake pools and mix of P2P and legacy networking
 
-or
+    ```sh
+    NUM_POOLS=6 MIXED_P2P=1 ./.github/regression.sh
+    ```
 
-```sh
-SCHEDULING_LOG=testrun_20221224_1.log TEST_THREADS=15 CLUSTER_ERA=babbage TX_ERA=alonzo SCRIPTS_DIRNAME=babbage_fast PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" make tests
-```
+* running tests on local cluster intances using 15 pytest workers, Babbage cluster era, Alonzo transaction era, cluster scripts that start a cluster directly in Babbage, selecting only tests without 'long' marker that also match given `-k` pytest argument
 
-or
+    ```sh
+    TEST_THREADS=15 CLUSTER_ERA=babbage TX_ERA=alonzo SCRIPTS_DIRNAME=babbage_fast PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" ./.github/regression.sh
+    ```
 
-```sh
-SCHEDULING_LOG=testrun_20221224_1.log CLUSTER_ERA=babbage BOOTSTRAP_DIR=~/tmp/shelley_qa_config/ make testnets
-```
+* running tests on Shelley-qa testnet with '8.0.0' release of `cardano-node`
 
-## Local installation (e.g. for tests development)
+    ```sh
+    NODE_REV=8.0.0 BOOTSTRAP_DIR=~/tmp/shelley_qa_config/ ./.github/regression.sh
+    ```
+
+## Local usage for tests development
 
 Install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md).
 Install and configure poetry, follow [Poetry documentation](https://python-poetry.org/docs/#installation).
+
+### Preparing Python virtual environment
 
 Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
 
@@ -86,57 +90,78 @@ Create a Python virtual environment (requires Python v3.8 or newer) and install 
 ./setup_venv.sh
 ```
 
-### Installing cardano-clusterlib in development mode
+### Running development cluster
 
-Sometimes it is useful to test local changes made to [cardano-clusterlib](https://github.com/input-output-hk/cardano-clusterlib-py).
-To install cardano-clusterlib in development mode:
+When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for test development, as starting a cluster instance takes several epochs (to get from Byron to Babbage). To keep the Cardano cluster running in between test runs, one needs to start it in 'development mode':
+
+1. cd to 'cardano-node' repo
+
+    ```sh
+    cd ../cardano-node
+    ```
+
+1. update and checkout the desired commit/tag
+
+    ```sh
+    git checkout master
+    git pull origin master
+    git fetch --all --tags
+    git checkout tags/<tag>
+    ```
+
+1. launch devops shell
+
+    ```sh
+    nix develop .#devops
+    ```
+
+1. cd back to 'cardano-node-tests' repo
+
+    ```sh
+    cd ../cardano-node-test
+    ```
+
+1. activate virtual env
+
+    ```sh
+    poetry shell
+    ```
+
+1. add virtual env to PYTHONPATH
+
+    ```sh
+    export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
+    ```
+
+1. prepare cluster scripts
+
+    ```sh
+    prepare-cluster-scripts -d <destination dir>/babbage_fast -s cardano_node_tests/cluster_scripts/babbage_fast/
+    ```
+
+1. set env variables
+
+    ```sh
+    export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
+    ```
+
+1. start the cluster instance in development mode
+
+    ```sh
+    <destination dir>/babbage_fast/start-cluster-hfc
+    ```
+
+After the cluster starts, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pool-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.
+
+To restart the cluster (eg, after upgrading `cardano-node` and `cardano-cli` binaries), run:
 
 ```sh
-# activate virtual env
-poetry shell
-# update virtual env
-# (answer 'y' to question "Install into the current virtual env? [y/N]")
-./setup_venv.sh
-# uninstall cardano-clusterlib installed by poetry
-pip uninstall cardano-clusterlib
-# cd to 'cardano-clusterlib-py' repo
-cd ../cardano-clusterlib-py
-# install cardano-clusterlib in development mode
-pip install -e .
-# cd back to 'cardano-node-tests' repo
-cd -
-# check that you are really using cardano-clusterlib files from your local repo
-python -c 'from cardano_clusterlib import clusterlib_klass; print(clusterlib_klass.__file__)'
+./scripts/restart_dev_cluster.sh
 ```
 
-Note that after you run `poetry install` (eg through running `./setup_venv.sh`), poetry will reinstall cardano-clusterlib. If you want to keep using cardano-clusterlib in development mode, you'll need to repeat the steps above.
+### Checking the development environment
 
-## Local usage
-
-Preparing the environment:
-
-```sh
-# cd to cardano-node repo
-cd <your path to cardano-node repo>
-# update and checkout the desired commit/tag
-git checkout master
-git pull origin master
-git fetch --all --tags
-git checkout tags/<tag>
-# launch devops shell
-nix develop .#devops
-
-# cd to tests repo
-cd <your path to cardano-node-test repo>
-# activate virtual env
-poetry shell
-# add virtual env to PYTHONPATH
-export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
-# set env variables
-export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket
-```
-
-Check that the environment is correctly set up by running:
+To check that the development environment was correctly setup, run the `./check_env.sh` script.
 
 ```text
 $ ./check_env.sh
@@ -168,73 +193,92 @@ dbsync available: ✔
 P2P network (optional): -
 ```
 
-Running tests on a local cluster (local cluster instances will be started automatically during test run setup):
+### Running individual tests
 
-```sh
-make tests
-```
-
-Running tests on one of the testnets:
-
-```sh
-# set env variables
-export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/relay1.socket
-# run tests
-BOOTSTRAP_DIR=<your path to bootstrap dir> make testnets
-```
-
-Running individual tests:
+Example:
 
 ```sh
 pytest -k "test_name1 or test_name2" cardano_node_tests
+pytest -m "not long" cardano_node_tests
+pytest -m smoke cardano_node_tests/tests/test_governance.py
 ```
 
-Running linter:
+### Running linters
+
+It is sufficient to activate the Python virtual environment before running linters, development cluster is not needed:
+
+1. activate virtual env
 
 ```sh
-# activate virtual env
 poetry shell
-# run linter
+```
+
+1. run linters
+
+```sh
 make lint
 ```
 
-## Tests development
+### Installing `cardano-clusterlib` in development mode
 
-When running tests, the testing framework starts and stops cluster instances as needed. That is not ideal for test development, as starting a cluster instance takes several epochs (to get from Byron to Babbage). To keep the Cardano cluster running in between test runs, one needs to start it in 'development mode':
+Sometimes it is useful to test local changes made to [cardano-clusterlib](https://github.com/input-output-hk/cardano-clusterlib-py).
+To install cardano-clusterlib in development mode:
+
+1. activate virtual env
+
+    ```sh
+    poetry shell
+    ```
+
+1. enable legacy behavior (needed by `mypy` and `pylint` linters)
+
+    ```sh
+    export SETUPTOOLS_ENABLE_FEATURES="legacy-editable"
+    ```
+
+1. update virtual env (answer 'y' to question "Install into the current virtual env? [y/N]")
+
+    ```sh
+    ./setup_venv.sh
+    ```
+
+1. uninstall `cardano-clusterlib` installed by poetry
+
+    ```sh
+    pip uninstall cardano-clusterlib
+    ```
+
+1. cd to 'cardano-clusterlib-py' repo
+
+    ```sh
+    cd ../cardano-clusterlib-py
+    ```
+
+1. install `cardano-clusterlib` in development mode
+
+    ```sh
+    pip install -e .
+    ```
+
+1. cd back to 'cardano-node-tests' repo
+
+    ```sh
+    cd -
+    ```
+
+1. check that you are really using cardano-clusterlib files from your local repo
+
+    ```sh
+    python -c 'from cardano_clusterlib import clusterlib_klass; print(clusterlib_klass.__file__)'
+    ```
+
+Note that after you run `poetry install` (eg through running `./setup_venv.sh`), poetry will reinstall `cardano-clusterlib`. If you want to keep using cardano-clusterlib in development mode, you'll need to repeat the steps above.
+
+### Building documentation
+
+ Build and deploy documentation:
 
 ```sh
-# activate virtual env
-poetry shell
-# prepare cluster scripts
-prepare-cluster-scripts -d <destination dir>/babbage -s cardano_node_tests/cluster_scripts/babbage/
-# set env variables
-export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
-# start the cluster instance in development mode
-<destination dir>/babbage/start-cluster-hfc
-```
-
-After the cluster starts, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pool-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.
-
-To restart the cluster (eg, after upgrading `cardano-node` and `cardano-cli` binaries), run:
-
-```sh
-./scripts/restart_dev_cluster.sh
-```
-
-## Test coverage of Cardano CLI commands
-
-To get test coverage of Cardano CLI commands, run tests as usual (`make tests`) and generate the coverage report JSON file with:
-
-```sh
-cardano-cli-coverage -i .cli_coverage/cli_coverage_*.json -o .cli_coverage/coverage_report.json
-```
-
-## Building documentation
-
-```sh
-# activate virtual env
-poetry shell
-# build and deploy documentation
 ./deploy_doc.sh
 ```
 
