@@ -170,8 +170,8 @@ def main():
     # cardano-node setup
     NODE_DIR=clone_repo('cardano-node', node_branch)
     os.chdir(NODE_DIR)
-    execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
-    execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
+    execute_command("nix build -v .#cardano-node -o cardano-node-bin")
+    execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
     print("--- Node setup")
     copy_node_executables(build_method="nix") 
     get_node_config_files(env)
@@ -190,8 +190,8 @@ def main():
     setup_postgres() # To login use: psql -h /path/to/postgres -p 5432 -e postgres
     create_pgpass_file(env)
     create_database()
-    execute_command("nix-build -A cardano-db-sync -o db-sync-node")
-    execute_command("nix-build -A cardano-db-tool -o db-sync-tool")
+    execute_command("nix-build -v .#cardano-db-sync -o db-sync-node")
+    execute_command("nix-build -v .#cardano-db-tool -o db-sync-tool")
     copy_db_sync_executables(build_method="nix")
     print("--- Db sync startup", flush=True)
     start_db_sync(env, start_args=db_start_options)

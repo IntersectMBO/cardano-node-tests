@@ -485,6 +485,7 @@ def get_node_config_files(env):
     urllib.request.urlretrieve(base_url + env + "/byron-genesis.json", "byron-genesis.json",)
     urllib.request.urlretrieve(base_url + env + "/shelley-genesis.json", "shelley-genesis.json",)
     urllib.request.urlretrieve(base_url + env + "/alonzo-genesis.json", "alonzo-genesis.json",)
+    urllib.request.urlretrieve(base_url + env + "/conway-genesis.json", "conway-genesis.json",)
     urllib.request.urlretrieve(base_url + env + "/topology.json", env + "-topology.json",)
 
 
