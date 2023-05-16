@@ -16,6 +16,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -158,9 +159,11 @@ class TestDatum:
         try:
             cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=[txin])
         except clusterlib.CLIError as err:
-            if "PPViewHashesDontMatch" in str(err):
-                pytest.xfail("build cmd requires protocol params - see node issue #4058")
-            raise
+            if "PPViewHashesDontMatch" not in str(err):
+                raise
+            blockers.GH(issue=4058, fixed_in="1.35.5").finish_test(
+                message="`transaction build` requires protocol params"
+            )
 
 
 @pytest.mark.testnets
