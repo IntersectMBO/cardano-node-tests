@@ -34,7 +34,9 @@ if configuration.IS_XDIST:
     _xdist_sleep = time.sleep
 else:
 
-    def _xdist_sleep(secs: float) -> None:  # noqa: ARG001
+    def _xdist_sleep(
+        secs: float,  # noqa: ARG001
+    ) -> None:
         """No need to sleep if tests are running on a single worker."""
         # pylint: disable=unused-argument,unnecessary-pass
         pass

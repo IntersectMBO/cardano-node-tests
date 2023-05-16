@@ -276,7 +276,9 @@ def testenv_setup_teardown(
 
 @pytest.fixture(scope="session", autouse=True)
 def session_autouse(
-    change_dir: Any, close_dbconn: Any, testenv_setup_teardown: Any  # noqa: ARG001
+    change_dir: Any,  # noqa: ARG001
+    close_dbconn: Any,  # noqa: ARG001
+    testenv_setup_teardown: Any,  # noqa: ARG001
 ) -> None:
     """Autouse session fixtures that are required for session setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
@@ -312,7 +314,9 @@ def cd_testfile_temp_dir(testfile_temp_dir: Path) -> Generator[Path, None, None]
 
 
 @pytest.fixture(autouse=True)
-def function_autouse(cd_testfile_temp_dir: Generator[Path, None, None]) -> None:  # noqa: ARG001
+def function_autouse(
+    cd_testfile_temp_dir: Generator[Path, None, None],  # noqa: ARG001
+) -> None:
     """Autouse function fixtures that are required for each test setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
     pass
