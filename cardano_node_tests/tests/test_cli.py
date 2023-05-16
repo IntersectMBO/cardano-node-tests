@@ -1188,7 +1188,9 @@ class TestPing:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     def test_ping_localhost(
-        self, cluster: clusterlib.ClusterLib, ping_available: None  # noqa: ARG002
+        self,
+        cluster: clusterlib.ClusterLib,
+        ping_available: None,  # noqa: ARG002
     ):
         """Test `cardano-cli ping` on local node using host and port."""
         # pylint: disable=unused-argument

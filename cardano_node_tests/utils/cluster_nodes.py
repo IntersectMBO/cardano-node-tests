@@ -299,7 +299,9 @@ class TestnetCluster(ClusterType):
         return cluster_obj
 
     def create_addrs_data(
-        self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."  # noqa: ARG002
+        self,
+        cluster_obj: clusterlib.ClusterLib,  # noqa: ARG002
+        destination_dir: FileType = ".",  # noqa: ARG002
     ) -> Dict[str, Dict[str, Any]]:
         """Create addresses and their keys for usage in tests."""
         shelley_dir = get_cluster_env().state_dir / "shelley"
