@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import string
+import time
 from pathlib import Path
 from typing import List
 
@@ -20,6 +21,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -1222,7 +1224,10 @@ class TestPing:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     def test_ping_unix_socket(
-        self, cluster: clusterlib.ClusterLib, ping_available: None  # noqa: ARG002
+        self,
+        cluster: clusterlib.ClusterLib,
+        worker_id: str,
+        ping_available: None,  # noqa: ARG002
     ):
         """Test `cardano-cli ping` on local node using unix socket."""
         # pylint: disable=unused-argument
@@ -1245,9 +1250,18 @@ class TestPing:
                 timeout=30,
             )
         except clusterlib.CLIError as exc:
-            if "MuxError MuxBearerClosed" in str(exc):
-                pytest.xfail("`MuxError MuxBearerClosed` error, see node issue #5245")
-            raise
+            if "MuxError MuxBearerClosed" not in str(exc):
+                raise
+
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex="MuxError MuxUnknownMiniProtocol .* MiniProtocolNum 8",
+                ignore_file_id=worker_id,
+            )
+            # give enough time for the log messages to be written to the log files
+            time.sleep(2.5)
+
+            pytest.xfail("`MuxError MuxBearerClosed` error, see node issue #5245")
 
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
