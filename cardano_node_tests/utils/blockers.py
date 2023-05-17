@@ -32,8 +32,7 @@ class GH:
         self.repo_name = repo.split("/")[-1]
         self.gh_issue = gh_issue.GHIssue(number=self.issue, repo=self.repo)
 
-    @property
-    def blocked(self) -> bool:
+    def is_blocked(self) -> bool:
         """Check if issue is blocked."""
         # Assume that the issue is blocked if we are not supposed to check the issue on
         # devel versions of node and we are running a devel version.
@@ -74,7 +73,7 @@ class GH:
         reason = f"{self.gh_issue}: {message}"
 
         # Xfail if the issue is still blocked
-        if self.blocked:
+        if self.is_blocked():
             pytest.xfail(reason)
         # Fail if the issue is supposed to be fixed
         else:
