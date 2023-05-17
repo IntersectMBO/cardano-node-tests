@@ -8,6 +8,8 @@ from cardano_node_tests.utils import helpers
 class Versions:
     """Cluster era, transaction era, node version info."""
 
+    LATEST_NODE_RELEASE = version.parse("8.0.0")
+
     BYRON = 1
     SHELLEY = 2
     ALLEGRA = 3
@@ -33,6 +35,8 @@ class Versions:
         self.ghc = cardano_version_db["ghc"]
         self.platform = cardano_version_db["platform"]
         self.git_rev = cardano_version_db["git_rev"]
+
+        self.node_is_devel = bool(self.node > self.LATEST_NODE_RELEASE)
 
         dbsync_version_db = self.get_dbsync_version() if configuration.HAS_DBSYNC else {}
         self.dbsync = version.parse(dbsync_version_db.get("version") or "0")
@@ -75,5 +79,5 @@ class Versions:
         )
 
 
-# versions don't change during test run, so it can be used as constant
+# Versions don't change during test run, so it can be used as constant
 VERSIONS = Versions()

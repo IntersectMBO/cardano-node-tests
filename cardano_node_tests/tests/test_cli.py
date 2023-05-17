@@ -16,6 +16,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -1260,10 +1261,10 @@ class TestPing:
                 regex="MuxError MuxUnknownMiniProtocol .* MiniProtocolNum 8",
                 ignore_file_id=worker_id,
             )
-            # give enough time for the log messages to be written to the log files
+            # Give enough time for the log messages to be written to the log files
             time.sleep(2.5)
 
-            pytest.xfail("`MuxError MuxBearerClosed` error, see node issue #5245")
+            blockers.GH(issue=5245).finish_test(message="`MuxError MuxBearerClosed` error")
 
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
