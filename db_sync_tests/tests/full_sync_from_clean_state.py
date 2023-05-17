@@ -23,7 +23,7 @@ from utils.utils import seconds_to_time, get_no_of_cpu_cores, get_current_date_t
     DB_SYNC_PERF_STATS, NODE_LOG, DB_SYNC_LOG, EPOCH_SYNC_TIMES, PERF_STATS_ARCHIVE, \
     NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE, EXPECTED_DB_SCHEMA, EXPECTED_DB_INDEXES, \
     ENVIRONMENT \
-    
+
 from utils.aws_db_utils import get_identifier_last_run_from_table, \
     add_bulk_rows_into_db, add_single_row_into_db
 
@@ -63,7 +63,7 @@ def create_sync_stats_chart():
     ax_perf.plot(times, rss_mem_usage)
     fig.savefig(CHART)
 
-    
+
 def upload_sync_results_to_aws(env):
     os.chdir(ROOT_TEST_PATH)
     os.chdir(Path.cwd() / 'cardano-db-sync')
@@ -116,13 +116,13 @@ def upload_sync_results_to_aws(env):
 def print_report(db_schema, db_indexes):
     log_errors = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
     print_color_log(sh_colors.WARNING, f"Are errors present: {log_errors}")
-    
+
     rollbacks = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
     print_color_log(sh_colors.WARNING, f"Are rollbacks present: {rollbacks}")
-    
+
     failed_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rollback failed")
     print_color_log(sh_colors.WARNING, f"Are failed rollbacks present: {failed_rollbacks}")
-    
+
     corrupted_ledger_files = is_string_present_in_file(DB_SYNC_LOG, "Failed to parse ledger state")
     print_color_log(sh_colors.WARNING, f"Are corrupted ledger files present: {corrupted_ledger_files}")
 
@@ -173,7 +173,7 @@ def main():
     execute_command("nix build -v .#cardano-node -o cardano-node-bin")
     execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
     print("--- Node setup")
-    copy_node_executables(build_method="nix") 
+    copy_node_executables(build_method="nix")
     get_node_config_files(env)
     set_node_socket_path_env_var_in_cwd()
     cli_version, cli_git_rev = get_node_version()
@@ -190,8 +190,8 @@ def main():
     setup_postgres() # To login use: psql -h /path/to/postgres -p 5432 -e postgres
     create_pgpass_file(env)
     create_database()
-    execute_command("nix-build -v .#cardano-db-sync -o db-sync-node")
-    execute_command("nix-build -v .#cardano-db-tool -o db-sync-tool")
+    execute_command("nix build -v .#cardano-db-sync -o db-sync-node")
+    execute_command("nix build -v .#cardano-db-tool -o db-sync-tool")
     copy_db_sync_executables(build_method="nix")
     print("--- Db sync startup", flush=True)
     start_db_sync(env, start_args=db_start_options)
@@ -287,7 +287,7 @@ if __name__ == "__main__":
 
         for arg in start_args:
             final_args_string+=str("--" + arg + " ")
-                    
+
         return final_args_string
 
     parser = argparse.ArgumentParser(description="Execute basic sync test\n\n")

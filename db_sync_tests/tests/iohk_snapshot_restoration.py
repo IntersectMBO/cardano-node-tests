@@ -25,9 +25,9 @@ from utils.utils import seconds_to_time, get_no_of_cpu_cores, get_current_date_t
     db_sync_perf_stats, sh_colors, ONE_MINUTE, ROOT_TEST_PATH, POSTGRES_DIR, POSTGRES_USER, \
     DB_SYNC_PERF_STATS, NODE_LOG, DB_SYNC_LOG, EPOCH_SYNC_TIMES, PERF_STATS_ARCHIVE, \
     NODE_ARCHIVE, DB_SYNC_ARCHIVE, SYNC_DATA_ARCHIVE, ENVIRONMENT \
-    
+
 from utils.aws_db_utils import get_identifier_last_run_from_table, \
-    add_bulk_rows_into_db, add_single_row_into_db 
+    add_bulk_rows_into_db, add_single_row_into_db
 
 
 
@@ -87,10 +87,10 @@ def main():
     # cardano-node setup
     NODE_DIR=clone_repo('cardano-node', node_branch)
     os.chdir(NODE_DIR)
-    execute_command("nix-build -v -A cardano-node -o cardano-node-bin")
-    execute_command("nix-build -v -A cardano-cli -o cardano-cli-bin")
+    execute_command("nix build -v .#cardano-node -o cardano-node-bin")
+    execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
     print("--- Node setup")
-    copy_node_executables(build_method="nix") 
+    copy_node_executables(build_method="nix")
     get_node_config_files(env)
     set_node_socket_path_env_var_in_cwd()
     cli_version, cli_git_rev = get_node_version()
@@ -109,8 +109,8 @@ def main():
     create_pgpass_file(env)
     create_database()
     list_databases()
-    execute_command("nix-build -A cardano-db-sync -o db-sync-node")
-    execute_command("nix-build -A cardano-db-tool -o db-sync-tool")
+    execute_command("nix build .#cardano-db-sync -o db-sync-node")
+    execute_command("nix build .#cardano-db-tool -o db-sync-tool")
     print("--- Download and check db-sync snapshot", flush=True)
     copy_db_sync_executables(build_method="nix")
     snapshot_name = download_db_sync_snapshot(snapshot_url)
@@ -124,7 +124,7 @@ def main():
     print(f"Restoration time [sec]: {restoration_time}")
     snapshot_epoch_no, snapshot_block_no, snapshot_slot_no = get_db_sync_tip(env)
     print(f"db-sync tip after restoration: epoch: {snapshot_epoch_no}, block: {snapshot_block_no}, slot: {snapshot_slot_no}")
-    
+
     # start db-sync
     print("--- Db sync start")
     start_db_sync(env, start_args="", first_start="True")
@@ -142,7 +142,7 @@ def main():
     print("--- Stop cardano services")
     stop_process('cardano-db-sync')
     stop_process('cardano-node')
- 
+
     # export test data as a json file
     print("--- Gathering end results")
     test_data = OrderedDict()
@@ -209,13 +209,13 @@ def main():
 
     log_errors = are_errors_present_in_db_sync_logs(DB_SYNC_LOG)
     print_color_log(sh_colors.WARNING, f"Are errors present: {log_errors}")
-    
+
     rollbacks = are_rollbacks_present_in_db_sync_logs(DB_SYNC_LOG)
     print_color_log(sh_colors.WARNING, f"Are rollbacks present: {rollbacks}")
-    
+
     failed_rollbacks = is_string_present_in_file(DB_SYNC_LOG, "Rollback failed")
     print_color_log(sh_colors.WARNING, f"Are failed rollbacks present: {failed_rollbacks}")
-    
+
     corrupted_ledger_files = is_string_present_in_file(DB_SYNC_LOG, "Failed to parse ledger state")
     print_color_log(sh_colors.WARNING, f"Are corrupted ledger files present: {corrupted_ledger_files}")
 
