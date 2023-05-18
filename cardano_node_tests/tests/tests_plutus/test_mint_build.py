@@ -15,6 +15,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import mint_build
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -720,7 +721,9 @@ class TestBuildMinting:
         except AssertionError as err:
             if "DeserialiseFailure" not in str(err):
                 raise
-            pytest.xfail("DeserialiseFailure: see issue #944")
+            blockers.GH(
+                issue=583, repo="input-output-hk/plutus-apps", message="DeserialiseFailure"
+            ).finish_test()
 
         plutus_mint_data = [plutus_mint_data_dummy[0]._replace(redeemer_file=redeemer_file)]
 
@@ -1167,7 +1170,7 @@ class TestCollateralOutput:
         except clusterlib.CLIError as exc:
             if "IncorrectTotalCollateralField" not in str(exc):
                 raise
-            pytest.xfail("`IncorrectTotalCollateralField` error, see node issue #4744")
+            blockers.GH(issue=4744, message="`IncorrectTotalCollateralField` error").finish_test()
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
         token_utxo = clusterlib.filter_utxos(

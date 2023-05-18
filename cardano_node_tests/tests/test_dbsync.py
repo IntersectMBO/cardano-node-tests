@@ -10,6 +10,7 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
@@ -325,7 +326,11 @@ class TestDBSync:
             assert blocks_data_blk_count == epoch_data_blk_count
         except AssertionError:
             if blocks_data_blk_count == epoch_data_blk_count + 1:
-                pytest.xfail("Blocks count don't match between tables, see dbsync issue #1363")
+                blockers.GH(
+                    issue=1363,
+                    repo="input-output-hk/cardano-db-sync",
+                    message="Blocks count don't match between tables",
+                ).finish_test()
             raise
 
         assert (

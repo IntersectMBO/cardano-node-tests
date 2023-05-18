@@ -21,6 +21,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -1545,7 +1546,7 @@ class TestTransfer:
         * (optional) check transactions in db-sync
         """
         temp_template = f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}"
-        xfail_msgs = []
+        xfail_issues = []
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -1577,7 +1578,6 @@ class TestTransfer:
             # TODO: add ADA txout for change address - see node issue #3057
             destinations.append(clusterlib.TxOut(address=src_address, amount=2_000_000))
 
-            # TODO: see node issue #4297
             if VERSIONS.transaction_era == VERSIONS.ALONZO:
                 err_str = ""
                 try:
@@ -1593,9 +1593,11 @@ class TestTransfer:
                     err_str = str(err)
                     if "Minimum required UTxO:" not in err_str:
                         raise
-                    xfail_msgs.append(
-                        "`transaction build` min required UTxO calculation is broken, "
-                        "see node issue #4297"
+                    xfail_issues.append(
+                        blockers.GH(
+                            issue=4297,
+                            message="`transaction build` min required UTxO calculation is broken",
+                        )
                     )
 
                 _min_reported_utxo = re.search("Minimum required UTxO: Lovelace ([0-9]+)", err_str)
@@ -1657,8 +1659,8 @@ class TestTransfer:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
-        if xfail_msgs:
-            pytest.xfail("\n".join(xfail_msgs))
+        if xfail_issues:
+            blockers.finish_test(issues=xfail_issues)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -1681,7 +1683,7 @@ class TestTransfer:
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
         amount = 1_000
         rand = clusterlib.get_rand_str(5)
-        xfail_msgs = []
+        xfail_issues = []
 
         new_tokens = clusterlib_utils.new_tokens(
             *[f"couttscoin{rand}{i}".encode().hex() for i in range(5)],
@@ -1762,9 +1764,11 @@ class TestTransfer:
                     err_str = str(err)
                     if "Minimum required UTxO:" not in err_str:
                         raise
-                    xfail_msgs.append(
-                        "`transaction build` min required UTxO calculation is broken, "
-                        "see node issue #4297"
+                    xfail_issues.append(
+                        blockers.GH(
+                            issue=4297,
+                            message="`transaction build` min required UTxO calculation is broken",
+                        )
                     )
 
                 _min_reported_utxo = re.search("Minimum required UTxO: Lovelace ([0-9]+)", err_str)
@@ -1838,8 +1842,8 @@ class TestTransfer:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
-        if xfail_msgs:
-            pytest.xfail("\n".join(xfail_msgs))
+        if xfail_issues:
+            blockers.finish_test(issues=xfail_issues)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD

@@ -14,6 +14,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_raw
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -350,10 +351,10 @@ class TestMinting:
                 assert "Unexpected datum hash at each reference input" in err_str, err_str
             except AssertionError:
                 if "The machine terminated because of an error" in err_str:
-                    pytest.xfail(
-                        "PlutusDebug doesn't return the evaluation error from "
-                        "plutus - see node issue #4488"
-                    )
+                    blockers.GH(
+                        issue=4488,
+                        message="PlutusDebug doesn't return the evaluation error from plutus",
+                    ).finish_test()
 
             return
 

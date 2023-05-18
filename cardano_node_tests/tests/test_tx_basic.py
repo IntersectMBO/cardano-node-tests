@@ -14,6 +14,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import tx_common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -320,7 +321,7 @@ class TestBasicTransactions:
         except clusterlib.CLIError as exc:
             if "FeeTooSmallUTxO" not in str(exc):
                 raise
-            pytest.xfail("FeeTooSmallUTxO: see node issue #4752")
+            blockers.GH(issue=4752, message="FeeTooSmallUTxO").finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE

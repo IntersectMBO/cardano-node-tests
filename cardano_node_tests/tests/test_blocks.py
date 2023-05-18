@@ -18,6 +18,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
@@ -162,7 +163,9 @@ class TestLeadershipSchedule:
         err_str = str(excinfo.value)
 
         if "PastHorizon" in err_str:
-            pytest.xfail("`query leadership-schedule` is affected by cardano-node issue 4002")
+            blockers.GH(
+                issue=4002, message="'PastHorizon' in `query leadership-schedule`"
+            ).finish_test()
 
         assert "current stake distribution is currently unstable" in err_str, err_str
 

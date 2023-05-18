@@ -10,6 +10,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -258,7 +259,7 @@ class TestSocketPath:
                 "Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH" in str_exc
                 or "Network.Socket.connect:" in str_exc
             ):
-                pytest.xfail("`CARDANO_NODE_SOCKET_PATH` needed, see node issue #5199")
+                blockers.GH(issue=5199, message="`CARDANO_NODE_SOCKET_PATH` needed").finish_test()
             raise
 
         tx_signed = cluster.g_transaction.sign_tx(

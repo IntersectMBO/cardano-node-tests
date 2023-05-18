@@ -8,6 +8,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -78,7 +79,7 @@ class TestProtocol:
         try:
             protocol_state: dict = json.loads(protocol_state_raw)
         except json.decoder.JSONDecodeError as err:
-            pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
+            blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
 
         assert set(protocol_state) == PROTOCOL_STATE_KEYS
 
@@ -92,9 +93,9 @@ class TestProtocol:
             )
         except UnicodeDecodeError as err:
             if "invalid start byte" in str(err):
-                pytest.xfail(
-                    "`query protocol-state --out-file` dumps binary data - cardano-node issue #2461"
-                )
+                blockers.GH(
+                    issue=2461, message="`query protocol-state --out-file` dumps binary data"
+                ).finish_test()
             raise
         assert set(protocol_state) == PROTOCOL_STATE_KEYS
 

@@ -12,6 +12,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_raw
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
@@ -254,7 +255,7 @@ class TestLockingV2:
         # see https://github.com/input-output-hk/cardano-db-sync/issues/1214
         # and https://github.com/input-output-hk/cardano-node/issues/4433
         if db_cbor_hex != orig_cbor_hex:
-            pytest.xfail(
-                "See cardano-node-issue #4433 - "
-                "datum bytes in db-sync doesn't correspond to the original datum"
-            )
+            blockers.GH(
+                issue=4433,
+                message="Datum bytes in db-sync doesn't correspond to the original datum",
+            ).finish_test()

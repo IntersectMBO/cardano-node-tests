@@ -11,6 +11,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -51,13 +52,12 @@ class TestLedgerState:
         if len(stake_pool_ids) > 200:
             pytest.skip("Skipping on this testnet, there's too many pools.")
 
-        # TODO: xfail for node issue #3859
         try:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
         except AssertionError as err:
             if "Invalid numeric literal at line" not in str(err):
                 raise
-            pytest.xfail("expected JSON, got CBOR - see node issue #3859")
+            blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
 
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,

@@ -78,7 +78,9 @@ class TestCLI:
             if "cardano-cli: TODO" in str(err) or "Could not JSON decode TextEnvelopeCddl" in str(
                 err
             ):
-                pytest.xfail("Not possible to use process substitution - see node issue #4235")
+                blockers.GH(
+                    issue=4235, message="Not possible to use process substitution"
+                ).finish_test()
             raise
 
     @allure.link(helpers.get_vcs_link())
@@ -607,7 +609,7 @@ class TestKey:
             )
         except clusterlib.CLIError as err:
             if "key non-extended-key  Error: Invalid key." in str(err):
-                pytest.xfail("See cardano-node issue #4914")
+                blockers.GH(issue=4914, message="Invalid non-extended-key").finish_test()
             raise
 
     @allure.link(helpers.get_vcs_link())
@@ -920,7 +922,7 @@ class TestAdvancedQueries:
             else:
                 raise ValueError(f"Unknown option: {option}")
         except json.decoder.JSONDecodeError as err:
-            pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
+            blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
         except clusterlib.CLIError as err:
             err_str = str(err)
             if "Missing" in err_str or "Invalid option" in err_str:
@@ -1044,7 +1046,9 @@ class TestAdvancedQueries:
             pytest.fail(f"Errors:\n{err_joined}")
         elif total_stake_errors:
             err_joined = "\n".join(total_stake_errors)
-            pytest.xfail(f"Unexpected values for total stake:\n{err_joined} - see node issue #4895")
+            blockers.GH(
+                issue=4895, message=f"Unexpected values for total stake:\n{err_joined}"
+            ).finish_test()
 
     @pytest.fixture
     def pool_ids(self, cluster: clusterlib.ClusterLib) -> List[str]:
@@ -1063,7 +1067,7 @@ class TestAdvancedQueries:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
         except AssertionError as err:
             if "Invalid numeric literal at line" in str(err):
-                pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
+                blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
             raise
 
         assert "lastEpoch" in ledger_state
@@ -1115,7 +1119,7 @@ class TestAdvancedQueries:
         try:
             pool_params = cluster.g_query.get_pool_params(stake_pool_id=pool_ids[0])
         except json.decoder.JSONDecodeError as err:
-            pytest.xfail(f"expected JSON, got CBOR - see node issue #3859: {err}")
+            blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
 
         assert hasattr(pool_params, "retiring")
 
@@ -1264,7 +1268,7 @@ class TestPing:
             # Give enough time for the log messages to be written to the log files
             time.sleep(2.5)
 
-            blockers.GH(issue=5245).finish_test(message="`MuxError MuxBearerClosed` error")
+            blockers.GH(issue=5245, message="`MuxError MuxBearerClosed` error").finish_test()
 
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 

@@ -161,9 +161,11 @@ class TestDatum:
         except clusterlib.CLIError as err:
             if "PPViewHashesDontMatch" not in str(err):
                 raise
-            blockers.GH(issue=4058, fixed_in="1.35.5").finish_test(
-                message="`transaction build` requires protocol params"
-            )
+            blockers.GH(
+                issue=4058,
+                fixed_in="1.35.5",
+                message="`transaction build` requires protocol params",
+            ).finish_test()
 
 
 @pytest.mark.testnets

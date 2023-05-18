@@ -9,6 +9,7 @@ class Versions:
     """Cluster era, transaction era, node version info."""
 
     LATEST_NODE_RELEASE = version.parse("8.0.0")
+    LATEST_DBSYNC_RELEASE = version.parse("13.1.1.0")
 
     BYRON = 1
     SHELLEY = 2
@@ -35,7 +36,6 @@ class Versions:
         self.ghc = cardano_version_db["ghc"]
         self.platform = cardano_version_db["platform"]
         self.git_rev = cardano_version_db["git_rev"]
-
         self.node_is_devel = bool(self.node > self.LATEST_NODE_RELEASE)
 
         dbsync_version_db = self.get_dbsync_version() if configuration.HAS_DBSYNC else {}
@@ -43,6 +43,7 @@ class Versions:
         self.dbsync_platform = dbsync_version_db.get("platform")
         self.dbsync_ghc = dbsync_version_db.get("ghc")
         self.dbsync_git_rev = dbsync_version_db.get("git_rev")
+        self.dbsync_is_devel = bool(self.dbsync > self.LATEST_DBSYNC_RELEASE)
 
     def get_cardano_version(self) -> dict:
         """Return version info for cardano-node."""
