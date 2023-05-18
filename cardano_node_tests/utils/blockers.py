@@ -1,6 +1,8 @@
 """Functionality for checking if an issue is blocked and thus blocking a test."""
 import logging
 import os
+from typing import Iterable
+from typing import Tuple
 
 import pytest
 from packaging import version
@@ -157,3 +159,28 @@ class GH:
 
     def __repr__(self) -> str:
         return f"<GH: issue='{self.repo}#{self.issue}', fixed_in='{self.fixed_in}'>"
+
+
+def finish_test(issues: Iterable[GH]) -> None:
+    """Fail or Xfail test with references to GitHub issues."""
+
+    def _get_outcome(issue: GH) -> Tuple[bool, str]:
+        blocked = issue.is_blocked()
+        py_method = "XFAIL" if blocked else "FAIL"
+        reason = f"{py_method}: {issue.gh_issue}: {issue.message}"
+        return blocked, reason
+
+    outcomes = [_get_outcome(i) for i in issues]
+
+    should_fail = False
+    for blocked, __ in outcomes:
+        if not blocked:
+            should_fail = True
+            break
+
+    reasons = "; ".join(reason for __, reason in outcomes)
+
+    if should_fail:
+        pytest.fail(reasons)
+    else:
+        pytest.xfail(reasons)
