@@ -46,8 +46,8 @@ Checkout the `db-sync` version that you want to use. `cardano-node-tests` requir
 
 ```sh
 cd cardano-db-sync
-git checkout tags/11.0.4
-nix-build -A cardano-db-sync -o db-sync-node
+git checkout tags/13.1.1.0
+nix build .#cardano-db-sync -o db-sync-node
 << wait for build to complete - it may take a while >>
 ```
 
