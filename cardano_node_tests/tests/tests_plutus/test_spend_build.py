@@ -15,6 +15,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -237,7 +238,9 @@ class TestBuildLocking:
         except AssertionError as err:
             if "DeserialiseFailure" not in str(err):
                 raise
-            pytest.xfail("DeserialiseFailure: see issue #944")
+            blockers.GH(
+                issue=583, repo="input-output-hk/plutus-apps", message="DeserialiseFailure"
+            ).finish_test()
 
         plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
