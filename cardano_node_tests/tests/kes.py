@@ -10,6 +10,7 @@ from typing import Set
 import requests
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 
 LOGGER = logging.getLogger(__name__)
@@ -55,9 +56,12 @@ def check_kes_period_info_result(  # noqa: C901
             f"{cluster_obj.slots_per_kes_period}"
         )
 
-    if command_metrics["qKesKesKeyExpiry"] is None:
-        errors.append(f"The kes expiration date is `null` in check '{check_id}'")
-    else:
+    if command_metrics["qKesKesKeyExpiry"] is None and expected_scenario not in [
+        KesScenarios.ALL_INVALID,
+        KesScenarios.INVALID_KES_PERIOD,
+    ]:
+        errors.append(f"The kes expiration date is `null` in check '{check_id}' -> issue_4396")
+    elif command_metrics["qKesKesKeyExpiry"]:
         expected_expiration_date = (
             datetime.datetime.now(tz=datetime.timezone.utc)
             + datetime.timedelta(
@@ -164,7 +168,6 @@ def check_kes_period_info_result(  # noqa: C901
         and not valid_kes_period_metrics
     ):
         output_scenario = KesScenarios.INVALID_KES_PERIOD
-    # TODO: tests for cardano node issue #4114
     elif (
         kes_output.get("valid_counters")
         and kes_output.get("valid_kes_period")
@@ -189,13 +192,13 @@ def get_xfails(errors: List[str]) -> Set[str]:
     for error in errors:
         if not error:
             continue
-        if "issue_4114" in error:
+        if "issue_4114" in error and blockers.GH(issue=4114).is_blocked():
             xfails.add("See cardano-node issue #4114")
             continue
-        if "expiration date is `null`" in error:
+        if "issue_4396" in error and blockers.GH(issue=4396).is_blocked():
             xfails.add("See cardano-node issue #4396")
             continue
-        # if here, there are other failures than the expected ones
+        # If here, there are other failures than the expected ones
         return set()
 
     return xfails
