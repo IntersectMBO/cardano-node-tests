@@ -357,18 +357,12 @@ class TestKES:
                 )
             )
 
-        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
-        if err_joined:
-            xfails = kes.get_xfails(errors=kes_period_info_errors_list)
-            if xfails:
-                pytest.xfail(" ".join(xfails))
-            else:
-                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}")
+        kes.finish_on_errors(errors=kes_period_info_errors_list)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
     @pytest.mark.long
-    def test_opcert_invalid_kes_period(  # noqa: C901
+    def test_opcert_invalid_kes_period(
         self,
         cluster_singleton: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
@@ -616,13 +610,7 @@ class TestKES:
             )
         )
 
-        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
-        if err_joined:
-            xfails = kes.get_xfails(errors=kes_period_info_errors_list)
-            if xfails:
-                pytest.xfail("; ".join(xfails))
-            else:
-                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}")
+        kes.finish_on_errors(errors=kes_period_info_errors_list)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
@@ -802,13 +790,7 @@ class TestKES:
             )
         )
 
-        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
-        if err_joined:
-            xfails = kes.get_xfails(errors=kes_period_info_errors_list)
-            if xfails:
-                pytest.xfail(" ".join(xfails))
-            else:
-                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}")
+        kes.finish_on_errors(errors=kes_period_info_errors_list)
 
     @allure.link(helpers.get_vcs_link())
     def test_no_kes_period_arg(

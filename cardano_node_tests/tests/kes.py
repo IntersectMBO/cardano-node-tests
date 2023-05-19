@@ -5,8 +5,8 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Set
 
+import pytest
 import requests
 from cardano_clusterlib import clusterlib
 
@@ -40,10 +40,10 @@ def check_kes_period_info_result(  # noqa: C901
     output_scenario = "unknown"
     errors = []
 
-    # get command metrics
+    # Get command metrics
     command_metrics: Dict[str, Any] = kes_output["metrics"] or {}
 
-    # check kes metrics with values in genesis
+    # Check kes metrics with values in genesis
     if command_metrics["qKesMaxKESEvolutions"] != cluster_obj.max_kes_evolutions:
         errors.append(
             f"The max kes evolution in check '{check_id}': "
@@ -60,7 +60,7 @@ def check_kes_period_info_result(  # noqa: C901
         KesScenarios.ALL_INVALID,
         KesScenarios.INVALID_KES_PERIOD,
     ]:
-        errors.append(f"The kes expiration date is `null` in check '{check_id}' -> issue_4396")
+        errors.append(f"The kes expiration date is `null` in check '{check_id}' -> issue #4396?")
     elif command_metrics["qKesKesKeyExpiry"]:
         expected_expiration_date = (
             datetime.datetime.now(tz=datetime.timezone.utc)
@@ -77,7 +77,7 @@ def check_kes_period_info_result(  # noqa: C901
                 f"{command_expiration_date} vs {expected_expiration_date}"
             )
 
-    # get prometheus metrics
+    # Get prometheus metrics
     prometheus_metrics: Dict[str, Any] = {}
     if pool_num and expected_scenario in (
         KesScenarios.ALL_VALID,
@@ -104,7 +104,7 @@ def check_kes_period_info_result(  # noqa: C901
             ],
         }
 
-    # check kes metrics with expected values
+    # Check kes metrics with expected values
     expected_metrics: Dict[str, Any] = {
         "qKesCurrentKesPeriod": cluster_obj.g_query.get_kes_period(),
     }
@@ -125,7 +125,7 @@ def check_kes_period_info_result(  # noqa: C901
                 f"{value} vs {prometheus_metrics[metric]}"
             )
 
-    # in eras > Alonzo, the on-disk counter must be equal or +1 to the on-chain counter
+    # In eras > Alonzo, the on-disk counter must be equal or +1 to the on-chain counter
     valid_counter_metrics = (
         0
         <= command_metrics["qKesOnDiskOperationalCertificateNumber"]
@@ -139,7 +139,7 @@ def check_kes_period_info_result(  # noqa: C901
         <= command_metrics["qKesEndKesInterval"]
     )
 
-    # check if output scenario matches expected scenario
+    # Check if output scenario matches expected scenario
     if (
         kes_output.get("valid_counters")
         and kes_output.get("valid_kes_period")
@@ -168,13 +168,6 @@ def check_kes_period_info_result(  # noqa: C901
         and not valid_kes_period_metrics
     ):
         output_scenario = KesScenarios.INVALID_KES_PERIOD
-    elif (
-        kes_output.get("valid_counters")
-        and kes_output.get("valid_kes_period")
-        and not valid_counter_metrics
-        and valid_kes_period_metrics
-    ):
-        output_scenario = "issue_4114"
 
     if expected_scenario != output_scenario:
         errors.append(
@@ -182,23 +175,57 @@ def check_kes_period_info_result(  # noqa: C901
             f"'{expected_scenario}' vs '{output_scenario}'"
         )
 
+    # Check node issue #4114
+    if (
+        kes_output.get("valid_counters")
+        and kes_output.get("valid_kes_period")
+        and not valid_counter_metrics
+        and valid_kes_period_metrics
+    ):
+        errors.append(
+            f"Undetected invalid counter and certificate in check '{check_id}' -> issue #4114?"
+        )
+
     return errors
 
 
-def get_xfails(errors: List[str]) -> Set[str]:
-    """Get xfail error strings."""
-    xfails = set()
+def get_xfails(errors: List[str]) -> List[blockers.GH]:
+    """Get xfail issues.
+
+    Either all errors can Xfail, or none of them can. There can be only one outcome of a test,
+    so if there are errors that can't be Xfailed, the test must fail.
+    """
+    xfails = []
 
     for error in errors:
         if not error:
             continue
-        if "issue_4114" in error and blockers.GH(issue=4114).is_blocked():
-            xfails.add("See cardano-node issue #4114")
+        if "issue #4114" in error:
+            issue = blockers.GH(issue=4114)
+            if not issue.is_blocked():
+                return []
+            xfails.append(issue)
             continue
-        if "issue_4396" in error and blockers.GH(issue=4396).is_blocked():
-            xfails.add("See cardano-node issue #4396")
+        if "issue #4396" in error:
+            issue = blockers.GH(issue=4396)
+            if not issue.is_blocked():
+                return []
+            xfails.append(issue)
             continue
         # If here, there are other failures than the expected ones
-        return set()
+        return []
 
     return xfails
+
+
+def finish_on_errors(errors: List[str]) -> None:
+    """Fail or Xfail the test if there are errors."""
+    if not errors:
+        return
+
+    xfails = get_xfails(errors=errors)
+    if xfails:
+        blockers.finish_test(issues=xfails)
+    else:
+        err_joined = "\n".join(e for e in errors if e)
+        pytest.fail(f"Failed checks on `kes-period-info` command:\n{err_joined}")
