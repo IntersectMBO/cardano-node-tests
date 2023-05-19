@@ -168,22 +168,23 @@ def check_kes_period_info_result(  # noqa: C901
         and not valid_kes_period_metrics
     ):
         output_scenario = KesScenarios.INVALID_KES_PERIOD
-
-    if expected_scenario != output_scenario:
-        errors.append(
-            f"Unexpected scenario in check '{check_id}': "
-            f"'{expected_scenario}' vs '{output_scenario}'"
-        )
-
     # Check node issue #4114
-    if (
+    elif (
         kes_output.get("valid_counters")
         and kes_output.get("valid_kes_period")
         and not valid_counter_metrics
         and valid_kes_period_metrics
     ):
+        # Skip the expected scenario check below, just report the corresponding node issue
+        output_scenario = expected_scenario
         errors.append(
             f"Undetected invalid counter and certificate in check '{check_id}' -> issue #4114?"
+        )
+
+    if expected_scenario != output_scenario:
+        errors.append(
+            f"Unexpected scenario in check '{check_id}': "
+            f"'{expected_scenario}' vs '{output_scenario}'"
         )
 
     return errors
