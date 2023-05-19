@@ -195,22 +195,19 @@ def get_xfails(errors: List[str]) -> List[blockers.GH]:
     Either all errors can Xfail, or none of them can. There can be only one outcome of a test,
     so if there are errors that can't be Xfailed, the test must fail.
     """
+    issue_4114 = blockers.GH(issue=4114)
+    issue_4396 = blockers.GH(issue=4396)
+
     xfails = []
 
     for error in errors:
         if not error:
             continue
-        if "issue #4114" in error:
-            issue = blockers.GH(issue=4114)
-            if not issue.is_blocked():
-                return []
-            xfails.append(issue)
+        if "issue #4114" in error and issue_4114.is_blocked():
+            xfails.append(issue_4114)
             continue
-        if "issue #4396" in error:
-            issue = blockers.GH(issue=4396)
-            if not issue.is_blocked():
-                return []
-            xfails.append(issue)
+        if "issue #4396" in error and issue_4396.is_blocked():
+            xfails.append(issue_4396)
             continue
         # If here, there are other failures than the expected ones
         return []
