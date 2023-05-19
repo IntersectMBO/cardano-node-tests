@@ -1000,10 +1000,4 @@ class TestNoRewards:
             owner_payment_balance >= pool_data.pool_pledge
         ), f"Pledge is not met for pool '{pool_name}'!"
 
-        err_joined = "\n".join(e for e in kes_period_info_errors_list if e)
-        if err_joined:
-            xfails = kes.get_xfails(errors=kes_period_info_errors_list)
-            if xfails:
-                pytest.xfail(" ".join(xfails))
-            else:
-                raise AssertionError(f"Failed checks on `kes-period-info` command:\n{err_joined}")
+        kes.finish_on_errors(errors=kes_period_info_errors_list)
