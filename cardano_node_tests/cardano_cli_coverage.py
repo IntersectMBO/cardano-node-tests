@@ -265,7 +265,7 @@ def main() -> int:
     )
 
     if args.output_file:
-        helpers.write_json(args.output_file, report)
+        helpers.write_json(out_file=args.output_file, content=report)
     if args.print_coverage:
         print(report["cardano-cli"]["_coverage_cardano-cli"])
     if args.badge_icon_url:

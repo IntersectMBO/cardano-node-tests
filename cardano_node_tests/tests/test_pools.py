@@ -653,7 +653,7 @@ class TestStakePool:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -731,7 +731,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -861,7 +861,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -997,7 +997,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -1160,7 +1160,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -1304,7 +1304,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         pool_metadata_updated = {
@@ -1314,8 +1314,8 @@ class TestStakePool:
             "homepage": "www.qa22.com",
         }
         pool_metadata_updated_file = helpers.write_json(
-            f"{pool_name}_registration_metadata_updated.json",
-            pool_metadata_updated,
+            out_file=f"{pool_name}_registration_metadata_updated.json",
+            content=pool_metadata_updated,
         )
 
         pool_data = clusterlib.PoolData(
@@ -1431,7 +1431,7 @@ class TestStakePool:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         min_pool_cost = cluster.g_query.get_protocol_params().get("minPoolCost", 500)
@@ -1950,7 +1950,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            "hypothesis_metadata_registration_metadata.json", pool_metadata
+            out_file="hypothesis_metadata_registration_metadata.json", content=pool_metadata
         )
         pool_metadata_hash = cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
 
@@ -2179,7 +2179,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            f"{temp_template}_registration_metadata.json", pool_metadata
+            out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2203,7 +2203,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            f"{temp_template}_registration_metadata.json", pool_metadata
+            out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2227,7 +2227,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            f"{temp_template}_registration_metadata.json", pool_metadata
+            out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2251,7 +2251,7 @@ class TestNegative:
             "ticker": "IOG1",
         }
         pool_metadata_file = helpers.write_json(
-            f"{temp_template}_registration_metadata.json", pool_metadata
+            out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2279,7 +2279,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            f"{temp_template}_registration_metadata.json", pool_metadata
+            out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2311,7 +2311,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            f"{temp_template}_registration_metadata.json", pool_metadata
+            out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2345,7 +2345,7 @@ class TestNegative:
             "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
-            f"{temp_template}_registration_metadata.json", pool_metadata
+            out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2377,7 +2377,7 @@ class TestNegative:
             "homepage": pool_homepage,
         }
         pool_metadata_file = helpers.write_json(
-            f"{temp_template}_registration_metadata.json", pool_metadata
+            out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
