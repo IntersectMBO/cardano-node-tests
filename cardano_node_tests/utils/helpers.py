@@ -219,11 +219,11 @@ def checksum(filename: FileType, blocksize: int = 65536) -> str:
     return hash_o.hexdigest()
 
 
-def write_json(location: FileType, content: dict) -> FileType:
+def write_json(out_file: FileType, content: dict) -> FileType:
     """Write dictionary content to JSON file."""
-    with open(Path(location).expanduser(), "w", encoding="utf-8") as out_file:
-        out_file.write(json.dumps(content, indent=4))
-    return location
+    with open(Path(out_file).expanduser(), "w", encoding="utf-8") as out_fp:
+        out_fp.write(json.dumps(content, indent=4))
+    return out_file
 
 
 def decode_bech32(bech32: str) -> str:

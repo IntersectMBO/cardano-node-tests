@@ -314,7 +314,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         pool_data = clusterlib.PoolData(
@@ -367,7 +367,7 @@ class TestExpectedFees:
             "homepage": "www.test1.com",
         }
         pool_metadata_file = helpers.write_json(
-            f"{pool_name}_registration_metadata.json", pool_metadata
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
 
         pool_data = clusterlib.PoolData(

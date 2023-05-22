@@ -5,7 +5,6 @@
 """
 # pylint: disable=abstract-method
 import itertools
-import json
 import random
 import shutil
 from pathlib import Path
@@ -16,6 +15,7 @@ from typing import Sequence
 from typing import Tuple
 
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 
 STOP_SCRIPT = "supervisord_stop"
@@ -305,8 +305,7 @@ class LocalScripts(ScriptsTypes):
             # Legacy topology
 
             topology = self._gen_legacy_topology(ports=all_except)
-            dest_legacy = destdir / f"topology-{node_name}.json"
-            dest_legacy.write_text(f"{json.dumps(topology, indent=4)}\n")
+            helpers.write_json(out_file=destdir / f"topology-{node_name}.json", content=topology)
 
             # P2P topology
 
@@ -323,8 +322,9 @@ class LocalScripts(ScriptsTypes):
             else:
                 p2p_topology = self._gen_p2p_topology(ports=all_except, fixed_ports=fixed_ports)
 
-            dest_p2p = destdir / f"p2p-topology-{node_name}.json"
-            dest_p2p.write_text(f"{json.dumps(p2p_topology, indent=4)}\n")
+            helpers.write_json(
+                out_file=destdir / f"p2p-topology-{node_name}.json", content=p2p_topology
+            )
 
     def _reconfigure_local(self, indir: Path, destdir: Path, instance_num: int) -> None:
         """Reconfigure cluster scripts and config files."""
@@ -445,14 +445,16 @@ class LocalScripts(ScriptsTypes):
 
             # Legacy topology
             topology = self._gen_legacy_topology(ports=all_except)
-            dest_legacy = destdir / f"split-topology-{node_name}.json"
-            dest_legacy.write_text(f"{json.dumps(topology, indent=4)}\n")
+            helpers.write_json(
+                out_file=destdir / f"split-topology-{node_name}.json", content=topology
+            )
 
             # P2P topology
             fixed_ports = all_except[:4]
             p2p_topology = self._gen_p2p_topology(ports=all_except, fixed_ports=fixed_ports)
-            dest_p2p = destdir / f"p2p-split-topology-{node_name}.json"
-            dest_p2p.write_text(f"{json.dumps(p2p_topology, indent=4)}\n")
+            helpers.write_json(
+                out_file=destdir / f"p2p-split-topology-{node_name}.json", content=p2p_topology
+            )
 
 
 class TestnetScripts(ScriptsTypes):

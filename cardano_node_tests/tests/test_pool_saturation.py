@@ -1,8 +1,6 @@
 """Tests of effect of pool saturation on rewards and blocks production."""
-import json
 import logging
 import pickle
-from pathlib import Path
 from typing import Dict
 from typing import List
 from typing import NamedTuple
@@ -345,9 +343,7 @@ class TestPoolSaturation:
                 # double check that we are still in the expected epoch
                 assert this_epoch == prev_epoch + 1, "We are not in the expected epoch"
 
-                Path(f"{temp_template}_{this_epoch}_tip.json").write_text(
-                    f"{json.dumps(tip, indent=4)}\n", encoding="utf-8"
-                )
+                helpers.write_json(out_file=f"{temp_template}_{this_epoch}_tip.json", content=tip)
                 ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
                 clusterlib_utils.save_ledger_state(
                     cluster_obj=cluster,
@@ -507,8 +503,8 @@ class TestPoolSaturation:
 
                 tip = cluster.g_query.get_tip()
                 if int(tip["epoch"]) != this_epoch:
-                    Path(f"{temp_template}_{this_epoch}_failed_tip.json").write_text(
-                        f"{json.dumps(tip, indent=4)}\n", encoding="utf-8"
+                    helpers.write_json(
+                        out_file=f"{temp_template}_{this_epoch}_failed_tip.json", content=tip
                     )
                     raise AssertionError(
                         "Failed to finish actions in single epoch, it would affect other checks"
