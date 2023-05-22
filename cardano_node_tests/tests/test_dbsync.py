@@ -227,13 +227,18 @@ class TestDBSync:
             db_cost_models = dbsync_queries.query_cost_model()
 
         protocol_params = cluster.g_query.get_protocol_params()
+
         pp_cost_models = protocol_params["costModels"]
 
+        # TODO: `PlutusScriptV1` was replaced with `PlutusV1` in node version 8.0.0
+        pp_cost_model_v1 = pp_cost_models.get("PlutusV1") or pp_cost_models.get("PlutusScriptV1")
+        pp_cost_model_v2 = pp_cost_models.get("PlutusV2") or pp_cost_models.get("PlutusScriptV2")
+
         assert (
-            pp_cost_models["PlutusScriptV1"] == db_cost_models["PlutusV1"]
+            pp_cost_model_v1 == db_cost_models["PlutusV1"]
         ), "PlutusV1 cost model is not the expected"
         assert (
-            pp_cost_models["PlutusScriptV2"] == db_cost_models["PlutusV2"]
+            pp_cost_model_v2 == db_cost_models["PlutusV2"]
         ), "PlutusV2 cost model is not the expected"
 
     @allure.link(helpers.get_vcs_link())
