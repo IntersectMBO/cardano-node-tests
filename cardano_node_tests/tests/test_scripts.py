@@ -651,7 +651,9 @@ class TestBasic:
             )
         except clusterlib.CLIError as err:
             if "Missing: (--witness-file FILE)" in str(err):
-                blockers.GH(issue=3835, message="Assemble Tx with no signatures").finish_test()
+                blockers.GH(
+                    issue=3835, fixed_in="8.0.0", message="Assemble Tx with no signatures"
+                ).finish_test()
                 return
             raise
 
@@ -1317,7 +1319,7 @@ class TestTimeLocking:
         if _slot_search is not None:
             slot_no = int(_slot_search.group(1))
         if slot_no > 0:
-            blockers.GH(issue=4863, message="UINT64 overflow").finish_test()
+            blockers.GH(issue=4863, fixed_in="8.0.0", message="UINT64 overflow").finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -2293,7 +2295,9 @@ class TestReferenceUTxO:
             script_type_str == "SimpleScriptV1"
             and reference_utxo.reference_script["script"]["type"] == "SimpleScriptV2"
         ):
-            blockers.GH(issue=4261, message="Reported 'SimpleScriptV2'").finish_test()
+            blockers.GH(
+                issue=4261, fixed_in="8.0.0", message="Reported 'SimpleScriptV2'"
+            ).finish_test()
 
         # In node >= 1.36.0 it is not necessary to distinguish between MultiSig and Timelock
         # scripts, both now report as "SimpleScript".

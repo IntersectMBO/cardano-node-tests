@@ -79,7 +79,7 @@ class TestCLI:
                 err
             ):
                 blockers.GH(
-                    issue=4235, message="Not possible to use process substitution"
+                    issue=4235, fixed_in="8.0.0", message="Not possible to use process substitution"
                 ).finish_test()
             raise
 

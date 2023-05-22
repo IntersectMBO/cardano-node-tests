@@ -163,7 +163,7 @@ class TestDatum:
                 raise
             blockers.GH(
                 issue=4058,
-                fixed_in="1.35.5",
+                fixed_in="8.0.0",
                 message="`transaction build` requires protocol params",
             ).finish_test()
 
