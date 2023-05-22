@@ -375,7 +375,7 @@ class TestNegative:
         assert invalid_before == slot_no, f"SlotNo: {slot_no}, `invalid_before`: {invalid_before}"
 
         if slot_no > 0:
-            blockers.GH(issue=4863, message="UINT64 overflow").finish_test()
+            blockers.GH(issue=4863, fixed_in="8.0.0", message="UINT64 overflow").finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -426,7 +426,7 @@ class TestNegative:
         assert invalid_before == slot_no, f"SlotNo: {slot_no}, `invalid_before`: {invalid_before}"
 
         if slot_no == before_value - 1:
-            blockers.GH(issue=4863, message="UINT64 overflow").finish_test()
+            blockers.GH(issue=4863, fixed_in="8.0.0", message="UINT64 overflow").finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
