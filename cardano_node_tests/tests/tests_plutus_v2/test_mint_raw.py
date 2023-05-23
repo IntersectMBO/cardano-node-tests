@@ -345,16 +345,16 @@ class TestMinting:
                     mint=plutus_mint_data,
                     readonly_reference_txins=reference_input,
                 )
-
             err_str = str(excinfo.value)
-            try:
-                assert "Unexpected datum hash at each reference input" in err_str, err_str
-            except AssertionError:
+
+            if "Unexpected datum hash at each reference input" not in err_str:
                 if "The machine terminated because of an error" in err_str:
                     blockers.GH(
                         issue=4488,
                         message="PlutusDebug doesn't return the evaluation error from plutus",
                     ).finish_test()
+
+                pytest.fail(f"Unexpected error message: {err_str}")
 
             return
 

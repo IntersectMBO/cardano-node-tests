@@ -172,9 +172,10 @@ class TestSECP256k1:
                 redeemer_file=redeemer_file,
             )
         except clusterlib.CLIError as err:
-            plutus_common.check_secp_expected_error_msg(
+            plutus_common.xfail_on_secp_error(
                 cluster_obj=cluster, algorithm=algorithm, err_msg=str(err)
             )
+            raise
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
