@@ -1233,7 +1233,6 @@ class TestPing:
     def test_ping_unix_socket(
         self,
         cluster: clusterlib.ClusterLib,
-        worker_id: str,
         ping_available: None,  # noqa: ARG002
     ):
         """Test `cardano-cli ping` on local node using unix socket."""
@@ -1263,10 +1262,10 @@ class TestPing:
             logfiles.add_ignore_rule(
                 files_glob="*.stdout",
                 regex="MuxError MuxUnknownMiniProtocol .* MiniProtocolNum 8",
-                ignore_file_id=worker_id,
+                ignore_file_id="ping_unix_socket",
+                # Ignore errors for next 20 seconds
+                skip_after=time.time() + 20,
             )
-            # Give enough time for the log messages to be written to the log files
-            time.sleep(2.5)
 
             blockers.GH(issue=5245, message="`MuxError MuxBearerClosed` error").finish_test()
 

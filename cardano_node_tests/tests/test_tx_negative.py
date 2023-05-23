@@ -24,7 +24,6 @@ from cardano_node_tests.tests import tx_common
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import tx_view
@@ -655,7 +654,6 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: List[clusterlib.PoolUser],
-        worker_id: str,
     ):
         """Try to submit a TX with wrong network magic.
 
@@ -670,7 +668,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
-        # build and sign a transaction
+        # Build and sign a transaction
         fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
@@ -690,17 +688,7 @@ class TestNegative:
             tx_name=temp_template,
         )
 
-        # it should NOT be possible to submit a transaction with incorrect network magic
-        logfiles.add_ignore_rule(
-            files_glob="*.stdout",
-            regex="HandshakeError",
-            ignore_file_id=worker_id,
-        )
-        logfiles.add_ignore_rule(
-            files_glob="*.stdout",
-            regex="NodeToClientVersionData",
-            ignore_file_id=worker_id,
-        )
+        # It should NOT be possible to submit a transaction with incorrect network magic
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
                 [
@@ -715,8 +703,20 @@ class TestNegative:
             )
         assert "HandshakeError" in str(excinfo.value)
 
-        # wait a bit so there's some time for error messages to appear in log file
-        time.sleep(1 if cluster.network_magic == configuration.NETWORK_MAGIC_LOCAL else 5)
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="HandshakeError",
+            ignore_file_id="wrong_magic",
+            # Ignore errors for next 20 seconds
+            skip_after=time.time() + 20,
+        )
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="NodeToClientVersionData",
+            ignore_file_id="wrong_magic",
+            # Ignore errors for next 20 seconds
+            skip_after=time.time() + 20,
+        )
 
     @allure.link(helpers.get_vcs_link())
     def test_wrong_signing_key(

@@ -94,24 +94,6 @@ def set_network_id_env(
 
 
 @pytest.fixture
-def ignore_log_errors(
-    # Depend on `cluster` just for correct ordering of fixtures
-    cluster: clusterlib.ClusterLib,  # noqa: ARG001
-    worker_id: str,
-) -> Generator[None, None, None]:
-    """Ignore expected handshake errors in the log files."""
-    # pylint: disable=unused-argument
-    logfiles.add_ignore_rule(
-        files_glob="*.stdout",
-        regex="HandshakeError.*Refused NodeToClient",
-        ignore_file_id=worker_id,
-    )
-    yield
-    # give enough time for the log messages to be written to the log files
-    time.sleep(2.5)
-
-
-@pytest.fixture
 def payment_addrs(
     skip_on_no_env: None,  # noqa: ARG001
     set_network_id_env: None,  # noqa: ARG001
@@ -260,8 +242,22 @@ class TestNetworkIdEnv:
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
 
+@pytest.mark.smoke
+@pytest.mark.testnets
 class TestNegativeNetworkIdEnv:
     """Negative tests for `CARDANO_NODE_NETWORK_ID`."""
+
+    @pytest.fixture
+    def ignore_log_errors(self) -> Generator[None, None, None]:
+        """Ignore expected handshake errors in the log files."""
+        yield
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="HandshakeError.*Refused NodeToClient",
+            ignore_file_id="neg_network_id_env",
+            # Ignore errors for next 20 seconds
+            skip_after=time.time() + 20,
+        )
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
