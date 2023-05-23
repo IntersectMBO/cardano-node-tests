@@ -36,7 +36,7 @@ mkdir -p "$COVERAGE_DIR"
 export SCHEDULING_LOG=scheduling.log
 true > "$SCHEDULING_LOG"
 
-BASE_REVISION="${BASE_REVISION:-1.35.7}"
+BASE_REVISION="${BASE_REVISION:-8.0.0}"
 
 # shellcheck disable=SC1090,SC1091
 . .github/nix_override_cardano_node.sh
