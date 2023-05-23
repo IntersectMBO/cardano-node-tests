@@ -34,11 +34,11 @@ ERRORS_IGNORED = [
     "MuxIOException writev: resource vanished",
     r"cardano\.node\.Mempool:Info",
     r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
-    # can happen when single postgres instance is used for multiple db-sync services
+    # Can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
-    # errors can happen on p2p when local roots are not up yet
+    # Errors can happen on p2p when local roots are not up yet
     "PeerSelection:Info:",
-    # can happen on p2p when node is shutting down
+    # Can happen on p2p when node is shutting down
     "AsyncCancelled",
     # TODO: p2p failures on testnet
     "PeerStatusChangeFailure",
@@ -46,9 +46,9 @@ ERRORS_IGNORED = [
     "DeactivationTimeout",
     # TODO: p2p failures on testnet
     "PeerMonitoringError .* MuxError",
-    # p2p info messages on testnet
+    # P2P info messages on testnet
     "PublicRootPeers:Info:",
-    # harmless when whole network is shutting down
+    # Harmless when whole network is shutting down
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
     # TODO: see node issue #4369
     "MAIN THREAD FAILED",
@@ -57,12 +57,12 @@ if (os.environ.get("GITHUB_ACTIONS") or "").lower() == "true":
     # We sometimes see this error on CI. It seems time is not synced properly on GitHub runners.
     ERRORS_IGNORED.append("TraceBlockFromFuture")
 
-# errors that are ignored if there are expected messages in the log file before the error
+# Errors that are ignored if there are expected messages in the log file before the error
 ERRORS_LOOK_BACK_LINES = 10
 ERRORS_LOOK_BACK_MAP = {
     "TraceNoLedgerState": "Switched to a fork",  # can happen when chain switched to a fork
 }
-ERRORS_LOOK_BACK_RE = re.compile("|".join(ERRORS_LOOK_BACK_MAP.keys()))
+ERRORS_LOOK_BACK_RE = re.compile("|".join(ERRORS_LOOK_BACK_MAP.keys()) or "nothing_to_ignore")
 
 
 class RotableLog(NamedTuple):
@@ -76,7 +76,7 @@ def _look_back_found(buffer: List[str]) -> bool:
 
     If the expected message is found, the error can be ignored.
     """
-    # find the look back regex that corresponds to the error message
+    # Find the look back regex that corresponds to the error message
     err_line = buffer[-1]
     look_back_re = ""
     for err_re, look_re in ERRORS_LOOK_BACK_MAP.items():
@@ -86,7 +86,7 @@ def _look_back_found(buffer: List[str]) -> bool:
     else:
         raise KeyError(f"Look back regex not found for error line: {err_line}")
 
-    # check if the look back regex matches any of the previous log messages
+    # Check if the look back regex matches any of the previous log messages
     return any(re.search(look_back_re, line) for line in buffer[:-1])
 
 
@@ -96,11 +96,11 @@ def _get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> L
     When the seek offset was recorded for a log file and the log file was rotated,
     the seek offset now belongs to the rotated file and the "live" log file has seek offset 0.
     """
-    # get logfile including rotated versions
+    # Get logfile including rotated versions
     logfiles = list(logfile.parent.glob(f"{logfile.name}*"))
 
-    # get list of logfiles modified after `timestamp`, sorted by their last modification time
-    # from oldest to newest
+    # Get list of logfiles modified after `timestamp`, sorted by their last modification time
+    # from oldest to newest.
     _logfile_records = [
         RotableLog(logfile=f, seek=0, timestamp=os.path.getmtime(f)) for f in logfiles
     ]
@@ -110,20 +110,23 @@ def _get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> L
     if not logfile_records:
         return []
 
-    # the `seek` value belongs to the log file with modification time furthest in the past
-    oldest_record = logfile_records[0]
-    oldest_record = oldest_record._replace(seek=seek)
-    logfile_records[0] = oldest_record
+    # The `seek` value belongs to the log file with modification time furthest in the past
+    logfile_records[0] = logfile_records[0]._replace(seek=seek)
 
     return logfile_records
 
 
-def _get_ignore_rules(cluster_env: cluster_nodes.ClusterEnv) -> List[Tuple[str, str]]:
+def _get_ignore_rules_lock_file(instance_num: int) -> Path:
+    """Return path to the lock file for ignored errors rules."""
+    return temptools.get_basetemp() / f"{ERRORS_IGNORE_FILE_NAME}_{instance_num}.lock"
+
+
+def _get_ignore_rules(
+    cluster_env: cluster_nodes.ClusterEnv, timestamp: float
+) -> List[Tuple[str, str]]:
     """Get rules (file glob and regex) for ignored errors."""
     rules: List[Tuple[str, str]] = []
-    lock_file = (
-        temptools.get_basetemp() / f"{ERRORS_IGNORE_FILE_NAME}_{cluster_env.instance_num}.lock"
-    )
+    lock_file = _get_ignore_rules_lock_file(instance_num=cluster_env.instance_num)
 
     with locking.FileLockIfXdist(lock_file):
         for rules_file in cluster_env.state_dir.glob(f"{ERRORS_IGNORE_FILE_NAME}_*"):
@@ -131,14 +134,25 @@ def _get_ignore_rules(cluster_env: cluster_nodes.ClusterEnv) -> List[Tuple[str, 
                 for line in infile:
                     if ";;" not in line:
                         continue
-                    files_glob, regex = line.split(";;")
+                    files_glob, skip_after_str, regex = line.split(";;")
+                    skip_after = float(skip_after_str)
+                    # Skip the rule if it is expired. The `timestamp` is the time of the last log
+                    # search, so the expire time is compared to the time of the last log check.
+                    if 0 < skip_after < timestamp:
+                        continue
                     rules.append((files_glob, regex.rstrip("\n")))
 
     return rules
 
 
-def _get_seek(fpath: Path) -> int:
-    with open(fpath, encoding="utf-8") as infile:
+def _get_offset_file(logfile: Path) -> Path:
+    """Return path to the file that stores the seek offset for the given log file."""
+    return logfile.parent / f".{logfile.name}.offset"
+
+
+def _read_seek(offset_file: Path) -> int:
+    """Read seek offset from the given file."""
+    with open(offset_file, encoding="utf-8") as infile:
         return int(infile.readline().strip())
 
 
@@ -151,41 +165,99 @@ def _get_ignore_regex(
         files_glob, regex = record
         if fnmatch.filter([logfile.name], files_glob):
             regex_set.add(regex)
-    return "|".join(regex_set)
+    return "|".join(regex_set) or "nothing_to_ignore"
 
 
-def add_ignore_rule(files_glob: str, regex: str, ignore_file_id: str) -> None:
-    """Add ignore rule for expected errors."""
+def _search_log_lines(
+    logfile: Path, rotated_logs: List[RotableLog], errors_ignored_re: re.Pattern
+) -> List[Tuple[Path, str]]:
+    """Search for errors in the log file and, if needed, in the corresponding rotated logs."""
+    errors = []
+    last_line_pos = -1
+
+    for logfile_rec in rotated_logs:
+        look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
+        with open(logfile_rec.logfile, encoding="utf-8") as infile:
+            if logfile_rec.seek > 0:
+                # Seek to the byte that comes right before the recorded offset
+                infile.seek(logfile_rec.seek - 1)
+                # Check if the byte is a newline, which means that the offset starts at
+                # the beginning of a line.
+                if infile.read(1) != "\n":
+                    # Skip the first line if the line is not complete
+                    infile.readline()
+
+            for line in infile:
+                look_back_buf.append(line)
+                look_back_buf.pop(0)
+                if ERRORS_RE.search(line) and not errors_ignored_re.search(line):
+                    # Skip if expected message is in the look back buffer
+                    if ERRORS_LOOK_BACK_RE.search(line) and _look_back_found(look_back_buf):
+                        continue
+                    errors.append((logfile, line))
+
+            # Get offset for the "live" log file
+            if logfile_rec.logfile == logfile:
+                last_line_pos = infile.tell()
+
+    # Record last search offset for the "live" log file
+    if last_line_pos >= 0:
+        offset_file = _get_offset_file(logfile=logfile)
+        with open(offset_file, "w", encoding="utf-8") as outfile:
+            outfile.write(str(last_line_pos))
+
+    return errors
+
+
+def add_ignore_rule(
+    files_glob: str, regex: str, ignore_file_id: str, skip_after: float = 0.0
+) -> None:
+    """Add ignore rule for expected errors.
+
+    Args:
+        files_glob: A glob matching files that the `regex` should apply to.
+        regex: A regex that should be ignored.
+        ignore_file_id: The id of a ignore file the ignore rule will be added to.
+
+            NOTE: When `ignore_file_id` matches pytest-xdist worker id (the `worker_id` fixture),
+            the rule will be deleted during the test teardown.
+
+        skip_after: The time in seconds after which the rule will expire. This is to avoid
+            reporting the ignored errors in subsequent tests. It can take several seconds for the
+            errors to appear in log files and we don't want to wait for them after each test.
+
+            NOTE: The rule will expire **only** when there are no yet to be searched log messages
+            that were created before the `skip_after` time.
+    """
     cluster_env = cluster_nodes.get_cluster_env()
     rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
-    lock_file = (
-        temptools.get_basetemp() / f"{ERRORS_IGNORE_FILE_NAME}_{cluster_env.instance_num}.lock"
-    )
+    lock_file = _get_ignore_rules_lock_file(instance_num=cluster_env.instance_num)
 
     with locking.FileLockIfXdist(lock_file), open(rules_file, "a", encoding="utf-8") as infile:
-        infile.write(f"{files_glob};;{regex}\n")
+        infile.write(f"{files_glob};;{skip_after};;{regex}\n")
 
 
 @contextlib.contextmanager
-def expect_errors(regex_pairs: List[Tuple[str, str]], ignore_file_id: str) -> Iterator[None]:
+def expect_errors(regex_pairs: List[Tuple[str, str]], worker_id: str) -> Iterator[None]:
     """Make sure the expected errors are present in logs.
 
     Args:
         regex_pairs: [(glob, regex)] - A list of regexes that need to be present in files
             described by the glob.
-        ignore_file_id: The id of a ignore file the expected error will be added to.
+        worker_id: The id of the pytest-xdist worker (the `worker_id` fixture) that the test
+            is running on.
     """
     state_dir = cluster_nodes.get_cluster_env().state_dir
 
     glob_list = []
     for files_glob, regex in regex_pairs:
-        add_ignore_rule(files_glob=files_glob, regex=regex, ignore_file_id=ignore_file_id)
+        add_ignore_rule(files_glob=files_glob, regex=regex, ignore_file_id=worker_id)
         glob_list.append(files_glob)
-    # resolve the globs
+    # Resolve the globs
     _expanded_paths = [list(state_dir.glob(glob_item)) for glob_item in glob_list]
-    # flatten the list
+    # Flatten the list
     expanded_paths = list(itertools.chain.from_iterable(_expanded_paths))
-    # record each end-of-file as a starting offset for searching the log file
+    # Record each end-of-file as a starting offset for searching the log file
     seek_offsets = {str(p): helpers.get_eof_offset(p) for p in expanded_paths}
 
     timestamp = time.time()
@@ -195,21 +267,21 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], ignore_file_id: str) -> It
     errors = []
     for files_glob, regex in regex_pairs:
         regex_comp = re.compile(regex)
-        # get list of records (file names and offsets) for given glob
+        # Get list of records (file names and offsets) for given glob
         matching_files = fnmatch.filter(seek_offsets, f"{state_dir}/{files_glob}")
         for logfile in matching_files:
-            # skip if the log file is rotated log, it will be handled by `_get_rotated_logs`
+            # Skip if the log file is rotated log, it will be handled by `_get_rotated_logs`
             if ROTATED_RE.match(logfile):
                 continue
 
-            # search for the expected error
+            # Search for the expected error
             seek = seek_offsets.get(logfile) or 0
             line_found = False
             for logfile_rec in _get_rotated_logs(
                 logfile=Path(logfile), seek=seek, timestamp=timestamp
             ):
                 with open(logfile_rec.logfile, encoding="utf-8") as infile:
-                    infile.seek(seek)
+                    infile.seek(logfile_rec.seek)
                     for line in infile:
                         if regex_comp.search(line):
                             line_found = True
@@ -230,53 +302,37 @@ def search_cluster_logs() -> List[Tuple[Path, str]]:
     lock_file = temptools.get_basetemp() / f"search_artifacts_{cluster_env.instance_num}.lock"
 
     with locking.FileLockIfXdist(lock_file):
-        ignore_rules = _get_ignore_rules(cluster_env=cluster_env)
-
         errors = []
         for logfile in cluster_env.state_dir.glob("*.std*"):
-            # skip if the log file is status file or rotated log
+            # Skip if the log file is status file or rotated log
             if logfile.name.endswith(".offset") or ROTATED_RE.match(logfile.name):
                 continue
 
-            # read seek offset (from where to start searching) and timestamp of last search
-            offset_file = logfile.parent / f".{logfile.name}.offset"
+            # Get seek offset (from where to start searching) and timestamp of last search
+            offset_file = _get_offset_file(logfile=logfile)
             if offset_file.exists():
-                seek = _get_seek(offset_file)
+                seek = _read_seek(offset_file=offset_file)
                 timestamp = os.path.getmtime(offset_file)
             else:
                 seek = 0
                 timestamp = 0.0
 
+            # Get ignore rules for the log file
+            ignore_rules = _get_ignore_rules(
+                cluster_env=cluster_env, timestamp=timestamp or time.time()
+            )
             errors_ignored = _get_ignore_regex(
                 ignore_rules=ignore_rules, regexes=ERRORS_IGNORED, logfile=logfile
             )
-            errors_ignored_re = re.compile(errors_ignored)
 
-            # record offset for the "live" log file
-            with open(offset_file, "w", encoding="utf-8") as outfile:
-                outfile.write(str(helpers.get_eof_offset(logfile)))
-
-            for logfile_rec in _get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp):
-                look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
-                with open(logfile_rec.logfile, encoding="utf-8") as infile:
-                    if seek > 0:
-                        # seek to the byte that comes right before the recorded offset
-                        infile.seek(seek - 1)
-                        # check if the byte is a newline, which means that the offset starts at
-                        # the beginning of a line
-                        if infile.read(1) != "\n":
-                            # skip the first line if the line is not complete
-                            infile.readline()
-                    for line in infile:
-                        look_back_buf.append(line)
-                        look_back_buf.pop(0)
-                        if ERRORS_RE.search(line) and not (
-                            errors_ignored and errors_ignored_re.search(line)
-                        ):
-                            # skip if expected message is in the look back buffer
-                            if ERRORS_LOOK_BACK_RE.search(line) and _look_back_found(look_back_buf):
-                                continue
-                            errors.append((logfile, line))
+            # Search for errors in the log file
+            errors.extend(
+                _search_log_lines(
+                    logfile=logfile,
+                    rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+                    errors_ignored_re=re.compile(errors_ignored),
+                )
+            )
 
     return errors
 
@@ -288,9 +344,7 @@ def clean_ignore_rules(ignore_file_id: str) -> None:
     """
     cluster_env = cluster_nodes.get_cluster_env()
     rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
-    lock_file = (
-        temptools.get_basetemp() / f"{ERRORS_IGNORE_FILE_NAME}_{cluster_env.instance_num}.lock"
-    )
+    lock_file = _get_ignore_rules_lock_file(instance_num=cluster_env.instance_num)
 
     with locking.FileLockIfXdist(lock_file):
         rules_file.unlink(missing_ok=True)

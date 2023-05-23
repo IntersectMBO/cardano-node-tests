@@ -227,6 +227,7 @@ class ClusterManager:
         self.log(f"c{self._cluster_instance_num}: called `on_test_stop` for '{current_test}'")
 
         with locking.FileLockIfXdist(self.cluster_lock):
+            # Delete an "ignore errors" rules file that was created for the current pytest worker.
             # There's only one test running on a worker at a time. Deleting the corresponding rules
             # file right after a test is finished is therefore safe. The effect is that the rules
             # apply only from the time they were added (by `logfiles.add_ignore_rule`) until the end
