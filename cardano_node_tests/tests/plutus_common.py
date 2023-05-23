@@ -399,12 +399,12 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
     )
 
 
-def check_secp_expected_error_msg(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_msg: str):
-    """Check expected error message when using SECP functions."""
+def xfail_on_secp_error(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_msg: str):
+    """Xfail a test based on error message when using SECP functions."""
     before_pv8 = cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
 
-    # the SECP256k1 functions should work from PV8
-    # before PV8 the SECP256k1 is blocked or limited by high cost model
+    # The SECP256k1 functions should work from PV8.
+    # Before PV8 the SECP256k1 is blocked or limited by high cost model
     is_forbidden = (
         "Forbidden builtin function: (builtin "
         f"verify{algorithm.capitalize()}Secp256k1Signature)" in err_msg
@@ -420,5 +420,3 @@ def check_secp_expected_error_msg(cluster_obj: clusterlib.ClusterLib, algorithm:
 
     if before_pv8 and (is_forbidden or is_overspending):
         pytest.xfail("The SECP256k1 builtin functions are not allowed before protocol version 8")
-
-    pytest.fail(err_msg)

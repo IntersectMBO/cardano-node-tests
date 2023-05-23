@@ -202,9 +202,10 @@ class TestSECP256k1:
                 fee=300_000,
             )
         except clusterlib.CLIError as err:
-            plutus_common.check_secp_expected_error_msg(
+            plutus_common.xfail_on_secp_error(
                 cluster_obj=cluster, algorithm=algorithm, err_msg=str(err)
             )
+            raise
 
         # check that script address UTxO was spent
         assert not cluster.g_query.get_utxo(

@@ -202,9 +202,10 @@ class TestSECP256k1:
                 script_txins=plutus_txins,
             )
         except clusterlib.CLIError as err:
-            plutus_common.check_secp_expected_error_msg(
+            plutus_common.xfail_on_secp_error(
                 cluster_obj=cluster, algorithm=algorithm, err_msg=str(err)
             )
+            raise
 
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
@@ -306,12 +307,10 @@ class TestSECP256k1:
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
             )
-
         err_str = str(excinfo.value)
 
-        try:
-            assert "Negative numbers indicate the overspent budget" in err_str, err_str
-        except AssertionError as err:
-            plutus_common.check_secp_expected_error_msg(
-                cluster_obj=cluster, algorithm=algorithm, err_msg=str(err)
+        if "Negative numbers indicate the overspent budget" not in err_str:
+            plutus_common.xfail_on_secp_error(
+                cluster_obj=cluster, algorithm=algorithm, err_msg=err_str
             )
+            pytest.fail(f"Unexpected error message: {err_str}")

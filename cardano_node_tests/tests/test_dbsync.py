@@ -327,16 +327,16 @@ class TestDBSync:
             epoch_data_blk_count += e.blk_count
             epoch_data_tx_count += e.tx_count
 
-        try:
-            assert blocks_data_blk_count == epoch_data_blk_count
-        except AssertionError:
-            if blocks_data_blk_count == epoch_data_blk_count + 1:
-                blockers.GH(
-                    issue=1363,
-                    repo="input-output-hk/cardano-db-sync",
-                    message="Blocks count don't match between tables",
-                ).finish_test()
-            raise
+        if blocks_data_blk_count == epoch_data_blk_count + 1:
+            blockers.GH(
+                issue=1363,
+                repo="input-output-hk/cardano-db-sync",
+                message="Blocks count don't match between tables",
+            ).finish_test()
+
+        assert (
+            blocks_data_blk_count == epoch_data_blk_count
+        ), f"Blocks count don't match between tables for epoch {epoch}"
 
         assert (
             blocks_data_tx_count == epoch_data_tx_count
