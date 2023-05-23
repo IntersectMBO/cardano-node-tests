@@ -10,14 +10,10 @@ import json
 import logging
 import os
 import random
-import shutil
 import signal
-import socket
 import string
 import subprocess
-import time
 from pathlib import Path
-from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Iterable
@@ -193,23 +189,6 @@ def get_vcs_link() -> str:
     return url
 
 
-def wait_for(
-    func: Callable, delay: int = 5, num_sec: int = 180, message: str = "", silent: bool = False
-) -> Any:
-    """Wait for success of `func` for `num_sec`."""
-    end_time = time.time() + num_sec
-
-    while time.time() < end_time:
-        response = func()
-        if response:
-            return response
-        time.sleep(delay)
-
-    if not silent:
-        raise AssertionError(f"Failed to {message or 'finish'} in time.")
-    return False
-
-
 def checksum(filename: FileType, blocksize: int = 65536) -> str:
     """Return file checksum."""
     hash_o = hashlib.blake2b()
@@ -256,25 +235,6 @@ def check_file_arg(file_path: str) -> Optional[Path]:
     return abs_path
 
 
-def get_cmd_path(cmd: str) -> Path:
-    """Return file path of a command."""
-    cmd_path = shutil.which(cmd)
-    if not cmd_path:
-        raise AssertionError(f"The `{cmd}` was not found on PATH.")
-    return Path(cmd_path)
-
-
-def replace_str_in_file(infile: Path, outfile: Path, orig_str: str, new_str: str) -> None:
-    """Replace a string in file with another string."""
-    with open(infile, encoding="utf-8") as in_fp:
-        content = in_fp.read()
-
-    replaced_content = content.replace(orig_str, new_str)
-
-    with open(outfile, "w", encoding="utf-8") as out_fp:
-        out_fp.write(replaced_content)
-
-
 def get_eof_offset(infile: Path) -> int:
     """Return position of the current end of the file."""
     with open(infile, "rb") as in_fp:
@@ -289,14 +249,6 @@ def is_in_interval(num1: float, num2: float, frac: float = 0.1) -> bool:
     _min = num2 - num2_frac
     _max = num2 + num2_frac
     return _min <= num1 <= _max
-
-
-def is_port_open(host: str, port: int) -> bool:
-    """Check if port is open."""
-    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        if sock.connect_ex((host, port)) == 0:
-            return True
-    return False
 
 
 @functools.lru_cache(maxsize=100)
