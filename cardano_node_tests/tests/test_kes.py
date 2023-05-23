@@ -569,10 +569,7 @@ class TestKES:
                     if (
                         "forked blockchain" in str(exc)
                         and VERSIONS.transaction_era >= VERSIONS.ALONZO
-                        and (
-                            configuration.ENABLE_P2P  # on Babbage
-                            or configuration.SCRIPTS_DIRNAME == "alonzo_p2p"  # on Alonzo
-                        )
+                        and configuration.ENABLE_P2P
                     ):
                         pytest.xfail(str(exc))
                     raise
@@ -740,10 +737,7 @@ class TestKES:
                     if (
                         "forked blockchain" in str(exc)
                         and VERSIONS.transaction_era >= VERSIONS.ALONZO
-                        and (
-                            configuration.ENABLE_P2P  # on Babbage
-                            or configuration.SCRIPTS_DIRNAME == "alonzo_p2p"  # on Alonzo
-                        )
+                        and configuration.ENABLE_P2P
                     ):
                         pytest.xfail(str(exc))
                     raise
@@ -864,5 +858,5 @@ class TestKES:
             blockers.GH(
                 issue=3788,
                 fixed_in="8.0.0",
-                message="Possible to create a op cert with a negative value for kes-period",
+                message="Possible to create an op cert with a negative value for kes-period",
             ).finish_test()
