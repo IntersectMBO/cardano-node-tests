@@ -279,7 +279,7 @@ class TestKES:
         # search for expected errors only in log file corresponding to pool with expired KES
         expected_errors = [(f"{expire_node_name}.stdout", err) for err in expected_err_regexes]
 
-        with logfiles.expect_errors(expected_errors, ignore_file_id=worker_id):
+        with logfiles.expect_errors(expected_errors, worker_id=worker_id):
             LOGGER.info(
                 f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
                 f"Waiting for {expire_timeout} sec for KES expiration."
@@ -430,7 +430,7 @@ class TestKES:
         )
 
         with cluster_manager.respin_on_failure():
-            with logfiles.expect_errors(expected_errors, ignore_file_id=cluster_manager.worker_id):
+            with logfiles.expect_errors(expected_errors, worker_id=cluster_manager.worker_id):
                 # restart the node with the new operational certificate (restart all nodes so
                 # the connection is established again)
                 shutil.copy(invalid_opcert_file, opcert_file)

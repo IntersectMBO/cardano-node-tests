@@ -19,7 +19,6 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_raw
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
@@ -637,7 +636,6 @@ class TestLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
-        worker_id: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
@@ -660,12 +658,6 @@ class TestLocking:
             execution_cost=plutus_common.ALWAYS_FAILS_COST,
         )
 
-        logfiles.add_ignore_rule(
-            files_glob="*.stdout",
-            regex="ValidationTagMismatch",
-            ignore_file_id=worker_id,
-        )
-
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -686,8 +678,13 @@ class TestLocking:
         )
         assert "PlutusFailure" in err, err
 
-        # wait a bit so there's some time for error messages to appear in log file
-        time.sleep(1 if cluster.network_magic == configuration.NETWORK_MAGIC_LOCAL else 5)
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="ValidationTagMismatch",
+            ignore_file_id="plutus_always_fails",
+            # Ignore errors for next 20 seconds
+            skip_after=time.time() + 20,
+        )
 
     @allure.link(helpers.get_vcs_link())
     def test_script_invalid(
