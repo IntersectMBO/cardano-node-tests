@@ -19,6 +19,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import kes
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -860,7 +861,8 @@ class TestKES:
             if "KES_PERIOD must not be less than 0" not in str(exc):
                 raise
         else:
-            pytest.xfail(
-                "Possible to create a op cert with a negative value for kes-period - "
-                "see node issue #3788"
-            )
+            blockers.GH(
+                issue=3788,
+                fixed_in="8.0.0",
+                message="Possible to create a op cert with a negative value for kes-period",
+            ).finish_test()
