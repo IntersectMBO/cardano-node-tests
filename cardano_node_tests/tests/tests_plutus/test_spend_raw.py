@@ -666,6 +666,15 @@ class TestLocking:
             plutus_op=plutus_op,
             amount=amount,
         )
+
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="ValidationTagMismatch",
+            ignore_file_id="plutus_always_fails",
+            # Ignore errors for next 20 seconds
+            skip_after=time.time() + 20,
+        )
+
         err, __ = spend_raw._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -677,14 +686,6 @@ class TestLocking:
             expect_failure=True,
         )
         assert "PlutusFailure" in err, err
-
-        logfiles.add_ignore_rule(
-            files_glob="*.stdout",
-            regex="ValidationTagMismatch",
-            ignore_file_id="plutus_always_fails",
-            # Ignore errors for next 20 seconds
-            skip_after=time.time() + 20,
-        )
 
     @allure.link(helpers.get_vcs_link())
     def test_script_invalid(
