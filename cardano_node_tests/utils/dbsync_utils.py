@@ -4,6 +4,7 @@ import itertools
 import json
 import logging
 import time
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -17,6 +18,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
@@ -153,6 +155,7 @@ class TxRecord(NamedTuple):
     collateral_outputs: List[clusterlib.UTXOData]
     reference_inputs: List[clusterlib.UTXOData]
     scripts: List[ScriptRecord]
+    reference_scripts: List[ScriptRecord]
     redeemers: List[RedeemerRecord]
     metadata: List[MetadataRecord]
     reserve: List[ADAStashRecord]
@@ -555,6 +558,20 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
             for r in dbsync_queries.query_scripts(txhash=txhash)
         ]
 
+    reference_scripts = []
+    if reference_inputs:
+        for reference_input in reference_inputs:
+            reference_scripts.extend(
+                [
+                    ScriptRecord(
+                        hash=r.hash.hex(),
+                        type=str(r.type),
+                        serialised_size=int(r.serialised_size) if r.serialised_size else 0,
+                    )
+                    for r in dbsync_queries.query_scripts(txhash=reference_input.utxo_hash)
+                ]
+            )
+
     redeemers = []
     if txdata.last_row.redeemer_count:
         redeemers = [
@@ -598,6 +615,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
         collateral_outputs=collateral_outputs,
         reference_inputs=reference_inputs,
         scripts=scripts,
+        reference_scripts=reference_scripts,
         redeemers=redeemers,
         metadata=metadata,
         reserve=reserve,
@@ -829,7 +847,7 @@ def _txout_has_inline_datum(txout: clusterlib.TxOut) -> bool:
     return False
 
 
-def check_tx(
+def check_tx(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
 ) -> Optional[TxRecord]:
     """Check a transaction in db-sync."""
@@ -1058,6 +1076,29 @@ def check_tx(
         assert tx_raw_output.required_signer_hashes == db_required_signer_hashes, (
             "Required signer hashes don't match "
             f"({tx_raw_output.required_signer_hashes} != {db_required_signer_hashes})"
+        )
+
+    # Check reference scripts txins
+    reference_script_hashes = []
+
+    for r in tx_raw_output.script_txins:
+        if r.reference_txin and r.reference_txin.reference_script:
+            script_file = Path(f"{helpers.get_timestamped_rand_str()}.script")
+            with open(script_file, "w", encoding="utf-8") as outfile:
+                json.dump(r.reference_txin.reference_script["script"], outfile)
+
+            reference_script_hashes.append(
+                cluster_obj.g_transaction.get_policyid(script_file=script_file)
+            )
+
+    db_reference_script_hashes = {r.hash for r in response.reference_scripts if r.hash}
+
+    # A script is added to `script` table only the first time it is seen, so the record
+    # can be empty for the current transaction
+    if db_reference_script_hashes:
+        assert set(reference_script_hashes).issubset(db_reference_script_hashes), (
+            "Reference scripts txins don't match "
+            f"({set(reference_script_hashes)} != {db_reference_script_hashes})"
         )
 
     return response
