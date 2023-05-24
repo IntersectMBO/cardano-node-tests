@@ -1239,6 +1239,15 @@ class TestPing:
         # pylint: disable=unused-argument
         common.get_test_id(cluster)
         count = 5
+        ignore_file_id = "ping_unix_socket"
+
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="MuxError MuxUnknownMiniProtocol .* MiniProtocolNum 8",
+            ignore_file_id=ignore_file_id,
+            # Ignore errors for next 20 seconds
+            skip_after=time.time() + 20,
+        )
 
         try:
             cli_out = cluster.cli(
@@ -1258,16 +1267,9 @@ class TestPing:
         except clusterlib.CLIError as exc:
             if "MuxError MuxBearerClosed" not in str(exc):
                 raise
-
-            logfiles.add_ignore_rule(
-                files_glob="*.stdout",
-                regex="MuxError MuxUnknownMiniProtocol .* MiniProtocolNum 8",
-                ignore_file_id="ping_unix_socket",
-                # Ignore errors for next 20 seconds
-                skip_after=time.time() + 20,
-            )
-
             blockers.GH(issue=5245, message="`MuxError MuxBearerClosed` error").finish_test()
+        else:
+            logfiles.clean_ignore_rules(ignore_file_id=ignore_file_id)
 
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 

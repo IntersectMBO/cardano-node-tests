@@ -688,21 +688,6 @@ class TestNegative:
             tx_name=temp_template,
         )
 
-        # It should NOT be possible to submit a transaction with incorrect network magic
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "transaction",
-                    "submit",
-                    "--testnet-magic",
-                    str(cluster.network_magic + 100),
-                    "--tx-file",
-                    str(out_file_signed),
-                    f"--{cluster.protocol}-mode",
-                ]
-            )
-        assert "HandshakeError" in str(excinfo.value)
-
         logfiles.add_ignore_rule(
             files_glob="*.stdout",
             regex="HandshakeError",
@@ -717,6 +702,21 @@ class TestNegative:
             # Ignore errors for next 20 seconds
             skip_after=time.time() + 20,
         )
+
+        # It should NOT be possible to submit a transaction with incorrect network magic
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "transaction",
+                    "submit",
+                    "--testnet-magic",
+                    str(cluster.network_magic + 100),
+                    "--tx-file",
+                    str(out_file_signed),
+                    f"--{cluster.protocol}-mode",
+                ]
+            )
+        assert "HandshakeError" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     def test_wrong_signing_key(

@@ -248,9 +248,8 @@ class TestNegativeNetworkIdEnv:
     """Negative tests for `CARDANO_NODE_NETWORK_ID`."""
 
     @pytest.fixture
-    def ignore_log_errors(self) -> Generator[None, None, None]:
+    def ignore_log_errors(self) -> None:
         """Ignore expected handshake errors in the log files."""
-        yield
         logfiles.add_ignore_rule(
             files_glob="*.stdout",
             regex="HandshakeError.*Refused NodeToClient",
