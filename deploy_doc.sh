@@ -4,6 +4,8 @@ set -euo pipefail
 
 DOC_SRC="src_docs"
 
+unset GH_TOKEN GITHUB_TOKEN
+
 # check that "$DOC_SRC" dir exists
 if [ ! -d "$DOC_SRC" ]; then
     echo "The '$DOC_SRC' dir doesn't exist, are you in the right directory?"
