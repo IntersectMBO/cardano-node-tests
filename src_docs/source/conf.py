@@ -117,6 +117,9 @@ html_css_files = [
     "css/copyright.css",
 ]
 
+# Clear tokens from the output
+os.environ["GITHUB_TOKEN"] = os.environ["GH_TOKEN"] = "token_XXXXXXXXXXXXXXXXXXXX"
+
 # Resolve function for the linkcode extension.
 
 # store current git revision
