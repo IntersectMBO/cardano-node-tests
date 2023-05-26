@@ -102,7 +102,7 @@ jobs:
         run: |
           cat .github_ci_env
           cat .github_ci_env >> $GITHUB_ENV
-          echo "GH_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
       - name: Get previous test results
         if: inputs.testrun_name && inputs.skip_passed
         run: |
