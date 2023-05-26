@@ -4,7 +4,7 @@ set -euo pipefail
 
 DOC_SRC="src_docs"
 
-unset GH_TOKEN GITHUB_TOKEN
+unset GITHUB_TOKEN
 
 # check that "$DOC_SRC" dir exists
 if [ ! -d "$DOC_SRC" ]; then

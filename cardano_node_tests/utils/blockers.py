@@ -13,8 +13,8 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-if os.environ.get("GH_TOKEN"):
-    gh_issue.GHIssue.TOKEN = os.environ.get("GH_TOKEN")
+if os.environ.get("GITHUB_TOKEN"):
+    gh_issue.GHIssue.TOKEN = os.environ.get("GITHUB_TOKEN")
 
 
 class GH:
