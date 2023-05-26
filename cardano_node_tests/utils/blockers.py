@@ -151,10 +151,13 @@ class GH:
     def finish_test(self) -> None:
         """Fail or Xfail test with GitHub issue reference."""
         reason = f"{self.gh_issue}: {self.message}"
+        log_message = f"{self.gh_issue.url} => {self.message}"
 
         if self.is_blocked():
+            LOGGER.warning(f"XFAIL: {log_message}")
             pytest.xfail(reason)
         else:
+            LOGGER.error(f"FAIL: {log_message}")
             pytest.fail(reason)
 
     def __repr__(self) -> str:
@@ -162,24 +165,26 @@ class GH:
 
 
 def finish_test(issues: Iterable[GH]) -> None:
-    """Fail or Xfail test with references to GitHub issues."""
+    """Fail or Xfail test with references to multiple GitHub issues."""
 
-    def _get_outcome(issue: GH) -> Tuple[bool, str]:
+    def _get_outcome(issue: GH) -> Tuple[bool, str, str]:
         blocked = issue.is_blocked()
-        py_method = "XFAIL" if blocked else "FAIL"
-        reason = f"{py_method}: {issue.gh_issue}: {issue.message}"
-        return blocked, reason
+        py_outcome = "XFAIL" if blocked else "FAIL"
+        reason = f"{py_outcome}: {issue.gh_issue}: {issue.message}"
+        log_message = f"{py_outcome}: {issue.gh_issue.url} => {issue.message}"
+        return blocked, reason, log_message
 
     outcomes = [_get_outcome(i) for i in issues]
 
     should_fail = False
-    for blocked, __ in outcomes:
-        if not blocked:
+    for blocked, __, log_message in outcomes:
+        if blocked:
+            LOGGER.warning(log_message)
+        else:
             should_fail = True
-            break
+            LOGGER.error(log_message)
 
-    reasons = "; ".join(reason for __, reason in outcomes)
-
+    reasons = "; ".join(o[1] for o in outcomes)
     if should_fail:
         pytest.fail(reasons)
     else:
