@@ -46,19 +46,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: trigger the Buildkite pipeline - run sync tests on Mainnet
+        uses: 'buildkite/trigger-pipeline-action@v1.5.0'
         env:
           BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          PIPELINE: 'input-output-hk/qa-sync-tests'
+          BRANCH: 'sync_tests'
+          MESSAGE: ':github: Triggered by GitHub Action'
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
           AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
           AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
-          BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
-        uses: zegocover/buildkite-pipeline-action@master
-        with:
-          access_token: '${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}'
-          pipeline: 'input-output-hk/qa-sync-tests'
-          message: ':github: Triggered by GitHub Action'
-          env: '{
+          BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}         
+          BUILD_ENV_VARS: '{
           "env":"mainnet",
           "build_mode":"${{ github.event.inputs.build_mode }}",
           "node_rev1":"${{ github.event.inputs.node_rev1 }}",
@@ -76,7 +75,6 @@ jobs:
           "AWS_DB_NAME":"${{ secrets.AWS_DB_NAME }}",
           "AWS_DB_HOSTNAME":"${{ secrets.AWS_DB_HOSTNAME }}"
           }'
-          branch: 'sync_tests'
   node_sync_test:
     strategy:
       matrix:
