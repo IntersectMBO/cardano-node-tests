@@ -47,19 +47,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: trigger the Buildkite pipeline - run db-sync full sync test
+        uses: 'buildkite/trigger-pipeline-action@v1.5.0'
         env:
           BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          PIPELINE: 'input-output-hk/qa-db-sync-full-sync'
+          BRANCH: 'db_sync_tests'
+          MESSAGE: ':github: Triggered by GitHub Action'
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
           AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
           AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
-        uses: zegocover/buildkite-pipeline-action@master
-        with:
-          branch: db_sync_tests
-          access_token: '${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}'
-          pipeline: 'input-output-hk/qa-db-sync-full-sync'
-          message: ':github: Triggered by GitHub Action'
-          env: '{
+          BUILD_ENV_VARS: '{
           "node_pr":"${{ github.event.inputs.node_pr }}",
           "node_branch":"${{ github.event.inputs.node_branch }}",
           "node_version":"${{ github.event.inputs.node_version }}",
