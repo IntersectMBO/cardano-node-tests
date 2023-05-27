@@ -247,8 +247,7 @@ class TestNetworkIdEnv:
 class TestNegativeNetworkIdEnv:
     """Negative tests for `CARDANO_NODE_NETWORK_ID`."""
 
-    @pytest.fixture
-    def ignore_log_errors(self) -> None:
+    def _ignore_log_errors(self) -> None:
         """Ignore expected handshake errors in the log files."""
         logfiles.add_ignore_rule(
             files_glob="*.stdout",
@@ -265,7 +264,6 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
-        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -278,6 +276,8 @@ class TestNegativeNetworkIdEnv:
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
+
+        self._ignore_log_errors()
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_protocol_state()
@@ -293,7 +293,6 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
-        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -306,6 +305,8 @@ class TestNegativeNetworkIdEnv:
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
+
+        self._ignore_log_errors()
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_stake_distribution()
@@ -320,7 +321,6 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
-        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -333,6 +333,8 @@ class TestNegativeNetworkIdEnv:
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
+
+        self._ignore_log_errors()
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_protocol_params()
@@ -347,7 +349,6 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
-        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -360,6 +361,8 @@ class TestNegativeNetworkIdEnv:
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
+
+        self._ignore_log_errors()
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_pool_state(stake_pool_id=POOL_ID)
@@ -374,7 +377,6 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
-        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -387,6 +389,8 @@ class TestNegativeNetworkIdEnv:
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
+
+        self._ignore_log_errors()
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_stake_addr_info(stake_addr=STAKE_ADDR)
@@ -402,7 +406,6 @@ class TestNegativeNetworkIdEnv:
         self,
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
-        ignore_log_errors: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: List[clusterlib.AddressRecord],
         env_scenario: str,
@@ -425,6 +428,8 @@ class TestNegativeNetworkIdEnv:
         amount = 1_500_000
         txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
+
+        self._ignore_log_errors()
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
