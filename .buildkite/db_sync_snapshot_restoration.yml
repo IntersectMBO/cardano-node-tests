@@ -9,4 +9,4 @@ steps:
     timeout_in_minutes: 14400
     agents:
       system: x86_64-linux
-      queue: benchmark
+      queue: core-tech-bench
