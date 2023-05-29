@@ -23,11 +23,35 @@ mkdir -p "$WORKDIR"
 export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
 
-if [ "${CI_ENABLE_DBSYNC:-"false"}" != "false" ]; then
-  # setup dbsync
-  # shellcheck disable=SC1090,SC1091
-  . .github/source_dbsync.sh
-fi
+# setup dbsync (disabled by default)
+case "${CI_ENABLE_DBSYNC:-"false"}" in
+  "true" | 1)
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_dbsync.sh
+    ;;
+  "false" | 0)
+    ;;
+  *)
+    echo "Unknown value for CI_ENABLE_DBSYNC: ${CI_ENABLE_DBSYNC}" >&2
+    exit 1
+    ;;
+esac
+
+# setup plutus-apps (enabled by default)
+# The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
+# Plutus tests that are testing script context.
+case "${CI_ENABLE_PLUTUS_APPS:-"true"}" in
+  "true" | 1)
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_plutus_apps.sh
+    ;;
+  "false" | 0)
+    ;;
+  *)
+    echo "Unknown value for CI_ENABLE_PLUTUS: ${CI_ENABLE_PLUTUS}" >&2
+    exit 1
+    ;;
+esac
 
 if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
   export ENABLE_P2P="true"
