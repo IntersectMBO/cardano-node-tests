@@ -7,6 +7,8 @@ from typing import Optional
 import pytest
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import blockers
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
@@ -420,3 +422,33 @@ def xfail_on_secp_error(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_
 
     if before_pv8 and (is_forbidden or is_overspending):
         pytest.xfail("The SECP256k1 builtin functions are not allowed before protocol version 8")
+
+
+def create_script_context_w_blockers(
+    cluster_obj: clusterlib.ClusterLib,
+    plutus_version: int,
+    redeemer_file: Path,
+    tx_file: Optional[Path] = None,
+) -> None:
+    """Run the `create-script-context` command (available in plutus-apps).
+
+    This variant of the `create_script_context` function catches known errors and fails the test
+    with a blocker issue.
+    """
+    try:
+        clusterlib_utils.create_script_context(
+            cluster_obj=cluster_obj,
+            plutus_version=plutus_version,
+            redeemer_file=redeemer_file,
+            tx_file=tx_file,
+        )
+    except AssertionError as err:
+        if "DeserialiseFailure" in str(err):
+            blockers.GH(
+                issue=583, repo="input-output-hk/plutus-apps", message="DeserialiseFailure"
+            ).finish_test()
+        if "TextEnvelopeTypeError" in str(err):
+            blockers.GH(
+                issue=1078, repo="input-output-hk/plutus-apps", message="TextEnvelopeTypeError"
+            ).finish_test()
+        raise

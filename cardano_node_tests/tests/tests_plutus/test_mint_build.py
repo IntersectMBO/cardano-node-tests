@@ -702,28 +702,15 @@ class TestBuildMinting:
         )
         assert tx_output_dummy
 
-        tx_file_dummy = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_output_dummy.out_file,
-            signing_key_files=tx_files_step2.signing_key_files,
-            tx_name=f"{temp_template}_dummy",
-        )
-
         # generate the "real" redeemer
         redeemer_file = Path(f"{temp_template}_script_context.redeemer")
 
-        try:
-            clusterlib_utils.create_script_context(
-                cluster_obj=cluster,
-                plutus_version=1,
-                redeemer_file=redeemer_file,
-                tx_file=tx_file_dummy,
-            )
-        except AssertionError as err:
-            if "DeserialiseFailure" not in str(err):
-                raise
-            blockers.GH(
-                issue=583, repo="input-output-hk/plutus-apps", message="DeserialiseFailure"
-            ).finish_test()
+        plutus_common.create_script_context_w_blockers(
+            cluster_obj=cluster,
+            plutus_version=1,
+            redeemer_file=redeemer_file,
+            tx_file=tx_output_dummy.out_file,
+        )
 
         plutus_mint_data = [plutus_mint_data_dummy[0]._replace(redeemer_file=redeemer_file)]
 
