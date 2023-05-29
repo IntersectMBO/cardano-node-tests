@@ -44,7 +44,7 @@ fi
 git rev-parse HEAD
 
 # build db-sync
-nix build .#cardano-db-sync -o db-sync-node
+nix build --accept-flake-config .#cardano-db-sync -o db-sync-node
 export DBSYNC_REPO="$PWD"
 
 pushd "$REPODIR" || exit 1
