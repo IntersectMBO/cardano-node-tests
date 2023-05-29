@@ -1048,29 +1048,26 @@ def create_script_context(
     tx_file: Optional[Path] = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps)."""
-    version_args = []
-    # TODO: remove once `--plutus-*` args are in main branch
-    if helpers.tool_has("create-script-context --plutus-v1"):
-        if plutus_version == 1:
-            version_args = ["--plutus-v1"]
-        elif plutus_version == 2:
-            version_args = ["--plutus-v2"]
-        else:
-            raise AssertionError(f"Unknown plutus version: {plutus_version}")
+    if plutus_version == 1:
+        version_arg = "--plutus-v1"
+    elif plutus_version == 2:
+        version_arg = "--plutus-v2"
+    else:
+        raise AssertionError(f"Unknown plutus version: {plutus_version}")
 
     if tx_file:
         cmd_args = [
             "create-script-context",
             "--generate-tx",
             str(tx_file),
-            *version_args,
+            version_arg,
             f"--{cluster_obj.protocol}-mode",
             *cluster_obj.magic_args,
             "--out-file",
             str(redeemer_file),
         ]
     else:
-        cmd_args = ["create-script-context", *version_args, "--out-file", str(redeemer_file)]
+        cmd_args = ["create-script-context", version_arg, "--out-file", str(redeemer_file)]
 
     helpers.run_command(cmd_args)
     assert redeemer_file.exists()

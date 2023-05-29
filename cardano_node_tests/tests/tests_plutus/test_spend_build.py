@@ -15,7 +15,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -226,21 +225,13 @@ class TestBuildLocking:
 
         # generate the "real" redeemer
         redeemer_file = Path(f"{temp_template}_script_context.redeemer")
-        tx_file_dummy = Path(f"{tx_output_dummy.out_file.with_suffix('')}.signed")
 
-        try:
-            clusterlib_utils.create_script_context(
-                cluster_obj=cluster,
-                plutus_version=1,
-                redeemer_file=redeemer_file,
-                tx_file=tx_file_dummy,
-            )
-        except AssertionError as err:
-            if "DeserialiseFailure" not in str(err):
-                raise
-            blockers.GH(
-                issue=583, repo="input-output-hk/plutus-apps", message="DeserialiseFailure"
-            ).finish_test()
+        plutus_common.create_script_context_w_blockers(
+            cluster_obj=cluster,
+            plutus_version=1,
+            redeemer_file=redeemer_file,
+            tx_file=tx_output_dummy.out_file,
+        )
 
         plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
 
