@@ -2170,7 +2170,7 @@ class TestReferenceUTxO:
         fund_amount = 4_500_000
         amount = 2_000_000
 
-        # create multisig script
+        # Create multisig script
         if script_version == "simple_v1":
             invalid_before = None
             invalid_hereafter = None
@@ -2202,7 +2202,7 @@ class TestReferenceUTxO:
                 slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
             )
 
-        # create reference UTxO
+        # Create reference UTxO
         reference_utxo, tx_out_reference = clusterlib_utils.create_reference_utxo(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -2213,12 +2213,12 @@ class TestReferenceUTxO:
         )
         assert reference_utxo.reference_script
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -2229,12 +2229,12 @@ class TestReferenceUTxO:
             use_build_cmd=use_build_cmd,
         )
 
-        # send funds from script address
+        # Send funds from script address
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(
             signing_key_files=[dst_addr.skey_file],
         )
-        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        # Empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
         script_txins = [
             clusterlib.ScriptTxIn(
                 txins=[],
@@ -2272,7 +2272,7 @@ class TestReferenceUTxO:
                 invalid_before=invalid_before,
             )
 
-        # check final balances
+        # Check final balances
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_from)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=script_address)[0].amount
@@ -2287,10 +2287,9 @@ class TestReferenceUTxO:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
-        # TODO: check reference script in db-sync (the `tx_out_from`)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
         # check expected script type
-        # TODO: moved the check to the end of the test because of XFAIL
         if (
             script_type_str == "SimpleScriptV1"
             and reference_utxo.reference_script["script"]["type"] == "SimpleScriptV2"
