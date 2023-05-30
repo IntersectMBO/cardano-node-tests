@@ -19,6 +19,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import poll_utils
 from cardano_node_tests.utils import tx_view
@@ -68,6 +69,8 @@ class TestPoll:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("required_signer_option", ("skey", "vkey_hash"))
+    @pytest.mark.dbsync
     def test_create_and_answer_poll(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -75,6 +78,7 @@ class TestPoll:
         payment_addr: clusterlib.AddressRecord,
         governance_poll_available: None,  # noqa: ARG002
         use_build_cmd: bool,
+        required_signer_option: str,
     ):
         """Test creating and answering new SPO poll.
 
@@ -84,16 +88,27 @@ class TestPoll:
         * answer the poll
         * publish the answer on chain
         * verify poll answer
+        * (optional) check create-poll transaction in db-sync
         """
         # pylint: disable=unused-argument
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{required_signer_option}"
 
         # Publish the poll on chain
 
         poll_question = f"Poll {clusterlib.get_rand_str(4)}: Pineapples on pizza?"
 
         # The poll should be signed with the delegateKey so that SPOS can verify it is a legit poll
-        required_signer = cluster.g_genesis.genesis_keys.delegate_skeys[0]
+        required_signer_file = cluster.g_genesis.genesis_keys.delegate_skeys[0]
+
+        required_signer_vkey = required_signer_file.parent / f"{required_signer_file.stem}.vkey"
+        required_signer_vkey_hash = cluster.g_genesis.get_genesis_vkey_hash(
+            vkey_file=required_signer_vkey
+        )
+
+        required_signers_arg = [required_signer_file] if required_signer_option == "skey" else []
+        required_signers_vkey_hash_arg = (
+            [required_signer_vkey_hash] if required_signer_option == "vkey_hash" else None
+        )
 
         poll_files = poll_utils.create_poll(
             cluster_obj=cluster,
@@ -105,7 +120,7 @@ class TestPoll:
         tx_files_poll = clusterlib.TxFiles(
             signing_key_files=[
                 payment_addr.skey_file,
-                required_signer,
+                required_signer_file,
             ],
             metadata_json_files=[poll_files.metadata],
             metadata_json_detailed_schema=True,
@@ -117,7 +132,8 @@ class TestPoll:
                 tx_name=f"{temp_template}_poll",
                 tx_files=tx_files_poll,
                 witness_override=len(tx_files_poll.signing_key_files),
-                required_signers=[required_signer],
+                required_signers=required_signers_arg,
+                required_signer_hashes=required_signers_vkey_hash_arg,
             )
 
             tx_signed_poll = cluster.g_transaction.sign_tx(
@@ -131,7 +147,8 @@ class TestPoll:
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_poll",
                 tx_files=tx_files_poll,
-                required_signers=[required_signer],
+                required_signers=required_signers_arg,
+                required_signer_hashes=required_signers_vkey_hash_arg,
             )
 
         expected_metadata = {"94": [[0, [poll_question]], [1, [["Yes"], ["No"]]]]}
@@ -141,17 +158,10 @@ class TestPoll:
         assert tx_data["metadata"] == expected_metadata
 
         # Check required signers
-        required_signer_vkey = required_signer.parent / f"{required_signer.stem}.vkey"
-        required_signer_vkey_hash = cluster.g_genesis.get_genesis_vkey_hash(
-            vkey_file=required_signer_vkey
-        )
-
         assert (
             tx_data["required signers (payment key hashes needed for scripts)"][0]
             == required_signer_vkey_hash
         ), "The Tx has unexpected required signers."
-
-        # TODO: check required signers on dbsync
 
         out_utxos_poll = cluster.g_query.get_utxo(tx_raw_output=tx_output_poll)
         assert (
@@ -210,6 +220,9 @@ class TestPoll:
             cluster_obj=cluster, poll_file=poll_files.poll, tx_signed=tx_output_answer.out_file
         )
         assert pool_id_dec == signers[0], "The command returned unexpected signers."
+
+        # Check create poll transaction on dbsync
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_poll)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
