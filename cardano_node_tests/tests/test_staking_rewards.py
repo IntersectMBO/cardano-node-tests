@@ -19,6 +19,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -90,7 +91,7 @@ def cluster_lock_pool_and_pots(
     return cluster_obj, pool_name
 
 
-def _add_spendable(rewards: List[dbsync_utils.RewardEpochRecord], max_epoch: int) -> Dict[int, int]:
+def _add_spendable(rewards: List[dbsync_types.RewardEpochRecord], max_epoch: int) -> Dict[int, int]:
     recs: Dict[int, int] = {}
     for r in rewards:
         epoch = r.spendable_epoch
@@ -106,7 +107,7 @@ def _add_spendable(rewards: List[dbsync_utils.RewardEpochRecord], max_epoch: int
 
 
 def _check_member_pool_ids(
-    rewards_by_idx: Dict[int, RewardRecord], reward_db_record: dbsync_utils.RewardRecord
+    rewards_by_idx: Dict[int, RewardRecord], reward_db_record: dbsync_types.RewardRecord
 ) -> None:
     """Check that in each epoch member rewards were received from the expected pool."""
     epoch_to = rewards_by_idx[max(rewards_by_idx)].epoch_no
@@ -145,7 +146,7 @@ def _check_member_pool_ids(
 
 
 def _check_leader_pool_ids(
-    rewards_by_idx: Dict[int, RewardRecord], reward_db_record: dbsync_utils.RewardRecord
+    rewards_by_idx: Dict[int, RewardRecord], reward_db_record: dbsync_types.RewardRecord
 ) -> None:
     """Check that in each epoch leader rewards were received from the expected pool."""
     epoch_to = rewards_by_idx[max(rewards_by_idx)].epoch_no
@@ -190,7 +191,7 @@ def _check_leader_pool_ids(
 def _dbsync_check_rewards(
     stake_address: str,
     rewards: List[RewardRecord],
-) -> dbsync_utils.RewardRecord:
+) -> dbsync_types.RewardRecord:
     """Check rewards in db-sync."""
     epoch_from = rewards[1].epoch_no
     epoch_to = rewards[-1].epoch_no
