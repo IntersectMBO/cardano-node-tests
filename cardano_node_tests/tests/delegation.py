@@ -16,7 +16,7 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
-from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import dbsync_types
 
 LOGGER = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ def cluster_and_pool(
 
 def db_check_delegation(
     pool_user: Union[clusterlib.PoolUser, PoolUserScript],
-    db_record: Optional[dbsync_utils.TxRecord],
+    db_record: Optional[dbsync_types.TxRecord],
     deleg_epoch: int,
     pool_id: str,
 ):

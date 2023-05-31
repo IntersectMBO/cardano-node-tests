@@ -1,196 +1,28 @@
 """Functionality for interacting with db-sync."""
 import functools
-import itertools
-import json
 import logging
 import time
-from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import List
-from typing import NamedTuple
 from typing import Optional
-from typing import Union
 
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_check_tx
 from cardano_node_tests.utils import dbsync_queries
-from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import dbsync_types
 
 LOGGER = logging.getLogger(__name__)
 
 NO_REPONSE_STR = "No response returned from db-sync:"
 
 
-class MetadataRecord(NamedTuple):
-    key: int
-    json: Any
-    bytes: memoryview
-
-
-class ADAStashRecord(NamedTuple):
-    address: str
-    cert_index: int
-    amount: int
-
-
-class PotTransferRecord(NamedTuple):
-    treasury: int
-    reserves: int
-
-
-class DelegationRecord(NamedTuple):
-    address: str
-    pool_id: str
-    active_epoch_no: int
-
-
-class RewardEpochRecord(NamedTuple):
-    amount: int
-    earned_epoch: int
-    spendable_epoch: int
-    type: str
-    pool_id: str
-
-
-class RewardRecord(NamedTuple):
-    address: str
-    rewards: List[RewardEpochRecord]
-    reward_sum: int
-
-    def __bool__(self) -> bool:
-        return self.reward_sum > 0
-
-
-class UTxORecord(NamedTuple):
-    utxo_hash: str
-    utxo_ix: int
-    amount: int
-    address: str
-    coin: str = clusterlib.DEFAULT_COIN
-    decoded_coin: str = ""
-    datum_hash: str = ""
-    inline_datum_hash: str = ""
-    reference_script_hash: str = ""
-
-
-class GetUTxORecord(NamedTuple):
-    utxo_hash: str
-    utxo_ix: int
-    has_script: bool
-    amount: int
-    data_hash: str
-
-
-class PaymentAddrRecord(NamedTuple):
-    payment_address: str
-    stake_address: Optional[str]
-    amount_sum: int
-    utxos: List[GetUTxORecord]
-
-    def __bool__(self) -> bool:
-        return self.amount_sum > 0
-
-
-class PoolDataRecord(NamedTuple):
-    id: int
-    hash: str
-    view: str
-    cert_index: int
-    vrf_key_hash: str
-    pledge: int
-    reward_addr: str
-    active_epoch_no: int
-    meta_id: int
-    margin: float
-    fixed_cost: int
-    registered_tx_id: int
-    metadata_url: str
-    metadata_hash: str
-    owners: List[str]
-    relays: List[Dict[str, Dict[str, Any]]]
-    retire_cert_index: int
-    retire_announced_tx_id: int
-    retiring_epoch: int
-
-
-class ScriptRecord(NamedTuple):
-    hash: str
-    type: str
-    serialised_size: int
-
-
-class RedeemerRecord(NamedTuple):
-    unit_mem: int
-    unit_steps: int
-    fee: int
-    purpose: str
-    script_hash: str
-    value: dict
-
-
-class ExtraKeyWitnessRecord(NamedTuple):
-    tx_hash: str
-    witness_hash: str
-
-
-class TxRecord(NamedTuple):
-    tx_id: int
-    tx_hash: str
-    block_id: int
-    block_index: int
-    out_sum: int
-    fee: int
-    deposit: int
-    size: int
-    invalid_before: Optional[int]
-    invalid_hereafter: Optional[int]
-    txins: List[clusterlib.UTXOData]
-    txouts: List[UTxORecord]
-    mint: List[UTxORecord]
-    collaterals: List[clusterlib.UTXOData]
-    collateral_outputs: List[clusterlib.UTXOData]
-    reference_inputs: List[clusterlib.UTXOData]
-    scripts: List[ScriptRecord]
-    reference_scripts: List[ScriptRecord]
-    redeemers: List[RedeemerRecord]
-    metadata: List[MetadataRecord]
-    reserve: List[ADAStashRecord]
-    treasury: List[ADAStashRecord]
-    pot_transfers: List[PotTransferRecord]
-    stake_registration: List[str]
-    stake_deregistration: List[str]
-    stake_delegation: List[DelegationRecord]
-    withdrawals: List[clusterlib.TxOut]
-    extra_key_witness: List[ExtraKeyWitnessRecord]
-
-    def _convert_metadata(self) -> dict:
-        """Convert list of `MetadataRecord`s to metadata dictionary."""
-        metadata = {int(r.key): r.json for r in self.metadata}
-        return metadata
-
-
-class TxPrelimRecord(NamedTuple):
-    utxo_out: List[UTxORecord]
-    ma_utxo_out: List[UTxORecord]
-    mint_utxo_out: List[UTxORecord]
-    last_row: dbsync_queries.TxDBRow
-
-
-def utxodata2txout(utxodata: Union[UTxORecord, clusterlib.UTXOData]) -> clusterlib.TxOut:
-    """Convert `UTxORecord` or `UTxOData` to `clusterlib.TxOut`."""
-    return clusterlib.TxOut(
-        address=utxodata.address,
-        amount=utxodata.amount,
-        coin=utxodata.coin,
-        datum_hash=utxodata.datum_hash,
-    )
-
-
-def get_address_reward(address: str, epoch_from: int = 0, epoch_to: int = 99999999) -> RewardRecord:
+def get_address_reward(
+    address: str, epoch_from: int = 0, epoch_to: int = 99999999
+) -> dbsync_types.RewardRecord:
     """Get reward data for stake address from db-sync.
 
     The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
@@ -200,7 +32,7 @@ def get_address_reward(address: str, epoch_from: int = 0, epoch_to: int = 999999
         address=address, epoch_from=epoch_from, epoch_to=epoch_to
     ):
         rewards.append(
-            RewardEpochRecord(
+            dbsync_types.RewardEpochRecord(
                 amount=int(db_row.amount),
                 earned_epoch=db_row.earned_epoch,
                 spendable_epoch=db_row.spendable_epoch,
@@ -209,16 +41,16 @@ def get_address_reward(address: str, epoch_from: int = 0, epoch_to: int = 999999
             )
         )
     if not rewards:
-        return RewardRecord(address=address, reward_sum=0, rewards=[])
+        return dbsync_types.RewardRecord(address=address, reward_sum=0, rewards=[])
 
     reward_sum = functools.reduce(lambda x, y: x + y.amount, rewards, 0)
     # pylint: disable=undefined-loop-variable
-    return RewardRecord(address=db_row.address, reward_sum=reward_sum, rewards=rewards)
+    return dbsync_types.RewardRecord(address=db_row.address, reward_sum=reward_sum, rewards=rewards)
 
 
 def check_address_reward(
     address: str, epoch_from: int = 0, epoch_to: int = 99999999
-) -> RewardRecord:
+) -> dbsync_types.RewardRecord:
     """Check reward data for stake address in db-sync.
 
     The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
@@ -232,7 +64,7 @@ def check_address_reward(
         if r.type in ("member", "leader"):
             if r.spendable_epoch != r.earned_epoch + 2:
                 errors.append(f"type == {r.type} and {r.spendable_epoch} != {r.earned_epoch} + 2")
-        # transfer from reserves or treasury
+        # Transfer from reserves or treasury
         elif r.spendable_epoch != r.earned_epoch + 1:
             errors.append(f"type == {r.type} and {r.spendable_epoch} != {r.earned_epoch} + 1")
 
@@ -243,12 +75,12 @@ def check_address_reward(
     return reward
 
 
-def get_utxo(address: str) -> PaymentAddrRecord:
+def get_utxo(address: str) -> dbsync_types.PaymentAddrRecord:
     """Return UTxO info for payment address from db-sync."""
     utxos = []
     for db_row in dbsync_queries.query_utxo(address=address):
         utxos.append(
-            GetUTxORecord(
+            dbsync_types.GetUTxORecord(
                 utxo_hash=db_row.tx_hash.hex(),
                 utxo_ix=db_row.utxo_ix,
                 has_script=db_row.has_script,
@@ -257,7 +89,7 @@ def get_utxo(address: str) -> PaymentAddrRecord:
             )
         )
     if not utxos:
-        return PaymentAddrRecord(
+        return dbsync_types.PaymentAddrRecord(
             payment_address=address,
             stake_address=None,
             amount_sum=0,
@@ -266,7 +98,7 @@ def get_utxo(address: str) -> PaymentAddrRecord:
 
     amount_sum = functools.reduce(lambda x, y: x + y.amount, utxos, 0)
     # pylint: disable=undefined-loop-variable
-    return PaymentAddrRecord(
+    return dbsync_types.PaymentAddrRecord(
         payment_address=db_row.payment_address,
         stake_address=db_row.stake_address,
         amount_sum=amount_sum,
@@ -274,7 +106,7 @@ def get_utxo(address: str) -> PaymentAddrRecord:
     )
 
 
-def get_pool_data(pool_id_bech32: str) -> Optional[PoolDataRecord]:
+def get_pool_data(pool_id_bech32: str) -> Optional[dbsync_types.PoolDataRecord]:
     """Get pool data from db-sync."""
     pools = list(dbsync_queries.query_pool_data(pool_id_bech32))
     if not pools:
@@ -303,7 +135,7 @@ def get_pool_data(pool_id_bech32: str) -> Optional[PoolDataRecord]:
                 single_host_addresses.append(host_address)
 
     # pylint: disable=undefined-loop-variable
-    pool_data = PoolDataRecord(
+    pool_data = dbsync_types.PoolDataRecord(
         id=pool.id,
         hash=pool.hash.hex(),
         view=pool.view,
@@ -328,13 +160,13 @@ def get_pool_data(pool_id_bech32: str) -> Optional[PoolDataRecord]:
     return pool_data
 
 
-def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
+def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     """Get first batch of transaction data from db-sync."""
-    utxo_out: List[UTxORecord] = []
+    utxo_out: List[dbsync_types.UTxORecord] = []
     seen_tx_out_ids = set()
-    ma_utxo_out: List[UTxORecord] = []
+    ma_utxo_out: List[dbsync_types.UTxORecord] = []
     seen_ma_tx_out_ids = set()
-    mint_utxo_out: List[UTxORecord] = []
+    mint_utxo_out: List[dbsync_types.UTxORecord] = []
     seen_ma_tx_mint_ids = set()
     tx_id = -1
 
@@ -347,7 +179,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:
             seen_tx_out_ids.add(query_row.tx_out_id)
-            out_rec = UTxORecord(
+            out_rec = dbsync_types.UTxORecord(
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.tx_out_value),
@@ -368,7 +200,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
             asset_name = query_row.ma_tx_out_name.hex() if query_row.ma_tx_out_name else None
             policyid = query_row.ma_tx_out_policy.hex() if query_row.ma_tx_out_policy else ""
             coin = f"{policyid}.{asset_name}" if asset_name else policyid
-            ma_rec = UTxORecord(
+            ma_rec = dbsync_types.UTxORecord(
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.ma_tx_out_quantity or 0),
@@ -384,11 +216,11 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
             asset_name = query_row.ma_tx_mint_name.hex() if query_row.ma_tx_mint_name else None
             policyid = query_row.ma_tx_mint_policy.hex() if query_row.ma_tx_mint_policy else ""
             coin = f"{policyid}.{asset_name}" if asset_name else policyid
-            mint_rec = UTxORecord(
+            mint_rec = dbsync_types.UTxORecord(
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.ma_tx_mint_quantity or 0),
-                address="",  # this is available only for MA outputs
+                address="",  # This is available only for MA outputs
                 coin=coin,
             )
             mint_utxo_out.append(mint_rec)
@@ -397,7 +229,7 @@ def get_prelim_tx_record(txhash: str) -> TxPrelimRecord:
         raise RuntimeError("No results were returned by the TX SQL query.")
 
     # pylint: disable=undefined-loop-variable
-    txdata = TxPrelimRecord(
+    txdata = dbsync_types.TxPrelimRecord(
         utxo_out=utxo_out,
         ma_utxo_out=ma_utxo_out,
         mint_utxo_out=mint_utxo_out,
@@ -445,7 +277,7 @@ def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
     return txins
 
 
-def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
+def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
     """Get transaction data from db-sync.
 
     Compile data from multiple SQL queries to get as much information about the TX as possible.
@@ -457,14 +289,14 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     metadata = []
     if txdata.last_row.metadata_count:
         metadata = [
-            MetadataRecord(key=int(r.key), json=r.json, bytes=r.bytes)
+            dbsync_types.MetadataRecord(key=int(r.key), json=r.json, bytes=r.bytes)
             for r in dbsync_queries.query_tx_metadata(txhash=txhash)
         ]
 
     reserve = []
     if txdata.last_row.reserve_count:
         reserve = [
-            ADAStashRecord(
+            dbsync_types.ADAStashRecord(
                 address=str(r.addr_view), cert_index=int(r.cert_index), amount=int(r.amount)
             )
             for r in dbsync_queries.query_tx_reserve(txhash=txhash)
@@ -473,7 +305,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     treasury = []
     if txdata.last_row.treasury_count:
         treasury = [
-            ADAStashRecord(
+            dbsync_types.ADAStashRecord(
                 address=str(r.addr_view), cert_index=int(r.cert_index), amount=int(r.amount)
             )
             for r in dbsync_queries.query_tx_treasury(txhash=txhash)
@@ -482,7 +314,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     pot_transfers = []
     if txdata.last_row.pot_transfer_count:
         pot_transfers = [
-            PotTransferRecord(treasury=int(r.treasury), reserves=int(r.reserves))
+            dbsync_types.PotTransferRecord(treasury=int(r.treasury), reserves=int(r.reserves))
             for r in dbsync_queries.query_tx_pot_transfers(txhash=txhash)
         ]
 
@@ -497,7 +329,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     stake_delegation = []
     if txdata.last_row.stake_deleg_count:
         stake_delegation = [
-            DelegationRecord(
+            dbsync_types.DelegationRecord(
                 address=r.address, pool_id=r.pool_id, active_epoch_no=r.active_epoch_no
             )
             for r in dbsync_queries.query_tx_stake_deleg(txhash=txhash)
@@ -550,7 +382,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     scripts = []
     if txdata.last_row.script_count:
         scripts = [
-            ScriptRecord(
+            dbsync_types.ScriptRecord(
                 hash=r.hash.hex(),
                 type=str(r.type),
                 serialised_size=int(r.serialised_size) if r.serialised_size else 0,
@@ -558,12 +390,14 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
             for r in dbsync_queries.query_scripts(txhash=txhash)
         ]
 
+    # TODO: FIXME: this is not correct, this includes all scripts present in the TX that created
+    # the reference input, not just the ones IN the reference input
     reference_scripts = []
     if reference_inputs:
         for reference_input in reference_inputs:
             reference_scripts.extend(
                 [
-                    ScriptRecord(
+                    dbsync_types.ScriptRecord(
                         hash=r.hash.hex(),
                         type=str(r.type),
                         serialised_size=int(r.serialised_size) if r.serialised_size else 0,
@@ -575,7 +409,7 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     redeemers = []
     if txdata.last_row.redeemer_count:
         redeemers = [
-            RedeemerRecord(
+            dbsync_types.RedeemerRecord(
                 unit_mem=int(r.unit_mem),
                 unit_steps=int(r.unit_steps),
                 fee=int(r.fee),
@@ -589,11 +423,13 @@ def get_tx_record(txhash: str) -> TxRecord:  # noqa: C901
     extra_key_witness = []
     if txdata.last_row.extra_key_witness_count:
         extra_key_witness = [
-            ExtraKeyWitnessRecord(tx_hash=r.tx_hash.hex(), witness_hash=r.witness_hash.hex())
+            dbsync_types.ExtraKeyWitnessRecord(
+                tx_hash=r.tx_hash.hex(), witness_hash=r.witness_hash.hex()
+            )
             for r in dbsync_queries.query_extra_key_witness(txhash=txhash)
         ]
 
-    record = TxRecord(
+    record = dbsync_types.TxRecord(
         tx_id=int(txdata.last_row.tx_id),
         tx_hash=txdata.last_row.tx_hash.hex(),
         block_id=int(txdata.last_row.block_id),
@@ -657,7 +493,7 @@ def retry_query(query_func: Callable, timeout: int = 20) -> Any:
     return response
 
 
-def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
+def get_tx_record_retry(txhash: str, retry_num: int = 3) -> dbsync_types.TxRecord:
     """Retry `get_tx_record` when data is anticipated and are not available yet.
 
     Under load it might be necessary to wait a bit and retry the query.
@@ -665,7 +501,7 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
     retry_num = retry_num if retry_num >= 0 else 0
     response = None
 
-    # first try + number of retries
+    # First try + number of retries
     for r in range(1 + retry_num):
         if r > 0:
             sleep_time = 2 + r * r
@@ -685,422 +521,29 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> TxRecord:
     return response
 
 
-def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> List[clusterlib.TxOut]:
-    """Calculate minting amount sum for records with the same token.
-
-    Remove address information - minting tokens doesn't include address, only amount and asset ID,
-    i.e. address information is not available in `ma_tx_mint` table.
-    Remove also datum hash, which is not available as well.
-    MA output is handled in Tx output checks.
-    """
-    mint_txouts: Dict[str, clusterlib.TxOut] = {}
-
-    for mt in txouts:
-        if mt.coin in mint_txouts:
-            mt_stored = mint_txouts[mt.coin]
-            mint_txouts[mt.coin] = mt_stored._replace(
-                address="", amount=mt_stored.amount + mt.amount, datum_hash=""
-            )
-        else:
-            mint_txouts[mt.coin] = mt._replace(address="", datum_hash="")
-
-    return list(mint_txouts.values())
-
-
-def _get_scripts_hashes(
-    cluster_obj: clusterlib.ClusterLib,
-    records: Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint],
-) -> Dict[str, Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint]]:
-    """Create a hash table of Tx Plutus data indexed by script hash."""
-    hashes_db: dict = {}
-
-    for r in records:
-        if not r.script_file:
-            continue
-        shash = cluster_obj.g_transaction.get_policyid(script_file=r.script_file)
-        shash_rec = hashes_db.get(shash)
-        if shash_rec is None:
-            hashes_db[shash] = [r]
-            continue
-        shash_rec.append(r)
-
-    return hashes_db
-
-
-def _db_redeemer_hashes(
-    records: List[RedeemerRecord],
-) -> Dict[str, List[RedeemerRecord]]:
-    """Create a hash table of redeemers indexed by script hash."""
-    hashes_db: dict = {}
-
-    for r in records:
-        shash = r.script_hash
-        shash_rec = hashes_db.get(shash)
-        if shash_rec is None:
-            hashes_db[shash] = [r]
-            continue
-        shash_rec.append(r)
-
-    return hashes_db
-
-
-def _compare_redeemer_value(
-    tx_rec: Union[clusterlib.ScriptTxIn, clusterlib.Mint], db_redeemer: dict
-) -> bool:
-    """Compare the value of the tx redeemer with the value stored on dbsync."""
-    if not (tx_rec.redeemer_file or tx_rec.redeemer_value):
-        return True
-
-    redeemer_value = None
-
-    if tx_rec.redeemer_file:
-        with open(tx_rec.redeemer_file, encoding="utf-8") as r:
-            redeemer_value = json.loads(r.read())
-    elif tx_rec.redeemer_value and db_redeemer.get("int"):
-        redeemer_value = {"int": int(tx_rec.redeemer_value)}
-    elif tx_rec.redeemer_value and db_redeemer.get("bytes"):
-        # we should ignore the first and last 2 chars because they represent
-        # the double quotes
-        tx_redeemer_bytes = tx_rec.redeemer_value.encode("utf-8").hex()[2:-2]
-        redeemer_value = {"bytes": tx_redeemer_bytes}
-
-    return bool(db_redeemer == redeemer_value) if redeemer_value else True
-
-
-def _compare_redeemers(
-    tx_data: Dict[str, Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint]],
-    db_data: Dict[str, List[RedeemerRecord]],
-    purpose: str,
-) -> None:
-    """Compare redeemers data available in Tx data with data in db-sync."""
-    # pylint: disable=too-many-branches
-    for script_hash, tx_recs in tx_data.items():
-        if not tx_recs:
-            return
-
-        # if redeemer is not present, it is not plutus script
-        if not (
-            tx_recs[0].redeemer_file or tx_recs[0].redeemer_value or tx_recs[0].redeemer_cbor_file
-        ):
-            return
-
-        # when minting with one Plutus script and two (or more) redeemers, only the last redeemer
-        # is used
-        if hasattr(tx_recs[0], "txouts"):  # check it is minting record
-            # we'll check only the last redeemer
-            tx_recs = tx_recs[-1:]  # noqa: PLW2901
-
-        db_redeemer_recs = db_data.get(script_hash)
-        assert db_redeemer_recs, f"No redeemer info in db-sync for script hash `{script_hash}`"
-
-        len_tx_recs, len_db_redeemer_recs = len(tx_recs), len(db_redeemer_recs)
-        assert (
-            len_tx_recs == len_db_redeemer_recs
-        ), f"Number of TX redeemers doesn't match ({len_tx_recs} != {db_redeemer_recs})"
-
-        for tx_rec in tx_recs:
-            tx_unit_steps = tx_rec.execution_units[0] if tx_rec.execution_units else None
-            tx_unit_mem = tx_rec.execution_units[1] if tx_rec.execution_units else None
-
-            missing_tx_unit_steps = not (tx_unit_steps and tx_unit_mem)
-
-            for db_redeemer in db_redeemer_recs:
-                if db_redeemer.purpose != purpose:
-                    continue
-                if not _compare_redeemer_value(tx_rec=tx_rec, db_redeemer=db_redeemer.value):
-                    continue
-                if missing_tx_unit_steps or (
-                    tx_unit_steps == db_redeemer.unit_steps and tx_unit_mem == db_redeemer.unit_mem
-                ):
-                    break
-            else:
-                raise AssertionError(
-                    f"Couldn't find matching redeemer info in db-sync for\n{tx_rec}"
-                )
-
-
-def _sanitize_txout(
-    cluster_obj: clusterlib.ClusterLib, txout: clusterlib.TxOut
-) -> clusterlib.TxOut:
-    """Transform txout so it can be compared to data from db-sync."""
-    datum_hash = clusterlib_utils.datum_hash_from_txout(cluster_obj=cluster_obj, txout=txout)
-
-    new_txout = txout._replace(
-        datum_hash=datum_hash,
-        datum_hash_file="",
-        datum_hash_cbor_file="",
-        datum_hash_value="",
-        datum_embed_file="",
-        datum_embed_cbor_file="",
-        datum_embed_value="",
-        inline_datum_file="",
-        inline_datum_cbor_file="",
-        inline_datum_value="",
-        reference_script_file="",
-    )
-    return new_txout
-
-
-def _txout_has_inline_datum(txout: clusterlib.TxOut) -> bool:
-    if txout.inline_datum_cbor_file or txout.inline_datum_file or txout.inline_datum_value:
-        return True
-    return False
-
-
-def check_tx(  # noqa: C901
+def get_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
-) -> Optional[TxRecord]:
-    """Check a transaction in db-sync."""
-    # pylint: disable=too-many-statements,too-many-locals
+) -> Optional[dbsync_types.TxRecord]:
+    """Get a transaction data from db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
     txhash = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
     response = get_tx_record_retry(txhash=txhash, retry_num=retry_num)
 
-    tx_txouts = {_sanitize_txout(cluster_obj=cluster_obj, txout=r) for r in tx_raw_output.txouts}
-    db_txouts = {utxodata2txout(r) for r in response.txouts}
+    return response
 
-    len_db_txouts, len_out_txouts = len(response.txouts), len(tx_raw_output.txouts)
 
-    # we don't have complete info about the transaction when `build` command
-    # was used (change txout, fee in older node versions), so we'll skip some of the checks
-    if tx_raw_output.change_address:
-        assert tx_txouts.issubset(db_txouts), f"TX outputs not subset: ({tx_txouts} vs {db_txouts})"
-        assert (
-            len_db_txouts >= len_out_txouts
-        ), f"Number of TX outputs doesn't match ({len_db_txouts} < {len_out_txouts})"
-    else:
-        txouts_amount = clusterlib.calculate_utxos_balance(utxos=tx_raw_output.txouts)
-        assert (
-            response.out_sum == txouts_amount
-        ), f"Sum of TX amounts doesn't match ({response.out_sum} != {txouts_amount})"
+def check_tx(
+    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
+) -> Optional[dbsync_types.TxRecord]:
+    """Check a transaction in db-sync."""
+    response = get_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output, retry_num=retry_num)
 
-        assert (
-            len_db_txouts == len_out_txouts
-        ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts})"
-
-        assert tx_txouts == db_txouts, f"TX outputs don't match ({tx_txouts} != {db_txouts})"
-
-    assert response.fee in (
-        tx_raw_output.fee,
-        -1,  # unknown fee is set to -1
-    ), f"TX fee doesn't match ({response.fee} != {tx_raw_output.fee})"
-
-    assert response.invalid_before == tx_raw_output.invalid_before, (
-        "TX invalid_before doesn't match "
-        f"({response.invalid_before} != {tx_raw_output.invalid_before})"
-    )
-    assert response.invalid_hereafter == tx_raw_output.invalid_hereafter, (
-        "TX invalid_hereafter doesn't match "
-        f"({response.invalid_hereafter} != {tx_raw_output.invalid_hereafter})"
-    )
-
-    combined_txins: List[clusterlib.UTXOData] = [
-        *tx_raw_output.txins,
-        *[p.txins[0] for p in tx_raw_output.script_txins if p.txins],
-    ]
-    txin_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in combined_txins}
-    db_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in response.txins}
-    assert (
-        txin_utxos == db_utxos
-    ), f"Not all TX inputs are present in the db ({txin_utxos} != {db_utxos})"
-
-    tx_mint_txouts = list(itertools.chain.from_iterable(m.txouts for m in tx_raw_output.mint))
-    tx_mint_by_token = sorted(_sum_mint_txouts(tx_mint_txouts))
-    len_db_mint, len_out_mint = len(response.mint), len(tx_mint_by_token)
-    assert (
-        len_db_mint == len_out_mint
-    ), f"Number of MA minting doesn't match ({len_db_mint} != {len_out_mint})"
-
-    db_mint_txouts = sorted(utxodata2txout(r) for r in response.mint)
-    assert (
-        tx_mint_by_token == db_mint_txouts
-    ), f"MA minting outputs don't match ({tx_mint_by_token} != {db_mint_txouts})"
-
-    tx_withdrawals = sorted(
-        [*tx_raw_output.withdrawals, *[s.txout for s in tx_raw_output.script_withdrawals]]
-    )
-    db_withdrawals = sorted(response.withdrawals)
-    len_tx_withdrawals = len(tx_withdrawals)
-    len_db_withdrawals = len(db_withdrawals)
-
-    assert (
-        len_db_withdrawals == len_tx_withdrawals
-    ), f"Number of TX withdrawals doesn't match ({len_db_withdrawals} != {len_tx_withdrawals})"
-
-    assert (
-        tx_withdrawals == db_withdrawals
-    ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
-
-    tx_collaterals_nested = [
-        r.collaterals
-        for r in (
-            *tx_raw_output.script_txins,
-            *tx_raw_output.mint,
-            *tx_raw_output.complex_certs,
-            *tx_raw_output.script_withdrawals,
+    if response is not None:
+        dbsync_check_tx.check_tx(
+            cluster_obj=cluster_obj, tx_raw_output=tx_raw_output, response=response
         )
-    ]
-    tx_collaterals = set(itertools.chain.from_iterable(tx_collaterals_nested))
-    db_collaterals = set(response.collaterals)
-    assert (
-        tx_collaterals == db_collaterals
-    ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
-
-    # test automatic return collateral only with `transaction build` command on node/dbsync versions
-    # that support it
-    if (
-        tx_collaterals
-        and tx_raw_output.change_address
-        and response.collateral_outputs
-        and not (tx_raw_output.total_collateral_amount or tx_raw_output.return_collateral_txouts)
-    ):
-        protocol_params = cluster_obj.g_query.get_protocol_params()
-        tx_collaterals_amount = clusterlib.calculate_utxos_balance(utxos=list(tx_collaterals))
-        tx_collateral_output_amount = int(
-            tx_collaterals_amount
-            - tx_raw_output.fee * protocol_params["collateralPercentage"] / 100
-        )
-        db_collateral_output_amount = clusterlib.calculate_utxos_balance(
-            utxos=list(response.collateral_outputs)
-        )
-
-        assert db_collateral_output_amount == tx_collateral_output_amount, (
-            "TX collateral output amount doesn't match "
-            f"({db_collateral_output_amount} != {tx_collateral_output_amount})"
-        )
-
-    tx_in_script_hashes = _get_scripts_hashes(
-        cluster_obj=cluster_obj, records=tx_raw_output.script_txins
-    )
-    tx_mint_script_hashes = _get_scripts_hashes(cluster_obj=cluster_obj, records=tx_raw_output.mint)
-
-    # a script is added to `script` table only the first time it is seen, so the record
-    # can be empty for the current transaction
-    tx_script_hashes = {*tx_in_script_hashes, *tx_mint_script_hashes}
-    if response.scripts and tx_script_hashes:
-        db_script_hashes = {s.hash for s in response.scripts}
-
-        assert db_script_hashes.issubset(
-            tx_script_hashes
-        ), f"Scripts hashes don't match: {db_script_hashes} is not subset of {tx_script_hashes}"
-
-        # on plutus scripts we should also check the serialised_size
-        db_plutus_scripts = {r for r in response.scripts if r.type.startswith("plutus")}
-
-        if db_plutus_scripts:
-            assert all(
-                r.serialised_size > 0 for r in db_plutus_scripts
-            ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
-
-    # compare redeemers data
-    db_redeemer_hashes = _db_redeemer_hashes(records=response.redeemers)
-    _compare_redeemers(tx_data=tx_in_script_hashes, db_data=db_redeemer_hashes, purpose="spend")
-    _compare_redeemers(tx_data=tx_mint_script_hashes, db_data=db_redeemer_hashes, purpose="mint")
-
-    redeemer_fees = functools.reduce(lambda x, y: x + y.fee, response.redeemers, 0)
-    assert tx_raw_output.fee > redeemer_fees, "Combined redeemer fees are >= than total TX fee"
-
-    # compare datum hash and inline datum hash in db-sync
-    wrong_db_datum_hashes = [
-        tx_out
-        for tx_out in response.txouts
-        if tx_out.inline_datum_hash and tx_out.inline_datum_hash != tx_out.datum_hash
-    ]
-
-    assert not wrong_db_datum_hashes, (
-        "Datum hash and inline datum hash returned by dbsync don't match for following records:\n"
-        f"{wrong_db_datum_hashes}"
-    )
-
-    # compare inline datums
-    tx_txouts_inline_datums = {
-        _sanitize_txout(cluster_obj=cluster_obj, txout=r)
-        for r in tx_raw_output.txouts
-        if _txout_has_inline_datum(r)
-    }
-    db_txouts_inline_datums = {utxodata2txout(r) for r in response.txouts if r.inline_datum_hash}
-    assert (
-        tx_txouts_inline_datums == db_txouts_inline_datums
-    ), f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
-
-    # compare readonly reference inputs
-    txins_utxos_reference_inputs = {
-        *[f"{r.utxo_hash}#{r.utxo_ix}" for r in tx_raw_output.readonly_reference_txins if r],
-        *[
-            f"{r.reference_txin.utxo_hash}#{r.reference_txin.utxo_ix}"
-            for r in tx_raw_output.script_txins
-            if r.reference_txin
-        ],
-        *[
-            f"{r.reference_txin.utxo_hash}#{r.reference_txin.utxo_ix}"
-            for r in tx_raw_output.complex_certs
-            if r.reference_txin
-        ],
-    }
-    db_utxos_reference_inputs = {
-        f"{r.utxo_hash}#{r.utxo_ix}" for r in response.reference_inputs if r
-    }
-    assert txins_utxos_reference_inputs == db_utxos_reference_inputs, (
-        "Reference inputs don't match "
-        f"({txins_utxos_reference_inputs} != {db_utxos_reference_inputs})"
-    )
-
-    # check reference scripts
-    tx_reference_script_hashes = {
-        cluster_obj.g_transaction.get_policyid(script_file=r.reference_script_file)
-        for r in tx_raw_output.txouts
-        if r.reference_script_file
-    }
-
-    db_reference_script_hashes = {
-        r.reference_script_hash for r in response.txouts if r.reference_script_hash
-    }
-
-    assert tx_reference_script_hashes == db_reference_script_hashes, (
-        "Reference scripts don't match "
-        f"({tx_reference_script_hashes} != {db_reference_script_hashes})"
-    )
-
-    # check required signers
-    if tx_raw_output.required_signers:
-        assert len(tx_raw_output.required_signers) == len(response.extra_key_witness), (
-            "Number of required signers doesn't match "
-            f"({len(tx_raw_output.required_signers)} != {len(response.extra_key_witness)})"
-        )
-
-    if tx_raw_output.required_signer_hashes:
-        db_required_signer_hashes = [r.witness_hash for r in response.extra_key_witness]
-
-        assert tx_raw_output.required_signer_hashes == db_required_signer_hashes, (
-            "Required signer hashes don't match "
-            f"({tx_raw_output.required_signer_hashes} != {db_required_signer_hashes})"
-        )
-
-    # Check reference scripts txins
-    reference_script_hashes = []
-
-    for r in tx_raw_output.script_txins:
-        if r.reference_txin and r.reference_txin.reference_script:
-            script_file = Path(f"{helpers.get_timestamped_rand_str()}.script")
-            with open(script_file, "w", encoding="utf-8") as outfile:
-                json.dump(r.reference_txin.reference_script["script"], outfile)
-
-            reference_script_hashes.append(
-                cluster_obj.g_transaction.get_policyid(script_file=script_file)
-            )
-
-    db_reference_script_hashes = {r.hash for r in response.reference_scripts if r.hash}
-
-    # A script is added to `script` table only the first time it is seen, so the record
-    # can be empty for the current transaction
-    if db_reference_script_hashes:
-        assert set(reference_script_hashes).issubset(db_reference_script_hashes), (
-            "Reference scripts txins don't match "
-            f"({set(reference_script_hashes)} != {db_reference_script_hashes})"
-        )
-
     return response
 
 
@@ -1109,7 +552,7 @@ def check_tx_phase_2_failure(
     tx_raw_output: clusterlib.TxRawOutput,
     collateral_charged: int,
     retry_num: int = 3,
-) -> Optional[TxRecord]:
+) -> Optional[dbsync_types.TxRecord]:
     """Check a transaction in db-sync when a phase 2 failure happens."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1123,8 +566,11 @@ def check_tx_phase_2_failure(
         not response.collateral_outputs
     ), "Collateral outputs are present in dbsync when the tx have a phase 2 failure"
 
-    db_txouts = {utxodata2txout(r) for r in response.txouts}
-    tx_out = {utxodata2txout(r) for r in cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)}
+    db_txouts = {dbsync_check_tx.utxodata2txout(r) for r in response.txouts}
+    tx_out = {
+        dbsync_check_tx.utxodata2txout(r)
+        for r in cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)
+    }
 
     assert db_txouts == tx_out, f"The TX outputs don't match ({db_txouts} != {tx_out})"
 
@@ -1143,7 +589,9 @@ def check_tx_phase_2_failure(
     return response
 
 
-def check_pool_deregistration(pool_id: str, retiring_epoch: int) -> Optional[PoolDataRecord]:
+def check_pool_deregistration(
+    pool_id: str, retiring_epoch: int
+) -> Optional[dbsync_types.PoolDataRecord]:
     """Check pool retirement in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1162,7 +610,9 @@ def check_pool_deregistration(pool_id: str, retiring_epoch: int) -> Optional[Poo
     return db_pool_data
 
 
-def check_pool_data(ledger_pool_data: dict, pool_id: str) -> Optional[PoolDataRecord]:  # noqa: C901
+def check_pool_data(  # noqa: C901
+    ledger_pool_data: dict, pool_id: str
+) -> Optional[dbsync_types.PoolDataRecord]:
     """Check comparison for pool data between ledger and db-sync."""
     # pylint: disable=too-many-branches
     if not configuration.HAS_DBSYNC:
@@ -1284,7 +734,9 @@ def check_pool_offline_fetch_error(
     return db_pool_offline_fetch_error[0]
 
 
-def check_plutus_cost(redeemer_record: RedeemerRecord, cost_record: Dict[str, Any]) -> None:
+def check_plutus_cost(
+    redeemer_record: dbsync_types.RedeemerRecord, cost_record: Dict[str, Any]
+) -> None:
     """Compare cost of Plutus script with data from db-sync."""
     errors = []
     if redeemer_record.unit_steps != cost_record["executionUnits"]["steps"]:
@@ -1305,10 +757,10 @@ def check_plutus_cost(redeemer_record: RedeemerRecord, cost_record: Dict[str, An
 
 
 def check_plutus_costs(
-    redeemer_records: List[RedeemerRecord], cost_records: List[Dict[str, Any]]
+    redeemer_records: List[dbsync_types.RedeemerRecord], cost_records: List[Dict[str, Any]]
 ) -> None:
     """Compare cost of multiple Plutus scripts with data from db-sync."""
-    # sort records first by total cost, second by hash
+    # Sort records first by total cost, second by hash
     sorted_costs = sorted(
         cost_records,
         key=lambda x: (
