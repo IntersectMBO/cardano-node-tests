@@ -255,6 +255,7 @@ def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
                     utxo_ix=int(txins_row.utxo_ix),
                     amount=int(txins_row.value),
                     address=str(txins_row.address),
+                    reference_script=txins_row.reference_script_json,
                 )
             )
 
@@ -271,6 +272,7 @@ def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
                     amount=int(txins_row.ma_tx_out_quantity or 0),
                     address=str(txins_row.address),
                     coin=coin,
+                    reference_script=txins_row.reference_script_json,
                 )
             )
 
@@ -351,6 +353,7 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
                 utxo_ix=int(r.utxo_ix),
                 amount=int(r.value),
                 address=str(r.address),
+                reference_script=r.reference_script_json,
             )
             for r in dbsync_queries.query_collateral_tx_ins(txhash=txhash)
         ]
@@ -375,6 +378,7 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
                 utxo_ix=int(r.utxo_ix),
                 amount=int(r.value),
                 address=str(r.address),
+                reference_script=r.reference_script_json,
             )
             for r in dbsync_queries.query_reference_tx_ins(txhash=txhash)
         ]
@@ -389,22 +393,6 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
             )
             for r in dbsync_queries.query_scripts(txhash=txhash)
         ]
-
-    # TODO: FIXME: this is not correct, this includes all scripts present in the TX that created
-    # the reference input, not just the ones IN the reference input
-    reference_scripts = []
-    if reference_inputs:
-        for reference_input in reference_inputs:
-            reference_scripts.extend(
-                [
-                    dbsync_types.ScriptRecord(
-                        hash=r.hash.hex(),
-                        type=str(r.type),
-                        serialised_size=int(r.serialised_size) if r.serialised_size else 0,
-                    )
-                    for r in dbsync_queries.query_scripts(txhash=reference_input.utxo_hash)
-                ]
-            )
 
     redeemers = []
     if txdata.last_row.redeemer_count:
@@ -451,7 +439,6 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
         collateral_outputs=collateral_outputs,
         reference_inputs=reference_inputs,
         scripts=scripts,
-        reference_scripts=reference_scripts,
         redeemers=redeemers,
         metadata=metadata,
         reserve=reserve,
