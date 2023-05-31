@@ -140,7 +140,6 @@ class TxRecord(NamedTuple):
     collateral_outputs: List[clusterlib.UTXOData]
     reference_inputs: List[clusterlib.UTXOData]
     scripts: List[ScriptRecord]
-    reference_scripts: List[ScriptRecord]
     redeemers: List[RedeemerRecord]
     metadata: List[MetadataRecord]
     reserve: List[ADAStashRecord]

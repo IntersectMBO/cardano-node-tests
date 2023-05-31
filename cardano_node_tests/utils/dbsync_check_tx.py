@@ -60,6 +60,14 @@ def _get_scripts_hashes(
     return hashes_db
 
 
+def _get_script_data_hash(cluster_obj: clusterlib.ClusterLib, script_data: dict) -> str:
+    """Get hash of the script data."""
+    script_file = Path(f"{helpers.get_timestamped_rand_str()}.script")
+    with open(script_file, "w", encoding="utf-8") as outfile:
+        json.dump(script_data, outfile)
+    return cluster_obj.g_transaction.get_policyid(script_file=script_file)
+
+
 def _db_redeemer_hashes(
     records: List[dbsync_types.RedeemerRecord],
 ) -> Dict[str, List[dbsync_types.RedeemerRecord]]:
@@ -477,22 +485,23 @@ def check_tx_reference_scripts(
     response: dbsync_types.TxRecord,
 ) -> None:
     """Check that scripts in Tx read-only reference inputs match the data from db-sync."""
-    tx_hashes_txin = set()
-    for r in tx_raw_output.script_txins:
-        if r.reference_txin and r.reference_txin.reference_script:
-            script_file = Path(f"{helpers.get_timestamped_rand_str()}.script")
-            with open(script_file, "w", encoding="utf-8") as outfile:
-                json.dump(r.reference_txin.reference_script["script"], outfile)
+    tx_hashes_txin = {
+        _get_script_data_hash(
+            cluster_obj=cluster_obj, script_data=rt.reference_txin.reference_script["script"]
+        )
+        for rt in tx_raw_output.script_txins
+        if (rt.reference_txin and rt.reference_txin.reference_script)
+    }
 
-            tx_hashes_txin.add(cluster_obj.g_transaction.get_policyid(script_file=script_file))
+    db_hashes_txin = {
+        _get_script_data_hash(cluster_obj=cluster_obj, script_data=rd.reference_script)
+        for rd in response.reference_inputs
+        if rd.reference_script
+    }
 
-    # A script is added to `script` table only the first time it is seen, so the record
-    # can be empty for the current transaction.
-    db_reference_scripts = {r.hash for r in response.reference_scripts if r.hash}
-    if db_reference_scripts:
-        assert db_reference_scripts.issubset(
-            tx_hashes_txin
-        ), f"Reference scripts txins don't match ({tx_hashes_txin} != {db_reference_scripts})"
+    assert (
+        tx_hashes_txin == db_hashes_txin
+    ), f"Reference scripts txins don't match ({tx_hashes_txin} != {db_hashes_txin})"
 
 
 def check_tx_required_signers(

@@ -160,6 +160,7 @@ class TxInDBRow(NamedTuple):
     address: str
     value: decimal.Decimal
     tx_hash: memoryview
+    reference_script_json: Optional[dict]
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -172,6 +173,7 @@ class TxInNoMADBRow(NamedTuple):
     address: str
     value: decimal.Decimal
     tx_hash: memoryview
+    reference_script_json: Optional[dict]
 
 
 class CollateralTxOutDBRow(NamedTuple):
@@ -400,6 +402,7 @@ def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
         "SELECT"
         " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
         " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
+        " (SELECT json FROM script WHERE id = tx_out.reference_script_id) AS reference_script_json,"
         " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity "
         "FROM tx_in "
         "LEFT JOIN tx_out "
@@ -420,7 +423,8 @@ def query_collateral_tx_ins(txhash: str) -> Generator[TxInNoMADBRow, None, None]
     query = (
         "SELECT"
         " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
-        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash "
+        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
+        " (SELECT json FROM script WHERE id = tx_out.reference_script_id) AS reference_script_json "
         "FROM collateral_tx_in "
         "LEFT JOIN tx_out "
         "ON (tx_out.tx_id = collateral_tx_in.tx_out_id AND"
@@ -439,7 +443,8 @@ def query_reference_tx_ins(txhash: str) -> Generator[TxInNoMADBRow, None, None]:
     query = (
         "SELECT "
         " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
-        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash "
+        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
+        " (SELECT json FROM script WHERE id = tx_out.reference_script_id) AS reference_script_json "
         "FROM reference_tx_in "
         "LEFT JOIN tx_out "
         "ON (tx_out.tx_id = reference_tx_in.tx_out_id AND"
