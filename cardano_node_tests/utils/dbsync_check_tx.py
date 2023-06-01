@@ -200,6 +200,22 @@ def utxodata2txout(
     )
 
 
+def utxorecord2utxodata(utxorecord: dbsync_types.UTxORecord) -> clusterlib.UTXOData:
+    """Convert `UTxORecord` to `clusterlib.UTXOData`."""
+    return clusterlib.UTXOData(
+        utxo_hash=utxorecord.utxo_hash,
+        utxo_ix=utxorecord.utxo_ix,
+        amount=utxorecord.amount,
+        address=utxorecord.address,
+        coin=utxorecord.coin,
+        decoded_coin=utxorecord.decoded_coin,
+        datum_hash=utxorecord.datum_hash,
+        inline_datum_hash=utxorecord.inline_datum_hash,
+        inline_datum=utxorecord.inline_datum,
+        reference_script=utxorecord.reference_script,
+    )
+
+
 def check_tx_outs(
     cluster_obj: clusterlib.ClusterLib,
     tx_raw_output: clusterlib.TxRawOutput,
@@ -339,7 +355,7 @@ def check_tx_collaterals(
         )
     ]
     tx_collaterals = set(itertools.chain.from_iterable(tx_collaterals_nested))
-    db_collaterals = set(response.collaterals)
+    db_collaterals = {utxorecord2utxodata(utxorecord=r) for r in response.collaterals}
 
     assert (
         tx_collaterals == db_collaterals
@@ -485,23 +501,32 @@ def check_tx_reference_scripts(
     response: dbsync_types.TxRecord,
 ) -> None:
     """Check that scripts in Tx read-only reference inputs match the data from db-sync."""
-    tx_hashes_txin = {
-        _get_script_data_hash(
-            cluster_obj=cluster_obj, script_data=rt.reference_txin.reference_script["script"]
+    # Get all txins with reference scripts
+    reference_scripts = [
+        r.reference_txin.reference_script
+        for r in (
+            *tx_raw_output.script_txins,
+            *tx_raw_output.mint,
+            *tx_raw_output.complex_certs,
+            *tx_raw_output.script_withdrawals,
         )
-        for rt in tx_raw_output.script_txins
-        if (rt.reference_txin and rt.reference_txin.reference_script)
+        if (r.reference_txin and r.reference_txin.reference_script)
+    ]
+    # Also read-only reference can contain scripts
+    readonly_reference_scripts = [
+        r.reference_script for r in tx_raw_output.readonly_reference_txins if r.reference_script
+    ]
+
+    tx_hashes = {
+        _get_script_data_hash(cluster_obj=cluster_obj, script_data=rt["script"])
+        for rt in (*reference_scripts, *readonly_reference_scripts)
     }
 
-    db_hashes_txin = {
-        _get_script_data_hash(cluster_obj=cluster_obj, script_data=rd.reference_script)
-        for rd in response.reference_inputs
-        if rd.reference_script
+    db_hashes = {
+        r.reference_script_hash for r in response.reference_inputs if r.reference_script_hash
     }
 
-    assert (
-        tx_hashes_txin == db_hashes_txin
-    ), f"Reference scripts txins don't match ({tx_hashes_txin} != {db_hashes_txin})"
+    assert tx_hashes == db_hashes, f"Reference scripts don't match ({tx_hashes} != {db_hashes})"
 
 
 def check_tx_required_signers(

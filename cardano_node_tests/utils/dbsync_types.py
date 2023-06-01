@@ -4,6 +4,7 @@ from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Union
 
 from cardano_clusterlib import clusterlib
 
@@ -59,6 +60,8 @@ class UTxORecord(NamedTuple):
     decoded_coin: str = ""
     datum_hash: str = ""
     inline_datum_hash: str = ""
+    inline_datum: Optional[Union[str, dict]] = None
+    reference_script: Optional[dict] = None
     reference_script_hash: str = ""
 
 
@@ -133,12 +136,12 @@ class TxRecord(NamedTuple):
     size: int
     invalid_before: Optional[int]
     invalid_hereafter: Optional[int]
-    txins: List[clusterlib.UTXOData]
+    txins: List[UTxORecord]
     txouts: List[UTxORecord]
     mint: List[UTxORecord]
-    collaterals: List[clusterlib.UTXOData]
+    collaterals: List[UTxORecord]
     collateral_outputs: List[clusterlib.UTXOData]
-    reference_inputs: List[clusterlib.UTXOData]
+    reference_inputs: List[UTxORecord]
     scripts: List[ScriptRecord]
     redeemers: List[RedeemerRecord]
     metadata: List[MetadataRecord]

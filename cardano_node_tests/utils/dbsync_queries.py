@@ -160,7 +160,10 @@ class TxInDBRow(NamedTuple):
     address: str
     value: decimal.Decimal
     tx_hash: memoryview
+    reference_script_hash: Optional[memoryview]
     reference_script_json: Optional[dict]
+    reference_script_bytes: Optional[memoryview]
+    reference_script_type: Optional[str]
     ma_tx_out_id: Optional[int]
     ma_tx_out_policy: Optional[memoryview]
     ma_tx_out_name: Optional[memoryview]
@@ -173,7 +176,10 @@ class TxInNoMADBRow(NamedTuple):
     address: str
     value: decimal.Decimal
     tx_hash: memoryview
+    reference_script_hash: Optional[memoryview]
     reference_script_json: Optional[dict]
+    reference_script_bytes: Optional[memoryview]
+    reference_script_type: Optional[str]
 
 
 class CollateralTxOutDBRow(NamedTuple):
@@ -400,17 +406,18 @@ def query_tx_ins(txhash: str) -> Generator[TxInDBRow, None, None]:
     """Query transaction txins in db-sync."""
     query = (
         "SELECT"
-        " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
-        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
-        " (SELECT json FROM script WHERE id = tx_out.reference_script_id) AS reference_script_json,"
+        " tx_out.id, tx_out.index, tx_out.address, tx_out.value, jtx_out_id.hash,"
+        " script.hash, script.json, script.bytes, script.type,"
         " ma_tx_out.id, join_ma_out.policy, join_ma_out.name, ma_tx_out.quantity "
         "FROM tx_in "
-        "LEFT JOIN tx_out "
-        "ON (tx_out.tx_id = tx_in.tx_out_id AND tx_out.index = tx_in.tx_out_index) "
-        "LEFT JOIN tx ON tx.id = tx_in.tx_in_id "
+        "LEFT JOIN tx_out"
+        " ON (tx_out.tx_id = tx_in.tx_out_id AND tx_out.index = tx_in.tx_out_index) "
+        "LEFT JOIN tx jtx_in ON jtx_in.id = tx_in.tx_in_id "
+        "LEFT JOIN tx jtx_out_id ON jtx_out_id.id = tx_out.tx_id "
         "LEFT JOIN ma_tx_out ON tx_out.id = ma_tx_out.tx_out_id "
         "LEFT JOIN multi_asset join_ma_out ON ma_tx_out.ident = join_ma_out.id "
-        "WHERE tx.hash = %s;"
+        "LEFT JOIN script ON script.id = tx_out.reference_script_id "
+        "WHERE jtx_in.hash = %s;"
     )
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
@@ -422,15 +429,16 @@ def query_collateral_tx_ins(txhash: str) -> Generator[TxInNoMADBRow, None, None]
     """Query transaction collateral txins in db-sync."""
     query = (
         "SELECT"
-        " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
-        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
-        " (SELECT json FROM script WHERE id = tx_out.reference_script_id) AS reference_script_json "
+        " tx_out.id, tx_out.index, tx_out.address, tx_out.value, jtx_out_id.hash,"
+        " script.hash, script.json, script.bytes, script.type "
         "FROM collateral_tx_in "
-        "LEFT JOIN tx_out "
-        "ON (tx_out.tx_id = collateral_tx_in.tx_out_id AND"
-        "    tx_out.index = collateral_tx_in.tx_out_index) "
-        "LEFT JOIN tx ON tx.id = collateral_tx_in.tx_in_id "
-        "WHERE tx.hash = %s;"
+        "LEFT JOIN tx_out"
+        " ON (tx_out.tx_id = collateral_tx_in.tx_out_id AND"
+        "     tx_out.index = collateral_tx_in.tx_out_index) "
+        "LEFT JOIN tx jtx_col ON jtx_col.id = collateral_tx_in.tx_in_id "
+        "LEFT JOIN tx jtx_out_id ON jtx_out_id.id = tx_out.tx_id "
+        "LEFT JOIN script ON script.id = tx_out.reference_script_id "
+        "WHERE jtx_col.hash = %s;"
     )
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
@@ -442,15 +450,16 @@ def query_reference_tx_ins(txhash: str) -> Generator[TxInNoMADBRow, None, None]:
     """Query transaction reference txins in db-sync."""
     query = (
         "SELECT "
-        " tx_out.id, tx_out.index, tx_out.address, tx_out.value,"
-        " (SELECT hash FROM tx WHERE id = tx_out.tx_id) AS tx_hash,"
-        " (SELECT json FROM script WHERE id = tx_out.reference_script_id) AS reference_script_json "
+        " tx_out.id, tx_out.index, tx_out.address, tx_out.value, jtx_out_id.hash,"
+        " script.hash, script.json, script.bytes, script.type "
         "FROM reference_tx_in "
-        "LEFT JOIN tx_out "
-        "ON (tx_out.tx_id = reference_tx_in.tx_out_id AND"
-        "    tx_out.index = reference_tx_in.tx_out_index) "
-        "LEFT JOIN tx ON tx.id = reference_tx_in.tx_in_id "
-        "WHERE tx.hash = %s;"
+        "LEFT JOIN tx_out"
+        " ON (tx_out.tx_id = reference_tx_in.tx_out_id AND"
+        "     tx_out.index = reference_tx_in.tx_out_index) "
+        "LEFT JOIN tx jtx_ref ON jtx_ref.id = reference_tx_in.tx_in_id "
+        "LEFT JOIN tx jtx_out_id ON jtx_out_id.id = tx_out.tx_id "
+        "LEFT JOIN script ON script.id = tx_out.reference_script_id "
+        "WHERE jtx_ref.hash = %s;"
     )
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
@@ -462,12 +471,12 @@ def query_collateral_tx_outs(txhash: str) -> Generator[CollateralTxOutDBRow, Non
     """Query transaction collateral txouts in db-sync."""
     query = (
         "SELECT "
-        "collateral_tx_out.id, collateral_tx_out.index, collateral_tx_out.address, "
-        "collateral_tx_out.value, "
-        "(SELECT hash FROM tx WHERE id = collateral_tx_out.tx_id) AS tx_hash "
+        " collateral_tx_out.id, collateral_tx_out.index, collateral_tx_out.address,"
+        " collateral_tx_out.value, jtx_out_id.hash "
         "FROM collateral_tx_out "
-        "LEFT JOIN tx ON tx.id = collateral_tx_out.tx_id "
-        "WHERE tx.hash = %s;"
+        "LEFT JOIN tx jtx_col ON jtx_col.id = collateral_tx_out.tx_id "
+        "LEFT JOIN tx jtx_out_id ON jtx_out_id.id = collateral_tx_out.tx_id "
+        "WHERE jtx_col.hash = %s;"
     )
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
