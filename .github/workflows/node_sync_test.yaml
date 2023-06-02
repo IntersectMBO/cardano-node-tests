@@ -131,14 +131,14 @@ jobs:
           git-ref: ${{ env.SECP256K1_REF }}
           cache-version: ${{ env.SECP_CACHE_VERSION }}
 
-      - uses: actions/checkout@v2
-      - name: "[PowerShell] Add build script path"
+      - uses: actions/checkout@v3
+      - name: "[PowerShell] Add build script path"        
         if: runner.os == 'Windows'
         shell: pwsh
         run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
 
-      - name: checkout cardano-node-tests repo
-        uses: actions/checkout@v2
+      - name: Checkout cardano-node-tests repo
+        uses: actions/checkout@v3
         with:
           path: cardano_node_tests
           ref: sync_tests
@@ -151,12 +151,12 @@ jobs:
             substituters = https://cache.nixos.org https://cache.iog.io https://iohk.cachix.org
             allow-import-from-derivation = true
 
-      - name: run actions/setup-python@v2
-        uses: actions/setup-python@v2
+      - name: Setup Python
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
 
-      - name: install dependencies
+      - name: Install Python dependencies
         run: |
           pip install pymysql
           pip install requests
@@ -165,7 +165,7 @@ jobs:
           pip install blockfrost-python
           pip install GitPython
 
-      - name: run sync test
+      - name: Run sync test
       # ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;D:\a\cardano-node-tests\cardano-node-tests\cardano_node_tests\cardano-node;D:\a\cardano-node-tests\cardano-node-tests\cardano_node_tests\cardano-cli;{0}" -f $env:PATH)') || '' }}
         env:
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
@@ -175,7 +175,7 @@ jobs:
           echo "current branch2: $(git branch --show-current)"
           python sync_tests/node_sync_test.py -e ${{ matrix.env }} -b ${{ github.event.inputs.build_mode }} -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -r1 "${{ github.event.inputs.node_rev1 }}" -r2 "${{ github.event.inputs.node_rev2 }}" -n1 "${{ github.event.inputs.node_topology1 }}" -n2 "${{ github.event.inputs.node_topology2 }}" -a1="${{ github.event.inputs.node_start_arguments1 }}" -a2="${{ github.event.inputs.node_start_arguments2 }}"
       
-      - name: write the test results into the database
+      - name: Write the test results into the database
         env:
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
@@ -187,8 +187,8 @@ jobs:
           echo "current branch3: $(git branch --show-current)"
           python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
       
-      - name: generate artifacts
-        uses: actions/upload-artifact@v2
+      - name: Generate artifacts
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.os }}
