@@ -21,6 +21,7 @@ echo "test: $(python -c 'import sys, sys.prefix == sys.base_prefix')"
 echo " ==== install packages into python virtual env"
 python3 -m pip install blockfrost-python
 python3 -m pip install GitPython
+python3 -m pip install colorama
 
 echo " ==== importing packages from nix (https://search.nixos.org/packages)"
 python3 -c "import requests, pandas, psutil, pymysql;"
@@ -39,5 +40,5 @@ node_start_arguments2=${10}
 echo " ==== start sync test"
 python ./sync_tests/node_sync_test.py -b "$build_mode" -e "$env" -t1 "$tag_no1" -t2 "$tag_no2" -r1 "$node_rev1" -r2 "$node_rev2" -n1 "$node_topology1" -n2 "$node_topology2" -a1="$node_start_arguments1" -a2="$node_start_arguments2"
 
-echo " ==== write sync test values into the db"
+echo "--- Prepare for adding sync test results to the AWS Database"
 python ./sync_tests/node_write_sync_values_to_db.py -e "$env"

@@ -12,6 +12,9 @@ from pathlib import Path
 import psutil
 import time
 
+from colorama import Fore, Style
+
+
 
 class CLIOut(NamedTuple):
     stdout: bytes
@@ -97,6 +100,22 @@ def cli_has(command: str) -> bool:
 
     cmd_err = err_str.split(":", maxsplit=1)[1].strip()
     return not cmd_err.startswith("Invalid")
+
+
+def print_ok(message):
+    print(Fore.GREEN + f"{message}", Style.RESET_ALL, flush=True)
+
+
+def print_info(message):
+    print(Fore.BLUE + f"{message}", Style.RESET_ALL, flush=True)
+
+
+def print_warn(message):
+    print(Fore.YELLOW + f"{message}", Style.RESET_ALL, flush=True)
+
+
+def print_error(message):
+    print(Fore.RED + f"{message}", Style.RESET_ALL, flush=True)
 
 
 def date_diff_in_seconds(dt2, dt1):
