@@ -22,8 +22,9 @@ def update_mainnet_tx_count_per_epoch():
             print(f"Getting values for epoch {epoch_no}")
             tx_count = get_tx_count_per_epoch_from_blockfrost(epoch_no)
             print(f"  - tx_count: {tx_count}")
-            new_row = pd.Series({'epoch_no': epoch_no, 'tx_count': tx_count})
-            pd.concat([df, new_row.to_frame()], ignore_index=True)
+            new_row_data = {'epoch_no': epoch_no, 'tx_count': tx_count}
+            new_row = pd.DataFrame([new_row_data])
+            df = pd.concat([df, new_row], ignore_index=True)
 
         col_to_insert = list(df.columns)
         val_to_insert = df.values.tolist()

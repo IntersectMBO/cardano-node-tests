@@ -84,19 +84,14 @@ def main():
 
         print(f"    ==== Creating the dataframe with the test values")
         for key, val in log_values_dict.items():
-            #new_row = {"identifier": sync_test_results_dict["identifier"],
-            #           "timestamp": key,
-            #           "slot_no": val["tip"],
-            #           "ram_bytes": val["ram"],
-            #           "cpu_percent": val["cpu"]}
-            #df1 = df1.append(new_row, ignore_index=True)
-            new_row = pd.Series({"identifier": sync_test_results_dict["identifier"],
+            new_row_data = {"identifier": sync_test_results_dict["identifier"],
                        "timestamp": key,
                        "slot_no": val["tip"],
                        "ram_bytes": val["ram"],
-                       "cpu_percent": val["cpu"]})
+                       "cpu_percent": val["cpu"]}
             
-            pd.concat([df1, new_row.to_frame()], ignore_index=True)
+            new_row = pd.DataFrame([new_row_data])
+            df1 = pd.concat([df1, new_row], ignore_index=True)
             
         col_to_insert = list(df1.columns)
         val_to_insert = df1.values.tolist()
