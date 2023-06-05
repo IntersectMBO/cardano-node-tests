@@ -222,7 +222,7 @@ class LocalScripts(ScriptsTypes):
 
     def _gen_p2p_topology(self, ports: List[int], fixed_ports: List[int]) -> dict:
         """Generate p2p topology for given ports."""
-        # select fixed ports and several randomly selected ports
+        # Select fixed ports and several randomly selected ports
         sample_ports = random.sample(ports, 3) if len(ports) > 3 else ports
         selected_ports = set(fixed_ports + sample_ports)
         access_points = [{"address": "127.0.0.1", "port": port} for port in selected_ports]
@@ -231,12 +231,13 @@ class LocalScripts(ScriptsTypes):
                 {"accessPoints": access_points, "advertise": False, "valency": len(access_points)},
             ],
             "publicRoots": [],
+            "useLedgerAfterSlot": -1,
         }
         return topology
 
     def _gen_p2p_topology_old(self, ports: List[int], fixed_ports: List[int]) -> dict:
         """Generate p2p topology for given ports in the old topology format."""
-        # select fixed ports and several randomly selected ports
+        # Select fixed ports and several randomly selected ports
         selected_ports = set(fixed_ports + random.sample(ports, 3))
         access_points = [{"address": "127.0.0.1", "port": port} for port in selected_ports]
         topology = {
@@ -249,6 +250,7 @@ class LocalScripts(ScriptsTypes):
                 ]
             },
             "PublicRoots": [],
+            "useLedgerAfterSlot": -1,
         }
         return topology
 
