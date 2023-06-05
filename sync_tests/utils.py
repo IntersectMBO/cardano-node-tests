@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import platform
 import subprocess
 import zipfile
@@ -114,6 +115,9 @@ def print_warn(message):
     print(Fore.YELLOW + f"{message}", Style.RESET_ALL, flush=True)
 
 
+def print_info_warn(message):
+    print(Fore.MAGENTA + f"{message}", Style.RESET_ALL, flush=True)
+
 def print_error(message):
     print(Fore.RED + f"{message}", Style.RESET_ALL, flush=True)
 
@@ -196,4 +200,4 @@ def delete_file(file_path):
     try:
         file_path.unlink()
     except OSError as e:
-        print(f"Error: {file_path} : {e.strerror}")
+        print_error(f"Error: {file_path} : {e.strerror}")

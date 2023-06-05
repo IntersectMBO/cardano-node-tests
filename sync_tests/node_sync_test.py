@@ -24,7 +24,7 @@ from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
 from gitpython_utils import git_clone_iohk_repo, git_checkout
 
 import utils
-from utils import print_info, print_ok, print_warn, print_error, seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
+from utils import print_info, print_ok, print_warn, print_info_warn, print_error, seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir, \
     list_absolute_file_paths
 
@@ -34,12 +34,12 @@ ROOT_TEST_PATH = ''
 NODE_LOG_FILE = 'logfile.log'
 NODE_LOG_FILE_ARTIFACT = 'logfile_copy.log'
 RESULTS_FILE_NAME = r'sync_results.json'
+ONE_MINUTE = 60
 
 
 def set_repo_paths():
     global ROOT_TEST_PATH
     ROOT_TEST_PATH = Path.cwd()
-
     print(f"ROOT_TEST_PATH: {ROOT_TEST_PATH}")
 
 
@@ -52,7 +52,7 @@ def execute_command(command):
         if errors:
             print_warn(f"Warnings or Errors: {errors}")
         if outs:  
-            print_ok(f"Output of command: {command} : {outs}")                    
+            print_ok(f"Output of command: {command} --> {outs}")                    
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
         print_error(f"Command {command} returned exception: {e}")
         raise
@@ -75,7 +75,6 @@ def git_get_last_closed_pr_cardano_node():
             response.raise_for_status()
     jData = json.loads(response.content)
     print(f" -- last closed PR no is: {jData[0].get('url').split('/pulls/')[1].strip()}")
-
     return jData[0].get('url').split("/pulls/")[1].strip()
 
 
@@ -90,7 +89,7 @@ def check_string_format(input_string):
 
 def delete_node_files():
     for p in Path(".").glob("cardano-*"):
-        print_warn(f" === deleting file: {p}")
+        print_info_warn(f"deleting file: {p}")
         p.unlink(missing_ok=True)
 
 
@@ -135,7 +134,7 @@ def enable_p2p_node_config_file(node_config_filepath):
 
 
 def rm_node_config_files() -> None:
-    print_warn('Removing existing config files')
+    print_info_warn('Removing existing config files')
     os.chdir(Path(ROOT_TEST_PATH))
     for gen in Path(".").glob("*-genesis.json"):
         Path(gen).unlink(missing_ok=True)
@@ -146,7 +145,6 @@ def rm_node_config_files() -> None:
 def download_config_file(env: str, file_name: str) -> None:
     if Path(file_name).exists():
         return
-
     print(f"Downloading {file_name} file...")
     urllib.request.urlretrieve(f"https://book.world.dev.cardano.org/environments/{env}/{file_name}", file_name,)
 
@@ -175,8 +173,7 @@ def get_node_config_files(env, node_topology_type):
         with open('config.json', 'w') as f:
             for line in lines:
                 if 'ConwayGenesis' not in line.strip("\n"):
-                    f.write(line)
-        
+                    f.write(line)    
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
 
@@ -185,11 +182,9 @@ def enable_cardano_node_resources_monitoring(node_config_filepath):
     print_info('  node_config_json["options"]["mapBackends"]["cardano.node.resources"] = ["KatipBK"]')
     
     os.chdir(Path(ROOT_TEST_PATH))
-
     with open(node_config_filepath, 'r') as json_file:
         node_config_json = json.load(json_file)
     node_config_json['options']['mapBackends']['cardano.node.resources'] = ['KatipBK']
-
     with open(node_config_filepath, 'w') as json_file:
         json.dump(node_config_json, json_file, indent=2)
 
@@ -230,7 +225,6 @@ def set_node_socket_path_env_var():
         socket_path = "\\\\.\pipe\cardano-node"
     else:
         socket_path = (Path(ROOT_TEST_PATH) / 'db' / 'node.socket').expanduser().absolute()
-
     os.environ['CARDANO_NODE_SOCKET_PATH'] = str(socket_path)
 
 
@@ -287,14 +281,13 @@ def wait_for_node_to_start(timeout_minutes=20):
     start_counter = time.perf_counter()
     get_current_tip(timeout_minutes)
     stop_counter = time.perf_counter()
-
     start_time_seconds = int(stop_counter - start_counter)
-    print(f" === It took {start_time_seconds} seconds for the QUERY TIP command to be available")
+    print_info_warn(f"It took {start_time_seconds} seconds for the QUERY TIP command to be available")
     return start_time_seconds
 
 
 def get_current_tip(timeout_minutes=10):
-    cmd = CLI + " query tip " + get_testnet_value()
+    cmd = CLI + ' query tip ' + get_testnet_value()
 
     for i in range(timeout_minutes):
         try:
@@ -314,12 +307,12 @@ def get_current_tip(timeout_minutes=10):
             return epoch, block, hash_value, slot, era, sync_progress
         except subprocess.CalledProcessError as e:
             print(f" === {get_current_date_time()} - Waiting 60s before retrying to get the tip again - {i}")
-            print_error(f"     !!!ERROR: command {e.cmd} returned with error (code {e.returncode}): {' '.join(str(e.output).split())}")
+            print_error(f"     !!! ERROR: command {e.cmd} returned with error (code {e.returncode}): {' '.join(str(e.output.decode('utf-8')).split())}")
             if "Invalid argument" in str(e.output):
-                print(f" -- exiting on - {e.output}")
+                print(f" -- exiting on - {e.output.decode('utf-8')}")
                 exit(1)
             pass
-        time.sleep(60)
+        time.sleep(ONE_MINUTE)
     exit(1)
 
 
@@ -367,7 +360,7 @@ def start_node(cardano_node, tag_no, node_start_arguments, timeout_minutes=400):
         ).strip()
 
     logfile = open(NODE_LOG_FILE, "w+")
-    print(f"start node cmd: {cmd}")
+    print_info_warn(f"start node cmd: {cmd}")
 
     try:
         p = subprocess.Popen(cmd.split(" "), stdout=logfile, stderr=logfile)
@@ -398,7 +391,7 @@ def start_node(cardano_node, tag_no, node_start_arguments, timeout_minutes=400):
 def stop_node(platform_system):
     for proc in process_iter():
         if 'cardano-node' in proc.name():
-            print_warn(f" --- Killing the `cardano-node` process - {proc}")
+            print_info_warn(f"Killing the `cardano-node` process - {proc}")
             if 'windows' in platform_system.lower():
                 proc.send_signal(signal.SIGTERM)
             else:
@@ -443,7 +436,6 @@ def get_calculated_slot_no(env):
 
     last_slot_no = int(date_diff_in_seconds(shelley_start_time, byron_start_time) / 20 +
                        date_diff_in_seconds(current_time, shelley_start_time))
-
     return last_slot_no
 
 
@@ -491,10 +483,6 @@ def wait_for_node_to_sync(env):
                       f" - actual_slot : {actual_slot} "
                       f" - syncProgress: {syncProgress}")
             if actual_era not in era_details_dict:
-                if actual_epoch is None:
-                    # TODO: to remove this after 'tip' bug returning None/null will be fixed
-                    # https://github.com/input-output-hk/cardano-node/issues/2568
-                    actual_epoch = 1
                 current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
                 if env == 'mainnet':
                     actual_era_start_time = get_epoch_start_datetime_from_blockfrost(actual_epoch)
@@ -508,13 +496,11 @@ def wait_for_node_to_sync(env):
                 current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
                 actual_epoch_dict = {"start_sync_time": current_time}
                 epoch_details_dict[actual_epoch] = actual_epoch_dict
-
             time.sleep(1)
             count += 1
             actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip()
 
     end_sync = time.perf_counter()
-
     sync_time_seconds = int(end_sync - start_sync)
     print(f"sync_time_seconds: {sync_time_seconds}")
 
@@ -567,7 +553,6 @@ def wait_for_node_to_sync(env):
             datetime.strptime(epoch_end_sync_time, "%Y-%m-%dT%H:%M:%SZ"),
             datetime.strptime(actual_epoch_dict['start_sync_time'], "%Y-%m-%dT%H:%M:%SZ"))
         epoch_details_dict[epoch] = actual_epoch_dict
-
     return sync_time_seconds, last_slot_no, latest_chunk_no, era_details_dict, epoch_details_dict
 
 
@@ -583,7 +568,6 @@ def get_no_of_slots_in_era(env, era_name, no_of_epochs_in_era):
         epoch_length_slots = 86400
 
     epoch_length_secs = int(epoch_length_slots / slot_length_secs)
-
     return int(epoch_length_secs * no_of_epochs_in_era)
 
 
@@ -734,8 +718,8 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
 
     if build_tool == 'nix':
         os.chdir(repo_dir)
-        Path("cardano-node-bin").unlink(missing_ok=True)
-        Path("cardano-cli-bin").unlink(missing_ok=True)
+        Path('cardano-node-bin').unlink(missing_ok=True)
+        Path('cardano-cli-bin').unlink(missing_ok=True)
         execute_command("nix build -v .#cardano-node -o cardano-node-bin")
         execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
         copy_node_executables(repo_dir, test_directory, "nix")
@@ -743,6 +727,7 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
         cabal_local_file = Path(test_directory) / 'sync_tests' / 'cabal.project.local'
         shutil.copy2(cabal_local_file, repo_dir)
         os.chdir(repo_dir)
+        shutil.rmtree('dist-newstyle', ignore_errors=True)
         for line in fileinput.input("cabal.project", inplace=True):
             print(line.replace("tests: True", "tests: False"), end="")
         execute_command("cabal update")
@@ -759,7 +744,7 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
 
 
 def main():
-    global NODE, CLI
+    global NODE, CLI, repository
     secs_to_start1, secs_to_start2 = 0, 0
     set_repo_paths()
     set_node_socket_path_env_var()
@@ -808,7 +793,7 @@ def main():
     print_info(f"  - start_build_time: {start_build_time}")
     print_info(f"  - end_build_time: {end_build_time}")
 
-    print('--- node version ')
+    print_warn('--- node version ')
     cli_version1, cli_git_rev1 = get_node_version()
     print(f"  - cardano_cli_version1: {cli_version1}")
     print(f"  - cardano_cli_git_rev1: {cli_git_rev1}")
@@ -823,9 +808,9 @@ def main():
     enable_cardano_node_tracers('config.json')
 
     print(f"--- Start node sync test using node_rev1: {node_rev1}")
-    print("===================================================================================")
-    print(f"================== Start node sync test using node_rev1: {node_rev1} =============")
-    print("===================================================================================")
+    print_ok("===================================================================================")
+    print_ok(f"================== Start node sync test using node_rev1: {node_rev1} =============")
+    print_ok("===================================================================================")
     print('')
     start_sync_time1 = get_current_date_time()
     secs_to_start1 = start_node(NODE, tag_no1, node_start_arguments1, timeout_minutes=10)
@@ -846,22 +831,19 @@ def main():
     test_values_dict['log_values'] = json.dumps(logs_details_dict)
 
     print(f"--- Start node using tag_no2: {tag_no2}")
-    print(f"   ======================= Start node using tag_no2: {tag_no2} ====================")
     (cardano_cli_version2, cardano_cli_git_rev2, shelley_sync_time_seconds2, total_chunks2,
      latest_block_no2, latest_slot_no2, start_sync_time2, end_sync_time2, start_sync_time3,
      sync_time_after_restart_seconds, cli_version2, cli_git_rev2, last_slot_no2, latest_chunk_no2,
      sync_time_seconds2
      ) = (None, None, None, None, None, None, None, None, None, None, None, None, None, None, 0)
     if tag_no2 != 'None':
-        print(f"   =============== Stop node using tag_no1: {tag_no1} ======================")
+        print(f"=============== Stop node using tag_no1: {tag_no1} ======================")
         stop_node(platform_system)
-
-        print("   ================ Delete the previous node files =======================")
         delete_node_files()
-
-        print("==============================================================================")
-        print(f"================= Start sync using node_rev2: {node_rev2} ===================")
-        print("==============================================================================")
+        print('')
+        print_ok("==============================================================================")
+        print_ok(f"================= Start sync using node_rev2: {node_rev2} ===================")
+        print_ok("==============================================================================")
         
         print('Get the cardano-node and cardano-cli files')
         if 'windows' not in platform_system.lower():
@@ -879,12 +861,12 @@ def main():
             print('Getting the node configuration files')
             get_node_config_files(env, node_topology_type2)
 
-        print_warn("node version")
+        print_warn('node version')
         cli_version2, cli_git_rev2 = get_node_version()
         print(f" - cardano_cli_version2: {cli_version2}")
         print(f" - cardano_cli_git_rev2: {cli_git_rev2}")
         print('')
-        print(f"   ================ Start node using node_rev2: {node_rev2} ====================")
+        print(f"================ Start node using node_rev2: {node_rev2} ====================")
         start_sync_time2 = get_current_date_time()
         secs_to_start2 = start_node(NODE, tag_no2, node_start_arguments2)
 

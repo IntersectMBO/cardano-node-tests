@@ -8,6 +8,7 @@ def git_clone_iohk_repo(repo_name, repo_dir, repo_branch):
     return repo
 
 
-def git_checkout(repo_name, rev):
-    print(f"Checked out rev: {rev} of {repo_name}")
-    repo_name.git.checkout(rev)
+def git_checkout(repo, rev):
+    print(f"Checked out rev: {rev} of {repo}")
+    repo.git.checkout(rev)
+    return repo
