@@ -112,7 +112,7 @@ jobs:
 
 
       - name: Publish test results on GitHub
-        uses: EnricoMi/publish-unit-test-result-action/composite@v1
+        uses: EnricoMi/publish-unit-test-result-action/composite@v2
         if: always()
         with:
           check_name: "Pytest tests results"
