@@ -603,13 +603,18 @@ if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
 fi
 
 sleep 3
+
+query_spend_success=0
 for _ in {1..20}; do
   if ! cardano_cli_log query utxo "${TXINS[@]}" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
+    query_spend_success=1
     break
   fi
   sleep 3
 done
-
-sleep 5
+if [ "$query_spend_success" -eq 0 ]; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster-hfc\` to stop"
