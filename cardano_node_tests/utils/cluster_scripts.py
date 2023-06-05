@@ -18,6 +18,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 
+LOCAL_HOSTNAME = "node.local.gd"
 STOP_SCRIPT = "supervisord_stop"
 
 
@@ -108,6 +109,31 @@ class LocalScripts(ScriptsTypes):
         self.num_pools = num_pools
         if num_pools == -1:
             self.num_pools = configuration.NUM_POOLS
+
+    def _get_rand_addr(self) -> str:
+        """Return randomly selected localhost address."""
+        localhost_addrs = ["127.0.0.1", "localhost.localdomain", LOCAL_HOSTNAME]
+        return random.choice(localhost_addrs)
+
+    def _preselect_addr(self, instance_num: int) -> str:
+        """Pre-select localhost address.
+
+        When empty string is selected, a randomly selected form of localhost address will be used
+        for each peer entry.
+
+        The goal is to have some topology files where all peers use only IP addresses, some where
+        all peers use only hostnames and some where peers use both IP addresses and hostnames.
+        """
+        if instance_num == 0:
+            return ""
+        if instance_num == 1 or instance_num % 4 == 0:
+            return LOCAL_HOSTNAME
+        if instance_num == 2 or instance_num % 5 == 0:
+            return "127.0.0.1"
+        if instance_num == 3 or instance_num % 6 == 0:
+            return "localhost.localdomain"
+
+        return ""
 
     def get_instance_ports(self, instance_num: int) -> InstancePorts:
         """Return ports mapping for given cluster instance."""
@@ -214,18 +240,27 @@ class LocalScripts(ScriptsTypes):
         new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
         return new_content
 
-    def _gen_legacy_topology(self, ports: Iterable[int]) -> dict:
+    def _gen_legacy_topology(self, addr: str, ports: Iterable[int]) -> dict:
         """Generate legacy topology for given ports."""
-        producers = [{"addr": "127.0.0.1", "port": port, "valency": 1} for port in ports]
+        producers = [
+            {
+                "addr": addr or self._get_rand_addr(),
+                "port": port,
+                "valency": 1,
+            }
+            for port in ports
+        ]
         topology = {"Producers": producers}
         return topology
 
-    def _gen_p2p_topology(self, ports: List[int], fixed_ports: List[int]) -> dict:
+    def _gen_p2p_topology(self, addr: str, ports: List[int], fixed_ports: List[int]) -> dict:
         """Generate p2p topology for given ports."""
         # Select fixed ports and several randomly selected ports
         sample_ports = random.sample(ports, 3) if len(ports) > 3 else ports
         selected_ports = set(fixed_ports + sample_ports)
-        access_points = [{"address": "127.0.0.1", "port": port} for port in selected_ports]
+        access_points = [
+            {"address": addr or self._get_rand_addr(), "port": port} for port in selected_ports
+        ]
         topology = {
             "localRoots": [
                 {"accessPoints": access_points, "advertise": False, "valency": len(access_points)},
@@ -235,11 +270,13 @@ class LocalScripts(ScriptsTypes):
         }
         return topology
 
-    def _gen_p2p_topology_old(self, ports: List[int], fixed_ports: List[int]) -> dict:
+    def _gen_p2p_topology_old(self, addr: str, ports: List[int], fixed_ports: List[int]) -> dict:
         """Generate p2p topology for given ports in the old topology format."""
         # Select fixed ports and several randomly selected ports
         selected_ports = set(fixed_ports + random.sample(ports, 3))
-        access_points = [{"address": "127.0.0.1", "port": port} for port in selected_ports]
+        access_points = [
+            {"address": addr or self._get_rand_addr(), "port": port} for port in selected_ports
+        ]
         topology = {
             "LocalRoots": {
                 "groups": [
@@ -295,7 +332,7 @@ class LocalScripts(ScriptsTypes):
 
         return "\n".join(lines)
 
-    def _gen_topology_files(self, destdir: Path, nodes: Sequence[NodePorts]) -> None:
+    def _gen_topology_files(self, destdir: Path, addr: str, nodes: Sequence[NodePorts]) -> None:
         """Generate topology files for all nodes."""
         all_nodes = [p.node for p in nodes]
 
@@ -306,7 +343,7 @@ class LocalScripts(ScriptsTypes):
 
             # Legacy topology
 
-            topology = self._gen_legacy_topology(ports=all_except)
+            topology = self._gen_legacy_topology(addr=addr, ports=all_except)
             helpers.write_json(out_file=destdir / f"topology-{node_name}.json", content=topology)
 
             # P2P topology
@@ -320,9 +357,13 @@ class LocalScripts(ScriptsTypes):
             # we would use just single P2P topology format for all pools. At the same time we
             # want the selection process to be deterministic, so we don't want to use random.
             if node_rec.num % 3 == 0:
-                p2p_topology = self._gen_p2p_topology_old(ports=all_except, fixed_ports=fixed_ports)
+                p2p_topology = self._gen_p2p_topology_old(
+                    addr=addr, ports=all_except, fixed_ports=fixed_ports
+                )
             else:
-                p2p_topology = self._gen_p2p_topology(ports=all_except, fixed_ports=fixed_ports)
+                p2p_topology = self._gen_p2p_topology(
+                    addr=addr, ports=all_except, fixed_ports=fixed_ports
+                )
 
             helpers.write_json(
                 out_file=destdir / f"p2p-topology-{node_name}.json", content=p2p_topology
@@ -332,6 +373,7 @@ class LocalScripts(ScriptsTypes):
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num=instance_num)
         ports_per_node = instance_ports.pool1 - instance_ports.bft1
+        addr = self._preselect_addr(instance_num=instance_num)
 
         # reconfigure cluster instance files
         for infile in indir.glob("*"):
@@ -375,7 +417,7 @@ class LocalScripts(ScriptsTypes):
             )
             node_config.write_text(f"{node_config_content}\n")
 
-        self._gen_topology_files(destdir=destdir, nodes=instance_ports.node_ports)
+        self._gen_topology_files(destdir=destdir, addr=addr, nodes=instance_ports.node_ports)
 
         supervisor_conf_file = destdir / "supervisor.conf"
         supervisor_conf_content = self._gen_supervisor_conf(
@@ -424,6 +466,7 @@ class LocalScripts(ScriptsTypes):
 
         destdir = Path(destdir).expanduser().resolve()
         instance_ports = self.get_instance_ports(instance_num=instance_num)
+        addr = self._preselect_addr(instance_num=instance_num)
         nodes = instance_ports.node_ports
 
         all_nodes = [p.node for p in nodes]
@@ -446,14 +489,16 @@ class LocalScripts(ScriptsTypes):
             node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
 
             # Legacy topology
-            topology = self._gen_legacy_topology(ports=all_except)
+            topology = self._gen_legacy_topology(addr=addr, ports=all_except)
             helpers.write_json(
                 out_file=destdir / f"split-topology-{node_name}.json", content=topology
             )
 
             # P2P topology
             fixed_ports = all_except[:4]
-            p2p_topology = self._gen_p2p_topology(ports=all_except, fixed_ports=fixed_ports)
+            p2p_topology = self._gen_p2p_topology(
+                addr=addr, ports=all_except, fixed_ports=fixed_ports
+            )
             helpers.write_json(
                 out_file=destdir / f"p2p-split-topology-{node_name}.json", content=p2p_topology
             )
