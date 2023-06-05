@@ -41,6 +41,12 @@
     "TraceTxInbound": false,
     "TraceTxOutbound": false,
     "TraceTxSubmissionProtocol": false,
+    "TraceInboundGovernor": true,
+    "TraceServer": true,
+    "TraceInboundGovernorCounters": true,
+    "TraceInboundGovernorTransitions": true,
+    "DebugPeerSelectionInitiator": true,
+    "DebugPeerSelectionInitiatorResponder": true,
     "TracingVerbosity": "NormalVerbosity",
     "TurnOnLogMetrics": true,
     "TurnOnLogging": true,
@@ -70,7 +76,9 @@
             "cardano.node.Mux": "Info",
             "cardano.node.ChainSyncProtocol": "Error",
             "cardano.node.InboundGovernor": "Debug",
-            "cardano.node.resources": "Notice"
+            "cardano.node.resources": "Notice",
+            "cardano.node.InboundGovernor": "Debug",
+            "cardano.node.ConnectionManagerTransitions": "Debug"
         },
         "mapBackends": {
             "cardano.node-metrics": [
