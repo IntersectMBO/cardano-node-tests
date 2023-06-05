@@ -48,7 +48,7 @@ def execute_command(command):
     try:
         cmd = shlex.split(command)
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        outs, errors = process.communicate(timeout=3600)               
+        outs, errors = process.communicate(timeout=7200)               
         if errors:
             print_warn(f"Warnings or Errors: {errors}")
         if outs:  
@@ -721,12 +721,13 @@ def copy_node_executables(src_location, dst_location, build_mode):
 def get_node_files(node_rev, repository=None, build_tool='nix'):
     test_directory = Path.cwd()
     repo = None
-    print(f"test_directory: {test_directory}")
+    print_info(f"test_directory: {test_directory}")
+    print(f" - listdir test_directory: {os.listdir(test_directory)}")
 
     repo_name = 'cardano-node'
     repo_dir = test_directory / 'cardano_node_dir'
 
-    if repo_dir.is_dir():
+    if is_dir(repo_dir):
         repo = git_checkout(repository, node_rev)
     else:
         repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
@@ -739,9 +740,7 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
         execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
         copy_node_executables(repo_dir, test_directory, "nix")
     elif build_tool == 'cabal':
-        os.chdir(Path(ROOT_TEST_PATH))
-        repo = git_checkout(repository, node_rev) if repo_dir.is_dir() else git_clone_iohk_repo(repo_name, repo_dir, node_rev)
-        cabal_local_file = Path(ROOT_TEST_PATH) / 'sync_tests' / 'cabal.project.local'
+        cabal_local_file = Path(test_directory) / 'sync_tests' / 'cabal.project.local'
         shutil.copy2(cabal_local_file, repo_dir)
         os.chdir(repo_dir)
         for line in fileinput.input("cabal.project", inplace=True):
