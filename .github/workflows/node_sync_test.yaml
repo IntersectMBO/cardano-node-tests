@@ -5,8 +5,17 @@ on:
     branches:
       - sync_tests
     inputs:
+      environment:
+        description: Environment on which Buildkite agent will run tests
+        type: choice
+        options: 
+        - mainnet
+        - preprod
+        - preview
+        - shelley-qa
+        default: mainnet
       build_mode:
-        description: how to get the node & cli executables - currently only nix is supported and windows agents can use only cabal
+        description: Currently only nix is supported, there are no prebuilt CI binaries available anymore. Windows agents can only build with cabal, nix is not supported. 
         type: choice
         options: 
         - nix
@@ -16,18 +25,18 @@ on:
         required: true
         default: "None"
       node_rev1:
-        description: desired cardano-node revision (used for initial sync) - cardano-node (tags/1.33.0-rc2) tag or branch
+        description: Desired cardano-node revision (used for initial sync) - cardano-node (tags/1.33.0-rc2) tag or branch
         required: true
         default: "None"
       node_topology1:
-        description: desired cardano-node topology type (used for initial sync) - legacy, p2p
+        description: Desired cardano-node topology type (used for initial sync) - legacy, p2p
         type: choice
         options: 
         - legacy
         - p2p
         default: legacy
       node_start_arguments1:
-        description: extra arguments to be used when starting the node using tag_no1 (--a1 --a2 21)
+        description: Extra arguments to be used when starting the node using tag_no1 (--a1 --a2 21)
         required: false
         default: "None"
       tag_no2:
@@ -35,18 +44,18 @@ on:
         required: true
         default: "None"
       node_rev2:
-        description: desired cardano-node revision (used for final sync) - cardano-node (tags/1.33.0-rc2) tag or branch
+        description: Desired cardano-node revision (used for final sync) - cardano-node (tags/1.33.0-rc2) tag or branch
         required: true
         default: "None"
       node_topology2:
-        description: desired cardano-node topology type (used for final sync) - legacy, p2p
+        description: Desired cardano-node topology type (used for final sync) - legacy, p2p
         type: choice
         options: 
         - legacy
         - p2p
         default: legacy
       node_start_arguments2:
-        description: extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21)
+        description: Extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21)
         required: false
         default: "None"
 jobs:
@@ -66,7 +75,7 @@ jobs:
           AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}         
           BUILD_ENV_VARS: '{
-          "env":"preprod",
+          "env":"${{ github.event.inputs.environment }}",
           "build_mode":"${{ github.event.inputs.build_mode }}",
           "node_rev1":"${{ github.event.inputs.node_rev1 }}",
           "node_rev2":"${{ github.event.inputs.node_rev2 }}",          
@@ -175,7 +184,6 @@ jobs:
           pip install colorama
 
       - name: Run sync test
-      # ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;D:\a\cardano-node-tests\cardano-node-tests\cardano_node_tests\cardano-node;D:\a\cardano-node-tests\cardano-node-tests\cardano_node_tests\cardano-cli;{0}" -f $env:PATH)') || '' }}
         env:
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
         run: |

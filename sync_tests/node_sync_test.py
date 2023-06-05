@@ -730,13 +730,13 @@ def copy_node_executables(src_location, dst_location, build_mode):
             shutil.copy2(Path(src_location) / node_binary_location / "cardano-node",
                          Path(dst_location) / "cardano-node")
         except Exception as e:
-            print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+            print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
             exit(1)
         try:
             shutil.copy2(Path(src_location) / cli_binary_location / "cardano-cli",
                          Path(dst_location) / "cardano-cli")
         except Exception as e:
-            print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+            print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
             exit(1)
         time.sleep(5)
     if build_mode == "cabal":
@@ -746,80 +746,54 @@ def copy_node_executables(src_location, dst_location, build_mode):
         try:
             shutil.copy2(node_binary_location, Path(dst_location) / "cardano-node")
         except Exception as e:
-            print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+            print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
             exit(1)
         try:
             shutil.copy2(cli_binary_location, Path(dst_location) / "cardano-cli")
         except Exception as e:
-            print(f" !!! ERROR - could not copy the cardano-cli file - {e}")
+            print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
             exit(1)
         time.sleep(5)
 
 
-def get_node_files_using_nix(node_rev, repository = None):
+def get_node_files(node_rev, repository=None, build_tool='nix'):
     test_directory = Path.cwd()
     repo = None
     print(f"test_directory: {test_directory}")
-
-    repo_name = "cardano-node"
-    repo_dir = Path(test_directory) / "cardano_node_dir"
-
-    if is_dir(repo_dir) is True:
-        repo = git_checkout(repository, node_rev)
-    else:
-        repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
-
-    os.chdir(Path(repo_dir))
-    Path("cardano-node-bin").unlink(missing_ok=True)
-    Path("cardano-cli-bin").unlink(missing_ok=True)
-    execute_command("nix build -v .#cardano-node -o cardano-node-bin")
-    execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
-    copy_node_executables(repo_dir, test_directory, "nix")
-    os.chdir(Path(test_directory))
-    subprocess.check_call(['chmod', '+x', NODE])
-    subprocess.check_call(['chmod', '+x', CLI])
-    print_info(f"files permissions inside test folder:")
-    subprocess.check_call(['ls', '-la'])
-    return repo
-
-
-def get_node_files_using_cabal(node_rev, repository = None):
-    test_directory = Path.cwd()
-    repo = None
-    print(f"test_directory: {test_directory}")
-    print(f" - listdir test_directory: {os.listdir(test_directory)}")
-
-    os.chdir(Path(ROOT_TEST_PATH))  
-    print(f" - listdir ROOT_TEST_PATH: {os.listdir(ROOT_TEST_PATH)}")
 
     repo_name = 'cardano-node'
-    repo_dir = Path(test_directory) / 'cardano_node_dir'
+    repo_dir = test_directory / 'cardano_node_dir'
 
-    if is_dir(repo_dir) is True:
+    if repo_dir.is_dir():
         repo = git_checkout(repository, node_rev)
     else:
         repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
 
-    cabal_local_file = Path(ROOT_TEST_PATH) / 'sync_tests' / 'cabal.project.local'
-    shutil.copy2(cabal_local_file , Path(repo_dir))   
-    os.chdir(Path(repo_dir))
-    print(f" - listdir repo_dir: {os.listdir(repo_dir)}") 
+    if build_tool == 'nix':
+        os.chdir(repo_dir)
+        Path("cardano-node-bin").unlink(missing_ok=True)
+        Path("cardano-cli-bin").unlink(missing_ok=True)
+        execute_command("nix build -v .#cardano-node -o cardano-node-bin")
+        execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
+        copy_node_executables(repo_dir, test_directory, "nix")
+    elif build_tool == 'cabal':
+        os.chdir(Path(ROOT_TEST_PATH))
+        repo = git_checkout(repository, node_rev) if repo_dir.is_dir() else git_clone_iohk_repo(repo_name, repo_dir, node_rev)
+        cabal_local_file = Path(ROOT_TEST_PATH) / 'sync_tests' / 'cabal.project.local'
+        shutil.copy2(cabal_local_file, repo_dir)
+        os.chdir(repo_dir)
+        for line in fileinput.input("cabal.project", inplace=True):
+            print(line.replace("tests: True", "tests: False"), end="")
+        execute_command("cabal update")
+        execute_command("cabal build cardano-node cardano-cli")
+        copy_node_executables(repo_dir, test_directory, "cabal")
+        git_checkout(repo, 'cabal.project')
 
-    for line in fileinput.input('cabal.project', inplace=True):
-        print(line.replace("tests: True", "tests: False"), end="")
-
-    print('cabal.project :')
-    with open('cabal.project', 'r') as f:
-        print(f.read()) 
-
-    execute_command("cabal update")
-    execute_command("cabal build cardano-node cardano-cli")
-    print(f" - listdir repo_dir after cabal build: {os.listdir(repo_dir)}") 
-    copy_node_executables(repo_dir, test_directory, "cabal")
-    git_checkout(repo, 'cabal.project')
-
-    os.chdir(Path(test_directory))
-    print(f" - listdir test_directory after copying executables: {os.listdir(test_directory)}") 
+    os.chdir(test_directory)
+    subprocess.check_call(['chmod', '+x', NODE])
+    subprocess.check_call(['chmod', '+x', CLI])
+    print_info("files permissions inside test folder:")
+    subprocess.check_call(['ls', '-la'])
     return repo
 
 
@@ -862,9 +836,9 @@ def main():
     print_info(f"Get the cardano-node and cardano-cli files using - {node_build_mode}")
     start_build_time = get_current_date_time()
     if node_build_mode == "nix" and "windows" not in platform_system.lower():
-        repository = get_node_files_using_nix(node_rev1)
+        repository = get_node_files(node_rev1)
     elif node_build_mode == "nix" and "windows" in platform_system.lower():
-        repository = get_node_files_using_cabal(node_rev1)
+        repository = get_node_files(node_rev1, build_tool="cabal")
     else:
         print_error(
             f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
@@ -884,9 +858,7 @@ def main():
     get_node_config_files(env, node_topology_type1)
 
     print("Enabling the desired cardano node tracers")
-    if env == "preprod":
-        enable_cardano_node_resources_monitoring("config.json")
-
+    enable_cardano_node_resources_monitoring("config.json")
     enable_cardano_node_tracers("config.json")
 
     print(f"--- Start node sync test using node_rev1: {node_rev1}")
@@ -934,10 +906,10 @@ def main():
         print("==============================================================================")
         
         print("Get the cardano-node and cardano-cli files")
-        if node_build_mode == "nix" and "windows" not in platform_system.lower():
-            get_node_files_using_nix(node_rev2, repository)
-        elif node_build_mode == "nix" and "windows" in platform_system.lower():
-            get_node_files_using_cabal(node_rev2, repository)
+        if node_build_mode == 'nix' and 'windows' not in platform_system.lower():
+            get_node_files(node_rev2, repository)
+        elif node_build_mode == 'nix' and 'windows' in platform_system.lower():
+            get_node_files(node_rev2, repository, build_tool='cabal')
         else:
             print_error(
                 f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
