@@ -272,18 +272,11 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     "$conf" > "$STATE_CLUSTER/$fname"
 
   if [ -n "$CONWAY_GENESIS_HASH" ]; then
-    # TODO: Experimental protocols are needed for "QueryStakeDelegDeposits"
-    # experimental feature that is for some reason on by default. See node issue
-    # https://github.com/input-output-hk/cardano-node/issues/5233
-    EXP_PROTOCOLS_VAL="true"
-
     jq \
       --arg conway_hash "$CONWAY_GENESIS_HASH" \
       --arg exp_protocols_key "$EXP_PROTOCOLS_KEY" \
-      --argjson exp_protocols_val "$EXP_PROTOCOLS_VAL" \
       '.ConwayGenesisFile = "shelley/genesis.conway.json"
-      | .ConwayGenesisHash = $conway_hash
-      | .[$exp_protocols_key] = $exp_protocols_val' \
+      | .ConwayGenesisHash = $conway_hash' \
       "$STATE_CLUSTER/$fname" > "$STATE_CLUSTER/${fname}_jq"
     cat "$STATE_CLUSTER/${fname}_jq" > "$STATE_CLUSTER/$fname"
     rm -f "$STATE_CLUSTER/${fname}_jq"
