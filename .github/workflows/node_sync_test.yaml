@@ -64,8 +64,8 @@ jobs:
         with:
           path: cardano_node_tests
           ref: sync_tests
-      - name: run actions/setup-python@v2
-        uses: actions/setup-python@v2
+      - name: run actions/setup-python@v4
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - name: install dependencies
