@@ -23,11 +23,11 @@ on:
       tag_no1:
         description: rev_label in db/visuals (1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
         required: true
-        default: "None"
+        default: "8.0.0-legacy"
       node_rev1:
         description: Desired cardano-node revision (used for initial sync) - cardano-node (tags/1.33.0-rc2) tag or branch
         required: true
-        default: "None"
+        default: "tags/8.0.0"
       node_topology1:
         description: Desired cardano-node topology type (used for initial sync) - legacy, p2p
         type: choice
@@ -188,6 +188,7 @@ jobs:
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
         run: |
           ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}   
+          git checkout artur/sync_tests_update
           cd cardano_node_tests
           echo "current branch: $(git branch --show-current)"
           python sync_tests/node_sync_test.py -e ${{ matrix.env }} -b ${{ github.event.inputs.build_mode }} -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -r1 "${{ github.event.inputs.node_rev1 }}" -r2 "${{ github.event.inputs.node_rev2 }}" -n1 "${{ github.event.inputs.node_topology1 }}" -n2 "${{ github.event.inputs.node_topology2 }}" -a1="${{ github.event.inputs.node_start_arguments1 }}" -a2="${{ github.event.inputs.node_start_arguments2 }}"
