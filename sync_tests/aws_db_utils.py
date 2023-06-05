@@ -3,7 +3,7 @@ import os
 import pymysql.cursors
 import pandas as pd
 
-from utils import print_info, print_ok, print_warn, print_error
+from utils import print_info, print_ok, print_error
 
 
 

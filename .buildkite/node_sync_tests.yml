@@ -10,4 +10,4 @@ steps:
       - 'logfile.log'
       - 'logfile_copy.log'
       - 'sync_results.json'
-      - '*-config.json'
+      - "*-config.json"

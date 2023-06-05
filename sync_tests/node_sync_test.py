@@ -225,56 +225,56 @@ def enable_cardano_node_tracers(node_config_filepath):
 
 
 def set_node_socket_path_env_var():
-    if "windows" in platform.system().lower():
+    if 'windows' in platform.system().lower():
         socket_path = "\\\\.\pipe\cardano-node"
     else:
-        socket_path = (Path(ROOT_TEST_PATH) / "db" / "node.socket").expanduser().absolute()
+        socket_path = (Path(ROOT_TEST_PATH) / 'db' / 'node.socket').expanduser().absolute()
 
-    os.environ["CARDANO_NODE_SOCKET_PATH"] = str(socket_path)
+    os.environ['CARDANO_NODE_SOCKET_PATH'] = str(socket_path)
 
 
 def get_epoch_no_d_zero():
-    env = vars(args)["environment"]
-    if env == "mainnet":
+    env = vars(args)['environment']
+    if env == 'mainnet':
         return 257
-    elif env == "testnet":
+    elif env == 'testnet':
         return 121
-    elif env == "staging":
+    elif env == 'staging':
         return None
-    elif env == "shelley-qa":
+    elif env == 'shelley-qa':
         return 2554
     else:
         return None
 
 
 def get_start_slot_no_d_zero():
-    env = vars(args)["environment"]
-    if env == "mainnet":
+    env = vars(args)['environment']
+    if env == 'mainnet':
         return 25661009
-    elif env == "testnet":
+    elif env == 'testnet':
         return 21902400
-    elif env == "staging":
+    elif env == 'staging':
         return None
-    elif env == "shelley-qa":
+    elif env == 'shelley-qa':
         return 18375135
     else:
         return None
 
 
 def get_testnet_value():
-    env = vars(args)["environment"]
-    if env == "mainnet":
-        return "--mainnet"
-    elif env == "testnet":
-        return "--testnet-magic 1097911063"
-    elif env == "staging":
-        return "--testnet-magic 633343913"
-    elif env == "shelley-qa":
-        return "--testnet-magic 3"
-    elif env == "preview":
-        return "--testnet-magic 2"
-    elif env == "preprod":
-        return "--testnet-magic 1"
+    env = vars(args)['environment']
+    if env == 'mainnet':
+        return '--mainnet'
+    elif env == 'testnet':
+        return '--testnet-magic 1097911063'
+    elif env == 'staging':
+        return '--testnet-magic 633343913'
+    elif env == 'shelley-qa':
+        return '--testnet-magic 3'
+    elif env == 'preview':
+        return '--testnet-magic 2'
+    elif env == 'preprod':
+        return '--testnet-magic 1'
     else:
         return None
 
@@ -303,26 +303,17 @@ def get_current_tip(timeout_minutes=10):
                 .strip()
             )
             output_json = json.loads(output)
+            epoch = int(output_json.get("epoch", 0))
+            block = int(output_json.get("block", 0))
+            hash_value = output_json.get("hash", "")
+            slot = int(output_json.get("slot", 0))
+            era = output_json.get("era", "").lower()
+            sync_progress = int(float(output_json.get("syncProgress", 0.0))) if "syncProgress" in output_json else None
 
-            if output_json["epoch"] is not None:
-                output_json["epoch"] = int(output_json["epoch"])
-            if "syncProgress" not in output_json:
-                output_json["syncProgress"] = None
-            else:
-                output_json["syncProgress"] = int(float(output_json["syncProgress"]))
-
-            if "block" not in output_json:
-                print(f"!!!! output_json: {output_json}")
-                output_json["block"] = 0
-                output_json["slot"] = 0
-                output_json["hash"] = 0
-
-            return output_json["epoch"], int(output_json["block"]), output_json["hash"], \
-                   int(output_json["slot"]), output_json["era"].lower(), output_json["syncProgress"]
+            return epoch, block, hash_value, slot, era, sync_progress
         except subprocess.CalledProcessError as e:
             print(f" === {get_current_date_time()} - Waiting 60s before retrying to get the tip again - {i}")
-            print(
-                f"     !!!ERROR: command {e.cmd} return with error (code {e.returncode}): {' '.join(str(e.output).split())}")
+            print(f"     !!!ERROR: command {e.cmd} returned with error (code {e.returncode}): {' '.join(str(e.output).split())}")
             if "Invalid argument" in str(e.output):
                 print(f" -- exiting on - {e.output}")
                 exit(1)
@@ -835,10 +826,10 @@ def main():
     print("--- Get the cardano-node files", flush=True)
     print_info(f"Get the cardano-node and cardano-cli files using - {node_build_mode}")
     start_build_time = get_current_date_time()
-    if node_build_mode == "nix" and "windows" not in platform_system.lower():
+    if 'windows' not in platform_system.lower():
         repository = get_node_files(node_rev1)
-    elif node_build_mode == "nix" and "windows" in platform_system.lower():
-        repository = get_node_files(node_rev1, build_tool="cabal")
+    elif 'windows' in platform_system.lower():
+        repository = get_node_files(node_rev1, build_tool='cabal')
     else:
         print_error(
             f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")
@@ -867,9 +858,9 @@ def main():
     print("===================================================================================")
     print('')
     start_sync_time1 = get_current_date_time()
-    if "linux" in platform_system.lower() or "darwin" in platform_system.lower():
+    if 'linux' in platform_system.lower() or 'darwin' in platform_system.lower():
         secs_to_start1 = start_node_unix(NODE, tag_no1, node_start_arguments1, timeout_minutes=20)
-    elif "windows" in platform_system.lower():
+    elif 'windows' in platform_system.lower():
         secs_to_start1 = start_node_windows(NODE, tag_no1, node_start_arguments1, timeout_minutes=20)
 
     print(" - waiting for the node to sync")
@@ -906,9 +897,9 @@ def main():
         print("==============================================================================")
         
         print("Get the cardano-node and cardano-cli files")
-        if node_build_mode == 'nix' and 'windows' not in platform_system.lower():
+        if 'windows' not in platform_system.lower():
             get_node_files(node_rev2, repository)
-        elif node_build_mode == 'nix' and 'windows' in platform_system.lower():
+        elif 'windows' in platform_system.lower():
             get_node_files(node_rev2, repository, build_tool='cabal')
         else:
             print_error(

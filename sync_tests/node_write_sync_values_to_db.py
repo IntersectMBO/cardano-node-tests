@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 import argparse
 
-from utils import print_info, print_ok, print_warn, print_error
+from utils import print_info, print_warn
 from aws_db_utils import get_identifier_last_run_from_table, get_column_names_from_table, \
     add_column_to_table, add_bulk_values_into_db, add_single_value_into_db
 

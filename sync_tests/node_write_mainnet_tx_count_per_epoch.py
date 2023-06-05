@@ -1,6 +1,6 @@
 import pandas as pd
 
-from utils import print_info, print_ok, print_warn, print_error
+from utils import print_info, print_warn
 from aws_db_utils import get_last_epoch_no_from_table, add_bulk_values_into_db
 from blockfrost_utils import get_tx_count_per_epoch_from_blockfrost, \
     get_current_epoch_no_from_blockfrost
@@ -33,7 +33,7 @@ def update_mainnet_tx_count_per_epoch():
             print(f"col_to_insert: {col_to_insert}")
             print(f"val_to_insert: {val_to_insert}")
     else:
-        print_warn("There are no new finalized epochs to be added")
+        print_warn('There are no new finalized epochs to be added')
 
 
 if __name__ == "__main__":
