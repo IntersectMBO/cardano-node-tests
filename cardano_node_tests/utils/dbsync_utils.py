@@ -239,9 +239,9 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     return txdata
 
 
-def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
+def get_txins(txhash: str) -> List[dbsync_types.UTxORecord]:
     """Get txins of a transaction from db-sync."""
-    txins: List[clusterlib.UTXOData] = []
+    txins: List[dbsync_types.UTxORecord] = []
     seen_txins_out_ids = set()
     seen_txins_ma_ids = set()
 
@@ -250,12 +250,14 @@ def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
         if txins_row.tx_out_id and txins_row.tx_out_id not in seen_txins_out_ids:
             seen_txins_out_ids.add(txins_row.tx_out_id)
             txins.append(
-                clusterlib.UTXOData(
+                dbsync_types.UTxORecord(
                     utxo_hash=txins_row.tx_hash.hex(),
                     utxo_ix=int(txins_row.utxo_ix),
                     amount=int(txins_row.value),
                     address=str(txins_row.address),
-                    reference_script=txins_row.reference_script_json,
+                    reference_script_hash=txins_row.reference_script_hash.hex()
+                    if txins_row.reference_script_hash
+                    else "",
                 )
             )
 
@@ -266,13 +268,15 @@ def get_txins(txhash: str) -> List[clusterlib.UTXOData]:
             policyid = txins_row.ma_tx_out_policy.hex() if txins_row.ma_tx_out_policy else ""
             coin = f"{policyid}.{asset_name}" if asset_name else policyid
             txins.append(
-                clusterlib.UTXOData(
+                dbsync_types.UTxORecord(
                     utxo_hash=txins_row.tx_hash.hex(),
                     utxo_ix=int(txins_row.utxo_ix),
                     amount=int(txins_row.ma_tx_out_quantity or 0),
                     address=str(txins_row.address),
                     coin=coin,
-                    reference_script=txins_row.reference_script_json,
+                    reference_script_hash=txins_row.reference_script_hash.hex()
+                    if txins_row.reference_script_hash
+                    else "",
                 )
             )
 
@@ -348,12 +352,14 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
     collaterals = []
     if txdata.last_row.collateral_count:
         collaterals = [
-            clusterlib.UTXOData(
+            dbsync_types.UTxORecord(
                 utxo_hash=r.tx_hash.hex(),
                 utxo_ix=int(r.utxo_ix),
                 amount=int(r.value),
                 address=str(r.address),
-                reference_script=r.reference_script_json,
+                reference_script_hash=r.reference_script_hash.hex()
+                if r.reference_script_hash
+                else "",
             )
             for r in dbsync_queries.query_collateral_tx_ins(txhash=txhash)
         ]
@@ -373,12 +379,14 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
     reference_inputs = []
     if txdata.last_row.reference_input_count:
         reference_inputs = [
-            clusterlib.UTXOData(
+            dbsync_types.UTxORecord(
                 utxo_hash=r.tx_hash.hex(),
                 utxo_ix=int(r.utxo_ix),
                 amount=int(r.value),
                 address=str(r.address),
-                reference_script=r.reference_script_json,
+                reference_script_hash=r.reference_script_hash.hex()
+                if r.reference_script_hash
+                else "",
             )
             for r in dbsync_queries.query_reference_tx_ins(txhash=txhash)
         ]
