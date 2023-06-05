@@ -501,7 +501,7 @@ def check_tx_reference_scripts(
     response: dbsync_types.TxRecord,
 ) -> None:
     """Check that scripts in Tx read-only reference inputs match the data from db-sync."""
-    # Get all txins with reference scripts
+    # Get reference scripts from complex txins
     reference_scripts = [
         r.reference_txin.reference_script
         for r in (
@@ -512,9 +512,11 @@ def check_tx_reference_scripts(
         )
         if (r.reference_txin and r.reference_txin.reference_script)
     ]
-    # Also read-only reference can contain scripts
+    # Also normal txins can contain reference scripts
     readonly_reference_scripts = [
-        r.reference_script for r in tx_raw_output.readonly_reference_txins if r.reference_script
+        r.reference_script
+        for r in (*tx_raw_output.txins, *tx_raw_output.readonly_reference_txins)
+        if r.reference_script
     ]
 
     tx_hashes = {
