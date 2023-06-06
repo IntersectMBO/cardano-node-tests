@@ -116,7 +116,7 @@ def print_warn(message):
 
 
 def print_info_warn(message):
-    print(Fore.MAGENTA + f"{message}", Style.RESET_ALL, flush=True)
+    print(Fore.LIGHTMAGENTA_EX + f"{message}", Style.RESET_ALL, flush=True)
 
 def print_error(message):
     print(Fore.RED + f"{message}", Style.RESET_ALL, flush=True)

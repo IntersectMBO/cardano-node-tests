@@ -50,7 +50,7 @@ def execute_command(command):
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         outs, errors = process.communicate(timeout=7200)               
         if errors:
-            print_warn(f"Warnings or Errors: {errors}")
+            print_warn(f"Warnings or Errors --> {errors}")
         if outs:  
             print_ok(f"Output of command: {command} --> {outs}")                    
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
@@ -282,7 +282,7 @@ def wait_for_node_to_start(timeout_minutes=20):
     get_current_tip(timeout_minutes)
     stop_counter = time.perf_counter()
     start_time_seconds = int(stop_counter - start_counter)
-    print_info_warn(f"It took {start_time_seconds} seconds for the QUERY TIP command to be available")
+    print_ok(f"It took {start_time_seconds} seconds for the QUERY TIP command to be available")
     return start_time_seconds
 
 
@@ -396,7 +396,7 @@ def stop_node(platform_system):
                 proc.send_signal(signal.SIGTERM)
             else:
                 proc.send_signal(signal.SIGINT)
-    time.sleep(10)
+    time.sleep(20)
     for proc in process_iter():
         if 'cardano-node' in proc.name():
             print_error(f" !!! ERROR: `cardano-node` process is still active - {proc}")
@@ -823,6 +823,9 @@ def main():
     print(f"secs_to_start1: {secs_to_start1}")
     print(f"start_sync_time1: {start_sync_time1}")
     print(f"end_sync_time1: {end_sync_time1}")
+    print_warn(f"Stop node for: {node_rev1}")
+    stop_node(platform_system)
+    stop_node(platform_system)
 
     # we are interested in the node logs only for the main sync - using tag_no1
     test_values_dict = OrderedDict()
@@ -837,8 +840,6 @@ def main():
      sync_time_seconds2
      ) = (None, None, None, None, None, None, None, None, None, None, None, None, None, None, 0)
     if tag_no2 != 'None':
-        print(f"=============== Stop node using tag_no1: {tag_no1} ======================")
-        stop_node(platform_system)
         delete_node_files()
         print('')
         print_ok("==============================================================================")
@@ -875,6 +876,9 @@ def main():
         sync_time_seconds2, last_slot_no2, latest_chunk_no2, era_details_dict2, epoch_details_dict2 = wait_for_node_to_sync(
             env)
         end_sync_time2 = get_current_date_time()
+        print_warn(f"Stop node for: {node_rev2}")
+        stop_node(platform_system)
+        stop_node(platform_system)
 
     chain_size = get_directory_size(Path(ROOT_TEST_PATH) / 'db')
 
@@ -939,12 +943,10 @@ def main():
     with open(RESULTS_FILE_NAME, 'w') as results_file:
         json.dump(test_values_dict, results_file, indent=2)
 
-
-    if 'linux' in platform_system.lower():
-        print('--- Copy the logs')
-        # sometimes uploading the artifacts on Buildkite fails because the node still writes into
-        # the log file during the upload
-        copy_log_file_artifact(NODE_LOG_FILE, NODE_LOG_FILE_ARTIFACT)
+    print('--- Copy the node logs')
+    # sometimes uploading the artifacts fails because the node still writes into
+    # the log file during the upload even though an attepmt to stop it was made
+    copy_log_file_artifact(NODE_LOG_FILE, NODE_LOG_FILE_ARTIFACT)
 
 
 if __name__ == "__main__":

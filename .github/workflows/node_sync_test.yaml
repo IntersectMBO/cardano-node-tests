@@ -210,7 +210,7 @@ jobs:
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.os }}
           path: |
-            cardano_node_tests/logfile.log
+            cardano_node_tests/logfile_copy.log
             cardano_node_tests/sync_results.json
-            cardano_node_tests/${{ matrix.env }}-config.json
-            cardano_node_tests/${{ matrix.env }}-topology.json
+            cardano_node_tests/config.json
+            cardano_node_tests/topology.json
