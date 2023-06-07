@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Iterator
 from typing import List
 from typing import NamedTuple
+from typing import Optional
 from typing import Tuple
 
 from cardano_node_tests.utils import cluster_nodes
@@ -62,7 +63,9 @@ ERRORS_LOOK_BACK_LINES = 10
 ERRORS_LOOK_BACK_MAP = {
     "TraceNoLedgerState": "Switched to a fork",  # can happen when chain switched to a fork
 }
-ERRORS_LOOK_BACK_RE = re.compile("|".join(ERRORS_LOOK_BACK_MAP.keys()) or "nothing_to_ignore")
+ERRORS_LOOK_BACK_RE = (
+    re.compile("|".join(ERRORS_LOOK_BACK_MAP.keys())) if ERRORS_LOOK_BACK_MAP else None
+)
 
 
 class RotableLog(NamedTuple):
@@ -179,7 +182,10 @@ def _get_ignore_regex(
 
 
 def _search_log_lines(
-    logfile: Path, rotated_logs: List[RotableLog], errors_ignored_re: re.Pattern
+    logfile: Path,
+    rotated_logs: List[RotableLog],
+    errors_ignored_re: Optional[re.Pattern] = None,
+    errors_look_back_re: Optional[re.Pattern] = None,
 ) -> List[Tuple[Path, str]]:
     """Search for errors in the log file and, if needed, in the corresponding rotated logs."""
     errors = []
@@ -200,9 +206,15 @@ def _search_log_lines(
             for line in infile:
                 look_back_buf.append(line)
                 look_back_buf.pop(0)
-                if ERRORS_RE.search(line) and not errors_ignored_re.search(line):
+                if ERRORS_RE.search(line) and not (
+                    errors_ignored_re and errors_ignored_re.search(line)
+                ):
                     # Skip if expected message is in the look back buffer
-                    if ERRORS_LOOK_BACK_RE.search(line) and _look_back_found(look_back_buf):
+                    if (
+                        errors_look_back_re
+                        and errors_look_back_re.search(line)
+                        and _look_back_found(look_back_buf)
+                    ):
                         continue
                     errors.append((logfile, line))
 
@@ -341,8 +353,36 @@ def search_cluster_logs() -> List[Tuple[Path, str]]:
                     logfile=logfile,
                     rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
                     errors_ignored_re=re.compile(errors_ignored),
+                    errors_look_back_re=ERRORS_LOOK_BACK_RE,
                 )
             )
+
+    return errors
+
+
+def search_framework_log() -> List[Tuple[Path, str]]:
+    """Search framework log for errors."""
+    # It is not necessary to lock the `framework.log` file because there is one log file per worker.
+    # Each worker is checking only its own log file.
+    logfile = get_framework_log_path()
+    errors = []
+
+    # Get seek offset (from where to start searching) and timestamp of last search
+    offset_file = _get_offset_file(logfile=logfile)
+    if offset_file.exists():
+        seek = _read_seek(offset_file=offset_file)
+        timestamp = os.path.getmtime(offset_file)
+    else:
+        seek = 0
+        timestamp = 0.0
+
+    # Search for errors in the log file
+    errors.extend(
+        _search_log_lines(
+            logfile=logfile,
+            rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+        )
+    )
 
     return errors
 
@@ -385,6 +425,7 @@ def clean_ignore_rules(ignore_file_id: str) -> None:
 def get_logfiles_errors() -> str:
     """Get errors found in cluster artifacts."""
     errors = search_cluster_logs()
+    errors.extend(search_framework_log())
     if not errors:
         return ""
 
