@@ -34,7 +34,13 @@ TCallable = TypeVar("TCallable", bound=Callable)  # pylint: disable=invalid-name
 
 
 def callonce(func: TCallable) -> TCallable:
-    """Call a function and cache its return value."""
+    """Call a function and cache its return value.
+
+    .. warning::
+       The function arguments are not considered when caching the result.
+       Therefore, this decorator should be used only for functions without arguments
+       or for functions with constant arguments.
+    """
     result: list = []
 
     @functools.wraps(func)
