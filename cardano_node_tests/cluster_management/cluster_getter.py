@@ -15,7 +15,6 @@ from typing import Optional
 
 import pytest
 from _pytest.config import Config
-from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import common
@@ -92,7 +91,6 @@ class ClusterGetter:
 
     def __init__(
         self,
-        tmp_path_factory: TempPathFactory,
         worker_id: str,
         pytest_config: Config,
         num_of_instances: int,
@@ -100,11 +98,10 @@ class ClusterGetter:
     ) -> None:
         self.pytest_config = pytest_config
         self.worker_id = worker_id
-        self.tmp_path_factory = tmp_path_factory
         self.num_of_instances = num_of_instances
         self.log = log_func
 
-        self.pytest_tmp_dir = temptools.get_pytest_root_tmp(self.tmp_path_factory)
+        self.pytest_tmp_dir = temptools.get_pytest_root_tmp()
         self.cluster_lock = f"{self.pytest_tmp_dir}/{common.CLUSTER_LOCK}"
 
         self._cluster_instance_num = -1
@@ -240,10 +237,9 @@ class ClusterGetter:
             fp_out.write(cluster_instance_id)
         self.log(f"c{self.cluster_instance_num}: started cluster instance '{cluster_instance_id}'")
 
-        # Create temp dir for faucet addresses data.
-        # Pytest's mktemp adds number to the end of the dir name, so keep the trailing '_'
-        # as separator. Resulting dir name is e.g. 'addrs_data_ci3_0'.
-        tmp_path = Path(self.tmp_path_factory.mktemp(f"addrs_data_ci{self.cluster_instance_num}_"))
+        # Create temp dir for faucet addresses data
+        tmp_path = temptools.get_pytest_worker_tmp() / f"addrs_data_ci{self.cluster_instance_num}"
+        tmp_path.mkdir(parents=True, exist_ok=True)
 
         # setup faucet addresses
         try:

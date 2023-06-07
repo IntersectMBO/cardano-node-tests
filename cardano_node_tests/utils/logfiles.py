@@ -76,12 +76,7 @@ class RotableLog(NamedTuple):
 
 @helpers.callonce
 def get_framework_log_path() -> Path:
-    pytest_worker_tmp = os.environ.get("PYTEST_WORKER_TMP")
-    if not pytest_worker_tmp:
-        raise RuntimeError("PYTEST_WORKER_TMP environment variable is not set")
-
-    tempdir = Path(pytest_worker_tmp)
-    return tempdir / "framework.log"
+    return temptools.get_pytest_worker_tmp() / "framework.log"
 
 
 def _look_back_found(buffer: List[str]) -> bool:

@@ -15,7 +15,6 @@ from typing import List
 from typing import Optional
 
 from _pytest.config import Config
-from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cache
@@ -58,13 +57,10 @@ class FixtureCache:
 class ClusterManager:
     """Set of management methods for cluster instances."""
 
-    def __init__(
-        self, tmp_path_factory: TempPathFactory, worker_id: str, pytest_config: Config
-    ) -> None:
+    def __init__(self, worker_id: str, pytest_config: Config) -> None:
         self.worker_id = worker_id
         self.pytest_config = pytest_config
-        self.tmp_path_factory = tmp_path_factory
-        self.pytest_tmp_dir = temptools.get_pytest_root_tmp(tmp_path_factory)
+        self.pytest_tmp_dir = temptools.get_pytest_root_tmp()
 
         if configuration.IS_XDIST:
             self.range_num = 5
@@ -348,7 +344,6 @@ class ClusterManager:
         """
         # get number of initialized cluster instance once it is possible to start a test
         instance_num = cluster_getter.ClusterGetter(
-            tmp_path_factory=self.tmp_path_factory,
             worker_id=self.worker_id,
             pytest_config=self.pytest_config,
             num_of_instances=self.num_of_instances,

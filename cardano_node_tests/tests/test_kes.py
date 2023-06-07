@@ -13,7 +13,6 @@ from typing import Tuple
 import allure
 import pytest
 import requests
-from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -52,9 +51,9 @@ SKIPIF_HF_SHORTCUT = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def short_kes_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
+def short_kes_start_cluster() -> Path:
     """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""
-    shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)
+    shared_tmp = temptools.get_pytest_shared_tmp()
     max_kes_evolutions = 10
 
     # need to lock because this same fixture can run on several workers in parallel

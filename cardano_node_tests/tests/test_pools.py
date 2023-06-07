@@ -19,7 +19,6 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from _pytest.fixtures import FixtureRequest
-from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -39,9 +38,9 @@ DEREG_BUFFER_SEC = 30
 
 
 @pytest.fixture(scope="module")
-def pool_cost_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
+def pool_cost_start_cluster() -> Path:
     """Update *minPoolCost* to 500."""
-    shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)
+    shared_tmp = temptools.get_pytest_shared_tmp()
 
     # need to lock because this same fixture can run on several workers in parallel
     with locking.FileLockIfXdist(f"{shared_tmp}/startup_files_pool_500.lock"):
