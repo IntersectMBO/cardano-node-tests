@@ -112,7 +112,7 @@ class LocalScripts(ScriptsTypes):
 
     def _get_rand_addr(self) -> str:
         """Return randomly selected localhost address."""
-        localhost_addrs = ["127.0.0.1", "localhost.localdomain", LOCAL_HOSTNAME]
+        localhost_addrs = ["127.0.0.1", LOCAL_HOSTNAME]
         return random.choice(localhost_addrs)
 
     def _preselect_addr(self, instance_num: int) -> str:
@@ -130,8 +130,6 @@ class LocalScripts(ScriptsTypes):
             return LOCAL_HOSTNAME
         if instance_num == 2 or instance_num % 5 == 0:
             return "127.0.0.1"
-        if instance_num == 3 or instance_num % 6 == 0:
-            return "localhost.localdomain"
 
         return ""
 
