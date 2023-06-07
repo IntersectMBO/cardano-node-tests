@@ -26,6 +26,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
@@ -222,6 +223,9 @@ class ClusterGetter:
             self.log(
                 f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}\ncluster dead"
             )
+            logfiles.framework_logger().error(
+                "Failed to start cluster instance 'c%s':\n%s", self.cluster_instance_num, excp
+            )
             if not configuration.IS_XDIST:
                 pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
             (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
@@ -248,6 +252,11 @@ class ClusterGetter:
             self.log(
                 f"c{self.cluster_instance_num}: failed to setup test addresses:\n{err}\n"
                 "cluster dead"
+            )
+            logfiles.framework_logger().error(
+                "Failed to setup test addresses on instance 'c%s':\n%s",
+                self.cluster_instance_num,
+                excp,
             )
             if not configuration.IS_XDIST:
                 pytest.exit(msg=f"Failed to setup test addresses, exception: {err}", returncode=1)
