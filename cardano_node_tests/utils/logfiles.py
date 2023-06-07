@@ -71,6 +71,16 @@ class RotableLog(NamedTuple):
     timestamp: float
 
 
+@helpers.callonce
+def get_framework_log_path() -> Path:
+    pytest_worker_tmp = os.environ.get("PYTEST_WORKER_TMP")
+    if not pytest_worker_tmp:
+        raise RuntimeError("PYTEST_WORKER_TMP environment variable is not set")
+
+    tempdir = Path(pytest_worker_tmp)
+    return tempdir / "framework.log"
+
+
 def _look_back_found(buffer: List[str]) -> bool:
     """Look back to the buffer to see if there is an expected message.
 
@@ -335,6 +345,28 @@ def search_cluster_logs() -> List[Tuple[Path, str]]:
             )
 
     return errors
+
+
+@helpers.callonce
+def framework_logger() -> logging.Logger:
+    """Get logger for the `framework.log` file.
+
+    The logger is configured per worker. It can be used for logging (and later reporting) events
+    like a failure to start a cluster instance.
+    """
+
+    class UTCFormatter(logging.Formatter):
+        converter = time.gmtime
+
+    formatter = UTCFormatter("%(asctime)s %(levelname)s %(message)s")
+    handler = logging.FileHandler(get_framework_log_path())
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger("framework")
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+
+    return logger
 
 
 def clean_ignore_rules(ignore_file_id: str) -> None:

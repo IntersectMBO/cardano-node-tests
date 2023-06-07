@@ -233,7 +233,11 @@ def testenv_setup_teardown(
     tmp_path_factory: TempPathFactory, worker_id: str, request: FixtureRequest
 ) -> Generator[None, None, None]:
     """Setup and teardown test environment."""
+    # Export env variables with Pytest tmp dirs, so these are available outside of fixtures
     pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
+    os.environ["PYTEST_ROOT_TMP"] = str(pytest_root_tmp)
+    pytest_worker_tmp = temptools.get_pytest_worker_tmp(tmp_path_factory)
+    os.environ["PYTEST_WORKER_TMP"] = str(pytest_worker_tmp)
 
     running_session_glob = ".running_session"
 
