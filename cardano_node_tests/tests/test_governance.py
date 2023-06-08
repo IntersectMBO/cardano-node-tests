@@ -18,6 +18,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -324,6 +325,34 @@ class TestPoll:
 
         err_str = str(excinfo.value)
         assert "Poll answer out of bounds" in err_str or "negative index" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    def test_create_answer_negative_index(
+        self,
+        cluster: clusterlib.ClusterLib,
+        governance_poll_available: None,  # noqa: ARG002
+    ):
+        """Test answering an SPO poll with an answer with a negative index.
+
+        Expect failure.
+        """
+        # pylint: disable=unused-argument
+        temp_template = common.get_test_id(cluster)
+        poll_file = DATA_DIR / "governance_poll.json"
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            poll_utils.answer_poll(
+                cluster_obj=cluster,
+                poll_file=poll_file,
+                answer=-10,
+                name_template=temp_template,
+            )
+
+        err_str = str(excinfo.value)
+        assert "Poll answer out of bounds" in err_str or "negative index" in err_str, err_str
+
+        if "Prelude.!!" in err_str:
+            blockers.GH(issue=5182, message="'Prelude.!!' in error message").finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
