@@ -402,8 +402,10 @@ class TestRollback:
         # The `securityParam` specifies after how many blocks is the blockchain considered to be
         # final, and thus can no longer be rolled back (i.e. what is the maximum allowable length
         # of any chain fork).
-        split_block = cluster.g_query.get_block_no()
-        final_block = split_block + cluster.genesis["securityParam"] + 1
+        # Add some extra margin to the current block, given that we still need some time to change
+        # the configuration and restart the nodes.
+        split_block = cluster.g_query.get_block_no() + 10
+        final_block = split_block + cluster.genesis["securityParam"]
 
         # Split the cluster into two separate clusters
         self.split_cluster(split_topology_dir=split_topology_dir)
@@ -434,7 +436,7 @@ class TestRollback:
         )
 
         # After both clusters has produced more than `securityParam` number of blocks while the
-        # topology was fragmented, it is not be possible to bring the the clusters back
+        # topology was fragmented, it is not possible to bring the the clusters back
         # into global consensus.
         self.node_wait_for_block(cluster_obj=cluster, node="pool1", block_no=final_block)
         self.node_wait_for_block(cluster_obj=cluster, node=LAST_POOL_NAME, block_no=final_block)
