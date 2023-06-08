@@ -168,9 +168,15 @@ def pytest_collection_modifyitems(config: Any, items: list) -> None:
 
 
 @pytest.fixture(scope="session")
-def change_dir(tmp_path_factory: TempPathFactory) -> None:
+def init_pytest_temp_dirs(tmp_path_factory: TempPathFactory) -> None:
+    """Init `PytestTempDirs`."""
+    temptools.PytestTempDirs.init(tmp_path_factory=tmp_path_factory)
+
+
+@pytest.fixture(scope="session")
+def change_dir() -> None:
     """Change CWD to temp directory before running tests."""
-    tmp_path = temptools.get_pytest_worker_tmp(tmp_path_factory)
+    tmp_path = temptools.get_pytest_worker_tmp()
     os.chdir(tmp_path)
     LOGGER.info(f"Changed CWD to '{tmp_path}'.")
 
@@ -182,12 +188,10 @@ def close_dbconn() -> Generator[None, None, None]:
     dbsync_conn.close_all()
 
 
-def _stop_all_cluster_instances(
-    tmp_path_factory: TempPathFactory, worker_id: str, pytest_config: Config
-) -> None:
+def _stop_all_cluster_instances(worker_id: str, pytest_config: Config) -> None:
     """Stop all cluster instances after all tests are finished."""
     cluster_manager_obj = cluster_management.ClusterManager(
-        tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=pytest_config
+        worker_id=worker_id, pytest_config=pytest_config
     )
     cluster_manager_obj.log("running `_stop_all_cluster_instances`")
 
@@ -229,16 +233,9 @@ def _save_env_for_allure(pytest_config: Config) -> None:
 
 
 @pytest.fixture(scope="session")
-def testenv_setup_teardown(
-    tmp_path_factory: TempPathFactory, worker_id: str, request: FixtureRequest
-) -> Generator[None, None, None]:
+def testenv_setup_teardown(worker_id: str, request: FixtureRequest) -> Generator[None, None, None]:
     """Setup and teardown test environment."""
-    # Export env variables with Pytest tmp dirs, so these are available outside of fixtures
-    pytest_root_tmp = temptools.get_pytest_root_tmp(tmp_path_factory)
-    os.environ["PYTEST_ROOT_TMP"] = str(pytest_root_tmp)
-    pytest_worker_tmp = temptools.get_pytest_worker_tmp(tmp_path_factory)
-    os.environ["PYTEST_WORKER_TMP"] = str(pytest_worker_tmp)
-
+    pytest_root_tmp = temptools.get_pytest_root_tmp()
     running_session_glob = ".running_session"
 
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
@@ -253,7 +250,7 @@ def testenv_setup_teardown(
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
         # Save CLI coverage to dir specified by `--cli-coverage-dir`
         cluster_manager_obj = cluster_management.ClusterManager(
-            tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
+            worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
 
@@ -274,7 +271,6 @@ def testenv_setup_teardown(
             else:
                 # Stop all cluster instances, save artifacts
                 _stop_all_cluster_instances(
-                    tmp_path_factory=tmp_path_factory,
                     worker_id=worker_id,
                     pytest_config=request.config,
                 )
@@ -285,7 +281,8 @@ def testenv_setup_teardown(
 
 @pytest.fixture(scope="session", autouse=True)
 def session_autouse(
-    change_dir: Any,  # noqa: ARG001
+    init_pytest_temp_dirs: None,  # noqa: ARG001
+    change_dir: None,  # noqa: ARG001
     close_dbconn: Any,  # noqa: ARG001
     testenv_setup_teardown: Any,  # noqa: ARG001
 ) -> None:
@@ -295,7 +292,7 @@ def session_autouse(
 
 
 @pytest.fixture(scope="module")
-def testfile_temp_dir(tmp_path_factory: TempPathFactory) -> Path:
+def testfile_temp_dir() -> Path:
     """Return a temporary dir for storing test artifacts.
 
     The dir is specific to a single test file.
@@ -308,7 +305,7 @@ def testfile_temp_dir(tmp_path_factory: TempPathFactory) -> Path:
         .replace(".", "_")
     )
 
-    p = temptools.get_pytest_worker_tmp(tmp_path_factory).joinpath(dir_path).resolve()
+    p = temptools.get_pytest_worker_tmp().joinpath(dir_path).resolve()
 
     p.mkdir(exist_ok=True, parents=True)
 
@@ -340,7 +337,6 @@ def _raise_logs_error(errors: str) -> None:
 
 @pytest.fixture
 def cluster_manager(
-    tmp_path_factory: TempPathFactory,
     worker_id: str,
     request: FixtureRequest,
 ) -> Generator[cluster_management.ClusterManager, None, None]:
@@ -349,7 +345,7 @@ def cluster_manager(
     __tracebackhide__ = True  # pylint: disable=unused-variable
 
     cluster_manager_obj = cluster_management.ClusterManager(
-        tmp_path_factory=tmp_path_factory, worker_id=worker_id, pytest_config=request.config
+        worker_id=worker_id, pytest_config=request.config
     )
 
     yield cluster_manager_obj

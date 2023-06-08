@@ -7,7 +7,6 @@ from pathlib import Path
 
 import allure
 import pytest
-from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -21,9 +20,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def epoch_length_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
+def epoch_length_start_cluster() -> Path:
     """Update *epochLength* to 1200."""
-    shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)
+    shared_tmp = temptools.get_pytest_shared_tmp()
 
     # need to lock because this same fixture can run on several workers in parallel
     with locking.FileLockIfXdist(f"{shared_tmp}/startup_files_epoch_1200.lock"):
@@ -50,9 +49,9 @@ def epoch_length_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
 
 
 @pytest.fixture(scope="module")
-def slot_length_start_cluster(tmp_path_factory: TempPathFactory) -> Path:
+def slot_length_start_cluster() -> Path:
     """Update *slotLength* to 0.3."""
-    shared_tmp = temptools.get_pytest_shared_tmp(tmp_path_factory)
+    shared_tmp = temptools.get_pytest_shared_tmp()
 
     # need to lock because this same fixture can run on several workers in parallel
     with locking.FileLockIfXdist(f"{shared_tmp}/startup_files_slot_03.lock"):
