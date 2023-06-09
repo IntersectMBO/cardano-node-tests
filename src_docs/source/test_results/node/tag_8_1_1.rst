@@ -37,13 +37,13 @@ Regression testing on a local cluster
 .. list-table:: Other Testing
    :header-rows: 0
 
-   * - upgrade job (1.35.7 to 8.1.1)
+   * - Upgrade testing (8.0.0 to 8.1.1)
      - |:heavy_check_mark:|
-   * - rollback testing
+   * - Rollback testing
      - |:heavy_check_mark:|
-   * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
-     - |:hourglass_flowing_sand:|
-   * - sanity check submit-api REST service
+   * - Block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
+     - |:heavy_check_mark:|
+   * - Sanity checks of the submit-api REST service
      - |:heavy_check_mark:|
 
 
@@ -55,12 +55,14 @@ Release testing checklist
 
    * - `8.1.1` pushed to `shelley-qa`
      - |:hourglass_flowing_sand:|
+   * - `8.1.1` pushed to `preview`
+     - |:heavy_check_mark:|
    * - Grafana metrics OK
      - |:hourglass_flowing_sand:|
-   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/8.1.1/>`__
+   * - Regression testing against `shelley-qa`
      - |:hourglass_flowing_sand:|
-   * - Regression testing against `preview`
-     - |:hourglass_flowing_sand:|
+   * - Regression testing against `preview` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/testnet_preview/8.1.1/>`__
+     - |:heavy_check_mark:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
      - |:hourglass_flowing_sand:|
    * - DB re-validation testing (ledger snapshots compatibility)
@@ -71,12 +73,13 @@ Release testing checklist
      - |:heavy_check_mark:|
    * - Benchmarking - Report
      - |:hourglass_flowing_sand:|
-   * - sanity check release notes
+   * - Sanity check release notes
      - |:hourglass_flowing_sand:|
 
 
 New functionalities in this tag
 -------------------------------
+
 
 Known issues
 ------------
