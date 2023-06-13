@@ -472,19 +472,9 @@ def check_tx_reference_inputs(
     tx_raw_output: clusterlib.TxRawOutput,
     response: dbsync_types.TxRecord,
 ) -> None:
-    """Check that the Tx read-only reference inputs match the data from db-sync."""
+    """Check that the Tx reference inputs match the data from db-sync."""
     txins_utxos_reference_inputs = {
-        *[f"{r.utxo_hash}#{r.utxo_ix}" for r in tx_raw_output.readonly_reference_txins if r],
-        *[
-            f"{r.reference_txin.utxo_hash}#{r.reference_txin.utxo_ix}"
-            for r in tx_raw_output.script_txins
-            if r.reference_txin
-        ],
-        *[
-            f"{r.reference_txin.utxo_hash}#{r.reference_txin.utxo_ix}"
-            for r in tx_raw_output.complex_certs
-            if r.reference_txin
-        ],
+        f"{r.utxo_hash}#{r.utxo_ix}" for r in tx_raw_output.combined_reference_txins
     }
     db_utxos_reference_inputs = {
         f"{r.utxo_hash}#{r.utxo_ix}" for r in response.reference_inputs if r
@@ -500,28 +490,16 @@ def check_tx_reference_scripts(
     tx_raw_output: clusterlib.TxRawOutput,
     response: dbsync_types.TxRecord,
 ) -> None:
-    """Check that scripts in Tx read-only reference inputs match the data from db-sync."""
-    # Get reference scripts from complex txins
+    """Check that reference scripts in Tx inputs match the data from db-sync."""
     reference_scripts = [
-        r.reference_txin.reference_script
-        for r in (
-            *tx_raw_output.script_txins,
-            *tx_raw_output.mint,
-            *tx_raw_output.complex_certs,
-            *tx_raw_output.script_withdrawals,
-        )
-        if (r.reference_txin and r.reference_txin.reference_script)
-    ]
-    # Also normal txins can contain reference scripts
-    readonly_reference_scripts = [
         r.reference_script
-        for r in (*tx_raw_output.txins, *tx_raw_output.readonly_reference_txins)
+        for r in (*tx_raw_output.txins, *tx_raw_output.combined_reference_txins)
         if r.reference_script
     ]
 
     tx_hashes = {
-        _get_script_data_hash(cluster_obj=cluster_obj, script_data=rt["script"])
-        for rt in (*reference_scripts, *readonly_reference_scripts)
+        _get_script_data_hash(cluster_obj=cluster_obj, script_data=r["script"])
+        for r in reference_scripts
     }
 
     db_hashes = {
