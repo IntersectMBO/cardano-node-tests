@@ -418,12 +418,7 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
 
     extra_key_witness = []
     if txdata.last_row.extra_key_witness_count:
-        extra_key_witness = [
-            dbsync_types.ExtraKeyWitnessRecord(
-                tx_hash=r.tx_hash.hex(), witness_hash=r.witness_hash.hex()
-            )
-            for r in dbsync_queries.query_extra_key_witness(txhash=txhash)
-        ]
+        extra_key_witness = [r.hex() for r in dbsync_queries.query_extra_key_witness(txhash=txhash)]
 
     record = dbsync_types.TxRecord(
         tx_id=int(txdata.last_row.tx_id),

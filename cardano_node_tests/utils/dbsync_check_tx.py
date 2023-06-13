@@ -521,11 +521,9 @@ def check_tx_required_signers(
         )
 
     if tx_raw_output.required_signer_hashes:
-        db_required_signer_hashes = [r.witness_hash for r in response.extra_key_witness]
-
-        assert tx_raw_output.required_signer_hashes == db_required_signer_hashes, (
+        assert tx_raw_output.required_signer_hashes == response.extra_key_witness, (
             "Required signer hashes don't match "
-            f"({tx_raw_output.required_signer_hashes} != {db_required_signer_hashes})"
+            f"({tx_raw_output.required_signer_hashes} != {response.extra_key_witness})"
         )
 
 

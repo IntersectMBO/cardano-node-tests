@@ -120,11 +120,6 @@ class RedeemerRecord(NamedTuple):
     value: dict
 
 
-class ExtraKeyWitnessRecord(NamedTuple):
-    tx_hash: str
-    witness_hash: str
-
-
 class TxRecord(NamedTuple):
     tx_id: int
     tx_hash: str
@@ -152,7 +147,7 @@ class TxRecord(NamedTuple):
     stake_deregistration: List[str]
     stake_delegation: List[DelegationRecord]
     withdrawals: List[clusterlib.TxOut]
-    extra_key_witness: List[ExtraKeyWitnessRecord]
+    extra_key_witness: List[str]
 
     def _convert_metadata(self) -> dict:
         """Convert list of `MetadataRecord`s to metadata dictionary."""

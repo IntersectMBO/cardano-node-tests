@@ -304,11 +304,6 @@ class ParamProposalDBRow(NamedTuple):
     registered_tx_id: int
 
 
-class ExtraKeyWitnessDBRow(NamedTuple):
-    tx_hash: memoryview
-    witness_hash: memoryview
-
-
 class EpochDBRow(NamedTuple):
     id: int
     out_sum: int
@@ -869,10 +864,10 @@ def query_param_proposal() -> ParamProposalDBRow:
         return ParamProposalDBRow(*results)
 
 
-def query_extra_key_witness(txhash: str) -> Generator[ExtraKeyWitnessDBRow, None, None]:
+def query_extra_key_witness(txhash: str) -> Generator[memoryview, None, None]:
     """Query extra key witness records in db-sync."""
     query = (
-        "SELECT tx.hash, extra_key_witness.hash "
+        "SELECT extra_key_witness.hash "
         "FROM extra_key_witness "
         "INNER JOIN tx ON tx.id = extra_key_witness.tx_id "
         "WHERE tx.hash = %s;"
@@ -880,7 +875,7 @@ def query_extra_key_witness(txhash: str) -> Generator[ExtraKeyWitnessDBRow, None
 
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
-            yield ExtraKeyWitnessDBRow(*result)
+            yield result[0]
 
 
 def query_epoch(epoch_from: int = 0, epoch_to: int = 99999999) -> Generator[EpochDBRow, None, None]:
