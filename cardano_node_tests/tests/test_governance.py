@@ -108,7 +108,7 @@ class TestPoll:
 
         required_signers_arg = [required_signer_file] if required_signer_option == "skey" else []
         required_signers_vkey_hash_arg = (
-            [required_signer_vkey_hash] if required_signer_option == "vkey_hash" else None
+            [required_signer_vkey_hash] if required_signer_option == "vkey_hash" else []
         )
 
         poll_files = poll_utils.create_poll(
