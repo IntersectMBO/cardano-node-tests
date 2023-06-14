@@ -8,6 +8,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.utils import cluster_nodes
@@ -24,6 +25,30 @@ def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
 ) -> Tuple[clusterlib.ClusterLib, str]:
     return delegation.cluster_and_pool(cluster_manager=cluster_manager)
+
+
+@pytest.fixture
+def cluster_and_two_pools(
+    cluster_manager: cluster_management.ClusterManager,
+) -> Tuple[clusterlib.ClusterLib, str, str]:
+    """Return instance of `clusterlib.ClusterLib` and two pools."""
+    cluster_obj = cluster_manager.get(
+        use_resources=[
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+        ]
+    )
+    pool_names = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)
+    pool_ids = [
+        delegation.get_pool_id(
+            cluster_obj=cluster_obj,
+            addrs_data=cluster_manager.cache.addrs_data,
+            pool_name=p,
+        )
+        for p in pool_names
+    ]
+    assert len(pool_ids) == 2, "Expecting two pools"
+    return cluster_obj, pool_ids[0], pool_ids[1]
 
 
 @pytest.fixture
@@ -115,7 +140,7 @@ def pool_users_disposable_cluster_and_pool(
     return pool_users
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def stake_address_option_unusable() -> bool:
     return not (
         clusterlib_utils.cli_has("stake-address registration-certificate --stake-address")
@@ -219,6 +244,157 @@ class TestDelegateAddr:
             deleg_epoch=init_epoch,
             pool_id=delegation_out.pool_id,
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(7)
+    @pytest.mark.long
+    def test_multi_delegation(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_and_two_pools: Tuple[clusterlib.ClusterLib, str, str],
+    ):
+        """Delegate multiple stake addresses that share the same payment keys to multiple pools.
+
+        * Create 1 payment vkey/skey key pair
+        * Create 4 stake vkey/skey key pairs
+        * Create 1 payment addresses for each combination of payment_vkey/stake_vkey
+        * Delegate the stake addresses to 2 different pools
+        * Check that the stake addresses received rewards
+        """
+        cluster, pool1_id, pool2_id = cluster_and_two_pools
+        temp_template = common.get_test_id(cluster)
+
+        # Step: Create 1 payment vkey/skey key pair
+
+        payment_key_pair = cluster.g_address.gen_payment_key_pair(
+            key_name=f"{temp_template}_payment"
+        )
+
+        # Step: Create 4 stake vkey/skey key pairs
+
+        stake_addr_recs = clusterlib_utils.create_stake_addr_records(
+            *[f"{temp_template}_{i}" for i in range(4)],
+            cluster_obj=cluster,
+        )
+
+        # Step: Create 1 payment addresses for each combination of payment_vkey/stake_vkey
+
+        def _get_pool_users(
+            name: str, stake_addr_rec: clusterlib.AddressRecord
+        ) -> clusterlib.PoolUser:
+            addr = cluster.g_address.gen_payment_addr(
+                addr_name=f"{name}_addr",
+                payment_vkey_file=payment_key_pair.vkey_file,
+                stake_vkey_file=stake_addr_rec.vkey_file,
+            )
+            addr_rec = clusterlib.AddressRecord(
+                address=addr,
+                vkey_file=payment_key_pair.vkey_file,
+                skey_file=payment_key_pair.skey_file,
+            )
+            pool_user = clusterlib.PoolUser(payment=addr_rec, stake=stake_addr_rec)
+
+            return pool_user
+
+        pool_users = [
+            _get_pool_users(
+                name=f"{temp_template}_{i}",
+                stake_addr_rec=s,
+            )
+            for i, s in enumerate(stake_addr_recs)
+        ]
+
+        # Fund payment addresses
+        clusterlib_utils.fund_from_faucet(
+            *pool_users,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        # Step: Delegate the stake addresses to 2 different pools
+
+        # Create registration certificates
+        stake_addr_reg_cert_files = [
+            cluster.g_stake_address.gen_stake_addr_registration_cert(
+                addr_name=f"{temp_template}_{i}_addr", stake_vkey_file=pu.stake.vkey_file
+            )
+            for i, pu in enumerate(pool_users)
+        ]
+
+        def _get_pool_id(idx: int) -> str:
+            return pool1_id if idx % 2 == 0 else pool2_id
+
+        delegation_map = [(pu, _get_pool_id(i)) for i, pu in enumerate(pool_users)]
+
+        # Create delegation certificates to different pool for each stake address
+        stake_addr_deleg_cert_files = [
+            cluster.g_stake_address.gen_stake_addr_delegation_cert(
+                addr_name=f"{temp_template}_{i}_addr",
+                stake_vkey_file=d[0].stake.vkey_file,
+                stake_pool_id=d[1],
+            )
+            for i, d in enumerate(delegation_map)
+        ]
+
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+        init_epoch = cluster.g_query.get_epoch()
+
+        # Submit registration and delegation certificates
+        src_address = pool_users[0].payment.address
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[*stake_addr_reg_cert_files, *stake_addr_deleg_cert_files],
+            signing_key_files=[
+                *(pu.payment.skey_file for pu in pool_users),
+                *(pu.stake.skey_file for pu in pool_users),
+            ],
+        )
+        tx_raw_output = cluster.g_transaction.send_tx(
+            src_address=src_address,
+            tx_name=f"{temp_template}_reg_deleg",
+            tx_files=tx_files,
+        )
+
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
+        # Check that the stake addresses are delegated
+        for deleg_rec in delegation_map:
+            stake_addr_info = cluster.g_query.get_stake_addr_info(deleg_rec[0].stake.address)
+            assert (
+                stake_addr_info.delegation
+            ), f"Stake address was not delegated yet: {stake_addr_info}"
+            assert (
+                deleg_rec[1] == stake_addr_info.delegation
+            ), "Stake address delegated to wrong pool"
+
+        # Check that the balance for source address was correctly updated
+        deposit = cluster.g_query.get_address_deposit()
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
+        assert clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[
+            0
+        ].amount == clusterlib.calculate_utxos_balance(
+            tx_raw_output.txins
+        ) - tx_raw_output.fee - deposit * len(
+            stake_addr_deleg_cert_files
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        # Step: Check that the stake addresses received rewards
+
+        LOGGER.info("Waiting 4 epochs for first rewards.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+
+        failures = [
+            f"Address '{d[0].stake.address}' delegated to pool '{d[1]}' hasn't received rewards."
+            for d in delegation_map
+            if not cluster.g_query.get_stake_addr_info(d[0].stake.address).reward_account_balance
+        ]
+        if failures:
+            raise AssertionError("\n".join(failures))
+
+        # TODO: check delegation in db-sync
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
