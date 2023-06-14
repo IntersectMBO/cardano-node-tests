@@ -115,7 +115,7 @@ def pool_users_disposable_cluster_and_pool(
     return pool_users
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def stake_address_option_unusable() -> bool:
     return not (
         clusterlib_utils.cli_has("stake-address registration-certificate --stake-address")
