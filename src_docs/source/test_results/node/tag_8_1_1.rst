@@ -64,21 +64,23 @@ Release testing checklist
    * - Regression testing against `preview` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/testnet_preview/8.1.1/>`__
      - |:heavy_check_mark:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - DB re-validation testing (ledger snapshots compatibility)
      - |:heavy_check_mark:|
    * - Backward compatibility testing (Node with version N-1)
      - |:heavy_check_mark:|
    * - Check build instructions changes
      - |:heavy_check_mark:|
-   * - Benchmarking - Report
-     - |:hourglass_flowing_sand:|
+   * - Benchmarking - `Report <https://input-output-rnd.slack.com/files/U03A639T0DN/F05C24JKAS2/2023-06-08-17.58.8.0.0_8.0.0_8.1.1-pre.value-only.pdf>`__
+     - |:heavy_check_mark:|
    * - Sanity check release notes
      - |:hourglass_flowing_sand:|
 
 
 New functionalities in this tag
 -------------------------------
+
+The Ping command now takes a new parameter, query.  |:hourglass_flowing_sand:|
 
 
 Known issues
