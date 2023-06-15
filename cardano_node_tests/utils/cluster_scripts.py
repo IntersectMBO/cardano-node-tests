@@ -4,13 +4,16 @@
 * setup of scripts and their configuration for starting of multiple cluster instances
 """
 # pylint: disable=abstract-method
+import contextlib
 import itertools
 import random
 import shutil
+import socket
 from pathlib import Path
 from typing import Iterable
 from typing import List
 from typing import NamedTuple
+from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
@@ -103,12 +106,31 @@ class ScriptsTypes:
 class LocalScripts(ScriptsTypes):
     """Scripts for starting local cluster."""
 
+    _has_dns_rebinding_protection: Optional[bool] = None
+
     def __init__(self, num_pools: int = -1) -> None:
         super().__init__()
         self.type = ScriptsTypes.LOCAL
         self.num_pools = num_pools
         if num_pools == -1:
             self.num_pools = configuration.NUM_POOLS
+
+    @classmethod
+    def _check_dns_rebinding_protection(cls) -> bool:
+        """Check for DNS rebinding protection.
+
+        The DNS rebinding protection may result in failure to resolve local and private
+        IP addresses.
+        """
+        if cls._has_dns_rebinding_protection is not None:
+            return cls._has_dns_rebinding_protection
+
+        addr = ""
+        with contextlib.suppress(socket.gaierror):
+            addr = socket.gethostbyname(LOCAL_HOSTNAME)
+
+        cls._has_dns_rebinding_protection = addr != "127.0.0.1"
+        return cls._has_dns_rebinding_protection
 
     def _get_rand_addr(self) -> str:
         """Return randomly selected localhost address."""
@@ -124,6 +146,10 @@ class LocalScripts(ScriptsTypes):
         The goal is to have some topology files where all peers use only IP addresses, some where
         all peers use only hostnames and some where peers use both IP addresses and hostnames.
         """
+        # If DNS rebinding protection is enabled, we need to use just 127.0.0.1
+        if self._check_dns_rebinding_protection():
+            return "127.0.0.1"
+
         if instance_num == 0:
             return ""
         if instance_num == 1 or instance_num % 4 == 0:
