@@ -1223,6 +1223,11 @@ class TestPing:
             ],
             timeout=30,
         )
+
+        err_str = cli_out.stderr.rstrip().decode("utf-8")
+        if "UnknownVersionInRsp" in err_str:
+            blockers.GH(issue=5324, message="`UnknownVersionInRsp` error").finish_test()
+
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
         last_pong = ping_data["pongs"][-1]
@@ -1270,6 +1275,10 @@ class TestPing:
             blockers.GH(issue=5245, message="`MuxError MuxBearerClosed` error").finish_test()
         else:
             logfiles.clean_ignore_rules(ignore_file_id=ignore_file_id)
+
+        err_str = cli_out.stderr.rstrip().decode("utf-8")
+        if "UnknownVersionInRsp" in err_str:
+            blockers.GH(issue=5324, message="`UnknownVersionInRsp` error").finish_test()
 
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
