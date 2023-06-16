@@ -1,7 +1,7 @@
 import json
+import pathlib as pl
 from datetime import datetime
 from datetime import timezone
-from pathlib import Path
 
 
 def _datetime2timestamp(datetime_str: str) -> int:
@@ -12,7 +12,7 @@ def _datetime2timestamp(datetime_str: str) -> int:
 
 
 def get_slots_offset(
-    genesis_byron: Path, genesis_shelley: Path, shelley_start: str = "", byron_epochs: int = 1
+    genesis_byron: pl.Path, genesis_shelley: pl.Path, shelley_start: str = "", byron_epochs: int = 1
 ) -> int:
     """Get offset of slots between Byron and Shelley eras.
 
@@ -24,8 +24,8 @@ def get_slots_offset(
     where Shelley era starts after a single Byron epoch.
 
     Args:
-        genesis_byron: Path to Byron genesis file.
-        genesis_shelley: Path to Shelley genesis file.
+        genesis_byron: pl.Path to Byron genesis file.
+        genesis_shelley: pl.Path to Shelley genesis file.
         shelley_start: Time of start of Shelley era.
         byron_epochs: Number of Byron epochs.
     """

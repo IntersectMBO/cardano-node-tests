@@ -1,8 +1,8 @@
 """Negative tests for spending with Plutus using `transaction build`."""
 import json
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -501,7 +501,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file) if redeemer_content else None,
+            redeemer_file=pl.Path(redeemer_file) if redeemer_content else None,
             redeemer_value=None if redeemer_content else str(redeemer_value),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
@@ -574,7 +574,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file) if redeemer_content else None,
+            redeemer_file=pl.Path(redeemer_file) if redeemer_content else None,
             redeemer_value=None if redeemer_content else str(redeemer_value),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
@@ -711,7 +711,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 
@@ -767,7 +767,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 
@@ -827,7 +827,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 
@@ -886,7 +886,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 
@@ -945,7 +945,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 
@@ -1005,7 +1005,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 
@@ -1064,7 +1064,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 
@@ -1120,7 +1120,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 
@@ -1181,7 +1181,7 @@ class TestNegativeRedeemer:
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
-            redeemer_file=Path(redeemer_file),
+            redeemer_file=pl.Path(redeemer_file),
             execution_cost=plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost,
         )
 

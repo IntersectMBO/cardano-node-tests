@@ -8,9 +8,9 @@
 import itertools
 import json
 import logging
+import pathlib as pl
 import re
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -61,7 +61,7 @@ def simple_script_policyid(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
     issuers_addrs: tp.List[clusterlib.AddressRecord],
-) -> tp.Tuple[Path, str]:
+) -> tp.Tuple[pl.Path, str]:
     """Return script and its PolicyId."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
@@ -73,7 +73,7 @@ def simple_script_policyid(
     # create simple script
     keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
-    script = Path(f"{temp_template}.script")
+    script = pl.Path(f"{temp_template}.script")
     with open(script, "w", encoding="utf-8") as out_json:
         json.dump(script_content, out_json)
 
@@ -87,7 +87,7 @@ def multisig_script_policyid(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
     issuers_addrs: tp.List[clusterlib.AddressRecord],
-) -> tp.Tuple[Path, str]:
+) -> tp.Tuple[pl.Path, str]:
     """Return multisig script and it's PolicyId."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
@@ -253,7 +253,7 @@ class TestMinting:
         # create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
+        script = pl.Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
@@ -338,7 +338,7 @@ class TestMinting:
                 payment_vkey_file=i_addrs[i].vkey_file
             )
             script_content = {"keyHash": keyhash, "type": "sig"}
-            script = Path(f"{temp_template}_{i}.script")
+            script = pl.Path(f"{temp_template}_{i}.script")
             with open(script, "w", encoding="utf-8") as out_json:
                 json.dump(script_content, out_json)
 
@@ -437,7 +437,7 @@ class TestMinting:
         # create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
+        script = pl.Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
@@ -540,7 +540,7 @@ class TestMinting:
         # create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
+        script = pl.Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
@@ -623,7 +623,7 @@ class TestMinting:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
-        multisig_script_policyid: tp.Tuple[Path, str],
+        multisig_script_policyid: tp.Tuple[pl.Path, str],
         tokens_db: tp.Tuple[int, int],
     ):
         """Test minting and burning multiple different tokens that are in single bundle.
@@ -739,7 +739,7 @@ class TestMinting:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
-        simple_script_policyid: tp.Tuple[Path, str],
+        simple_script_policyid: tp.Tuple[pl.Path, str],
         tokens_db: tp.Tuple[int, int],
     ):
         """Test minting and burning multiple different tokens that are in single bundle.
@@ -958,7 +958,7 @@ class TestMinting:
         # create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
+        script = pl.Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
@@ -1982,7 +1982,7 @@ class TestNegative:
         cluster_obj: clusterlib.ClusterLib,
         new_tokens: tp.List[clusterlib_utils.TokenRecord],
         temp_template: str,
-    ) -> Path:
+    ) -> pl.Path:
         """Return signed TX for minting new token. Sign using skeys."""
         _issuers_addrs = [n.issuers_addrs for n in new_tokens]
         issuers_addrs = list(itertools.chain.from_iterable(_issuers_addrs))
@@ -2043,7 +2043,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
-        simple_script_policyid: tp.Tuple[Path, str],
+        simple_script_policyid: tp.Tuple[pl.Path, str],
         asset_name: str,
     ):
         """Try to create token with asset name that is longer than allowed.
@@ -2088,7 +2088,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
-        simple_script_policyid: tp.Tuple[Path, str],
+        simple_script_policyid: tp.Tuple[pl.Path, str],
         token_amount: int,
     ):
         """Test minting a token amount above the maximum allowed."""
@@ -2159,7 +2159,7 @@ class TestCLITxOutSyntax:
         # create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
+        script = pl.Path(f"{temp_template}.script")
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)
 
@@ -2321,7 +2321,7 @@ class TestReferenceUTxO:
                 payment_vkey_file=issuer_addr.vkey_file
             )
             script_content = {"keyHash": keyhash, "type": "sig"}
-            script = Path(f"{temp_template}.script")
+            script = pl.Path(f"{temp_template}.script")
             with open(script, "w", encoding="utf-8") as out_json:
                 json.dump(script_content, out_json)
         else:

@@ -1,8 +1,8 @@
 """Negative tests for spending with Plutus using `transaction build-raw`."""
 import json
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -704,7 +704,7 @@ class TestNegativeRedeemer:
                     per_space,
                 ),
                 datum_file=plutus_common.DATUM_42,
-                redeemer_file=Path(redeemer_file),
+                redeemer_file=pl.Path(redeemer_file),
             )
         ]
 
@@ -1007,7 +1007,7 @@ class TestNegativeRedeemer:
                     per_space,
                 ),
                 datum_file=plutus_common.DATUM_42,
-                redeemer_file=Path(redeemer_file),
+                redeemer_file=pl.Path(redeemer_file),
             )
         ]
 
@@ -1086,7 +1086,7 @@ class TestNegativeRedeemer:
                     per_space,
                 ),
                 datum_file=plutus_common.DATUM_42,
-                redeemer_file=Path(redeemer_file),
+                redeemer_file=pl.Path(redeemer_file),
             )
         ]
 

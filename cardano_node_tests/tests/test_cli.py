@@ -2,10 +2,10 @@
 import json
 import logging
 import os
+import pathlib as pl
 import string
 import time
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -26,7 +26,7 @@ from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = pl.Path(__file__).parent / "data"
 
 ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 

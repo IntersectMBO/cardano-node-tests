@@ -8,10 +8,10 @@ import concurrent.futures
 import contextlib
 import functools
 import logging
+import pathlib as pl
 import random
 import time
 import typing as tp
-from pathlib import Path
 
 from cardano_clusterlib import clusterlib
 
@@ -107,7 +107,7 @@ def return_funds_to_faucet(
         )
 
 
-def create_addr_record(addr_file: Path) -> clusterlib.AddressRecord:
+def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
     """Return a `clusterlib.AddressRecord`."""
     f_name = addr_file.name.replace(".addr", "")
     basedir = addr_file.parent
@@ -125,20 +125,20 @@ def create_addr_record(addr_file: Path) -> clusterlib.AddressRecord:
     return addr_record
 
 
-def find_files(location: FileType) -> tp.Generator[Path, None, None]:
+def find_files(location: FileType) -> tp.Generator[pl.Path, None, None]:
     r"""Find all '\*.addr' files in given location and it's subdirectories."""
-    location = Path(location).expanduser().resolve()
+    location = pl.Path(location).expanduser().resolve()
     return location.glob("**/*.addr")
 
 
-def group_files(file_paths: tp.Generator[Path, None, None]) -> tp.List[tp.List[Path]]:
+def group_files(file_paths: tp.Generator[pl.Path, None, None]) -> tp.List[tp.List[pl.Path]]:
     """Group payment address files with corresponding stake address files.
 
     These need to be processed together - funds are transferred from payment address after
     the stake address was deregistered.
     """
-    curr_group: tp.List[Path] = []
-    path_groups: tp.List[tp.List[Path]] = [curr_group]
+    curr_group: tp.List[pl.Path] = []
+    path_groups: tp.List[tp.List[pl.Path]] = [curr_group]
     prev_basename = ""
 
     # reverse-sort the list so stake address files are processes before payment address files
@@ -166,7 +166,7 @@ def cleanup(
     faucet_payment = create_addr_record(faucet_addr_file)
     files_found = group_files(find_files(location))
 
-    def _run(files: tp.List[Path]) -> None:
+    def _run(files: tp.List[pl.Path]) -> None:
         for fpath in files:
             # add random sleep for < 1s to prevent
             # "Network.Socket.connect: <socket: 11>: resource exhausted"

@@ -1,8 +1,8 @@
 """Functions for working with SPO polls."""
 import json
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 from cardano_clusterlib import clusterlib
 
@@ -13,8 +13,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class PollFiles(tp.NamedTuple):
-    poll: Path
-    metadata: Path
+    poll: pl.Path
+    metadata: pl.Path
 
 
 def create_poll(
@@ -43,14 +43,14 @@ def create_poll(
     with open(metadata_file, "w", encoding="utf-8") as fp_out:
         json.dump(json.loads(cli_out.stdout.rstrip().decode("utf-8")), fp_out)
 
-    return PollFiles(poll=Path(poll_file), metadata=Path(metadata_file))
+    return PollFiles(poll=pl.Path(poll_file), metadata=pl.Path(metadata_file))
 
 
 def answer_poll(
-    cluster_obj: clusterlib.ClusterLib, poll_file: Path, answer: int, name_template: str
-) -> Path:
+    cluster_obj: clusterlib.ClusterLib, poll_file: pl.Path, answer: int, name_template: str
+) -> pl.Path:
     """Answer a poll and return the answer file."""
-    answer_file = Path(f"{name_template}_poll_answer.json")
+    answer_file = pl.Path(f"{name_template}_poll_answer.json")
 
     cli_out = cluster_obj.cli(
         [
@@ -74,7 +74,7 @@ def answer_poll(
 
 
 def verify_poll(
-    cluster_obj: clusterlib.ClusterLib, poll_file: Path, tx_signed: Path
+    cluster_obj: clusterlib.ClusterLib, poll_file: pl.Path, tx_signed: pl.Path
 ) -> tp.Tuple[str, ...]:
     """Verify an answer to the poll."""
     # TODO: Node 8.0.0-rc1 uses the old `--signed-tx-file` argument.

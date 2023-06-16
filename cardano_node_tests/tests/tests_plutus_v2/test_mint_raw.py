@@ -1,8 +1,8 @@
 """Tests for minting with Plutus V2 using `transaction build-raw`."""
 import json
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -56,7 +56,7 @@ def _build_reference_txin(
     amount: int,
     payment_addr: clusterlib.AddressRecord,
     dst_addr: tp.Optional[clusterlib.AddressRecord] = None,
-    datum_file: tp.Optional[Path] = None,
+    datum_file: tp.Optional[pl.Path] = None,
 ) -> tp.List[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 

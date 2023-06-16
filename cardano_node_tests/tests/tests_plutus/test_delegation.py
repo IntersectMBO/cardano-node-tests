@@ -6,8 +6,8 @@
 * stake address deregistration
 """
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -113,7 +113,7 @@ def delegate_stake_addr(
     collaterals: tp.List[clusterlib.UTXOData],
     pool_user: delegation.PoolUserScript,
     pool_id: str,
-    redeemer_file: Path,
+    redeemer_file: pl.Path,
     reference_script_utxos: tp.Optional[tp.List[clusterlib.UTXOData]],
     use_build_cmd: bool,
 ) -> tp.Tuple[clusterlib.TxRawOutput, tp.List[dict]]:
@@ -205,7 +205,7 @@ def deregister_stake_addr(
     txins: tp.List[clusterlib.UTXOData],
     collaterals: tp.List[clusterlib.UTXOData],
     pool_user: delegation.PoolUserScript,
-    redeemer_file: Path,
+    redeemer_file: pl.Path,
     reference_script_utxos: tp.Optional[tp.List[clusterlib.UTXOData]],
     use_build_cmd: bool,
 ) -> tp.Tuple[clusterlib.TxRawOutput, tp.List[dict]]:

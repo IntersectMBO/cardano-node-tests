@@ -2,8 +2,8 @@
 import datetime
 import json
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -213,7 +213,7 @@ class TestBuildMintingNegative:
         # Create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
-        script = Path(f"{temp_template}.script")
+        script = pl.Path(f"{temp_template}.script")
 
         with open(script, "w", encoding="utf-8") as out_json:
             json.dump(script_content, out_json)

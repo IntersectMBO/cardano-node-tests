@@ -1,7 +1,7 @@
 """Functionality for stake address delegation used in multiple tests modules."""
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 class AddressRecordScript(tp.NamedTuple):
     address: str
-    script_file: Path
+    script_file: pl.Path
 
 
 class PoolUserScript(tp.NamedTuple):
@@ -112,7 +112,7 @@ def delegate_stake_addr(
     temp_template: str,
     pool_user: tp.Optional[clusterlib.PoolUser] = None,
     pool_id: str = "",
-    cold_vkey: tp.Optional[Path] = None,
+    cold_vkey: tp.Optional[pl.Path] = None,
     amount: int = 100_000_000,
     use_build_cmd: bool = False,
 ) -> DelegationOut:

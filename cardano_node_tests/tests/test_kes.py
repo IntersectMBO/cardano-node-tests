@@ -3,10 +3,10 @@
 import datetime
 import json
 import logging
+import pathlib as pl
 import shutil
 import time
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -49,7 +49,7 @@ SKIPIF_HF_SHORTCUT = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def short_kes_start_cluster() -> Path:
+def short_kes_start_cluster() -> pl.Path:
     """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""
     shared_tmp = temptools.get_pytest_shared_tmp()
     max_kes_evolutions = 10
@@ -91,7 +91,7 @@ def short_kes_start_cluster() -> Path:
 
 @pytest.fixture
 def cluster_kes(
-    cluster_manager: cluster_management.ClusterManager, short_kes_start_cluster: Path
+    cluster_manager: cluster_management.ClusterManager, short_kes_start_cluster: pl.Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
@@ -395,8 +395,8 @@ class TestKES:
         pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
         pool_id_dec = helpers.decode_bech32(pool_id)
 
-        opcert_file: Path = pool_rec["pool_operational_cert"]
-        cold_counter_file: Path = pool_rec["cold_key_pair"].counter_file
+        opcert_file: pl.Path = pool_rec["pool_operational_cert"]
+        cold_counter_file: pl.Path = pool_rec["cold_key_pair"].counter_file
 
         expected_errors = [
             (f"{node_name}.stdout", "PraosCannotForgeKeyNotUsableYet"),
@@ -406,7 +406,7 @@ class TestKES:
         # In Babbage we get `CounterOverIncrementedOCERT` error if counter for new opcert
         # is not exactly +1 from last used opcert. We'll backup the original counter
         # file so we can use it for issuing next valid opcert.
-        cold_counter_file_orig = Path(
+        cold_counter_file_orig = pl.Path(
             f"{cold_counter_file.stem}_orig{cold_counter_file.suffix}"
         ).resolve()
         shutil.copy(cold_counter_file, cold_counter_file_orig)
@@ -798,7 +798,7 @@ class TestKES:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         temp_template = common.get_test_id(cluster)
-        out_file = Path(f"{temp_template}_shouldnt_exist.opcert")
+        out_file = pl.Path(f"{temp_template}_shouldnt_exist.opcert")
 
         # try to generate new operational certificate without specifying the `--kes-period`
         with pytest.raises(clusterlib.CLIError) as excinfo:

@@ -4,11 +4,11 @@ import contextlib
 import dataclasses
 import logging
 import os
+import pathlib as pl
 import random
 import shutil
 import time
 import typing as tp
-from pathlib import Path
 
 import pytest
 from _pytest.config import Config
@@ -74,13 +74,13 @@ class _ClusterGetStatus:
     cluster_needs_respin: bool = False
     prio_here: bool = False
     tried_all_instances: bool = False
-    instance_dir: Path = Path("/nonexistent")
+    instance_dir: pl.Path = pl.Path("/nonexistent")
     final_lock_resources: tp.Iterable[str] = ()
     final_use_resources: tp.Iterable[str] = ()
     # status files
-    started_tests_sfiles: tp.Iterable[Path] = ()
-    marked_ready_sfiles: tp.Iterable[Path] = ()
-    marked_running_my_anywhere: tp.Iterable[Path] = ()
+    started_tests_sfiles: tp.Iterable[pl.Path] = ()
+    marked_ready_sfiles: tp.Iterable[pl.Path] = ()
+    marked_running_my_anywhere: tp.Iterable[pl.Path] = ()
 
 
 class ClusterGetter:
@@ -110,13 +110,13 @@ class ClusterGetter:
         return self._cluster_instance_num
 
     @property
-    def instance_dir(self) -> Path:
+    def instance_dir(self) -> pl.Path:
         _instance_dir = (
             self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{self.cluster_instance_num}"
         )
         return _instance_dir
 
-    def _create_startup_files_dir(self, instance_num: int) -> Path:
+    def _create_startup_files_dir(self, instance_num: int) -> pl.Path:
         _instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
         rand_str = clusterlib.get_rand_str(8)
         startup_files_dir = _instance_dir / "startup_files" / rand_str

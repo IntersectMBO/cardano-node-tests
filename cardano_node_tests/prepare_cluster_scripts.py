@@ -5,8 +5,8 @@ For settings it uses the same env variables as when running the tests.
 """
 import argparse
 import logging
+import pathlib as pl
 import sys
-from pathlib import Path
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
@@ -53,7 +53,7 @@ def prepare_scripts_files(
     stop_script: FileType = ""
 
     if scriptsdir:
-        scriptsdir = Path(scriptsdir)
+        scriptsdir = pl.Path(scriptsdir)
         start_script = next(scriptsdir.glob("start-cluster*"), "")
         stop_script = next(scriptsdir.glob("stop-cluster*"), "")
         if not (start_script and stop_script):
@@ -75,13 +75,13 @@ def main() -> int:
     )
     args = get_args()
 
-    destdir = Path(args.dest_dir)
+    destdir = pl.Path(args.dest_dir)
     if destdir.exists():
         LOGGER.error(f"Destination directory '{destdir}' already exists.")
         return 1
     destdir.mkdir(parents=True)
 
-    scriptsdir: FileType = Path(args.scripts_dir) if args.scripts_dir else ""
+    scriptsdir: FileType = pl.Path(args.scripts_dir) if args.scripts_dir else ""
 
     try:
         prepare_scripts_files(

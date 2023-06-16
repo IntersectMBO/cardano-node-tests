@@ -4,10 +4,10 @@ import fnmatch
 import itertools
 import logging
 import os
+import pathlib as pl
 import re
 import time
 import typing as tp
-from pathlib import Path
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
@@ -65,13 +65,13 @@ ERRORS_LOOK_BACK_RE = (
 
 
 class RotableLog(tp.NamedTuple):
-    logfile: Path
+    logfile: pl.Path
     seek: int
     timestamp: float
 
 
 @helpers.callonce
-def get_framework_log_path() -> Path:
+def get_framework_log_path() -> pl.Path:
     return temptools.get_pytest_worker_tmp() / "framework.log"
 
 
@@ -94,7 +94,9 @@ def _look_back_found(buffer: tp.List[str]) -> bool:
     return any(re.search(look_back_re, line) for line in buffer[:-1])
 
 
-def _get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> tp.List[RotableLog]:
+def _get_rotated_logs(
+    logfile: pl.Path, seek: int = 0, timestamp: float = 0.0
+) -> tp.List[RotableLog]:
     """Return list of versions of the log file (list of `RotableLog`).
 
     When the seek offset was recorded for a log file and the log file was rotated,
@@ -120,7 +122,7 @@ def _get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> t
     return logfile_records
 
 
-def _get_ignore_rules_lock_file(instance_num: int) -> Path:
+def _get_ignore_rules_lock_file(instance_num: int) -> pl.Path:
     """Return path to the lock file for ignored errors rules."""
     return temptools.get_basetemp() / f"{ERRORS_IGNORE_FILE_NAME}_{instance_num}.lock"
 
@@ -149,19 +151,19 @@ def _get_ignore_rules(
     return rules
 
 
-def _get_offset_file(logfile: Path) -> Path:
+def _get_offset_file(logfile: pl.Path) -> pl.Path:
     """Return path to the file that stores the seek offset for the given log file."""
     return logfile.parent / f".{logfile.name}.offset"
 
 
-def _read_seek(offset_file: Path) -> int:
+def _read_seek(offset_file: pl.Path) -> int:
     """Read seek offset from the given file."""
     with open(offset_file, encoding="utf-8") as infile:
         return int(infile.readline().strip())
 
 
 def _get_ignore_regex(
-    ignore_rules: tp.List[tp.Tuple[str, str]], regexes: tp.List[str], logfile: Path
+    ignore_rules: tp.List[tp.Tuple[str, str]], regexes: tp.List[str], logfile: pl.Path
 ) -> str:
     """Combine together regex for the given log file using file specific and global ignore rules."""
     regex_set = set(regexes)
@@ -173,11 +175,11 @@ def _get_ignore_regex(
 
 
 def _search_log_lines(
-    logfile: Path,
+    logfile: pl.Path,
     rotated_logs: tp.List[RotableLog],
     errors_ignored_re: tp.Optional[re.Pattern] = None,
     errors_look_back_re: tp.Optional[re.Pattern] = None,
-) -> tp.List[tp.Tuple[Path, str]]:
+) -> tp.List[tp.Tuple[pl.Path, str]]:
     """Search for errors in the log file and, if needed, in the corresponding rotated logs."""
     errors = []
     last_line_pos = -1
@@ -291,7 +293,7 @@ def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> t
             seek = seek_offsets.get(logfile) or 0
             line_found = False
             for logfile_rec in _get_rotated_logs(
-                logfile=Path(logfile), seek=seek, timestamp=timestamp
+                logfile=pl.Path(logfile), seek=seek, timestamp=timestamp
             ):
                 with open(logfile_rec.logfile, encoding="utf-8") as infile:
                     infile.seek(logfile_rec.seek)
@@ -309,7 +311,7 @@ def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> t
         raise AssertionError(errors_joined) from None
 
 
-def search_cluster_logs() -> tp.List[tp.Tuple[Path, str]]:
+def search_cluster_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
     """Search cluster logs for errors."""
     cluster_env = cluster_nodes.get_cluster_env()
     lock_file = temptools.get_basetemp() / f"search_artifacts_{cluster_env.instance_num}.lock"
@@ -351,7 +353,7 @@ def search_cluster_logs() -> tp.List[tp.Tuple[Path, str]]:
     return errors
 
 
-def search_framework_log() -> tp.List[tp.Tuple[Path, str]]:
+def search_framework_log() -> tp.List[tp.Tuple[pl.Path, str]]:
     """Search framework log for errors."""
     # It is not necessary to lock the `framework.log` file because there is one log file per worker.
     # Each worker is checking only its own log file.

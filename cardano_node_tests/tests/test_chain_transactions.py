@@ -1,8 +1,8 @@
 """Tests for transactions chaining."""
 import logging
+import pathlib as pl
 import time
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -27,7 +27,7 @@ def _gen_signed_tx(
     tx_name: str,
     fee: int,
     invalid_hereafter: tp.Optional[int] = None,
-) -> tp.Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, Path]:
+) -> tp.Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, pl.Path]:
     """Generate Tx and return Tx output in a format that can be used as input for next Tx."""
     send_amount = txin.amount - fee
     out_file = f"{tx_name}_tx.body"
@@ -144,7 +144,7 @@ class TestTxChaining:
             generated_txs.append(tx_file)
             tx_raw_outputs.append(tx_raw_output)
 
-        def _repeat_submit(tx_file: Path):
+        def _repeat_submit(tx_file: pl.Path):
             # we want to submit the Tx and then re-submit it and see the expected error, to make
             # sure the Tx made it to mempool
             for r in range(5):

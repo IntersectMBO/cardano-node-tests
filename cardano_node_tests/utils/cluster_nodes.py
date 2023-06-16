@@ -2,10 +2,10 @@
 import json
 import logging
 import os
+import pathlib as pl
 import pickle
 import time
 import typing as tp
-from pathlib import Path
 
 from cardano_clusterlib import clusterlib
 
@@ -23,9 +23,9 @@ STATE_CLUSTER = "state-cluster"
 
 
 class ClusterEnv(tp.NamedTuple):
-    socket_path: Path
-    state_dir: Path
-    work_dir: Path
+    socket_path: pl.Path
+    state_dir: pl.Path
+    work_dir: pl.Path
     instance_num: int
     cluster_era: str
     tx_era: str
@@ -103,7 +103,7 @@ class LocalCluster(ClusterType):
         _uses_shortcut = not (byron_dir / "address-000-converted").exists()
         return _uses_shortcut
 
-    def _get_slots_offset(self, state_dir: Path) -> int:
+    def _get_slots_offset(self, state_dir: pl.Path) -> int:
         """Get offset of blocks from Byron era vs current configuration.
 
         Unlike in `TestnetCluster`, don't cache slots offset value, we might
@@ -148,7 +148,7 @@ class LocalCluster(ClusterType):
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
     ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
-        destination_dir = Path(destination_dir).expanduser()
+        destination_dir = pl.Path(destination_dir).expanduser()
         destination_dir.mkdir(parents=True, exist_ok=True)
         cluster_env = get_cluster_env()
         instance_num = cluster_env.instance_num
@@ -248,7 +248,7 @@ class TestnetCluster(ClusterType):
         self._testnet_type = testnet_type
         return testnet_type
 
-    def _get_slots_offset(self, state_dir: Path) -> int:
+    def _get_slots_offset(self, state_dir: pl.Path) -> int:
         """Get offset of blocks from Byron era vs current configuration."""
         if self._slots_offset != -1:
             return self._slots_offset
@@ -322,7 +322,7 @@ def get_cluster_type() -> ClusterType:
     return LocalCluster()
 
 
-def get_cardano_node_socket_path(instance_num: int, socket_file_name: str = "") -> Path:
+def get_cardano_node_socket_path(instance_num: int, socket_file_name: str = "") -> pl.Path:
     """Return path to socket file in the given cluster instance."""
     socket_file_name = socket_file_name or configuration.STARTUP_CARDANO_NODE_SOCKET_PATH.name
     state_cluster_dirname = f"{STATE_CLUSTER}{instance_num}"
@@ -352,14 +352,14 @@ def set_cluster_env(instance_num: int, socket_file_name: str = "") -> None:
 
 def get_instance_num() -> int:
     """Get cardano cluster instance number."""
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
+    socket_path = pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
     instance_num = int(socket_path.parent.name.replace(STATE_CLUSTER, "") or 0)
     return instance_num
 
 
 def get_cluster_env() -> ClusterEnv:
     """Get cardano cluster environment."""
-    socket_path = Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
+    socket_path = pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
     state_dir = socket_path.parent
     work_dir = state_dir.parent
     instance_num = int(state_dir.name.replace(STATE_CLUSTER, "") or 0)
@@ -533,9 +533,11 @@ def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
     return pools_data
 
 
-def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = ".") -> Path:
+def setup_test_addrs(
+    cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
+) -> pl.Path:
     """Set addresses and their keys up for usage in tests."""
-    destination_dir = Path(destination_dir).expanduser()
+    destination_dir = pl.Path(destination_dir).expanduser()
     destination_dir.mkdir(parents=True, exist_ok=True)
     cluster_env = get_cluster_env()
 
@@ -545,7 +547,7 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
     )
 
     pools_data = load_pools_data(cluster_obj)
-    data_file = Path(cluster_env.state_dir) / ADDRS_DATA
+    data_file = pl.Path(cluster_env.state_dir) / ADDRS_DATA
     with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
 
@@ -554,6 +556,6 @@ def setup_test_addrs(cluster_obj: clusterlib.ClusterLib, destination_dir: FileTy
 
 def load_addrs_data() -> dict:
     """Load data about addresses and their keys for usage in tests."""
-    data_file = Path(get_cluster_env().state_dir) / ADDRS_DATA
+    data_file = pl.Path(get_cluster_env().state_dir) / ADDRS_DATA
     with open(data_file, "rb") as in_data:
         return pickle.load(in_data)  # type: ignore

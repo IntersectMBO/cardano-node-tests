@@ -7,10 +7,10 @@
 """
 import json
 import logging
+import pathlib as pl
 import random
 import re
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -33,7 +33,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = pl.Path(__file__).parent / "data"
 
 JSON_METADATA_FILE = DATA_DIR / "tx_metadata.json"
 CBOR_METADATA_FILE = DATA_DIR / "tx_metadata.cbor"
@@ -45,8 +45,8 @@ def multisig_tx(
     src_address: str,
     dst_address: str,
     amount: int,
-    payment_skey_files: tp.List[Path],
-    multisig_script: tp.Optional[Path] = None,
+    payment_skey_files: tp.List[pl.Path],
+    multisig_script: tp.Optional[pl.Path] = None,
     invalid_hereafter: tp.Optional[int] = None,
     invalid_before: tp.Optional[int] = None,
     use_build_cmd: bool = False,
@@ -878,7 +878,7 @@ class TestTimeLocking:
         slot: int,
         slot_type_arg: str,
         use_build_cmd: bool,
-    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput]:
+    ) -> tp.Tuple[pl.Path, str, clusterlib.TxRawOutput]:
         """Create and fund script address."""
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -945,7 +945,7 @@ class TestTimeLocking:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput, int]:
+    ) -> tp.Tuple[pl.Path, str, clusterlib.TxRawOutput, int]:
         """Create and fund script address with "before" slot in the past."""
         temp_template = common.get_test_id(cluster)
         use_build_cmd = request.param
@@ -970,7 +970,7 @@ class TestTimeLocking:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput, int]:
+    ) -> tp.Tuple[pl.Path, str, clusterlib.TxRawOutput, int]:
         """Create and fund script address with "before" slot in the future."""
         temp_template = common.get_test_id(cluster)
         use_build_cmd = request.param
@@ -995,7 +995,7 @@ class TestTimeLocking:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput, int]:
+    ) -> tp.Tuple[pl.Path, str, clusterlib.TxRawOutput, int]:
         """Create and fund script address with "after" slot in the future."""
         temp_template = common.get_test_id(cluster)
         use_build_cmd = request.param
@@ -1020,7 +1020,7 @@ class TestTimeLocking:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput, int]:
+    ) -> tp.Tuple[pl.Path, str, clusterlib.TxRawOutput, int]:
         """Create and fund script address with "after" slot in the past."""
         temp_template = common.get_test_id(cluster)
         use_build_cmd = request.param
@@ -1333,7 +1333,7 @@ class TestTimeLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_before_slot_in_past: tp.Tuple[Path, str, clusterlib.TxRawOutput, int],
+        fund_script_before_slot_in_past: tp.Tuple[pl.Path, str, clusterlib.TxRawOutput, int],
         data: st.DataObject,
         request: FixtureRequest,
     ):
@@ -1400,7 +1400,7 @@ class TestTimeLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_before_slot_in_future: tp.Tuple[Path, str, clusterlib.TxRawOutput, int],
+        fund_script_before_slot_in_future: tp.Tuple[pl.Path, str, clusterlib.TxRawOutput, int],
         slot_no: int,
         request: FixtureRequest,
     ):
@@ -1448,7 +1448,7 @@ class TestTimeLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_after_slot_in_future: tp.Tuple[Path, str, clusterlib.TxRawOutput, int],
+        fund_script_after_slot_in_future: tp.Tuple[pl.Path, str, clusterlib.TxRawOutput, int],
         data: st.DataObject,
         request: FixtureRequest,
     ):
@@ -1515,7 +1515,7 @@ class TestTimeLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_after_slot_in_past: tp.Tuple[Path, str, clusterlib.TxRawOutput, int],
+        fund_script_after_slot_in_past: tp.Tuple[pl.Path, str, clusterlib.TxRawOutput, int],
         data: st.DataObject,
         request: FixtureRequest,
     ):
@@ -2051,7 +2051,7 @@ class TestDatum:
 
         # create multisig script
         if script_version == "simple_v1":
-            multisig_script = Path(f"{temp_template}_multisig.script")
+            multisig_script = pl.Path(f"{temp_template}_multisig.script")
             script_content = {
                 "keyHash": cluster.g_address.get_payment_vkey_hash(
                     payment_vkey_file=dst_addr.vkey_file
@@ -2176,7 +2176,7 @@ class TestReferenceUTxO:
             reference_type = clusterlib.ScriptTypes.SIMPLE_V1
             script_type_str = "SimpleScriptV1"
 
-            multisig_script = Path(f"{temp_template}_multisig.script")
+            multisig_script = pl.Path(f"{temp_template}_multisig.script")
             script_content = {
                 "keyHash": cluster.g_address.get_payment_vkey_hash(
                     payment_vkey_file=dst_addr.vkey_file
@@ -2337,7 +2337,7 @@ class TestReferenceUTxO:
 
         # create multisig script
         if script_version == "simple_v1":
-            multisig_script = Path(f"{temp_template}_multisig.script")
+            multisig_script = pl.Path(f"{temp_template}_multisig.script")
             script_content = {
                 "keyHash": cluster.g_address.get_payment_vkey_hash(
                     payment_vkey_file=payment_addr.vkey_file
@@ -2465,7 +2465,7 @@ class TestNested:
         dst_addr3 = payment_addrs[3]
 
         # create multisig script
-        multisig_script = Path(f"{temp_template}_multisig.script")
+        multisig_script = pl.Path(f"{temp_template}_multisig.script")
         script_content = {
             "type": type_top,
             "scripts": [
@@ -2559,7 +2559,7 @@ class TestNested:
         dst_addr1 = payment_addrs[1]
 
         # create multisig script
-        multisig_script = Path(f"{temp_template}_multisig.script")
+        multisig_script = pl.Path(f"{temp_template}_multisig.script")
         script_content = {
             "type": "any",
             "scripts": [
@@ -2754,7 +2754,7 @@ class TestNested:
             raise AssertionError(f"Unknown scenario: {scenario}")
 
         # create multisig script
-        multisig_script = Path(f"{temp_template}_multisig.script")
+        multisig_script = pl.Path(f"{temp_template}_multisig.script")
         script_content = {
             "type": type_top,
             "scripts": [

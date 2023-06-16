@@ -5,9 +5,9 @@ import itertools
 import json
 import logging
 import math
+import pathlib as pl
 import time
 import typing as tp
-from pathlib import Path
 
 import cbor2
 from cardano_clusterlib import clusterlib
@@ -31,7 +31,7 @@ class TokenRecord(tp.NamedTuple):
     amount: int
     issuers_addrs: tp.List[clusterlib.AddressRecord]
     token_mint_addr: clusterlib.AddressRecord
-    script: Path
+    script: pl.Path
 
 
 class TxMetadata(tp.NamedTuple):
@@ -457,7 +457,7 @@ def update_params_build(
         proposal_files=[out_file],
         signing_key_files=[
             *cluster_obj.g_genesis.genesis_keys.delegate_skeys,
-            Path(src_addr_record.skey_file),
+            pl.Path(src_addr_record.skey_file),
         ],
     )
     tx_output = cluster_obj.g_transaction.build_tx(
@@ -762,7 +762,7 @@ def new_tokens(
     # create simple script
     keyhash = cluster_obj.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
-    script = Path(f"{temp_template}.script")
+    script = pl.Path(f"{temp_template}.script")
     with open(f"{temp_template}.script", "w", encoding="utf-8") as out_json:
         json.dump(script_content, out_json)
 
@@ -874,7 +874,7 @@ def save_ledger_state(
     state_name: str,
     ledger_state: tp.Optional[dict] = None,
     destination_dir: FileType = ".",
-) -> Path:
+) -> pl.Path:
     """Save ledger state to file.
 
     Args:
@@ -884,9 +884,9 @@ def save_ledger_state(
         destination_dir: A path to directory for storing the state JSON file (optional).
 
     Returns:
-        Path: A path to the generated state JSON file.
+        pl.Path: A path to the generated state JSON file.
     """
-    json_file = Path(destination_dir) / f"{state_name}_ledger_state.json"
+    json_file = pl.Path(destination_dir) / f"{state_name}_ledger_state.json"
     ledger_state = ledger_state or get_ledger_state(cluster_obj)
     with open(json_file, "w", encoding="utf-8") as fp_out:
         json.dump(ledger_state, fp_out, indent=4)
@@ -959,7 +959,7 @@ def wait_for_epoch_interval(
         raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s.")
 
 
-def load_body_metadata(tx_body_file: Path) -> tp.Any:
+def load_body_metadata(tx_body_file: pl.Path) -> tp.Any:
     """Load metadata from file containing transaction body."""
     with open(tx_body_file, encoding="utf-8") as body_fp:
         tx_body_json = json.load(body_fp)
@@ -974,7 +974,7 @@ def load_body_metadata(tx_body_file: Path) -> tp.Any:
     return metadata
 
 
-def load_tx_metadata(tx_body_file: Path) -> TxMetadata:
+def load_tx_metadata(tx_body_file: pl.Path) -> TxMetadata:
     """Load transaction metadata from file containing transaction body."""
     metadata_section = load_body_metadata(tx_body_file=tx_body_file)
 
@@ -1038,8 +1038,8 @@ def datum_hash_from_txout(cluster_obj: clusterlib.ClusterLib, txout: clusterlib.
 def create_script_context(
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
-    redeemer_file: Path,
-    tx_file: tp.Optional[Path] = None,
+    redeemer_file: pl.Path,
+    tx_file: tp.Optional[pl.Path] = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps)."""
     if plutus_version == 1:
@@ -1094,7 +1094,7 @@ def create_reference_utxo(
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
-    script_file: Path,
+    script_file: pl.Path,
     amount: int,
 ) -> tp.Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput]:
     """Create a reference script UTxO."""
@@ -1156,7 +1156,7 @@ def gen_byron_addr(
     destination_dir: FileType = ".",
 ) -> clusterlib.AddressRecord:
     """Generate a Byron address and keys."""
-    destination_dir = Path(destination_dir).expanduser().resolve()
+    destination_dir = pl.Path(destination_dir).expanduser().resolve()
 
     secret_file = destination_dir / f"{name_template}_byron_orig.key"
     skey_file = destination_dir / f"{name_template}_byron.skey"

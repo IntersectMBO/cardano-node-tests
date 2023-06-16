@@ -1,9 +1,9 @@
 """Tests for minting with Plutus using `transaction build`."""
 import datetime
 import logging
+import pathlib as pl
 import shutil
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -675,7 +675,7 @@ class TestBuildMinting:
 
         # generate a dummy redeemer in order to create a txbody from which
         # we can generate a tx and then derive the correct redeemer
-        redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+        redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
         clusterlib_utils.create_script_context(
             cluster_obj=cluster, plutus_version=1, redeemer_file=redeemer_file_dummy
         )
@@ -704,7 +704,7 @@ class TestBuildMinting:
         assert tx_output_dummy
 
         # generate the "real" redeemer
-        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
+        redeemer_file = pl.Path(f"{temp_template}_script_context.redeemer")
 
         plutus_common.create_script_context_w_blockers(
             cluster_obj=cluster,
@@ -1140,7 +1140,7 @@ class TestCollateralOutput:
         altered_build_args.insert(collateral_idx + 2, altered_build_args[collateral_idx])
 
         # change the output file
-        tx_body_step2 = Path(f"{tx_output_step2.out_file.stem}_altered.body")
+        tx_body_step2 = pl.Path(f"{tx_output_step2.out_file.stem}_altered.body")
         out_file_idx = altered_build_args.index("--out-file") + 1
         altered_build_args[out_file_idx] = str(tx_body_step2)
 

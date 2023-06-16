@@ -2,9 +2,9 @@
 import itertools
 import json
 import logging
+import pathlib as pl
 import re
 import typing as tp
-from pathlib import Path
 
 import yaml
 from cardano_clusterlib import clusterlib
@@ -200,7 +200,7 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     ), "Return collateral address mismatch"
 
 
-def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: Path) -> tp.Dict[str, tp.Any]:
+def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path) -> tp.Dict[str, tp.Any]:
     tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_body_file)
     tx_loaded: tp.Dict[str, tp.Any] = load_raw(tx_view=tx_view_raw)
     return tx_loaded

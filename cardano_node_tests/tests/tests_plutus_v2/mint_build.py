@@ -1,6 +1,6 @@
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 from cardano_clusterlib import clusterlib
 
@@ -17,8 +17,8 @@ def _fund_issuer(
     issuer_addr: clusterlib.AddressRecord,
     minting_cost: plutus_common.ScriptCost,
     amount: int,
-    reference_script: tp.Optional[Path] = None,
-    inline_datum: tp.Optional[Path] = None,
+    reference_script: tp.Optional[pl.Path] = None,
+    inline_datum: tp.Optional[pl.Path] = None,
 ) -> tp.Tuple[
     tp.List[clusterlib.UTXOData],
     tp.List[clusterlib.UTXOData],

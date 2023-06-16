@@ -1,7 +1,7 @@
 """Tests for checking staking scenarios where no rewards are expected."""
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -762,7 +762,7 @@ class TestNoRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        pool_opcert_file: Path = pool_rec["pool_operational_cert"]
+        pool_opcert_file: pl.Path = pool_rec["pool_operational_cert"]
         temp_template = common.get_test_id(cluster)
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")

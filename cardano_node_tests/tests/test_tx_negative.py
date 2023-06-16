@@ -3,11 +3,11 @@
 Tests like duplicated transaction, sending funds to wrong addresses, wrong fee, wrong ttl.
 """
 import logging
+import pathlib as pl
 import re
 import string
 import time
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -288,7 +288,7 @@ class TestNegative:
         return slot_no, exc_val, tx_output
 
     def _get_validity_range(
-        self, cluster_obj: clusterlib.ClusterLib, tx_body_file: Path
+        self, cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path
     ) -> tp.Tuple[tp.Optional[int], tp.Optional[int]]:
         """Get validity range from a transaction body."""
         tx_loaded = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_body_file)

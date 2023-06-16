@@ -1,8 +1,8 @@
 """Tests for update proposals."""
 import json
 import logging
+import pathlib as pl
 import time
-from pathlib import Path
 
 import allure
 import pytest
@@ -17,7 +17,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = pl.Path(__file__).parent / "data"
 
 
 @pytest.mark.order(8)

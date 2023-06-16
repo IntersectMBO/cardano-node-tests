@@ -1,9 +1,9 @@
 """Tests for datum while spending with Plutus using `transaction build`."""
 import json
 import logging
+import pathlib as pl
 import string
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -203,7 +203,7 @@ class TestNegativeInlineDatum:
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2,
-            datum_file=Path(datum_file),
+            datum_file=pl.Path(datum_file),
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_V2_COST,
         )

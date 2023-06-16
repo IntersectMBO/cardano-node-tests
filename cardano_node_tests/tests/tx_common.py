@@ -1,6 +1,6 @@
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 from cardano_clusterlib import clusterlib
 
@@ -47,7 +47,7 @@ def get_raw_tx_values(
             address=dst_address, amount=src_addr_highest_utxo.amount - fee - min_change
         ),
     ]
-    out_file = Path(f"{helpers.get_timestamped_rand_str()}_tx.body")
+    out_file = pl.Path(f"{helpers.get_timestamped_rand_str()}_tx.body")
 
     return clusterlib.TxRawOutput(
         txins=txins,

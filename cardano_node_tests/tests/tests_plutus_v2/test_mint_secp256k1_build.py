@@ -1,7 +1,7 @@
 """SECP256k1 tests for minting with Plutus V2 using `transaction build`."""
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -54,8 +54,8 @@ class TestSECP256k1:
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
         payment_addrs: tp.List[clusterlib.AddressRecord],
-        script_file: Path,
-        redeemer_file: Path,
+        script_file: pl.Path,
+        redeemer_file: pl.Path,
     ):
         """Fund the token issuer and mint a token."""
         __: tp.Any  # mypy workaround

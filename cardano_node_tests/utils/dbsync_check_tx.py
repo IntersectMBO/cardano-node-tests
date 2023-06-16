@@ -3,8 +3,8 @@ import functools
 import itertools
 import json
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 from cardano_clusterlib import clusterlib
 
@@ -60,7 +60,7 @@ def _get_scripts_hashes(
 
 def _get_script_data_hash(cluster_obj: clusterlib.ClusterLib, script_data: dict) -> str:
     """Get hash of the script data."""
-    script_file = Path(f"{helpers.get_timestamped_rand_str()}.script")
+    script_file = pl.Path(f"{helpers.get_timestamped_rand_str()}.script")
     with open(script_file, "w", encoding="utf-8") as outfile:
         json.dump(script_data, outfile)
     return cluster_obj.g_transaction.get_policyid(script_file=script_file)

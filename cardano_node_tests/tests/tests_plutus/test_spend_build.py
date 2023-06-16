@@ -1,8 +1,8 @@
 """Tests for spending with Plutus using `transaction build`."""
 import logging
+import pathlib as pl
 import shutil
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -180,7 +180,7 @@ class TestBuildLocking:
 
         # generate a dummy redeemer in order to create a txbody from which
         # we can generate a tx and then derive the correct redeemer
-        redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+        redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
         clusterlib_utils.create_script_context(
             cluster_obj=cluster, plutus_version=1, redeemer_file=redeemer_file_dummy
         )
@@ -222,7 +222,7 @@ class TestBuildLocking:
         assert tx_output_dummy
 
         # generate the "real" redeemer
-        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
+        redeemer_file = pl.Path(f"{temp_template}_script_context.redeemer")
 
         plutus_common.create_script_context_w_blockers(
             cluster_obj=cluster,
@@ -287,11 +287,11 @@ class TestBuildLocking:
         __: tp.Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
 
-        datum_file: tp.Optional[Path] = None
-        datum_cbor_file: tp.Optional[Path] = None
+        datum_file: tp.Optional[pl.Path] = None
+        datum_cbor_file: tp.Optional[pl.Path] = None
         datum_value: tp.Optional[str] = None
-        redeemer_file: tp.Optional[Path] = None
-        redeemer_cbor_file: tp.Optional[Path] = None
+        redeemer_file: tp.Optional[pl.Path] = None
+        redeemer_cbor_file: tp.Optional[pl.Path] = None
         redeemer_value: tp.Optional[str] = None
 
         if variant == "typed_json":

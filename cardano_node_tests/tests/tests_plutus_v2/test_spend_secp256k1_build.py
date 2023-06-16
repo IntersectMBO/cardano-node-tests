@@ -1,8 +1,8 @@
 """SECP256k1 tests for spending with Plutus V2 using `transaction build`."""
 import json
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import allure
 import hypothesis
@@ -257,7 +257,7 @@ class TestSECP256k1:
 
         # generate a dummy redeemer with a number of loops big enough
         # to make the script to overspending the budget
-        redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+        redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
 
         with open(redeemer_file, encoding="utf-8") as f:
             redeemer = json.load(f)
@@ -275,7 +275,7 @@ class TestSECP256k1:
         plutus_op = plutus_common.PlutusOp(
             script_file=script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
-            redeemer_file=Path(redeemer_file_dummy),
+            redeemer_file=pl.Path(redeemer_file_dummy),
         )
 
         # for mypy

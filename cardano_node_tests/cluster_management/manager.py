@@ -6,9 +6,9 @@ import hashlib
 import inspect
 import logging
 import os
+import pathlib as pl
 import shutil
 import typing as tp
-from pathlib import Path
 
 from _pytest.config import Config
 from cardano_clusterlib import clusterlib
@@ -81,7 +81,7 @@ class ClusterManager:
         return cache.CacheManager.get_instance_cache(self.cluster_instance_num)
 
     @property
-    def instance_dir(self) -> Path:
+    def instance_dir(self) -> pl.Path:
         instance_dir = (
             self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{self.cluster_instance_num}"
         )
@@ -307,7 +307,7 @@ class ClusterManager:
 
         artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.pytest_config)
 
-    def _reload_cluster_obj(self, state_dir: Path) -> None:
+    def _reload_cluster_obj(self, state_dir: pl.Path) -> None:
         """Reload cluster instance data if necessary."""
         addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
         # the checksum will not match when cluster was respun

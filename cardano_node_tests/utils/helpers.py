@@ -9,12 +9,12 @@ import itertools
 import json
 import logging
 import os
+import pathlib as pl
 import random
 import signal
 import string
 import subprocess
 import typing as tp
-from pathlib import Path
 
 from cardano_node_tests.utils.types import FileType
 
@@ -51,7 +51,7 @@ def callonce(func: TCallable) -> TCallable:
 @contextlib.contextmanager
 def change_cwd(dir_path: FileType) -> tp.Iterator[FileType]:
     """Change and restore CWD - context manager."""
-    orig_cwd = Path.cwd()
+    orig_cwd = pl.Path.cwd()
     os.chdir(dir_path)
     LOGGER.debug(f"Changed CWD to '{dir_path}'.")
     try:
@@ -199,7 +199,7 @@ def checksum(filename: FileType, blocksize: int = 65536) -> str:
 
 def write_json(out_file: FileType, content: dict) -> FileType:
     """Write dictionary content to JSON file."""
-    with open(Path(out_file).expanduser(), "w", encoding="utf-8") as out_fp:
+    with open(pl.Path(out_file).expanduser(), "w", encoding="utf-8") as out_fp:
         out_fp.write(json.dumps(content, indent=4))
     return out_file
 
@@ -214,27 +214,27 @@ def encode_bech32(prefix: str, data: str) -> str:
     return run_command(f"echo '{data}' | bech32 {prefix}", shell=True).decode().strip()
 
 
-def check_dir_arg(dir_path: str) -> tp.Optional[Path]:
+def check_dir_arg(dir_path: str) -> tp.Optional[pl.Path]:
     """Check that the dir passed as argparse parameter is a valid existing dir."""
     if not dir_path:
         return None
-    abs_path = Path(dir_path).expanduser().resolve()
+    abs_path = pl.Path(dir_path).expanduser().resolve()
     if not (abs_path.exists() and abs_path.is_dir()):
         raise argparse.ArgumentTypeError(f"check_dir_arg: directory '{dir_path}' doesn't exist")
     return abs_path
 
 
-def check_file_arg(file_path: str) -> tp.Optional[Path]:
+def check_file_arg(file_path: str) -> tp.Optional[pl.Path]:
     """Check that the file passed as argparse parameter is a valid existing file."""
     if not file_path:
         return None
-    abs_path = Path(file_path).expanduser().resolve()
+    abs_path = pl.Path(file_path).expanduser().resolve()
     if not (abs_path.exists() and abs_path.is_file()):
         raise argparse.ArgumentTypeError(f"check_file_arg: file '{file_path}' doesn't exist")
     return abs_path
 
 
-def get_eof_offset(infile: Path) -> int:
+def get_eof_offset(infile: pl.Path) -> int:
     """Return position of the current end of the file."""
     with open(infile, "rb") as in_fp:
         in_fp.seek(0, io.SEEK_END)

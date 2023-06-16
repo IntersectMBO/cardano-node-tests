@@ -1,7 +1,7 @@
 """Tests for transactions with metadata."""
 import json
 import logging
-from pathlib import Path
+import pathlib as pl
 
 import allure
 import cbor2
@@ -16,7 +16,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = pl.Path(__file__).parent / "data"
 
 
 @pytest.mark.testnets

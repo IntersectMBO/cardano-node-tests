@@ -1,9 +1,9 @@
 """Utilities for `cardano-submit-api` REST service."""
 import binascii
 import json
+import pathlib as pl
 import shutil
 import typing as tp
-from pathlib import Path
 
 import requests
 
@@ -32,10 +32,10 @@ def is_running() -> bool:
     return True
 
 
-def tx2cbor(tx_file: FileType, destination_dir: FileType = ".") -> Path:
+def tx2cbor(tx_file: FileType, destination_dir: FileType = ".") -> pl.Path:
     """Convert signed Tx to binary CBOR."""
-    tx_file = Path(tx_file)
-    out_file = Path(destination_dir).expanduser() / f"{tx_file.name}.cbor"
+    tx_file = pl.Path(tx_file)
+    out_file = pl.Path(destination_dir).expanduser() / f"{tx_file.name}.cbor"
 
     with open(tx_file, encoding="utf-8") as in_fp:
         tx_loaded = json.load(in_fp)

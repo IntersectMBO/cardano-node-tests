@@ -1,6 +1,6 @@
 import logging
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -48,8 +48,8 @@ def _fund_issuer(
     amount: int,
     fee_txsize: int = FEE_MINT_TXSIZE,
     collateral_utxo_num: int = 1,
-    reference_script: tp.Optional[Path] = None,
-    datum_file: tp.Optional[Path] = None,
+    reference_script: tp.Optional[pl.Path] = None,
+    datum_file: tp.Optional[pl.Path] = None,
 ) -> tp.Tuple[
     tp.List[clusterlib.UTXOData],
     tp.List[clusterlib.UTXOData],

@@ -1,7 +1,7 @@
 """Cluster and test environment configuration."""
 import os
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 
 def _check_cardano_node_socket_path() -> None:
@@ -10,7 +10,7 @@ def _check_cardano_node_socket_path() -> None:
     if not socket_env:
         raise RuntimeError("The `CARDANO_NODE_SOCKET_PATH` env variable is not set.")
 
-    socket_path = Path(socket_env).expanduser().resolve()
+    socket_path = pl.Path(socket_env).expanduser().resolve()
     parts = socket_path.parts
     if not parts[-2].startswith("state-cluster") or parts[-1] not in (
         "bft1.socket",
@@ -24,7 +24,7 @@ def _check_cardano_node_socket_path() -> None:
 _check_cardano_node_socket_path()
 
 
-LAUNCH_PATH = Path.cwd()
+LAUNCH_PATH = pl.Path.cwd()
 
 NETWORK_MAGIC_LOCAL = 42
 DBSYNC_DB = "dbsync"
@@ -48,19 +48,19 @@ TESTNET_POOL_IDS = (
 
 # resolve CARDANO_NODE_SOCKET_PATH
 STARTUP_CARDANO_NODE_SOCKET_PATH = (
-    Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
+    pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
 )
 os.environ["CARDANO_NODE_SOCKET_PATH"] = str(STARTUP_CARDANO_NODE_SOCKET_PATH)
 
 # resolve SCHEDULING_LOG
-SCHEDULING_LOG: tp.Union[str, Path] = os.environ.get("SCHEDULING_LOG") or ""
+SCHEDULING_LOG: tp.Union[str, pl.Path] = os.environ.get("SCHEDULING_LOG") or ""
 if SCHEDULING_LOG:
-    SCHEDULING_LOG = Path(SCHEDULING_LOG).expanduser().resolve()
+    SCHEDULING_LOG = pl.Path(SCHEDULING_LOG).expanduser().resolve()
 
 # resolve BLOCK_PRODUCTION_DB
-BLOCK_PRODUCTION_DB: tp.Union[str, Path] = os.environ.get("BLOCK_PRODUCTION_DB") or ""
+BLOCK_PRODUCTION_DB: tp.Union[str, pl.Path] = os.environ.get("BLOCK_PRODUCTION_DB") or ""
 if BLOCK_PRODUCTION_DB:
-    BLOCK_PRODUCTION_DB = Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
+    BLOCK_PRODUCTION_DB = pl.Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
 if CLUSTER_ERA not in ("", "babbage"):
@@ -86,10 +86,10 @@ if not BOOTSTRAP_DIR and NUM_POOLS < 3:
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
 if HAS_DBSYNC:
     DBSYNC_BIN = (
-        Path(os.environ["DBSYNC_REPO"]).expanduser() / "db-sync-node" / "bin" / "cardano-db-sync"
+        pl.Path(os.environ["DBSYNC_REPO"]).expanduser() / "db-sync-node" / "bin" / "cardano-db-sync"
     ).resolve()
 else:
-    DBSYNC_BIN = Path("/nonexistent")
+    DBSYNC_BIN = pl.Path("/nonexistent")
 
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 
@@ -102,4 +102,4 @@ elif BOOTSTRAP_DIR:
 else:
     SCRIPTS_DIRNAME = CLUSTER_ERA or "babbage"
 
-SCRIPTS_DIR = Path(__file__).parent.parent / "cluster_scripts" / SCRIPTS_DIRNAME
+SCRIPTS_DIR = pl.Path(__file__).parent.parent / "cluster_scripts" / SCRIPTS_DIRNAME

@@ -3,9 +3,9 @@
 See https://github.com/input-output-hk/lobster-challenge
 """
 import logging
+import pathlib as pl
 import random
 import typing as tp
-from pathlib import Path
 
 import allure
 import pytest
@@ -24,7 +24,7 @@ pytestmark = [
     pytest.mark.plutus,
 ]
 
-DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_DIR = pl.Path(__file__).parent.parent / "data"
 LOBSTER_DIR = DATA_DIR / "plutus" / "lobster"
 
 LOBSTER_PLUTUS = LOBSTER_DIR / "lobster.plutus"

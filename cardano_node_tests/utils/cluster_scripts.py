@@ -6,11 +6,11 @@
 # pylint: disable=abstract-method
 import contextlib
 import itertools
+import pathlib as pl
 import random
 import shutil
 import socket
 import typing as tp
-from pathlib import Path
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
@@ -21,15 +21,15 @@ STOP_SCRIPT = "supervisord_stop"
 
 
 class InstanceFiles(tp.NamedTuple):
-    start_script: Path
-    stop_script: Path
+    start_script: pl.Path
+    stop_script: pl.Path
     start_script_args: tp.List[str]
-    dir: Path
+    dir: pl.Path
 
 
 class StartupFiles(tp.NamedTuple):
-    start_script: Path
-    genesis_spec: Path
+    start_script: pl.Path
+    genesis_spec: pl.Path
     config_glob: str
 
 
@@ -206,7 +206,7 @@ class LocalScripts(ScriptsTypes):
 
     def copy_scripts_files(self, destdir: FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
-        destdir = Path(destdir).expanduser().resolve()
+        destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
 
         shutil.copytree(
@@ -223,7 +223,7 @@ class LocalScripts(ScriptsTypes):
         )
 
     def _replace_node_template(
-        self, template_file: Path, node_rec: NodePorts, instance_num: int
+        self, template_file: pl.Path, node_rec: NodePorts, instance_num: int
     ) -> str:
         """Replace template variables in given content."""
         content = template_file.read_text()
@@ -235,7 +235,7 @@ class LocalScripts(ScriptsTypes):
         return new_content
 
     def _replace_instance_files(
-        self, infile: Path, instance_ports: InstancePorts, instance_num: int, ports_per_node: int
+        self, infile: pl.Path, instance_ports: InstancePorts, instance_num: int, ports_per_node: int
     ) -> str:
         """Replace instance variables in given content."""
         content = infile.read_text()
@@ -353,7 +353,9 @@ class LocalScripts(ScriptsTypes):
 
         return "\n".join(lines)
 
-    def _gen_topology_files(self, destdir: Path, addr: str, nodes: tp.Sequence[NodePorts]) -> None:
+    def _gen_topology_files(
+        self, destdir: pl.Path, addr: str, nodes: tp.Sequence[NodePorts]
+    ) -> None:
         """Generate topology files for all nodes."""
         all_nodes = [p.node for p in nodes]
 
@@ -390,7 +392,7 @@ class LocalScripts(ScriptsTypes):
                 out_file=destdir / f"p2p-topology-{node_name}.json", content=p2p_topology
             )
 
-    def _reconfigure_local(self, indir: Path, destdir: Path, instance_num: int) -> None:
+    def _reconfigure_local(self, indir: pl.Path, destdir: pl.Path, instance_num: int) -> None:
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num=instance_num)
         ports_per_node = instance_ports.pool1 - instance_ports.bft1
@@ -454,13 +456,13 @@ class LocalScripts(ScriptsTypes):
         stop_script: FileType = "",
     ) -> InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
-        destdir = Path(destdir).expanduser().resolve()
+        destdir = pl.Path(destdir).expanduser().resolve()
 
         _start_script = start_script or configuration.SCRIPTS_DIR / "start-cluster-hfc"
         _stop_script = stop_script or configuration.SCRIPTS_DIR / "stop-cluster-hfc"
 
-        start_script = Path(_start_script).expanduser().resolve()
-        stop_script = Path(_stop_script).expanduser().resolve()
+        start_script = pl.Path(_start_script).expanduser().resolve()
+        stop_script = pl.Path(_stop_script).expanduser().resolve()
 
         self._reconfigure_local(
             indir=start_script.parent, destdir=destdir, instance_num=instance_num
@@ -485,7 +487,7 @@ class LocalScripts(ScriptsTypes):
                 f"(current number: {self.num_pools})"
             )
 
-        destdir = Path(destdir).expanduser().resolve()
+        destdir = pl.Path(destdir).expanduser().resolve()
         instance_ports = self.get_instance_ports(instance_num=instance_num)
         addr = self._preselect_addr(instance_num=instance_num)
         nodes = instance_ports.node_ports
@@ -581,7 +583,7 @@ class TestnetScripts(ScriptsTypes):
 
     def copy_scripts_files(self, destdir: FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
-        destdir = Path(destdir).expanduser().resolve()
+        destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
@@ -607,7 +609,7 @@ class TestnetScripts(ScriptsTypes):
         )
 
     def _reconfigure_testnet(
-        self, indir: Path, destdir: Path, instance_num: int, globs: tp.List[str]
+        self, indir: pl.Path, destdir: pl.Path, instance_num: int, globs: tp.List[str]
     ) -> None:
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num=instance_num)
@@ -646,7 +648,7 @@ class TestnetScripts(ScriptsTypes):
             if "." not in fname or fname.endswith(".sh"):
                 outfile.chmod(0o755)
 
-    def _reconfigure_submit_api_config(self, infile: Path, outfile: Path) -> None:
+    def _reconfigure_submit_api_config(self, infile: pl.Path, outfile: pl.Path) -> None:
         """Reconfigure submit-api config file."""
         with open(infile, encoding="utf-8") as in_fp:
             content = in_fp.readlines()
@@ -657,7 +659,7 @@ class TestnetScripts(ScriptsTypes):
         with open(outfile, "w", encoding="utf-8") as out_fp:
             out_fp.write("".join(new_content))
 
-    def _reconfigure_bootstrap(self, indir: Path, destdir: Path, globs: tp.List[str]) -> None:
+    def _reconfigure_bootstrap(self, indir: pl.Path, destdir: pl.Path, globs: tp.List[str]) -> None:
         """Copy and reconfigure config files from bootstrap dir."""
         _infiles = [list(indir.glob(g)) for g in globs]
         infiles = list(itertools.chain.from_iterable(_infiles))
@@ -671,15 +673,15 @@ class TestnetScripts(ScriptsTypes):
 
             shutil.copy(infile, outfile)
 
-    def _is_bootstrap_conf_dir(self, bootstrap_dir: Path) -> bool:
+    def _is_bootstrap_conf_dir(self, bootstrap_dir: pl.Path) -> bool:
         return all(list(bootstrap_dir.glob(g)) for g in self.TESTNET_GLOBS)
 
-    def _get_bootstrap_conf_dir(self, bootstrap_dir: Path) -> Path:
+    def _get_bootstrap_conf_dir(self, bootstrap_dir: pl.Path) -> pl.Path:
         bootstrap_conf_dir = bootstrap_dir / self.BOOTSTRAP_CONF
         if not self._is_bootstrap_conf_dir(bootstrap_conf_dir):
             if not configuration.BOOTSTRAP_DIR:
                 raise RuntimeError("The 'BOOTSTRAP_DIR' env variable is not set.")
-            bootstrap_conf_dir = Path(configuration.BOOTSTRAP_DIR).expanduser().resolve()
+            bootstrap_conf_dir = pl.Path(configuration.BOOTSTRAP_DIR).expanduser().resolve()
         if not self._is_bootstrap_conf_dir(bootstrap_conf_dir):
             raise RuntimeError("The 'BOOTSTRAP_DIR' doesn't contain all the needed files.")
         return bootstrap_conf_dir
@@ -696,15 +698,15 @@ class TestnetScripts(ScriptsTypes):
         There is just one cluster instance running for a given testnet. We keep the `instance_num`
         support anyway, as this makes it possible to run multiple testnets on the same machine.
         """
-        destdir = Path(destdir).expanduser().resolve()
+        destdir = pl.Path(destdir).expanduser().resolve()
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir(exist_ok=True)
 
         _start_script = start_script or configuration.SCRIPTS_DIR / "start-cluster"
         _stop_script = stop_script or configuration.SCRIPTS_DIR / "stop-cluster"
 
-        start_script = Path(_start_script).expanduser().resolve()
-        stop_script = Path(_stop_script).expanduser().resolve()
+        start_script = pl.Path(_start_script).expanduser().resolve()
+        stop_script = pl.Path(_stop_script).expanduser().resolve()
 
         bootstrap_conf_dir = self._get_bootstrap_conf_dir(bootstrap_dir=start_script.parent)
 

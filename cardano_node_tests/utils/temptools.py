@@ -1,6 +1,6 @@
+import pathlib as pl
 import tempfile
 import typing as tp
-from pathlib import Path
 
 from _pytest.tmpdir import TempPathFactory
 
@@ -15,15 +15,15 @@ class PytestTempDirs:
     fixture.
     """
 
-    pytest_worker_tmp: tp.Optional[Path] = None
-    pytest_root_tmp: tp.Optional[Path] = None
-    pytest_shared_tmp: tp.Optional[Path] = None
+    pytest_worker_tmp: tp.Optional[pl.Path] = None
+    pytest_root_tmp: tp.Optional[pl.Path] = None
+    pytest_shared_tmp: tp.Optional[pl.Path] = None
 
     _err_init_str = "PytestTempDirs are not initialized"
 
     @classmethod
     def init(cls, tmp_path_factory: TempPathFactory) -> None:
-        worker_tmp = Path(tmp_path_factory.getbasetemp())
+        worker_tmp = pl.Path(tmp_path_factory.getbasetemp())
         cls.pytest_worker_tmp = worker_tmp
 
         root_tmp = worker_tmp.parent if configuration.IS_XDIST else worker_tmp
@@ -34,7 +34,7 @@ class PytestTempDirs:
         cls.pytest_shared_tmp = shared_tmp
 
 
-def get_pytest_worker_tmp() -> Path:
+def get_pytest_worker_tmp() -> pl.Path:
     """Return Pytest temporary directory for the current worker.
 
     When running pytest with multiple workers, each worker has it's own base temporary
@@ -45,14 +45,14 @@ def get_pytest_worker_tmp() -> Path:
     return PytestTempDirs.pytest_worker_tmp
 
 
-def get_pytest_root_tmp() -> Path:
+def get_pytest_root_tmp() -> pl.Path:
     """Return root of the Pytest temporary directory for a single Pytest run."""
     if PytestTempDirs.pytest_root_tmp is None:
         raise RuntimeError(PytestTempDirs._err_init_str)
     return PytestTempDirs.pytest_root_tmp
 
 
-def get_pytest_shared_tmp() -> Path:
+def get_pytest_shared_tmp() -> pl.Path:
     """Return shared temporary directory for a single Pytest run.
 
     Temporary directory that can be shared by multiple Pytest workers, e.g. for creating
@@ -64,8 +64,8 @@ def get_pytest_shared_tmp() -> Path:
 
 
 @helpers.callonce
-def get_basetemp() -> Path:
+def get_basetemp() -> pl.Path:
     """Return base temporary directory for tests artifacts."""
-    basetemp = Path(tempfile.gettempdir()) / "cardano-node-tests"
+    basetemp = pl.Path(tempfile.gettempdir()) / "cardano-node-tests"
     basetemp.mkdir(mode=0o700, parents=True, exist_ok=True)
     return basetemp

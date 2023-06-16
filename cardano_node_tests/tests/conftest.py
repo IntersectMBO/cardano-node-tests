@@ -2,9 +2,9 @@
 import json
 import logging
 import os
+import pathlib as pl
 import shutil
 import typing as tp
-from pathlib import Path
 
 import pytest
 from _pytest.config import Config
@@ -94,7 +94,7 @@ def pytest_configure(config: tp.Any) -> None:
     network_magic = configuration.NETWORK_MAGIC_LOCAL
     if configuration.BOOTSTRAP_DIR:
         with open(
-            Path(configuration.BOOTSTRAP_DIR) / "genesis-shelley.json", encoding="utf-8"
+            pl.Path(configuration.BOOTSTRAP_DIR) / "genesis-shelley.json", encoding="utf-8"
         ) as in_fp:
             genesis = json.load(in_fp)
         network_magic = genesis["networkMagic"]
@@ -197,7 +197,7 @@ def _stop_all_cluster_instances(worker_id: str, pytest_config: Config) -> None:
         cluster_manager_obj.stop_all_clusters()
 
 
-def _testnet_cleanup(pytest_root_tmp: Path) -> None:
+def _testnet_cleanup(pytest_root_tmp: pl.Path) -> None:
     """Perform testnet cleanup at the end of session."""
     if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET:
         return
@@ -291,7 +291,7 @@ def session_autouse(
 
 
 @pytest.fixture(scope="module")
-def testfile_temp_dir() -> Path:
+def testfile_temp_dir() -> pl.Path:
     """Return a temporary dir for storing test artifacts.
 
     The dir is specific to a single test file.
@@ -312,7 +312,7 @@ def testfile_temp_dir() -> Path:
 
 
 @pytest.fixture
-def cd_testfile_temp_dir(testfile_temp_dir: Path) -> tp.Generator[Path, None, None]:
+def cd_testfile_temp_dir(testfile_temp_dir: pl.Path) -> tp.Generator[pl.Path, None, None]:
     """Change to a temporary dir specific to a test file."""
     with helpers.change_cwd(testfile_temp_dir):
         yield testfile_temp_dir
@@ -320,7 +320,7 @@ def cd_testfile_temp_dir(testfile_temp_dir: Path) -> tp.Generator[Path, None, No
 
 @pytest.fixture(autouse=True)
 def function_autouse(
-    cd_testfile_temp_dir: tp.Generator[Path, None, None],  # noqa: ARG001
+    cd_testfile_temp_dir: tp.Generator[pl.Path, None, None],  # noqa: ARG001
 ) -> None:
     """Autouse function fixtures that are required for each test setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass

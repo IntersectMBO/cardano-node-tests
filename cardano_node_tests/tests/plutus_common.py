@@ -1,6 +1,6 @@
 import itertools
+import pathlib as pl
 import typing as tp
-from pathlib import Path
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -11,7 +11,7 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.types import FileType
 
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = pl.Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
@@ -126,7 +126,7 @@ MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
 
 
 class PlutusScriptData(tp.NamedTuple):
-    script_file: Path
+    script_file: pl.Path
     execution_cost: ExecutionCost
 
 
@@ -167,12 +167,12 @@ MINTING_PLUTUS = {
 
 
 class PlutusOp(tp.NamedTuple):
-    script_file: Path
-    datum_file: tp.Optional[Path] = None
-    datum_cbor_file: tp.Optional[Path] = None
+    script_file: pl.Path
+    datum_file: tp.Optional[pl.Path] = None
+    datum_cbor_file: tp.Optional[pl.Path] = None
     datum_value: tp.Optional[str] = None
-    redeemer_file: tp.Optional[Path] = None
-    redeemer_cbor_file: tp.Optional[Path] = None
+    redeemer_file: tp.Optional[pl.Path] = None
+    redeemer_cbor_file: tp.Optional[pl.Path] = None
     redeemer_value: tp.Optional[str] = None
     execution_cost: tp.Optional[ExecutionCost] = None
 
@@ -425,8 +425,8 @@ def xfail_on_secp_error(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_
 def create_script_context_w_blockers(
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
-    redeemer_file: Path,
-    tx_file: tp.Optional[Path] = None,
+    redeemer_file: pl.Path,
+    tx_file: tp.Optional[pl.Path] = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps).
 

@@ -4,10 +4,10 @@ import argparse
 import copy
 import json
 import logging
+import pathlib as pl
 import subprocess
 import sys
 import typing as tp
-from pathlib import Path
 
 from cardano_clusterlib import clusterlib
 
@@ -152,7 +152,7 @@ def get_available_commands(cli_args: tp.Iterable[str], ignore_skips: bool = Fals
     return command_dict
 
 
-def get_log_coverage(log_file: Path) -> dict:
+def get_log_coverage(log_file: pl.Path) -> dict:
     """Get coverage info from log file containing CLI commands."""
     coverage_dict: dict = {}
     with open(log_file, encoding="utf-8") as infile:
@@ -164,7 +164,7 @@ def get_log_coverage(log_file: Path) -> dict:
     return coverage_dict
 
 
-def get_coverage(coverage_files: tp.List[Path], available_commands: dict) -> dict:
+def get_coverage(coverage_files: tp.List[pl.Path], available_commands: dict) -> dict:
     """Get coverage info by merging available data."""
     coverage_dict = copy.deepcopy(available_commands)
     for in_coverage in coverage_files:
