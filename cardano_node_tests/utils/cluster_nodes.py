@@ -9,12 +9,12 @@ import typing as tp
 
 from cardano_clusterlib import clusterlib
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import slots_offset
-from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class ClusterType:
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
     def create_addrs_data(
-        self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
+        self, cluster_obj: clusterlib.ClusterLib, destination_dir: ttypes.FileType = "."
     ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
@@ -145,7 +145,7 @@ class LocalCluster(ClusterType):
         return cluster_obj
 
     def create_addrs_data(
-        self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
+        self, cluster_obj: clusterlib.ClusterLib, destination_dir: ttypes.FileType = "."
     ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         destination_dir = pl.Path(destination_dir).expanduser()
@@ -295,7 +295,7 @@ class TestnetCluster(ClusterType):
     def create_addrs_data(
         self,
         cluster_obj: clusterlib.ClusterLib,  # noqa: ARG002
-        destination_dir: FileType = ".",  # noqa: ARG002
+        destination_dir: ttypes.FileType = ".",  # noqa: ARG002
     ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         shelley_dir = get_cluster_env().state_dir / "shelley"
@@ -534,7 +534,7 @@ def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
 
 
 def setup_test_addrs(
-    cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
+    cluster_obj: clusterlib.ClusterLib, destination_dir: ttypes.FileType = "."
 ) -> pl.Path:
     """Set addresses and their keys up for usage in tests."""
     destination_dir = pl.Path(destination_dir).expanduser()

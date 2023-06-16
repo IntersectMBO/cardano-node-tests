@@ -5,11 +5,11 @@ import typing as tp
 import pytest
 from cardano_clusterlib import clusterlib
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.types import FileType
 
 DATA_DIR = pl.Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
@@ -259,14 +259,14 @@ def txout_factory(
     inline_datum: bool = False,
 ) -> clusterlib.TxOut:
     """Create `TxOut` object."""
-    datum_hash_file: FileType = ""
-    datum_hash_cbor_file: FileType = ""
+    datum_hash_file: ttypes.FileType = ""
+    datum_hash_cbor_file: ttypes.FileType = ""
     datum_hash_value = ""
-    datum_embed_file: FileType = ""
-    datum_embed_cbor_file: FileType = ""
+    datum_embed_file: ttypes.FileType = ""
+    datum_embed_cbor_file: ttypes.FileType = ""
     datum_embed_value = ""
-    inline_datum_file: FileType = ""
-    inline_datum_cbor_file: FileType = ""
+    inline_datum_file: ttypes.FileType = ""
+    inline_datum_cbor_file: ttypes.FileType = ""
     inline_datum_value = ""
 
     if embed_datum:

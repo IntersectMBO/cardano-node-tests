@@ -15,8 +15,8 @@ import typing as tp
 
 from cardano_clusterlib import clusterlib
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
     return addr_record
 
 
-def find_files(location: FileType) -> tp.Generator[pl.Path, None, None]:
+def find_files(location: ttypes.FileType) -> tp.Generator[pl.Path, None, None]:
     r"""Find all '\*.addr' files in given location and it's subdirectories."""
     location = pl.Path(location).expanduser().resolve()
     return location.glob("**/*.addr")
@@ -158,7 +158,7 @@ def group_files(file_paths: tp.Generator[pl.Path, None, None]) -> tp.List[tp.Lis
 
 def cleanup(
     cluster_obj: clusterlib.ClusterLib,
-    location: FileType,
+    location: ttypes.FileType,
 ) -> None:
     """Cleanup a testnet with the help of testing artifacts."""
     cluster_env = cluster_nodes.get_cluster_env()

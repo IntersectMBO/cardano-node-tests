@@ -8,10 +8,10 @@ import logging
 import pathlib as pl
 import sys
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,13 +44,13 @@ def get_args() -> argparse.Namespace:
 
 
 def prepare_scripts_files(
-    destdir: FileType,
-    scriptsdir: FileType = "",
+    destdir: ttypes.FileType,
+    scriptsdir: ttypes.FileType = "",
     instance_num: int = 0,
 ) -> cluster_scripts.InstanceFiles:
     """Prepare scripts files for starting and stopping cluster instance."""
-    start_script: FileType = ""
-    stop_script: FileType = ""
+    start_script: ttypes.FileType = ""
+    stop_script: ttypes.FileType = ""
 
     if scriptsdir:
         scriptsdir = pl.Path(scriptsdir)
@@ -81,7 +81,7 @@ def main() -> int:
         return 1
     destdir.mkdir(parents=True)
 
-    scriptsdir: FileType = pl.Path(args.scripts_dir) if args.scripts_dir else ""
+    scriptsdir: ttypes.FileType = pl.Path(args.scripts_dir) if args.scripts_dir else ""
 
     try:
         prepare_scripts_files(

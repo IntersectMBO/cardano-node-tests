@@ -12,9 +12,9 @@ import shutil
 import socket
 import typing as tp
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.types import FileType
 
 LOCAL_HOSTNAME = "node.local.gd"
 STOP_SCRIPT = "supervisord_stop"
@@ -77,22 +77,22 @@ class ScriptsTypes:
         """Return ports mapping for given cluster instance."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
-    def copy_scripts_files(self, destdir: FileType) -> StartupFiles:
+    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
     def prepare_scripts_files(
         self,
-        destdir: FileType,
+        destdir: ttypes.FileType,
         instance_num: int,
-        start_script: FileType = "",
-        stop_script: FileType = "",
+        start_script: ttypes.FileType = "",
+        stop_script: ttypes.FileType = "",
     ) -> InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
 
     def gen_split_topology_files(
-        self, destdir: FileType, instance_num: int, offset: int = 0
+        self, destdir: ttypes.FileType, instance_num: int, offset: int = 0
     ) -> None:
         """Generate topology files for split network."""
         raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
@@ -204,7 +204,7 @@ class LocalScripts(ScriptsTypes):
         )
         return ports
 
-    def copy_scripts_files(self, destdir: FileType) -> StartupFiles:
+    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
@@ -450,10 +450,10 @@ class LocalScripts(ScriptsTypes):
 
     def prepare_scripts_files(
         self,
-        destdir: FileType,
+        destdir: ttypes.FileType,
         instance_num: int,
-        start_script: FileType = "",
-        stop_script: FileType = "",
+        start_script: ttypes.FileType = "",
+        stop_script: ttypes.FileType = "",
     ) -> InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
         destdir = pl.Path(destdir).expanduser().resolve()
@@ -478,7 +478,7 @@ class LocalScripts(ScriptsTypes):
         )
 
     def gen_split_topology_files(
-        self, destdir: FileType, instance_num: int, offset: int = 0
+        self, destdir: ttypes.FileType, instance_num: int, offset: int = 0
     ) -> None:
         """Generate topology files for split network."""
         if self.num_pools < 4:
@@ -581,7 +581,7 @@ class TestnetScripts(ScriptsTypes):
         )
         return ports
 
-    def copy_scripts_files(self, destdir: FileType) -> StartupFiles:
+    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
@@ -688,10 +688,10 @@ class TestnetScripts(ScriptsTypes):
 
     def prepare_scripts_files(
         self,
-        destdir: FileType,
+        destdir: ttypes.FileType,
         instance_num: int,
-        start_script: FileType = "",
-        stop_script: FileType = "",
+        start_script: ttypes.FileType = "",
+        stop_script: ttypes.FileType = "",
     ) -> InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance.
 

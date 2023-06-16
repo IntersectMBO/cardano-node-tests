@@ -12,10 +12,10 @@ import typing as tp
 import cbor2
 from cardano_clusterlib import clusterlib
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
-from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ def fund_from_genesis(
     cluster_obj: clusterlib.ClusterLib,
     amount: int = 2_000_000,
     tx_name: tp.Optional[str] = None,
-    destination_dir: FileType = ".",
+    destination_dir: ttypes.FileType = ".",
 ) -> None:
     """Send `amount` from genesis addr to all `dst_addrs`."""
     fund_dst = [
@@ -149,7 +149,7 @@ def return_funds_to_faucet(
     faucet_addr: str,
     amount: tp.Union[int, tp.List[int]] = -1,
     tx_name: tp.Optional[str] = None,
-    destination_dir: FileType = ".",
+    destination_dir: ttypes.FileType = ".",
 ) -> None:
     """Send `amount` from all `src_addrs` to `faucet_addr`.
 
@@ -185,7 +185,7 @@ def fund_from_faucet(
     faucet_data: dict,
     amount: tp.Union[int, tp.List[int]] = 1000_000_000,
     tx_name: tp.Optional[str] = None,
-    destination_dir: FileType = ".",
+    destination_dir: ttypes.FileType = ".",
     force: bool = False,
 ) -> tp.Optional[clusterlib.TxRawOutput]:
     """Send `amount` from faucet addr to all `dst_addrs`."""
@@ -224,8 +224,8 @@ def fund_from_faucet(
 def create_payment_addr_records(
     *names: str,
     cluster_obj: clusterlib.ClusterLib,
-    stake_vkey_file: tp.Optional[FileType] = None,
-    destination_dir: FileType = ".",
+    stake_vkey_file: tp.Optional[ttypes.FileType] = None,
+    destination_dir: ttypes.FileType = ".",
 ) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment address(es)."""
     addrs = [
@@ -244,7 +244,7 @@ def create_payment_addr_records(
 def create_stake_addr_records(
     *names: str,
     cluster_obj: clusterlib.ClusterLib,
-    destination_dir: FileType = ".",
+    destination_dir: ttypes.FileType = ".",
 ) -> tp.List[clusterlib.AddressRecord]:
     """Create new stake address(es)."""
     addrs = [
@@ -873,7 +873,7 @@ def save_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
     state_name: str,
     ledger_state: tp.Optional[dict] = None,
-    destination_dir: FileType = ".",
+    destination_dir: ttypes.FileType = ".",
 ) -> pl.Path:
     """Save ledger state to file.
 
@@ -1153,7 +1153,7 @@ def get_utxo_ix_offset(
 def gen_byron_addr(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
-    destination_dir: FileType = ".",
+    destination_dir: ttypes.FileType = ".",
 ) -> clusterlib.AddressRecord:
     """Generate a Byron address and keys."""
     destination_dir = pl.Path(destination_dir).expanduser().resolve()

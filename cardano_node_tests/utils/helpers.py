@@ -16,7 +16,7 @@ import string
 import subprocess
 import typing as tp
 
-from cardano_node_tests.utils.types import FileType
+import cardano_node_tests.utils.types as ttypes
 
 
 LOGGER = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def callonce(func: TCallable) -> TCallable:
 
 
 @contextlib.contextmanager
-def change_cwd(dir_path: FileType) -> tp.Iterator[FileType]:
+def change_cwd(dir_path: ttypes.FileType) -> tp.Iterator[ttypes.FileType]:
     """Change and restore CWD - context manager."""
     orig_cwd = pl.Path.cwd()
     os.chdir(dir_path)
@@ -98,7 +98,7 @@ def environ(env: dict) -> tp.Iterator[None]:
 
 def run_command(
     command: tp.Union[str, list],
-    workdir: FileType = "",
+    workdir: ttypes.FileType = "",
     ignore_fail: bool = False,
     shell: bool = False,
 ) -> bytes:
@@ -129,7 +129,7 @@ def run_command(
     return stdout
 
 
-def run_in_bash(command: str, workdir: FileType = "") -> bytes:
+def run_in_bash(command: str, workdir: ttypes.FileType = "") -> bytes:
     """Run command(s) in bash."""
     cmd = ["bash", "-o", "pipefail", "-c", f"{command}"]
     return run_command(cmd, workdir=workdir)
@@ -188,7 +188,7 @@ def get_vcs_link() -> str:
     return url
 
 
-def checksum(filename: FileType, blocksize: int = 65536) -> str:
+def checksum(filename: ttypes.FileType, blocksize: int = 65536) -> str:
     """Return file checksum."""
     hash_o = hashlib.blake2b()
     with open(filename, "rb") as f:
@@ -197,7 +197,7 @@ def checksum(filename: FileType, blocksize: int = 65536) -> str:
     return hash_o.hexdigest()
 
 
-def write_json(out_file: FileType, content: dict) -> FileType:
+def write_json(out_file: ttypes.FileType, content: dict) -> ttypes.FileType:
     """Write dictionary content to JSON file."""
     with open(pl.Path(out_file).expanduser(), "w", encoding="utf-8") as out_fp:
         out_fp.write(json.dumps(content, indent=4))
