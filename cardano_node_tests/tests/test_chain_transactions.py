@@ -1,9 +1,8 @@
 """Tests for transactions chaining."""
 import logging
 import time
+import typing as tp
 from pathlib import Path
-from typing import Optional
-from typing import Tuple
 
 import allure
 import pytest
@@ -27,8 +26,8 @@ def _gen_signed_tx(
     out_addr: clusterlib.AddressRecord,
     tx_name: str,
     fee: int,
-    invalid_hereafter: Optional[int] = None,
-) -> Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, Path]:
+    invalid_hereafter: tp.Optional[int] = None,
+) -> tp.Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, Path]:
     """Generate Tx and return Tx output in a format that can be used as input for next Tx."""
     send_amount = txin.amount - fee
     out_file = f"{tx_name}_tx.body"

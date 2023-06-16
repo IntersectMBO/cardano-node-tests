@@ -1,8 +1,6 @@
 import itertools
+import typing as tp
 from pathlib import Path
-from typing import List
-from typing import NamedTuple
-from typing import Optional
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -71,7 +69,7 @@ SIGNING_KEY_GOLDEN = DATA_DIR / "golden_normal.skey"
 SIGNING_KEY_GOLDEN_EXTENDED = DATA_DIR / "golden_extended.skey"
 
 
-class ExecutionCost(NamedTuple):
+class ExecutionCost(tp.NamedTuple):
     per_time: int
     per_space: int
     fixed_cost: int
@@ -127,7 +125,7 @@ MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
 )
 
 
-class PlutusScriptData(NamedTuple):
+class PlutusScriptData(tp.NamedTuple):
     script_file: Path
     execution_cost: ExecutionCost
 
@@ -168,30 +166,30 @@ MINTING_PLUTUS = {
 }
 
 
-class PlutusOp(NamedTuple):
+class PlutusOp(tp.NamedTuple):
     script_file: Path
-    datum_file: Optional[Path] = None
-    datum_cbor_file: Optional[Path] = None
-    datum_value: Optional[str] = None
-    redeemer_file: Optional[Path] = None
-    redeemer_cbor_file: Optional[Path] = None
-    redeemer_value: Optional[str] = None
-    execution_cost: Optional[ExecutionCost] = None
+    datum_file: tp.Optional[Path] = None
+    datum_cbor_file: tp.Optional[Path] = None
+    datum_value: tp.Optional[str] = None
+    redeemer_file: tp.Optional[Path] = None
+    redeemer_cbor_file: tp.Optional[Path] = None
+    redeemer_value: tp.Optional[str] = None
+    execution_cost: tp.Optional[ExecutionCost] = None
 
 
-class Token(NamedTuple):
+class Token(tp.NamedTuple):
     coin: str
     amount: int
 
 
-class ScriptCost(NamedTuple):
+class ScriptCost(tp.NamedTuple):
     fee: int
     collateral: int  # Lovelace amount > minimum UTxO value
     min_collateral: int  # minimum needed collateral
 
 
 def check_plutus_costs(
-    plutus_costs: List[dict], expected_costs: List[ExecutionCost], frac: float = 0.15
+    plutus_costs: tp.List[dict], expected_costs: tp.List[ExecutionCost], frac: float = 0.15
 ):
     """Check plutus transaction cost.
 
@@ -428,7 +426,7 @@ def create_script_context_w_blockers(
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
     redeemer_file: Path,
-    tx_file: Optional[Path] = None,
+    tx_file: tp.Optional[Path] = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps).
 

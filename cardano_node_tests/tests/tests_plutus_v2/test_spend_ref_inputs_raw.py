@@ -1,8 +1,7 @@
 """Tests for ro reference inputs while spending with Plutus V2 using `transaction build-raw`."""
 import logging
 import re
-from typing import Any
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -30,7 +29,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -59,7 +58,7 @@ class TestReadonlyReferenceInputs:
     def test_use_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         reference_input_scenario: str,
     ):
         """Test use a reference input when unlock some funds.
@@ -68,7 +67,7 @@ class TestReadonlyReferenceInputs:
         * use a reference input and spend the locked UTxO
         * check that the reference input was not spent
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{reference_input_scenario}"
 
         amount = 2_000_000
@@ -156,7 +155,7 @@ class TestReadonlyReferenceInputs:
     def test_same_input_as_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test use a reference input that is also a regular input of the same transaction.
 
@@ -165,7 +164,7 @@ class TestReadonlyReferenceInputs:
         * check that the input was spent
         * check "transaction view"
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
         amount = 2_000_000
@@ -250,7 +249,7 @@ class TestReadonlyReferenceInputs:
     def test_reference_input_non_plutus(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test using a read-only reference input in non-Plutus transaction.
 
@@ -312,13 +311,13 @@ class TestNegativeReadonlyReferenceInputs:
     def test_reference_spent_output(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test use a reference input that was already spent.
 
         Expect failure
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
         amount = 2_000_000
@@ -415,13 +414,13 @@ class TestNegativeReadonlyReferenceInputs:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_v1_script_with_reference_input(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Test use a reference input with a v1 Plutus script.
 
         Expect failure
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
         amount = 2_000_000
@@ -504,7 +503,7 @@ class TestNegativeReadonlyReferenceInputs:
     def test_reference_input_without_spend_anything(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test using a read-only reference input without spending any UTxO.
 

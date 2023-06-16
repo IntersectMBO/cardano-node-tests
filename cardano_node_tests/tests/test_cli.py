@@ -4,8 +4,8 @@ import logging
 import os
 import string
 import time
+import typing as tp
 from pathlib import Path
-from typing import List
 
 import allure
 import hypothesis
@@ -1033,10 +1033,10 @@ class TestAdvancedQueries:
         elif not {
             "activeStakeGo",
             "activeStakeMark",
-            "activeStakeSet",
+            "activeStaketp.Set",
             "poolStakeGo",
             "poolStakeMark",
-            "poolStakeSet",
+            "poolStaketp.Set",
         }.issubset(stake_snapshot):
             errors.append(f"Missing some expected keys: {stake_snapshot.keys()}")
 
@@ -1051,7 +1051,7 @@ class TestAdvancedQueries:
             ).finish_test()
 
     @pytest.fixture
-    def pool_ids(self, cluster: clusterlib.ClusterLib) -> List[str]:
+    def pool_ids(self, cluster: clusterlib.ClusterLib) -> tp.List[str]:
         stake_pool_ids = cluster.g_query.get_stake_pools()
         if not stake_pool_ids:
             pytest.skip("No stake pools are available.")
@@ -1112,7 +1112,7 @@ class TestAdvancedQueries:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.smoke
-    def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
+    def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: tp.List[str]):
         """Test `query pool-params`."""
         common.get_test_id(cluster)
 
@@ -1169,7 +1169,7 @@ class TestAdvancedQueries:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: List[str]):
+    def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: tp.List[str]):
         """Test `query pool-state`."""
         if not clusterlib_utils.cli_has("query pool-state"):
             pytest.skip("CLI command `query pool-state` is not available")

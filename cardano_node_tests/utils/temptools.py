@@ -1,6 +1,6 @@
 import tempfile
+import typing as tp
 from pathlib import Path
-from typing import Optional
 
 from _pytest.tmpdir import TempPathFactory
 
@@ -15,9 +15,9 @@ class PytestTempDirs:
     fixture.
     """
 
-    pytest_worker_tmp: Optional[Path] = None
-    pytest_root_tmp: Optional[Path] = None
-    pytest_shared_tmp: Optional[Path] = None
+    pytest_worker_tmp: tp.Optional[Path] = None
+    pytest_root_tmp: tp.Optional[Path] = None
+    pytest_shared_tmp: tp.Optional[Path] = None
 
     _err_init_str = "PytestTempDirs are not initialized"
 

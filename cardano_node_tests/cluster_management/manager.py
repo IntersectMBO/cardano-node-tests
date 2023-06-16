@@ -7,12 +7,8 @@ import inspect
 import logging
 import os
 import shutil
+import typing as tp
 from pathlib import Path
-from typing import Any
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Optional
 
 from _pytest.config import Config
 from cardano_clusterlib import clusterlib
@@ -51,7 +47,7 @@ def _get_fixture_hash() -> int:
 class FixtureCache:
     """Cache for a fixture."""
 
-    value: Any
+    value: tp.Any
 
 
 class ClusterManager:
@@ -186,7 +182,7 @@ class ClusterManager:
             (self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}").touch()
 
     @contextlib.contextmanager
-    def respin_on_failure(self) -> Iterator[None]:
+    def respin_on_failure(self) -> tp.Iterator[None]:
         """Indicate that the cluster instance needs respin if command failed - context manager."""
         try:
             yield
@@ -195,7 +191,7 @@ class ClusterManager:
             raise
 
     @contextlib.contextmanager
-    def cache_fixture(self) -> Iterator[FixtureCache]:
+    def cache_fixture(self) -> tp.Iterator[FixtureCache]:
         """Cache fixture value - context manager."""
         curline_hash = _get_fixture_hash()
         cached_value = self.cache.test_data.get(curline_hash)
@@ -266,8 +262,8 @@ class ClusterManager:
     def _get_resources_by_glob(
         self,
         glob: str,
-        from_set: Optional[Iterable[str]] = None,
-    ) -> List[str]:
+        from_set: tp.Optional[tp.Iterable[str]] = None,
+    ) -> tp.List[str]:
         if from_set is not None and isinstance(from_set, str):
             raise AssertionError("`from_set` cannot be a string")
 
@@ -280,9 +276,9 @@ class ClusterManager:
 
     def get_locked_resources(
         self,
-        from_set: Optional[Iterable[str]] = None,
-        worker_id: Optional[str] = None,
-    ) -> List[str]:
+        from_set: tp.Optional[tp.Iterable[str]] = None,
+        worker_id: tp.Optional[str] = None,
+    ) -> tp.List[str]:
         """Get resources locked by worker.
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
@@ -292,9 +288,9 @@ class ClusterManager:
 
     def get_used_resources(
         self,
-        from_set: Optional[Iterable[str]] = None,
-        worker_id: Optional[str] = None,
-    ) -> List[str]:
+        from_set: tp.Optional[tp.Iterable[str]] = None,
+        worker_id: tp.Optional[str] = None,
+    ) -> tp.List[str]:
         """Get resources used by worker.
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).

@@ -5,10 +5,8 @@ import json
 import logging
 import shutil
 import time
+import typing as tp
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import Tuple
 
 import allure
 import pytest
@@ -121,7 +119,7 @@ def _check_block_production(
     temp_template: str,
     pool_id_dec: str,
     in_epoch: int,
-) -> Tuple[int, bool]:
+) -> tp.Tuple[int, bool]:
     epoch = cluster_obj.g_query.get_epoch()
     if epoch < in_epoch:
         new_epochs = in_epoch - epoch
@@ -227,7 +225,7 @@ class TestKES:
                     ]
                 )
 
-        def _refresh_opcerts() -> Dict[str, int]:
+        def _refresh_opcerts() -> tp.Dict[str, int]:
             refreshed_nodes_kes_period = {}
 
             for n in refreshed_nodes:
@@ -383,7 +381,7 @@ class TestKES:
         * check that the pool is minting blocks again
         """
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL_FOR_OFFLINE
         pool_num = int(pool_name.replace("node-pool", ""))
@@ -630,7 +628,7 @@ class TestKES:
         * check `kes-period-info` with the old (replaced) operational certificate
         """
         # pylint: disable=too-many-statements,too-many-locals
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL_FOR_OFFLINE
         pool_num = int(pool_name.replace("node-pool", ""))

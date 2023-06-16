@@ -4,14 +4,8 @@ import logging
 import os
 import pickle
 import time
+import typing as tp
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import NamedTuple
-from typing import Optional
-from typing import Set
-from typing import Union
 
 from cardano_clusterlib import clusterlib
 
@@ -28,7 +22,7 @@ ADDRS_DATA = "addrs_data.pickle"
 STATE_CLUSTER = "state-cluster"
 
 
-class ClusterEnv(NamedTuple):
+class ClusterEnv(tp.NamedTuple):
     socket_path: Path
     state_dir: Path
     work_dir: Path
@@ -37,11 +31,11 @@ class ClusterEnv(NamedTuple):
     tx_era: str
 
 
-class ServiceStatus(NamedTuple):
+class ServiceStatus(tp.NamedTuple):
     name: str
     status: str
-    pid: Optional[int]
-    uptime: Optional[str]
+    pid: tp.Optional[int]
+    uptime: tp.Optional[str]
     message: str = ""
 
 
@@ -61,7 +55,7 @@ class ClusterType:
     TESTNET = "testnet"
     test_addr_records = ("user1",)
 
-    NODES: Set[str] = set()
+    NODES: tp.Set[str] = set()
 
     def __init__(self) -> None:
         self.type = "unknown"
@@ -84,7 +78,7 @@ class ClusterType:
 
     def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
@@ -152,7 +146,7 @@ class LocalCluster(ClusterType):
 
     def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: FileType = "."
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         destination_dir = Path(destination_dir).expanduser()
         destination_dir.mkdir(parents=True, exist_ok=True)
@@ -160,7 +154,7 @@ class LocalCluster(ClusterType):
         instance_num = cluster_env.instance_num
 
         # create new addresses
-        new_addrs_data: Dict[str, Dict[str, Any]] = {}
+        new_addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {}
         for addr_name in self.test_addr_records:
             addr_name_instance = f"{addr_name}_ci{instance_num}"
             payment = cluster_obj.g_address.gen_payment_addr_and_keys(
@@ -172,7 +166,7 @@ class LocalCluster(ClusterType):
             }
 
         # create records for existing addresses
-        faucet_addrs_data: Dict[str, Dict[str, Any]] = {"faucet": {"payment": None}}
+        faucet_addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {"faucet": {"payment": None}}
         byron_dir = cluster_env.state_dir / "byron"
         shelley_dir = cluster_env.state_dir / "shelley"
 
@@ -210,7 +204,7 @@ class LocalCluster(ClusterType):
 class TestnetCluster(ClusterType):
     """Testnet cluster type (full cardano mode)."""
 
-    TESTNETS: Dict[int, dict] = {
+    TESTNETS: tp.Dict[int, dict] = {
         1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"},
         1563999616: {"type": Testnets.testnet, "shelley_start": "2020-07-28T20:20:16Z"},
         1506450213: {"type": Testnets.staging, "shelley_start": "2020-08-01T18:23:33Z"},
@@ -224,7 +218,7 @@ class TestnetCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET
-        self.cluster_scripts: Union[
+        self.cluster_scripts: tp.Union[
             cluster_scripts.ScriptsTypes, cluster_scripts.TestnetScripts
         ] = cluster_scripts.TestnetScripts()
 
@@ -266,7 +260,7 @@ class TestnetCluster(ClusterType):
             byron_dict = json.load(in_json)
         start_timestamp: int = byron_dict["startTime"]
 
-        testnet_dict: Dict[str, Any] = self.TESTNETS.get(start_timestamp) or {}
+        testnet_dict: tp.Dict[str, tp.Any] = self.TESTNETS.get(start_timestamp) or {}
         shelley_start: str = testnet_dict.get("shelley_start") or ""
         byron_epochs: int = testnet_dict.get("byron_epochs") or 0
         if not (shelley_start or byron_epochs):
@@ -302,11 +296,11 @@ class TestnetCluster(ClusterType):
         self,
         cluster_obj: clusterlib.ClusterLib,  # noqa: ARG002
         destination_dir: FileType = ".",  # noqa: ARG002
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         shelley_dir = get_cluster_env().state_dir / "shelley"
 
-        addrs_data: Dict[str, Dict[str, Any]] = {}
+        addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {}
         for addr_name in self.test_addr_records:
             faucet_addr = {
                 "payment": clusterlib.AddressRecord(
@@ -381,7 +375,7 @@ def get_cluster_env() -> ClusterEnv:
     return cluster_env
 
 
-def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
+def start_cluster(cmd: str, args: tp.List[str]) -> clusterlib.ClusterLib:
     """Start cluster."""
     args_str = " ".join(args)
     args_str = f" {args_str}" if args_str else ""
@@ -391,7 +385,7 @@ def start_cluster(cmd: str, args: List[str]) -> clusterlib.ClusterLib:
     return get_cluster_type().get_cluster_obj()
 
 
-def restart_all_nodes(instance_num: Optional[int] = None) -> None:
+def restart_all_nodes(instance_num: tp.Optional[int] = None) -> None:
     """Restart all Cardano nodes of the running cluster."""
     LOGGER.info("Restarting all cluster nodes.")
 
@@ -409,7 +403,7 @@ def restart_all_nodes(instance_num: Optional[int] = None) -> None:
 
 
 def services_action(
-    service_names: List[str], action: str, instance_num: Optional[int] = None
+    service_names: tp.List[str], action: str, instance_num: tp.Optional[int] = None
 ) -> None:
     """Perform action on services on the running cluster."""
     LOGGER.info(f"Performing '{action}' action on services {service_names}.")
@@ -427,19 +421,19 @@ def services_action(
             raise Exception(f"Failed to restart service `{service_name}`") from exc
 
 
-def start_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
+def start_nodes(node_names: tp.List[str], instance_num: tp.Optional[int] = None) -> None:
     """Start list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="start", instance_num=instance_num)
 
 
-def stop_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
+def stop_nodes(node_names: tp.List[str], instance_num: tp.Optional[int] = None) -> None:
     """Stop list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="stop", instance_num=instance_num)
 
 
-def restart_nodes(node_names: List[str], instance_num: Optional[int] = None) -> None:
+def restart_nodes(node_names: tp.List[str], instance_num: tp.Optional[int] = None) -> None:
     """Restart list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="restart", instance_num=instance_num)
@@ -449,8 +443,8 @@ def restart_nodes(node_names: List[str], instance_num: Optional[int] = None) -> 
 
 
 def services_status(
-    service_names: Optional[List[str]] = None, instance_num: Optional[int] = None
-) -> List[ServiceStatus]:
+    service_names: tp.Optional[tp.List[str]] = None, instance_num: tp.Optional[int] = None
+) -> tp.List[ServiceStatus]:
     """Return status info for list of services running on the running cluster (all by default)."""
     if instance_num is None:
         instance_num = get_cluster_env().instance_num

@@ -1,13 +1,13 @@
 import logging
 import os
 import re
+import typing as tp
 from pathlib import Path
-from typing import NamedTuple
 
 LOGGER = logging.getLogger(__name__)
 
 
-class PytestTest(NamedTuple):
+class PytestTest(tp.NamedTuple):
     test_function: str
     test_file: Path
     full: str

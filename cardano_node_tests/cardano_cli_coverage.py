@@ -6,10 +6,8 @@ import json
 import logging
 import subprocess
 import sys
+import typing as tp
 from pathlib import Path
-from typing import Iterable
-from typing import List
-from typing import Tuple
 
 from cardano_clusterlib import clusterlib
 
@@ -104,7 +102,7 @@ def merge_coverage(dict_a: dict, dict_b: dict) -> dict:
     return dict_a
 
 
-def cli(cli_args: Iterable[str]) -> str:
+def cli(cli_args: tp.Iterable[str]) -> str:
     """Run the `cardano-cli` command."""
     assert not isinstance(cli_args, str), "`cli_args` must be sequence of strings"
     with subprocess.Popen(list(cli_args), stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
@@ -112,7 +110,7 @@ def cli(cli_args: Iterable[str]) -> str:
     return stderr.decode()
 
 
-def parse_cmd_output(output: str) -> List[str]:
+def parse_cmd_output(output: str) -> tp.List[str]:
     """Parse `cardano-cli` command output, return sub-commands and options names."""
     section_start = False
     cli_args = []
@@ -138,7 +136,7 @@ def parse_cmd_output(output: str) -> List[str]:
     return cli_args
 
 
-def get_available_commands(cli_args: Iterable[str], ignore_skips: bool = False) -> dict:
+def get_available_commands(cli_args: tp.Iterable[str], ignore_skips: bool = False) -> dict:
     """Get all available cardano-cli sub-commands and options."""
     cli_out = cli(cli_args)
     new_cli_args = parse_cmd_output(cli_out)
@@ -166,7 +164,7 @@ def get_log_coverage(log_file: Path) -> dict:
     return coverage_dict
 
 
-def get_coverage(coverage_files: List[Path], available_commands: dict) -> dict:
+def get_coverage(coverage_files: tp.List[Path], available_commands: dict) -> dict:
     """Get coverage info by merging available data."""
     coverage_dict = copy.deepcopy(available_commands)
     for in_coverage in coverage_files:
@@ -188,7 +186,7 @@ def get_coverage(coverage_files: List[Path], available_commands: dict) -> dict:
 
 def get_report(
     arg_name: str, coverage: dict, uncovered_only: bool = False
-) -> Tuple[dict, int, int]:
+) -> tp.Tuple[dict, int, int]:
     """Generate coverage report."""
     uncovered_db: dict = {}
     covered_count = 0

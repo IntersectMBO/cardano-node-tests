@@ -7,11 +7,8 @@ import os
 import random
 import shutil
 import time
+import typing as tp
 from pathlib import Path
-from typing import Callable
-from typing import Dict
-from typing import Iterable
-from typing import Optional
 
 import pytest
 from _pytest.config import Config
@@ -78,12 +75,12 @@ class _ClusterGetStatus:
     prio_here: bool = False
     tried_all_instances: bool = False
     instance_dir: Path = Path("/nonexistent")
-    final_lock_resources: Iterable[str] = ()
-    final_use_resources: Iterable[str] = ()
+    final_lock_resources: tp.Iterable[str] = ()
+    final_use_resources: tp.Iterable[str] = ()
     # status files
-    started_tests_sfiles: Iterable[Path] = ()
-    marked_ready_sfiles: Iterable[Path] = ()
-    marked_running_my_anywhere: Iterable[Path] = ()
+    started_tests_sfiles: tp.Iterable[Path] = ()
+    marked_ready_sfiles: tp.Iterable[Path] = ()
+    marked_running_my_anywhere: tp.Iterable[Path] = ()
 
 
 class ClusterGetter:
@@ -94,7 +91,7 @@ class ClusterGetter:
         worker_id: str,
         pytest_config: Config,
         num_of_instances: int,
-        log_func: Callable,
+        log_func: tp.Callable,
     ) -> None:
         self.pytest_config = pytest_config
         self.worker_id = worker_id
@@ -174,7 +171,7 @@ class ClusterGetter:
             f"stop_cmd='{startup_files.stop_script}'"
         )
 
-        excp: Optional[Exception] = None
+        excp: tp.Optional[Exception] = None
         for i in range(2):
             if i > 0:
                 self.log(
@@ -363,8 +360,8 @@ class ClusterGetter:
             f.unlink()
 
     def _get_marked_tests_status(
-        self, marked_tests_cache: Dict[int, Dict[str, int]], instance_num: int
-    ) -> Dict[str, int]:
+        self, marked_tests_cache: tp.Dict[int, tp.Dict[str, int]], instance_num: int
+    ) -> tp.Dict[str, int]:
         """Return marked tests status for cluster instance."""
         if instance_num not in marked_tests_cache:
             marked_tests_cache[instance_num] = {}
@@ -373,7 +370,7 @@ class ClusterGetter:
 
     def _update_marked_tests(
         self,
-        marked_tests_cache: Dict[int, Dict[str, int]],
+        marked_tests_cache: tp.Dict[int, tp.Dict[str, int]],
         cget_status: _ClusterGetStatus,
     ) -> None:
         """Update status about running of marked test.
@@ -774,7 +771,7 @@ class ClusterGetter:
             start_cmd=start_cmd,
             current_test=os.environ.get("PYTEST_CURRENT_TEST") or "",
         )
-        marked_tests_cache: Dict[int, Dict[str, int]] = {}
+        marked_tests_cache: tp.Dict[int, tp.Dict[str, int]] = {}
 
         self.log(f"want to run test '{cget_status.current_test}'")
 

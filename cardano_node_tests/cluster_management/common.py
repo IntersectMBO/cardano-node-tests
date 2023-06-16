@@ -1,7 +1,6 @@
 import re
+import typing as tp
 from pathlib import Path
-from typing import Iterator
-from typing import List
 
 CLUSTER_LOCK = ".cluster.lock"
 LOG_LOCK = ".manager_log.lock"
@@ -24,7 +23,7 @@ CLUSTER_STARTED_BY_FRAMEWORK = ".cluster_started_by_cnt"
 CLUSTER_START_CMDS_LOG = "start_cluster_cmds.log"
 
 
-def _get_resources_from_paths(paths: Iterator[Path]) -> List[str]:
+def _get_resources_from_paths(paths: tp.Iterator[Path]) -> tp.List[str]:
     """Get resources names from status files path."""
     resources = [re.search("_@@(.+)@@_", str(r)).group(1) for r in paths]  # type: ignore
     return resources

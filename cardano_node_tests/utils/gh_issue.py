@@ -1,7 +1,6 @@
 """Functionality for working with GitHub issues."""
 import logging
-from typing import Dict
-from typing import Optional
+import typing as tp
 
 import github
 
@@ -11,15 +10,15 @@ LOGGER = logging.getLogger(__name__)
 class GHIssue:
     """GitHub issue."""
 
-    TOKEN: Optional[str] = None
+    TOKEN: tp.Optional[str] = None
 
-    issue_cache: Dict[str, str] = {}
+    issue_cache: tp.Dict[str, str] = {}
 
     _github_instance = None
     _github_instance_error = False
 
     @classmethod
-    def _get_github(cls) -> Optional[github.Github]:
+    def _get_github(cls) -> tp.Optional[github.Github]:
         """Get GitHub instance."""
         if cls._github_instance is not None:
             return cls._github_instance
@@ -45,14 +44,14 @@ class GHIssue:
         self.repo = repo
 
     @property
-    def github(self) -> Optional[github.Github]:
+    def github(self) -> tp.Optional[github.Github]:
         return self._get_github()
 
     @property
     def url(self) -> str:
         return f"https://github.com/{self.repo}/issues/{self.number}"
 
-    def get_state(self) -> Optional[str]:
+    def get_state(self) -> tp.Optional[str]:
         """Get issue state."""
         if not self.github:
             LOGGER.error("Failed to get GitHub instance")

@@ -1,7 +1,6 @@
 """Compatibility tests for spending with Plutus V2 using `transaction build`."""
 import logging
-from typing import Any
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -29,7 +28,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -60,7 +59,7 @@ class TestCompatibility:
     def test_inline_datum_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an inline datum using old Tx era.
 
@@ -104,10 +103,10 @@ class TestCompatibility:
     def test_reference_script_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a reference script using old Tx era."""
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
@@ -143,7 +142,7 @@ class TestCompatibility:
     def test_ro_reference_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test building Tx with read-only reference input using old Tx era.
 

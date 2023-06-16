@@ -1,6 +1,6 @@
 """Tests for spending with Plutus V2 using `transaction build`."""
 import logging
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -30,7 +30,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -62,7 +62,7 @@ class TestBuildLocking:
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_inline_datum: bool,
         use_reference_script: bool,
         request: FixtureRequest,
@@ -216,7 +216,7 @@ class TestBuildLocking:
     def test_min_required_utxo(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_inline_datum: bool,
         use_token: bool,
         use_reference_script: bool,

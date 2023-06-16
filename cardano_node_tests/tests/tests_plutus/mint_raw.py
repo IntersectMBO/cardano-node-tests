@@ -1,6 +1,5 @@
 import logging
-from typing import List
-from typing import Tuple
+import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -21,7 +20,7 @@ def _fund_issuer(
     amount: int,
     fee_txsize: int = FEE_MINT_TXSIZE,
     collateral_utxo_num: int = 1,
-) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund the token issuer."""
     single_collateral_amount = minting_cost.collateral // collateral_utxo_num
     collateral_amounts = [single_collateral_amount for __ in range(collateral_utxo_num - 1)]

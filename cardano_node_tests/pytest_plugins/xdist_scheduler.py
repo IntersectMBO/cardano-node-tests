@@ -1,5 +1,5 @@
+import typing as tp
 from collections import OrderedDict
-from typing import Any
 
 import pytest
 from xdist import scheduler
@@ -166,5 +166,5 @@ def pytest_collection_modifyitems(items: list) -> None:
         item._nodeid = "@".join(comps)
 
 
-def pytest_xdist_make_scheduler(config: Any, log: Any) -> OneLongScheduling:
+def pytest_xdist_make_scheduler(config: tp.Any, log: tp.Any) -> OneLongScheduling:
     return OneLongScheduling(config, log)

@@ -3,10 +3,8 @@ import itertools
 import logging
 import shutil
 import time
+import typing as tp
 from pathlib import Path
-from typing import Any
-from typing import List
-from typing import Optional
 
 import allure
 import pytest
@@ -37,7 +35,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -60,7 +58,7 @@ def payment_addrs(
 def pool_users(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.PoolUser]:
+) -> tp.List[clusterlib.PoolUser]:
     """Create new pool users."""
     test_id = common.get_test_id(cluster)
     created_users = clusterlib_utils.create_pool_users(
@@ -136,7 +134,7 @@ class TestLocking:
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
@@ -192,7 +190,7 @@ class TestLocking:
     def test_context_equivalence(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Test context equivalence while spending a locked UTxO.
 
@@ -204,7 +202,7 @@ class TestLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
         amount = 10_000_000
         deposit_amount = cluster.g_query.get_address_deposit()
@@ -270,7 +268,7 @@ class TestLocking:
             tx_file=tx_output_dummy.out_file,
         )
 
-        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)
+        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)  # pylint: disable=E1101
 
         spend_raw._spend_locked_txin(
             temp_template=temp_template,
@@ -302,7 +300,7 @@ class TestLocking:
     def test_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         request: FixtureRequest,
         embed_datum: bool,
         variant: str,
@@ -323,12 +321,12 @@ class TestLocking:
         temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
         amount = 2_000_000
 
-        datum_file: Optional[Path] = None
-        datum_cbor_file: Optional[Path] = None
-        datum_value: Optional[str] = None
-        redeemer_file: Optional[Path] = None
-        redeemer_cbor_file: Optional[Path] = None
-        redeemer_value: Optional[str] = None
+        datum_file: tp.Optional[Path] = None
+        datum_cbor_file: tp.Optional[Path] = None
+        datum_value: tp.Optional[str] = None
+        redeemer_file: tp.Optional[Path] = None
+        redeemer_cbor_file: tp.Optional[Path] = None
+        redeemer_value: tp.Optional[str] = None
 
         if variant == "typed_json":
             script_file = plutus_common.GUESSING_GAME[plutus_version].script_file
@@ -401,7 +399,7 @@ class TestLocking:
     def test_two_scripts_spending(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx.
@@ -626,7 +624,7 @@ class TestLocking:
     def test_always_fails(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
@@ -638,7 +636,7 @@ class TestLocking:
         * check that the amount was not transferred, collateral UTxO was not spent
           and the expected error was raised
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
@@ -682,7 +680,7 @@ class TestLocking:
     def test_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test failing script together with the `--script-invalid` argument - collateral is taken.
 
@@ -741,7 +739,7 @@ class TestLocking:
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output with native tokens and spending the locked UTxO.
@@ -802,7 +800,7 @@ class TestLocking:
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending part of funds (Lovelace and native tokens) on a locked UTxO.
@@ -814,7 +812,7 @@ class TestLocking:
         * check that the expected amounts of Lovelace and native tokens were spent
         * (optional) check transactions in db-sync
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
 
         token_rand = clusterlib.get_rand_str(5)
@@ -892,7 +890,7 @@ class TestLocking:
     def test_collaterals(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         scenario: str,
         plutus_version: str,
     ):

@@ -2,9 +2,8 @@
 import json
 import logging
 import string
+import typing as tp
 from pathlib import Path
-from typing import Any
-from typing import List
 
 import allure
 import hypothesis
@@ -33,7 +32,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -189,7 +188,7 @@ class TestNegativeInlineDatum:
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         datum_value: str,
     ):
         """Test locking a Tx output with an invalid datum.
@@ -227,13 +226,13 @@ class TestNegativeInlineDatum:
     def test_lock_tx_v1_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an inline datum and a v1 script.
 
         Expect failure.
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
@@ -298,7 +297,7 @@ class TestNegativeInlineDatum:
     def test_lock_tx_big_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         pbt_script_address: str,
         datum_content: str,
     ):
@@ -348,13 +347,13 @@ class TestNegativeInlineDatum:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_lock_tx_datum_as_witness(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Test unlock a Tx output with a datum as witness.
 
         Expect failure.
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS

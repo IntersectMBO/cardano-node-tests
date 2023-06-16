@@ -1,40 +1,35 @@
 """Types used in db-sync related functions."""
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import NamedTuple
-from typing import Optional
-from typing import Union
+import typing as tp
 
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import dbsync_queries
 
 
-class MetadataRecord(NamedTuple):
+class MetadataRecord(tp.NamedTuple):
     key: int
-    json: Any
+    json: tp.Any
     bytes: memoryview
 
 
-class ADAStashRecord(NamedTuple):
+class ADAStashRecord(tp.NamedTuple):
     address: str
     cert_index: int
     amount: int
 
 
-class PotTransferRecord(NamedTuple):
+class PotTransferRecord(tp.NamedTuple):
     treasury: int
     reserves: int
 
 
-class DelegationRecord(NamedTuple):
+class DelegationRecord(tp.NamedTuple):
     address: str
     pool_id: str
     active_epoch_no: int
 
 
-class RewardEpochRecord(NamedTuple):
+class RewardEpochRecord(tp.NamedTuple):
     amount: int
     earned_epoch: int
     spendable_epoch: int
@@ -42,16 +37,16 @@ class RewardEpochRecord(NamedTuple):
     pool_id: str
 
 
-class RewardRecord(NamedTuple):
+class RewardRecord(tp.NamedTuple):
     address: str
-    rewards: List[RewardEpochRecord]
+    rewards: tp.List[RewardEpochRecord]
     reward_sum: int
 
     def __bool__(self) -> bool:
         return self.reward_sum > 0
 
 
-class UTxORecord(NamedTuple):
+class UTxORecord(tp.NamedTuple):
     utxo_hash: str
     utxo_ix: int
     amount: int
@@ -60,12 +55,12 @@ class UTxORecord(NamedTuple):
     decoded_coin: str = ""
     datum_hash: str = ""
     inline_datum_hash: str = ""
-    inline_datum: Optional[Union[str, dict]] = None
-    reference_script: Optional[dict] = None
+    inline_datum: tp.Optional[tp.Union[str, dict]] = None
+    reference_script: tp.Optional[dict] = None
     reference_script_hash: str = ""
 
 
-class GetUTxORecord(NamedTuple):
+class GetUTxORecord(tp.NamedTuple):
     utxo_hash: str
     utxo_ix: int
     has_script: bool
@@ -73,17 +68,17 @@ class GetUTxORecord(NamedTuple):
     data_hash: str
 
 
-class PaymentAddrRecord(NamedTuple):
+class PaymentAddrRecord(tp.NamedTuple):
     payment_address: str
-    stake_address: Optional[str]
+    stake_address: tp.Optional[str]
     amount_sum: int
-    utxos: List[GetUTxORecord]
+    utxos: tp.List[GetUTxORecord]
 
     def __bool__(self) -> bool:
         return self.amount_sum > 0
 
 
-class PoolDataRecord(NamedTuple):
+class PoolDataRecord(tp.NamedTuple):
     id: int
     hash: str
     view: str
@@ -98,20 +93,20 @@ class PoolDataRecord(NamedTuple):
     registered_tx_id: int
     metadata_url: str
     metadata_hash: str
-    owners: List[str]
-    relays: List[Dict[str, Dict[str, Any]]]
+    owners: tp.List[str]
+    relays: tp.List[tp.Dict[str, tp.Dict[str, tp.Any]]]
     retire_cert_index: int
     retire_announced_tx_id: int
     retiring_epoch: int
 
 
-class ScriptRecord(NamedTuple):
+class ScriptRecord(tp.NamedTuple):
     hash: str
     type: str
     serialised_size: int
 
 
-class RedeemerRecord(NamedTuple):
+class RedeemerRecord(tp.NamedTuple):
     unit_mem: int
     unit_steps: int
     fee: int
@@ -120,7 +115,7 @@ class RedeemerRecord(NamedTuple):
     value: dict
 
 
-class TxRecord(NamedTuple):
+class TxRecord(tp.NamedTuple):
     tx_id: int
     tx_hash: str
     block_id: int
@@ -129,25 +124,25 @@ class TxRecord(NamedTuple):
     fee: int
     deposit: int
     size: int
-    invalid_before: Optional[int]
-    invalid_hereafter: Optional[int]
-    txins: List[UTxORecord]
-    txouts: List[UTxORecord]
-    mint: List[UTxORecord]
-    collaterals: List[UTxORecord]
-    collateral_outputs: List[clusterlib.UTXOData]
-    reference_inputs: List[UTxORecord]
-    scripts: List[ScriptRecord]
-    redeemers: List[RedeemerRecord]
-    metadata: List[MetadataRecord]
-    reserve: List[ADAStashRecord]
-    treasury: List[ADAStashRecord]
-    pot_transfers: List[PotTransferRecord]
-    stake_registration: List[str]
-    stake_deregistration: List[str]
-    stake_delegation: List[DelegationRecord]
-    withdrawals: List[clusterlib.TxOut]
-    extra_key_witness: List[str]
+    invalid_before: tp.Optional[int]
+    invalid_hereafter: tp.Optional[int]
+    txins: tp.List[UTxORecord]
+    txouts: tp.List[UTxORecord]
+    mint: tp.List[UTxORecord]
+    collaterals: tp.List[UTxORecord]
+    collateral_outputs: tp.List[clusterlib.UTXOData]
+    reference_inputs: tp.List[UTxORecord]
+    scripts: tp.List[ScriptRecord]
+    redeemers: tp.List[RedeemerRecord]
+    metadata: tp.List[MetadataRecord]
+    reserve: tp.List[ADAStashRecord]
+    treasury: tp.List[ADAStashRecord]
+    pot_transfers: tp.List[PotTransferRecord]
+    stake_registration: tp.List[str]
+    stake_deregistration: tp.List[str]
+    stake_delegation: tp.List[DelegationRecord]
+    withdrawals: tp.List[clusterlib.TxOut]
+    extra_key_witness: tp.List[str]
 
     def _convert_metadata(self) -> dict:
         """Convert list of `MetadataRecord`s to metadata dictionary."""
@@ -155,8 +150,8 @@ class TxRecord(NamedTuple):
         return metadata
 
 
-class TxPrelimRecord(NamedTuple):
-    utxo_out: List[UTxORecord]
-    ma_utxo_out: List[UTxORecord]
-    mint_utxo_out: List[UTxORecord]
+class TxPrelimRecord(tp.NamedTuple):
+    utxo_out: tp.List[UTxORecord]
+    ma_utxo_out: tp.List[UTxORecord]
+    mint_utxo_out: tp.List[UTxORecord]
     last_row: dbsync_queries.TxDBRow

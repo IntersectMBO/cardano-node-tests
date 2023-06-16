@@ -1,6 +1,6 @@
 """Tests for transactions in mempool."""
 import logging
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -23,7 +23,7 @@ class TestMempool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create 2 new payment addresses for 'test_query_mempool_txin'."""
         temp_template = common.get_test_id(cluster_singleton)
 
@@ -45,7 +45,7 @@ class TestMempool:
     def test_query_mempool_txin(
         self,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs_locked: List[clusterlib.AddressRecord],
+        payment_addrs_locked: tp.List[clusterlib.AddressRecord],
     ):
         """Test that is possible to query txin of a transaction that is still in mempool.
 

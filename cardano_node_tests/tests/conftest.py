@@ -3,11 +3,8 @@ import json
 import logging
 import os
 import shutil
+import typing as tp
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import Generator
-from typing import Tuple
 
 import pytest
 from _pytest.config import Config
@@ -41,7 +38,7 @@ class LogsError(Exception):
     pass
 
 
-def pytest_addoption(parser: Any) -> None:
+def pytest_addoption(parser: tp.Any) -> None:
     parser.addoption(
         artifacts.CLI_COVERAGE_ARG,
         action="store",
@@ -64,7 +61,7 @@ def pytest_addoption(parser: Any) -> None:
     )
 
 
-def pytest_configure(config: Any) -> None:
+def pytest_configure(config: tp.Any) -> None:
     # don't bother collecting metadata if all tests are skipped
     if config.getvalue("skipall"):
         return
@@ -116,7 +113,7 @@ def pytest_configure(config: Any) -> None:
         LOGGER.warning("WARNING: Not using `cardano-node` from nix store!")
 
 
-def _skip_all_tests(config: Any, items: list) -> bool:
+def _skip_all_tests(config: tp.Any, items: list) -> bool:
     """Skip all tests if specified on command line.
 
     Can be used for collecting all tests and having "skipped" result before running them for real.
@@ -156,7 +153,7 @@ def _mark_needs_dbsync_tests(items: list) -> bool:
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_collection_modifyitems(config: Any, items: list) -> None:
+def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:
     # prevent on slave nodes (xdist)
     if hasattr(config, "slaveinput"):
         return
@@ -182,7 +179,7 @@ def change_dir() -> None:
 
 
 @pytest.fixture(scope="session")
-def close_dbconn() -> Generator[None, None, None]:
+def close_dbconn() -> tp.Generator[None, None, None]:
     """Close connection to db-sync database at the end of session."""
     yield
     dbsync_conn.close_all()
@@ -223,7 +220,7 @@ def _save_env_for_allure(pytest_config: Config) -> None:
         return
 
     alluredir = configuration.LAUNCH_PATH / alluredir
-    metadata: Dict[str, Any] = pytest_config._metadata  # type: ignore
+    metadata: tp.Dict[str, tp.Any] = pytest_config._metadata  # type: ignore
     with open(alluredir / "environment.properties", "w+", encoding="utf-8") as infile:
         for k, v in metadata.items():
             if isinstance(v, dict):
@@ -233,7 +230,9 @@ def _save_env_for_allure(pytest_config: Config) -> None:
 
 
 @pytest.fixture(scope="session")
-def testenv_setup_teardown(worker_id: str, request: FixtureRequest) -> Generator[None, None, None]:
+def testenv_setup_teardown(
+    worker_id: str, request: FixtureRequest
+) -> tp.Generator[None, None, None]:
     """Setup and teardown test environment."""
     pytest_root_tmp = temptools.get_pytest_root_tmp()
     running_session_glob = ".running_session"
@@ -283,8 +282,8 @@ def testenv_setup_teardown(worker_id: str, request: FixtureRequest) -> Generator
 def session_autouse(
     init_pytest_temp_dirs: None,  # noqa: ARG001
     change_dir: None,  # noqa: ARG001
-    close_dbconn: Any,  # noqa: ARG001
-    testenv_setup_teardown: Any,  # noqa: ARG001
+    close_dbconn: tp.Any,  # noqa: ARG001
+    testenv_setup_teardown: tp.Any,  # noqa: ARG001
 ) -> None:
     """Autouse session fixtures that are required for session setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
@@ -313,7 +312,7 @@ def testfile_temp_dir() -> Path:
 
 
 @pytest.fixture
-def cd_testfile_temp_dir(testfile_temp_dir: Path) -> Generator[Path, None, None]:
+def cd_testfile_temp_dir(testfile_temp_dir: Path) -> tp.Generator[Path, None, None]:
     """Change to a temporary dir specific to a test file."""
     with helpers.change_cwd(testfile_temp_dir):
         yield testfile_temp_dir
@@ -321,7 +320,7 @@ def cd_testfile_temp_dir(testfile_temp_dir: Path) -> Generator[Path, None, None]
 
 @pytest.fixture(autouse=True)
 def function_autouse(
-    cd_testfile_temp_dir: Generator[Path, None, None],  # noqa: ARG001
+    cd_testfile_temp_dir: tp.Generator[Path, None, None],  # noqa: ARG001
 ) -> None:
     """Autouse function fixtures that are required for each test setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
@@ -339,7 +338,7 @@ def _raise_logs_error(errors: str) -> None:
 def cluster_manager(
     worker_id: str,
     request: FixtureRequest,
-) -> Generator[cluster_management.ClusterManager, None, None]:
+) -> tp.Generator[cluster_management.ClusterManager, None, None]:
     """Return instance of `cluster_management.ClusterManager`."""
     # hide from traceback to make logs errors more readable
     __tracebackhide__ = True  # pylint: disable=unused-variable
@@ -374,7 +373,7 @@ def cluster_singleton(
 @pytest.fixture
 def cluster_lock_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
     """Lock any pool and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         lock_resources=[
@@ -390,7 +389,7 @@ def cluster_lock_pool(
 @pytest.fixture
 def cluster_use_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
     """Mark any pool as "in use" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=[

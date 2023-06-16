@@ -2,8 +2,8 @@
 import binascii
 import json
 import shutil
+import typing as tp
 from pathlib import Path
-from typing import NamedTuple
 
 import requests
 
@@ -15,7 +15,7 @@ class SubmitApiError(Exception):
     pass
 
 
-class SubmitApiOut(NamedTuple):
+class SubmitApiOut(tp.NamedTuple):
     txid: str
     response: requests.Response
 

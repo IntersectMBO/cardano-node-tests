@@ -1,7 +1,6 @@
 """Tests for reference scripts while spending with Plutus V2 using `transaction build`."""
 import logging
-from typing import Any
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -29,7 +28,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -59,7 +58,7 @@ class TestReferenceScripts:
     def test_reference_multiple_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_same_script: bool,
         request: FixtureRequest,
     ):
@@ -235,7 +234,7 @@ class TestReferenceScripts:
     def test_reference_same_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking two Tx output with the same V2 reference script and spending it.
 
@@ -380,7 +379,7 @@ class TestReferenceScripts:
     def test_mix_reference_attached_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an attached V2 script and one using reference V2 script.
 
@@ -546,7 +545,7 @@ class TestReferenceScripts:
     def test_spend_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
         address_type: str,
     ):
@@ -613,7 +612,7 @@ class TestReferenceScripts:
     def test_spend_regular_utxo_and_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
         request: FixtureRequest,
     ):
@@ -709,7 +708,7 @@ class TestNegativeReferenceScripts:
     def test_not_a_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an invalid reference script.
 
@@ -742,7 +741,7 @@ class TestNegativeReferenceScripts:
     def test_two_scripts_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking two Tx with different Plutus reference scripts in single Tx, one fails.
 
@@ -889,7 +888,7 @@ class TestNegativeReferenceScripts:
     def test_lock_tx_v1_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a Plutus V1 reference script.
 
@@ -960,7 +959,7 @@ class TestNegativeReferenceScripts:
     def test_v1_attached_v2_reference(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an attached V1 script and one using reference V2 script.
 
@@ -1103,13 +1102,13 @@ class TestNegativeReferenceScripts:
     def test_lock_byron_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a Plutus V2 reference script on Byron address.
 
         Expect failure.
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS

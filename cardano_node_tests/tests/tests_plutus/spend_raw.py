@@ -1,7 +1,5 @@
 import logging
-from typing import List
-from typing import Optional
-from typing import Tuple
+import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -27,13 +25,15 @@ def _fund_script(
     amount: int,
     fee_txsize: int = FEE_REDEEM_TXSIZE,
     deposit_amount: int = 0,
-    tokens: Optional[List[plutus_common.Token]] = None,  # tokens must already be in `payment_addr`
-    tokens_collateral: Optional[
-        List[plutus_common.Token]
+    tokens: tp.Optional[
+        tp.List[plutus_common.Token]
+    ] = None,  # tokens must already be in `payment_addr`
+    tokens_collateral: tp.Optional[
+        tp.List[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
     collateral_fraction_offset: float = 1.0,
     embed_datum: bool = False,
-) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
     # pylint: disable=too-many-locals,too-many-arguments
     assert plutus_op.execution_cost  # for mypy
@@ -128,20 +128,20 @@ def _spend_locked_txin(  # noqa: C901
     temp_template: str,
     cluster_obj: clusterlib.ClusterLib,
     dst_addr: clusterlib.AddressRecord,
-    script_utxos: List[clusterlib.UTXOData],
-    collateral_utxos: List[clusterlib.UTXOData],
+    script_utxos: tp.List[clusterlib.UTXOData],
+    collateral_utxos: tp.List[clusterlib.UTXOData],
     plutus_op: plutus_common.PlutusOp,
     amount: int,
     fee_txsize: int = FEE_REDEEM_TXSIZE,
     txins: clusterlib.OptionalUTXOData = (),
-    tx_files: Optional[clusterlib.TxFiles] = None,
-    invalid_hereafter: Optional[int] = None,
-    invalid_before: Optional[int] = None,
-    tokens: Optional[List[plutus_common.Token]] = None,
+    tx_files: tp.Optional[clusterlib.TxFiles] = None,
+    invalid_hereafter: tp.Optional[int] = None,
+    invalid_before: tp.Optional[int] = None,
+    tokens: tp.Optional[tp.List[plutus_common.Token]] = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,
-) -> Tuple[str, clusterlib.TxRawOutput]:
+) -> tp.Tuple[str, clusterlib.TxRawOutput]:
     """Spend the locked UTxO."""
     # pylint: disable=too-many-arguments,too-many-locals
     assert plutus_op.execution_cost

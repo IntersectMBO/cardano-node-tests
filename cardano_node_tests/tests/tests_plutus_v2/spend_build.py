@@ -1,8 +1,6 @@
 import json
 import logging
-from typing import List
-from typing import Optional
-from typing import Tuple
+import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -52,14 +50,14 @@ def _build_fund_script(
     plutus_op: plutus_common.PlutusOp,
     use_reference_script: bool = False,
     use_inline_datum: bool = True,
-    collateral_amount: Optional[int] = None,
-    tokens_collateral: Optional[
-        List[plutus_common.Token]
+    collateral_amount: tp.Optional[int] = None,
+    tokens_collateral: tp.Optional[
+        tp.List[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
-) -> Tuple[
-    List[clusterlib.UTXOData],
-    List[clusterlib.UTXOData],
-    Optional[clusterlib.UTXOData],
+) -> tp.Tuple[
+    tp.List[clusterlib.UTXOData],
+    tp.List[clusterlib.UTXOData],
+    tp.Optional[clusterlib.UTXOData],
     clusterlib.TxRawOutput,
 ]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO and reference script.
@@ -185,8 +183,8 @@ def _build_reference_txin(
     cluster: clusterlib.ClusterLib,
     amount: int,
     payment_addr: clusterlib.AddressRecord,
-    dst_addr: Optional[clusterlib.AddressRecord] = None,
-) -> List[clusterlib.UTXOData]:
+    dst_addr: tp.Optional[clusterlib.AddressRecord] = None,
+) -> tp.List[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 
     Uses `cardano-cli transaction build` command for building the transaction.

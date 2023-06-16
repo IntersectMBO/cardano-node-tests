@@ -10,9 +10,8 @@ import functools
 import logging
 import random
 import time
+import typing as tp
 from pathlib import Path
-from typing import Generator
-from typing import List
 
 from cardano_clusterlib import clusterlib
 
@@ -126,20 +125,20 @@ def create_addr_record(addr_file: Path) -> clusterlib.AddressRecord:
     return addr_record
 
 
-def find_files(location: FileType) -> Generator[Path, None, None]:
+def find_files(location: FileType) -> tp.Generator[Path, None, None]:
     r"""Find all '\*.addr' files in given location and it's subdirectories."""
     location = Path(location).expanduser().resolve()
     return location.glob("**/*.addr")
 
 
-def group_files(file_paths: Generator[Path, None, None]) -> List[List[Path]]:
+def group_files(file_paths: tp.Generator[Path, None, None]) -> tp.List[tp.List[Path]]:
     """Group payment address files with corresponding stake address files.
 
     These need to be processed together - funds are transferred from payment address after
     the stake address was deregistered.
     """
-    curr_group: List[Path] = []
-    path_groups: List[List[Path]] = [curr_group]
+    curr_group: tp.List[Path] = []
+    path_groups: tp.List[tp.List[Path]] = [curr_group]
     prev_basename = ""
 
     # reverse-sort the list so stake address files are processes before payment address files
@@ -167,7 +166,7 @@ def cleanup(
     faucet_payment = create_addr_record(faucet_addr_file)
     files_found = group_files(find_files(location))
 
-    def _run(files: List[Path]) -> None:
+    def _run(files: tp.List[Path]) -> None:
         for fpath in files:
             # add random sleep for < 1s to prevent
             # "Network.Socket.connect: <socket: 11>: resource exhausted"

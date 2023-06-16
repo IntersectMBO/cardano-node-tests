@@ -6,12 +6,8 @@ import logging
 import os
 import re
 import time
+import typing as tp
 from pathlib import Path
-from typing import Iterator
-from typing import List
-from typing import NamedTuple
-from typing import Optional
-from typing import Tuple
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
@@ -68,7 +64,7 @@ ERRORS_LOOK_BACK_RE = (
 )
 
 
-class RotableLog(NamedTuple):
+class RotableLog(tp.NamedTuple):
     logfile: Path
     seek: int
     timestamp: float
@@ -79,7 +75,7 @@ def get_framework_log_path() -> Path:
     return temptools.get_pytest_worker_tmp() / "framework.log"
 
 
-def _look_back_found(buffer: List[str]) -> bool:
+def _look_back_found(buffer: tp.List[str]) -> bool:
     """Look back to the buffer to see if there is an expected message.
 
     If the expected message is found, the error can be ignored.
@@ -98,7 +94,7 @@ def _look_back_found(buffer: List[str]) -> bool:
     return any(re.search(look_back_re, line) for line in buffer[:-1])
 
 
-def _get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> List[RotableLog]:
+def _get_rotated_logs(logfile: Path, seek: int = 0, timestamp: float = 0.0) -> tp.List[RotableLog]:
     """Return list of versions of the log file (list of `RotableLog`).
 
     When the seek offset was recorded for a log file and the log file was rotated,
@@ -131,9 +127,9 @@ def _get_ignore_rules_lock_file(instance_num: int) -> Path:
 
 def _get_ignore_rules(
     cluster_env: cluster_nodes.ClusterEnv, timestamp: float
-) -> List[Tuple[str, str]]:
+) -> tp.List[tp.Tuple[str, str]]:
     """Get rules (file glob and regex) for ignored errors."""
-    rules: List[Tuple[str, str]] = []
+    rules: tp.List[tp.Tuple[str, str]] = []
     lock_file = _get_ignore_rules_lock_file(instance_num=cluster_env.instance_num)
 
     with locking.FileLockIfXdist(lock_file):
@@ -165,7 +161,7 @@ def _read_seek(offset_file: Path) -> int:
 
 
 def _get_ignore_regex(
-    ignore_rules: List[Tuple[str, str]], regexes: List[str], logfile: Path
+    ignore_rules: tp.List[tp.Tuple[str, str]], regexes: tp.List[str], logfile: Path
 ) -> str:
     """Combine together regex for the given log file using file specific and global ignore rules."""
     regex_set = set(regexes)
@@ -178,10 +174,10 @@ def _get_ignore_regex(
 
 def _search_log_lines(
     logfile: Path,
-    rotated_logs: List[RotableLog],
-    errors_ignored_re: Optional[re.Pattern] = None,
-    errors_look_back_re: Optional[re.Pattern] = None,
-) -> List[Tuple[Path, str]]:
+    rotated_logs: tp.List[RotableLog],
+    errors_ignored_re: tp.Optional[re.Pattern] = None,
+    errors_look_back_re: tp.Optional[re.Pattern] = None,
+) -> tp.List[tp.Tuple[Path, str]]:
     """Search for errors in the log file and, if needed, in the corresponding rotated logs."""
     errors = []
     last_line_pos = -1
@@ -255,7 +251,7 @@ def add_ignore_rule(
 
 
 @contextlib.contextmanager
-def expect_errors(regex_pairs: List[Tuple[str, str]], worker_id: str) -> Iterator[None]:
+def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> tp.Iterator[None]:
     """Make sure the expected errors are present in logs.
 
     Args:
@@ -313,7 +309,7 @@ def expect_errors(regex_pairs: List[Tuple[str, str]], worker_id: str) -> Iterato
         raise AssertionError(errors_joined) from None
 
 
-def search_cluster_logs() -> List[Tuple[Path, str]]:
+def search_cluster_logs() -> tp.List[tp.Tuple[Path, str]]:
     """Search cluster logs for errors."""
     cluster_env = cluster_nodes.get_cluster_env()
     lock_file = temptools.get_basetemp() / f"search_artifacts_{cluster_env.instance_num}.lock"
@@ -355,7 +351,7 @@ def search_cluster_logs() -> List[Tuple[Path, str]]:
     return errors
 
 
-def search_framework_log() -> List[Tuple[Path, str]]:
+def search_framework_log() -> tp.List[tp.Tuple[Path, str]]:
     """Search framework log for errors."""
     # It is not necessary to lock the `framework.log` file because there is one log file per worker.
     # Each worker is checking only its own log file.

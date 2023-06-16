@@ -1,7 +1,7 @@
 """Tests for protocol state and protocol parameters."""
 import json
 import logging
-from typing import FrozenSet
+import typing as tp
 
 import allure
 import pytest
@@ -105,7 +105,7 @@ class TestProtocol:
         common.get_test_id(cluster)
         protocol_params = cluster.g_query.get_protocol_params()
 
-        union_with: FrozenSet[str] = frozenset()
+        union_with: tp.FrozenSet[str] = frozenset()
         if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
             union_with = PROTOCOL_PARAM_KEYS_1_35_2
 

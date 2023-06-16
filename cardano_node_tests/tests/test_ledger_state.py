@@ -2,9 +2,7 @@
 import functools
 import itertools
 import logging
-from typing import Dict
-from typing import List
-from typing import Set
+import typing as tp
 
 import allure
 import pytest
@@ -66,8 +64,8 @@ class TestLedgerState:
         )
         es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
 
-        def _get_hashes(snapshot: str) -> Dict[str, int]:
-            hashes: Dict[str, int] = {}
+        def _get_hashes(snapshot: str) -> tp.Dict[str, int]:
+            hashes: tp.Dict[str, int] = {}
             for r in es_snapshot[snapshot]["stake"]:
                 r_hash_rec = r[0]
                 r_hash = r_hash_rec.get("script hash") or r_hash_rec.get("key hash")
@@ -77,8 +75,8 @@ class TestLedgerState:
                     hashes[r_hash] = r[1]
             return hashes
 
-        def _get_delegations(snapshot: str) -> Dict[str, List[str]]:
-            delegations: Dict[str, List[str]] = {}
+        def _get_delegations(snapshot: str) -> tp.Dict[str, tp.List[str]]:
+            delegations: tp.Dict[str, tp.List[str]] = {}
             for r in es_snapshot[snapshot]["delegations"]:
                 r_hash_rec = r[0]
                 r_hash = r_hash_rec.get("script hash") or r_hash_rec.get("key hash")
@@ -137,9 +135,9 @@ class TestLedgerState:
             )
 
         sum_mark = sum_set = sum_go = 0
-        seen_hashes_mark: Set[str] = set()
-        seen_hashes_set: Set[str] = set()
-        seen_hashes_go: Set[str] = set()
+        seen_hashes_mark: tp.Set[str] = set()
+        seen_hashes_set: tp.Set[str] = set()
+        seen_hashes_go: tp.Set[str] = set()
         delegation_pool_ids = {*delegations_mark, *delegations_set, *delegations_go}
         for pool_id_dec in delegation_pool_ids:
             pool_id = helpers.encode_bech32(prefix="pool", data=pool_id_dec)
@@ -168,7 +166,7 @@ class TestLedgerState:
                 pstake_go_cmd = stake_snapshot["pools"][pool_id_dec]["stakeGo"]
             else:
                 pstake_mark_cmd = stake_snapshot["poolStakeMark"]
-                pstake_set_cmd = stake_snapshot["poolStakeSet"]
+                pstake_set_cmd = stake_snapshot["poolStaketp.Set"]
                 pstake_go_cmd = stake_snapshot["poolStakeGo"]
 
             if pstake_sum_mark != pstake_mark_cmd:
@@ -215,8 +213,8 @@ class TestLedgerState:
         else:
             if sum_mark < stake_snapshot["activeStakeMark"]:
                 errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
-            if sum_set < stake_snapshot["activeStakeSet"]:
-                errors.append(f"active_set: {sum_set} < {stake_snapshot['activeStakeSet']}")
+            if sum_set < stake_snapshot["activeStaketp.Set"]:
+                errors.append(f"active_set: {sum_set} < {stake_snapshot['activeStaketp.Set']}")
             if sum_go < stake_snapshot["activeStakeGo"]:
                 errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
 

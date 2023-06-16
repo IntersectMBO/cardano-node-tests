@@ -7,9 +7,8 @@ import logging
 import os
 import shutil
 import time
+import typing as tp
 from pathlib import Path
-from typing import List
-from typing import Optional
 
 import allure
 import pytest
@@ -50,7 +49,7 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
         num_addrs = 4 if ROLLBACK_PAUSE else 3
@@ -137,8 +136,8 @@ class TestRollback:
         cluster_obj: clusterlib.ClusterLib,
         node: str,
         address: str = "",
-        tx_raw_output: Optional[clusterlib.TxRawOutput] = None,
-    ) -> List[clusterlib.UTXOData]:
+        tx_raw_output: tp.Optional[clusterlib.TxRawOutput] = None,
+    ) -> tp.List[clusterlib.UTXOData]:
         """Query UTxO on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
@@ -202,7 +201,7 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         backup_topology: Path,
         split_topology_dir: Path,
     ):
@@ -366,7 +365,7 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         backup_topology: Path,
         split_topology_dir: Path,
     ):

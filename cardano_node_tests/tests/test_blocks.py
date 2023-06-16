@@ -7,9 +7,7 @@ import os
 import random
 import sqlite3
 import time
-from typing import Dict
-from typing import List
-from typing import Tuple
+import typing as tp
 
 import allure
 import pytest
@@ -42,7 +40,7 @@ class TestLeadershipSchedule:
         self,
         skip_leadership_schedule: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
         for_epoch: str,
     ):
         """Check that blocks were minted according to leadership schedule.
@@ -92,7 +90,7 @@ class TestLeadershipSchedule:
         )
         slots_when_minted = {r.slot_no for r in minted_blocks}
 
-        errors: List[str] = []
+        errors: tp.List[str] = []
 
         # compare leadership schedule with blocks that were actually minted
         slots_when_scheduled = {r.slot_no for r in leadership_schedule}
@@ -114,7 +112,7 @@ class TestLeadershipSchedule:
             state_name=temp_template,
             ledger_state=ledger_state,
         )
-        blocks_before: Dict[str, int] = ledger_state["blocksBefore"]
+        blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
         pool_id_dec = helpers.decode_bech32(pool_id)
         minted_blocks_ledger = blocks_before.get(pool_id_dec) or 0
         minted_blocks_db = len(slots_when_minted)
@@ -181,7 +179,7 @@ class TestCollectData:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -209,7 +207,7 @@ class TestCollectData:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Record number of blocks produced by each pool over multiple epochs.
 
@@ -273,7 +271,7 @@ class TestCollectData:
                 state_name=f"{temp_template}_epoch{curr_epoch}",
                 ledger_state=ledger_state,
             )
-            blocks_before: Dict[str, int] = ledger_state["blocksBefore"]
+            blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
 
             # save blocks data to sqlite db
             cur = conn.cursor()

@@ -3,9 +3,7 @@ import functools
 import logging
 import random
 import time
-from typing import List
-from typing import Optional
-from typing import Tuple
+import typing as tp
 
 import allure
 import pytest
@@ -44,7 +42,7 @@ class TestManyUTXOs:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -70,7 +68,7 @@ class TestManyUTXOs:
         self,
         cluster_obj: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
-        out_addrs: List[clusterlib.AddressRecord],
+        out_addrs: tp.List[clusterlib.AddressRecord],
         tx_name: str,
         amount: int,
     ):
@@ -96,8 +94,8 @@ class TestManyUTXOs:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-    ) -> Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+    ) -> tp.Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
         """Generate many UTxOs (100000+) with 1-2 ADA."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -118,7 +116,7 @@ class TestManyUTXOs:
                     amount = less_than_1_ada + 1_000_000
 
                     # repeat transaction when "BadInputsUTxO" error happens
-                    excp: Optional[clusterlib.CLIError] = None
+                    excp: tp.Optional[clusterlib.CLIError] = None
                     for r in range(2):
                         if r > 0:
                             cluster.wait_for_new_block(2)
@@ -171,7 +169,7 @@ class TestManyUTXOs:
     def test_mini_transactions(
         self,
         cluster: clusterlib.ClusterLib,
-        many_utxos: Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord],
+        many_utxos: tp.Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord],
         amount: int,
     ):
         """Test transaction with many UTxOs (300+) with small amounts of ADA (1-10).

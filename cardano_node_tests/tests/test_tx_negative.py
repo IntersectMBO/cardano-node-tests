@@ -6,11 +6,8 @@ import logging
 import re
 import string
 import time
+import typing as tp
 from pathlib import Path
-from typing import Any
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 import allure
 import hypothesis
@@ -76,7 +73,7 @@ class TestNegative:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.PoolUser]:
+    ) -> tp.List[clusterlib.PoolUser]:
         """Create pool users."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -101,7 +98,7 @@ class TestNegative:
     def _send_funds_to_invalid_address(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
         temp_template: str,
         use_build_cmd=False,
@@ -135,7 +132,7 @@ class TestNegative:
     def _send_funds_from_invalid_address(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
         temp_template: str,
         use_build_cmd=False,
@@ -167,7 +164,7 @@ class TestNegative:
     def _send_funds_invalid_change_address(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
         temp_template: str,
     ):
@@ -190,7 +187,7 @@ class TestNegative:
     def _send_funds_with_invalid_utxo(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         utxo: clusterlib.UTXOData,
         temp_template: str,
         use_build_cmd=False,
@@ -223,12 +220,12 @@ class TestNegative:
     def _submit_wrong_validity(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         temp_template: str,
-        invalid_before: Optional[int] = None,
-        invalid_hereafter: Optional[int] = None,
+        invalid_before: tp.Optional[int] = None,
+        invalid_hereafter: tp.Optional[int] = None,
         use_build_cmd=False,
-    ) -> Tuple[Optional[int], str, Optional[clusterlib.TxRawOutput]]:
+    ) -> tp.Tuple[tp.Optional[int], str, tp.Optional[clusterlib.TxRawOutput]]:
         """Try to build and submit a transaction with wrong validity interval."""
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
@@ -292,7 +289,7 @@ class TestNegative:
 
     def _get_validity_range(
         self, cluster_obj: clusterlib.ClusterLib, tx_body_file: Path
-    ) -> Tuple[Optional[int], Optional[int]]:
+    ) -> tp.Tuple[tp.Optional[int], tp.Optional[int]]:
         """Get validity range from a transaction body."""
         tx_loaded = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_body_file)
 
@@ -310,7 +307,7 @@ class TestNegative:
     def test_past_ttl(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to send a transaction with ttl in the past.
@@ -335,14 +332,14 @@ class TestNegative:
     def test_before_negative_overflow(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to send a transaction with negative `invalid_before` and check for int overflow.
 
         Expect failure.
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         # Negative values overflow to positive `common.MAX_UINT64`.
@@ -385,14 +382,14 @@ class TestNegative:
     def test_before_positive_overflow(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to send a transaction with `invalid_before` > `MAX_UINT64`.
 
         Check for int overflow. Expect failure.
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         # Valid values are <= `common.MAX_INT64`, and overflow happens for
@@ -436,14 +433,14 @@ class TestNegative:
     def test_before_too_high(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to send a transaction with `invalid_before` > `MAX_INT64`.
 
         Expect failure.
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
 
         # valid values are <= `common.MAX_INT64`
@@ -472,7 +469,7 @@ class TestNegative:
     def test_pbt_before_negative_overflow(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         before_value: int,
         use_build_cmd: bool,
     ):
@@ -520,7 +517,7 @@ class TestNegative:
     def test_pbt_before_positive_overflow(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         before_value: int,
         use_build_cmd: bool,
     ):
@@ -569,7 +566,7 @@ class TestNegative:
     def test_pbt_before_too_high(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         before_value: int,
         use_build_cmd: bool,
     ):
@@ -597,7 +594,7 @@ class TestNegative:
     def test_duplicated_tx(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to send an identical transaction twice.
 
@@ -653,7 +650,7 @@ class TestNegative:
     def test_wrong_network_magic(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to submit a TX with wrong network magic.
 
@@ -722,7 +719,7 @@ class TestNegative:
     def test_wrong_signing_key(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to send a transaction signed with wrong signing key.
 
@@ -749,7 +746,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         cluster_wrong_tx_era: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to send a transaction using TX era > network (cluster) era.
 
@@ -779,7 +776,7 @@ class TestNegative:
     def test_send_funds_to_reward_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to send funds from payment address to stake address.
@@ -802,7 +799,7 @@ class TestNegative:
     def test_send_funds_to_utxo_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to send funds from payment address to UTxO address.
@@ -827,7 +824,7 @@ class TestNegative:
     def test_send_funds_to_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from payment address to non-existent address (property-based test).
@@ -848,7 +845,7 @@ class TestNegative:
     def test_build_send_funds_to_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from payment address to non-existent address (property-based test).
@@ -874,7 +871,7 @@ class TestNegative:
     def test_send_funds_to_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from payment address to address with invalid length.
@@ -895,7 +892,7 @@ class TestNegative:
     def test_build_send_funds_to_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from payment address to address with invalid length.
@@ -923,7 +920,7 @@ class TestNegative:
     def test_send_funds_to_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from payment address to address with invalid characters.
@@ -946,7 +943,7 @@ class TestNegative:
     def test_build_send_funds_to_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from payment address to address with invalid characters.
@@ -972,7 +969,7 @@ class TestNegative:
     def test_send_funds_from_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from invalid address (property-based test).
@@ -993,7 +990,7 @@ class TestNegative:
     def test_build_send_funds_from_invalid_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from non-existent address (property-based test).
@@ -1019,7 +1016,7 @@ class TestNegative:
     def test_send_funds_from_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from address with invalid length (property-based test).
@@ -1040,7 +1037,7 @@ class TestNegative:
     def test_build_send_funds_from_invalid_length_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from address with invalid length (property-based test).
@@ -1068,7 +1065,7 @@ class TestNegative:
     def test_send_funds_from_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from address with invalid characters (property-based test).
@@ -1091,7 +1088,7 @@ class TestNegative:
     def test_build_send_funds_from_invalid_chars_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds from address with invalid characters (property-based test).
@@ -1118,7 +1115,7 @@ class TestNegative:
     def test_build_send_funds_invalid_change_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds using invalid change address (property-based test).
@@ -1143,7 +1140,7 @@ class TestNegative:
     def test_build_send_funds_invalid_chars_change_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds using change address with invalid characters (property-based test).
@@ -1166,7 +1163,7 @@ class TestNegative:
     def test_build_send_funds_invalid_length_change_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         addr: str,
     ):
         """Try to send funds using change address with invalid length (property-based test).
@@ -1187,7 +1184,7 @@ class TestNegative:
     def test_nonexistent_utxo_ix(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to use nonexistent UTxO TxIx as an input.
@@ -1219,7 +1216,7 @@ class TestNegative:
     def test_nonexistent_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to use nonexistent UTxO hash as an input.
@@ -1253,7 +1250,7 @@ class TestNegative:
     def test_invalid_length_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         utxo_hash: str,
     ):
         """Try to use invalid UTxO hash as an input (property-based test).
@@ -1280,7 +1277,7 @@ class TestNegative:
     def test_build_invalid_length_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
         utxo_hash: str,
     ):
         """Try to use invalid UTxO hash as an input (property-based test).
@@ -1310,7 +1307,7 @@ class TestNegative:
     def test_missing_fee(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to build a transaction with a missing `--fee` parameter.
 
@@ -1359,7 +1356,7 @@ class TestNegative:
     def test_missing_ttl(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to build a Shelley era TX with a missing `--ttl` (`--invalid-hereafter`) parameter.
 
@@ -1407,7 +1404,7 @@ class TestNegative:
     def test_missing_tx_in(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to build a transaction with a missing `--tx-in` parameter.
 
@@ -1449,7 +1446,7 @@ class TestNegative:
     def test_lower_bound_not_supported(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to build a Shelley era TX with an `--invalid-before` argument.
 
@@ -1485,7 +1482,7 @@ class TestNegative:
     def test_build_missing_tx_in(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to build a transaction with a missing `--tx-in` parameter.
 
@@ -1528,7 +1525,7 @@ class TestNegative:
     def test_build_missing_change_address(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to build a transaction with a missing `--change-address` parameter.
 
@@ -1570,7 +1567,7 @@ class TestNegative:
     def test_build_multiple_change_addresses(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to build a transaction with multiple `--change-address` parameters.
 

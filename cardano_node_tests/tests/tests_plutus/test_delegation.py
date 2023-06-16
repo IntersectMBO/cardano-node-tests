@@ -6,10 +6,8 @@
 * stake address deregistration
 """
 import logging
+import typing as tp
 from pathlib import Path
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 import allure
 import pytest
@@ -37,7 +35,7 @@ pytestmark = [
 @pytest.fixture
 def cluster_lock_42stake(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
     """Make sure just one staking Plutus test run at a time.
 
     Plutus script always has the same address. When one script is used in multiple
@@ -69,7 +67,7 @@ def cluster_lock_42stake(
 @pytest.fixture
 def pool_user(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_42stake: Tuple[clusterlib.ClusterLib, str],
+    cluster_lock_42stake: tp.Tuple[clusterlib.ClusterLib, str],
 ) -> delegation.PoolUserScript:
     """Create pool user."""
     cluster, *__ = cluster_lock_42stake
@@ -111,14 +109,14 @@ def pool_user(
 def delegate_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
-    txins: List[clusterlib.UTXOData],
-    collaterals: List[clusterlib.UTXOData],
+    txins: tp.List[clusterlib.UTXOData],
+    collaterals: tp.List[clusterlib.UTXOData],
     pool_user: delegation.PoolUserScript,
     pool_id: str,
     redeemer_file: Path,
-    reference_script_utxos: Optional[List[clusterlib.UTXOData]],
+    reference_script_utxos: tp.Optional[tp.List[clusterlib.UTXOData]],
     use_build_cmd: bool,
-) -> Tuple[clusterlib.TxRawOutput, List[dict]]:
+) -> tp.Tuple[clusterlib.TxRawOutput, tp.List[dict]]:
     """Submit registration certificate and delegate to pool."""
     # create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
@@ -204,13 +202,13 @@ def delegate_stake_addr(
 def deregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
-    txins: List[clusterlib.UTXOData],
-    collaterals: List[clusterlib.UTXOData],
+    txins: tp.List[clusterlib.UTXOData],
+    collaterals: tp.List[clusterlib.UTXOData],
     pool_user: delegation.PoolUserScript,
     redeemer_file: Path,
-    reference_script_utxos: Optional[List[clusterlib.UTXOData]],
+    reference_script_utxos: tp.Optional[tp.List[clusterlib.UTXOData]],
     use_build_cmd: bool,
-) -> Tuple[clusterlib.TxRawOutput, List[dict]]:
+) -> tp.Tuple[clusterlib.TxRawOutput, tp.List[dict]]:
     """Deregister stake address."""
     src_payment_balance = cluster_obj.g_query.get_address_balance(pool_user.payment.address)
     reward_balance = cluster_obj.g_query.get_stake_addr_info(
@@ -324,7 +322,7 @@ class TestDelegateAddr:
     @pytest.mark.dbsync
     def test_delegate_deregister(
         self,
-        cluster_lock_42stake: Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_42stake: tp.Tuple[clusterlib.ClusterLib, str],
         pool_user: delegation.PoolUserScript,
         plutus_version: str,
         use_build_cmd: bool,

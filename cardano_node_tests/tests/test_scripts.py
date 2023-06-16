@@ -9,10 +9,8 @@ import json
 import logging
 import random
 import re
+import typing as tp
 from pathlib import Path
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 import allure
 import hypothesis
@@ -47,10 +45,10 @@ def multisig_tx(
     src_address: str,
     dst_address: str,
     amount: int,
-    payment_skey_files: List[Path],
-    multisig_script: Optional[Path] = None,
-    invalid_hereafter: Optional[int] = None,
-    invalid_before: Optional[int] = None,
+    payment_skey_files: tp.List[Path],
+    multisig_script: tp.Optional[Path] = None,
+    invalid_hereafter: tp.Optional[int] = None,
+    invalid_before: tp.Optional[int] = None,
     use_build_cmd: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
@@ -138,7 +136,7 @@ class TestBasic:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -162,7 +160,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     def test_script_addr_length(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Check that script address length is the same as length of other addresses.
 
@@ -193,7 +191,7 @@ class TestBasic:
     def test_multisig_all(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Send funds to and from script address using the *all* script."""
@@ -246,7 +244,7 @@ class TestBasic:
     def test_multisig_any(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Send funds using the *any* script.
@@ -335,7 +333,7 @@ class TestBasic:
     def test_multisig_atleast(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Send funds to and from script address using the *atLeast* script."""
@@ -400,7 +398,7 @@ class TestBasic:
     def test_normal_tx_to_script_addr(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Send funds to script address using TX signed with skeys (not using witness files)."""
@@ -468,7 +466,7 @@ class TestBasic:
     def test_normal_tx_from_script_addr(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Send funds from script address using TX signed with skeys (not using witness files)."""
@@ -555,7 +553,7 @@ class TestBasic:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_multisig_empty_all(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Send funds from script address using the *all* script with zero skeys."""
         temp_template = common.get_test_id(cluster)
@@ -607,7 +605,7 @@ class TestBasic:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_multisig_no_required_atleast(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Send funds from script address using the *atLeast* script with no required witnesses."""
         temp_template = common.get_test_id(cluster)
@@ -677,7 +675,7 @@ class TestNegative:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -704,7 +702,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_multisig_all_missing_skey(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Try to send funds from script address using the *all* script, omit one skey.
 
@@ -756,7 +754,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_multisig_any_unlisted_skey(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Try to send funds from script address using the *any* script with unlisted skey.
 
@@ -808,7 +806,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_multisig_atleast_low_num_of_skeys(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Try to send funds from script address using the *atLeast* script.
 
@@ -876,11 +874,11 @@ class TestTimeLocking:
         self,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         slot: int,
         slot_type_arg: str,
         use_build_cmd: bool,
-    ) -> Tuple[Path, str, clusterlib.TxRawOutput]:
+    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput]:
         """Create and fund script address."""
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -917,7 +915,7 @@ class TestTimeLocking:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -945,9 +943,9 @@ class TestTimeLocking:
     def fund_script_before_slot_in_past(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> Tuple[Path, str, clusterlib.TxRawOutput, int]:
+    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput, int]:
         """Create and fund script address with "before" slot in the past."""
         temp_template = common.get_test_id(cluster)
         use_build_cmd = request.param
@@ -970,9 +968,9 @@ class TestTimeLocking:
     def fund_script_before_slot_in_future(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> Tuple[Path, str, clusterlib.TxRawOutput, int]:
+    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput, int]:
         """Create and fund script address with "before" slot in the future."""
         temp_template = common.get_test_id(cluster)
         use_build_cmd = request.param
@@ -995,9 +993,9 @@ class TestTimeLocking:
     def fund_script_after_slot_in_future(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> Tuple[Path, str, clusterlib.TxRawOutput, int]:
+    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput, int]:
         """Create and fund script address with "after" slot in the future."""
         temp_template = common.get_test_id(cluster)
         use_build_cmd = request.param
@@ -1020,9 +1018,9 @@ class TestTimeLocking:
     def fund_script_after_slot_in_past(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> Tuple[Path, str, clusterlib.TxRawOutput, int]:
+    ) -> tp.Tuple[Path, str, clusterlib.TxRawOutput, int]:
         """Create and fund script address with "after" slot in the past."""
         temp_template = common.get_test_id(cluster)
         use_build_cmd = request.param
@@ -1050,7 +1048,7 @@ class TestTimeLocking:
     def test_script_after(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         use_tx_validity: bool,
     ):
@@ -1121,7 +1119,7 @@ class TestTimeLocking:
     def test_script_before(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         use_tx_validity: bool,
     ):
@@ -1187,7 +1185,7 @@ class TestTimeLocking:
     def test_tx_missing_validity(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         slot_type: str,
     ):
@@ -1254,7 +1252,7 @@ class TestTimeLocking:
     def test_tx_negative_validity(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Check that it is NOT possible to spend from script address when validity is negative."""
@@ -1334,8 +1332,8 @@ class TestTimeLocking:
     def test_before_past(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        fund_script_before_slot_in_past: Tuple[Path, str, clusterlib.TxRawOutput, int],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        fund_script_before_slot_in_past: tp.Tuple[Path, str, clusterlib.TxRawOutput, int],
         data: st.DataObject,
         request: FixtureRequest,
     ):
@@ -1401,8 +1399,8 @@ class TestTimeLocking:
     def test_before_future(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        fund_script_before_slot_in_future: Tuple[Path, str, clusterlib.TxRawOutput, int],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        fund_script_before_slot_in_future: tp.Tuple[Path, str, clusterlib.TxRawOutput, int],
         slot_no: int,
         request: FixtureRequest,
     ):
@@ -1449,8 +1447,8 @@ class TestTimeLocking:
     def test_after_future(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        fund_script_after_slot_in_future: Tuple[Path, str, clusterlib.TxRawOutput, int],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        fund_script_after_slot_in_future: tp.Tuple[Path, str, clusterlib.TxRawOutput, int],
         data: st.DataObject,
         request: FixtureRequest,
     ):
@@ -1516,8 +1514,8 @@ class TestTimeLocking:
     def test_after_past(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        fund_script_after_slot_in_past: Tuple[Path, str, clusterlib.TxRawOutput, int],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        fund_script_after_slot_in_past: tp.Tuple[Path, str, clusterlib.TxRawOutput, int],
         data: st.DataObject,
         request: FixtureRequest,
     ):
@@ -1569,7 +1567,7 @@ class TestAuxiliaryScripts:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -1599,7 +1597,7 @@ class TestAuxiliaryScripts:
     def test_tx_script_metadata_json(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Send transaction with auxiliary script and metadata JSON.
@@ -1661,7 +1659,7 @@ class TestAuxiliaryScripts:
     def test_tx_script_metadata_cbor(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Send transaction with auxiliary script and metadata CBOR.
@@ -1724,7 +1722,7 @@ class TestAuxiliaryScripts:
     def test_tx_script_no_metadata(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Send transaction with auxiliary script and no other metadata.
@@ -1777,7 +1775,7 @@ class TestAuxiliaryScripts:
     def test_tx_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Build transaction with invalid auxiliary script.
@@ -1818,7 +1816,7 @@ class TestIncrementalSigning:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -1853,7 +1851,7 @@ class TestIncrementalSigning:
     def test_incremental_signing(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         tx_is: str,
     ):
@@ -2009,7 +2007,7 @@ class TestDatum:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -2040,7 +2038,7 @@ class TestDatum:
     def test_script_utxo_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         script_version: str,
     ):
@@ -2129,7 +2127,7 @@ class TestReferenceUTxO:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -2158,7 +2156,7 @@ class TestReferenceUTxO:
     def test_script_reference_utxo(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         script_version: str,
     ):
@@ -2313,7 +2311,7 @@ class TestReferenceUTxO:
     def test_spend_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         script_version: str,
         address_type: str,
@@ -2422,7 +2420,7 @@ class TestNested:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -2454,7 +2452,7 @@ class TestNested:
     def test_nested_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         type_top: str,
         type_nested: str,
         use_build_cmd: bool,
@@ -2552,7 +2550,7 @@ class TestNested:
     def test_nested_optional_all(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Check that it is possible to not meet conditions in nested "all" rule."""
@@ -2631,7 +2629,7 @@ class TestNested:
     def test_invalid(  # noqa: C901
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         scenario: str,
         use_build_cmd: bool,
     ):
@@ -2652,8 +2650,8 @@ class TestNested:
             invalid_hereafter = last_slot_no + 1_000
             # `dst_addr1.skey_file` is needed and missing
             payment_skey_files = [dst_addr2.skey_file]
-            script_top: List[dict] = []
-            script_nested: List[dict] = [{"type": "after", "slot": invalid_before}]
+            script_top: tp.List[dict] = []
+            script_nested: tp.List[dict] = [{"type": "after", "slot": invalid_before}]
             expected_err = "ScriptWitnessNotValidatingUTXOW"
         elif scenario == "all2":
             type_top = "all"
@@ -2835,7 +2833,7 @@ class TestCompatibility:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -2865,7 +2863,7 @@ class TestCompatibility:
     def test_script_v2(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Check that it is not possible to use 'SimpleScriptV2' in Shelley-era Tx."""
@@ -2927,7 +2925,7 @@ class TestCompatibility:
     def test_auxiliary_scripts(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Check that it is not possible to use auxiliary script in Shelley-era Tx."""
         temp_template = common.get_test_id(cluster)

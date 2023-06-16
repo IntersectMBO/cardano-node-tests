@@ -1,9 +1,7 @@
 """Tests of effect of pool saturation on rewards and blocks production."""
 import logging
 import pickle
-from typing import Dict
-from typing import List
-from typing import NamedTuple
+import typing as tp
 
 import allure
 import pytest
@@ -19,24 +17,24 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-class RewardRecord(NamedTuple):
+class RewardRecord(tp.NamedTuple):
     epoch_no: int
     reward_total: int
     reward_per_epoch: int
     stake_total: int
 
 
-class PoolRecord(NamedTuple):
+class PoolRecord(tp.NamedTuple):
     # pylint: disable=invalid-name
     name: str
     id: str
     id_dec: str
     reward_addr: clusterlib.PoolUser
     delegation_out: delegation.DelegationOut
-    user_rewards: List[RewardRecord]
-    owner_rewards: List[RewardRecord]
-    blocks_minted: Dict[int, int]
-    saturation_amounts: Dict[int, int]
+    user_rewards: tp.List[RewardRecord]
+    owner_rewards: tp.List[RewardRecord]
+    blocks_minted: tp.Dict[int, int]
+    saturation_amounts: tp.Dict[int, int]
 
 
 @pytest.fixture
@@ -68,9 +66,11 @@ def _get_saturation_threshold(
     return saturation_threshold
 
 
-def _get_reward_per_block(pool_record: PoolRecord, owner_rewards: bool = False) -> Dict[int, float]:
+def _get_reward_per_block(
+    pool_record: PoolRecord, owner_rewards: bool = False
+) -> tp.Dict[int, float]:
     """For each epoch calculate reward per block per staked Lovelace."""
-    results: Dict[int, float] = {}
+    results: tp.Dict[int, float] = {}
 
     rew_db = pool_record.user_rewards
     if owner_rewards:
@@ -123,7 +123,7 @@ def _withdraw_rewards(
     return tx_raw_withdrawal_output
 
 
-def _check_pool_records(pool_records: Dict[int, PoolRecord]) -> None:
+def _check_pool_records(pool_records: tp.Dict[int, PoolRecord]) -> None:
     """Check that pool records has expected values."""
     pool1_user_rewards_per_block = _get_reward_per_block(pool_records[1])
     pool2_user_rewards_per_block = _get_reward_per_block(pool_records[2])
@@ -244,7 +244,7 @@ class TestPoolSaturation:
         initial_balance = 1_000_000_000
 
         faucet_rec = cluster_manager.cache.addrs_data["faucet"]
-        pool_records: Dict[int, PoolRecord] = {}
+        pool_records: tp.Dict[int, PoolRecord] = {}
 
         def _save_pool_records() -> None:
             """Save debugging data in case of test failure."""

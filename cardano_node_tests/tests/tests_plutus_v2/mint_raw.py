@@ -1,8 +1,6 @@
 import logging
+import typing as tp
 from pathlib import Path
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -22,7 +20,7 @@ FEE_MINT_TXSIZE = 400_000
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -50,12 +48,12 @@ def _fund_issuer(
     amount: int,
     fee_txsize: int = FEE_MINT_TXSIZE,
     collateral_utxo_num: int = 1,
-    reference_script: Optional[Path] = None,
-    datum_file: Optional[Path] = None,
-) -> Tuple[
-    List[clusterlib.UTXOData],
-    List[clusterlib.UTXOData],
-    Optional[clusterlib.UTXOData],
+    reference_script: tp.Optional[Path] = None,
+    datum_file: tp.Optional[Path] = None,
+) -> tp.Tuple[
+    tp.List[clusterlib.UTXOData],
+    tp.List[clusterlib.UTXOData],
+    tp.Optional[clusterlib.UTXOData],
     clusterlib.TxRawOutput,
 ]:
     """Fund the token issuer."""

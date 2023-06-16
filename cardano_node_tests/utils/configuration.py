@@ -1,7 +1,7 @@
 """Cluster and test environment configuration."""
 import os
+import typing as tp
 from pathlib import Path
-from typing import Union
 
 
 def _check_cardano_node_socket_path() -> None:
@@ -53,12 +53,12 @@ STARTUP_CARDANO_NODE_SOCKET_PATH = (
 os.environ["CARDANO_NODE_SOCKET_PATH"] = str(STARTUP_CARDANO_NODE_SOCKET_PATH)
 
 # resolve SCHEDULING_LOG
-SCHEDULING_LOG: Union[str, Path] = os.environ.get("SCHEDULING_LOG") or ""
+SCHEDULING_LOG: tp.Union[str, Path] = os.environ.get("SCHEDULING_LOG") or ""
 if SCHEDULING_LOG:
     SCHEDULING_LOG = Path(SCHEDULING_LOG).expanduser().resolve()
 
 # resolve BLOCK_PRODUCTION_DB
-BLOCK_PRODUCTION_DB: Union[str, Path] = os.environ.get("BLOCK_PRODUCTION_DB") or ""
+BLOCK_PRODUCTION_DB: tp.Union[str, Path] = os.environ.get("BLOCK_PRODUCTION_DB") or ""
 if BLOCK_PRODUCTION_DB:
     BLOCK_PRODUCTION_DB = Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
 

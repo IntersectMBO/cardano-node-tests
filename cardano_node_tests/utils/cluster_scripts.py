@@ -9,13 +9,8 @@ import itertools
 import random
 import shutil
 import socket
+import typing as tp
 from pathlib import Path
-from typing import Iterable
-from typing import List
-from typing import NamedTuple
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
@@ -25,27 +20,27 @@ LOCAL_HOSTNAME = "node.local.gd"
 STOP_SCRIPT = "supervisord_stop"
 
 
-class InstanceFiles(NamedTuple):
+class InstanceFiles(tp.NamedTuple):
     start_script: Path
     stop_script: Path
-    start_script_args: List[str]
+    start_script_args: tp.List[str]
     dir: Path
 
 
-class StartupFiles(NamedTuple):
+class StartupFiles(tp.NamedTuple):
     start_script: Path
     genesis_spec: Path
     config_glob: str
 
 
-class NodePorts(NamedTuple):
+class NodePorts(tp.NamedTuple):
     num: int
     node: int
     ekg: int
     prometheus: int
 
 
-class InstancePorts(NamedTuple):
+class InstancePorts(tp.NamedTuple):
     base: int
     webserver: int
     metrics_submit_api: int
@@ -66,7 +61,7 @@ class InstancePorts(NamedTuple):
     pool3: int
     ekg_pool3: int
     prometheus_pool3: int
-    node_ports: Tuple[NodePorts, ...]
+    node_ports: tp.Tuple[NodePorts, ...]
 
 
 class ScriptsTypes:
@@ -106,7 +101,7 @@ class ScriptsTypes:
 class LocalScripts(ScriptsTypes):
     """Scripts for starting local cluster."""
 
-    _has_dns_rebinding_protection: Optional[bool] = None
+    _has_dns_rebinding_protection: tp.Optional[bool] = None
 
     def __init__(self, num_pools: int = -1) -> None:
         super().__init__()
@@ -264,7 +259,7 @@ class LocalScripts(ScriptsTypes):
         new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
         return new_content
 
-    def _gen_legacy_topology(self, addr: str, ports: Iterable[int]) -> dict:
+    def _gen_legacy_topology(self, addr: str, ports: tp.Iterable[int]) -> dict:
         """Generate legacy topology for given ports."""
         producers = [
             {
@@ -277,7 +272,7 @@ class LocalScripts(ScriptsTypes):
         topology = {"Producers": producers}
         return topology
 
-    def _gen_p2p_topology(self, addr: str, ports: List[int], fixed_ports: List[int]) -> dict:
+    def _gen_p2p_topology(self, addr: str, ports: tp.List[int], fixed_ports: tp.List[int]) -> dict:
         """Generate p2p topology for given ports."""
         # Select fixed ports and several randomly selected ports
         sample_ports = random.sample(ports, 3) if len(ports) > 3 else ports
@@ -294,7 +289,9 @@ class LocalScripts(ScriptsTypes):
         }
         return topology
 
-    def _gen_p2p_topology_old(self, addr: str, ports: List[int], fixed_ports: List[int]) -> dict:
+    def _gen_p2p_topology_old(
+        self, addr: str, ports: tp.List[int], fixed_ports: tp.List[int]
+    ) -> dict:
         """Generate p2p topology for given ports in the old topology format."""
         # Select fixed ports and several randomly selected ports
         selected_ports = set(fixed_ports + random.sample(ports, 3))
@@ -356,7 +353,7 @@ class LocalScripts(ScriptsTypes):
 
         return "\n".join(lines)
 
-    def _gen_topology_files(self, destdir: Path, addr: str, nodes: Sequence[NodePorts]) -> None:
+    def _gen_topology_files(self, destdir: Path, addr: str, nodes: tp.Sequence[NodePorts]) -> None:
         """Generate topology files for all nodes."""
         all_nodes = [p.node for p in nodes]
 
@@ -610,7 +607,7 @@ class TestnetScripts(ScriptsTypes):
         )
 
     def _reconfigure_testnet(
-        self, indir: Path, destdir: Path, instance_num: int, globs: List[str]
+        self, indir: Path, destdir: Path, instance_num: int, globs: tp.List[str]
     ) -> None:
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num=instance_num)
@@ -660,7 +657,7 @@ class TestnetScripts(ScriptsTypes):
         with open(outfile, "w", encoding="utf-8") as out_fp:
             out_fp.write("".join(new_content))
 
-    def _reconfigure_bootstrap(self, indir: Path, destdir: Path, globs: List[str]) -> None:
+    def _reconfigure_bootstrap(self, indir: Path, destdir: Path, globs: tp.List[str]) -> None:
         """Copy and reconfigure config files from bootstrap dir."""
         _infiles = [list(indir.glob(g)) for g in globs]
         infiles = list(itertools.chain.from_iterable(_infiles))

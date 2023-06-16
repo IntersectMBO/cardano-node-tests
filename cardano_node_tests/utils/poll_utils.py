@@ -1,10 +1,8 @@
 """Functions for working with SPO polls."""
 import json
 import logging
+import typing as tp
 from pathlib import Path
-from typing import List
-from typing import NamedTuple
-from typing import Tuple
 
 from cardano_clusterlib import clusterlib
 
@@ -14,13 +12,13 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-class PollFiles(NamedTuple):
+class PollFiles(tp.NamedTuple):
     poll: Path
     metadata: Path
 
 
 def create_poll(
-    cluster_obj: clusterlib.ClusterLib, question: str, answers: List[str], name_template: str
+    cluster_obj: clusterlib.ClusterLib, question: str, answers: tp.List[str], name_template: str
 ) -> PollFiles:
     """Create a poll and return the poll and metadata files."""
     poll_file = f"{name_template}_poll.json"
@@ -77,7 +75,7 @@ def answer_poll(
 
 def verify_poll(
     cluster_obj: clusterlib.ClusterLib, poll_file: Path, tx_signed: Path
-) -> Tuple[str, ...]:
+) -> tp.Tuple[str, ...]:
     """Verify an answer to the poll."""
     # TODO: Node 8.0.0-rc1 uses the old `--signed-tx-file` argument.
     # Can be removed if 8.0.0 is released with the new `--tx-file` argument,

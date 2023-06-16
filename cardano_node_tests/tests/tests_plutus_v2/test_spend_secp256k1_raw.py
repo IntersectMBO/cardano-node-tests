@@ -1,7 +1,6 @@
 """SECP256k1 tests for spending with Plutus V2 using `transaction build-raw`."""
 import logging
-from typing import List
-from typing import Tuple
+import typing as tp
 
 import allure
 import pytest
@@ -28,7 +27,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -53,9 +52,9 @@ class TestSECP256k1:
     def fund_script_secp(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> Tuple[str, List[clusterlib.UTXOData], List[clusterlib.UTXOData]]:
+    ) -> tp.Tuple[str, tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]]:
         """Fund a Plutus script and create the necessary Tx outputs."""
         algorithm = request.param
         temp_template = f"{common.get_test_id(cluster)}_{algorithm}"
@@ -122,8 +121,8 @@ class TestSECP256k1:
     def test_use_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        fund_script_secp: Tuple[str, List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        fund_script_secp: tp.Tuple[str, tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]],
     ):
         """Test that it is possible to spend a locked UTxO by a script that uses a SECP function.
 

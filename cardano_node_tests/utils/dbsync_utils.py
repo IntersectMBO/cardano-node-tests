@@ -2,11 +2,7 @@
 import functools
 import logging
 import time
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
+import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -106,7 +102,7 @@ def get_utxo(address: str) -> dbsync_types.PaymentAddrRecord:
     )
 
 
-def get_pool_data(pool_id_bech32: str) -> Optional[dbsync_types.PoolDataRecord]:
+def get_pool_data(pool_id_bech32: str) -> tp.Optional[dbsync_types.PoolDataRecord]:
     """Get pool data from db-sync."""
     pools = list(dbsync_queries.query_pool_data(pool_id_bech32))
     if not pools:
@@ -162,11 +158,11 @@ def get_pool_data(pool_id_bech32: str) -> Optional[dbsync_types.PoolDataRecord]:
 
 def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     """Get first batch of transaction data from db-sync."""
-    utxo_out: List[dbsync_types.UTxORecord] = []
+    utxo_out: tp.List[dbsync_types.UTxORecord] = []
     seen_tx_out_ids = set()
-    ma_utxo_out: List[dbsync_types.UTxORecord] = []
+    ma_utxo_out: tp.List[dbsync_types.UTxORecord] = []
     seen_ma_tx_out_ids = set()
-    mint_utxo_out: List[dbsync_types.UTxORecord] = []
+    mint_utxo_out: tp.List[dbsync_types.UTxORecord] = []
     seen_ma_tx_mint_ids = set()
     tx_id = -1
 
@@ -239,9 +235,9 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     return txdata
 
 
-def get_txins(txhash: str) -> List[dbsync_types.UTxORecord]:
+def get_txins(txhash: str) -> tp.List[dbsync_types.UTxORecord]:
     """Get txins of a transaction from db-sync."""
-    txins: List[dbsync_types.UTxORecord] = []
+    txins: tp.List[dbsync_types.UTxORecord] = []
     seen_txins_out_ids = set()
     seen_txins_ma_ids = set()
 
@@ -457,7 +453,7 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
     return record
 
 
-def retry_query(query_func: Callable, timeout: int = 20) -> Any:
+def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
     """Wait a bit and retry a query until response is returned.
 
     A generic function that can be used by any query/check that raises `AssertionError` with
@@ -513,7 +509,7 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> dbsync_types.TxRecor
 
 def get_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
-) -> Optional[dbsync_types.TxRecord]:
+) -> tp.Optional[dbsync_types.TxRecord]:
     """Get a transaction data from db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -526,7 +522,7 @@ def get_tx(
 
 def check_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
-) -> Optional[dbsync_types.TxRecord]:
+) -> tp.Optional[dbsync_types.TxRecord]:
     """Check a transaction in db-sync."""
     response = get_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output, retry_num=retry_num)
 
@@ -542,7 +538,7 @@ def check_tx_phase_2_failure(
     tx_raw_output: clusterlib.TxRawOutput,
     collateral_charged: int,
     retry_num: int = 3,
-) -> Optional[dbsync_types.TxRecord]:
+) -> tp.Optional[dbsync_types.TxRecord]:
     """Check a transaction in db-sync when a phase 2 failure happens."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -581,7 +577,7 @@ def check_tx_phase_2_failure(
 
 def check_pool_deregistration(
     pool_id: str, retiring_epoch: int
-) -> Optional[dbsync_types.PoolDataRecord]:
+) -> tp.Optional[dbsync_types.PoolDataRecord]:
     """Check pool retirement in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -602,7 +598,7 @@ def check_pool_deregistration(
 
 def check_pool_data(  # noqa: C901
     ledger_pool_data: dict, pool_id: str
-) -> Optional[dbsync_types.PoolDataRecord]:
+) -> tp.Optional[dbsync_types.PoolDataRecord]:
     """Check comparison for pool data between ledger and db-sync."""
     # pylint: disable=too-many-branches
     if not configuration.HAS_DBSYNC:
@@ -725,7 +721,7 @@ def check_pool_offline_fetch_error(
 
 
 def check_plutus_cost(
-    redeemer_record: dbsync_types.RedeemerRecord, cost_record: Dict[str, Any]
+    redeemer_record: dbsync_types.RedeemerRecord, cost_record: tp.Dict[str, tp.Any]
 ) -> None:
     """Compare cost of Plutus script with data from db-sync."""
     errors = []
@@ -747,7 +743,8 @@ def check_plutus_cost(
 
 
 def check_plutus_costs(
-    redeemer_records: List[dbsync_types.RedeemerRecord], cost_records: List[Dict[str, Any]]
+    redeemer_records: tp.List[dbsync_types.RedeemerRecord],
+    cost_records: tp.List[tp.Dict[str, tp.Any]],
 ) -> None:
     """Compare cost of multiple Plutus scripts with data from db-sync."""
     # Sort records first by total cost, second by hash
@@ -780,7 +777,7 @@ def check_plutus_costs(
         raise AssertionError("\n".join(errors))
 
 
-def check_param_proposal(protocol_params: dict) -> Optional[dbsync_queries.ParamProposalDBRow]:
+def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.ParamProposalDBRow]:
     """Check expected values in the `param_proposal` table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
