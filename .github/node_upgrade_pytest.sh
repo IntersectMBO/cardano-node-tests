@@ -12,6 +12,10 @@ export TX_ERA="$CLUSTER_ERA"
 CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
 
+# init dir for step1 binaries
+STEP1_BIN="$WORKDIR/step1-bin"
+mkdir -p "$STEP1_BIN"
+
 # init reports dir before each step
 export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
 rm -rf "${REPORTS_DIR:?}"
@@ -43,12 +47,9 @@ if [ "$1" = "step1" ]; then
   # start local cluster
   "$CLUSTER_SCRIPTS_DIR/start-cluster-hfc" || exit 6
 
-  # get path to cardano-node binary
-  pool1_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool1)"
-  node_path_step1="$(readlink -f "/proc/$pool1_pid/exe")"
-
-  # backup the original cardano-node binary
-  ln -s "$node_path_step1" "$STATE_CLUSTER/cardano-node-step1"
+  # backup the original cardano binaries
+  ln -s "$(command -v cardano-node)" "$STEP1_BIN/cardano-node-step1"
+  ln -s "$(command -v cardano-cli)" "$STEP1_BIN/cardano-cli-step1"
 
   # backup the original Alonzo genesis file
   cp -f "$STATE_CLUSTER/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo-step1.json"
@@ -83,6 +84,9 @@ elif [ "$1" = "step2" ]; then
   printf "STEP2 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=2
+
+  # add binaries saved in step1 to the PATH
+  export PATH="${STEP1_BIN}:${PATH}"
 
   # generate config and topology files for "mixed" mode
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_mixed/state-cluster0/bft1.socket" \
@@ -125,11 +129,11 @@ elif [ "$1" = "step2" ]; then
     if [ "$fname" = "config-pool3.json" ]; then
       # use old Alonzo genesis on pool3
       selected_alonzo_hash="$ALONZO_GENESIS_STEP1_HASH"
-      selected_alonzo_file="$STATE_CLUSTER/shelley/genesis.alonzo-step1.json"
+      selected_alonzo_file="shelley/genesis.alonzo-step1.json"
     else
       # use new Alonzo genesis on upgraded nodes
       selected_alonzo_hash="$ALONZO_GENESIS_HASH"
-      selected_alonzo_file="$STATE_CLUSTER/shelley/genesis.alonzo.json"
+      selected_alonzo_file="shelley/genesis.alonzo.json"
     fi
 
     # If the upgrade revision doesn't have conway genesis, or if the base revision doesn't have
@@ -163,7 +167,7 @@ elif [ "$1" = "step2" ]; then
 
   # run the "pool3" with the original cardano-node binary
   cp -a "$STATE_CLUSTER/cardano-node-pool3" "$STATE_CLUSTER/cardano-node-pool3.orig"
-  sed -i 's/exec cardano-node run/exec .\/state-cluster0\/cardano-node-step1 run/' "$STATE_CLUSTER/cardano-node-pool3"
+  sed -i 's/cardano-node run/cardano-node-step1 run/' "$STATE_CLUSTER/cardano-node-pool3"
 
   # Restart local cluster nodes with binaries from new cluster-node version.
   # It is necessary to restart supervisord with new environment.

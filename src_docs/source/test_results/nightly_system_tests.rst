@@ -58,7 +58,7 @@ Nightly upgrade testing
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 * `Step 1 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step1/>`__:  |nightly-upgrade-step1-badge|
-   * using `latest cardano-node release <https://github.com/input-output-hk/cardano-node-tests/blob/master/.github/env_nightly_upgrade>`__ for Mainnet
+   * use the `latest cardano-node release <https://github.com/input-output-hk/cardano-node-tests/blob/master/.github/env_nightly_upgrade>`__ for Mainnet
    * network in Babbage era
    * Babbage transaction era
    * default (legacy) network topology

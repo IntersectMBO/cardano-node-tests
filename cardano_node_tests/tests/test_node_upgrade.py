@@ -107,10 +107,17 @@ class TestSetup:
                 regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure 168 ",
                 ignore_file_id=worker_id,
             )
-        elif version.parse("1.36.0") > BASE_REVISION:
+        elif UPGRADE_REVISION >= version.parse("1.36.0") > BASE_REVISION:
             logfiles.add_ignore_rule(
                 files_glob="*.stdout",
                 regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure 5 ",
+                ignore_file_id=worker_id,
+            )
+        elif UPGRADE_REVISION >= version.parse("8.1.0") > BASE_REVISION:
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure "
+                ".*Size mismatch when decoding Record RecD",
                 ignore_file_id=worker_id,
             )
 
