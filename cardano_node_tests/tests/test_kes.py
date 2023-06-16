@@ -3,12 +3,10 @@
 import datetime
 import json
 import logging
+import pathlib as pl
 import shutil
 import time
-from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import Tuple
+import typing as tp
 
 import allure
 import pytest
@@ -51,7 +49,7 @@ SKIPIF_HF_SHORTCUT = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def short_kes_start_cluster() -> Path:
+def short_kes_start_cluster() -> pl.Path:
     """Update *slotsPerKESPeriod* and *maxKESEvolutions*."""
     shared_tmp = temptools.get_pytest_shared_tmp()
     max_kes_evolutions = 10
@@ -93,7 +91,7 @@ def short_kes_start_cluster() -> Path:
 
 @pytest.fixture
 def cluster_kes(
-    cluster_manager: cluster_management.ClusterManager, short_kes_start_cluster: Path
+    cluster_manager: cluster_management.ClusterManager, short_kes_start_cluster: pl.Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
@@ -121,7 +119,7 @@ def _check_block_production(
     temp_template: str,
     pool_id_dec: str,
     in_epoch: int,
-) -> Tuple[int, bool]:
+) -> tp.Tuple[int, bool]:
     epoch = cluster_obj.g_query.get_epoch()
     if epoch < in_epoch:
         new_epochs = in_epoch - epoch
@@ -227,7 +225,7 @@ class TestKES:
                     ]
                 )
 
-        def _refresh_opcerts() -> Dict[str, int]:
+        def _refresh_opcerts() -> tp.Dict[str, int]:
             refreshed_nodes_kes_period = {}
 
             for n in refreshed_nodes:
@@ -383,7 +381,7 @@ class TestKES:
         * check that the pool is minting blocks again
         """
         # pylint: disable=too-many-statements,too-many-branches,too-many-locals
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL_FOR_OFFLINE
         pool_num = int(pool_name.replace("node-pool", ""))
@@ -397,8 +395,8 @@ class TestKES:
         pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
         pool_id_dec = helpers.decode_bech32(pool_id)
 
-        opcert_file: Path = pool_rec["pool_operational_cert"]
-        cold_counter_file: Path = pool_rec["cold_key_pair"].counter_file
+        opcert_file: pl.Path = pool_rec["pool_operational_cert"]
+        cold_counter_file: pl.Path = pool_rec["cold_key_pair"].counter_file
 
         expected_errors = [
             (f"{node_name}.stdout", "PraosCannotForgeKeyNotUsableYet"),
@@ -408,7 +406,7 @@ class TestKES:
         # In Babbage we get `CounterOverIncrementedOCERT` error if counter for new opcert
         # is not exactly +1 from last used opcert. We'll backup the original counter
         # file so we can use it for issuing next valid opcert.
-        cold_counter_file_orig = Path(
+        cold_counter_file_orig = pl.Path(
             f"{cold_counter_file.stem}_orig{cold_counter_file.suffix}"
         ).resolve()
         shutil.copy(cold_counter_file, cold_counter_file_orig)
@@ -630,7 +628,7 @@ class TestKES:
         * check `kes-period-info` with the old (replaced) operational certificate
         """
         # pylint: disable=too-many-statements,too-many-locals
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL_FOR_OFFLINE
         pool_num = int(pool_name.replace("node-pool", ""))
@@ -800,7 +798,7 @@ class TestKES:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         temp_template = common.get_test_id(cluster)
-        out_file = Path(f"{temp_template}_shouldnt_exist.opcert")
+        out_file = pl.Path(f"{temp_template}_shouldnt_exist.opcert")
 
         # try to generate new operational certificate without specifying the `--kes-period`
         with pytest.raises(clusterlib.CLIError) as excinfo:

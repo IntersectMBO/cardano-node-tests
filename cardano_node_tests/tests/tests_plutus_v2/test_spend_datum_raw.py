@@ -1,10 +1,9 @@
 """Tests for datum while spending with Plutus using `transaction build-raw`."""
 import json
 import logging
+import pathlib as pl
 import string
-from pathlib import Path
-from typing import Any
-from typing import List
+import typing as tp
 
 import allure
 import hypothesis
@@ -32,7 +31,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -59,7 +58,7 @@ class TestNegativeInlineDatum:
     def pbt_highest_utxo(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ) -> clusterlib.UTXOData:
         """Get UTxO with highest amount of Lovelace.
 
@@ -90,7 +89,7 @@ class TestNegativeInlineDatum:
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         datum_value: str,
     ):
         """Test locking a Tx output with an invalid datum.
@@ -106,7 +105,7 @@ class TestNegativeInlineDatum:
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2,
-            datum_file=Path(datum_file),
+            datum_file=pl.Path(datum_file),
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
@@ -140,13 +139,13 @@ class TestNegativeInlineDatum:
     def test_lock_tx_v1_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an inline datum and a v1 script.
 
         Expect failure.
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
@@ -227,7 +226,7 @@ class TestNegativeInlineDatum:
     def test_lock_tx_big_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         pbt_script_address: str,
         datum_content: str,
@@ -280,13 +279,13 @@ class TestNegativeInlineDatum:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     def test_lock_tx_datum_as_witness(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Test unlock a Tx output with a datum as witness.
 
         Expect failure.
         """
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 

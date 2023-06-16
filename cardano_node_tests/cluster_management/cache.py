@@ -1,6 +1,5 @@
 import dataclasses
-from typing import Dict
-from typing import Optional
+import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -13,7 +12,7 @@ class ClusterManagerCache:
     """
 
     # single `ClusterLib` instance can be used in multiple tests executed on the same worker
-    cluster_obj: Optional[clusterlib.ClusterLib] = None
+    cluster_obj: tp.Optional[clusterlib.ClusterLib] = None
     # data for initialized cluster instance
     test_data: dict = dataclasses.field(default_factory=dict)
     addrs_data: dict = dataclasses.field(default_factory=dict)
@@ -24,10 +23,10 @@ class CacheManager:
     """Set of cache management methods."""
 
     # every pytest worker has its own cache, i.e. this cache is local to single worker
-    cache: Dict[int, ClusterManagerCache] = {}
+    cache: tp.Dict[int, ClusterManagerCache] = {}
 
     @classmethod
-    def get_cache(cls) -> Dict[int, ClusterManagerCache]:
+    def get_cache(cls) -> tp.Dict[int, ClusterManagerCache]:
         return cls.cache
 
     @classmethod

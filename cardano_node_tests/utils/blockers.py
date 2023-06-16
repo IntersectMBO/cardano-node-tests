@@ -1,8 +1,7 @@
 """Functionality for checking if an issue is blocked and thus blocking a test."""
 import logging
 import os
-from typing import Iterable
-from typing import Tuple
+import typing as tp
 
 import pytest
 from packaging import version
@@ -164,10 +163,10 @@ class GH:
         return f"<GH: issue='{self.repo}#{self.issue}', fixed_in='{self.fixed_in}'>"
 
 
-def finish_test(issues: Iterable[GH]) -> None:
+def finish_test(issues: tp.Iterable[GH]) -> None:
     """Fail or Xfail test with references to multiple GitHub issues."""
 
-    def _get_outcome(issue: GH) -> Tuple[bool, str, str]:
+    def _get_outcome(issue: GH) -> tp.Tuple[bool, str, str]:
         blocked = issue.is_blocked()
         py_outcome = "XFAIL" if blocked else "FAIL"
         reason = f"{py_outcome}: {issue.gh_issue}: {issue.message}"

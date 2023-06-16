@@ -2,7 +2,7 @@
 import logging
 import os
 import shutil
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -31,7 +31,7 @@ pytestmark = [
 def payment_addrs_locked(
     cluster_manager: cluster_management.ClusterManager,
     cluster_singleton: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     cluster = cluster_singleton
     temp_template = common.get_test_id(cluster)
@@ -61,7 +61,7 @@ def payment_addrs_locked(
 def payment_addrs_disposable(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new disposable payment addresses."""
     temp_template = common.get_test_id(cluster)
 
@@ -152,7 +152,7 @@ class TestUpgrade:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs_disposable: List[clusterlib.AddressRecord],
+        payment_addrs_disposable: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         for_step: int,
         file_type: str,

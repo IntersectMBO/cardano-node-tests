@@ -2,8 +2,7 @@
 import logging
 import os
 import time
-from typing import Generator
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -81,7 +80,7 @@ def skip_on_no_env(
 @pytest.fixture
 def set_network_id_env(
     cluster: clusterlib.ClusterLib,
-) -> Generator[None, None, None]:
+) -> tp.Generator[None, None, None]:
     """Set `CARDANO_NODE_NETWORK_ID` and prevent `cardano-cli` from using `--testnet-magic`."""
     magic_args = cluster.magic_args[:]
 
@@ -99,7 +98,7 @@ def payment_addrs(
     set_network_id_env: None,  # noqa: ARG001
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     # pylint: disable=unused-argument
     with cluster_manager.cache_fixture() as fixture_cache:
@@ -198,7 +197,7 @@ class TestNetworkIdEnv:
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Send funds to payment address.
 
@@ -407,7 +406,7 @@ class TestNegativeNetworkIdEnv:
         skip_on_no_env: None,  # noqa: ARG002
         set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         env_scenario: str,
         arg_scenario: str,
     ):

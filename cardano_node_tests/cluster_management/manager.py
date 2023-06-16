@@ -6,13 +6,9 @@ import hashlib
 import inspect
 import logging
 import os
+import pathlib as pl
 import shutil
-from pathlib import Path
-from typing import Any
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Optional
+import typing as tp
 
 from _pytest.config import Config
 from cardano_clusterlib import clusterlib
@@ -51,7 +47,7 @@ def _get_fixture_hash() -> int:
 class FixtureCache:
     """Cache for a fixture."""
 
-    value: Any
+    value: tp.Any
 
 
 class ClusterManager:
@@ -85,7 +81,7 @@ class ClusterManager:
         return cache.CacheManager.get_instance_cache(self.cluster_instance_num)
 
     @property
-    def instance_dir(self) -> Path:
+    def instance_dir(self) -> pl.Path:
         instance_dir = (
             self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{self.cluster_instance_num}"
         )
@@ -186,7 +182,7 @@ class ClusterManager:
             (self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}").touch()
 
     @contextlib.contextmanager
-    def respin_on_failure(self) -> Iterator[None]:
+    def respin_on_failure(self) -> tp.Iterator[None]:
         """Indicate that the cluster instance needs respin if command failed - context manager."""
         try:
             yield
@@ -195,7 +191,7 @@ class ClusterManager:
             raise
 
     @contextlib.contextmanager
-    def cache_fixture(self) -> Iterator[FixtureCache]:
+    def cache_fixture(self) -> tp.Iterator[FixtureCache]:
         """Cache fixture value - context manager."""
         curline_hash = _get_fixture_hash()
         cached_value = self.cache.test_data.get(curline_hash)
@@ -266,8 +262,8 @@ class ClusterManager:
     def _get_resources_by_glob(
         self,
         glob: str,
-        from_set: Optional[Iterable[str]] = None,
-    ) -> List[str]:
+        from_set: tp.Optional[tp.Iterable[str]] = None,
+    ) -> tp.List[str]:
         if from_set is not None and isinstance(from_set, str):
             raise AssertionError("`from_set` cannot be a string")
 
@@ -280,9 +276,9 @@ class ClusterManager:
 
     def get_locked_resources(
         self,
-        from_set: Optional[Iterable[str]] = None,
-        worker_id: Optional[str] = None,
-    ) -> List[str]:
+        from_set: tp.Optional[tp.Iterable[str]] = None,
+        worker_id: tp.Optional[str] = None,
+    ) -> tp.List[str]:
         """Get resources locked by worker.
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
@@ -292,9 +288,9 @@ class ClusterManager:
 
     def get_used_resources(
         self,
-        from_set: Optional[Iterable[str]] = None,
-        worker_id: Optional[str] = None,
-    ) -> List[str]:
+        from_set: tp.Optional[tp.Iterable[str]] = None,
+        worker_id: tp.Optional[str] = None,
+    ) -> tp.List[str]:
         """Get resources used by worker.
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
@@ -311,7 +307,7 @@ class ClusterManager:
 
         artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.pytest_config)
 
-    def _reload_cluster_obj(self, state_dir: Path) -> None:
+    def _reload_cluster_obj(self, state_dir: pl.Path) -> None:
         """Reload cluster instance data if necessary."""
         addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
         # the checksum will not match when cluster was respun

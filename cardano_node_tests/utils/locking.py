@@ -1,6 +1,6 @@
 import contextlib
 import logging
-from typing import Any
+import typing as tp
 
 from cardano_node_tests.utils import configuration
 
@@ -14,6 +14,6 @@ if configuration.IS_XDIST:
     # suppress messages from filelock
     logging.getLogger("filelock").setLevel(logging.WARNING)
 
-    FileLockIfXdist: Any = FileLock
+    FileLockIfXdist: tp.Any = FileLock
 else:
     FileLockIfXdist = contextlib.nullcontext

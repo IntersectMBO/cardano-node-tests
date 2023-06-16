@@ -5,8 +5,8 @@ For settings it uses the same env variables as when running the tests.
 """
 import argparse
 import logging
+import pathlib as pl
 import sys
-from pathlib import Path
 
 from cardano_node_tests.utils import cluster_nodes
 
@@ -48,7 +48,7 @@ def main() -> int:
     )
     args = get_args()
 
-    destdir = Path(args.dest_dir)
+    destdir = pl.Path(args.dest_dir)
     destdir.mkdir(parents=True, exist_ok=True)
 
     try:

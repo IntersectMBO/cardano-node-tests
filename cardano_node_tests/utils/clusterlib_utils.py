@@ -5,42 +5,36 @@ import itertools
 import json
 import logging
 import math
+import pathlib as pl
 import time
-from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import NamedTuple
-from typing import Optional
-from typing import Tuple
-from typing import Union
+import typing as tp
 
 import cbor2
 from cardano_clusterlib import clusterlib
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
-from cardano_node_tests.utils.types import FileType
 
 LOGGER = logging.getLogger(__name__)
 
 
-class UpdateProposal(NamedTuple):
+class UpdateProposal(tp.NamedTuple):
     arg: str
-    value: Any
+    value: tp.Any
     name: str = ""
 
 
-class TokenRecord(NamedTuple):
+class TokenRecord(tp.NamedTuple):
     token: str
     amount: int
-    issuers_addrs: List[clusterlib.AddressRecord]
+    issuers_addrs: tp.List[clusterlib.AddressRecord]
     token_mint_addr: clusterlib.AddressRecord
-    script: Path
+    script: pl.Path
 
 
-class TxMetadata(NamedTuple):
+class TxMetadata(tp.NamedTuple):
     metadata: dict
     aux_data: list
 
@@ -85,7 +79,7 @@ def register_stake_address(
 
 def deregister_stake_address(
     cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
-) -> Tuple[clusterlib.TxRawOutput, clusterlib.TxRawOutput]:
+) -> tp.Tuple[clusterlib.TxRawOutput, clusterlib.TxRawOutput]:
     """Deregister stake address."""
     # files for deregistering stake address
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
@@ -116,8 +110,8 @@ def fund_from_genesis(
     *dst_addrs: str,
     cluster_obj: clusterlib.ClusterLib,
     amount: int = 2_000_000,
-    tx_name: Optional[str] = None,
-    destination_dir: FileType = ".",
+    tx_name: tp.Optional[str] = None,
+    destination_dir: ttypes.FileType = ".",
 ) -> None:
     """Send `amount` from genesis addr to all `dst_addrs`."""
     fund_dst = [
@@ -153,9 +147,9 @@ def return_funds_to_faucet(
     *src_addrs: clusterlib.AddressRecord,
     cluster_obj: clusterlib.ClusterLib,
     faucet_addr: str,
-    amount: Union[int, List[int]] = -1,
-    tx_name: Optional[str] = None,
-    destination_dir: FileType = ".",
+    amount: tp.Union[int, tp.List[int]] = -1,
+    tx_name: tp.Optional[str] = None,
+    destination_dir: ttypes.FileType = ".",
 ) -> None:
     """Send `amount` from all `src_addrs` to `faucet_addr`.
 
@@ -186,17 +180,17 @@ def return_funds_to_faucet(
 
 
 def fund_from_faucet(
-    *dst_addrs: Union[clusterlib.AddressRecord, clusterlib.PoolUser],
+    *dst_addrs: tp.Union[clusterlib.AddressRecord, clusterlib.PoolUser],
     cluster_obj: clusterlib.ClusterLib,
     faucet_data: dict,
-    amount: Union[int, List[int]] = 1000_000_000,
-    tx_name: Optional[str] = None,
-    destination_dir: FileType = ".",
+    amount: tp.Union[int, tp.List[int]] = 1000_000_000,
+    tx_name: tp.Optional[str] = None,
+    destination_dir: ttypes.FileType = ".",
     force: bool = False,
-) -> Optional[clusterlib.TxRawOutput]:
+) -> tp.Optional[clusterlib.TxRawOutput]:
     """Send `amount` from faucet addr to all `dst_addrs`."""
     # get payment AddressRecord out of PoolUser
-    dst_addr_records: List[clusterlib.AddressRecord] = [
+    dst_addr_records: tp.List[clusterlib.AddressRecord] = [
         (r.payment if hasattr(r, "payment") else r) for r in dst_addrs  # type: ignore
     ]
     if isinstance(amount, int):
@@ -230,9 +224,9 @@ def fund_from_faucet(
 def create_payment_addr_records(
     *names: str,
     cluster_obj: clusterlib.ClusterLib,
-    stake_vkey_file: Optional[FileType] = None,
-    destination_dir: FileType = ".",
-) -> List[clusterlib.AddressRecord]:
+    stake_vkey_file: tp.Optional[ttypes.FileType] = None,
+    destination_dir: ttypes.FileType = ".",
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment address(es)."""
     addrs = [
         cluster_obj.g_address.gen_payment_addr_and_keys(
@@ -250,8 +244,8 @@ def create_payment_addr_records(
 def create_stake_addr_records(
     *names: str,
     cluster_obj: clusterlib.ClusterLib,
-    destination_dir: FileType = ".",
-) -> List[clusterlib.AddressRecord]:
+    destination_dir: ttypes.FileType = ".",
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new stake address(es)."""
     addrs = [
         cluster_obj.g_stake_address.gen_stake_addr_and_keys(
@@ -268,7 +262,7 @@ def create_pool_users(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     no_of_addr: int = 1,
-) -> List[clusterlib.PoolUser]:
+) -> tp.List[clusterlib.PoolUser]:
     """Create PoolUsers."""
     pool_users = []
     for i in range(no_of_addr):
@@ -391,7 +385,7 @@ def check_pool_data(  # noqa: C901
     return "\n\n".join(errors_list)
 
 
-def check_updated_params(update_proposals: List[UpdateProposal], protocol_params: dict) -> None:
+def check_updated_params(update_proposals: tp.List[UpdateProposal], protocol_params: dict) -> None:
     """Compare update proposals with actual protocol parameters."""
     failures = []
     for u in update_proposals:
@@ -416,7 +410,7 @@ def check_updated_params(update_proposals: List[UpdateProposal], protocol_params
 def update_params(
     cluster_obj: clusterlib.ClusterLib,
     src_addr_record: clusterlib.AddressRecord,
-    update_proposals: List[UpdateProposal],
+    update_proposals: tp.List[UpdateProposal],
 ) -> None:
     """Update params using update proposal."""
     if not update_proposals:
@@ -438,7 +432,7 @@ def update_params(
 def update_params_build(
     cluster_obj: clusterlib.ClusterLib,
     src_addr_record: clusterlib.AddressRecord,
-    update_proposals: List[UpdateProposal],
+    update_proposals: tp.List[UpdateProposal],
 ) -> None:
     """Update params using update proposal.
 
@@ -463,7 +457,7 @@ def update_params_build(
         proposal_files=[out_file],
         signing_key_files=[
             *cluster_obj.g_genesis.genesis_keys.delegate_skeys,
-            Path(src_addr_record.skey_file),
+            pl.Path(src_addr_record.skey_file),
         ],
     )
     tx_output = cluster_obj.g_transaction.build_tx(
@@ -484,10 +478,10 @@ def update_params_build(
 
 def mint_or_burn_witness(
     cluster_obj: clusterlib.ClusterLib,
-    new_tokens: List[TokenRecord],
+    new_tokens: tp.List[TokenRecord],
     temp_template: str,
-    invalid_hereafter: Optional[int] = None,
-    invalid_before: Optional[int] = None,
+    invalid_hereafter: tp.Optional[int] = None,
+    invalid_before: tp.Optional[int] = None,
     use_build_cmd: bool = False,
     sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
@@ -603,7 +597,7 @@ def mint_or_burn_witness(
 
 def mint_or_burn_sign(
     cluster_obj: clusterlib.ClusterLib,
-    new_tokens: List[TokenRecord],
+    new_tokens: tp.List[TokenRecord],
     temp_template: str,
     sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
@@ -763,12 +757,12 @@ def new_tokens(
     token_mint_addr: clusterlib.AddressRecord,
     issuer_addr: clusterlib.AddressRecord,
     amount: int,
-) -> List[TokenRecord]:
+) -> tp.List[TokenRecord]:
     """Mint new token, sign using skeys."""
     # create simple script
     keyhash = cluster_obj.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
-    script = Path(f"{temp_template}.script")
+    script = pl.Path(f"{temp_template}.script")
     with open(f"{temp_template}.script", "w", encoding="utf-8") as out_json:
         json.dump(script_content, out_json)
 
@@ -837,7 +831,7 @@ def filtered_ledger_state(
 
 def get_blocks_before(
     cluster_obj: clusterlib.ClusterLib,
-) -> Dict[str, int]:
+) -> tp.Dict[str, int]:
     """Get `blocksBefore` section of ledger state with bech32 encoded pool ids."""
     cardano_cli_args = [
         "cardano-cli",
@@ -878,9 +872,9 @@ def get_ledger_state(
 def save_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
     state_name: str,
-    ledger_state: Optional[dict] = None,
-    destination_dir: FileType = ".",
-) -> Path:
+    ledger_state: tp.Optional[dict] = None,
+    destination_dir: ttypes.FileType = ".",
+) -> pl.Path:
     """Save ledger state to file.
 
     Args:
@@ -890,9 +884,9 @@ def save_ledger_state(
         destination_dir: A path to directory for storing the state JSON file (optional).
 
     Returns:
-        Path: A path to the generated state JSON file.
+        pl.Path: A path to the generated state JSON file.
     """
-    json_file = Path(destination_dir) / f"{state_name}_ledger_state.json"
+    json_file = pl.Path(destination_dir) / f"{state_name}_ledger_state.json"
     ledger_state = ledger_state or get_ledger_state(cluster_obj)
     with open(json_file, "w", encoding="utf-8") as fp_out:
         json.dump(ledger_state, fp_out, indent=4)
@@ -965,7 +959,7 @@ def wait_for_epoch_interval(
         raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s.")
 
 
-def load_body_metadata(tx_body_file: Path) -> Any:
+def load_body_metadata(tx_body_file: pl.Path) -> tp.Any:
     """Load metadata from file containing transaction body."""
     with open(tx_body_file, encoding="utf-8") as body_fp:
         tx_body_json = json.load(body_fp)
@@ -980,7 +974,7 @@ def load_body_metadata(tx_body_file: Path) -> Any:
     return metadata
 
 
-def load_tx_metadata(tx_body_file: Path) -> TxMetadata:
+def load_tx_metadata(tx_body_file: pl.Path) -> TxMetadata:
     """Load transaction metadata from file containing transaction body."""
     metadata_section = load_body_metadata(tx_body_file=tx_body_file)
 
@@ -1044,8 +1038,8 @@ def datum_hash_from_txout(cluster_obj: clusterlib.ClusterLib, txout: clusterlib.
 def create_script_context(
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
-    redeemer_file: Path,
-    tx_file: Optional[Path] = None,
+    redeemer_file: pl.Path,
+    tx_file: tp.Optional[pl.Path] = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps)."""
     if plutus_version == 1:
@@ -1083,7 +1077,7 @@ def cli_has(command: str) -> bool:
 
 
 def check_txins_spent(
-    cluster_obj: clusterlib.ClusterLib, txins: List[clusterlib.UTXOData], wait_blocks: int = 2
+    cluster_obj: clusterlib.ClusterLib, txins: tp.List[clusterlib.UTXOData], wait_blocks: int = 2
 ) -> None:
     """Check that txins were spent."""
     if wait_blocks > 0:
@@ -1100,9 +1094,9 @@ def create_reference_utxo(
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
-    script_file: Path,
+    script_file: pl.Path,
     amount: int,
-) -> Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput]:
+) -> tp.Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput]:
     """Create a reference script UTxO."""
     # pylint: disable=too-many-arguments
     tx_files = clusterlib.TxFiles(
@@ -1136,7 +1130,9 @@ def create_reference_utxo(
     return reference_utxo, tx_raw_output
 
 
-def get_utxo_ix_offset(utxos: List[clusterlib.UTXOData], txouts: List[clusterlib.TxOut]) -> int:
+def get_utxo_ix_offset(
+    utxos: tp.List[clusterlib.UTXOData], txouts: tp.List[clusterlib.TxOut]
+) -> int:
     """Get offset of index of the first user-defined txout.
 
     Change txout created by `transaction build` used to be UTxO with index 0, now it is the last
@@ -1157,10 +1153,10 @@ def get_utxo_ix_offset(utxos: List[clusterlib.UTXOData], txouts: List[clusterlib
 def gen_byron_addr(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
-    destination_dir: FileType = ".",
+    destination_dir: ttypes.FileType = ".",
 ) -> clusterlib.AddressRecord:
     """Generate a Byron address and keys."""
-    destination_dir = Path(destination_dir).expanduser().resolve()
+    destination_dir = pl.Path(destination_dir).expanduser().resolve()
 
     secret_file = destination_dir / f"{name_template}_byron_orig.key"
     skey_file = destination_dir / f"{name_template}_byron.skey"

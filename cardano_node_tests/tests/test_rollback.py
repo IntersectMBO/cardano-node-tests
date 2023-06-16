@@ -5,11 +5,10 @@ configuration.
 """
 import logging
 import os
+import pathlib as pl
 import shutil
 import time
-from pathlib import Path
-from typing import List
-from typing import Optional
+import typing as tp
 
 import allure
 import pytest
@@ -50,7 +49,7 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-    ) -> List[clusterlib.AddressRecord]:
+    ) -> tp.List[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
         num_addrs = 4 if ROLLBACK_PAUSE else 3
@@ -77,11 +76,11 @@ class TestRollback:
         return addrs
 
     @pytest.fixture
-    def split_topology_dir(self) -> Path:
+    def split_topology_dir(self) -> pl.Path:
         """Return path to directory with split topology files."""
         instance_num = cluster_nodes.get_instance_num()
 
-        destdir = Path.cwd() / f"split_topology_ci{instance_num}"
+        destdir = pl.Path.cwd() / f"split_topology_ci{instance_num}"
         if destdir.exists():
             return destdir
 
@@ -96,7 +95,7 @@ class TestRollback:
         return destdir
 
     @pytest.fixture
-    def backup_topology(self) -> Path:
+    def backup_topology(self) -> pl.Path:
         """Backup the original topology files."""
         state_dir = cluster_nodes.get_cluster_env().state_dir
         topology_files = list(state_dir.glob("topology*.json"))
@@ -110,7 +109,7 @@ class TestRollback:
 
         return backup_dir
 
-    def split_cluster(self, split_topology_dir: Path) -> None:
+    def split_cluster(self, split_topology_dir: pl.Path) -> None:
         """Use the split topology files == split the cluster."""
         state_dir = cluster_nodes.get_cluster_env().state_dir
         topology_files = list(state_dir.glob("topology*.json"))
@@ -122,7 +121,7 @@ class TestRollback:
 
         cluster_nodes.restart_all_nodes()
 
-    def restore_cluster(self, backup_topology: Path) -> None:
+    def restore_cluster(self, backup_topology: pl.Path) -> None:
         """Restore the original topology files == restore the cluster."""
         state_dir = cluster_nodes.get_cluster_env().state_dir
         topology_files = list(state_dir.glob("topology*.json"))
@@ -137,12 +136,12 @@ class TestRollback:
         cluster_obj: clusterlib.ClusterLib,
         node: str,
         address: str = "",
-        tx_raw_output: Optional[clusterlib.TxRawOutput] = None,
-    ) -> List[clusterlib.UTXOData]:
+        tx_raw_output: tp.Optional[clusterlib.TxRawOutput] = None,
+    ) -> tp.List[clusterlib.UTXOData]:
         """Query UTxO on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
-        new_socket = Path(orig_socket).parent / f"{node}.socket"
+        new_socket = pl.Path(orig_socket).parent / f"{node}.socket"
 
         try:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
@@ -162,7 +161,7 @@ class TestRollback:
         """Submit transaction on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
-        new_socket = Path(orig_socket).parent / f"{node}.socket"
+        new_socket = pl.Path(orig_socket).parent / f"{node}.socket"
 
         curr_time = time.time()
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
@@ -189,7 +188,7 @@ class TestRollback:
         """Wait for block number on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
-        new_socket = Path(orig_socket).parent / f"{node}.socket"
+        new_socket = pl.Path(orig_socket).parent / f"{node}.socket"
 
         try:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
@@ -202,9 +201,9 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        backup_topology: Path,
-        split_topology_dir: Path,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        backup_topology: pl.Path,
+        split_topology_dir: pl.Path,
     ):
         """Test that global consensus is reached after rollback.
 
@@ -366,9 +365,9 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        backup_topology: Path,
-        split_topology_dir: Path,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        backup_topology: pl.Path,
+        split_topology_dir: pl.Path,
     ):
         """Test that global consensus is NOT reached and the result is permanent fork.
 

@@ -1,7 +1,6 @@
 """Functionality for interacting with db-sync database in postgres."""
 import logging
-from typing import Dict
-from typing import Optional
+import typing as tp
 
 import psycopg2
 
@@ -15,7 +14,7 @@ LOGGER = logging.getLogger(__name__)
 class DBSyncCache:
     """Cache connection to db-sync database for each cluster instance."""
 
-    conns: Dict[int, Optional[psycopg2.extensions.connection]] = {0: None}
+    conns: tp.Dict[int, tp.Optional[psycopg2.extensions.connection]] = {0: None}
 
 
 def _conn(instance_num: int) -> psycopg2.extensions.connection:
@@ -27,7 +26,7 @@ def _conn(instance_num: int) -> psycopg2.extensions.connection:
     return conn
 
 
-def _close(instance_num: int, conn: Optional[psycopg2.extensions.connection]) -> None:
+def _close(instance_num: int, conn: tp.Optional[psycopg2.extensions.connection]) -> None:
     if conn is None or conn.closed == 1:
         return
 

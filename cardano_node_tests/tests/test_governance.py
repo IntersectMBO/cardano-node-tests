@@ -8,7 +8,7 @@ This file tests:
 * poll verification
 """
 import logging
-from pathlib import Path
+import pathlib as pl
 
 import allure
 import hypothesis
@@ -27,7 +27,7 @@ from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = pl.Path(__file__).parent / "data"
 
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALONZO,

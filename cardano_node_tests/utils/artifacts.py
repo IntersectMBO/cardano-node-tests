@@ -2,9 +2,9 @@
 import json
 import logging
 import os
+import pathlib as pl
 import shutil
-from pathlib import Path
-from typing import Optional
+import typing as tp
 
 from _pytest.config import Config
 from cardano_clusterlib import clusterlib
@@ -18,34 +18,38 @@ ARTIFACTS_BASE_DIR_ARG = "--artifacts-base-dir"
 CLUSTER_INSTANCE_ID_FILENAME = "cluster_instance_id.log"
 
 
-def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> Optional[Path]:
+def save_cli_coverage(
+    cluster_obj: clusterlib.ClusterLib, pytest_config: Config
+) -> tp.Optional[pl.Path]:
     """Save CLI coverage info."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
         return None
 
-    json_file = Path(cli_coverage_dir) / f"cli_coverage_{helpers.get_timestamped_rand_str()}.json"
+    json_file = (
+        pl.Path(cli_coverage_dir) / f"cli_coverage_{helpers.get_timestamped_rand_str()}.json"
+    )
     with open(json_file, "w", encoding="utf-8") as out_json:
         json.dump(cluster_obj.cli_coverage, out_json, indent=4)
     LOGGER.info(f"Coverage file saved to '{cli_coverage_dir}'.")
     return json_file
 
 
-def save_start_script_coverage(log_file: Path, pytest_config: Config) -> Optional[Path]:
+def save_start_script_coverage(log_file: pl.Path, pytest_config: Config) -> tp.Optional[pl.Path]:
     """Save info about CLI commands executed by cluster start script."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and log_file.exists()):
         return None
 
     dest_file = (
-        Path(cli_coverage_dir) / f"cli_coverage_script_{helpers.get_timestamped_rand_str()}.log"
+        pl.Path(cli_coverage_dir) / f"cli_coverage_script_{helpers.get_timestamped_rand_str()}.log"
     )
     shutil.copy(log_file, dest_file)
     LOGGER.info(f"Start script coverage log file saved to '{dest_file}'.")
     return dest_file
 
 
-def save_cluster_artifacts(save_dir: Path, state_dir: Path) -> None:
+def save_cluster_artifacts(save_dir: pl.Path, state_dir: pl.Path) -> None:
     """Save cluster artifacts (logs, certs, etc.)."""
     dir_rand_str = ""
     cluster_instance_id_log = state_dir / CLUSTER_INSTANCE_ID_FILENAME
@@ -82,13 +86,13 @@ def save_cluster_artifacts(save_dir: Path, state_dir: Path) -> None:
     LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
 
 
-def copy_artifacts(pytest_tmp_dir: Path, pytest_config: Config) -> None:
+def copy_artifacts(pytest_tmp_dir: pl.Path, pytest_config: Config) -> None:
     """Copy collected tests and cluster artifacts to artifacts dir."""
     artifacts_base_dir = pytest_config.getoption(ARTIFACTS_BASE_DIR_ARG)
     if not artifacts_base_dir:
         return
 
-    artifacts_dir = Path(artifacts_base_dir)
+    artifacts_dir = pl.Path(artifacts_base_dir)
 
     pytest_tmp_dir = pytest_tmp_dir.resolve()
     if not pytest_tmp_dir.is_dir():

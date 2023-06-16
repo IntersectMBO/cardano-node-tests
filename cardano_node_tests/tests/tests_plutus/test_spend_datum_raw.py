@@ -1,9 +1,8 @@
 """Tests for datum while spending with Plutus using `transaction build-raw`."""
 import json
 import logging
-from pathlib import Path
-from typing import Dict
-from typing import List
+import pathlib as pl
+import typing as tp
 
 import allure
 import hypothesis
@@ -32,7 +31,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -60,7 +59,7 @@ class TestDatum:
     def test_datum_on_key_credential_address(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test creating UTxO with datum on address with key credentials (non-script address)."""
         temp_template = common.get_test_id(cluster)
@@ -100,7 +99,7 @@ class TestNegativeDatum:
     def pbt_highest_utxo(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ) -> clusterlib.UTXOData:
         """Get UTxO with highest amount of Lovelace.
 
@@ -112,7 +111,7 @@ class TestNegativeDatum:
     def pbt_script_addresses(
         self,
         cluster: clusterlib.ClusterLib,
-    ) -> Dict[str, str]:
+    ) -> tp.Dict[str, str]:
         """Get Plutus script addresses.
 
         Meant for property-based tests, so this expensive operation gets executed only once.
@@ -135,7 +134,7 @@ class TestNegativeDatum:
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         address_type: str,
         plutus_version: str,
     ):
@@ -214,7 +213,7 @@ class TestNegativeDatum:
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         datum_value: str,
         plutus_version: str,
     ):
@@ -233,7 +232,7 @@ class TestNegativeDatum:
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
-            datum_file=Path(datum_file),
+            datum_file=pl.Path(datum_file),
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
@@ -257,7 +256,7 @@ class TestNegativeDatum:
     def test_unlock_tx_wrong_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output and try to spend it with a wrong datum.
@@ -314,7 +313,7 @@ class TestNegativeDatum:
     def test_unlock_non_script_utxo(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Try to spend a non-script UTxO with datum as if it was script locked UTxO.
@@ -403,9 +402,9 @@ class TestNegativeDatum:
     def test_too_big(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
-        pbt_script_addresses: Dict[str, str],
+        pbt_script_addresses: tp.Dict[str, str],
         datum_value: bytes,
         plutus_version: str,
     ):
@@ -422,7 +421,7 @@ class TestNegativeDatum:
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
-            datum_file=Path(datum_file),
+            datum_file=pl.Path(datum_file),
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
         assert plutus_op.execution_cost  # for mypy

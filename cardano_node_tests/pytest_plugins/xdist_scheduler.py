@@ -1,5 +1,5 @@
-from collections import OrderedDict
-from typing import Any
+import collections
+import typing as tp
 
 import pytest
 from xdist import scheduler
@@ -69,7 +69,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
 
         return comps[1]  # nodeid has a group name
 
-    def _is_long_pending(self, assigned_to_node: OrderedDict) -> bool:
+    def _is_long_pending(self, assigned_to_node: collections.OrderedDict) -> bool:
         """Return True if there is a long-running test pending."""
         for nodeids_dict in assigned_to_node.values():
             for nodeid, is_completed in nodeids_dict.items():
@@ -102,7 +102,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         """Assign a work unit to a node."""
         assert self.workqueue
 
-        assigned_to_node = self.assigned_work.setdefault(node, default=OrderedDict())
+        assigned_to_node = self.assigned_work.setdefault(node, default=collections.OrderedDict())
         scope, work_unit = None, None
 
         # check if there are any long-running tests already pending
@@ -166,5 +166,5 @@ def pytest_collection_modifyitems(items: list) -> None:
         item._nodeid = "@".join(comps)
 
 
-def pytest_xdist_make_scheduler(config: Any, log: Any) -> OneLongScheduling:
+def pytest_xdist_make_scheduler(config: tp.Any, log: tp.Any) -> OneLongScheduling:
     return OneLongScheduling(config, log)

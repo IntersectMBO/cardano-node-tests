@@ -1,21 +1,21 @@
 """Utilities for `cardano-submit-api` REST service."""
 import binascii
 import json
+import pathlib as pl
 import shutil
-from pathlib import Path
-from typing import NamedTuple
+import typing as tp
 
 import requests
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils.types import FileType
 
 
 class SubmitApiError(Exception):
     pass
 
 
-class SubmitApiOut(NamedTuple):
+class SubmitApiOut(tp.NamedTuple):
     txid: str
     response: requests.Response
 
@@ -32,10 +32,10 @@ def is_running() -> bool:
     return True
 
 
-def tx2cbor(tx_file: FileType, destination_dir: FileType = ".") -> Path:
+def tx2cbor(tx_file: ttypes.FileType, destination_dir: ttypes.FileType = ".") -> pl.Path:
     """Convert signed Tx to binary CBOR."""
-    tx_file = Path(tx_file)
-    out_file = Path(destination_dir).expanduser() / f"{tx_file.name}.cbor"
+    tx_file = pl.Path(tx_file)
+    out_file = pl.Path(destination_dir).expanduser() / f"{tx_file.name}.cbor"
 
     with open(tx_file, encoding="utf-8") as in_fp:
         tx_loaded = json.load(in_fp)
@@ -48,7 +48,7 @@ def tx2cbor(tx_file: FileType, destination_dir: FileType = ".") -> Path:
     return out_file
 
 
-def post_cbor(cbor_file: FileType, url: str) -> requests.Response:
+def post_cbor(cbor_file: ttypes.FileType, url: str) -> requests.Response:
     """Post binary CBOR representation of Tx to `cardano-submit-api` service on `url`."""
     headers = {"Content-Type": "application/cbor"}
     with open(cbor_file, "rb") as in_fp:
@@ -57,7 +57,7 @@ def post_cbor(cbor_file: FileType, url: str) -> requests.Response:
     return response
 
 
-def submit_tx(tx_file: FileType) -> SubmitApiOut:
+def submit_tx(tx_file: ttypes.FileType) -> SubmitApiOut:
     """Submit a signed Tx using `cardano-submit-api` service."""
     cbor_file = tx2cbor(tx_file=tx_file)
 

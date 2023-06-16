@@ -1,19 +1,17 @@
 import itertools
-from pathlib import Path
-from typing import List
-from typing import NamedTuple
-from typing import Optional
+import pathlib as pl
+import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.types import FileType
 
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = pl.Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
@@ -71,7 +69,7 @@ SIGNING_KEY_GOLDEN = DATA_DIR / "golden_normal.skey"
 SIGNING_KEY_GOLDEN_EXTENDED = DATA_DIR / "golden_extended.skey"
 
 
-class ExecutionCost(NamedTuple):
+class ExecutionCost(tp.NamedTuple):
     per_time: int
     per_space: int
     fixed_cost: int
@@ -127,8 +125,8 @@ MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
 )
 
 
-class PlutusScriptData(NamedTuple):
-    script_file: Path
+class PlutusScriptData(tp.NamedTuple):
+    script_file: pl.Path
     execution_cost: ExecutionCost
 
 
@@ -168,30 +166,30 @@ MINTING_PLUTUS = {
 }
 
 
-class PlutusOp(NamedTuple):
-    script_file: Path
-    datum_file: Optional[Path] = None
-    datum_cbor_file: Optional[Path] = None
-    datum_value: Optional[str] = None
-    redeemer_file: Optional[Path] = None
-    redeemer_cbor_file: Optional[Path] = None
-    redeemer_value: Optional[str] = None
-    execution_cost: Optional[ExecutionCost] = None
+class PlutusOp(tp.NamedTuple):
+    script_file: pl.Path
+    datum_file: tp.Optional[pl.Path] = None
+    datum_cbor_file: tp.Optional[pl.Path] = None
+    datum_value: tp.Optional[str] = None
+    redeemer_file: tp.Optional[pl.Path] = None
+    redeemer_cbor_file: tp.Optional[pl.Path] = None
+    redeemer_value: tp.Optional[str] = None
+    execution_cost: tp.Optional[ExecutionCost] = None
 
 
-class Token(NamedTuple):
+class Token(tp.NamedTuple):
     coin: str
     amount: int
 
 
-class ScriptCost(NamedTuple):
+class ScriptCost(tp.NamedTuple):
     fee: int
     collateral: int  # Lovelace amount > minimum UTxO value
     min_collateral: int  # minimum needed collateral
 
 
 def check_plutus_costs(
-    plutus_costs: List[dict], expected_costs: List[ExecutionCost], frac: float = 0.15
+    plutus_costs: tp.List[dict], expected_costs: tp.List[ExecutionCost], frac: float = 0.15
 ):
     """Check plutus transaction cost.
 
@@ -261,14 +259,14 @@ def txout_factory(
     inline_datum: bool = False,
 ) -> clusterlib.TxOut:
     """Create `TxOut` object."""
-    datum_hash_file: FileType = ""
-    datum_hash_cbor_file: FileType = ""
+    datum_hash_file: ttypes.FileType = ""
+    datum_hash_cbor_file: ttypes.FileType = ""
     datum_hash_value = ""
-    datum_embed_file: FileType = ""
-    datum_embed_cbor_file: FileType = ""
+    datum_embed_file: ttypes.FileType = ""
+    datum_embed_cbor_file: ttypes.FileType = ""
     datum_embed_value = ""
-    inline_datum_file: FileType = ""
-    inline_datum_cbor_file: FileType = ""
+    inline_datum_file: ttypes.FileType = ""
+    inline_datum_cbor_file: ttypes.FileType = ""
     inline_datum_value = ""
 
     if embed_datum:
@@ -427,8 +425,8 @@ def xfail_on_secp_error(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_
 def create_script_context_w_blockers(
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
-    redeemer_file: Path,
-    tx_file: Optional[Path] = None,
+    redeemer_file: pl.Path,
+    tx_file: tp.Optional[pl.Path] = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps).
 

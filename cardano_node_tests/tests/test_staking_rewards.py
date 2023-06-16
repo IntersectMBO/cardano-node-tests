@@ -1,11 +1,6 @@
 """Tests for staking, rewards, blocks production on real block-producing pools."""
 import logging
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import NamedTuple
-from typing import Tuple
-from typing import Union
+import typing as tp
 
 import allure
 import hypothesis
@@ -28,26 +23,26 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-class RewardRecord(NamedTuple):
+class RewardRecord(tp.NamedTuple):
     epoch_no: int
     reward_total: int
     reward_per_epoch: int
     member_pool_id: str = ""
-    leader_pool_ids: Union[List[str], tuple] = ()
+    leader_pool_ids: tp.Union[tp.List[str], tuple] = ()
     stake_total: int = 0
 
 
 @pytest.fixture
 def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
     return delegation.cluster_and_pool(cluster_manager=cluster_manager)
 
 
 @pytest.fixture
 def cluster_use_two_pools(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str, str]:
     cluster_obj = cluster_manager.get(
         use_resources=[
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
@@ -61,7 +56,7 @@ def cluster_use_two_pools(
 @pytest.fixture
 def cluster_lock_two_pools(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str, str]:
     cluster_obj = cluster_manager.get(
         lock_resources=[
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
@@ -77,7 +72,7 @@ def cluster_lock_two_pools(
 @pytest.fixture
 def cluster_lock_pool_and_pots(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
     cluster_obj = cluster_manager.get(
         lock_resources=[
             cluster_management.Resources.RESERVES,
@@ -91,8 +86,10 @@ def cluster_lock_pool_and_pots(
     return cluster_obj, pool_name
 
 
-def _add_spendable(rewards: List[dbsync_types.RewardEpochRecord], max_epoch: int) -> Dict[int, int]:
-    recs: Dict[int, int] = {}
+def _add_spendable(
+    rewards: tp.List[dbsync_types.RewardEpochRecord], max_epoch: int
+) -> tp.Dict[int, int]:
+    recs: tp.Dict[int, int] = {}
     for r in rewards:
         epoch = r.spendable_epoch
         if max_epoch and epoch > max_epoch:
@@ -107,7 +104,7 @@ def _add_spendable(rewards: List[dbsync_types.RewardEpochRecord], max_epoch: int
 
 
 def _check_member_pool_ids(
-    rewards_by_idx: Dict[int, RewardRecord], reward_db_record: dbsync_types.RewardRecord
+    rewards_by_idx: tp.Dict[int, RewardRecord], reward_db_record: dbsync_types.RewardRecord
 ) -> None:
     """Check that in each epoch member rewards were received from the expected pool."""
     epoch_to = rewards_by_idx[max(rewards_by_idx)].epoch_no
@@ -146,7 +143,7 @@ def _check_member_pool_ids(
 
 
 def _check_leader_pool_ids(
-    rewards_by_idx: Dict[int, RewardRecord], reward_db_record: dbsync_types.RewardRecord
+    rewards_by_idx: tp.Dict[int, RewardRecord], reward_db_record: dbsync_types.RewardRecord
 ) -> None:
     """Check that in each epoch leader rewards were received from the expected pool."""
     epoch_to = rewards_by_idx[max(rewards_by_idx)].epoch_no
@@ -190,7 +187,7 @@ def _check_leader_pool_ids(
 
 def _dbsync_check_rewards(
     stake_address: str,
-    rewards: List[RewardRecord],
+    rewards: tp.List[RewardRecord],
 ) -> dbsync_types.RewardRecord:
     """Check rewards in db-sync."""
     epoch_from = rewards[1].epoch_no
@@ -216,18 +213,18 @@ def _dbsync_check_rewards(
     return reward_db_record
 
 
-def _get_rec_hash(rec: List[dict]):
+def _get_rec_hash(rec: tp.List[dict]):
     """Get credential hash (key or script) from record."""
     # make it fail when neither key nor script hash is present
     return rec[0].get("key hash") or rec[0]["script hash"]
 
 
-def _get_cred_hashes(rec: dict) -> List[str]:
+def _get_cred_hashes(rec: dict) -> tp.List[str]:
     """Get credential hashes in ledger state snapshot record."""
     return [_get_rec_hash(r) for r in rec]
 
 
-def _get_val_for_cred_hash(key_hash: str, rec: list) -> Any:
+def _get_val_for_cred_hash(key_hash: str, rec: list) -> tp.Any:
     """Get value for credential hash in ledger state snapshot record."""
     for r in rec:
         if _get_rec_hash(r) == key_hash:
@@ -247,7 +244,7 @@ def _get_rew_amount_for_cred_hash(key_hash: str, rec: list) -> int:
     return 0
 
 
-def _get_rew_type_for_cred_hash(key_hash: str, rec: list) -> List[str]:
+def _get_rew_type_for_cred_hash(key_hash: str, rec: list) -> tp.List[str]:
     """Get reward types for credential hash in ledger state snapshot record."""
     rew_types = []
     for r in rec:
@@ -273,7 +270,7 @@ class TestRewards:
     def test_reward_simple(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake address and pool owner are receiving rewards.
 
@@ -325,7 +322,7 @@ class TestRewards:
     def test_reward_amount(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake address and pool owner are receiving rewards.
 
@@ -342,7 +339,7 @@ class TestRewards:
         * (optional) check records in db-sync
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_use_pool
 
         # make sure there are rewards already available
@@ -398,7 +395,7 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        native_tokens: List[clusterlib_utils.TokenRecord] = []
+        native_tokens: tp.List[clusterlib_utils.TokenRecord] = []
         if VERSIONS.transaction_era >= VERSIONS.MARY:
             # create native tokens UTxOs for pool user
             native_tokens = clusterlib_utils.new_tokens(
@@ -650,7 +647,7 @@ class TestRewards:
     def test_reward_addr_delegation(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool_and_pots: Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool_and_pots: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the rewards address can be delegated and receive rewards.
 
@@ -676,7 +673,7 @@ class TestRewards:
            - expected reward types
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool_and_pots
 
         # make sure there are rewards already available
@@ -712,7 +709,7 @@ class TestRewards:
         init_epoch = cluster.g_query.get_epoch()
 
         # rewards each epoch
-        reward_records: List[RewardRecord] = []
+        reward_records: tp.List[RewardRecord] = []
 
         # ledger state db
         rs_records: dict = {init_epoch: None}
@@ -1027,7 +1024,7 @@ class TestRewards:
 
         # in db-sync check that there were rewards of multiple different types
         # ("leader", "member", "treasury", "reserves")
-        reward_types: Dict[int, List[str]] = {}
+        reward_types: tp.Dict[int, tp.List[str]] = {}
         for rec in reward_db_record.rewards:
             stored_types = reward_types.get(rec.earned_epoch)
             if stored_types is None:
@@ -1056,7 +1053,7 @@ class TestRewards:
     def test_decreasing_reward_transferred_funds(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that rewards are gradually decreasing when funds are being transferred.
 
@@ -1178,7 +1175,7 @@ class TestRewards:
     def test_2_pools_same_reward_addr(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_two_pools: Tuple[clusterlib.ClusterLib, str, str],
+        cluster_lock_two_pools: tp.Tuple[clusterlib.ClusterLib, str, str],
     ):
         """Check that one reward address used for two pools receives rewards for both of them.
 
@@ -1280,8 +1277,8 @@ class TestRewards:
         this_epoch = init_epoch
 
         # rewards each epoch
-        rewards_ledger_pool1: List[RewardRecord] = []
-        rewards_ledger_pool2: List[RewardRecord] = []
+        rewards_ledger_pool1: tp.List[RewardRecord] = []
+        rewards_ledger_pool2: tp.List[RewardRecord] = []
 
         # check rewards
         for ep in range(6):
@@ -1394,7 +1391,7 @@ class TestRewards:
 
         # in db-sync check that pool1 reward address is used as reward address for pool1, and
         # in the expected epochs also for pool2
-        reward_types_pool1: Dict[int, List[str]] = {}
+        reward_types_pool1: tp.Dict[int, tp.List[str]] = {}
         for rec in rewards_db_pool1.rewards:
             stored_types = reward_types_pool1.get(rec.earned_epoch)
             if stored_types is None:
@@ -1410,7 +1407,7 @@ class TestRewards:
 
         # in db-sync check that pool2 reward address is NOT used for receiving rewards anymore
         # in the expected epochs
-        reward_types_pool2: Dict[int, List[str]] = {}
+        reward_types_pool2: tp.Dict[int, tp.List[str]] = {}
         for rec in rewards_db_pool2.rewards:
             stored_types = reward_types_pool2.get(rec.earned_epoch)
             if stored_types is None:
@@ -1429,7 +1426,7 @@ class TestRewards:
     def test_redelegation(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_two_pools: Tuple[clusterlib.ClusterLib, str, str],
+        cluster_use_two_pools: tp.Tuple[clusterlib.ClusterLib, str, str],
     ):
         """Check rewards received by stake address over multiple epochs.
 
@@ -1448,7 +1445,7 @@ class TestRewards:
         * (optional) check records in db-sync
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         cluster, pool1_name, pool2_name = cluster_use_two_pools
 
         temp_template = common.get_test_id(cluster)
@@ -1765,8 +1762,8 @@ class TestNegativeWithdrawal:
     def pool_users(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
-    ) -> Tuple[clusterlib.PoolUser, clusterlib.PoolUser]:
+        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
+    ) -> tp.Tuple[clusterlib.PoolUser, clusterlib.PoolUser]:
         cluster, pool_name = cluster_use_pool
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -1789,8 +1786,8 @@ class TestNegativeWithdrawal:
     @common.hypothesis_settings(max_examples=300)
     def test_withdrawal_wrong_amount(
         self,
-        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users: Tuple[clusterlib.PoolUser, clusterlib.PoolUser],
+        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        pool_users: tp.Tuple[clusterlib.PoolUser, clusterlib.PoolUser],
         amount: int,
     ):
         """Test that it is not possible to withdraw other amount than the total reward amount.

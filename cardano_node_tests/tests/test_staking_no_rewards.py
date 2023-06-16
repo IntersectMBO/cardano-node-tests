@@ -1,9 +1,7 @@
 """Tests for checking staking scenarios where no rewards are expected."""
 import logging
-from pathlib import Path
-from typing import Any
-from typing import List
-from typing import Tuple
+import pathlib as pl
+import typing as tp
 
 import allure
 import pytest
@@ -26,7 +24,7 @@ class TestNoRewards:
     def test_no_reward_unmet_pledge1(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -183,7 +181,7 @@ class TestNoRewards:
     def test_no_reward_unmet_pledge2(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -350,7 +348,7 @@ class TestNoRewards:
     def test_no_reward_deregistered_stake_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the pool is not receiving rewards when owner's stake address is deregistered.
 
@@ -547,7 +545,7 @@ class TestNoRewards:
     def test_no_reward_deregistered_reward_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the reward address is not receiving rewards when deregistered.
 
@@ -736,7 +734,7 @@ class TestNoRewards:
     def test_deregister_reward_addr_retire_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Test deregistering reward address and retiring stake pool.
 
@@ -755,16 +753,16 @@ class TestNoRewards:
         * check that pool owner is receiving rewards
         """
         # pylint: disable=too-many-statements,too-many-locals
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool
         pool_num = int(pool_name.replace("node-pool", ""))
 
-        kes_period_info_errors_list: List[str] = []
+        kes_period_info_errors_list: tp.List[str] = []
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
-        pool_opcert_file: Path = pool_rec["pool_operational_cert"]
+        pool_opcert_file: pl.Path = pool_rec["pool_operational_cert"]
         temp_template = common.get_test_id(cluster)
 
         LOGGER.info("Waiting up to 4 full epochs for first reward.")

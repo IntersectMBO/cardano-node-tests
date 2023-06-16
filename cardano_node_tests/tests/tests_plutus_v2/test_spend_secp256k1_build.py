@@ -1,9 +1,8 @@
 """SECP256k1 tests for spending with Plutus V2 using `transaction build`."""
 import json
 import logging
-from pathlib import Path
-from typing import List
-from typing import Tuple
+import pathlib as pl
+import typing as tp
 
 import allure
 import hypothesis
@@ -32,7 +31,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -57,9 +56,9 @@ class TestSECP256k1:
     def build_fund_script_secp(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> Tuple[str, List[clusterlib.UTXOData], List[clusterlib.UTXOData]]:
+    ) -> tp.Tuple[str, tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]]:
         """Fund a Plutus script and create the necessary Tx outputs."""
         algorithm = request.param
         temp_template = f"{common.get_test_id(cluster)}_{algorithm}"
@@ -136,8 +135,10 @@ class TestSECP256k1:
     def test_use_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        build_fund_script_secp: Tuple[str, List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        build_fund_script_secp: tp.Tuple[
+            str, tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
+        ],
     ):
         """Test that it is possible to spend a locked UTxO by a script that uses a SECP function.
 
@@ -230,9 +231,11 @@ class TestSECP256k1:
     def test_overspending_execution_budget(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         number_of_iterations: int,
-        build_fund_script_secp: Tuple[str, List[clusterlib.UTXOData], List[clusterlib.UTXOData]],
+        build_fund_script_secp: tp.Tuple[
+            str, tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
+        ],
     ):
         """Try to build a transaction with a plutus script that overspend the execution budget.
 
@@ -254,7 +257,7 @@ class TestSECP256k1:
 
         # generate a dummy redeemer with a number of loops big enough
         # to make the script to overspending the budget
-        redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+        redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
 
         with open(redeemer_file, encoding="utf-8") as f:
             redeemer = json.load(f)
@@ -272,7 +275,7 @@ class TestSECP256k1:
         plutus_op = plutus_common.PlutusOp(
             script_file=script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
-            redeemer_file=Path(redeemer_file_dummy),
+            redeemer_file=pl.Path(redeemer_file_dummy),
         )
 
         # for mypy

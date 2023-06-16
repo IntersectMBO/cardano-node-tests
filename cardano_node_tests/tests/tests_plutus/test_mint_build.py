@@ -1,10 +1,9 @@
 """Tests for minting with Plutus using `transaction build`."""
 import datetime
 import logging
+import pathlib as pl
 import shutil
-from pathlib import Path
-from typing import List
-from typing import Tuple
+import typing as tp
 
 import allure
 import pytest
@@ -36,7 +35,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -63,8 +62,10 @@ class TestBuildMinting:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-    ) -> Tuple[List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+    ) -> tp.Tuple[
+        tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput
+    ]:
         """Create UTxOs for `test_ttl_horizon`."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -101,7 +102,7 @@ class TestBuildMinting:
     def test_minting_one_token(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a Plutus script.
@@ -228,7 +229,7 @@ class TestBuildMinting:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_time_range_minting(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Test minting a token with a time constraints Plutus script.
 
@@ -370,7 +371,7 @@ class TestBuildMinting:
     def test_two_scripts_minting(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting two tokens with two different Plutus scripts.
@@ -609,7 +610,7 @@ class TestBuildMinting:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_minting_context_equivalence(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
         """Test context equivalence while minting a token.
 
@@ -674,7 +675,7 @@ class TestBuildMinting:
 
         # generate a dummy redeemer in order to create a txbody from which
         # we can generate a tx and then derive the correct redeemer
-        redeemer_file_dummy = Path(f"{temp_template}_dummy_script_context.redeemer")
+        redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
         clusterlib_utils.create_script_context(
             cluster_obj=cluster, plutus_version=1, redeemer_file=redeemer_file_dummy
         )
@@ -703,7 +704,7 @@ class TestBuildMinting:
         assert tx_output_dummy
 
         # generate the "real" redeemer
-        redeemer_file = Path(f"{temp_template}_script_context.redeemer")
+        redeemer_file = pl.Path(f"{temp_template}_script_context.redeemer")
 
         plutus_common.create_script_context_w_blockers(
             cluster_obj=cluster,
@@ -788,7 +789,7 @@ class TestBuildMinting:
     def test_witness_redeemer(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         key: str,
     ):
         """Test minting a token with a Plutus script.
@@ -935,9 +936,9 @@ class TestBuildMinting:
     def test_ttl_horizon(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
-        past_horizon_funds: Tuple[
-            List[clusterlib.UTXOData], List[clusterlib.UTXOData], clusterlib.TxRawOutput
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        past_horizon_funds: tp.Tuple[
+            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput
         ],
         plutus_version: str,
         ttl_offset: int,
@@ -1053,7 +1054,7 @@ class TestCollateralOutput:
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a Plutus script while using the same collateral input twice.
@@ -1139,7 +1140,7 @@ class TestCollateralOutput:
         altered_build_args.insert(collateral_idx + 2, altered_build_args[collateral_idx])
 
         # change the output file
-        tx_body_step2 = Path(f"{tx_output_step2.out_file.stem}_altered.body")
+        tx_body_step2 = pl.Path(f"{tx_output_step2.out_file.stem}_altered.body")
         out_file_idx = altered_build_args.index("--out-file") + 1
         altered_build_args[out_file_idx] = str(tx_body_step2)
 

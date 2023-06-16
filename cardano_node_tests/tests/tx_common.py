@@ -1,7 +1,6 @@
 import logging
-from pathlib import Path
-from typing import List
-from typing import Tuple
+import pathlib as pl
+import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -48,7 +47,7 @@ def get_raw_tx_values(
             address=dst_address, amount=src_addr_highest_utxo.amount - fee - min_change
         ),
     ]
-    out_file = Path(f"{helpers.get_timestamped_rand_str()}_tx.body")
+    out_file = pl.Path(f"{helpers.get_timestamped_rand_str()}_tx.body")
 
     return clusterlib.TxRawOutput(
         txins=txins,
@@ -63,8 +62,8 @@ def get_raw_tx_values(
 
 
 def get_txins_txouts(
-    txins: List[clusterlib.UTXOData], txouts: List[clusterlib.TxOut]
-) -> Tuple[List[str], List[str]]:
+    txins: tp.List[clusterlib.UTXOData], txouts: tp.List[clusterlib.TxOut]
+) -> tp.Tuple[tp.List[str], tp.List[str]]:
     txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in txins]
     txouts_combined = [f"{x.address}+{x.amount}" for x in txouts]
     return txins_combined, txouts_combined

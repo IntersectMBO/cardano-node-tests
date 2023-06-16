@@ -1,8 +1,7 @@
 """Tests for `--socket-path` CLI argument."""
 import logging
 import os
-from typing import Generator
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -76,7 +75,7 @@ def has_socket_path() -> None:
 def set_socket_path(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> Generator[None, None, None]:
+) -> tp.Generator[None, None, None]:
     """Unset `CARDANO_NODE_SOCKET_PATH` and set path for `cardano-cli ... --socket-path`."""
     if os.environ.get("CARDANO_NODE_SOCKET_PATH"):
         del os.environ["CARDANO_NODE_SOCKET_PATH"]
@@ -98,7 +97,7 @@ def payment_addrs(
     set_socket_path: None,  # noqa: ARG001
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     # pylint: disable=unused-argument
     with cluster_manager.cache_fixture() as fixture_cache:
@@ -223,7 +222,7 @@ class TestSocketPath:
         has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         env_scenario: str,
     ):
         """Send funds to payment address.
@@ -431,7 +430,7 @@ class TestNegativeSocketPath:
         has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         env_scenario: str,
         socket_scenario: str,
     ):

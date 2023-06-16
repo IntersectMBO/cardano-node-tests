@@ -1,8 +1,7 @@
 """SECP256k1 tests for minting with Plutus V2 using `transaction build`."""
 import logging
-from pathlib import Path
-from typing import Any
-from typing import List
+import pathlib as pl
+import typing as tp
 
 import allure
 import pytest
@@ -29,7 +28,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -54,12 +53,12 @@ class TestSECP256k1:
         self,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
-        payment_addrs: List[clusterlib.AddressRecord],
-        script_file: Path,
-        redeemer_file: Path,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        script_file: pl.Path,
+        redeemer_file: pl.Path,
     ):
         """Fund the token issuer and mint a token."""
-        __: Any  # mypy workaround
+        __: tp.Any  # mypy workaround
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -136,7 +135,7 @@ class TestSECP256k1:
     def test_use_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         algorithm: str,
     ):
         """Test that is possible to use the two SECP256k1 builtin functions.
@@ -207,7 +206,7 @@ class TestSECP256k1:
     def test_negative_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
         test_vector: str,
         algorithm: str,
     ):

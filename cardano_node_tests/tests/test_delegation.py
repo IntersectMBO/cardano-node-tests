@@ -1,7 +1,6 @@
 """Tests for stake address registration and delegation."""
 import logging
-from typing import List
-from typing import Tuple
+import typing as tp
 
 import allure
 import pytest
@@ -23,14 +22,14 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture
 def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
     return delegation.cluster_and_pool(cluster_manager=cluster_manager)
 
 
 @pytest.fixture
 def cluster_and_two_pools(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str, str]:
     """Return instance of `clusterlib.ClusterLib` and two pools."""
     cluster_obj = cluster_manager.get(
         use_resources=[
@@ -55,7 +54,7 @@ def cluster_and_two_pools(
 def pool_users(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.PoolUser]:
+) -> tp.List[clusterlib.PoolUser]:
     """Create pool users."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
@@ -81,7 +80,7 @@ def pool_users(
 @pytest.fixture
 def pool_users_disposable(
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.PoolUser]:
+) -> tp.List[clusterlib.PoolUser]:
     """Create function scoped pool users."""
     test_id = common.get_test_id(cluster)
     pool_users = clusterlib_utils.create_pool_users(
@@ -95,8 +94,8 @@ def pool_users_disposable(
 @pytest.fixture
 def pool_users_cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-) -> List[clusterlib.PoolUser]:
+    cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+) -> tp.List[clusterlib.PoolUser]:
     """Create pool users using `cluster_and_pool` fixture.
 
     .. warning::
@@ -127,8 +126,8 @@ def pool_users_cluster_and_pool(
 
 @pytest.fixture
 def pool_users_disposable_cluster_and_pool(
-    cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-) -> List[clusterlib.PoolUser]:
+    cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+) -> tp.List[clusterlib.PoolUser]:
     """Create function scoped pool users using `cluster_and_pool` fixture."""
     cluster, *__ = cluster_and_pool
     test_id = common.get_test_id(cluster)
@@ -161,7 +160,7 @@ class TestDelegateAddr:
     def test_delegate_using_pool_id(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
         use_build_cmd: bool,
     ):
         """Submit registration certificate and delegate to pool using pool id.
@@ -208,7 +207,7 @@ class TestDelegateAddr:
     def test_delegate_using_vkey(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
         use_build_cmd: bool,
     ):
         """Submit registration certificate and delegate to pool using cold vkey.
@@ -251,7 +250,7 @@ class TestDelegateAddr:
     def test_multi_delegation(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_and_two_pools: Tuple[clusterlib.ClusterLib, str, str],
+        cluster_and_two_pools: tp.Tuple[clusterlib.ClusterLib, str, str],
     ):
         """Delegate multiple stake addresses that share the same payment keys to multiple pools.
 
@@ -403,7 +402,7 @@ class TestDelegateAddr:
     def test_deregister(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Deregister stake address.
 
@@ -566,7 +565,7 @@ class TestDelegateAddr:
     def test_undelegate(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Undelegate stake address.
 
@@ -705,8 +704,8 @@ class TestDelegateAddr:
     def test_addr_registration_deregistration(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users_disposable: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Submit registration and deregistration certificates in single TX.
@@ -794,9 +793,9 @@ class TestDelegateAddr:
     @pytest.mark.smoke
     def test_addr_delegation_deregistration(
         self,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
-        pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        pool_users_cluster_and_pool: tp.List[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: tp.List[clusterlib.PoolUser],
         stake_cert: str,
         use_build_cmd: bool,
         stake_address_option_unusable: bool,
@@ -937,8 +936,8 @@ class TestDelegateAddr:
     def test_addr_registration_certificate_order(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users_disposable: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Submit (de)registration certificates in single TX and check that the order matter.
@@ -1032,7 +1031,7 @@ class TestNegative:
     def test_registration_cert_with_wrong_key(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
     ):
         """Try to generate stake address registration certificate using wrong stake vkey.
 
@@ -1051,8 +1050,8 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     def test_delegation_cert_with_wrong_key(
         self,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        pool_users_cluster_and_pool: tp.List[clusterlib.PoolUser],
     ):
         """Try to generate stake address delegation certificate using wrong stake vkey.
 
@@ -1075,8 +1074,8 @@ class TestNegative:
     def test_register_addr_with_wrong_key(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users_disposable: tp.List[clusterlib.PoolUser],
     ):
         """Try to register stake address using wrong payment skey.
 
@@ -1108,9 +1107,9 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     def test_delegate_addr_with_wrong_key(
         self,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
-        pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        pool_users_cluster_and_pool: tp.List[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: tp.List[clusterlib.PoolUser],
     ):
         """Try to delegate stake address using wrong payment skey.
 
@@ -1167,9 +1166,9 @@ class TestNegative:
     @common.PARAM_USE_BUILD_CMD
     def test_delegate_unknown_addr(
         self,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
-        pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        pool_users_cluster_and_pool: tp.List[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to delegate unknown stake address.
@@ -1223,9 +1222,9 @@ class TestNegative:
     @common.PARAM_USE_BUILD_CMD
     def test_delegate_deregistered_addr(
         self,
-        cluster_and_pool: Tuple[clusterlib.ClusterLib, str],
-        pool_users_cluster_and_pool: List[clusterlib.PoolUser],
-        pool_users_disposable_cluster_and_pool: List[clusterlib.PoolUser],
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        pool_users_cluster_and_pool: tp.List[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Try to delegate deregistered stake address.
@@ -1322,8 +1321,8 @@ class TestNegative:
     def test_deregister_not_registered_addr(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users_disposable: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Deregister not registered stake address."""
@@ -1369,8 +1368,8 @@ class TestNegative:
     def test_delegatee_not_registered(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: List[clusterlib.PoolUser],
-        pool_users_disposable: List[clusterlib.PoolUser],
+        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users_disposable: tp.List[clusterlib.PoolUser],
     ):
         """Try to delegate stake address to unregistered pool.
 

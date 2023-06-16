@@ -1,10 +1,7 @@
 """Functionality for KES key used in multiple tests modules."""
 import datetime
 import logging
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+import typing as tp
 
 import pytest
 import requests
@@ -26,12 +23,12 @@ class KesScenarios:
 
 def check_kes_period_info_result(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib,
-    kes_output: Dict[str, Any],
+    kes_output: tp.Dict[str, tp.Any],
     expected_scenario: str,
     check_id: str,
-    expected_start_kes: Optional[int] = None,
-    pool_num: Optional[int] = None,
-) -> List[str]:
+    expected_start_kes: tp.Optional[int] = None,
+    pool_num: tp.Optional[int] = None,
+) -> tp.List[str]:
     """Check output `kes-period-info` command.
 
     When `pool_num` is specified, prometheus metrics are checked.
@@ -41,7 +38,7 @@ def check_kes_period_info_result(  # noqa: C901
     errors = []
 
     # Get command metrics
-    command_metrics: Dict[str, Any] = kes_output["metrics"] or {}
+    command_metrics: tp.Dict[str, tp.Any] = kes_output["metrics"] or {}
 
     # Check kes metrics with values in genesis
     if command_metrics["qKesMaxKESEvolutions"] != cluster_obj.max_kes_evolutions:
@@ -78,7 +75,7 @@ def check_kes_period_info_result(  # noqa: C901
             )
 
     # Get prometheus metrics
-    prometheus_metrics: Dict[str, Any] = {}
+    prometheus_metrics: tp.Dict[str, tp.Any] = {}
     if pool_num and expected_scenario in (
         KesScenarios.ALL_VALID,
         KesScenarios.INVALID_COUNTERS,
@@ -105,7 +102,7 @@ def check_kes_period_info_result(  # noqa: C901
         }
 
     # Check kes metrics with expected values
-    expected_metrics: Dict[str, Any] = {
+    expected_metrics: tp.Dict[str, tp.Any] = {
         "qKesCurrentKesPeriod": cluster_obj.g_query.get_kes_period(),
     }
     if expected_start_kes is not None:
@@ -190,7 +187,7 @@ def check_kes_period_info_result(  # noqa: C901
     return errors
 
 
-def get_xfails(errors: List[str]) -> List[blockers.GH]:
+def get_xfails(errors: tp.List[str]) -> tp.List[blockers.GH]:
     """Get xfail issues.
 
     Either all errors can Xfail, or none of them can. There can be only one outcome of a test,
@@ -216,7 +213,7 @@ def get_xfails(errors: List[str]) -> List[blockers.GH]:
     return xfails
 
 
-def finish_on_errors(errors: List[str]) -> None:
+def finish_on_errors(errors: tp.List[str]) -> None:
     """Fail or Xfail the test if there are errors."""
     if not errors:
         return

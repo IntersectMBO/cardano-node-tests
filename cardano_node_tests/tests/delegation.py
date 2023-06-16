@@ -1,12 +1,7 @@
 """Functionality for stake address delegation used in multiple tests modules."""
 import logging
-from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import NamedTuple
-from typing import Optional
-from typing import Tuple
-from typing import Union
+import pathlib as pl
+import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -21,17 +16,17 @@ from cardano_node_tests.utils import dbsync_types
 LOGGER = logging.getLogger(__name__)
 
 
-class AddressRecordScript(NamedTuple):
+class AddressRecordScript(tp.NamedTuple):
     address: str
-    script_file: Path
+    script_file: pl.Path
 
 
-class PoolUserScript(NamedTuple):
+class PoolUserScript(tp.NamedTuple):
     payment: clusterlib.AddressRecord
     stake: AddressRecordScript
 
 
-class DelegationOut(NamedTuple):
+class DelegationOut(tp.NamedTuple):
     pool_user: clusterlib.PoolUser
     pool_id: str
     tx_raw_output: clusterlib.TxRawOutput
@@ -49,7 +44,7 @@ def get_pool_id(
 
 def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> Tuple[clusterlib.ClusterLib, str]:
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
     """Return instance of `clusterlib.ClusterLib`, and pool id to delegate to.
 
     We need to mark the pool as "in use" when requesting local cluster
@@ -96,8 +91,8 @@ def cluster_and_pool(
 
 
 def db_check_delegation(
-    pool_user: Union[clusterlib.PoolUser, PoolUserScript],
-    db_record: Optional[dbsync_types.TxRecord],
+    pool_user: tp.Union[clusterlib.PoolUser, PoolUserScript],
+    db_record: tp.Optional[dbsync_types.TxRecord],
     deleg_epoch: int,
     pool_id: str,
 ):
@@ -115,9 +110,9 @@ def delegate_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     addrs_data: dict,
     temp_template: str,
-    pool_user: Optional[clusterlib.PoolUser] = None,
+    pool_user: tp.Optional[clusterlib.PoolUser] = None,
     pool_id: str = "",
-    cold_vkey: Optional[Path] = None,
+    cold_vkey: tp.Optional[pl.Path] = None,
     amount: int = 100_000_000,
     use_build_cmd: bool = False,
 ) -> DelegationOut:
@@ -152,7 +147,7 @@ def delegate_stake_addr(
         )
 
     # create stake address delegation cert
-    deleg_kwargs: Dict[str, Any] = {
+    deleg_kwargs: tp.Dict[str, tp.Any] = {
         "addr_name": f"{temp_template}_addr0",
         "stake_vkey_file": pool_user.stake.vkey_file,
     }

@@ -2,8 +2,8 @@
 # pylint: disable=abstract-class-instantiated
 import json
 import logging
+import pathlib as pl
 import time
-from pathlib import Path
 
 import allure
 import pytest
@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def epoch_length_start_cluster() -> Path:
+def epoch_length_start_cluster() -> pl.Path:
     """Update *epochLength* to 1200."""
     shared_tmp = temptools.get_pytest_shared_tmp()
 
@@ -49,7 +49,7 @@ def epoch_length_start_cluster() -> Path:
 
 
 @pytest.fixture(scope="module")
-def slot_length_start_cluster() -> Path:
+def slot_length_start_cluster() -> pl.Path:
     """Update *slotLength* to 0.3."""
     shared_tmp = temptools.get_pytest_shared_tmp()
 
@@ -79,7 +79,7 @@ def slot_length_start_cluster() -> Path:
 
 @pytest.fixture
 def cluster_epoch_length(
-    cluster_manager: cluster_management.ClusterManager, epoch_length_start_cluster: Path
+    cluster_manager: cluster_management.ClusterManager, epoch_length_start_cluster: pl.Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
@@ -91,7 +91,7 @@ def cluster_epoch_length(
 
 @pytest.fixture
 def cluster_slot_length(
-    cluster_manager: cluster_management.ClusterManager, slot_length_start_cluster: Path
+    cluster_manager: cluster_management.ClusterManager, slot_length_start_cluster: pl.Path
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],

@@ -1,8 +1,6 @@
 import logging
 import time
-from typing import Any
-from typing import Set
-from typing import Tuple
+import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -106,7 +104,7 @@ else:
     EPOCH_STOP_SEC_LEDGER_STATE = -200
 
 
-def hypothesis_settings(max_examples: int = 100) -> Any:
+def hypothesis_settings(max_examples: int = 100) -> tp.Any:
     # pylint: disable=import-outside-toplevel
     import hypothesis
 
@@ -150,10 +148,10 @@ def detect_fork(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
-) -> Tuple[Set[str], Set[str]]:
+) -> tp.Tuple[tp.Set[str], tp.Set[str]]:
     """Detect if one or more nodes have forked blockchain or is out of sync."""
-    forked_nodes: Set[str] = set()
-    unsynced_nodes: Set[str] = set()
+    forked_nodes: tp.Set[str] = set()
+    unsynced_nodes: tp.Set[str] = set()
 
     known_nodes = cluster_nodes.get_cluster_type().NODES
     if len(known_nodes) <= 1:

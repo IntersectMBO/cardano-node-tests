@@ -9,28 +9,21 @@ import itertools
 import json
 import logging
 import os
+import pathlib as pl
 import random
 import signal
 import string
 import subprocess
-from pathlib import Path
-from typing import Callable
-from typing import cast
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import TypeVar
-from typing import Union
+import typing as tp
 
-from cardano_node_tests.utils.types import FileType
+import cardano_node_tests.utils.types as ttypes
 
 
 LOGGER = logging.getLogger(__name__)
 
 GITHUB_URL = "https://github.com/input-output-hk/cardano-node-tests"
 
-TCallable = TypeVar("TCallable", bound=Callable)  # pylint: disable=invalid-name
+TCallable = tp.TypeVar("TCallable", bound=tp.Callable)  # pylint: disable=invalid-name
 
 
 def callonce(func: TCallable) -> TCallable:
@@ -52,13 +45,13 @@ def callonce(func: TCallable) -> TCallable:
         result.append(retval)
         return retval
 
-    return cast(TCallable, wrapper)
+    return tp.cast(TCallable, wrapper)
 
 
 @contextlib.contextmanager
-def change_cwd(dir_path: FileType) -> Iterator[FileType]:
+def change_cwd(dir_path: ttypes.FileType) -> tp.Iterator[ttypes.FileType]:
     """Change and restore CWD - context manager."""
-    orig_cwd = Path.cwd()
+    orig_cwd = pl.Path.cwd()
     os.chdir(dir_path)
     LOGGER.debug(f"Changed CWD to '{dir_path}'.")
     try:
@@ -69,7 +62,7 @@ def change_cwd(dir_path: FileType) -> Iterator[FileType]:
 
 
 @contextlib.contextmanager
-def ignore_interrupt() -> Iterator[None]:
+def ignore_interrupt() -> tp.Iterator[None]:
     """Ignore the KeyboardInterrupt signal."""
     orig_handler = None
     try:
@@ -89,7 +82,7 @@ def ignore_interrupt() -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def environ(env: dict) -> Iterator[None]:
+def environ(env: dict) -> tp.Iterator[None]:
     """Temporarily set environment variables and restore previous environment afterwards."""
     original_env = {key: os.environ.get(key) for key in env}
     os.environ.update(env)
@@ -104,13 +97,13 @@ def environ(env: dict) -> Iterator[None]:
 
 
 def run_command(
-    command: Union[str, list],
-    workdir: FileType = "",
+    command: tp.Union[str, list],
+    workdir: ttypes.FileType = "",
     ignore_fail: bool = False,
     shell: bool = False,
 ) -> bytes:
     """Run command."""
-    cmd: Union[str, list]
+    cmd: tp.Union[str, list]
     if isinstance(command, str):
         cmd = command if shell else command.split()
         cmd_str = command
@@ -136,7 +129,7 @@ def run_command(
     return stdout
 
 
-def run_in_bash(command: str, workdir: FileType = "") -> bytes:
+def run_in_bash(command: str, workdir: ttypes.FileType = "") -> bytes:
     """Run command(s) in bash."""
     cmd = ["bash", "-o", "pipefail", "-c", f"{command}"]
     return run_command(cmd, workdir=workdir)
@@ -157,7 +150,7 @@ def get_rand_str(length: int = 8) -> str:
 
 
 # TODO: unify with the implementation in clusterlib
-def prepend_flag(flag: str, contents: Iterable) -> List[str]:
+def prepend_flag(flag: str, contents: tp.Iterable) -> tp.List[str]:
     """Prepend flag to every item of the sequence.
 
     Args:
@@ -165,7 +158,7 @@ def prepend_flag(flag: str, contents: Iterable) -> List[str]:
         contents: A list (iterable) of content to be prepended.
 
     Returns:
-        List[str]: A list of flag followed by content, see below.
+        tp.List[str]: A list of flag followed by content, see below.
 
     >>> prepend_flag(None, "--foo", [1, 2, 3])
     ['--foo', '1', '--foo', '2', '--foo', '3']
@@ -195,7 +188,7 @@ def get_vcs_link() -> str:
     return url
 
 
-def checksum(filename: FileType, blocksize: int = 65536) -> str:
+def checksum(filename: ttypes.FileType, blocksize: int = 65536) -> str:
     """Return file checksum."""
     hash_o = hashlib.blake2b()
     with open(filename, "rb") as f:
@@ -204,9 +197,9 @@ def checksum(filename: FileType, blocksize: int = 65536) -> str:
     return hash_o.hexdigest()
 
 
-def write_json(out_file: FileType, content: dict) -> FileType:
+def write_json(out_file: ttypes.FileType, content: dict) -> ttypes.FileType:
     """Write dictionary content to JSON file."""
-    with open(Path(out_file).expanduser(), "w", encoding="utf-8") as out_fp:
+    with open(pl.Path(out_file).expanduser(), "w", encoding="utf-8") as out_fp:
         out_fp.write(json.dumps(content, indent=4))
     return out_file
 
@@ -221,27 +214,27 @@ def encode_bech32(prefix: str, data: str) -> str:
     return run_command(f"echo '{data}' | bech32 {prefix}", shell=True).decode().strip()
 
 
-def check_dir_arg(dir_path: str) -> Optional[Path]:
+def check_dir_arg(dir_path: str) -> tp.Optional[pl.Path]:
     """Check that the dir passed as argparse parameter is a valid existing dir."""
     if not dir_path:
         return None
-    abs_path = Path(dir_path).expanduser().resolve()
+    abs_path = pl.Path(dir_path).expanduser().resolve()
     if not (abs_path.exists() and abs_path.is_dir()):
         raise argparse.ArgumentTypeError(f"check_dir_arg: directory '{dir_path}' doesn't exist")
     return abs_path
 
 
-def check_file_arg(file_path: str) -> Optional[Path]:
+def check_file_arg(file_path: str) -> tp.Optional[pl.Path]:
     """Check that the file passed as argparse parameter is a valid existing file."""
     if not file_path:
         return None
-    abs_path = Path(file_path).expanduser().resolve()
+    abs_path = pl.Path(file_path).expanduser().resolve()
     if not (abs_path.exists() and abs_path.is_file()):
         raise argparse.ArgumentTypeError(f"check_file_arg: file '{file_path}' doesn't exist")
     return abs_path
 
 
-def get_eof_offset(infile: Path) -> int:
+def get_eof_offset(infile: pl.Path) -> int:
     """Return position of the current end of the file."""
     with open(infile, "rb") as in_fp:
         in_fp.seek(0, io.SEEK_END)

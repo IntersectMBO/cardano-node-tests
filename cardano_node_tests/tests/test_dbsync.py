@@ -1,7 +1,7 @@
 """Tests for db-sync."""
 import logging
 import time
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -107,7 +107,7 @@ class TestDBSync:
 
         rec = None
         prev_rec = None
-        errors: List[str] = []
+        errors: tp.List[str] = []
         for rec in dbsync_queries.query_blocks(epoch_from=epoch_from):
             if not prev_rec:
                 prev_rec = rec

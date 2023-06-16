@@ -1,6 +1,6 @@
 """Compatibility tests for spending with Plutus using `transaction build`."""
 import logging
-from typing import List
+import typing as tp
 
 import allure
 import pytest
@@ -27,7 +27,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> List[clusterlib.AddressRecord]:
+) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -59,7 +59,7 @@ class TestCompatibility:
     def test_plutusv2_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: List[clusterlib.AddressRecord],
+        payment_addrs: tp.List[clusterlib.AddressRecord],
     ):
         """Test spending a UTxO locked with PlutusV2 script using old Tx era.
 
