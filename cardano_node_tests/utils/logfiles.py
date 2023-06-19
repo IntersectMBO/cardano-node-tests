@@ -17,10 +17,14 @@ from cardano_node_tests.utils import temptools
 LOGGER = logging.getLogger(__name__)
 
 ROTATED_RE = re.compile(r".+\.[0-9]+")  # detect rotated log file
-ERRORS_RE = re.compile(":error:|failed|failure", re.IGNORECASE)
+ERRORS_RE = re.compile("error|failed|failure", re.IGNORECASE)
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 ERRORS_IGNORED = [
+    r"cardano\.node\.[^:]+:Info:",
+    "Event: LedgerUpdate",
+    "trace.*ErrorPolicy",
+    "ErrorPolicySuspendConsumer",
     "Connection Attempt Exception",
     "EKGServerStartupError",
     "ExceededTimeLimit",
@@ -29,12 +33,9 @@ ERRORS_IGNORED = [
     "failedScripts",
     "closed when reading data, waiting on next header",
     "MuxIOException writev: resource vanished",
-    r"cardano\.node\.Mempool:Info",
     r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
     # Can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
-    # Errors can happen on p2p when local roots are not up yet
-    "PeerSelection:Info:",
     # Can happen on p2p when node is shutting down
     "AsyncCancelled",
     # TODO: p2p failures on testnet
@@ -43,13 +44,15 @@ ERRORS_IGNORED = [
     "DeactivationTimeout",
     # TODO: p2p failures on testnet
     "PeerMonitoringError .* MuxError",
-    # P2P info messages on testnet
-    "PublicRootPeers:Info:",
     # Harmless when whole network is shutting down
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
-    # TODO: see node issue #4369
-    "MAIN THREAD FAILED",
+    # TODO: see node issue https://github.com/input-output-hk/cardano-node/issues/5312
+    "DiffusionError thread killed",
 ]
+# Already removed from the list above:
+# * Workaround for node issue https://github.com/input-output-hk/cardano-node/issues/4369
+#   "MAIN THREAD FAILED"
+
 if (os.environ.get("GITHUB_ACTIONS") or "").lower() == "true":
     # We sometimes see this error on CI. It seems time is not synced properly on GitHub runners.
     ERRORS_IGNORED.append("TraceBlockFromFuture")
