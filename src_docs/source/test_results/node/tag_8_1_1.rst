@@ -74,7 +74,7 @@ Release testing checklist
    * - Benchmarking - `Report <https://input-output-rnd.slack.com/files/U03A639T0DN/F05C24JKAS2/2023-06-08-17.58.8.0.0_8.0.0_8.1.1-pre.value-only.pdf>`__
      - |:heavy_check_mark:|
    * - Sanity check release notes
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 
 New functionalities in this tag
