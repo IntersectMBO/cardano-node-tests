@@ -1,4 +1,5 @@
 """Tests for cardano-cli that doesn't fit into any other test file."""
+import datetime
 import json
 import logging
 import os
@@ -6,8 +7,6 @@ import pathlib as pl
 import string
 import time
 import typing as tp
-from datetime import datetime
-from datetime import timezone
 
 import allure
 import hypothesis
@@ -1305,7 +1304,7 @@ class TestQuerySlotNumber:
         # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.datetime.now(datetime.timezone.utc)
 
         slot_number = cluster.g_query.get_slot_number(timestamp=timestamp)
 
@@ -1324,7 +1323,7 @@ class TestQuerySlotNumber:
         # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
-        timestamp_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        timestamp_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.query_cli(["slot-number", timestamp_str])
@@ -1333,11 +1332,11 @@ class TestQuerySlotNumber:
         assert "parseTimeOrError" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("timestamp", ("above", "bellow"))
+    @pytest.mark.parametrize("time_val", ("above", "bellow"))
     def test_slot_number_out_of_range(
         self,
         cluster: clusterlib.ClusterLib,
-        timestamp: str,
+        time_val: str,
         query_slot_number_available: None,  # noqa: ARG002
     ):
         """Test `query slot-number` with a timestamp out of range.
@@ -1347,13 +1346,12 @@ class TestQuerySlotNumber:
         # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.datetime.now(datetime.timezone.utc)
 
-        timestamp = now.replace(year=now.year * 4) if timestamp == "above" else now.replace(year=1)
+        timestamp = now.replace(year=now.year * 4) if time_val == "above" else now.replace(year=1)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_slot_number(timestamp=timestamp)
-
         err_str = str(excinfo.value)
 
         assert "PastHorizon" in err_str, err_str
