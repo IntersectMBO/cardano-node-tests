@@ -17,7 +17,7 @@ from cardano_node_tests.utils import temptools
 LOGGER = logging.getLogger(__name__)
 
 ROTATED_RE = re.compile(r".+\.[0-9]+")  # detect rotated log file
-ERRORS_RE = re.compile("error|failed|failure", re.IGNORECASE)
+ERRORS_RE = re.compile("error|fail", re.IGNORECASE)
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 ERRORS_IGNORED = [
