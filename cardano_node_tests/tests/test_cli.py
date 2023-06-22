@@ -1,4 +1,5 @@
 """Tests for cardano-cli that doesn't fit into any other test file."""
+import datetime
 import json
 import logging
 import os
@@ -1284,3 +1285,73 @@ class TestPing:
 
         last_pong = ping_data["pongs"][-1]
         assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
+
+
+@pytest.mark.smoke
+class TestQuerySlotNumber:
+    """Tests for `cardano-cli query slot-number`."""
+
+    @pytest.fixture(scope="class")
+    def query_slot_number_available(self) -> None:
+        if not clusterlib_utils.cli_has("query slot-number"):
+            pytest.skip("CLI command `query slot-number` is not available")
+
+    @allure.link(helpers.get_vcs_link())
+    def test_slot_number(
+        self, cluster: clusterlib.ClusterLib, query_slot_number_available: None  # noqa: ARG002
+    ):
+        """Test `query slot-number`."""
+        # pylint: disable=unused-argument
+        common.get_test_id(cluster)
+
+        timestamp = datetime.datetime.now(datetime.timezone.utc)
+
+        slot_number = cluster.g_query.get_slot_number(timestamp=timestamp)
+
+        # Check that 'slot' returned is never greater than the total number of slots
+        tip_out = cluster.g_query.get_tip()
+        assert slot_number <= (tip_out["epoch"] + 1) * cluster.epoch_length - cluster.slots_offset
+
+    @allure.link(helpers.get_vcs_link())
+    def test_slot_number_invalid_format(
+        self, cluster: clusterlib.ClusterLib, query_slot_number_available: None  # noqa: ARG002
+    ):
+        """Test `query slot-number` with a timestamp invalid format.
+
+        Expect failure.
+        """
+        # pylint: disable=unused-argument
+        common.get_test_id(cluster)
+
+        timestamp_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_query.query_cli(["slot-number", timestamp_str])
+        err_str = str(excinfo.value)
+
+        assert "parseTimeOrError" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("time_val", ("above", "bellow"))
+    def test_slot_number_out_of_range(
+        self,
+        cluster: clusterlib.ClusterLib,
+        time_val: str,
+        query_slot_number_available: None,  # noqa: ARG002
+    ):
+        """Test `query slot-number` with a timestamp out of range.
+
+        Expect failure.
+        """
+        # pylint: disable=unused-argument
+        common.get_test_id(cluster)
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        timestamp = now.replace(year=now.year * 4) if time_val == "above" else now.replace(year=1)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_query.get_slot_number(timestamp=timestamp)
+        err_str = str(excinfo.value)
+
+        assert "PastHorizon" in err_str, err_str
