@@ -5,6 +5,8 @@ set -xeuo pipefail
 
 nix --version
 
+DEFAULT_CLUSTER_ERA="babbage"
+
 REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"
 
@@ -75,12 +77,16 @@ if [ -n "${CLUSTERS_COUNT:-""}" ]; then
   export CLUSTERS_COUNT
 fi
 
+export CLUSTER_ERA="${CLUSTER_ERA:-"$DEFAULT_CLUSTER_ERA"}"
+
 if [ "${TX_ERA:-""}" == "default" ]; then
   export TX_ERA=""
 fi
 
-if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ] && [ -z "${SCRIPTS_DIRNAME:-""}" ]; then
-  export SCRIPTS_DIRNAME="${CLUSTER_ERA:-"babbage"}_fast"
+if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ]; then
+  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"${CLUSTER_ERA}_fast"}"
+else
+  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"$CLUSTER_ERA"}"
 fi
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
