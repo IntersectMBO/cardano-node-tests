@@ -1273,7 +1273,9 @@ class TestPing:
         except clusterlib.CLIError as exc:
             if "MuxError MuxBearerClosed" not in str(exc):
                 raise
-            blockers.GH(issue=5245, message="`MuxError MuxBearerClosed` error").finish_test()
+            blockers.GH(
+                issue=5245, message="`MuxError MuxBearerClosed` error", check_on_devel=False
+            ).finish_test()
         else:
             logfiles.clean_ignore_rules(ignore_file_id=ignore_file_id)
 
