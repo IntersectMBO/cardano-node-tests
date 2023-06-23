@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
+
+if [ -e ./state-cluster%%INSTANCE_NUM%%/db_backend ]; then
+  DB_BACKEND="$(<./state-cluster%%INSTANCE_NUM%%/db_backend)"
+fi
+
+case "${DB_BACKEND:-""}" in
+  mem)
+    DB_BACKEND_ARGS=("--in-memory-ledger-db-backend")
+    ;;
+  lmdb)
+    DB_BACKEND_ARGS=("--lmdb-ledger-db-backend")
+    ;;
+  *)
+    DB_BACKEND_ARGS=()
+    ;;
+esac
+
+echo "Starting cardano-node run: cardano-node run"
+   echo "--config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json"
+   echo "--database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1"
+   echo "--topology ./state-cluster%%INSTANCE_NUM%%/topology-bft1.json"
+   echo "--host-addr 127.0.0.1"
+   echo "--port %%NODE_PORT_BASE%%"
+   echo "--socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket"
+   echo "--signing-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.key"
+   echo "--delegation-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.json"
+   echo "--shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/vrf.skey"
+   echo "--shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/kes.skey"
+   echo "--shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert ${DB_BACKEND_ARGS[*]}"
+
+echo "..or, once again, in a single line:"
+echo "cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1 --topology ./state-cluster%%INSTANCE_NUM%%/topology-bft1.json --host-addr 127.0.0.1 --port %%NODE_PORT_BASE%% --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --signing-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.key --delegation-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.json --shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/vrf.skey --shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/kes.skey --shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert ${DB_BACKEND_ARGS[*]}"
+
+
+exec cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1 --topology ./state-cluster%%INSTANCE_NUM%%/topology-bft1.json --host-addr 127.0.0.1 --port %%NODE_PORT_BASE%% --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --signing-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.key --delegation-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.json --shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/vrf.skey --shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/kes.skey --shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert "${DB_BACKEND_ARGS[@]}"

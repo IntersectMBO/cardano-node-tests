@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
+
+if [ -e ./state-cluster%%INSTANCE_NUM%%/db_backend ]; then
+  DB_BACKEND="$(<./state-cluster%%INSTANCE_NUM%%/db_backend)"
+fi
+
+case "${DB_BACKEND:-""}" in
+  mem)
+    DB_BACKEND_ARGS=("--in-memory-ledger-db-backend")
+    ;;
+  lmdb)
+    DB_BACKEND_ARGS=("--lmdb-ledger-db-backend")
+    ;;
+  *)
+    DB_BACKEND_ARGS=()
+    ;;
+esac
+
+echo "Starting cardano-node run: cardano-node run"
+   echo "--config ./state-cluster%%INSTANCE_NUM%%/config-pool%%POOL_NUM%%.json"
+   echo "--database-path ./state-cluster%%INSTANCE_NUM%%/db-pool%%POOL_NUM%%"
+   echo "--topology ./state-cluster%%INSTANCE_NUM%%/topology-pool%%POOL_NUM%%.json"
+   echo "--host-addr 127.0.0.1"
+   echo "--port %%NODE_PORT%%"
+   echo "--socket-path ./state-cluster%%INSTANCE_NUM%%/pool%%POOL_NUM%%.socket"
+   echo "--shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/vrf.skey"
+   echo "--shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/kes.skey"
+   echo "--shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/op.cert ${DB_BACKEND_ARGS[*]}"
+
+echo "..or, once again, in a single line:"
+echo "cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-pool%%POOL_NUM%%.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-pool%%POOL_NUM%% --topology ./state-cluster%%INSTANCE_NUM%%/topology-pool%%POOL_NUM%%.json --host-addr 127.0.0.1 --port %%NODE_PORT%% --socket-path ./state-cluster%%INSTANCE_NUM%%/pool%%POOL_NUM%%.socket --shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/vrf.skey --shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/kes.skey --shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/op.cert ${DB_BACKEND_ARGS[*]}"
+
+
+exec cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-pool%%POOL_NUM%%.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-pool%%POOL_NUM%% --topology ./state-cluster%%INSTANCE_NUM%%/topology-pool%%POOL_NUM%%.json --host-addr 127.0.0.1 --port %%NODE_PORT%% --socket-path ./state-cluster%%INSTANCE_NUM%%/pool%%POOL_NUM%%.socket --shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/vrf.skey --shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/kes.skey --shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-pool%%POOL_NUM%%/op.cert "${DB_BACKEND_ARGS[@]}"
