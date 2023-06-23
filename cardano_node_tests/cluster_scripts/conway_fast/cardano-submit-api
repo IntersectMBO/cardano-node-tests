@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
+
+testnet_magic="$(<./state-cluster%%INSTANCE_NUM%%/db-bft1/protocolMagicId)"
+
+# TODO: `--metrics-port` is not available in older cardano-node releases, see node issue #4280
+metrics_port="$(cardano-submit-api --metrics-port 8081 2>&1 | { read -r i; if [[ "$i" == *Invalid* ]]; then echo ""; else echo "--metrics-port %%METRICS_SUBMIT_API_PORT%%"; fi; })"
+
+echo "Starting cardano-submit-api: cardano-submit-api"
+  echo "--config ./state-cluster%%INSTANCE_NUM%%/submit-api-config.json"
+  echo "--socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket"
+  echo "--listen-address 127.0.0.1"
+  echo "--port %%SUBMIT_API_PORT%%"
+  echo "$metrics_port"
+  echo --testnet-magic "$testnet_magic"
+echo "..or, once again, in a single line:"
+echo cardano-submit-api --config ./state-cluster%%INSTANCE_NUM%%/submit-api-config.json --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --listen-address 127.0.0.1 --port %%SUBMIT_API_PORT%% "$metrics_port" --testnet-magic "$testnet_magic"
+
+# shellcheck disable=SC2086
+exec cardano-submit-api --config ./state-cluster%%INSTANCE_NUM%%/submit-api-config.json --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --listen-address 127.0.0.1 --port %%SUBMIT_API_PORT%% $metrics_port --testnet-magic "$testnet_magic"
