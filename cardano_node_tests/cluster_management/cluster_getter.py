@@ -224,7 +224,7 @@ class ClusterGetter:
                 "Failed to start cluster instance 'c%s':\n%s", self.cluster_instance_num, excp
             )
             if not configuration.IS_XDIST:
-                pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
+                pytest.exit(msg="Failed to start cluster", returncode=1)
             (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
             return False
 
