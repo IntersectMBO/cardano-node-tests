@@ -1,6 +1,5 @@
 """Functionality for obtaining and setting up a cluster instance."""
 # pylint: disable=abstract-class-instantiated
-import contextlib
 import dataclasses
 import logging
 import os
@@ -40,12 +39,17 @@ else:
 
 
 def _kill_supervisor(instance_num: int) -> None:
-    """Kill supervisor process."""
+    """Attempt to kill the `supervisord` process."""
+    try:
+        netstat = helpers.run_command("netstat -plnt").decode().splitlines()
+    except Exception:
+        return
+
     port_num = (
         cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
     )
     port_str = f":{port_num}"
-    netstat = helpers.run_command("netstat -plnt").decode().splitlines()
+
     for line in netstat:
         if port_str not in line:
             continue
@@ -53,6 +57,14 @@ def _kill_supervisor(instance_num: int) -> None:
         pid = line_p.split()[-1].split("/")[0]
         os.kill(int(pid), 15)
         return
+
+
+def _get_netstat_out() -> str:
+    """Get output of the `netstat` command."""
+    try:
+        return helpers.run_command("netstat -plnt").decode()
+    except Exception:
+        return ""
 
 
 @dataclasses.dataclass
@@ -195,8 +207,7 @@ class ClusterGetter:
 
             shutil.rmtree(state_dir, ignore_errors=True)
 
-            with contextlib.suppress(Exception):
-                _kill_supervisor(self.cluster_instance_num)
+            _kill_supervisor(self.cluster_instance_num)
 
             _cluster_started = False
             try:
@@ -214,14 +225,20 @@ class ClusterGetter:
             if _cluster_started:
                 break
         else:
+            netstat_out = _get_netstat_out()
             self.log(
-                f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}\ncluster dead"
+                f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}"
+                f"\nnetstat:\n{netstat_out}"
+                "\ncluster dead"
             )
             logfiles.framework_logger().error(
-                "Failed to start cluster instance 'c%s':\n%s", self.cluster_instance_num, excp
+                "Failed to start cluster instance 'c%s':\n%s\nnetstat:\n%s",
+                self.cluster_instance_num,
+                excp,
+                netstat_out,
             )
             if not configuration.IS_XDIST:
-                pytest.exit(msg=f"Failed to start cluster, exception: {excp}", returncode=1)
+                pytest.exit(msg="Failed to start cluster", returncode=1)
             (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
             return False
 
