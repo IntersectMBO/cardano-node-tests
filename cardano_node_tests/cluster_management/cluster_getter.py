@@ -1,6 +1,5 @@
 """Functionality for obtaining and setting up a cluster instance."""
 # pylint: disable=abstract-class-instantiated
-import contextlib
 import dataclasses
 import logging
 import os
@@ -40,12 +39,17 @@ else:
 
 
 def _kill_supervisor(instance_num: int) -> None:
-    """Kill supervisor process."""
+    """Attempt to kill the `supervisord` process."""
+    try:
+        netstat = helpers.run_command("netstat -plnt").decode().splitlines()
+    except Exception:
+        return
+
     port_num = (
         cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
     )
     port_str = f":{port_num}"
-    netstat = helpers.run_command("netstat -plnt").decode().splitlines()
+
     for line in netstat:
         if port_str not in line:
             continue
@@ -195,8 +199,7 @@ class ClusterGetter:
 
             shutil.rmtree(state_dir, ignore_errors=True)
 
-            with contextlib.suppress(Exception):
-                _kill_supervisor(self.cluster_instance_num)
+            _kill_supervisor(self.cluster_instance_num)
 
             _cluster_started = False
             try:
