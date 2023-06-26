@@ -10,6 +10,7 @@ import json
 import logging
 import pathlib as pl
 import re
+import time
 import typing as tp
 
 import allure
@@ -25,6 +26,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -622,6 +624,7 @@ class TestMinting:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
+        worker_id: str,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         multisig_script_policyid: tp.Tuple[pl.Path, str],
         tokens_db: tp.Tuple[int, int],
@@ -659,7 +662,7 @@ class TestMinting:
                 )
             )
 
-        # token minting
+        # Token minting
         minting_args = {
             "cluster_obj": cluster,
             "new_tokens": tokens_to_mint,
@@ -667,18 +670,27 @@ class TestMinting:
         }
 
         if tokens_num >= 500:
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex="Too many asset ids in the tx output",
+                ignore_file_id=worker_id,
+            )
+
             try:
-                # disable logging of "Not enough funds to make the transaction"
+                # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
                 with pytest.raises(clusterlib.CLIError) as excinfo:
                     clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
                 assert "OutputTooBigUTxO" in str(excinfo.value)
             finally:
                 logging.disable(logging.NOTSET)
+                # Wait for the log files to be written
+                time.sleep(2)
+
             return
 
         if tokens_num >= 10:
-            # add more funds to mint address
+            # Add more funds to mint address
             clusterlib_utils.fund_from_faucet(
                 token_mint_addr,
                 cluster_obj=cluster,
@@ -695,7 +707,7 @@ class TestMinting:
             )
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
-        # token burning
+        # Token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
@@ -710,12 +722,12 @@ class TestMinting:
             )
             assert not token_utxo, "The token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
@@ -738,6 +750,7 @@ class TestMinting:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
+        worker_id: str,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         simple_script_policyid: tp.Tuple[pl.Path, str],
         tokens_db: tp.Tuple[int, int],
@@ -776,7 +789,7 @@ class TestMinting:
                 )
             )
 
-        # token minting
+        # Token minting
         minting_args = {
             "cluster_obj": cluster,
             "new_tokens": tokens_to_mint,
@@ -784,18 +797,27 @@ class TestMinting:
         }
 
         if tokens_num >= 500:
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex="Too many asset ids in the tx output",
+                ignore_file_id=worker_id,
+            )
+
             try:
-                # disable logging of "Not enough funds to make the transaction"
+                # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
                 with pytest.raises(clusterlib.CLIError) as excinfo:
                     clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
                 assert "OutputTooBigUTxO" in str(excinfo.value)
             finally:
                 logging.disable(logging.NOTSET)
+                # Wait for the log files to be written
+                time.sleep(2)
+
             return
 
         if tokens_num >= 10:
-            # add more funds to mint address
+            # Add more funds to mint address
             clusterlib_utils.fund_from_faucet(
                 token_mint_addr,
                 cluster_obj=cluster,
@@ -812,7 +834,7 @@ class TestMinting:
             )
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
-        # token burning
+        # Token burning
         tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
@@ -827,7 +849,7 @@ class TestMinting:
             )
             assert not token_utxo, "The token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
