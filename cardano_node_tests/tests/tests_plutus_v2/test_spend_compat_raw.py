@@ -74,7 +74,7 @@ class TestCompatibility:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
 
         redeem_cost = plutus_common.compute_cost(
@@ -82,7 +82,7 @@ class TestCompatibility:
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
         try:
             script_utxos, *__ = spend_raw._fund_script(
                 temp_template=temp_template,
@@ -98,6 +98,9 @@ class TestCompatibility:
             if "Inline datums cannot be used" not in str(exc):
                 raise
             return
+
+        # Attempt to use Babbage features in older era transactions should fail. If we are here,
+        # it was not the case.
 
         assert script_utxos and not script_utxos[0].inline_datum, "Inline datum was NOT ignored"
 
@@ -135,18 +138,27 @@ class TestCompatibility:
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
-        # create a Tx output with an inline datum at the script address
-        __, __, reference_utxo, *__ = spend_raw._fund_script(
-            temp_template=temp_template,
-            cluster=cluster,
-            payment_addr=payment_addrs[0],
-            dst_addr=payment_addrs[1],
-            plutus_op=plutus_op,
-            amount=amount,
-            redeem_cost=redeem_cost,
-            use_reference_script=True,
-            use_inline_datum=False,
-        )
+        # Create a Tx output with an inline datum at the script address
+        try:
+            __, __, reference_utxo, *__ = spend_raw._fund_script(
+                temp_template=temp_template,
+                cluster=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                plutus_op=plutus_op,
+                amount=amount,
+                redeem_cost=redeem_cost,
+                use_reference_script=True,
+                use_inline_datum=False,
+            )
+        except clusterlib.CLIError as exc:
+            if "Reference scripts cannot be used" not in str(exc):
+                raise
+            return
+
+        # Attempt to use Babbage features in older era transactions should fail. If we are here,
+        # it was not the case.
+
         assert (
             reference_utxo and not reference_utxo.reference_script
         ), "Reference script was NOT ignored"
