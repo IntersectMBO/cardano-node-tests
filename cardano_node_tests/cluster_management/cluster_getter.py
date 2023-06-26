@@ -59,6 +59,14 @@ def _kill_supervisor(instance_num: int) -> None:
         return
 
 
+def _get_netstat_out() -> str:
+    """Get output of the `netstat` command."""
+    try:
+        return helpers.run_command("netstat -plnt").decode()
+    except Exception:
+        return ""
+
+
 @dataclasses.dataclass
 class _ClusterGetStatus:
     """Intermediate status while trying to `get` suitable cluster instance."""
@@ -217,11 +225,17 @@ class ClusterGetter:
             if _cluster_started:
                 break
         else:
+            netstat_out = _get_netstat_out()
             self.log(
-                f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}\ncluster dead"
+                f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}"
+                f"\nnetstat:\n{netstat_out}"
+                "\ncluster dead"
             )
             logfiles.framework_logger().error(
-                "Failed to start cluster instance 'c%s':\n%s", self.cluster_instance_num, excp
+                "Failed to start cluster instance 'c%s':\n%s\nnetstat:\n%s",
+                self.cluster_instance_num,
+                excp,
+                netstat_out,
             )
             if not configuration.IS_XDIST:
                 pytest.exit(msg="Failed to start cluster", returncode=1)
