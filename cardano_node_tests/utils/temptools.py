@@ -15,9 +15,9 @@ class PytestTempDirs:
     fixture.
     """
 
-    pytest_worker_tmp: tp.Optional[pl.Path] = None
-    pytest_root_tmp: tp.Optional[pl.Path] = None
-    pytest_shared_tmp: tp.Optional[pl.Path] = None
+    pytest_worker_tmp: tp.ClassVar[tp.Optional[pl.Path]] = None
+    pytest_root_tmp: tp.ClassVar[tp.Optional[pl.Path]] = None
+    pytest_shared_tmp: tp.ClassVar[tp.Optional[pl.Path]] = None
 
     _err_init_str = "PytestTempDirs are not initialized"
 

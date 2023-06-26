@@ -14,7 +14,7 @@ LOGGER = logging.getLogger(__name__)
 class DBSyncCache:
     """Cache connection to db-sync database for each cluster instance."""
 
-    conns: tp.Dict[int, tp.Optional[psycopg2.extensions.connection]] = {0: None}
+    conns: tp.ClassVar[tp.Dict[int, tp.Optional[psycopg2.extensions.connection]]] = {0: None}
 
 
 def _conn(instance_num: int) -> psycopg2.extensions.connection:

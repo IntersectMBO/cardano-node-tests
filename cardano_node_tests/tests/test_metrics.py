@@ -1,5 +1,6 @@
 """Tests for Prometheus and EKG metrics."""
 import logging
+import typing as tp
 
 import allure
 import pytest
@@ -44,7 +45,7 @@ def get_ekg_metrics(port: int) -> requests.Response:
 class TestPrometheus:
     """Prometheus metrics tests."""
 
-    EXPECTED_METRICS = [
+    EXPECTED_METRICS: tp.Final[tp.Set[str]] = {
         "cardano_node_metrics_Forge_adopted_int",
         "cardano_node_metrics_Forge_forge_about_to_lead_int",
         "cardano_node_metrics_Forge_forged_int",
@@ -99,7 +100,7 @@ class TestPrometheus:
         "rts_gc_par_tot_bytes_copied",
         "rts_gc_peak_megabytes_allocated",
         "rts_gc_wall_ms",
-    ]
+    }
 
     @allure.link(helpers.get_vcs_link())
     def test_available_metrics(
@@ -117,7 +118,7 @@ class TestPrometheus:
         response = get_prometheus_metrics(prometheus_port)
 
         metrics = response.text.strip().split("\n")
-        metrics_keys = sorted(m.split()[0] for m in metrics)
+        metrics_keys = {m.split()[0] for m in metrics}
         assert metrics_keys == self.EXPECTED_METRICS, "Metrics differ"
 
 

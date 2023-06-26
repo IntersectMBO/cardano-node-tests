@@ -1,4 +1,6 @@
 """Cardano node version, cluster era, transaction era."""
+import typing as tp
+
 from packaging import version
 
 from cardano_node_tests.utils import configuration
@@ -8,21 +10,28 @@ from cardano_node_tests.utils import helpers
 class Versions:
     """Cluster era, transaction era, node version info."""
 
-    LATEST_NODE_RELEASE = version.parse("8.0.0")
-    LATEST_DBSYNC_RELEASE = version.parse("13.1.1.0")
+    LATEST_NODE_RELEASE: tp.Final[version.Version] = version.parse("8.0.0")
+    LATEST_DBSYNC_RELEASE: tp.Final[version.Version] = version.parse("13.1.1.0")
 
-    BYRON = 1
-    SHELLEY = 2
-    ALLEGRA = 3
-    MARY = 4
-    ALONZO = 5
-    BABBAGE = 6
+    BYRON: tp.Final[int] = 1
+    SHELLEY: tp.Final[int] = 2
+    ALLEGRA: tp.Final[int] = 3
+    MARY: tp.Final[int] = 4
+    ALONZO: tp.Final[int] = 5
+    BABBAGE: tp.Final[int] = 6
 
-    DEFAULT_CLUSTER_ERA = 6
-    DEFAULT_TX_ERA = 6
-    LAST_KNOWN_ERA = 6
+    DEFAULT_CLUSTER_ERA: tp.Final[int] = 6
+    DEFAULT_TX_ERA: tp.Final[int] = 6
+    LAST_KNOWN_ERA: tp.Final[int] = 6
 
-    MAP = {1: "byron", 2: "shelley", 3: "allegra", 4: "mary", 5: "alonzo", 6: "babbage"}
+    MAP: tp.ClassVar[tp.Dict[int, str]] = {
+        1: "byron",
+        2: "shelley",
+        3: "allegra",
+        4: "mary",
+        5: "alonzo",
+        6: "babbage",
+    }
 
     def __init__(self) -> None:
         self.cluster_era_name = configuration.CLUSTER_ERA or self.MAP[self.DEFAULT_CLUSTER_ERA]

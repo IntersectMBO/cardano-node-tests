@@ -1,7 +1,7 @@
 exclude: ^sync_tests/
 repos:
 - repo: https://github.com/asottile/reorder_python_imports
-  rev: v3.9.0
+  rev: v3.10.0
   hooks:
   - id: reorder-python-imports
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
@@ -27,15 +27,15 @@ repos:
   - id: debug-statements
     language_version: python3
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.265
+  rev: v0.0.275
   hooks:
     - id: ruff
 - repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.9.0.2
+  rev: v0.9.0.5
   hooks:
   - id: shellcheck
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.34.0
+  rev: v0.35.0
   hooks:
   - id: markdownlint
 - repo: https://github.com/rstcheck/rstcheck
@@ -56,6 +56,6 @@ repos:
     language: system
     types: [python]
 - repo: https://github.com/python-poetry/poetry
-  rev: 1.4.0
+  rev: 1.5.0
   hooks:
     - id: poetry-check
