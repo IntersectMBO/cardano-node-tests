@@ -28,7 +28,7 @@ pytestmark = pytest.mark.needs_dbsync
 class TestDBSync:
     """General db-sync tests."""
 
-    DBSYNC_TABLES = {
+    DBSYNC_TABLES: tp.Final[tp.Set[str]] = {
         "ada_pots",
         "block",
         "collateral_tx_in",

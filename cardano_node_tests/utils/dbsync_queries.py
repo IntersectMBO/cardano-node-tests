@@ -331,7 +331,7 @@ def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensio
 class SchemaVersion:
     """Query and cache db-sync schema version."""
 
-    _stages: tp.Optional[SchemaVersionStages] = None
+    _stages: tp.ClassVar[tp.Optional[SchemaVersionStages]] = None
 
     @classmethod
     def stages(cls) -> SchemaVersionStages:

@@ -10,12 +10,12 @@ LOGGER = logging.getLogger(__name__)
 class GHIssue:
     """GitHub issue."""
 
-    TOKEN: tp.Optional[str] = None
+    TOKEN: tp.ClassVar[tp.Optional[str]] = None
 
-    issue_cache: tp.Dict[str, str] = {}
+    issue_cache: tp.ClassVar[tp.Dict[str, str]] = {}
 
-    _github_instance = None
-    _github_instance_error = False
+    _github_instance: tp.ClassVar[tp.Optional[github.Github]] = None
+    _github_instance_error: tp.ClassVar[bool] = False
 
     @classmethod
     def _get_github(cls) -> tp.Optional[github.Github]:

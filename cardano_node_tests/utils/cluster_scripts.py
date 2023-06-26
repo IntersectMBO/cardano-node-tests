@@ -67,8 +67,8 @@ class InstancePorts(tp.NamedTuple):
 class ScriptsTypes:
     """Generic cluster scripts."""
 
-    LOCAL = "local"
-    TESTNET = "testnet"
+    LOCAL: tp.Final[str] = "local"
+    TESTNET: tp.Final[str] = "testnet"
 
     def __init__(self) -> None:
         self.type = "unknown"
@@ -101,7 +101,7 @@ class ScriptsTypes:
 class LocalScripts(ScriptsTypes):
     """Scripts for starting local cluster."""
 
-    _has_dns_rebinding_protection: tp.Optional[bool] = None
+    _has_dns_rebinding_protection: tp.ClassVar[tp.Optional[bool]] = None
 
     def __init__(self, num_pools: int = -1) -> None:
         super().__init__()
@@ -530,14 +530,14 @@ class LocalScripts(ScriptsTypes):
 class TestnetScripts(ScriptsTypes):
     """Scripts for starting a node on testnet."""
 
-    TESTNET_GLOBS = (
+    TESTNET_GLOBS: tp.ClassVar[tp.Tuple[str, ...]] = (
         "config*.json",
         "genesis-*.json",
         "topology-*.json",
         "dbsync-config.*",
         "submit-api-config.*",
     )
-    BOOTSTRAP_CONF = "testnet_conf"
+    BOOTSTRAP_CONF: tp.Final[str] = "testnet_conf"
 
     def __init__(self) -> None:
         super().__init__()

@@ -23,7 +23,7 @@ class CacheManager:
     """Set of cache management methods."""
 
     # every pytest worker has its own cache, i.e. this cache is local to single worker
-    cache: tp.Dict[int, ClusterManagerCache] = {}
+    cache: tp.ClassVar[tp.Dict[int, ClusterManagerCache]] = {}
 
     @classmethod
     def get_cache(cls) -> tp.Dict[int, ClusterManagerCache]:

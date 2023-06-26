@@ -40,22 +40,23 @@ class ServiceStatus(tp.NamedTuple):
 
 
 class Testnets:
-    shelley_qa = "shelley_qa"
-    testnet = "testnet"
-    staging = "staging"
-    preview = "preview"
-    preprod = "preprod"
-    mainnet = "mainnet"
+    # pylint: disable=invalid-name
+    shelley_qa: tp.Final[str] = "shelley_qa"
+    testnet: tp.Final[str] = "testnet"
+    staging: tp.Final[str] = "staging"
+    preview: tp.Final[str] = "preview"
+    preprod: tp.Final[str] = "preprod"
+    mainnet: tp.Final[str] = "mainnet"
 
 
 class ClusterType:
     """Generic cluster type."""
 
-    LOCAL = "local"
-    TESTNET = "testnet"
-    test_addr_records = ("user1",)
+    LOCAL: tp.Final[str] = "local"
+    TESTNET: tp.Final[str] = "testnet"
+    test_addr_records: tp.ClassVar[tp.Tuple[str, ...]] = ("user1",)
 
-    NODES: tp.Set[str] = set()
+    NODES: tp.ClassVar[tp.Set[str]] = set()
 
     def __init__(self) -> None:
         self.type = "unknown"
@@ -86,7 +87,10 @@ class ClusterType:
 class LocalCluster(ClusterType):
     """Local cluster type (full cardano mode)."""
 
-    NODES = {"bft1", *(f"pool{i}" for i in range(1, configuration.NUM_POOLS + 1))}
+    NODES: tp.ClassVar[tp.Set[str]] = {
+        "bft1",
+        *(f"pool{i}" for i in range(1, configuration.NUM_POOLS + 1)),
+    }
 
     def __init__(self) -> None:
         super().__init__()
@@ -204,7 +208,7 @@ class LocalCluster(ClusterType):
 class TestnetCluster(ClusterType):
     """Testnet cluster type (full cardano mode)."""
 
-    TESTNETS: tp.Dict[int, dict] = {
+    TESTNETS: tp.ClassVar[tp.Dict[int, dict]] = {
         1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"},
         1563999616: {"type": Testnets.testnet, "shelley_start": "2020-07-28T20:20:16Z"},
         1506450213: {"type": Testnets.staging, "shelley_start": "2020-08-01T18:23:33Z"},
@@ -213,7 +217,7 @@ class TestnetCluster(ClusterType):
         1666656000: {"type": Testnets.preview, "byron_epochs": 0},
     }
 
-    NODES = {"relay1"}
+    NODES: tp.ClassVar[tp.Set[str]] = {"relay1"}
 
     def __init__(self) -> None:
         super().__init__()
