@@ -24,8 +24,8 @@ def get_slots_offset(
     where Shelley era starts after a single Byron epoch.
 
     Args:
-        genesis_byron: pl.Path to Byron genesis file.
-        genesis_shelley: pl.Path to Shelley genesis file.
+        genesis_byron: Path to Byron genesis file.
+        genesis_shelley: Path to Shelley genesis file.
         shelley_start: Time of start of Shelley era.
         byron_epochs: Number of Byron epochs.
     """
