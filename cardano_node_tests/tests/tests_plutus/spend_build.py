@@ -67,7 +67,9 @@ def _build_fund_script(
     ]
 
     for token in stokens:
-        txouts.append(script_txout._replace(amount=token.amount, coin=token.coin))
+        txouts.append(
+            script_txout._replace(amount=token.amount, coin=token.coin)  # pylint: disable=no-member
+        )
 
     for token in ctokens:
         txouts.append(

@@ -713,7 +713,11 @@ class TestBuildMinting:
             tx_file=tx_output_dummy.out_file,
         )
 
-        plutus_mint_data = [plutus_mint_data_dummy[0]._replace(redeemer_file=redeemer_file)]
+        plutus_mint_data = [
+            plutus_mint_data_dummy[0]._replace(  # pylint: disable=no-member
+                redeemer_file=redeemer_file
+            )
+        ]
 
         tx_output_step2 = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
