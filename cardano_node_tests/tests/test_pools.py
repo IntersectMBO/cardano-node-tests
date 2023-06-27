@@ -145,7 +145,7 @@ def _register_stake_pool_w_build(
         destination_dir: A path to directory for storing artifacts (optional).
 
     Returns:
-        tp.Tuple[pl.Path, TxRawOutput]: A tuple with pool registration cert file and transaction
+        Tuple[Path, TxRawOutput]: A tuple with pool registration cert file and transaction
             output details.
     """
     tx_name = f"{tx_name}_reg_pool"
@@ -285,7 +285,7 @@ def _deregister_stake_pool_w_build(
         destination_dir: A path to directory for storing artifacts (optional).
 
     Returns:
-        tp.Tuple[pl.Path, TxRawOutput]: A tuple with pool registration cert file and transaction
+        Tuple[Path, TxRawOutput]: A tuple with pool registration cert file and transaction
             output details.
     """
     tx_name = f"{tx_name}_dereg_pool"

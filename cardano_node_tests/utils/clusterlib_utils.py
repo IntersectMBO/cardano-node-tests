@@ -884,7 +884,7 @@ def save_ledger_state(
         destination_dir: A path to directory for storing the state JSON file (optional).
 
     Returns:
-        pl.Path: A path to the generated state JSON file.
+        Path: A path to the generated state JSON file.
     """
     json_file = pl.Path(destination_dir) / f"{state_name}_ledger_state.json"
     ledger_state = ledger_state or get_ledger_state(cluster_obj)
