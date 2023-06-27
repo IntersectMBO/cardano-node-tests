@@ -1,4 +1,4 @@
-"""Cardano node version, cluster era, transaction era."""
+"""Cardano node version, cluster era, transaction era, db-sync version."""
 import typing as tp
 
 from packaging import version
@@ -17,20 +17,20 @@ class Versions:
     SHELLEY: tp.Final[int] = 2
     ALLEGRA: tp.Final[int] = 3
     MARY: tp.Final[int] = 4
-    ALONZO: tp.Final[int] = 5
-    BABBAGE: tp.Final[int] = 6
+    ALONZO: tp.Final[int] = 6
+    BABBAGE: tp.Final[int] = 8
 
-    DEFAULT_CLUSTER_ERA: tp.Final[int] = 6
-    DEFAULT_TX_ERA: tp.Final[int] = 6
-    LAST_KNOWN_ERA: tp.Final[int] = 6
+    DEFAULT_CLUSTER_ERA: tp.Final[int] = 8
+    DEFAULT_TX_ERA: tp.Final[int] = 8
+    LAST_KNOWN_ERA: tp.Final[int] = 8
 
     MAP: tp.ClassVar[tp.Dict[int, str]] = {
         1: "byron",
         2: "shelley",
         3: "allegra",
         4: "mary",
-        5: "alonzo",
-        6: "babbage",
+        6: "alonzo",
+        8: "babbage",
     }
 
     def __init__(self) -> None:
