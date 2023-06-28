@@ -14,10 +14,11 @@ git pull origin main
 git rev-parse HEAD
 
 # Build `create-script-context`
-nix build --accept-flake-config .#create-script-context -o create-script-context
+nix build --accept-flake-config .#create-script-context -o create-script-context-build || exit 1
+[ -e create-script-context-build/bin/create-script-context ] || exit 1
 
 # Add `create-script-context` to PATH
-PATH="$(readlink -m create-script-context/bin)":"$PATH"
+PATH="$(readlink -m create-script-context-build/bin)":"$PATH"
 export PATH
 
 pushd "$REPODIR" || exit 1
