@@ -10,8 +10,9 @@ from cardano_node_tests.utils import helpers
 class Versions:
     """Cluster era, transaction era, node version info."""
 
-    LATEST_NODE_RELEASE: tp.Final[version.Version] = version.parse("8.1.1")
-    LATEST_DBSYNC_RELEASE: tp.Final[version.Version] = version.parse("13.1.1.2")
+    LATEST_NODE_RELEASE_VER: tp.Final[version.Version] = version.parse("8.1.1")
+    LATEST_NODE_RELEASE_REV: tp.Final[str] = "6f79e5c3ea109a70cd01910368e011635767305a"
+    LATEST_DBSYNC_RELEASE_VER: tp.Final[version.Version] = version.parse("13.1.1.2")
 
     BYRON: tp.Final[int] = 1
     SHELLEY: tp.Final[int] = 2
@@ -45,14 +46,17 @@ class Versions:
         self.ghc = cardano_version_db["ghc"]
         self.platform = cardano_version_db["platform"]
         self.git_rev = cardano_version_db["git_rev"]
-        self.node_is_devel = bool(self.node > self.LATEST_NODE_RELEASE)
+        self.node_is_devel = (
+            self.node >= self.LATEST_NODE_RELEASE_VER
+            and self.git_rev != self.LATEST_NODE_RELEASE_REV
+        )
 
         dbsync_version_db = self.get_dbsync_version() if configuration.HAS_DBSYNC else {}
         self.dbsync = version.parse(dbsync_version_db.get("version") or "0")
         self.dbsync_platform = dbsync_version_db.get("platform")
         self.dbsync_ghc = dbsync_version_db.get("ghc")
         self.dbsync_git_rev = dbsync_version_db.get("git_rev")
-        self.dbsync_is_devel = bool(self.dbsync > self.LATEST_DBSYNC_RELEASE)
+        self.dbsync_is_devel = self.dbsync > self.LATEST_DBSYNC_RELEASE_VER
 
     def get_cardano_version(self) -> dict:
         """Return version info for cardano-node."""
