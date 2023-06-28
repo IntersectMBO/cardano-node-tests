@@ -85,6 +85,13 @@ elif [ "$1" = "step2" ]; then
 
   export UPGRADE_TESTS_STEP=2
 
+  # setup latest `cardano-cli` if we are testing latest cardano-node
+  if [ -z "${UPGRADE_REVISION:-""}" ]; then
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_cardano_cli.sh
+    export PATH="$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
+  fi
+
   # add binaries saved in step1 to the PATH
   export PATH="${STEP1_BIN}:${PATH}"
 
@@ -238,6 +245,11 @@ elif [ "$1" = "step3" ]; then
   printf "STEP3 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=3
+
+  # if we are testing latest cardano-node, add to PATH the `cardano-cli` build in step2
+  if [ -z "${UPGRADE_REVISION:-""}" ]; then
+    export PATH="$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
+  fi
 
   # generate config and topology files for p2p mode
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_p2p/state-cluster0/bft1.socket" \

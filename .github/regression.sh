@@ -55,6 +55,23 @@ case "${CI_ENABLE_PLUTUS_APPS:-"true"}" in
     ;;
 esac
 
+# setup latest `cardano-cli` if we are testing latest cardano-node
+if [ -z "${USE_LASTEST_CARDANO_CLI:-""}" ] && [ -z "${NODE_REV:-""}" ]; then
+  USE_LASTEST_CARDANO_CLI="true"
+fi
+case "${USE_LASTEST_CARDANO_CLI:-"true"}" in
+  "true" | 1)
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_cardano_cli.sh
+    ;;
+  "false" | 0)
+    ;;
+  *)
+    echo "Unknown value for USE_LASTEST_CARDANO_CLI: ${USE_LASTEST_CARDANO_CLI}" >&2
+    exit 1
+    ;;
+esac
+
 if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
   export ENABLE_P2P="true"
 elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
@@ -111,7 +128,7 @@ nix develop --accept-flake-config $(node_override) --command bash -c '
   printf "finish: %(%H:%M:%S)T\n" -1
   echo "::endgroup::"  # end group for "Nix env setup"
   echo "::group::Pytest run"
-  if [ -e ".bin" ]; then export PATH="${PWD}/.bin:${PATH}"; fi
+  export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   make "${MAKE_TARGET:-"tests"}"
   retval="$?"
