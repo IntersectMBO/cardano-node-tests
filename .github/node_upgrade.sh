@@ -6,6 +6,7 @@ set -xeuo pipefail
 nix --version
 
 REPODIR="$(readlink -m "${0%/*}/..")"
+export REPODIR
 cd "$REPODIR"
 
 export WORKDIR="$REPODIR/run_workdir"

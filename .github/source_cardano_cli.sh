@@ -14,7 +14,8 @@ git pull origin main
 git rev-parse HEAD
 
 # Build `cardano-cli`
-nix build --accept-flake-config .#cardano-cli -o cardano-cli-build
+nix build --accept-flake-config .#cardano-cli -o cardano-cli-build || exit 1
+[ -e cardano-cli-build/bin/cardano-cli ] || exit 1
 
 pushd "$REPODIR" || exit 1
 
