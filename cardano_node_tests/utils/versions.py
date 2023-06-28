@@ -41,48 +41,55 @@ class Versions:
         self.cluster_era = getattr(self, self.cluster_era_name.upper())
         self.transaction_era = getattr(self, self.transaction_era_name.upper())
 
-        cardano_version_db = self.get_cardano_version()
-        self.node = version.parse(cardano_version_db["version"])
-        self.ghc = cardano_version_db["ghc"]
-        self.platform = cardano_version_db["platform"]
-        self.git_rev = cardano_version_db["git_rev"]
+        node_version_db = self.get_cardano_node_version()
+        self.node = version.parse(node_version_db["version"])
+        self.ghc = node_version_db["ghc"]
+        self.platform = node_version_db["platform"]
+        self.git_rev = node_version_db["git_rev"]
         self.node_is_devel = (
             self.node >= self.LATEST_NODE_RELEASE_VER
             and self.git_rev != self.LATEST_NODE_RELEASE_REV
         )
 
+        cli_version_db = self.get_cardano_cli_version()
+        self.cli = version.parse(cli_version_db["version"])
+        self.cli_ghc = cli_version_db["ghc"]
+        self.cli_platform = cli_version_db["platform"]
+        self.cli_git_rev = cli_version_db["git_rev"]
+
         dbsync_version_db = self.get_dbsync_version() if configuration.HAS_DBSYNC else {}
         self.dbsync = version.parse(dbsync_version_db.get("version") or "0")
-        self.dbsync_platform = dbsync_version_db.get("platform")
         self.dbsync_ghc = dbsync_version_db.get("ghc")
+        self.dbsync_platform = dbsync_version_db.get("platform")
         self.dbsync_git_rev = dbsync_version_db.get("git_rev")
         self.dbsync_is_devel = self.dbsync > self.LATEST_DBSYNC_RELEASE_VER
 
-    def get_cardano_version(self) -> dict:
-        """Return version info for cardano-node."""
-        out = helpers.run_command("cardano-node --version").decode().strip()
-        env_info, git_info, *__ = out.splitlines()
-        node, platform, ghc, *__ = env_info.split(" - ")
+    def _get_cardano_version(self, version_str: str) -> dict:
+        """Return version info for cardano-*."""
+        env_info, git_info, *__ = version_str.splitlines()
+        ver, platform, ghc, *__ = env_info.split(" - ")
         version_db = {
-            "version": node.split()[-1],
+            "version": ver.split()[-1],
             "platform": platform,
             "ghc": ghc,
             "git_rev": git_info.split()[-1],
         }
         return version_db
+
+    def get_cardano_node_version(self) -> dict:
+        """Return version info for cardano-node."""
+        out = helpers.run_command("cardano-node --version").decode().strip()
+        return self._get_cardano_version(version_str=out)
+
+    def get_cardano_cli_version(self) -> dict:
+        """Return version info for cardano-cli."""
+        out = helpers.run_command("cardano-cli --version").decode().strip()
+        return self._get_cardano_version(version_str=out)
 
     def get_dbsync_version(self) -> dict:
         """Return version info for db-sync."""
         out = helpers.run_command(f"{configuration.DBSYNC_BIN} --version").decode().strip()
-        env_info, git_info, *__ = out.splitlines()
-        dbsync, platform, ghc, *__ = env_info.split(" - ")
-        version_db = {
-            "version": dbsync.split()[-1],
-            "platform": platform,
-            "ghc": ghc,
-            "git_rev": git_info.split()[-1],
-        }
-        return version_db
+        return self._get_cardano_version(version_str=out)
 
     def __repr__(self) -> str:
         return (

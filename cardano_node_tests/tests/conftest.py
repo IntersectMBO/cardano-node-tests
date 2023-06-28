@@ -68,6 +68,10 @@ def pytest_configure(config: tp.Any) -> None:
 
     config._metadata["cardano-node"] = str(VERSIONS.node)
     config._metadata["cardano-node rev"] = VERSIONS.git_rev
+    config._metadata["cardano-node ghc"] = VERSIONS.ghc
+    config._metadata["cardano-cli"] = str(VERSIONS.cli)
+    config._metadata["cardano-cli rev"] = VERSIONS.cli_git_rev
+    config._metadata["cardano-cli ghc"] = VERSIONS.cli_ghc
     config._metadata["CLUSTER_ERA"] = configuration.CLUSTER_ERA
     config._metadata["TX_ERA"] = configuration.TX_ERA
     config._metadata["SCRIPTS_DIRNAME"] = configuration.SCRIPTS_DIRNAME
@@ -75,7 +79,6 @@ def pytest_configure(config: tp.Any) -> None:
     config._metadata["MIXED_P2P"] = str(configuration.MIXED_P2P)
     config._metadata["NUM_POOLS"] = str(configuration.NUM_POOLS)
     config._metadata["DB_BACKEND"] = configuration.DB_BACKEND
-    config._metadata["ghc"] = VERSIONS.ghc
     config._metadata["cardano-node-tests rev"] = helpers.get_current_commit()
     config._metadata[
         "cardano-node-tests url"
