@@ -114,7 +114,7 @@ def _get_rotated_logs(
         RotableLog(logfile=f, seek=0, timestamp=os.path.getmtime(f)) for f in logfiles
     ]
     _logfile_records = [r for r in _logfile_records if r.timestamp > timestamp]
-    logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp, reverse=True)
+    logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp)
 
     if not logfile_records:
         return []
