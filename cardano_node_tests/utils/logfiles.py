@@ -114,7 +114,7 @@ def _get_rotated_logs(
         RotableLog(logfile=f, seek=0, timestamp=os.path.getmtime(f)) for f in logfiles
     ]
     _logfile_records = [r for r in _logfile_records if r.timestamp > timestamp]
-    logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp, reverse=True)
+    logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp)
 
     if not logfile_records:
         return []
@@ -190,7 +190,8 @@ def _search_log_lines(
     for logfile_rec in rotated_logs:
         look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
         with open(logfile_rec.logfile, encoding="utf-8") as infile:
-            if logfile_rec.seek > 0:
+            # Avoid seeking past the end of file
+            if 0 < logfile_rec.seek <= logfile_rec.logfile.stat().st_size:
                 # Seek to the byte that comes right before the recorded offset
                 infile.seek(logfile_rec.seek - 1)
                 # Check if the byte is a newline, which means that the offset starts at
