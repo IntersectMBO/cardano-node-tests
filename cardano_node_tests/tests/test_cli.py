@@ -1274,14 +1274,18 @@ class TestPing:
             if "MuxError MuxBearerClosed" not in str(exc):
                 raise
             blockers.GH(
-                issue=5245, message="`MuxError MuxBearerClosed` error", check_on_devel=False
+                issue=5245,
+                fixed_in="8.2.0",
+                message="`MuxError MuxBearerClosed` error",
             ).finish_test()
         else:
             logfiles.clean_ignore_rules(ignore_file_id=ignore_file_id)
 
         err_str = cli_out.stderr.rstrip().decode("utf-8")
         if "UnknownVersionInRsp" in err_str:
-            blockers.GH(issue=5324, message="`UnknownVersionInRsp` error").finish_test()
+            blockers.GH(
+                issue=5324, fixed_in="8.1.1", message="`UnknownVersionInRsp` error"
+            ).finish_test()
 
         out_str = cli_out.stdout.rstrip().decode("utf-8")
         if not (out_str and out_str[0] == "{"):
