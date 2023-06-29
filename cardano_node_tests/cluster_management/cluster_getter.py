@@ -197,8 +197,13 @@ class ClusterGetter:
             except Exception as err:
                 self.log(f"c{self.cluster_instance_num}: failed to stop cluster:\n{err}")
 
+            _kill_supervisor(self.cluster_instance_num)
+
+            # give the cluster time to stop
+            time.sleep(5)
+
             # save artifacts only when produced during this test run
-            if cluster_running_file.exists():
+            if cluster_running_file.exists() or i > 0:
                 artifacts.save_start_script_coverage(
                     log_file=state_dir / common.CLUSTER_START_CMDS_LOG,
                     pytest_config=self.pytest_config,
@@ -206,8 +211,6 @@ class ClusterGetter:
                 artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
 
             shutil.rmtree(state_dir, ignore_errors=True)
-
-            _kill_supervisor(self.cluster_instance_num)
 
             _cluster_started = False
             try:
