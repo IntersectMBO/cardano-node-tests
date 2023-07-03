@@ -1317,11 +1317,14 @@ class TestQuerySlotNumber:
         common.get_test_id(cluster)
 
         timestamp = datetime.datetime.now(datetime.timezone.utc)
-
         slot_number = cluster.g_query.get_slot_number(timestamp=timestamp)
 
-        # Check that 'slot' returned is never greater than the total number of slots
+        # In case the test runs on epoch boundary, the tip could still be in the previous epoch.
+        # Wait for new block to be sure that the tip is up-to-date.
+        cluster.wait_for_new_block()
         tip_out = cluster.g_query.get_tip()
+
+        # Check that 'slot' returned is never greater than the total number of slots
         assert slot_number <= (tip_out["epoch"] + 1) * cluster.epoch_length - cluster.slots_offset
 
     @allure.link(helpers.get_vcs_link())
