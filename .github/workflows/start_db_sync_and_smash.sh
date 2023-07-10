@@ -7,22 +7,21 @@ function usage() {
     cat << HEREDOC
 
     arguments:
-    -e          environment (network) - possible options: mainnet, shelley_qa
-    -p          pr number that contains desired version of db-sync and SMASH that is not available on latest master
-    -t          how many epochs db-sync should sync
+    -e          environment - possible options: mainnet, preprod, preview, shelley-qa
+    -v          version - desired version number of db-sync and SMASH
+    -t          time as epochs - how many epochs db-sync should sync
 
     optional arguments:
     -h          show this help message and exit
 
 	Example:
 
-	./start_db_sync.sh -e shelley_qa -t 100
+	./start_db_sync.sh -e shelley-qa -v 13.1.1.3 -t 100
 
-	USE UNDERSCORES IN NETWORK NAMES !!!
 HEREDOC
 }
 
-while getopts ":h:e:p:t:" o; do
+while getopts ":h:e:v:t:" o; do
     case "${o}" in
         h)
             usage
@@ -30,8 +29,8 @@ while getopts ":h:e:p:t:" o; do
         e)
             environment=${OPTARG}
             ;;
-        p)
-            pr_no=${OPTARG}
+        v)
+            version=${OPTARG}
             ;;
         t)
             expected_epochs_to_sync=${OPTARG}
@@ -69,28 +68,23 @@ echo "Entering cardano-db-sync directory"
 cd cardano-db-sync
 mkdir logs
 
-DB_PR=""
-
-if [[ ! -z "$pr_no" ]]
-then
-      DB_PR="-pr-${pr_no}"
-fi
-
 
 echo ""
 echo "Downloading cardano-db-sync & SMASH archive:"
 
-wget -q --content-disposition "https://hydra.iohk.io/job/Cardano/cardano-db-sync${DB_PR}/cardano-db-sync-linux/latest-finished/download/1/"
 
+wget -q "https://update-cardano-mainnet.iohk.io/cardano-db-sync/cardano-db-sync-${version}-linux.tar.gz"
 downloaded_archive=$(ls | grep tar)
+mkdir extracted_files
+
 
 echo ""
 echo "Unpacking and removing archive ..."
 
-mkdir extracted_files
 tar -xzf $downloaded_archive -C extracted_files
 mv extracted_files/cardano-db-sync _cardano-db-sync
 mv extracted_files/cardano-smash-server _cardano-smash-server
+rm $downloaded_archive
 
 
 echo ""
@@ -104,18 +98,31 @@ echo ""
 ./_cardano-smash-server --version
 
 
-if [ "$environment" = "shelley_qa" ]; then
-    chmod 600 config/pgpass-shelley-qa-testnet
-    PGPASSFILE=config/pgpass-shelley-qa-testnet scripts/postgresql-setup.sh --createdb
-    PGPASSFILE=config/pgpass-shelley-qa-testnet ./_cardano-db-sync --config config/shelley-qa-config.json --socket-path ../cardano-node/shelley_qa/node.socket --schema-dir schema/ --state-dir ledger-state/shelley_qa >> $db_sync_logfile &
+if [ "$environment" = "shelley-qa" ]; then
+    chmod 600 config/pgpass-shelley-qa
+    PGPASSFILE=config/pgpass-shelley-qa scripts/postgresql-setup.sh --createdb
+    PGPASSFILE=config/pgpass-shelley-qa ./_cardano-db-sync --config config/shelley-qa-config.json --socket-path ../cardano-node/shelley-qa/node.socket --schema-dir schema/ --state-dir ledger-state/shelley-qa >> $db_sync_logfile &
 fi
 
-if [ "$environment" = "testnet" ];then
-    chmod 600 config/pgpass-testnet
-    PGPASSFILE=config/pgpass-testnet scripts/postgresql-setup.sh --createdb
-    cp ../cardano-node/testnet/testnet-db-sync-config.json config/
-    sed -i "s/NodeConfigFile.*/NodeConfigFile\": \"..\/..\/cardano-node\/testnet\/testnet-config.json\",/g" config/testnet-db-sync-config.json
-    PGPASSFILE=config/pgpass-testnet ./_cardano-db-sync --config config/testnet-db-sync-config.json --socket-path ../cardano-node/testnet/node.socket --schema-dir schema/ --state-dir ledger-state/testnet >> $db_sync_logfile &
+if [ "$environment" = "preview" ];then
+    touch config/pgpass-preview
+    echo "/var/run/postgresql:5432:preview:*:*" > config/pgpass-preview
+    chmod 600 config/pgpass-preview
+    PGPASSFILE=config/pgpass-preview scripts/postgresql-setup.sh --createdb
+    cp config/shelley-qa-config.json config/preview-config.json
+    sed -i "s/NodeConfigFile.*/NodeConfigFile\": \"..\/..\/cardano-node\/preview\/config.json\",/g" config/preview-config.json
+    PGPASSFILE=config/pgpass-preview ./_cardano-db-sync --config config/preview-config.json --socket-path ../cardano-node/preview/node.socket --schema-dir schema/ --state-dir ledger-state/preview >> $db_sync_logfile &
+fi
+
+if [ "$environment" = "preprod" ];then
+    touch config/pgpass-preprod
+    echo "/var/run/postgresql:5432:preprod:*:*" > config/pgpass-preprod
+    chmod 600 config/pgpass-preprod
+    PGPASSFILE=config/pgpass-preprod scripts/postgresql-setup.sh --createdb
+    cp config/shelley-qa-config.json config/preprod-config.json
+    sed -i "s/NetworkName.*/NetworkName\": \"preprod\",/g" config/preprod-config.json
+    sed -i "s/NodeConfigFile.*/NodeConfigFile\": \"..\/..\/cardano-node\/preprod\/config.json\",/g" config/preprod-config.json
+    PGPASSFILE=config/pgpass-preprod ./_cardano-db-sync --config config/preprod-config.json --socket-path ../cardano-node/preprod/node.socket --schema-dir schema/ --state-dir ledger-state/preprod >> $db_sync_logfile &
 fi
 
 if [ "$environment" = "mainnet" ];then
@@ -128,23 +135,30 @@ sleep 3
 cat $db_sync_logfile
 
 echo ""
+echo ""
 echo "Starting SMASH..."
 echo "runner, password" >> admins.txt
 
-if [ "$environment" = "shelley_qa" ]; then
-PGPASSFILE=config/pgpass-shelley-qa-testnet ./_cardano-smash-server \
+if [ "$environment" = "shelley-qa" ]; then
+PGPASSFILE=config/pgpass-shelley-qa ./_cardano-smash-server \
      --config config/shelley-qa-config.json \
      --port 3100 \
      --admins admins.txt >> $smash_logfile &
 fi
 
-if [ "$environment" = "testnet" ]; then
-PGPASSFILE=config/pgpass-testnet ./_cardano-smash-server \
-     --config config/testnet-db-sync-config.json \
+if [ "$environment" = "preview" ]; then
+PGPASSFILE=config/pgpass-preview ./_cardano-smash-server \
+     --config config/preview-config.json \
      --port 3100 \
      --admins admins.txt >> $smash_logfile &
 fi
 
+if [ "$environment" = "preprod" ]; then
+PGPASSFILE=config/pgpass-preprod ./_cardano-smash-server \
+     --config config/preprod-config.json \
+     --port 3100 \
+     --admins admins.txt >> $smash_logfile &
+fi
 
 if [ "$environment" = "mainnet" ]; then
 PGPASSFILE=config/pgpass-mainnet ./_cardano-smash-server \
@@ -157,7 +171,9 @@ sleep 3
 cat  $smash_logfile
 
 echo ""
+echo ""
 echo "Waiting for db-sync to sync $expected_epochs_to_sync epochs ..."
+echo ""
 
 latest_db_synced_epoch=$(get_latest_db_synced_epoch $db_sync_logfile)
 
@@ -173,12 +189,13 @@ tmp_latest_db_synced_epoch=$latest_db_synced_epoch
 while [ "$latest_db_synced_epoch" -lt "$expected_epochs_to_sync" ]
 do
 	sleep 60
-    echo "Latest epoch: $latest_db_synced_epoch"
 	latest_db_synced_epoch=$(get_latest_db_synced_epoch $db_sync_logfile)
 
 	if ! [[ $latest_db_synced_epoch =~ $re ]] ; then
 		latest_db_synced_epoch=$tmp_latest_db_synced_epoch
     	continue
+    else
+        echo "Latest epoch: $latest_db_synced_epoch"
 	fi
 done
 

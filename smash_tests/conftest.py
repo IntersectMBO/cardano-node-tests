@@ -24,9 +24,11 @@ def pytest_addoption(parser):
 def get_dbname(environment):
     if environment == 'mainnet':
         return 'cexplorer'
-    elif environment == 'testnet':
-        return 'testnet'  
-    elif environment == 'shelley_qa':
+    elif environment == 'preprod':
+        return 'preprod'
+    elif environment == 'preview':
+        return 'preview'  
+    elif environment == 'shelley-qa':
         return 'shelley-test'
     else:
         raise NameError('NoSuchEnvironment')
@@ -86,7 +88,8 @@ def data(get_config):
         credentials = ('runner', 'password')
 
         arguments["smash_mainnet_url"] = {"smashURL": "https://smash.cardano-mainnet.iohk.io"}
-        arguments["smash_testnet_url"] = {"smashURL": "https://smash.cardano-testnet.iohkdev.io"}
+        arguments["smash_preprod_url"] = {"smashURL": "https://preprod-smash.world.dev.cardano.org"}
+        arguments["smash_preview_url"] = {"smashURL": "https://preview-smash.world.dev.cardano.org"}
         arguments["smash_shelley_qa_url"] = {"smashURL": "https://smash.shelley-qa.dev.cardano.org"}
         arguments["smash_invalid_url"] = {"smashURL": "https://smash.invalid.dev.cardano.org"}
 
@@ -128,9 +131,60 @@ def data(get_config):
                 {'poolId': '4f0fa098d08e0b044adb0b8c76ab8dc59742149847bbb0b5272d7efc'}
             ]
 
+        ################################## PREPROD DATA ##################################
+
+        if environment == 'preprod':
+            arguments["pool_hash"] = '212b8cef18dcedadebadc4cd9688956b07f7168d97e750e1687c820a'
+            arguments["pool_view"] = 'pool1yy4cemccmnk6m6adcnxedzy4dvrlw95djln4pctg0jpq5x7gczh'
+            arguments["pool_metadata"] = 'c9e5e56c46dd015c183978583e6f9bc71f7abfc4dc4f949ca12a6f5aff8778fa'
+
+            arguments["pool_json_by_hash"] = {'poolId':'212b8cef18dcedadebadc4cd9688956b07f7168d97e750e1687c820a'}
+            arguments["pool_json_by_view"] = {'poolId':'pool1yy4cemccmnk6m6adcnxedzy4dvrlw95djln4pctg0jpq5x7gczh'}
+            arguments["pool_with_errors"] = '13b76e10523b8964b4053a14782ec1028f67a63f51a1989ea3cd0897'
+            arguments["pool_is_delisted"] = 'Pool 212b8cef18dcedadebadc4cd9688956b07f7168d97e750e1687c820a is delisted'
+
+            arguments["expected_metadata"] = {
+                "name": "ONYX Stake Pool #1",
+                "ticker": "ONYX",
+                "homepage": "https://onyxstakepool.com",
+                "description": "Welcome to the world of the ONYX stake pools!"
+            }
+
+            arguments["unregistered_pools_examples"] = [
+                {'poolId': '2bdbd083f0890ad3700bc9b7b3be010cafdf64e3bf34a311a874eb29'},
+                {'poolId': '92cd3fdd671ff9535ffcc11b996a87af19109a9ee0ffc8b73b5ee94c'}, 
+                {'poolId': '0362558dc8a66643368d9706ef1a201083b20dafd4b26f1a77319d33'}
+            ]
+
+
+        ################################## PREVIEW DATA ##################################
+
+        if environment == 'preview':
+            arguments["pool_hash"] = '74855f526eb82299dd2c1cb304d42ef3ecaf2678a6c4c80c40f99372'
+            arguments["pool_view"] = 'pool1wjz475nwhq3fnhfvrjesf4pw70k27fnc5mzvsrzqlxfhy60rmu3'
+            arguments["pool_metadata"] = 'c9e5e56c46dd015c183978583e6f9bc71f7abfc4dc4f949ca12a6f5aff8778fa'
+
+            arguments["pool_json_by_hash"] = {'poolId':'74855f526eb82299dd2c1cb304d42ef3ecaf2678a6c4c80c40f99372'}
+            arguments["pool_json_by_view"] = {'poolId':'pool1wjz475nwhq3fnhfvrjesf4pw70k27fnc5mzvsrzqlxfhy60rmu3'}
+            arguments["pool_with_errors"] = '13b76e10523b8964b4053a14782ec1028f67a63f51a1989ea3cd0897'
+            arguments["pool_is_delisted"] = 'Pool 74855f526eb82299dd2c1cb304d42ef3ecaf2678a6c4c80c40f99372 is delisted'
+
+            arguments["expected_metadata"] = {
+                "name": "ONYX Stake Pool #1",
+                "ticker": "ONYX",
+                "homepage": "https://onyxstakepool.com",
+                "description": "Welcome to the world of the ONYX stake pools!"
+            }
+
+            arguments["unregistered_pools_examples"] = [
+                {'poolId': '1b910529472640f182e7d9c6729decff2f68358b43d6047d32531d9c'},
+                {'poolId': 'd2b22da5c478e8133f7ffbff631217026f43e77a9717f8bbb060e66f'}, 
+                {'poolId': '9da3c9552d6e9b552ccad1291f1bb9937dae68c41cde0f9e03a8cabe'}
+            ]
+
         ################################## SHELLEY_QA DATA ####################################
 
-        if environment == 'shelley_qa':
+        if environment == 'shelley-qa':
             arguments["pool_hash"] = '8517fa7042cb9494818861c53c87780b4975c0bd402e3ed85168aa66'
             arguments["pool_view"] = 'pool1s5tl5uzzew2ffqvgv8znepmcpdyhts9agqhrakz3dz4xvfs049l'
             arguments["pool_metadata"] = '4b2221a0ac0b0197308323080ba97e3e453f8625393d30f96eebe0fca4cb7334'
@@ -151,29 +205,5 @@ def data(get_config):
                 {'poolId': 'dba7b19a960d9e21748aaac28388432018efd80957ce09df2fb91953'}
             ]
 
-        ################################## TESTNET DATA ##################################
-
-        if environment == 'testnet':
-            arguments["pool_hash"] = '48f2c367cfe81cac6687c3f7c26613edfe73cd329402aa5cf493bb61'
-            arguments["pool_view"] = 'pool1frevxe70aqw2ce58c0muyesnahl88nfjjsp25h85jwakzgd2g2l'
-            arguments["pool_metadata"] = '4b2221a0ac0b0197308323080ba97e3e453f8625393d30f96eebe0fca4cb7334'
-
-            arguments["pool_json_by_hash"] = {'poolId':'48f2c367cfe81cac6687c3f7c26613edfe73cd329402aa5cf493bb61'}
-            arguments["pool_json_by_view"] = {'poolId':'pool1frevxe70aqw2ce58c0muyesnahl88nfjjsp25h85jwakzgd2g2l'}
-            arguments["pool_with_errors"] = 'be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853'
-            arguments["pool_is_delisted"] = 'Pool 48f2c367cfe81cac6687c3f7c26613edfe73cd329402aa5cf493bb61 is delisted'
-
-            arguments["expected_metadata"] = {
-                "name": "IOG 1",
-                "ticker": "IOG1",
-                "homepage": "https://iohk.io",
-                "description": "IOG Testnet Pool"
-            }
-
-            arguments["unregistered_pools_examples"] = [
-                {'poolId': '002c501d063cf552144e58ea9a85c8d156b3d7c7a498e52a50cf546c'},
-                {'poolId': '00cd5fd9cbf0b9535f804f59da4666859afa38e5ca7729a3172efe36'}, 
-                {'poolId': '0192e6835f8613b1a47084d800ee3d2a0931a334e5e63dd80c447c15'}
-            ]
     
     return arguments

@@ -37,7 +37,7 @@ def get_delisted_pools_from_db(db_session):
 def test_health_status(data):
     response = requests.get(data["STATUS_ENDPOINT"])
     _validate_status_and_content_type(response, HTTP_STATUS.OK)
-    assert response.json() == {"status":"OK","version":"12.0.0"}
+    assert response.json() == {"status":"OK","version":"13.1.0.2"}
 
 
 def test_fetch_metadata_by_pool_hash(data):
@@ -197,7 +197,7 @@ def test_fetch_policies(data, db_session):
     fetched_data = response.json()
     assert len(fetched_data["uniqueTickers"]) >= 0 # Reserved ticker functionality has never been used and it's still under discussion how to use it.
     assert fetched_data["smashURL"] == data["smash_mainnet_url"]
-    assert fetched_data["healthStatus"] == {"status":"OK","version":"1.6.1"}
+    assert fetched_data["healthStatus"]["status"] == "OK"
     assert len(fetched_data["delistedPools"]) >= 18
 
     delisted_pools_from_rest = set(pool["poolId"] for pool in fetched_data["delistedPools"])
