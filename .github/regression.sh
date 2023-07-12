@@ -56,6 +56,8 @@ case "${CI_ENABLE_PLUTUS_APPS:-"true"}" in
 esac
 
 # setup latest `cardano-cli` if we are testing latest cardano-node
+# TODO: setting to 'false' by default as a workaround; latest cardano-cli is not buildable
+: "${USE_LASTEST_CARDANO_CLI:="false"}"
 if [ -z "${USE_LASTEST_CARDANO_CLI:-""}" ] && [ -z "${NODE_REV:-""}" ]; then
   USE_LASTEST_CARDANO_CLI="true"
 fi
