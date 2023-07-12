@@ -58,10 +58,11 @@ The execution can be configured using env variables described in the section bel
 
 When running tests using the `./.github/regression.sh` script, you can also use
 
-* `NODE_REV` - revison of `cardano-node` (default: master HEAD)
 * `CI_FAST_CLUSTER` - start local cluster directly in Babbage era, without going from Byron -> ... -> Babbage (same effect as `SCRIPTS_DIRNAME=babbage_fast`)
-* `CI_ENABLE_DBSYNC` - specifies if tests will setup db-sync and perform db-sync checks (default: unset)
-* `DBSYNC_REV` - revison of `cardano-db-sync` (default: master HEAD)
+* `NODE_REV` - revison of `cardano-node` (default: 'master')
+* `DBSYNC_REV` - revison of `cardano-db-sync` (default: unset; db-sync is not used by default)
+* `CARDANO_CLI_REV` - revison of `cardano-cli` (default: unset; cardano-cli bundled in cardano-node repo is used by default)
+* `PLUTUS_APPS_REV` - revison of `plutus-apps` (default: 'main')
 
 For example:
 

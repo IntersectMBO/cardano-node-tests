@@ -4,13 +4,34 @@ echo "::group::plutus-apps setup"
 
 pushd "$WORKDIR" || exit 1
 
-# Clone plutus-apps if needed
-if [ ! -e plutus-apps ]; then
-  git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/input-output-hk/plutus-apps.git
-fi
+case "${PLUTUS_APPS_REV:-""}" in
+  "" )
+    echo "The value for PLUTUS_APPS_REV cannot be empty" >&2
+    exit 1
+    ;;
 
-pushd plutus-apps || exit 1
-git pull origin main
+  "main" | "HEAD" )
+    export PLUTUS_APPS_REV="main"
+
+    if [ ! -e plutus-apps ]; then
+      git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/input-output-hk/plutus-apps.git
+    fi
+
+    pushd plutus-apps || exit 1
+    git fetch origin main
+    ;;
+
+  * )
+    if [ ! -e plutus-apps ]; then
+      git clone --recurse-submodules https://github.com/input-output-hk/plutus-apps.git
+    fi
+
+    pushd plutus-apps || exit 1
+    git fetch
+    ;;
+esac
+
+git checkout "$PLUTUS_APPS_REV"
 git rev-parse HEAD
 
 # Build `create-script-context`

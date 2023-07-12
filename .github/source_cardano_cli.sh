@@ -4,13 +4,34 @@ echo "::group::cardano-cli setup"
 
 pushd "$WORKDIR" || exit 1
 
-# Clone cardano-cli if needed
-if [ ! -e cardano-cli ]; then
-  git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/input-output-hk/cardano-cli.git
-fi
+case "${CARDANO_CLI_REV:-""}" in
+  "" )
+    echo "The value for CARDANO_CLI_REV cannot be empty" >&2
+    exit 1
+    ;;
 
-pushd cardano-cli || exit 1
-git pull origin main
+  "main" | "HEAD" )
+    export CARDANO_CLI_REV="main"
+
+    if [ ! -e cardano-cli ]; then
+      git clone --depth 1 https://github.com/input-output-hk/cardano-cli.git
+    fi
+
+    pushd cardano-cli || exit 1
+    git fetch origin main
+    ;;
+
+  * )
+    if [ ! -e cardano-cli ]; then
+      git clone https://github.com/input-output-hk/cardano-cli.git
+    fi
+
+    pushd cardano-cli || exit 1
+    git fetch
+    ;;
+esac
+
+git checkout "$CARDANO_CLI_REV"
 git rev-parse HEAD
 
 # Build `cardano-cli`

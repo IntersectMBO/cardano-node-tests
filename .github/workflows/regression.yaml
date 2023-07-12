@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       node_rev:
-        description: "cardano-node revision (default: master HEAD)"
-        required: false
+        description: "cardano-node revision"
+        default: master
       cluster_era:
         type: choice
         description: "Cluster era"

@@ -29,18 +29,34 @@ stop_postgres() {
   rm -f "$psql_pid_file"
 }
 
-# clone db-sync if needed
-if [ ! -e cardano-db-sync ]; then
-  git clone https://github.com/input-output-hk/cardano-db-sync.git
-fi
+case "${DBSYNC_REV:-""}" in
+  "" )
+    echo "The value for DBSYNC_REV cannot be empty" >&2
+    exit 1
+    ;;
 
-pushd cardano-db-sync || exit 1
-if [ -n "${DBSYNC_REV:-""}" ]; then
-  git fetch
-  git checkout "$DBSYNC_REV"
-else
-  git pull origin master
-fi
+  "master" | "HEAD" )
+    export DBSYNC_REV="master"
+
+    if [ ! -e cardano-db-sync ]; then
+      git clone --depth 1 https://github.com/input-output-hk/cardano-db-sync.git
+    fi
+
+    pushd cardano-db-sync || exit 1
+    git fetch origin master
+    ;;
+
+  * )
+    if [ ! -e cardano-db-sync ]; then
+      git clone https://github.com/input-output-hk/cardano-db-sync.git
+    fi
+
+    pushd cardano-db-sync || exit 1
+    git fetch
+    ;;
+esac
+
+git checkout "$DBSYNC_REV"
 git rev-parse HEAD
 
 # build db-sync

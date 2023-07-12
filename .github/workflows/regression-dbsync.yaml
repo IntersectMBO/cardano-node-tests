@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       node_rev:
-        description: "cardano-node revision (default: master HEAD)"
-        required: false
+        description: "cardano-node revision"
+        default: "master"
       dbsync_rev:
-        description: "db-sync revision (default: master HEAD)"
-        required: false
+        description: "db-sync revision"
+        default: "master"
       cluster_era:
         type: choice
         description: "Cluster era"
@@ -73,7 +73,6 @@ jobs:
       tx_era: ${{ inputs.tx_era }}
       markexpr: ${{ inputs.markexpr }}
       topology: ${{ inputs.topology }}
-      enable_dbsync: true
       fast_cluster: ${{ inputs.fast_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
       skip_passed: ${{ inputs.skip_passed }}
