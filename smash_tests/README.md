@@ -7,14 +7,15 @@ available for all test.
 
 </br> 
 
-Before running tests following services must be started on one of blockchain networks (mainnet, preprod, preview or shelley-qa):
+Before running tests following services must be started on one of blockchain networks (mainnet, preprod, preview or shelley-qa). There are scripts that can easily achieve this goal and the whole process is described in detailed howvever in case user desires to run them manually here are links to instructions:
 
+- `cardano-node` - instruction are located [here](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/install.md)
 - `cardano-db-sync` for which instructions can be found [here](https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/building-running.md)
 - `SMASH` - instruction are [here](https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/smash.md#installation)
 
 If you named your databases different than it is stated in pgpass files located [here](https://github.com/input-output-hk/cardano-db-sync/tree/master/config)
 then you need to adjust code in [conftest.py](https://github.com/input-output-hk/cardano-node-tests/blob/smash_tests/smash_tests/conftest.py#L24-L32) and also
-add your 'username' in [here](https://github.com/input-output-hk/cardano-node-tests/blob/smash_tests/smash_tests/conftest.py#L47) (and password if you decided to use one for those databases) and [here too](https://github.com/input-output-hk/cardano-node-tests/blob/smash_tests/smash_tests/conftest.py#L88)
+add your `username` in [here](https://github.com/input-output-hk/cardano-node-tests/blob/smash_tests/smash_tests/conftest.py#L47) (and password if you decided to use one for those databases) and [here too](https://github.com/input-output-hk/cardano-node-tests/blob/smash_tests/smash_tests/conftest.py#L88)
 
 
 ## Scripts
@@ -105,6 +106,12 @@ Node configuration: NodeConfiguration {ncSocketConfig = SocketConfig {ncNodeIPv4
 
 </br>
 
+### Important
+
+Change the name `runner` inside `conftest.py` which is used by GitHub Actions VM to your proper database user name - it is used in two places - then you can proceed to next step.
+
+</br>
+
 The next step is to start `cardano-db-sync` and `SMASH`:
 
 ```sh
@@ -177,15 +184,11 @@ cardano-node-tests/smash_tests
 ├── test_smash_local_server.py*
 ```
 
-### Important
-
-Change the name `runner` inside `conftest.py` which is used by GitHub Actions VM to your database user and then you can start tests with:
+</br>
 
 ```sh
 pytest -svv test_smash_local_server.py --environment 'shelley-qa'
 ```
-
-</br>
 
 # Requirements 
 
@@ -264,6 +267,9 @@ test_smash_local_server.py::test_fetch_policies_invalid_smash_url PASSED
 
 Tests can be run through GitHub Actions [SMASH workflow](https://github.com/input-output-hk/cardano-node-tests/actions/workflows/smash_tests.yaml)
 
+![image](https://github.com/input-output-hk/cardano-node-tests/assets/2938515/5476e725-b9f7-475d-86c4-b7e60ef5bdd0)
+
+
 Use workflow from `smash_tests` branch.
 Workflow has predefined parameters for `shelley-qa` required epochs sync time.
 For `preprod` use value of 60 epochs.
@@ -278,11 +284,36 @@ Tests try to use pools that retired first as test data but certain epoch needs t
 Workflow just as scripts requires you to specify particular version of exeutables for `cardano-node` and `cardano-db-sync`. 
 
 
-- `cardano-node` executable is downloaded from [Releases](https://github.com/input-output-hk/cardano-node/releases) section of it's repository. 
+#### cardano-node
+
+`cardano-node` executable is downloaded from [Releases](https://github.com/input-output-hk/cardano-node/releases) section of it's repository. 
 
 The URL has following structure:
 
 https://github.com/input-output-hk/cardano-node/releases/download/${tag-name}/cardano-node-${node-version}-linux.tar.gz
 
 In this case it is important to know that sometimes tag name is not only numeric but can have some suffixes like for pre releases. In such case tag name can be `8.1.0-pre` and node version will be numeric `8.1.0`.
+
+</br>
+
+Tag name can be checked here (blue rectangle on the left):
+
+![image](https://github.com/input-output-hk/cardano-node-tests/assets/2938515/a4aa3b09-0c80-48b5-9630-53d6207506cc)
+
+
+</br>
+
+#### cardano-db-sync
+
+For now `cardano-db-sync` executable is located on AWS S3:
+https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html#
+
+
+In the near future executables can be migrated to Hydra CI System.
+
+
+
+
+
+
 
