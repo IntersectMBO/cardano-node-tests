@@ -1277,6 +1277,7 @@ class TestPing:
                 issue=5245,
                 fixed_in="8.2.0",
                 message="`MuxError MuxBearerClosed` error",
+                check_on_devel=False,
             ).finish_test()
         else:
             logfiles.clean_ignore_rules(ignore_file_id=ignore_file_id)
