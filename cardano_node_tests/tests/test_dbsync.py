@@ -16,6 +16,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -247,6 +248,7 @@ class TestDBSync:
         self,
         cluster_singleton: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
+        worker_id: str,
     ):
         """
         Check that db-sync reconnects to the node after the node is restarted.
@@ -257,6 +259,12 @@ class TestDBSync:
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
+
+        logfiles.add_ignore_rule(
+            files_glob="dbsync.stdout",
+            regex="Connection refused",
+            ignore_file_id=worker_id,
+        )
 
         cluster_nodes.restart_all_nodes()
 
