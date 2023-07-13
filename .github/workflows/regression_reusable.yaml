@@ -35,10 +35,6 @@ on:
         required: false
         type: string
         default: ""
-      enable_dbsync:
-        required: false
-        type: boolean
-        default: false
       fast_cluster:
         required: false
         type: boolean
@@ -93,7 +89,6 @@ jobs:
           echo "MARKEXPR=${{ inputs.markexpr }}" >> .github_ci_env
           echo "SCRIPTS_DIRNAME=${{ inputs.scripts_dirname }}" >> .github_ci_env
           echo "CI_TOPOLOGY=${{ inputs.topology }}" >> .github_ci_env
-          echo "CI_ENABLE_DBSYNC=${{ inputs.enable_dbsync }}" >> .github_ci_env
           echo "CI_FAST_CLUSTER=${{ inputs.fast_cluster }}" >> .github_ci_env
           echo "CI_TESTRUN_NAME=${{ inputs.testrun_name }}" >> .github_ci_env
           echo "CI_SKIP_PASSED=${{ inputs.skip_passed }}" >> .github_ci_env

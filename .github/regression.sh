@@ -26,51 +26,46 @@ export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
 
 # setup dbsync (disabled by default)
-case "${CI_ENABLE_DBSYNC:-"false"}" in
-  "true" | 1)
+case "${DBSYNC_REV:-""}" in
+  "" )
+    ;;
+  "none" )
+    unset DBSYNC_REV
+    ;;
+  * )
     # shellcheck disable=SC1090,SC1091
     . .github/source_dbsync.sh
-    ;;
-  "false" | 0)
-    ;;
-  *)
-    echo "Unknown value for CI_ENABLE_DBSYNC: ${CI_ENABLE_DBSYNC}" >&2
-    exit 1
     ;;
 esac
 
 # setup plutus-apps (enabled by default)
 # The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
 # Plutus tests that are testing script context.
-case "${CI_ENABLE_PLUTUS_APPS:-"true"}" in
-  "true" | 1)
+case "${PLUTUS_APPS_REV:="main"}" in
+  "none" )
+    unset PLUTUS_APPS_REV
+    ;;
+  * )
     # shellcheck disable=SC1090,SC1091
     . .github/source_plutus_apps.sh
-    ;;
-  "false" | 0)
-    ;;
-  *)
-    echo "Unknown value for CI_ENABLE_PLUTUS: ${CI_ENABLE_PLUTUS}" >&2
-    exit 1
     ;;
 esac
 
 # setup latest `cardano-cli` if we are testing latest cardano-node
-# TODO: setting to 'false' by default as a workaround; latest cardano-cli is not buildable
-: "${USE_LASTEST_CARDANO_CLI:="false"}"
-if [ -z "${USE_LASTEST_CARDANO_CLI:-""}" ] && [ -z "${NODE_REV:-""}" ]; then
-  USE_LASTEST_CARDANO_CLI="true"
+# TODO: setting to 'none' by default as a workaround; latest cardano-cli is not buildable
+: "${CARDANO_CLI_REV:="none"}"
+if [ -z "${CARDANO_CLI_REV:-""}" ] && [[ "${NODE_REV:-""}" = @(""|"master") ]]; then
+  CARDANO_CLI_REV="main"
 fi
-case "${USE_LASTEST_CARDANO_CLI:-"true"}" in
-  "true" | 1)
+case "${CARDANO_CLI_REV:-""}" in
+  "" )
+    ;;
+  "none" )
+    unset CARDANO_CLI_REV
+    ;;
+  * )
     # shellcheck disable=SC1090,SC1091
     . .github/source_cardano_cli.sh
-    ;;
-  "false" | 0)
-    ;;
-  *)
-    echo "Unknown value for USE_LASTEST_CARDANO_CLI: ${USE_LASTEST_CARDANO_CLI}" >&2
-    exit 1
     ;;
 esac
 
