@@ -12,7 +12,7 @@ class Versions:
 
     LATEST_NODE_RELEASE_VER: tp.Final[version.Version] = version.parse("8.1.1")
     LATEST_NODE_RELEASE_REV: tp.Final[str] = "6f79e5c3ea109a70cd01910368e011635767305a"
-    LATEST_DBSYNC_RELEASE_VER: tp.Final[version.Version] = version.parse("13.1.1.2")
+    LATEST_DBSYNC_RELEASE_VER: tp.Final[version.Version] = version.parse("13.1.1.3")
 
     BYRON: tp.Final[int] = 1
     SHELLEY: tp.Final[int] = 2
