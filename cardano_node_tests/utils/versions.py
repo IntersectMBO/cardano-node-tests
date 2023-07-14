@@ -20,10 +20,11 @@ class Versions:
     MARY: tp.Final[int] = 4
     ALONZO: tp.Final[int] = 6
     BABBAGE: tp.Final[int] = 8
+    CONWAY: tp.Final[int] = 9
 
     DEFAULT_CLUSTER_ERA: tp.Final[int] = 8
     DEFAULT_TX_ERA: tp.Final[int] = 8
-    LAST_KNOWN_ERA: tp.Final[int] = 8
+    LAST_KNOWN_ERA: tp.Final[int] = 9
 
     MAP: tp.ClassVar[tp.Dict[int, str]] = {
         1: "byron",
@@ -32,6 +33,7 @@ class Versions:
         4: "mary",
         6: "alonzo",
         8: "babbage",
+        9: "conway",
     }
 
     def __init__(self) -> None:
