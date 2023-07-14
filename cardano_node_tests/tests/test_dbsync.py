@@ -262,7 +262,7 @@ class TestDBSync:
 
         logfiles.add_ignore_rule(
             files_glob="dbsync.stdout",
-            regex="Connection refused",
+            regex=r"Network\.Socket\.connect",
             ignore_file_id=worker_id,
         )
 
