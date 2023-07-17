@@ -663,7 +663,7 @@ class TestQueryUTxO:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.LAST_KNOWN_ERA,
+        VERSIONS.transaction_era != VERSIONS.DEFAULT_CLUSTER_ERA,
         reason="works only with the latest TX era",
     )
     def test_pretty_utxo(

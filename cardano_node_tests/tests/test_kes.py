@@ -32,6 +32,8 @@ LOGGER = logging.getLogger(__name__)
 # NOTE: must be kept up-to-date
 if VERSIONS.cluster_era == VERSIONS.BABBAGE:
     NUM_OF_EPOCHS = 8  # PV7 + PV8
+elif VERSIONS.cluster_era == VERSIONS.CONWAY:
+    NUM_OF_EPOCHS = 9
 else:
     raise AssertionError(f"Unsupported era '{VERSIONS.cluster_era_name}'")
 

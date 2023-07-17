@@ -516,7 +516,7 @@ for i in $(seq 1 "$NUM_POOLS"); do
 done
 
 cardano_cli_log transaction build-raw \
-  --conway-era \
+  --babbage-era \
   --fee    0 \
   "${TXINS[@]}" \
   --tx-out "$TXIN_ADDR+0" \
@@ -536,7 +536,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
 
 cardano_cli_log transaction build-raw \
-  --conway-era \
+  --babbage-era \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
