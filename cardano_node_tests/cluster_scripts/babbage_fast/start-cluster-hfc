@@ -94,6 +94,13 @@ if [ -e "$SCRIPT_DIR/shell_env" ]; then
   source "$SCRIPT_DIR/shell_env"
 fi
 
+
+CERT_ERA_ARG=("--babbage-era")
+if cardano-cli stake-address registration-certificate --babbage-era 2>&1 |\
+  { read -r i; [[ "$i" == *Invalid* ]]; }; then
+  CERT_ERA_ARG=()
+fi
+
 rm -rf "$STATE_CLUSTER"
 mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync,create_staked}
 cd "$STATE_CLUSTER/.."
@@ -343,16 +350,19 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
   #   stake address registration cert
   cardano_cli_log stake-address registration-certificate \
+    "${CERT_ERA_ARG[@]}" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
 
   # stake reward address registration cert
   cardano_cli_log stake-address registration-certificate \
+    "${CERT_ERA_ARG[@]}" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
 
   # stake address delegation certs
   cardano_cli_log stake-address delegation-certificate \
+    "${CERT_ERA_ARG[@]}" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
@@ -392,6 +402,7 @@ EoF
   echo $POOL_PLEDGE > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
 
   cardano_cli_log stake-pool registration-certificate \
+    "${CERT_ERA_ARG[@]}" \
     --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --vrf-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
     --pool-pledge "$POOL_PLEDGE" \
