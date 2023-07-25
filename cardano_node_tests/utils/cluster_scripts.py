@@ -289,29 +289,6 @@ class LocalScripts(ScriptsTypes):
         }
         return topology
 
-    def _gen_p2p_topology_old(
-        self, addr: str, ports: tp.List[int], fixed_ports: tp.List[int]
-    ) -> dict:
-        """Generate p2p topology for given ports in the old topology format."""
-        # Select fixed ports and several randomly selected ports
-        selected_ports = set(fixed_ports + random.sample(ports, 3))
-        access_points = [
-            {"address": addr or self._get_rand_addr(), "port": port} for port in selected_ports
-        ]
-        topology = {
-            "LocalRoots": {
-                "groups": [
-                    {
-                        "localRoots": {"accessPoints": access_points, "advertise": False},
-                        "valency": len(access_points),
-                    }
-                ]
-            },
-            "PublicRoots": [],
-            "useLedgerAfterSlot": -1,
-        }
-        return topology
-
     def _gen_supervisor_conf(self, instance_num: int, instance_ports: InstancePorts) -> str:
         """Generate supervisor configuration for given instance."""
         lines = [
@@ -374,19 +351,9 @@ class LocalScripts(ScriptsTypes):
             # bft1 and first three pools
             fixed_ports = all_except[:4]
 
-            # Use both old and new format for P2P topology.
-            # When testing mix of legacy and P2P topologies, odd numbered pools use legacy
-            # topology. Here, for that reason, the decision cannot be based on oddity, otherwise
-            # we would use just single P2P topology format for all pools. At the same time we
-            # want the selection process to be deterministic, so we don't want to use random.
-            if node_rec.num % 3 == 0:
-                p2p_topology = self._gen_p2p_topology_old(
-                    addr=addr, ports=all_except, fixed_ports=fixed_ports
-                )
-            else:
-                p2p_topology = self._gen_p2p_topology(
-                    addr=addr, ports=all_except, fixed_ports=fixed_ports
-                )
+            p2p_topology = self._gen_p2p_topology(
+                addr=addr, ports=all_except, fixed_ports=fixed_ports
+            )
 
             helpers.write_json(
                 out_file=destdir / f"p2p-topology-{node_name}.json", content=p2p_topology
