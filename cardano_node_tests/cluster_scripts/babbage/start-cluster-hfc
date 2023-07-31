@@ -130,7 +130,7 @@ fi
 
 
 CERT_ERA_ARG=("--shelley-era")
-if cardano-cli stake-address registration-certificate --shelley-era 2>&1 |\
+if { cardano-cli stake-address registration-certificate --shelley-era 2>&1; true; } |\
   { read -r i; [[ "$i" == *Invalid* ]]; }; then
   CERT_ERA_ARG=()
 fi
