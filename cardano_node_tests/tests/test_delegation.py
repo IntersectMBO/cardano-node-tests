@@ -746,7 +746,7 @@ class TestDelegateAddr:
         if use_build_cmd:
             tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=user_payment.address,
-                tx_name=f"{temp_template}_reg_deleg",
+                tx_name=f"{temp_template}_reg_dereg",
                 tx_files=tx_files,
                 fee_buffer=2_000_000,
                 deposit=0,
@@ -755,7 +755,7 @@ class TestDelegateAddr:
             tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
-                tx_name=f"{temp_template}_reg_deleg",
+                tx_name=f"{temp_template}_reg_dereg",
             )
             cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
