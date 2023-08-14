@@ -399,12 +399,12 @@ class TestDelegateAddr:
     @pytest.mark.order(7)
     @pytest.mark.dbsync
     @pytest.mark.long
-    def test_deregister(
+    def test_deregister_delegated(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
     ):
-        """Deregister stake address.
+        """Deregister a delegated stake address.
 
         * create two payment addresses that share single stake address
         * register and delegate the stake address to pool
