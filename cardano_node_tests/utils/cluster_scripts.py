@@ -308,7 +308,7 @@ class LocalScripts(ScriptsTypes):
                     f"command=./state-cluster{instance_num}/cardano-node-{node_name}",
                     f"stderr_logfile=./state-cluster{instance_num}/{node_name}.stderr",
                     f"stdout_logfile=./state-cluster{instance_num}/{node_name}.stdout",
-                    "startsecs=3",
+                    "startsecs=5",
                 ]
             )
 

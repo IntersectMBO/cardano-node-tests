@@ -151,7 +151,7 @@ stderr_logfile=./$STATE_CLUSTER_NAME/dbsync.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/dbsync.stdout
 autostart=false
 autorestart=false
-startsecs=3
+startsecs=5
 EoF
 fi
 
@@ -165,7 +165,7 @@ stderr_logfile=./$STATE_CLUSTER_NAME/submit_api.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/submit_api.stdout
 autostart=false
 autorestart=false
-startsecs=3
+startsecs=5
 EoF
 fi
 
