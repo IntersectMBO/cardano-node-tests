@@ -11,6 +11,7 @@ from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
 from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
+from pytest_metadata.plugin import metadata_key
 from xdist import workermanage
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -66,33 +67,35 @@ def pytest_configure(config: tp.Any) -> None:
     if config.getvalue("skipall"):
         return
 
-    config._metadata["cardano-node"] = str(VERSIONS.node)
-    config._metadata["cardano-node rev"] = VERSIONS.git_rev
-    config._metadata["cardano-node ghc"] = VERSIONS.ghc
-    config._metadata["cardano-cli"] = str(VERSIONS.cli)
-    config._metadata["cardano-cli rev"] = VERSIONS.cli_git_rev
-    config._metadata["cardano-cli ghc"] = VERSIONS.cli_ghc
-    config._metadata["CLUSTER_ERA"] = configuration.CLUSTER_ERA
-    config._metadata["TX_ERA"] = configuration.TX_ERA
-    config._metadata["SCRIPTS_DIRNAME"] = configuration.SCRIPTS_DIRNAME
-    config._metadata["ENABLE_P2P"] = str(configuration.ENABLE_P2P)
-    config._metadata["MIXED_P2P"] = str(configuration.MIXED_P2P)
-    config._metadata["NUM_POOLS"] = str(configuration.NUM_POOLS)
-    config._metadata["DB_BACKEND"] = configuration.DB_BACKEND
-    config._metadata["cardano-node-tests rev"] = helpers.get_current_commit()
-    config._metadata[
+    config.stash[metadata_key]["cardano-node"] = str(VERSIONS.node)
+    config.stash[metadata_key]["cardano-node rev"] = VERSIONS.git_rev
+    config.stash[metadata_key]["cardano-node ghc"] = VERSIONS.ghc
+    config.stash[metadata_key]["cardano-cli"] = str(VERSIONS.cli)
+    config.stash[metadata_key]["cardano-cli rev"] = VERSIONS.cli_git_rev
+    config.stash[metadata_key]["cardano-cli ghc"] = VERSIONS.cli_ghc
+    config.stash[metadata_key]["CLUSTER_ERA"] = configuration.CLUSTER_ERA
+    config.stash[metadata_key]["TX_ERA"] = configuration.TX_ERA
+    config.stash[metadata_key]["SCRIPTS_DIRNAME"] = configuration.SCRIPTS_DIRNAME
+    config.stash[metadata_key]["ENABLE_P2P"] = str(configuration.ENABLE_P2P)
+    config.stash[metadata_key]["MIXED_P2P"] = str(configuration.MIXED_P2P)
+    config.stash[metadata_key]["NUM_POOLS"] = str(configuration.NUM_POOLS)
+    config.stash[metadata_key]["DB_BACKEND"] = configuration.DB_BACKEND
+    config.stash[metadata_key]["cardano-node-tests rev"] = helpers.get_current_commit()
+    config.stash[metadata_key][
         "cardano-node-tests url"
     ] = f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
-    config._metadata["CARDANO_NODE_SOCKET_PATH"] = os.environ.get("CARDANO_NODE_SOCKET_PATH")
-    config._metadata["cardano-cli exe"] = shutil.which("cardano-cli") or ""
-    config._metadata["cardano-node exe"] = shutil.which("cardano-node") or ""
-    config._metadata["cardano-submit-api exe"] = shutil.which("cardano-submit-api") or ""
+    config.stash[metadata_key]["CARDANO_NODE_SOCKET_PATH"] = os.environ.get(
+        "CARDANO_NODE_SOCKET_PATH"
+    )
+    config.stash[metadata_key]["cardano-cli exe"] = shutil.which("cardano-cli") or ""
+    config.stash[metadata_key]["cardano-node exe"] = shutil.which("cardano-node") or ""
+    config.stash[metadata_key]["cardano-submit-api exe"] = shutil.which("cardano-submit-api") or ""
 
     testrun_name = os.environ.get("CI_TESTRUN_NAME")
     if testrun_name:
         skip_passed = os.environ.get("CI_SKIP_PASSED") == "true"
-        config._metadata["CI_TESTRUN_NAME"] = testrun_name
-        config._metadata["CI_SKIP_PASSED"] = str(skip_passed)
+        config.stash[metadata_key]["CI_TESTRUN_NAME"] = testrun_name
+        config.stash[metadata_key]["CI_SKIP_PASSED"] = str(skip_passed)
 
     network_magic = configuration.NETWORK_MAGIC_LOCAL
     if configuration.BOOTSTRAP_DIR:
@@ -101,18 +104,18 @@ def pytest_configure(config: tp.Any) -> None:
         ) as in_fp:
             genesis = json.load(in_fp)
         network_magic = genesis["networkMagic"]
-    config._metadata["network magic"] = network_magic
+    config.stash[metadata_key]["network magic"] = network_magic
 
-    config._metadata["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
+    config.stash[metadata_key]["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
     if configuration.HAS_DBSYNC:
-        config._metadata["db-sync"] = str(VERSIONS.dbsync)
-        config._metadata["db-sync rev"] = VERSIONS.dbsync_git_rev
-        config._metadata["db-sync ghc"] = VERSIONS.dbsync_ghc
-        config._metadata["db-sync exe"] = str(configuration.DBSYNC_BIN)
+        config.stash[metadata_key]["db-sync"] = str(VERSIONS.dbsync)
+        config.stash[metadata_key]["db-sync rev"] = VERSIONS.dbsync_git_rev
+        config.stash[metadata_key]["db-sync ghc"] = VERSIONS.dbsync_ghc
+        config.stash[metadata_key]["db-sync exe"] = str(configuration.DBSYNC_BIN)
 
-    if "nix/store" not in config._metadata["cardano-cli exe"]:
+    if "nix/store" not in config.stash[metadata_key]["cardano-cli exe"]:
         LOGGER.warning("WARNING: Not using `cardano-cli` from nix store!")
-    if "nix/store" not in config._metadata["cardano-node exe"]:
+    if "nix/store" not in config.stash[metadata_key]["cardano-node exe"]:
         LOGGER.warning("WARNING: Not using `cardano-node` from nix store!")
 
 
@@ -223,7 +226,7 @@ def _save_env_for_allure(pytest_config: Config) -> None:
         return
 
     alluredir = configuration.LAUNCH_PATH / alluredir
-    metadata: tp.Dict[str, tp.Any] = pytest_config._metadata  # type: ignore
+    metadata: tp.Dict[str, tp.Any] = pytest_config.stash[metadata_key]  # type: ignore
     with open(alluredir / "environment.properties", "w+", encoding="utf-8") as infile:
         for k, v in metadata.items():
             if isinstance(v, dict):
