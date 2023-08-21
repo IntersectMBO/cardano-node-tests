@@ -67,6 +67,9 @@ ERRORS_LOOK_BACK_RE = (
     re.compile("|".join(ERRORS_LOOK_BACK_MAP.keys())) if ERRORS_LOOK_BACK_MAP else None
 )
 
+# Relevant errors from supervisord.log
+SUPERVISORD_ERRORS_RE = re.compile("not expected|FATAL", re.IGNORECASE)
+
 
 class RotableLog(tp.NamedTuple):
     logfile: pl.Path
@@ -181,6 +184,7 @@ def _get_ignore_regex(
 def _search_log_lines(
     logfile: pl.Path,
     rotated_logs: tp.List[RotableLog],
+    errors_re: re.Pattern,
     errors_ignored_re: tp.Optional[re.Pattern] = None,
     errors_look_back_re: tp.Optional[re.Pattern] = None,
 ) -> tp.List[tp.Tuple[pl.Path, str]]:
@@ -204,7 +208,7 @@ def _search_log_lines(
             for line in infile:
                 look_back_buf.append(line)
                 look_back_buf.pop(0)
-                if ERRORS_RE.search(line) and not (
+                if errors_re.search(line) and not (
                     errors_ignored_re and errors_ignored_re.search(line)
                 ):
                     # Skip if expected message is in the look back buffer
@@ -319,7 +323,7 @@ def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> t
 def search_cluster_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
     """Search cluster logs for errors."""
     cluster_env = cluster_nodes.get_cluster_env()
-    lock_file = temptools.get_basetemp() / f"search_artifacts_{cluster_env.instance_num}.lock"
+    lock_file = temptools.get_basetemp() / f"search_cluster_{cluster_env.instance_num}.lock"
 
     with locking.FileLockIfXdist(lock_file):
         errors = []
@@ -350,6 +354,7 @@ def search_cluster_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
                 _search_log_lines(
                     logfile=logfile,
                     rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+                    errors_re=ERRORS_RE,
                     errors_ignored_re=re.compile(errors_ignored),
                     errors_look_back_re=ERRORS_LOOK_BACK_RE,
                 )
@@ -379,8 +384,36 @@ def search_framework_log() -> tp.List[tp.Tuple[pl.Path, str]]:
         _search_log_lines(
             logfile=logfile,
             rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+            errors_re=ERRORS_RE,
         )
     )
+
+    return errors
+
+
+def search_supervisord_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
+    """Search cluster logs for errors."""
+    cluster_env = cluster_nodes.get_cluster_env()
+    lock_file = temptools.get_basetemp() / f"search_supervisord_{cluster_env.instance_num}.lock"
+
+    with locking.FileLockIfXdist(lock_file):
+        logfile = cluster_env.state_dir / "supervisord.log"
+
+        # Get seek offset (from where to start searching) and timestamp of last search
+        offset_file = _get_offset_file(logfile=logfile)
+        if offset_file.exists():
+            seek = _read_seek(offset_file=offset_file)
+            timestamp = offset_file.stat().st_mtime
+        else:
+            seek = 0
+            timestamp = 0.0
+
+        # Search for errors in the log file
+        errors = _search_log_lines(
+            logfile=logfile,
+            rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+            errors_re=SUPERVISORD_ERRORS_RE,
+        )
 
     return errors
 
@@ -424,6 +457,7 @@ def get_logfiles_errors() -> str:
     """Get errors found in cluster artifacts."""
     errors = search_cluster_logs()
     errors.extend(search_framework_log())
+    errors.extend(search_supervisord_logs())
     if not errors:
         return ""
 
