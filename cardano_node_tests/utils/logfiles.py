@@ -112,7 +112,7 @@ def _get_rotated_logs(
     # Get list of logfiles modified after `timestamp`, sorted by their last modification time
     # from oldest to newest.
     _logfile_records = [
-        RotableLog(logfile=f, seek=0, timestamp=os.path.getmtime(f)) for f in logfiles
+        RotableLog(logfile=f, seek=0, timestamp=f.stat().st_mtime) for f in logfiles
     ]
     _logfile_records = [r for r in _logfile_records if r.timestamp > timestamp]
     logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp)
@@ -332,7 +332,7 @@ def search_cluster_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
             offset_file = _get_offset_file(logfile=logfile)
             if offset_file.exists():
                 seek = _read_seek(offset_file=offset_file)
-                timestamp = os.path.getmtime(offset_file)
+                timestamp = offset_file.stat().st_mtime
             else:
                 seek = 0
                 timestamp = 0.0
@@ -369,7 +369,7 @@ def search_framework_log() -> tp.List[tp.Tuple[pl.Path, str]]:
     offset_file = _get_offset_file(logfile=logfile)
     if offset_file.exists():
         seek = _read_seek(offset_file=offset_file)
-        timestamp = os.path.getmtime(offset_file)
+        timestamp = offset_file.stat().st_mtime
     else:
         seek = 0
         timestamp = 0.0

@@ -455,8 +455,8 @@ class TestLobsterChallenge:
             utxo_counter_tokens = [u for u in vote_utxos if u.coin == counter_token]
             utxo_counter_token = None
             try:
-                utxos_lovelace = [u for u in vote_utxos if u.coin == clusterlib.DEFAULT_COIN][0]
-                utxo_votes_token = [u for u in vote_utxos if u.coin == votes_token][0]
+                utxos_lovelace = next(u for u in vote_utxos if u.coin == clusterlib.DEFAULT_COIN)
+                utxo_votes_token = next(u for u in vote_utxos if u.coin == votes_token)
                 # when `vote_counter` is not 0 (that can happen for final vote), there needs to be
                 # a counter token
                 if vote_counter:

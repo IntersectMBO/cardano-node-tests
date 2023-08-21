@@ -160,7 +160,7 @@ class TestSocketPath:
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
 
         distrib = cluster.g_query.get_stake_distribution()
-        assert list(distrib)[0].startswith("pool")
+        assert next(iter(distrib)).startswith("pool")
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO

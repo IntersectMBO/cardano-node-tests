@@ -285,9 +285,9 @@ class TestUpgrade:
         if not tx_dir.exists():
             pytest.skip("No tx files found")
 
-        tx_file = list(tx_dir.glob("*.signed"))[0]
-        tx_body_file = list(tx_dir.glob("*.body"))[0]
-        skey_file = list(tx_dir.glob("*.skey"))[0]
+        tx_file = next(iter(tx_dir.glob("*.signed")))
+        tx_body_file = next(iter(tx_dir.glob("*.body")))
+        skey_file = next(iter(tx_dir.glob("*.skey")))
 
         if file_type == "tx_body":
             tx_file = cluster.g_transaction.sign_tx(
