@@ -241,10 +241,11 @@ def check_tx_view(  # noqa: C901
 
     # check fee
     fee = int(tx_loaded.get("fee", "").split()[0] or 0)
-    # pylint: disable=consider-using-in
-    if (
-        tx_raw_output.fee != -1 and tx_raw_output.fee != fee
-    ):  # for `transaction build` the `tx_raw_output.fee` can be -1
+    # for `transaction build` the `tx_raw_output.fee` can be -1
+    if tx_raw_output.fee not in (
+        -1,
+        fee,
+    ):
         raise AssertionError(f"fee: {tx_raw_output.fee} != {fee}")
 
     # check validity intervals
