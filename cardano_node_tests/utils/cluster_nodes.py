@@ -400,7 +400,9 @@ def restart_all_nodes(instance_num: tp.Optional[int] = None) -> None:
     try:
         helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:")
     except Exception as exc:
-        raise Exception("Failed to restart cluster nodes.") from exc
+        raise Exception(  # pylint: disable=broad-exception-raised
+            "Failed to restart cluster nodes."
+        ) from exc
 
     # wait for nodes to start
     time.sleep(5)
@@ -422,7 +424,9 @@ def services_action(
                 f"supervisorctl -s http://localhost:{supervisor_port} {action} {service_name}"
             )
         except Exception as exc:
-            raise Exception(f"Failed to restart service `{service_name}`") from exc
+            raise Exception(  # pylint: disable=broad-exception-raised
+                f"Failed to restart service `{service_name}`"
+            ) from exc
 
 
 def start_nodes(node_names: tp.List[str], instance_num: tp.Optional[int] = None) -> None:

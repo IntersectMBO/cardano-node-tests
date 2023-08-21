@@ -153,7 +153,9 @@ class TestTxChaining:
                 except clusterlib.CLIError as exc:
                     err_str = str(exc)
                     if r == 0 and "(BadInputsUTxO" in err_str:
-                        raise Exception("Tx input is missing, maybe temporary fork?") from exc
+                        raise Exception(  # pylint: disable=broad-exception-raised
+                            "Tx input is missing, maybe temporary fork?"
+                        ) from exc
                     if "(BadInputsUTxO" not in err_str:
                         raise
                     break
