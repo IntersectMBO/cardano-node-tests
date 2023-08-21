@@ -151,7 +151,7 @@ class TestNetworkIdEnv:
         # pylint: disable=unused-argument
         common.get_test_id(cluster)
         distrib = cluster.g_query.get_stake_distribution()
-        assert list(distrib)[0].startswith("pool")
+        assert next(iter(distrib)).startswith("pool")
 
     @allure.link(helpers.get_vcs_link())
     def test_query_protocol_params(

@@ -682,7 +682,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_data=pool_data,
             request=request,
             use_build_cmd=use_build_cmd,
@@ -760,7 +760,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_data=pool_data,
             request=request,
             use_build_cmd=use_build_cmd,
@@ -826,7 +826,7 @@ class TestStakePool:
         _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -890,7 +890,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_data=pool_data,
             use_build_cmd=use_build_cmd,
         )
@@ -1024,7 +1024,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_data=pool_data,
         )
 
@@ -1187,7 +1187,7 @@ class TestStakePool:
             cluster_obj=cluster,
             pool_owners=pool_owners,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_data=pool_data,
         )
 
@@ -1350,7 +1350,7 @@ class TestStakePool:
         pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1465,7 +1465,7 @@ class TestStakePool:
         pool_creation_out = _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
@@ -1828,7 +1828,7 @@ class TestPoolCost:
             _create_register_pool(
                 cluster_obj=cluster,
                 temp_template=temp_template,
-                temp_dir=pl.Path("."),
+                temp_dir=pl.Path(),
                 pool_owners=pool_owners,
                 pool_data=pool_data,
             )
@@ -1882,7 +1882,7 @@ class TestPoolCost:
         _create_register_pool(
             cluster_obj=cluster,
             temp_template=temp_template,
-            temp_dir=pl.Path("."),
+            temp_dir=pl.Path(),
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,

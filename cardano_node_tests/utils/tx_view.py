@@ -305,8 +305,8 @@ def check_tx_view(  # noqa: C901
         raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")
 
     for certificate in tx_loaded.get("certificates") or []:
-        certificate_name = list(certificate.keys())[0]
-        certificate_fields = set(list(certificate.values())[0].keys())
+        certificate_name = next(iter(certificate.keys()))
+        certificate_fields = set(next(iter(certificate.values())).keys())
 
         if CERTIFICATES_INFORMATION.get(certificate_name) and not certificate_fields.issubset(
             CERTIFICATES_INFORMATION[certificate_name]

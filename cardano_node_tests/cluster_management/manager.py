@@ -248,9 +248,9 @@ class ClusterManager:
                 f.unlink()
 
             # remove file that indicates that a test is running on the worker
-            list(self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*_{self.worker_id}"))[0].unlink(
-                missing_ok=True
-            )
+            next(
+                iter(self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*_{self.worker_id}"))
+            ).unlink(missing_ok=True)
 
             # log names of tests that keep running on the cluster instance
             tnames = [
