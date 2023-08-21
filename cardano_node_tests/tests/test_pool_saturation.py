@@ -469,7 +469,7 @@ class TestPoolSaturation:
                         )
                     except clusterlib.CLIError as exc:
                         if "(WithdrawalsNotInRewardsDELEGS" in str(exc):
-                            raise Exception(
+                            raise Exception(  # pylint: disable=broad-exception-raised
                                 "Withdrawal likely happened at epoch boundary and the reward "
                                 "amounts no longer match"
                             ) from exc
