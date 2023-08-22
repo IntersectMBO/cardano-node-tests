@@ -269,6 +269,9 @@ for i in $(seq 1 $NUM_BFT_NODES); do
   echo "$BFT_PORT" > "$STATE_CLUSTER/nodes/node-bft$i/port"
 done
 
+KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.json")"
+
 for i in $(seq 1 "$NUM_POOLS"); do
   mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
   mv "$STATE_CLUSTER/create_staked/pools/cold$i.skey" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey"
@@ -311,12 +314,14 @@ for i in $(seq 1 "$NUM_POOLS"); do
   cardano_cli_log stake-address registration-certificate \
     --conway-era \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
 
   # stake reward address registration cert
   cardano_cli_log stake-address registration-certificate \
     --conway-era \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
 
   # stake address delegation certs
@@ -483,8 +488,7 @@ cardano_cli_log query protocol-parameters \
   --out-file "$STATE_CLUSTER/pparams.json"
 
 TXIN_ADDR="$(<"$STATE_CLUSTER"/shelley/genesis-utxo.addr)"
-DEPOSITS="$(jq '2 * .protocolParams.keyDeposit' \
-  < "$STATE_CLUSTER/shelley/genesis.json")"
+DEPOSITS="$((KEY_DEPOSIT * 2))"
 NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
 FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE_BUFFER))"
@@ -516,7 +520,7 @@ for i in $(seq 1 "$NUM_POOLS"); do
 done
 
 cardano_cli_log transaction build-raw \
-  --babbage-era \
+  --conway-era \
   --fee    0 \
   "${TXINS[@]}" \
   --tx-out "$TXIN_ADDR+0" \
@@ -536,7 +540,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
 
 cardano_cli_log transaction build-raw \
-  --babbage-era \
+  --conway-era \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
