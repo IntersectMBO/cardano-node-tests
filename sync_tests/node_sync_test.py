@@ -166,14 +166,14 @@ def get_node_config_files(env, node_topology_type):
     else:
         download_config_file(env, 'topology.json')
 
-    if not utils.cli_has(f"{CLI} governance create-poll"):
-        Path('conway-genesis.json').unlink(missing_ok=True)
-        with open('config.json', 'r') as f:
-            lines = f.readlines()
-        with open('config.json', 'w') as f:
-            for line in lines:
-                if 'ConwayGenesis' not in line.strip("\n"):
-                    f.write(line)    
+    #if not utils.cli_has(f"{CLI} governance create-poll"):
+    #    Path('conway-genesis.json').unlink(missing_ok=True)
+    #    with open('config.json', 'r') as f:
+    #        lines = f.readlines()
+    #    with open('config.json', 'w') as f:
+    #        for line in lines:
+    #            if 'ConwayGenesis' not in line.strip("\n"):
+    #                f.write(line)    
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
 
