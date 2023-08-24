@@ -519,34 +519,6 @@ for i in $(seq 1 "$NUM_POOLS"); do
   )
 done
 
-cardano_cli_log transaction build-raw \
-  --conway-era \
-  --fee    0 \
-  "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+0" \
-  "${POOL_ARGS[@]}" \
-  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody"
-
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 3 \
-        --witness-count "$((5 * NUM_POOLS))" \
-        --byron-witness-count 0 \
-        --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody" |
-        cut -d' ' -f1)"
-
-TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
-
-cardano_cli_log transaction build-raw \
-  --conway-era \
-  --fee    "$FEE" \
-  "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
-  "${POOL_ARGS[@]}" \
-  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
-
 POOL_SIGNING=()
 for i in $(seq 1 "$NUM_POOLS"); do
   POOL_SIGNING+=( \
@@ -556,11 +528,22 @@ for i in $(seq 1 "$NUM_POOLS"); do
   )
 done
 
+WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + 1))"
+
+cardano_cli_log transaction build \
+  --conway-era \
+  "${TXINS[@]}" \
+  --change-address   "$TXIN_ADDR" \
+  "${POOL_ARGS[@]}" \
+  --witness-override "$WITNESS_COUNT" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
+
 cardano_cli_log transaction sign \
   "${POOL_SIGNING[@]}" \
-  --signing-key-file "$STATE_CLUSTER/shelley/genesis-utxo.skey" \
   "${GENESIS_SIGNING[@]}" \
   "${DELEGATE_SIGNING[@]}" \
+  --signing-key-file "$STATE_CLUSTER/shelley/genesis-utxo.skey" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
