@@ -576,6 +576,8 @@ for skey in "$STATE_CLUSTER"/shelley/delegate-keys/delegate?.skey; do
   DELEGATE_SIGNING+=("--signing-key-file" "$skey")
 done
 
+DELEGATE_WITNESS_COUNT="$((${#DELEGATE_SIGNING[@]} + 1))"
+
 FEE_BUFFER=100000000
 
 FAUCET_ADDR="$(<"$STATE_CLUSTER"/byron/address-000-converted)"
@@ -652,12 +654,23 @@ cardano_cli_log transaction build-raw \
   --update-proposal-file "$ALLEGRA_HF_PROPOSAL_FILE" \
   --out-file "${ALLEGRA_TX_BASE}-fee-tx.txbody"
 
+POOL_SIGNING=()
+for i in $(seq 1 "$NUM_POOLS"); do
+  POOL_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
+  )
+done
+
+WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + DELEGATE_WITNESS_COUNT))"
+
 FEE="$(cardano_cli_log transaction calculate-min-fee \
         --testnet-magic "$NETWORK_MAGIC" \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 3 \
-        --witness-count "$((5 * NUM_POOLS))" \
+        --witness-count "$WITNESS_COUNT" \
         --byron-witness-count 0 \
         --tx-body-file "${ALLEGRA_TX_BASE}-fee-tx.txbody" |
         cut -d' ' -f1)"
@@ -674,20 +687,11 @@ cardano_cli_log transaction build-raw \
   --update-proposal-file "$ALLEGRA_HF_PROPOSAL_FILE" \
   --out-file         "${ALLEGRA_TX_BASE}-tx.txbody"
 
-POOL_SIGNING=()
-for i in $(seq 1 "$NUM_POOLS"); do
-  POOL_SIGNING+=( \
-    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
-    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
-    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
-  )
-done
-
 cardano_cli_log transaction sign \
   "${POOL_SIGNING[@]}" \
-  --signing-key-file "$FAUCET_SKEY" \
   "${GENESIS_SIGNING[@]}" \
   "${DELEGATE_SIGNING[@]}" \
+  --signing-key-file "$FAUCET_SKEY" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --tx-body-file     "${ALLEGRA_TX_BASE}-tx.txbody" \
   --out-file         "${ALLEGRA_TX_BASE}-tx.tx"
@@ -757,7 +761,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 1 \
-        --witness-count 5 \
+        --witness-count "$DELEGATE_WITNESS_COUNT" \
         --byron-witness-count 0 \
         --tx-body-file "${MARY_HF_PROPOSAL}-fee-tx.txbody" |
         cut -d' ' -f1)"
@@ -840,7 +844,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 1 \
-        --witness-count 5 \
+        --witness-count "$DELEGATE_WITNESS_COUNT" \
         --byron-witness-count 0 \
         --tx-body-file "${ALONZO_UPDATE_PROPOSAL}-fee-tx.txbody" |
         cut -d' ' -f1)"
@@ -924,7 +928,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 1 \
-        --witness-count 5 \
+        --witness-count "$DELEGATE_WITNESS_COUNT" \
         --byron-witness-count 0 \
         --tx-body-file "${ALONZO_UPDATE_PROPOSAL_PV6}-fee-tx.txbody" |
         cut -d' ' -f1)"
@@ -1024,7 +1028,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 1 \
-        --witness-count 5 \
+        --witness-count "$DELEGATE_WITNESS_COUNT" \
         --byron-witness-count 0 \
         --tx-body-file "${BABBAGE_UPDATE_PROPOSAL}-fee-tx.txbody" |
         cut -d' ' -f1)"
@@ -1108,7 +1112,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 1 \
-        --witness-count 5 \
+        --witness-count "$DELEGATE_WITNESS_COUNT" \
         --byron-witness-count 0 \
         --tx-body-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-fee-tx.txbody" |
         cut -d' ' -f1)"
@@ -1202,7 +1206,7 @@ FEE="$(cardano_cli_log transaction calculate-min-fee \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 1 \
-        --witness-count 5 \
+        --witness-count "$DELEGATE_WITNESS_COUNT" \
         --byron-witness-count 0 \
         --tx-body-file "${CONWAY_UPDATE_PROPOSAL}-fee-tx.txbody" |
         cut -d' ' -f1)"

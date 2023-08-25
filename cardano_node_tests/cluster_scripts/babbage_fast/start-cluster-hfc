@@ -564,12 +564,23 @@ cardano_cli_log transaction build-raw \
   "${POOL_ARGS[@]}" \
   --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody"
 
+POOL_SIGNING=()
+for i in $(seq 1 "$NUM_POOLS"); do
+  POOL_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
+  )
+done
+
+WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + 1))"
+
 FEE="$(cardano_cli_log transaction calculate-min-fee \
         --testnet-magic "$NETWORK_MAGIC" \
         --protocol-params-file "$STATE_CLUSTER"/pparams.json \
         --tx-in-count 1 \
         --tx-out-count 3 \
-        --witness-count "$((5 * NUM_POOLS))" \
+        --witness-count "$WITNESS_COUNT" \
         --byron-witness-count 0 \
         --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody" |
         cut -d' ' -f1)"
@@ -584,20 +595,11 @@ cardano_cli_log transaction build-raw \
   "${POOL_ARGS[@]}" \
   --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
 
-POOL_SIGNING=()
-for i in $(seq 1 "$NUM_POOLS"); do
-  POOL_SIGNING+=( \
-    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
-    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
-    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
-  )
-done
-
 cardano_cli_log transaction sign \
   "${POOL_SIGNING[@]}" \
-  --signing-key-file "$STATE_CLUSTER/shelley/genesis-utxo.skey" \
   "${GENESIS_SIGNING[@]}" \
   "${DELEGATE_SIGNING[@]}" \
+  --signing-key-file "$STATE_CLUSTER/shelley/genesis-utxo.skey" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
