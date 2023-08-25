@@ -93,6 +93,9 @@ else:
 
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 
+# cluster instances are kept running after tests finish
+KEEP_CLUSTERS_RUNNING = bool(os.environ.get("KEEP_CLUSTERS_RUNNING"))
+
 # determine what scripts to use to start the cluster
 SCRIPTS_DIRNAME = os.environ.get("SCRIPTS_DIRNAME") or ""
 if SCRIPTS_DIRNAME:
