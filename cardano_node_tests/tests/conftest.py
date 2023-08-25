@@ -191,11 +191,19 @@ def close_dbconn() -> tp.Generator[None, None, None]:
     dbsync_conn.close_all()
 
 
-def _stop_all_cluster_instances(worker_id: str, pytest_config: Config) -> None:
+def _save_all_cluster_instances_artifacts(
+    cluster_manager_obj: cluster_management.ClusterManager,
+) -> None:
+    """Save artifacts of all cluster instances after all tests are finished."""
+    cluster_manager_obj.log("running `_save_all_cluster_instances_artifacts`")
+
+    # stop all cluster instances
+    with helpers.ignore_interrupt():
+        cluster_manager_obj.save_all_clusters_artifacts()
+
+
+def _stop_all_cluster_instances(cluster_manager_obj: cluster_management.ClusterManager) -> None:
     """Stop all cluster instances after all tests are finished."""
-    cluster_manager_obj = cluster_management.ClusterManager(
-        worker_id=worker_id, pytest_config=pytest_config
-    )
     cluster_manager_obj.log("running `_stop_all_cluster_instances`")
 
     # stop all cluster instances
@@ -273,12 +281,12 @@ def testenv_setup_teardown(
                 if artifacts_base_dir:
                     state_dir = cluster_nodes.get_cluster_env().state_dir
                     artifacts.save_cluster_artifacts(save_dir=pytest_root_tmp, state_dir=state_dir)
+            elif configuration.KEEP_CLUSTERS_RUNNING:
+                # Keep cluster instances running. Stopping them would need to be handled manually.
+                _save_all_cluster_instances_artifacts(cluster_manager_obj=cluster_manager_obj)
             else:
-                # Stop all cluster instances, save artifacts
-                _stop_all_cluster_instances(
-                    worker_id=worker_id,
-                    pytest_config=request.config,
-                )
+                _save_all_cluster_instances_artifacts(cluster_manager_obj=cluster_manager_obj)
+                _stop_all_cluster_instances(cluster_manager_obj=cluster_manager_obj)
 
             # Copy collected artifacts to dir specified by `--artifacts-base-dir`
             artifacts.copy_artifacts(pytest_tmp_dir=pytest_root_tmp, pytest_config=request.config)

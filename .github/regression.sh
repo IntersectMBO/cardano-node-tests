@@ -70,9 +70,9 @@ case "${CARDANO_CLI_REV:-""}" in
 esac
 
 if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
-  export ENABLE_P2P="true"
+  export ENABLE_P2P=1
 elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
-  export MIXED_P2P="true"
+  export MIXED_P2P=1
   export NUM_POOLS="${NUM_POOLS:-4}"
 fi
 
@@ -142,6 +142,18 @@ mv .reports/testrun-report.* ./
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
 . .github/grep_errors.sh
+
+# Don't stop cluster instances just yet if KEEP_CLUSTERS_RUNNING is set to 1.
+# After any key is pressed, resume this script and stop all running cluster instances.
+if [ "${KEEP_CLUSTERS_RUNNING:-""}" = 1 ]; then
+  sets="$-"
+  set +x
+  echo
+  echo "KEEP_CLUSTERS_RUNNING is set, leaving clusters running until any key is pressed."
+  echo "Press any key to continue..."
+  read -r
+  set -"$sets"
+fi
 
 # stop all running cluster instances
 stop_instances "$WORKDIR"

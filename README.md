@@ -55,6 +55,8 @@ The execution can be configured using env variables described in the section bel
 * `DB_BACKEND` – 'mem' or 'lmdb', default is 'mem' (or legacy) backend if unset (default: unset)
 * `SCRIPTS_DIRNAME` – path to a dir with local cluster start/stop scripts and configuration files (default: unset)
 * `BOOTSTRAP_DIR` – path to a bootstrap dir for the given testnet (genesis files, config files, faucet data) (default: unset)
+* `KEEP_CLUSTERS_RUNNING` – don't stop cluster instances after testrun is finished
+  (WARNING: this implies interactive behavior when running tests using the `./.github/regression.sh` script)
 
 When running tests using the `./.github/regression.sh` script, you can also use
 

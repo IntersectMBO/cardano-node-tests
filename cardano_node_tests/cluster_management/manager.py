@@ -121,6 +121,53 @@ class ClusterManager:
 
             artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.pytest_config)
 
+    def _is_valid_cluster_instance(self, work_dir: pl.Path, instance_num: int) -> bool:
+        """Check if cluster instance is valid."""
+        state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}{instance_num}"
+        instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
+        cluster_stopped = (instance_dir / common.CLUSTER_STOPPED_FILE).exists()
+        cluster_started_or_dead = (instance_dir / common.CLUSTER_RUNNING_FILE).exists() or (
+            instance_dir / common.CLUSTER_DEAD_FILE
+        ).exists()
+
+        if cluster_stopped or not cluster_started_or_dead:
+            self.log(f"c{instance_num}: cluster instance not running")
+            return False
+
+        if not state_dir.exists():
+            self.log(f"c{instance_num}: cluster instance state dir '{state_dir}' doesn't exist")
+            return False
+
+        if not (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).exists():
+            self.log(f"c{instance_num}: cluster instance was not started by framework")
+            return False
+
+        return True
+
+    def save_all_clusters_artifacts(self) -> None:
+        """Save artifacts of all cluster instances."""
+        self.log("called `save_all_clusters_artifacts`")
+
+        if configuration.DEV_CLUSTER_RUNNING:
+            LOGGER.warning(
+                "Ignoring request to save all clusters artifacts as "
+                "'DEV_CLUSTER_RUNNING' is set."
+            )
+            return
+
+        work_dir = cluster_nodes.get_cluster_env().work_dir
+
+        for instance_num in range(self.num_of_instances):
+            state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}{instance_num}"
+            if not self._is_valid_cluster_instance(work_dir=work_dir, instance_num=instance_num):
+                continue
+
+            artifacts.save_start_script_coverage(
+                log_file=state_dir / common.CLUSTER_START_CMDS_LOG,
+                pytest_config=self.pytest_config,
+            )
+            artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
+
     def stop_all_clusters(self) -> None:
         """Stop all cluster instances."""
         self.log("called `stop_all_clusters`")
@@ -133,24 +180,8 @@ class ClusterManager:
         work_dir = cluster_nodes.get_cluster_env().work_dir
 
         for instance_num in range(self.num_of_instances):
-            instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
-            cluster_stopped = (instance_dir / common.CLUSTER_STOPPED_FILE).exists()
-            cluster_started_or_dead = (instance_dir / common.CLUSTER_RUNNING_FILE).exists() or (
-                instance_dir / common.CLUSTER_DEAD_FILE
-            ).exists()
-
-            if cluster_stopped or not cluster_started_or_dead:
-                self.log(f"c{instance_num}: cluster instance not running")
-                continue
-
             state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}{instance_num}"
-
-            if not state_dir.exists():
-                self.log(f"c{instance_num}: cluster instance state dir '{state_dir}' doesn't exist")
-                continue
-
-            if not (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).exists():
-                self.log(f"c{instance_num}: cluster instance was not started by framework")
+            if not self._is_valid_cluster_instance(work_dir=work_dir, instance_num=instance_num):
                 continue
 
             stop_script = state_dir / cluster_scripts.STOP_SCRIPT
@@ -164,14 +195,9 @@ class ClusterManager:
             except Exception as err:
                 self.log(f"c{instance_num}: failed to stop cluster:\n{err}")
 
-            artifacts.save_start_script_coverage(
-                log_file=state_dir / common.CLUSTER_START_CMDS_LOG,
-                pytest_config=self.pytest_config,
-            )
-            artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
-
             shutil.rmtree(state_dir, ignore_errors=True)
 
+            instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
             (instance_dir / common.CLUSTER_STOPPED_FILE).touch()
             self.log(f"c{instance_num}: stopped cluster instance")
 
