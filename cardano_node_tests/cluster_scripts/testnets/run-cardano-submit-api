@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
 
 testnet_magic="$(<./state-cluster%%INSTANCE_NUM%%/db-relay1/protocolMagicId)"
 

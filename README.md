@@ -157,7 +157,7 @@ When running tests, the testing framework starts and stops cluster instances as 
 1. start the cluster instance in development mode
 
     ```sh
-    <destination dir>/babbage_fast/start-cluster-hfc
+    <destination dir>/babbage_fast/start-cluster
     ```
 
 After the cluster starts, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pool-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.

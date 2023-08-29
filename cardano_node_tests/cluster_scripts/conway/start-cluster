@@ -35,7 +35,7 @@ if [ -n "${MIXED_P2P:-""}" ]; then
 fi
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
-  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster-hfc\` first!" >&2
+  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster\` first!" >&2
   exit 1
 fi
 
@@ -133,7 +133,7 @@ mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync}
 cd "$STATE_CLUSTER/.."
 
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
-cp "$SCRIPT_DIR"/cardano-submit-api "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/run-cardano-submit-api" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/submit-api-config.json" "$STATE_CLUSTER"
@@ -173,7 +173,7 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:dbsync]
-command=$SCRIPT_DIR/run_dbsync.sh
+command=$SCRIPT_DIR/run-cardano-dbsync
 stderr_logfile=./$STATE_CLUSTER_NAME/dbsync.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/dbsync.stdout
 autostart=false
@@ -187,7 +187,7 @@ if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:submit_api]
-command=$SCRIPT_DIR/cardano-submit-api
+command=$SCRIPT_DIR/run-cardano-submit-api
 stderr_logfile=./$STATE_CLUSTER_NAME/submit_api.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/submit_api.stdout
 autostart=false
@@ -1253,4 +1253,4 @@ PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")
 [ "$PROTOCOL_VERSION" = 9 ] || { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
 fi
 
-echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster-hfc\` to stop"
+echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"

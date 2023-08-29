@@ -48,7 +48,7 @@ Running the db-sync
 * Start db-sync ONLY AFTER the node is fully synced:
 
     ```sh
-    ./run_dbsync.sh
+    ./run-cardano-dbsync
     ```
 
 * Wait until the db-syn is synced

@@ -213,7 +213,7 @@ class LocalScripts(ScriptsTypes):
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
 
-        start_script = destdir / "start-cluster-hfc"
+        start_script = destdir / "start-cluster"
         config_glob = "config-*.json"
         genesis_spec_json = destdir / "genesis.spec.json"
         assert start_script.exists() and genesis_spec_json.exists()
@@ -425,8 +425,8 @@ class LocalScripts(ScriptsTypes):
         """Prepare scripts files for starting and stopping cluster instance."""
         destdir = pl.Path(destdir).expanduser().resolve()
 
-        _start_script = start_script or configuration.SCRIPTS_DIR / "start-cluster-hfc"
-        _stop_script = stop_script or configuration.SCRIPTS_DIR / "stop-cluster-hfc"
+        _start_script = start_script or configuration.SCRIPTS_DIR / "start-cluster"
+        _stop_script = stop_script or configuration.SCRIPTS_DIR / "stop-cluster"
 
         start_script = pl.Path(_start_script).expanduser().resolve()
         stop_script = pl.Path(_stop_script).expanduser().resolve()

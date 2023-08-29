@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-choice() { i=$1; shift; eval "echo \${$((i + 1))}"; }
-
 if [ -e ./state-cluster%%INSTANCE_NUM%%/db_backend ]; then
   DB_BACKEND="$(<./state-cluster%%INSTANCE_NUM%%/db_backend)"
 fi
