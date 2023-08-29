@@ -151,10 +151,10 @@ Those files will be used by the script that will start our local cluster.
 After running the preparation script, a new directory with template files and scripts will be created:
 `cardano-node-tests/scripts/destination/dir`
 
-You can find there a `start-cluster-hfc` script that contains all the code that starts the local cluster.
+You can find there a `start-cluster` script that contains all the code that starts the local cluster.
 
 If you want, for example, to change the value of the decentralization parameter, just search for that keyword
-in the code of `start-cluster-hfc` and after finding the right place edit it:
+in the code of `start-cluster` and after finding the right place edit it:
 
 ```sh
 MARY_HF_PROPOSAL="$STATE_CLUSTER/shelley/update-proposal-mary.proposal"
@@ -201,7 +201,7 @@ Now export the location for `db-sync` so the test tool knows its location and ca
 
 Finally, we can start our local cluster with:
 
-`scripts/destination/dir/start-cluster-hfc`
+`scripts/destination/dir/start-cluster`
 
 The local cluster will start 3 stake pools and 1 BFT node.
 
@@ -212,7 +212,7 @@ with all the local cluster files:
 #### OUTPUT example
 
 ```sh
-[nix-shell:~/Projects/cardano-node-tests]$ scripts/destination/dir/start-cluster-hfc
+[nix-shell:~/Projects/cardano-node-tests]$ scripts/destination/dir/start-cluster
 Deleting db dbsync0
 NOTICE:  database "dbsync0" does not exist, skipping
 Setting up db dbsync0
@@ -246,7 +246,7 @@ nodes:pool1: started
 nodes:pool2: started
 nodes:pool3: started
 Waiting 187 sec for Alonzo era to start
-Cluster started. Run `/home/artur/Projects/cardano-node-tests/scripts/destination/dir/stop-cluster-hfc` to stop
+Cluster started. Run `/home/artur/Projects/cardano-node-tests/scripts/destination/dir/stop-cluster` to stop
 [18:50:12] (.env)
 ```
 
@@ -254,7 +254,7 @@ Cluster started. Run `/home/artur/Projects/cardano-node-tests/scripts/destinatio
 
 To stop the cluster, run the exact command that the last line suggests in the above log:
 
-`<scripts/destination/dir>/stop-cluster-hfc`
+`<scripts/destination/dir>/stop-cluster`
 
 ### Set the TX_Era
 

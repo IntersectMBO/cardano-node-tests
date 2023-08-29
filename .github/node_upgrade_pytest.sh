@@ -43,9 +43,9 @@ if [ "$1" = "step1" ]; then
     -d "$CLUSTER_SCRIPTS_DIR"
 
   # try to stop local cluster
-  "$CLUSTER_SCRIPTS_DIR/stop-cluster-hfc"
+  "$CLUSTER_SCRIPTS_DIR/stop-cluster"
   # start local cluster
-  "$CLUSTER_SCRIPTS_DIR/start-cluster-hfc" || exit 6
+  "$CLUSTER_SCRIPTS_DIR/start-cluster" || exit 6
 
   # backup the original cardano binaries
   ln -s "$(command -v cardano-node)" "$STEP1_BIN/cardano-node-step1"
@@ -67,7 +67,7 @@ if [ "$1" = "step1" ]; then
   retval="$?"
 
   # stop local cluster if tests failed unexpectedly
-  [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster-hfc"
+  [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # create results archive for step1
   ./.github/results.sh .
@@ -101,7 +101,7 @@ elif [ "$1" = "step2" ]; then
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_mixed/state-cluster0/bft1.socket" \
     MIXED_P2P=1 \
     DRY_RUN=1 \
-    "$CLUSTER_SCRIPTS_DIR/start-cluster-hfc"
+    "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
   # copy newly generated topology files to the cluster state dir
   cp -f "$WORKDIR"/dry_mixed/state-cluster0/topology-*.json "$STATE_CLUSTER"
@@ -230,7 +230,7 @@ elif [ "$1" = "step2" ]; then
   retval="$?"
 
   # stop local cluster if tests failed unexpectedly
-  [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster-hfc"
+  [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # create results archive for step2
   ./.github/results.sh .
@@ -257,7 +257,7 @@ elif [ "$1" = "step3" ]; then
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_p2p/state-cluster0/bft1.socket" \
     ENABLE_P2P=1 \
     DRY_RUN=1 \
-    "$CLUSTER_SCRIPTS_DIR/start-cluster-hfc"
+    "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
   # copy newly generated topology files to the cluster state dir
   cp -f "$WORKDIR"/dry_p2p/state-cluster0/topology-*.json "$STATE_CLUSTER"
@@ -340,7 +340,7 @@ elif [ "$1" = "step3" ]; then
 
 elif [ "$1" = "finish" ]; then
   # stop local cluster
-  "$CLUSTER_SCRIPTS_DIR/stop-cluster-hfc"
+  "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # generate CLI coverage reports
   ./.github/cli_coverage.sh .

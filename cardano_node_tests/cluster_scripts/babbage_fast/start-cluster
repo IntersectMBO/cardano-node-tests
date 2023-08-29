@@ -31,15 +31,16 @@ SECURITY_PARAM="$(jq '.securityParam' < "$SCRIPT_DIR/genesis.spec.json")"
 NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
 
-INIT_SUPPLY="$((MAX_SUPPLY / 4))"
-DELEG_SUPPLY="$((MAX_SUPPLY / 8))"
+# TODO: see https://github.com/input-output-hk/cardano-node/issues/4556
+INIT_SUPPLY="$((MAX_SUPPLY / 4))"  # in reality, it will be `INIT_SUPPLY * 1.8`
+DELEG_SUPPLY="$((MAX_SUPPLY / 8))" # in reality, it will be `DELEG_SUPPLY * 1.6`
 
 if [ -n "${MIXED_P2P:-""}" ]; then
   export ENABLE_P2P=1
 fi
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
-  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster-hfc\` first!" >&2
+  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster\` first!" >&2
   exit 1
 fi
 
@@ -72,11 +73,32 @@ cardano_cli_log() {
   return "$retval"
 }
 
-ENABLE_SUBMIT_API="$(type cardano-submit-api >/dev/null 2>&1 && echo 1 || echo 0)"
+enable_submit_api() {
+  type cardano-submit-api >/dev/null 2>&1 || return 1
+
+  # TODO: `--metrics-port` is not available in older cardano-node releases, see node issue #4280
+  # If the metrics port is not available, we can start the `cardano-submit-api` only on the first
+  # cluster instance.
+  [[ "$CARDANO_NODE_SOCKET_PATH" == */cluster0/* ]] && return 0
+  if cardano-submit-api --metrics-port 8081 2>&1 | { read -r i; [[ "$i" == *Invalid* ]]; }; then
+    return 1
+  fi
+
+  return 0
+}
+
+ENABLE_SUBMIT_API="$(enable_submit_api && echo 1 || echo 0)"
 
 if [ -e "$SCRIPT_DIR/shell_env" ]; then
   # shellcheck disable=SC1090,SC1091
   source "$SCRIPT_DIR/shell_env"
+fi
+
+
+CERT_ERA_ARG=("--babbage-era")
+if { cardano-cli stake-address registration-certificate --babbage-era 2>&1; true; } |\
+  { read -r i; [[ "$i" == *Invalid* ]]; }; then
+  CERT_ERA_ARG=()
 fi
 
 rm -rf "$STATE_CLUSTER"
@@ -84,7 +106,7 @@ mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync,create_staked}
 cd "$STATE_CLUSTER/.."
 
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
-cp "$SCRIPT_DIR"/cardano-submit-api "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/run-cardano-submit-api" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/byron-params.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/submit-api-config.json" "$STATE_CLUSTER"
@@ -124,7 +146,7 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:dbsync]
-command=$SCRIPT_DIR/run_dbsync.sh
+command=$SCRIPT_DIR/run-cardano-dbsync
 stderr_logfile=./$STATE_CLUSTER_NAME/dbsync.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/dbsync.stdout
 autostart=false
@@ -138,7 +160,7 @@ if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:submit_api]
-command=$SCRIPT_DIR/cardano-submit-api
+command=$SCRIPT_DIR/run-cardano-submit-api
 stderr_logfile=./$STATE_CLUSTER_NAME/submit_api.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/submit_api.stdout
 autostart=false
@@ -211,8 +233,16 @@ SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.json")"
 ALONZO_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
-CONWAY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
-  "$STATE_CLUSTER/shelley/genesis.conway.json")"
+
+CONWAY_GENESIS_HASH=""
+EXP_PROTOCOLS_KEY="TestEnableDevelopmentNetworkProtocols"
+
+# conway genesis is not present on node < 1.36.0
+if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
+  CONWAY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+    "$STATE_CLUSTER/shelley/genesis.conway.json")"
+  EXP_PROTOCOLS_KEY="ExperimentalProtocolsEnabled"
+fi
 
 for conf in "$SCRIPT_DIR"/config-*.json; do
   fname="${conf##*/}"
@@ -220,12 +250,23 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     --arg byron_hash "$BYRON_GENESIS_HASH" \
     --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
     --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
-    --arg conway_hash "$CONWAY_GENESIS_HASH" \
+    --arg exp_protocols_key "$EXP_PROTOCOLS_KEY" \
     '.ByronGenesisHash = $byron_hash
     | .ShelleyGenesisHash = $shelley_hash
     | .AlonzoGenesisHash = $alonzo_hash
-    | .ConwayGenesisHash = $conway_hash' \
+    | .[$exp_protocols_key] = true' \
     "$conf" > "$STATE_CLUSTER/$fname"
+
+  if [ -n "$CONWAY_GENESIS_HASH" ]; then
+    CONWAY_GENESIS_HASH="${CONWAY_GENESIS_HASH:-"$(cardano_cli_log genesis hash --genesis \
+      "$STATE_CLUSTER/shelley/genesis.conway.json")"}"
+    jq \
+      --arg conway_hash "$CONWAY_GENESIS_HASH" \
+      '.ConwayGenesisFile = "shelley/genesis.conway.json" | .ConwayGenesisHash = $conway_hash' \
+      "$STATE_CLUSTER/$fname" > "$STATE_CLUSTER/${fname}_jq"
+    cat "$STATE_CLUSTER/${fname}_jq" > "$STATE_CLUSTER/$fname"
+    rm -f "$STATE_CLUSTER/${fname}_jq"
+  fi
 
   # enable P2P
   if [ -n "${ENABLE_P2P:-""}" ]; then
@@ -269,9 +310,6 @@ for i in $(seq 1 $NUM_BFT_NODES); do
   echo "$BFT_PORT" > "$STATE_CLUSTER/nodes/node-bft$i/port"
 done
 
-KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
-  < "$STATE_CLUSTER/shelley/genesis.json")"
-
 for i in $(seq 1 "$NUM_POOLS"); do
   mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
   mv "$STATE_CLUSTER/create_staked/pools/cold$i.skey" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey"
@@ -312,21 +350,19 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
   #   stake address registration cert
   cardano_cli_log stake-address registration-certificate \
-    --conway-era \
+    "${CERT_ERA_ARG[@]}" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
-    --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
 
   # stake reward address registration cert
   cardano_cli_log stake-address registration-certificate \
-    --conway-era \
+    "${CERT_ERA_ARG[@]}" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
-    --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
 
   # stake address delegation certs
   cardano_cli_log stake-address delegation-certificate \
-    --conway-era \
+    "${CERT_ERA_ARG[@]}" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
@@ -366,7 +402,7 @@ EoF
   echo $POOL_PLEDGE > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
 
   cardano_cli_log stake-pool registration-certificate \
-    --conway-era \
+    "${CERT_ERA_ARG[@]}" \
     --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --vrf-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
     --pool-pledge "$POOL_PLEDGE" \
@@ -451,7 +487,7 @@ done
 
 
 #
-# In Conway era
+# In Babbage era
 #
 
 
@@ -488,7 +524,8 @@ cardano_cli_log query protocol-parameters \
   --out-file "$STATE_CLUSTER/pparams.json"
 
 TXIN_ADDR="$(<"$STATE_CLUSTER"/shelley/genesis-utxo.addr)"
-DEPOSITS="$((KEY_DEPOSIT * 2))"
+DEPOSITS="$(jq '2 * .protocolParams.keyDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.json")"
 NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
 FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE_BUFFER))"
@@ -519,6 +556,14 @@ for i in $(seq 1 "$NUM_POOLS"); do
   )
 done
 
+cardano_cli_log transaction build-raw \
+  --babbage-era \
+  --fee    0 \
+  "${TXINS[@]}" \
+  --tx-out "$TXIN_ADDR+0" \
+  "${POOL_ARGS[@]}" \
+  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody"
+
 POOL_SIGNING=()
 for i in $(seq 1 "$NUM_POOLS"); do
   POOL_SIGNING+=( \
@@ -530,14 +575,25 @@ done
 
 WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + 1))"
 
-cardano_cli_log transaction build \
-  --conway-era \
+FEE="$(cardano_cli_log transaction calculate-min-fee \
+        --testnet-magic "$NETWORK_MAGIC" \
+        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
+        --tx-in-count 1 \
+        --tx-out-count 3 \
+        --witness-count "$WITNESS_COUNT" \
+        --byron-witness-count 0 \
+        --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody" |
+        cut -d' ' -f1)"
+
+TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
+
+cardano_cli_log transaction build-raw \
+  --babbage-era \
+  --fee    "$FEE" \
   "${TXINS[@]}" \
-  --change-address   "$TXIN_ADDR" \
+  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
   "${POOL_ARGS[@]}" \
-  --witness-override "$WITNESS_COUNT" \
-  --testnet-magic    "$NETWORK_MAGIC" \
-  --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
+  --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
 
 cardano_cli_log transaction sign \
   "${POOL_SIGNING[@]}" \
@@ -573,4 +629,4 @@ if [ "$query_spend_success" -eq 0 ]; then
   exit 1
 fi
 
-echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster-hfc\` to stop"
+echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
