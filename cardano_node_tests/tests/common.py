@@ -7,6 +7,7 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import pytest_utils
@@ -220,3 +221,24 @@ def fail_on_fork(
         # the local cluster needs to be respun before it is usable again
         cluster_manager.set_needs_respin()
         raise AssertionError("\n".join(err_msg))
+
+
+def match_blocker(func: tp.Callable) -> tp.Any:
+    """Fail or Xfail the test if CLI error is raised."""
+    try:
+        ret = func()
+    except clusterlib.CLIError as exc:
+        str_exc = str(exc)
+
+        if (
+            " transaction build " in str_exc
+            and "fromConsensusQueryResult: internal query mismatch" in str_exc
+            and "--certificate-file" in str_exc
+        ):
+            blockers.GH(
+                issue=268, repo="input-output-hk/cardano-cli", message="internal query mismatch"
+            ).finish_test()
+
+        raise
+
+    return ret
