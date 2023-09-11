@@ -134,13 +134,17 @@ class TestRegisterAddr:
         )
 
         if use_build_cmd:
-            tx_raw_output_dereg = cluster.g_transaction.build_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_dereg",
-                tx_files=tx_files_dereg,
-                fee_buffer=2_000_000,
-                witness_override=len(tx_files_dereg.signing_key_files),
-            )
+
+            def _build_dereg():
+                cluster.g_transaction.build_tx(
+                    src_address=user_payment.address,
+                    tx_name=f"{temp_template}_dereg",
+                    tx_files=tx_files_dereg,
+                    fee_buffer=2_000_000,
+                    witness_override=len(tx_files_dereg.signing_key_files),
+                )
+
+            tx_raw_output_dereg: clusterlib.TxRawOutput = common.match_blocker(func=_build_dereg)
             tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output_dereg.out_file,
                 signing_key_files=tx_files_dereg.signing_key_files,
@@ -439,13 +443,17 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
-                tx_raw_output = cluster.g_transaction.build_tx(
-                    src_address=user_payment.address,
-                    tx_name=f"{temp_template}_dereg_fail",
-                    tx_files=tx_files,
-                    fee_buffer=2_000_000,
-                    witness_override=len(tx_files.signing_key_files),
-                )
+
+                def _build_dereg():
+                    cluster.g_transaction.build_tx(
+                        src_address=user_payment.address,
+                        tx_name=f"{temp_template}_dereg_fail",
+                        tx_files=tx_files,
+                        fee_buffer=2_000_000,
+                        witness_override=len(tx_files.signing_key_files),
+                    )
+
+                tx_raw_output: clusterlib.TxRawOutput = common.match_blocker(func=_build_dereg)
                 tx_signed = cluster.g_transaction.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,

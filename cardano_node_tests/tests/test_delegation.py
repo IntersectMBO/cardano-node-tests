@@ -803,12 +803,18 @@ class TestDelegateAddr:
         )
 
         if use_build_cmd:
-            tx_raw_output_deleg = cluster.g_transaction.build_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_deleg_dereg",
-                tx_files=tx_files,
-                fee_buffer=2_000_000,
-                witness_override=len(tx_files.signing_key_files),
+
+            def _build_deleg_dereg():
+                cluster.g_transaction.build_tx(
+                    src_address=user_payment.address,
+                    tx_name=f"{temp_template}_deleg_dereg",
+                    tx_files=tx_files,
+                    fee_buffer=2_000_000,
+                    witness_override=len(tx_files.signing_key_files),
+                )
+
+            tx_raw_output_deleg: clusterlib.TxRawOutput = common.match_blocker(
+                func=_build_deleg_dereg
             )
             tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output_deleg.out_file,
