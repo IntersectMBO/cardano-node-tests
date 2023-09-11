@@ -7,7 +7,7 @@ repos:
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
     language_version: python3
 - repo: https://github.com/ambv/black
-  rev: 23.7.0
+  rev: 23.9.1
   hooks:
   - id: black
     args: [--safe, --quiet]
@@ -27,7 +27,7 @@ repos:
   - id: debug-statements
     language_version: python3
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.285
+  rev: v0.0.287
   hooks:
     - id: ruff
 - repo: https://github.com/shellcheck-py/shellcheck-py
@@ -35,11 +35,11 @@ repos:
   hooks:
   - id: shellcheck
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.35.0
+  rev: v0.36.0
   hooks:
   - id: markdownlint
 - repo: https://github.com/rstcheck/rstcheck
-  rev: v6.1.2
+  rev: v6.2.0
   hooks:
   - id: rstcheck
     additional_dependencies: [sphinx, toml]

@@ -837,11 +837,7 @@ class ClusterGetter:
                 # try all existing cluster instances; randomize the order
                 for instance_num in random.sample(available_instances, k=self.num_of_instances):
                     # if instance to run the test on was already decided, skip all other instances
-                    # pylint: disable=consider-using-in
-                    if (
-                        cget_status.selected_instance != -1
-                        and instance_num != cget_status.selected_instance
-                    ):
+                    if cget_status.selected_instance not in (-1, instance_num):
                         continue
 
                     cget_status.instance_num = instance_num
