@@ -449,4 +449,10 @@ def create_script_context_w_blockers(
             blockers.GH(
                 issue=1078, repo="input-output-hk/plutus-apps", message="TextEnvelopeTypeError"
             ).finish_test()
+        if "PlutusScriptV1 custom redeemer not wired up" in str(err):
+            blockers.GH(
+                issue=1107,
+                repo="input-output-hk/plutus-apps",
+                message="PlutusScriptV1 custom redeemer",
+            ).finish_test()
         raise
