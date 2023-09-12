@@ -1,5 +1,6 @@
 """Tests for reference scripts while spending with Plutus V2 using `transaction build`."""
 import logging
+import pathlib as pl
 import typing as tp
 
 import allure
@@ -1138,7 +1139,7 @@ class TestNegativeReferenceScripts:
             cluster_obj=cluster,
             payment_addr=payment_addrs[0],
             dst_addr=byron_addr,
-            script_file=plutus_op.script_file,
+            script_file=pl.Path(plutus_op.script_file),
             amount=2_000_000,
         )
         assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"

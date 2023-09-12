@@ -57,6 +57,112 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @common.PARAM_PLUTUS_VERSION
+    def test_wrong_script(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_version: str,
+    ):
+        """Test spending the locked UTxO while using wrong Plutus script.
+
+        Expect failure.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx output with a datum hash at the script address
+        * try to spend the locked UTxO while using wrong Plutus script
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME[plutus_version].script_file,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
+            execution_cost=plutus_common.GUESSING_GAME[plutus_version].execution_cost,
+        )
+        plutus_op2 = plutus_op._replace(  # pylint: disable=no-member
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
+        )
+
+        script_utxos, collateral_utxos, __ = spend_build._build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            spend_build._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op2,
+                amount=2_000_000,
+            )
+        err_str = str(excinfo.value)
+        assert "points to a Plutus script that does not exist" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @common.PARAM_PLUTUS_VERSION
+    def test_no_script(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_version: str,
+    ):
+        """Test spending the locked UTxO while passing no Plutus script.
+
+        Expect failure.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * create a Tx output with a datum hash at the script address
+        * try to spend the locked UTxO using while passing no Plutus script
+        * check that the expected error was raised
+        * (optional) check transactions in db-sync
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+
+        plutus_op = plutus_common.PlutusOp(
+            script_file=plutus_common.GUESSING_GAME[plutus_version].script_file,
+            datum_file=plutus_common.DATUM_42_TYPED,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
+            execution_cost=plutus_common.GUESSING_GAME[plutus_version].execution_cost,
+        )
+        plutus_op2 = plutus_op._replace(script_file="")  # pylint: disable=no-member
+
+        script_utxos, collateral_utxos, __ = spend_build._build_fund_script(
+            temp_template=temp_template,
+            cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
+            dst_addr=payment_addrs[1],
+            plutus_op=plutus_op,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            spend_build._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
+                dst_addr=payment_addrs[1],
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op2,
+                amount=2_000_000,
+            )
+        err_str = str(excinfo.value)
+        assert "(MissingScriptWitnessesUTXOW" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    @common.PARAM_PLUTUS_VERSION
     def test_collateral_w_tokens(
         self,
         cluster: clusterlib.ClusterLib,
