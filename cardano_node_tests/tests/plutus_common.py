@@ -167,7 +167,7 @@ MINTING_PLUTUS = {
 
 
 class PlutusOp(tp.NamedTuple):
-    script_file: pl.Path
+    script_file: ttypes.FileType
     datum_file: tp.Optional[pl.Path] = None
     datum_cbor_file: tp.Optional[pl.Path] = None
     datum_value: tp.Optional[str] = None
