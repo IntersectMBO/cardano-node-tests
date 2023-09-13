@@ -20,7 +20,7 @@ jobs:
     steps:
 
       - name: Checkout cardano-db-sync Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: input-output-hk/cardano-db-sync
           path: cardano-db-sync
