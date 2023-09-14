@@ -1,5 +1,6 @@
 """Utilities that extends the functionality of `cardano-clusterlib`."""
 # pylint: disable=abstract-class-instantiated
+import base64
 import contextlib
 import itertools
 import json
@@ -1195,3 +1196,15 @@ def gen_byron_addr(
     )
 
     return clusterlib.AddressRecord(address=address, vkey_file=vkey_file, skey_file=skey_file)
+
+
+def get_plutus_b64(script_file: ttypes.FileType) -> str:
+    """Get base64 encoded binary version of Plutus script from file."""
+    with open(script_file, encoding="utf-8") as fp_in:
+        script_str = json.load(fp_in)
+
+    script_cbor_hex = script_str["cborHex"]
+    script_bytes = bytes.fromhex(script_cbor_hex)
+    script_cbor_bytes = cbor2.loads(script_bytes)
+    script_base64 = base64.b64encode(script_cbor_bytes).decode()
+    return script_base64
