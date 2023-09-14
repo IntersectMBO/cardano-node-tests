@@ -12,6 +12,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_raw
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -861,7 +862,16 @@ class TestNegativeReferenceScripts:
             )
         err_str = str(excinfo.value)
         script2_hash = helpers.decode_bech32(bech32=script_address_2)[2:]
-        assert rf"ScriptHash \"{script2_hash}\") fails" in str(excinfo.value) in err_str, err_str
+
+        if rf"ScriptHash \"{script2_hash}\") fails" not in err_str:
+            # Try matching the error message with base64 encoded binary script instead
+            script2_base64 = clusterlib_utils.get_plutus_b64(script_file=plutus_op2.script_file)
+            assert rf"script failed:\n\"{script2_base64}\"" in err_str, err_str
+            blockers.GH(
+                issue=3731,
+                repo="input-output-hk/cardano-ledger",
+                message="base64 encoded binary script",
+            ).finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

@@ -16,6 +16,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_raw
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -500,7 +501,6 @@ class TestNegative:
         script_address2 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr2", payment_script_file=plutus_op2.script_file
         )
-        script2_hash = helpers.decode_bech32(bech32=script_address2)[2:]
         redeem_cost2 = plutus_common.compute_cost(
             execution_cost=plutus_op2.execution_cost, protocol_params=protocol_params
         )
@@ -600,9 +600,18 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
-
         err_str = str(excinfo.value)
-        assert rf"ScriptHash \"{script2_hash}\") fails" in err_str, err_str
+        script2_hash = helpers.decode_bech32(bech32=script_address2)[2:]
+
+        if rf"ScriptHash \"{script2_hash}\") fails" not in err_str:
+            # Try matching the error message with base64 encoded binary script instead
+            script2_base64 = clusterlib_utils.get_plutus_b64(script_file=plutus_op2.script_file)
+            assert rf"script failed:\n\"{script2_base64}\"" in err_str, err_str
+            blockers.GH(
+                issue=3731,
+                repo="input-output-hk/cardano-ledger",
+                message="base64 encoded binary script",
+            ).finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(data=st.data())
