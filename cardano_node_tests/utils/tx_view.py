@@ -16,28 +16,44 @@ LOGGER = logging.getLogger(__name__)
 
 CERTIFICATES_INFORMATION = {
     "genesis key delegation": {"VRF key hash", "delegate key hash", "genesis key hash"},
-    "MIR": {"pot", "target stake addresses", "send to treasury", "send to reserves"},
+    "MIR": {
+        "pot",
+        "target stake addresses",
+        "send to treasury",
+        "send to reserves",
+        "MIR amount",  # node 8.3.0+
+    },
     "stake address deregistration": {
         "stake credential key hash",
         "stake credential script hash",
+        "key hash",  # node 8.3.0+
     },
-    "stake address registration": {"stake credential key hash", "stake credential script hash"},
+    "stake address registration": {
+        "stake credential key hash",
+        "stake credential script hash",
+        "key hash",  # node 8.3.0+
+    },
     "stake address delegation": {
         "pool",
         "stake credential key hash",
         "stake credential script hash",
+        "key hash",  # node 8.3.0+
     },
     "stake pool retirement": {"epoch", "pool"},
     "stake pool registration": {
         "VRF key hash",
+        "vrf",  # node 8.3.0+
         "cost",
         "margin",
         "metadata",
         "owners (stake key hashes)",
+        "owners",  # node 8.3.0+
         "pledge",
         "pool",
         "relays",
         "reward account",
+        "rewardAccount",  # node 8.3.0+
+        "publicKey",  # node 8.3.0+
     },
 }
 
@@ -307,13 +323,13 @@ def check_tx_view(  # noqa: C901
     for certificate in tx_loaded.get("certificates") or []:
         certificate_name = next(iter(certificate.keys()))
         certificate_fields = set(next(iter(certificate.values())).keys())
+        certificate_golden = CERTIFICATES_INFORMATION.get(certificate_name)
+        certificate_diff = certificate_golden and certificate_fields.difference(certificate_golden)
 
-        if CERTIFICATES_INFORMATION.get(certificate_name) and not certificate_fields.issubset(
-            CERTIFICATES_INFORMATION[certificate_name]
-        ):
+        if certificate_diff:
             raise AssertionError(
-                f"The output of the certificate '{certificate_name}' doesn't have "
-                "the expected fields"
+                f"The output of the certificate '{certificate_name}' has unexpected fields:\n"
+                f"{certificate_diff}"
             )
 
     # load and check transaction era
