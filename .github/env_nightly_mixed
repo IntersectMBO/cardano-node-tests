@@ -1,3 +1,4 @@
 CLUSTER_ERA=babbage
 MIXED_P2P=true
 NUM_POOLS=4
+CARDANO_CLI_REV=main

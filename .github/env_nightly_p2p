@@ -1,3 +1,4 @@
 CLUSTER_ERA=babbage
 TX_ERA=babbage
 ENABLE_P2P=true
+CARDANO_CLI_REV=main
