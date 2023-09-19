@@ -1208,3 +1208,49 @@ def get_plutus_b64(script_file: ttypes.FileType) -> str:
     script_cbor_bytes = cbor2.loads(script_bytes)
     script_base64 = base64.b64encode(script_cbor_bytes).decode()
     return script_base64
+
+
+def get_snapshot_rec(ledger_snapshot: dict) -> tp.Dict[str, tp.Union[int, list]]:
+    """Get uniform record for ledger state snapshot."""
+    hashes: tp.Dict[str, tp.Union[int, list]] = {}
+
+    for r in ledger_snapshot:
+        r_hash_rec = r[0]
+        # In node 8.3+ the format is not list of dicts, but a dict like
+        # {'keyhash-12d36d11cd0e570dde3c87360d4fb6074a1925e08a1a55513d7f7641': 1500000, ...}
+        if r_hash_rec == "k":
+            r_hash = r.split("-")[1]
+            r_value = ledger_snapshot[r]
+        else:
+            r_hash = r_hash_rec.get("script hash") or r_hash_rec.get("key hash")
+            r_value = r[1]
+
+        if r_hash in hashes:
+            hashes[r_hash] += r_value
+        else:
+            hashes[r_hash] = r_value
+
+    return hashes
+
+
+def get_snapshot_delegations(ledger_snapshot: dict) -> tp.Dict[str, tp.List[str]]:
+    """Get delegations data from ledger state snapshot."""
+    delegations: tp.Dict[str, tp.List[str]] = {}
+
+    for r in ledger_snapshot:
+        r_hash_rec = r[0]
+        # In node 8.3+ the format is not list of dicts, but dict like
+        # {'keyhash-12d36d11cd0e570dde3c87360d4fb6074a1925e08a1a55513d7f7641': POOL_ID, ...}
+        if r_hash_rec == "k":
+            r_hash = r.split("-")[1]
+            r_pool_id = ledger_snapshot[r]
+        else:
+            r_hash = r_hash_rec.get("script hash") or r_hash_rec.get("key hash")
+            r_pool_id = r[1]
+
+        if r_pool_id in delegations:
+            delegations[r_pool_id].append(r_hash)
+        else:
+            delegations[r_pool_id] = [r_hash]
+
+    return delegations

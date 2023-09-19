@@ -65,26 +65,15 @@ class TestLedgerState:
         es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
 
         def _get_hashes(snapshot: str) -> tp.Dict[str, int]:
-            hashes: tp.Dict[str, int] = {}
-            for r in es_snapshot[snapshot]["stake"]:
-                r_hash_rec = r[0]
-                r_hash = r_hash_rec.get("script hash") or r_hash_rec.get("key hash")
-                if r_hash in hashes:
-                    hashes[r_hash] += r[1]
-                else:
-                    hashes[r_hash] = r[1]
+            hashes: dict = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot[snapshot]["stake"]
+            )
             return hashes
 
         def _get_delegations(snapshot: str) -> tp.Dict[str, tp.List[str]]:
-            delegations: tp.Dict[str, tp.List[str]] = {}
-            for r in es_snapshot[snapshot]["delegations"]:
-                r_hash_rec = r[0]
-                r_hash = r_hash_rec.get("script hash") or r_hash_rec.get("key hash")
-                r_pool_id = r[1]
-                if r_pool_id in delegations:
-                    delegations[r_pool_id].append(r_hash)
-                else:
-                    delegations[r_pool_id] = [r_hash]
+            delegations: dict = clusterlib_utils.get_snapshot_delegations(
+                ledger_snapshot=es_snapshot[snapshot]["delegations"]
+            )
             return delegations
 
         errors = []
