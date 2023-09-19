@@ -135,8 +135,8 @@ class TestRegisterAddr:
 
         if use_build_cmd:
 
-            def _build_dereg():
-                cluster.g_transaction.build_tx(
+            def _build_dereg() -> clusterlib.TxRawOutput:
+                return cluster.g_transaction.build_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_dereg",
                     tx_files=tx_files_dereg,
@@ -444,8 +444,8 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
 
-                def _build_dereg():
-                    cluster.g_transaction.build_tx(
+                def _build_dereg() -> clusterlib.TxRawOutput:
+                    return cluster.g_transaction.build_tx(
                         src_address=user_payment.address,
                         tx_name=f"{temp_template}_dereg_fail",
                         tx_files=tx_files,

@@ -804,8 +804,8 @@ class TestDelegateAddr:
 
         if use_build_cmd:
 
-            def _build_deleg_dereg():
-                cluster.g_transaction.build_tx(
+            def _build_deleg_dereg() -> clusterlib.TxRawOutput:
+                return cluster.g_transaction.build_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_deleg_dereg",
                     tx_files=tx_files,
