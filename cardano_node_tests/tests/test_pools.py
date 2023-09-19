@@ -463,7 +463,7 @@ def _create_register_pool_delegate_stake_tx(
     if use_build_cmd:
         tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
-            tx_name=temp_template,
+            tx_name=f"{temp_template}_reg_deleg",
             tx_files=tx_files,
             fee_buffer=2_000_000,
             witness_override=len(pool_owners) * 3,
@@ -471,12 +471,12 @@ def _create_register_pool_delegate_stake_tx(
         tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=temp_template,
+            tx_name=f"{temp_template}_reg_deleg",
         )
         cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
     else:
         tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address, tx_name=temp_template, tx_files=tx_files
+            src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
         )
 
     # deregister stake pool
@@ -488,7 +488,7 @@ def _create_register_pool_delegate_stake_tx(
                 cold_key_pair=node_cold,
                 epoch=cluster_obj.g_query.get_epoch() + depoch,
                 pool_name=pool_data.pool_name,
-                tx_name=temp_template,
+                tx_name=f"{temp_template}_dereg",
             )
 
     if request is not None:
@@ -583,7 +583,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     if use_build_cmd:
         tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
-            tx_name=temp_template,
+            tx_name=f"{temp_template}_reg_deleg",
             tx_files=tx_files,
             fee_buffer=2_000_000,
             witness_override=len(pool_owners) * 3,
@@ -591,12 +591,12 @@ def _create_register_pool_tx_delegate_stake_tx(
         tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=temp_template,
+            tx_name=f"{temp_template}_reg_deleg",
         )
         cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
     else:
         tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address, tx_name=temp_template, tx_files=tx_files
+            src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
         )
 
     # check that the balance for source address was correctly updated
