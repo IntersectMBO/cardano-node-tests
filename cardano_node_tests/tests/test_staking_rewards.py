@@ -213,46 +213,21 @@ def _dbsync_check_rewards(
     return reward_db_record
 
 
-def _get_rec_hash(rec: tp.List[dict]):
-    """Get credential hash (key or script) from record."""
-    # make it fail when neither key nor script hash is present
-    return rec[0].get("key hash") or rec[0]["script hash"]
-
-
-def _get_cred_hashes(rec: dict) -> tp.List[str]:
-    """Get credential hashes in ledger state snapshot record."""
-    return [_get_rec_hash(r) for r in rec]
-
-
-def _get_val_for_cred_hash(key_hash: str, rec: list) -> tp.Any:
-    """Get value for credential hash in ledger state snapshot record."""
-    for r in rec:
-        if _get_rec_hash(r) == key_hash:
-            return r[1]
-    return None
-
-
-def _get_rew_amount_for_cred_hash(key_hash: str, rec: list) -> int:
+def _get_rew_amount_for_cred_hash(key_hash: str, rec: tp.Dict[str, tp.List[dict]]) -> int:
     """Get reward amount for credential hash in ledger state snapshot record."""
-    for r in rec:
-        if _get_rec_hash(r) != key_hash:
-            continue
-        rew_amount = 0
-        for sr in r[1]:
-            rew_amount += sr["rewardAmount"]
-        return rew_amount
-    return 0
+    r = rec.get(key_hash) or []
+    rew_amount = 0
+    for sr in r:
+        rew_amount += sr["rewardAmount"]
+    return rew_amount
 
 
-def _get_rew_type_for_cred_hash(key_hash: str, rec: list) -> tp.List[str]:
+def _get_rew_type_for_cred_hash(key_hash: str, rec: tp.Dict[str, tp.List[dict]]) -> tp.List[str]:
     """Get reward types for credential hash in ledger state snapshot record."""
     rew_types = []
-    for r in rec:
-        if _get_rec_hash(r) != key_hash:
-            continue
-        for sr in r[1]:
-            rew_types.append(sr["rewardType"])
-        return rew_types
+    r = rec.get(key_hash) or []
+    for sr in r[1]:
+        rew_types.append(sr["rewardType"])
     return rew_types
 
 
@@ -452,7 +427,9 @@ class TestRewards:
                 ledger_state=ledger_state,
             )
             es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
-            rs_record: list = ledger_state["possibleRewardUpdate"]["rs"]
+            rs_record = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=ledger_state["possibleRewardUpdate"]["rs"]
+            )
             rs_records[this_epoch] = rs_record
 
             # Make sure reward amount corresponds with ledger state.
@@ -469,9 +446,15 @@ class TestRewards:
                     pool_reward_addr_dec, prev_rs_record
                 )
 
-            pstake_mark = _get_cred_hashes(es_snapshot["pstakeMark"]["stake"])
-            pstake_set = _get_cred_hashes(es_snapshot["pstakeSet"]["stake"])
-            pstake_go = _get_cred_hashes(es_snapshot["pstakeGo"]["stake"])
+            pstake_mark = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeMark"]["stake"]
+            )
+            pstake_set = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeSet"]["stake"]
+            )
+            pstake_go = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeGo"]["stake"]
+            )
 
             if this_epoch == init_epoch + 1:
                 assert pool_stake_addr_dec in pstake_mark
@@ -482,24 +465,15 @@ class TestRewards:
                 assert user_stake_addr_dec not in pstake_go
 
                 # make sure ledger state and actual stake correspond
-                assert (
-                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == user_rewards[-1].stake_total
-                )
+                assert pstake_mark[user_stake_addr_dec] == user_rewards[-1].stake_total
 
             if this_epoch == init_epoch + 2:
                 assert user_stake_addr_dec in pstake_mark
                 assert user_stake_addr_dec in pstake_set
                 assert user_stake_addr_dec not in pstake_go
 
-                assert (
-                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == user_rewards[-1].stake_total
-                )
-                assert (
-                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == user_rewards[-2].stake_total
-                )
+                assert pstake_mark[user_stake_addr_dec] == user_rewards[-1].stake_total
+                assert pstake_set[user_stake_addr_dec] == user_rewards[-2].stake_total
 
             if this_epoch >= init_epoch + 2:
                 assert pool_stake_addr_dec in pstake_mark
@@ -511,18 +485,9 @@ class TestRewards:
                 assert user_stake_addr_dec in pstake_set
                 assert user_stake_addr_dec in pstake_go
 
-                assert (
-                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == user_rewards[-1].stake_total
-                )
-                assert (
-                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == user_rewards[-2].stake_total
-                )
-                assert (
-                    _get_val_for_cred_hash(user_stake_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == user_rewards[-3].stake_total
-                )
+                assert pstake_mark[user_stake_addr_dec] == user_rewards[-1].stake_total
+                assert pstake_set[user_stake_addr_dec] == user_rewards[-2].stake_total
+                assert pstake_go[user_stake_addr_dec] == user_rewards[-3].stake_total
 
         LOGGER.info("Checking rewards for 9 epochs.")
         for __ in range(9):
@@ -724,7 +689,9 @@ class TestRewards:
                 ledger_state=ledger_state,
             )
             es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
-            rs_record: list = ledger_state["possibleRewardUpdate"]["rs"]
+            rs_record: tp.Dict[str, tp.Any] = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=ledger_state["possibleRewardUpdate"]["rs"]
+            )
             rs_records[this_epoch] = rs_record
 
             # Make sure reward amount corresponds with ledger state.
@@ -740,9 +707,15 @@ class TestRewards:
                     prev_recorded_reward + mir_reward,
                 )
 
-            pstake_mark = _get_cred_hashes(es_snapshot["pstakeMark"]["stake"])
-            pstake_set = _get_cred_hashes(es_snapshot["pstakeSet"]["stake"])
-            pstake_go = _get_cred_hashes(es_snapshot["pstakeGo"]["stake"])
+            pstake_mark = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeMark"]["stake"]
+            )
+            pstake_set = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeSet"]["stake"]
+            )
+            pstake_go = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeGo"]["stake"]
+            )
 
             if this_epoch == init_epoch + 1:
                 assert reward_addr_dec in pstake_mark
@@ -750,66 +723,39 @@ class TestRewards:
                 assert reward_addr_dec not in pstake_go
 
                 # make sure ledger state and actual stake correspond
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == reward_records[-1].reward_total
-                )
+                assert pstake_mark[reward_addr_dec] == reward_records[-1].reward_total
 
             if this_epoch == init_epoch + 2:
                 assert reward_addr_dec in pstake_mark
                 assert reward_addr_dec in pstake_set
                 assert reward_addr_dec not in pstake_go
 
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == reward_records[-1].reward_total
-                )
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == reward_records[-2].reward_total
-                )
+                assert pstake_mark[reward_addr_dec] == reward_records[-1].reward_total
+                assert pstake_mark[reward_addr_dec] == reward_records[-2].reward_total
 
             if init_epoch + 3 <= this_epoch <= init_epoch + 5:
                 assert reward_addr_dec in pstake_mark
                 assert reward_addr_dec in pstake_set
                 assert reward_addr_dec in pstake_go
 
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == reward_records[-1].reward_total
-                )
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == reward_records[-2].reward_total
-                )
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == reward_records[-3].reward_total
-                )
+                assert pstake_mark[reward_addr_dec] == reward_records[-1].reward_total
+                assert pstake_set[reward_addr_dec] == reward_records[-2].reward_total
+                assert pstake_go[reward_addr_dec] == reward_records[-3].reward_total
 
             if this_epoch == init_epoch + 6:
                 assert reward_addr_dec not in pstake_mark
                 assert reward_addr_dec in pstake_set
                 assert reward_addr_dec in pstake_go
 
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == reward_records[-2].reward_total
-                )
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == reward_records[-3].reward_total
-                )
+                assert pstake_set[reward_addr_dec] == reward_records[-2].reward_total
+                assert pstake_go[reward_addr_dec] == reward_records[-3].reward_total
 
             if this_epoch == init_epoch + 7:
                 assert reward_addr_dec not in pstake_mark
                 assert reward_addr_dec not in pstake_set
                 assert reward_addr_dec in pstake_go
 
-                assert (
-                    _get_val_for_cred_hash(reward_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == reward_records[-3].reward_total
-                )
+                assert pstake_go[reward_addr_dec] == reward_records[-3].reward_total
 
             if this_epoch > init_epoch + 7:
                 assert reward_addr_dec not in pstake_mark
@@ -1503,7 +1449,9 @@ class TestRewards:
                 ledger_state=ledger_state,
             )
             es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
-            rs_record: list = ledger_state["possibleRewardUpdate"]["rs"]
+            rs_record = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=ledger_state["possibleRewardUpdate"]["rs"]
+            )
             rs_records[this_epoch] = rs_record
 
             # Make sure reward amount corresponds with ledger state.
@@ -1515,9 +1463,15 @@ class TestRewards:
                     stake_addr_dec, prev_rs_record
                 )
 
-            pstake_mark = _get_cred_hashes(es_snapshot["pstakeMark"]["stake"])
-            pstake_set = _get_cred_hashes(es_snapshot["pstakeSet"]["stake"])
-            pstake_go = _get_cred_hashes(es_snapshot["pstakeGo"]["stake"])
+            pstake_mark = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeMark"]["stake"]
+            )
+            pstake_set = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeSet"]["stake"]
+            )
+            pstake_go = clusterlib_utils.get_snapshot_rec(
+                ledger_snapshot=es_snapshot["pstakeGo"]["stake"]
+            )
 
             if this_epoch == init_epoch + 1:
                 assert stake_addr_dec in pstake_mark
@@ -1525,42 +1479,24 @@ class TestRewards:
                 assert stake_addr_dec not in pstake_go
 
                 # make sure ledger state and actual stake correspond
-                assert (
-                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == reward_records[-1].stake_total
-                )
+                assert pstake_mark[stake_addr_dec] == reward_records[-1].stake_total
 
             if this_epoch == init_epoch + 2:
                 assert stake_addr_dec in pstake_mark
                 assert stake_addr_dec in pstake_set
                 assert stake_addr_dec not in pstake_go
 
-                assert (
-                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == reward_records[-1].stake_total
-                )
-                assert (
-                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == reward_records[-2].stake_total
-                )
+                assert pstake_mark[stake_addr_dec] == reward_records[-1].stake_total
+                assert pstake_set[stake_addr_dec] == reward_records[-2].stake_total
 
             if this_epoch >= init_epoch + 3:
                 assert stake_addr_dec in pstake_mark
                 assert stake_addr_dec in pstake_set
                 assert stake_addr_dec in pstake_go
 
-                assert (
-                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeMark"]["stake"])
-                    == reward_records[-1].stake_total
-                )
-                assert (
-                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeSet"]["stake"])
-                    == reward_records[-2].stake_total
-                )
-                assert (
-                    _get_val_for_cred_hash(stake_addr_dec, es_snapshot["pstakeGo"]["stake"])
-                    == reward_records[-3].stake_total
-                )
+                assert pstake_mark[stake_addr_dec] == reward_records[-1].stake_total
+                assert pstake_set[stake_addr_dec] == reward_records[-2].stake_total
+                assert pstake_go[stake_addr_dec] == reward_records[-3].stake_total
 
         LOGGER.info("Checking rewards for 8 epochs.")
         withdrawal_past_epoch = False
