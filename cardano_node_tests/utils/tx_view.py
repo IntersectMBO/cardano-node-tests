@@ -37,7 +37,7 @@ CERTIFICATES_INFORMATION = {
         "pool",
         "stake credential key hash",
         "stake credential script hash",
-        "key hash",  # node 8.3.0+
+        "credential",  # node 8.3.0+
     },
     "stake pool retirement": {"epoch", "pool"},
     "stake pool registration": {
