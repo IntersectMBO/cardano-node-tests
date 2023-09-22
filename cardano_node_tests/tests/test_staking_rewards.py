@@ -224,9 +224,9 @@ def _get_rew_amount_for_cred_hash(key_hash: str, rec: tp.Dict[str, tp.List[dict]
 
 def _get_rew_type_for_cred_hash(key_hash: str, rec: tp.Dict[str, tp.List[dict]]) -> tp.List[str]:
     """Get reward types for credential hash in ledger state snapshot record."""
-    rew_types = []
     r = rec.get(key_hash) or []
-    for sr in r[1]:
+    rew_types = []
+    for sr in r:
         rew_types.append(sr["rewardType"])
     return rew_types
 
