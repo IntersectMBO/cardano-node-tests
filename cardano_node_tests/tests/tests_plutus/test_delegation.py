@@ -112,7 +112,7 @@ def pool_user(
         payment_addr_rec,
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=10_000_000_000,
+        amount=18_000_000_000,
     )
 
     return pool_user
@@ -828,4 +828,219 @@ class TestDelegateAddr:
         if tx_db_record and use_build_cmd:
             dbsync_utils.check_plutus_costs(
                 redeemer_records=tx_db_record.redeemers, cost_records=plutus_cost_deleg
+            )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
+    def test_register_delegate_deregister(
+        self,
+        cluster_lock_42stake: tp.Tuple[clusterlib.ClusterLib, str],
+        pool_user: delegation.PoolUserScript,
+        plutus_version: str,
+        use_build_cmd: bool,
+    ):
+        """Register, delegate and deregister Plutus script stake address.
+
+        The stake address registration and delegation happen in two separate transactions.
+
+        * submit registration certificate for a stake address
+        * delegate stake address to pool
+        * check that the stake address was delegated
+        * withdraw rewards to payment address and deregister stake address
+        * check that the key deposit was returned and rewards withdrawn
+        * check that the stake address is no longer delegated
+        * (optional) check records in db-sync
+        """
+        # pylint: disable=too-many-locals,too-many-statements
+        # It makes no sense to continue if following issues are still blocking the test
+        issues = [ISSUE_297, ISSUE_299]
+        if any(issue.is_blocked() for issue in issues):
+            blockers.finish_test(issues=issues)
+
+        cluster, pool_id = cluster_lock_42stake
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{plutus_version}"
+
+        collateral_fund_reg = 1_500_000_000
+        collateral_fund_deleg = 1_500_000_000
+        collateral_fund_withdraw = 1_500_000_000
+        collateral_fund_dereg = 1_500_000_000
+        reg_fund = 1_500_000_000
+        deleg_fund = 1_500_000_000
+        dereg_fund = 1_500_000_000
+
+        if cluster.g_query.get_stake_addr_info(pool_user.stake.address):
+            pytest.skip(
+                f"The Plutus script stake address '{pool_user.stake.address}' is already "
+                "registered, cannot continue."
+            )
+
+        # Step 1: create Tx inputs for step 2 and step 3
+        txouts_step1 = [
+            # For collateral
+            clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_reg),
+            clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_deleg),
+            clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_withdraw),
+            clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_dereg),
+            # For registration
+            clusterlib.TxOut(address=pool_user.payment.address, amount=reg_fund),
+            # For delegation
+            clusterlib.TxOut(address=pool_user.payment.address, amount=deleg_fund),
+            # For deregistration
+            clusterlib.TxOut(address=pool_user.payment.address, amount=dereg_fund),
+        ]
+
+        if plutus_version == "v2":
+            txouts_step1.append(
+                clusterlib.TxOut(
+                    address=pool_user.payment.address,
+                    amount=10_000_000,
+                    reference_script_file=plutus_common.STAKE_PLUTUS_V2,
+                )
+            )
+
+        tx_files_step1 = clusterlib.TxFiles(
+            signing_key_files=[pool_user.payment.skey_file],
+        )
+        tx_output_step1 = cluster.g_transaction.build_tx(
+            src_address=pool_user.payment.address,
+            tx_name=f"{temp_template}_step1",
+            tx_files=tx_files_step1,
+            txouts=txouts_step1,
+            fee_buffer=2_000_000,
+            # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
+            join_txouts=False,
+        )
+        tx_signed_step1 = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output_step1.out_file,
+            signing_key_files=tx_files_step1.signing_key_files,
+            tx_name=f"{temp_template}_step1",
+        )
+        cluster.g_transaction.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
+
+        step1_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step1)
+        utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
+            utxos=step1_utxos, txouts=tx_output_step1.txouts
+        )
+        collateral_reg = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset)
+        collateral_deleg = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 1)
+        collateral_withdraw = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 2)
+        collateral_dereg = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 3)
+        reg_utxos = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 4)
+        deleg_utxos = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 5)
+        dereg_utxos = clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 6)
+
+        reference_script_utxos = (
+            clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 7)
+            if plutus_version == "v2"
+            else None
+        )
+
+        # Step 2: register and delegate
+
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+        init_epoch = cluster.g_query.get_epoch()
+
+        # Register a stake address
+        tx_raw_output_reg, plutus_costs_reg = register_stake_addr(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            txins=reg_utxos,
+            collaterals=collateral_reg,
+            pool_user=pool_user,
+            redeemer_file=plutus_common.REDEEMER_42,
+            reference_script_utxos=reference_script_utxos,
+            use_build_cmd=use_build_cmd,
+        )
+
+        # Delegate a stake address
+        try:
+            (
+                tx_raw_output_deleg,
+                plutus_costs_deleg,
+            ) = delegate_stake_addr(
+                cluster_obj=cluster,
+                temp_template=temp_template,
+                txins=deleg_utxos,
+                collaterals=collateral_deleg,
+                pool_user=pool_user,
+                pool_id=pool_id,
+                redeemer_file=plutus_common.REDEEMER_42,
+                reference_script_utxos=reference_script_utxos,
+                use_build_cmd=use_build_cmd,
+            )
+
+            assert (
+                cluster.g_query.get_epoch() == init_epoch
+            ), "Delegation took longer than expected and would affect other checks"
+        finally:
+            # Cleanup on failure: deregister stake address if it was registered
+            if cluster.g_query.get_stake_addr_info(pool_user.stake.address):
+                deregister_stake_addr(
+                    cluster_obj=cluster,
+                    temp_template=temp_template,
+                    txins=dereg_utxos,
+                    collaterals=[*collateral_withdraw, *collateral_dereg],
+                    pool_user=pool_user,
+                    redeemer_file=plutus_common.REDEEMER_42,
+                    reference_script_utxos=reference_script_utxos,
+                    use_build_cmd=use_build_cmd,
+                )
+
+        tx_db_record_reg = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_reg
+        )
+        tx_db_record_deleg = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_deleg
+        )
+        delegation.db_check_delegation(
+            pool_user=pool_user,
+            db_record=tx_db_record_deleg,
+            deleg_epoch=init_epoch,
+            pool_id=pool_id,
+        )
+
+        # Step 3: withdraw rewards and deregister
+
+        reward_error = ""
+
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        if not cluster.g_query.get_stake_addr_info(pool_user.stake.address).reward_account_balance:
+            reward_error = f"User of pool '{pool_id}' hasn't received any rewards."
+
+        # Make sure we have enough time to finish deregistration in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        # Submit deregistration certificate and withdraw rewards
+        tx_raw_output_dereg, __ = deregister_stake_addr(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            txins=dereg_utxos,
+            collaterals=[*collateral_withdraw, *collateral_dereg],
+            pool_user=pool_user,
+            redeemer_file=plutus_common.REDEEMER_42,
+            reference_script_utxos=reference_script_utxos,
+            use_build_cmd=use_build_cmd,
+        )
+
+        if reward_error:
+            raise AssertionError(reward_error)
+
+        # Check tx_view of step 2 and step 3
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_reg)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_deleg)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_dereg)
+
+        # Compare cost of Plutus script with data from db-sync
+        if tx_db_record_reg and use_build_cmd:
+            dbsync_utils.check_plutus_costs(
+                redeemer_records=tx_db_record_reg.redeemers, cost_records=plutus_costs_reg
+            )
+        if tx_db_record_deleg and use_build_cmd:
+            dbsync_utils.check_plutus_costs(
+                redeemer_records=tx_db_record_deleg.redeemers, cost_records=plutus_costs_deleg
             )
