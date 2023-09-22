@@ -10,8 +10,8 @@ from cardano_node_tests.utils import helpers
 class Versions:
     """Cluster era, transaction era, node version info."""
 
-    LATEST_NODE_RELEASE_VER: tp.Final[version.Version] = version.parse("8.1.1")
-    LATEST_NODE_RELEASE_REV: tp.Final[str] = "6f79e5c3ea109a70cd01910368e011635767305a"
+    LATEST_NODE_RELEASE_VER: tp.Final[version.Version] = version.parse("8.1.2")
+    LATEST_NODE_RELEASE_REV: tp.Final[str] = "d2d90b48c5577b4412d5c9c9968b55f8ab4b9767"
     LATEST_DBSYNC_RELEASE_VER: tp.Final[version.Version] = version.parse("13.1.1.3")
 
     BYRON: tp.Final[int] = 1
