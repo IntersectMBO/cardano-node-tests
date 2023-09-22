@@ -18,6 +18,7 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -30,6 +31,17 @@ pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
+
+ISSUE_297 = blockers.GH(
+    issue=297,
+    repo="input-output-hk/cardano-cli",
+    message="Cannot delegate Plutus stake address",
+)
+ISSUE_299 = blockers.GH(
+    issue=299,
+    repo="input-output-hk/cardano-cli",
+    message="Cannot de-register Plutus stake address",
+)
 
 
 @pytest.fixture
@@ -95,7 +107,7 @@ def pool_user(
         ),
     )
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         payment_addr_rec,
         cluster_obj=cluster,
@@ -106,7 +118,7 @@ def pool_user(
     return pool_user
 
 
-def delegate_stake_addr(
+def register_delegate_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
     txins: tp.List[clusterlib.UTXOData],
@@ -118,12 +130,12 @@ def delegate_stake_addr(
     use_build_cmd: bool,
 ) -> tp.Tuple[clusterlib.TxRawOutput, tp.List[dict]]:
     """Submit registration certificate and delegate to pool."""
-    # create stake address registration cert
+    # Create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
         addr_name=f"{temp_template}_addr0", stake_script_file=pool_user.stake.script_file
     )
 
-    # create stake address delegation cert
+    # Create stake address delegation cert
     stake_addr_deleg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
         addr_name=f"{temp_template}_addr0",
         stake_script_file=pool_user.stake.script_file,
@@ -132,7 +144,7 @@ def delegate_stake_addr(
 
     src_init_balance = cluster_obj.g_query.get_address_balance(pool_user.payment.address)
 
-    # register stake address and delegate it to pool
+    # Register stake address and delegate it to pool
     reg_cert_script = clusterlib.ComplexCert(
         certificate_file=stake_addr_reg_cert_file,
     )
@@ -158,7 +170,7 @@ def delegate_stake_addr(
             fee_buffer=2_000_000,
             witness_override=len(tx_files.signing_key_files),
         )
-        # calculate cost of Plutus script
+        # Calculate cost of Plutus script
         plutus_costs = cluster_obj.g_transaction.calculate_plutus_script_cost(
             src_address=pool_user.payment.address,
             tx_name=f"{temp_template}_reg_deleg",
@@ -184,14 +196,14 @@ def delegate_stake_addr(
             fee=300_000,
         )
 
-    # check that the balance for source address was correctly updated
+    # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit()
     assert (
         cluster_obj.g_query.get_address_balance(pool_user.payment.address)
         == src_init_balance - deposit - tx_raw_output.fee
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
-    # check that the stake address was delegated
+    # Check that the stake address was delegated
     stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
     assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
     assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
@@ -215,13 +227,13 @@ def deregister_stake_addr(
         pool_user.stake.address
     ).reward_account_balance
 
-    # create stake address deregistration cert
+    # Create stake address deregistration cert
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
         addr_name=f"{temp_template}_addr0",
         stake_script_file=pool_user.stake.script_file,
     )
 
-    # withdraw rewards to payment address, deregister stake address
+    # Withdraw rewards to payment address, deregister stake address
     withdrawal_script = clusterlib.ScriptWithdrawal(
         txout=clusterlib.TxOut(address=pool_user.stake.address, amount=-1),
         script_file=pool_user.stake.script_file if not reference_script_utxos else "",
@@ -254,7 +266,7 @@ def deregister_stake_addr(
             script_withdrawals=[withdrawal_script],
             witness_override=len(tx_files.signing_key_files),
         )
-        # calculate cost of Plutus script
+        # Calculate cost of Plutus script
         plutus_costs = cluster_obj.g_transaction.calculate_plutus_script_cost(
             src_address=pool_user.payment.address,
             tx_name=f"{temp_template}_dereg_withdraw",
@@ -283,7 +295,7 @@ def deregister_stake_addr(
             fee=300_000,
         )
 
-    # check that the key deposit was returned and rewards withdrawn
+    # Check that the key deposit was returned and rewards withdrawn
     assert (
         cluster_obj.g_query.get_address_balance(pool_user.payment.address)
         == src_payment_balance
@@ -292,7 +304,7 @@ def deregister_stake_addr(
         + cluster_obj.g_query.get_address_deposit()
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
-    # check that the stake address is no longer delegated
+    # Check that the stake address is no longer delegated
     stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
     assert not stake_addr_info.delegation, f"Stake address is still delegated: {stake_addr_info}"
 
@@ -300,7 +312,7 @@ def deregister_stake_addr(
     if tx_db_dereg and use_build_cmd:
         assert pool_user.stake.address in tx_db_dereg.stake_deregistration
 
-        # compare cost of Plutus script with data from db-sync
+        # Compare cost of Plutus script with data from db-sync
 
         dbsync_utils.check_plutus_costs(
             redeemer_records=tx_db_dereg.redeemers, cost_records=plutus_costs
@@ -309,8 +321,8 @@ def deregister_stake_addr(
     return tx_raw_output, plutus_costs
 
 
-# don't run these tests on testnets as a stake address corresponding to the Plutus script
-# might be already in use
+# Don't run these tests on testnets as a stake address corresponding to the Plutus script
+# might be already in use.
 @pytest.mark.order(8)
 @common.SKIPIF_BUILD_UNUSABLE
 @common.PARAM_PLUTUS_VERSION
@@ -327,7 +339,9 @@ class TestDelegateAddr:
         plutus_version: str,
         use_build_cmd: bool,
     ):
-        """Delegate and deregister Plutus script stake address.
+        """Register, delegate and deregister Plutus script stake address.
+
+        The stake address registration and delegation happen in single transaction.
 
         * submit registration certificate and delegate stake address to pool
         * check that the stake address was delegated
@@ -336,7 +350,7 @@ class TestDelegateAddr:
         * check that the stake address is no longer delegated
         * (optional) check records in db-sync
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals,too-many-statements
         cluster, pool_id = cluster_lock_42stake
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{plutus_version}"
 
@@ -354,13 +368,13 @@ class TestDelegateAddr:
 
         # Step 1: create Tx inputs for step 2 and step 3
         txouts_step1 = [
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_deleg),
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_withdraw),
             clusterlib.TxOut(address=pool_user.payment.address, amount=collateral_fund_dereg),
-            # for delegation
+            # For delegation and registration
             clusterlib.TxOut(address=pool_user.payment.address, amount=deleg_fund),
-            # for deregistration
+            # For deregistration
             clusterlib.TxOut(address=pool_user.payment.address, amount=dereg_fund),
         ]
 
@@ -382,7 +396,7 @@ class TestDelegateAddr:
             tx_files=tx_files_step1,
             txouts=txouts_step1,
             fee_buffer=2_000_000,
-            # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+            # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
             join_txouts=False,
         )
         tx_signed_step1 = cluster.g_transaction.sign_tx(
@@ -415,18 +429,24 @@ class TestDelegateAddr:
         )
         init_epoch = cluster.g_query.get_epoch()
 
-        # submit registration certificate and delegate to pool
-        tx_raw_delegation_out, plutus_cost_deleg = delegate_stake_addr(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            txins=deleg_utxos,
-            collaterals=collateral_deleg,
-            pool_user=pool_user,
-            pool_id=pool_id,
-            redeemer_file=plutus_common.REDEEMER_42,
-            reference_script_utxos=reference_script_utxos,
-            use_build_cmd=use_build_cmd,
-        )
+        # Submit registration certificate and delegate to pool
+        try:
+            tx_raw_delegation_out, plutus_cost_deleg = register_delegate_stake_addr(
+                cluster_obj=cluster,
+                temp_template=temp_template,
+                txins=deleg_utxos,
+                collaterals=collateral_deleg,
+                pool_user=pool_user,
+                pool_id=pool_id,
+                redeemer_file=plutus_common.REDEEMER_42,
+                reference_script_utxos=reference_script_utxos,
+                use_build_cmd=use_build_cmd,
+            )
+        except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if "(MissingScriptWitnessesUTXOW" not in str_exc and "(MissingRedeemers" not in str_exc:
+                raise
+            ISSUE_297.finish_test()
 
         assert (
             cluster.g_query.get_epoch() == init_epoch
@@ -451,31 +471,36 @@ class TestDelegateAddr:
         if not cluster.g_query.get_stake_addr_info(pool_user.stake.address).reward_account_balance:
             reward_error = f"User of pool '{pool_id}' hasn't received any rewards."
 
-        # make sure we have enough time to finish deregistration in one epoch
+        # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
-        # submit deregistration certificate and withdraw rewards
-        tx_raw_deregister_out, __ = deregister_stake_addr(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            txins=dereg_utxos,
-            collaterals=[*collateral_withdraw, *collateral_dereg],
-            pool_user=pool_user,
-            redeemer_file=plutus_common.REDEEMER_42,
-            reference_script_utxos=reference_script_utxos,
-            use_build_cmd=use_build_cmd,
-        )
+        # Submit deregistration certificate and withdraw rewards
+        try:
+            tx_raw_deregister_out, __ = deregister_stake_addr(
+                cluster_obj=cluster,
+                temp_template=temp_template,
+                txins=dereg_utxos,
+                collaterals=[*collateral_withdraw, *collateral_dereg],
+                pool_user=pool_user,
+                redeemer_file=plutus_common.REDEEMER_42,
+                reference_script_utxos=reference_script_utxos,
+                use_build_cmd=use_build_cmd,
+            )
+        except clusterlib.CLIError as exc:
+            if "(MissingRedeemers" not in str(exc):
+                raise
+            ISSUE_299.finish_test()
 
         if reward_error:
             raise AssertionError(reward_error)
 
-        # check tx_view of step 2 and step 3
+        # Check tx_view of step 2 and step 3
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_delegation_out)
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_deregister_out)
 
-        # compare cost of Plutus script with data from db-sync
+        # Compare cost of Plutus script with data from db-sync
         if tx_db_record and use_build_cmd:
             dbsync_utils.check_plutus_costs(
                 redeemer_records=tx_db_record.redeemers, cost_records=plutus_cost_deleg
