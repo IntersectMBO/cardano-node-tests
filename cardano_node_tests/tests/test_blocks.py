@@ -12,6 +12,7 @@ import typing as tp
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -21,6 +22,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -123,6 +125,19 @@ class TestLeadershipSchedule:
             )
 
         if errors:
+            # Xfail if cardano-api GH-269 is still open
+            issue_269 = blockers.GH(
+                issue=269,
+                repo="input-output-hk/cardano-api",
+                message="Broken `nextEpochEligibleLeadershipSlots`",
+            )
+            if (
+                VERSIONS.node > version.parse("8.1.2")
+                and VERSIONS.cluster_era >= VERSIONS.BABBAGE
+                and issue_269.is_blocked()
+            ):
+                issue_269.finish_test()
+
             err_joined = "\n".join(errors)
             pytest.fail(f"Errors:\n{err_joined}")
 
