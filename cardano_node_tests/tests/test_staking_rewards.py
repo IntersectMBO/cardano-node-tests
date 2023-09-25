@@ -731,7 +731,7 @@ class TestRewards:
                 assert reward_addr_dec not in pstake_go
 
                 assert pstake_mark[reward_addr_dec] == reward_records[-1].reward_total
-                assert pstake_mark[reward_addr_dec] == reward_records[-2].reward_total
+                assert pstake_set[reward_addr_dec] == reward_records[-2].reward_total
 
             if init_epoch + 3 <= this_epoch <= init_epoch + 5:
                 assert reward_addr_dec in pstake_mark
