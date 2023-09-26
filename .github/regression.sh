@@ -51,12 +51,7 @@ case "${PLUTUS_APPS_REV:="main"}" in
     ;;
 esac
 
-# setup latest `cardano-cli` if we are testing latest cardano-node
-# TODO: setting to 'none' by default as a workaround; latest cardano-cli is not buildable
-: "${CARDANO_CLI_REV:="none"}"
-if [ -z "${CARDANO_CLI_REV:-""}" ] && [[ "${NODE_REV:-""}" = @(""|"master") ]]; then
-  CARDANO_CLI_REV="main"
-fi
+# setup cardano-cli (use the built-in version by default)
 case "${CARDANO_CLI_REV:-""}" in
   "" )
     ;;

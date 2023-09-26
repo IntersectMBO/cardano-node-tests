@@ -85,15 +85,6 @@ elif [ "$1" = "step2" ]; then
 
   export UPGRADE_TESTS_STEP=2
 
-  # setup latest `cardano-cli` if we are testing latest cardano-node
-  # TODO: skipping for now; latest cardano-cli is not buildable
-  if false && [ -z "${UPGRADE_REVISION:-""}" ]; then
-    export CARDANO_CLI_REV="main"
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_cardano_cli.sh
-    export PATH="$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
-  fi
-
   # add binaries saved in step1 to the PATH
   export PATH="${STEP1_BIN}:${PATH}"
 
