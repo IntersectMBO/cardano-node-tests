@@ -132,6 +132,13 @@ class GH:
 
     def _issue_is_blocked(self) -> bool:
         """Check if generic issue is blocked."""
+        # Assume that the issue is blocked if we are not supposed to check the issue on
+        # devel versions of node and we are running a devel version.
+        # This can be useful when the issue was fixed, but node master has not integrated the
+        # fixed version of the project yet.
+        if VERSIONS.node_is_devel and not self.check_on_devel:
+            return True
+
         # Assume that the issue is blocked if no Github token was provided and so the check
         # cannot be performed.
         if not self.gh_issue.TOKEN:
