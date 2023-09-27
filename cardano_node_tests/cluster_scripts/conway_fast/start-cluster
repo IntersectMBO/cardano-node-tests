@@ -530,8 +530,7 @@ done
 
 WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + 1))"
 
-cardano_cli_log transaction build \
-  --conway-era \
+cardano_cli_log conway transaction build \
   "${TXINS[@]}" \
   --change-address   "$TXIN_ADDR" \
   "${POOL_ARGS[@]}" \
