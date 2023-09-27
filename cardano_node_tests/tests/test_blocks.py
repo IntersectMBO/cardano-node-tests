@@ -130,6 +130,7 @@ class TestLeadershipSchedule:
                 issue=269,
                 repo="input-output-hk/cardano-api",
                 message="Broken `nextEpochEligibleLeadershipSlots`",
+                check_on_devel=False,
             )
             if (
                 VERSIONS.node > version.parse("8.1.2")
