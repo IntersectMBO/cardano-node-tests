@@ -10,6 +10,7 @@ import allure
 import pytest
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -114,7 +115,9 @@ def _check_pretty_utxo(
         tx_raw_output.txouts[0].coin,
         "+",
         "TxOutDatumHash",
-        f"ScriptDataIn{cluster_era}Era",
+        f"AlonzoEraOnwards{cluster_era}"
+        if VERSIONS.node > version.parse("8.1.2")
+        else f"ScriptDataIn{cluster_era}Era",
         f'"{datum_hash}"',
     ]
 
