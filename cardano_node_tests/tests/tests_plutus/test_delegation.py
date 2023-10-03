@@ -955,6 +955,7 @@ class TestDelegateAddr:
         )
 
         # Delegate a stake address
+        delegated = False
         try:
             (
                 tx_raw_output_deleg,
@@ -974,9 +975,11 @@ class TestDelegateAddr:
             assert (
                 cluster.g_query.get_epoch() == init_epoch
             ), "Delegation took longer than expected and would affect other checks"
+
+            delegated = True
         finally:
             # Cleanup on failure: deregister stake address if it was registered
-            if cluster.g_query.get_stake_addr_info(pool_user.stake.address):
+            if not delegated and cluster.g_query.get_stake_addr_info(pool_user.stake.address):
                 deregister_stake_addr(
                     cluster_obj=cluster,
                     temp_template=temp_template,
