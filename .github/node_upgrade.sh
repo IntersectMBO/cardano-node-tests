@@ -1,6 +1,11 @@
 #! /usr/bin/env -S nix develop --accept-flake-config .#base -c bash
 # shellcheck shell=bash
 
+# controlling environment variables:
+# BASE_TAR_URL - URL of a tarball with binaries for base revision
+# BASE_REVISION - revision of cardano-node to upgrade from (alternative to BASE_TAR_URL)
+# UPGRADE_REVISION - revision of cardano-node to upgrade to
+
 set -xeuo pipefail
 
 nix --version
@@ -37,13 +42,20 @@ mkdir -p "$COVERAGE_DIR"
 export SCHEDULING_LOG=scheduling.log
 true > "$SCHEDULING_LOG"
 
-BASE_REVISION="${BASE_REVISION:-8.1.1}"
-
 # shellcheck disable=SC1090,SC1091
 . .github/nix_override_cardano_node.sh
 
 # update cardano-node to specified revision
-NODE_OVERRIDE=$(node_override "$BASE_REVISION")
+# If BASE_TAR_URL is set, instead of using nix, download and extract binaries for base revision
+# from a published tarball to save disk space. We are running out of space on Github Actions
+# runners.
+if [ -z "${BASE_TAR_URL:-""}" ]; then
+  NODE_OVERRIDE=$(node_override "${BASE_REVISION:-8.1.2}")
+elif [ -n "${UPGRADE_REVISION:-""}" ]; then
+  NODE_OVERRIDE=$(node_override "$UPGRADE_REVISION")
+else
+  NODE_OVERRIDE=$(node_override)
+fi
 
 export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
 unset ENABLE_P2P MIXED_P2P
