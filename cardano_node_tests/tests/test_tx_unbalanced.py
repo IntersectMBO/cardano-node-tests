@@ -294,11 +294,12 @@ class TestUnbalanced:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    # TODO: `MIN_UTXO_VALUE - 10_000` because of issue
-    # https://github.com/input-output-hk/cardano-node/issues/4061
-    @hypothesis.given(amount=st.integers(min_value=0, max_value=tx_common.MIN_UTXO_VALUE - 10_000))
+    # See https://github.com/input-output-hk/cardano-node/issues/4061
+    @hypothesis.given(
+        amount=st.integers(min_value=0, max_value=tx_common.MIN_UTXO_VALUE[1] - 1_000)
+    )
     @hypothesis.example(amount=0)
-    @hypothesis.example(amount=tx_common.MIN_UTXO_VALUE - 10_000)
+    @hypothesis.example(amount=tx_common.MIN_UTXO_VALUE[1] - 1_000)
     @common.hypothesis_settings(max_examples=200)
     def test_build_transfer_amount_bellow_minimum(
         self,
@@ -353,11 +354,12 @@ class TestUnbalanced:
         )
 
     @allure.link(helpers.get_vcs_link())
-    # TODO: `MIN_UTXO_VALUE - 10_000` because of issue
-    # https://github.com/input-output-hk/cardano-node/issues/4061
-    @hypothesis.given(amount=st.integers(min_value=0, max_value=tx_common.MIN_UTXO_VALUE - 10_000))
+    # See https://github.com/input-output-hk/cardano-node/issues/4061
+    @hypothesis.given(
+        amount=st.integers(min_value=0, max_value=tx_common.MIN_UTXO_VALUE[1] - 1_000)
+    )
     @hypothesis.example(amount=0)
-    @hypothesis.example(amount=tx_common.MIN_UTXO_VALUE - 10_000)
+    @hypothesis.example(amount=tx_common.MIN_UTXO_VALUE[1] - 1_000)
     @common.hypothesis_settings(max_examples=400)
     def test_transfer_amount_bellow_minimum(
         self,

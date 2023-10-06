@@ -503,9 +503,9 @@ class TestBasicTransactions:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        # check min UTxO value
+        # Check min UTxO value
         min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=destinations)
-        assert min_value.value == tx_common.MIN_UTXO_VALUE
+        assert min_value.value in tx_common.MIN_UTXO_VALUE
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 

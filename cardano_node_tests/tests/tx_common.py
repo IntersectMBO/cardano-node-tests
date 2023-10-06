@@ -8,7 +8,9 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
-MIN_UTXO_VALUE = 857_690
+# Old value, new fixed value
+# See https://github.com/input-output-hk/cardano-node/issues/4061
+MIN_UTXO_VALUE = (857_690, 849_070)
 
 
 def get_raw_tx_values(
