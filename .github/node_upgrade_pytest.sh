@@ -106,16 +106,26 @@ elif [ "$1" = "step2" ]; then
   # add binaries saved in step1 to the PATH
   export PATH="${STEP1_BIN}:${PATH}"
 
-  # generate config and topology files for "mixed" mode
+  # generate config and topology files for the "mixed" mode
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_mixed/state-cluster0/bft1.socket" \
     MIXED_P2P=1 \
     DRY_RUN=1 \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
+  # hashes of old and new Conway genesis files
+  CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$WORKDIR/dry_mixed/state-cluster0/config-bft1.json")"
   CONWAY_GENESIS_STEP1_HASH=""
   if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
     CONWAY_GENESIS_STEP1_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   fi
+
+  # hashes of old and new Alonzo genesis files
+  ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$WORKDIR/dry_mixed/state-cluster0/config-bft1.json")"
+  ALONZO_GENESIS_STEP1_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+
+  # use the original genesis files
+  BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
 
   # copy newly generated topology files to the cluster state dir
   cp -f "$WORKDIR"/dry_mixed/state-cluster0/topology-*.json "$STATE_CLUSTER"
@@ -126,33 +136,26 @@ elif [ "$1" = "step2" ]; then
   # copy newly generated Conway genesis file to the cluster state dir
   cp -f "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley"
 
-  # copy newly generated config files to the cluster state dir, but use the original genesis files
-  BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$WORKDIR/dry_mixed/state-cluster0/config-bft1.json")"
-  # hashes of old and new Alonzo genesis files
-  ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$WORKDIR/dry_mixed/state-cluster0/config-bft1.json")"
-  ALONZO_GENESIS_STEP1_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-
+  # copy newly generated config files to the cluster state dir
   for conf in "$WORKDIR"/dry_mixed/state-cluster0/config-*.json; do
     fname="${conf##*/}"
 
     if [ "$fname" = "config-pool3.json" ]; then
-      # use old Alonzo genesis on pool3
+      # use old Alonzo and Conway genesis on pool3
       selected_alonzo_hash="$ALONZO_GENESIS_STEP1_HASH"
       selected_alonzo_file="shelley/genesis.alonzo-step1.json"
       selected_conway_hash="$CONWAY_GENESIS_STEP1_HASH"
       selected_conway_file="shelley/genesis.conway-step1.json"
     else
-      # use new Alonzo genesis on upgraded nodes
+      # use new Alonzo and Conway genesis on upgraded nodes
       selected_alonzo_hash="$ALONZO_GENESIS_HASH"
       selected_alonzo_file="shelley/genesis.alonzo.json"
       selected_conway_hash="$CONWAY_GENESIS_HASH"
       selected_conway_file="shelley/genesis.conway.json"
     fi
 
-    # If the base revision doesn't have conway genesis and the config file is for pool3,
-    # then don't add conway hash.
+    # If the base revision doesn't have Conway genesis and the config file is for pool3,
+    # then don't add Conway genesis records.
     if [[ "$fname" = "config-pool3.json" && "$selected_conway_hash" = "" ]]; then
       jq \
         --arg byron_hash "$BYRON_GENESIS_HASH" \
@@ -182,7 +185,7 @@ elif [ "$1" = "step2" ]; then
     fi
   done
 
-  # run the "pool3" with the original cardano-node binary
+  # run the pool3 with the original cardano-node binary
   cp -a "$STATE_CLUSTER/cardano-node-pool3" "$STATE_CLUSTER/cardano-node-pool3.orig"
   sed -i 's/cardano-node run/cardano-node-step1 run/' "$STATE_CLUSTER/cardano-node-pool3"
 
@@ -202,7 +205,13 @@ elif [ "$1" = "step2" ]; then
   pool3_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool3)"
   ls -l "/proc/$pool3_pid/exe"
 
-  # waiting for node to start
+  # check that nodes are running
+  if [ "$pool1_pid" = 0 ] || [ "$pool3_pid" = 0 ]; then
+    echo "Failed to start node" >&2
+    exit 6
+  fi
+
+  # waiting for node to fully start
   for _ in {1..10}; do
     if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
       break
@@ -297,6 +306,12 @@ elif [ "$1" = "step3" ]; then
   ls -l "/proc/$pool1_pid/exe"
   pool3_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool3)"
   ls -l "/proc/$pool3_pid/exe"
+
+  # check that nodes are running
+  if [ "$pool1_pid" = 0 ] || [ "$pool3_pid" = 0 ]; then
+    echo "Failed to start node" >&2
+    exit 6
+  fi
 
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
