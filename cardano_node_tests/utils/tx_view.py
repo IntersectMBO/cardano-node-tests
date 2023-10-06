@@ -28,12 +28,14 @@ CERTIFICATES_INFORMATION = {
         "stake credential script hash",
         "key hash",  # node 8.3.0+
         "script hash",  # node 8.3.0+
+        "keyHash",  # node 8.4.0+
     },
     "stake address registration": {
         "stake credential key hash",
         "stake credential script hash",
         "key hash",  # node 8.3.0+
         "script hash",  # node 8.3.0+
+        "keyHash",  # node 8.4.0+
     },
     "stake address delegation": {
         "pool",
