@@ -18,7 +18,7 @@ def get_raw_tx_values(
     dst_record: clusterlib.AddressRecord,
     for_build_command: bool = False,
 ) -> clusterlib.TxRawOutput:
-    """Get values for building raw TX using `clusterlib.build_raw_tx_bare`."""
+    """Get values for manually building Tx using `transaction build` or `transaction build-raw`."""
     src_address = src_record.address
     dst_address = dst_record.address
 
