@@ -513,9 +513,9 @@ class TestRegisterAddr:
         * (optional) check records in db-sync
         """
         # pylint: disable=too-many-locals
-        # It makes no sense to continue if the following issue is still blocking the test
-        if ISSUE_299.is_blocked():
-            ISSUE_299.finish_test()
+
+        # The test checks the following issues:
+        #  - cardano-cli 299: Cannot de-register Plutus script stake address
 
         __: tp.Any  # mypy workaround
         cluster, __ = cluster_lock_42stake
@@ -859,10 +859,10 @@ class TestDelegateAddr:
         * (optional) check records in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
-        # It makes no sense to continue if following issues are still blocking the test
-        issues = [ISSUE_297, ISSUE_299]
-        if any(issue.is_blocked() for issue in issues):
-            blockers.finish_test(issues=issues)
+
+        # The test checks the following issues:
+        #  - cardano-cli 297: Cannot delegate Plutus script stake address
+        #  - cardano-cli 299: Cannot de-register Plutus script stake address
 
         cluster, pool_id = cluster_lock_42stake
         temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{plutus_version}"
