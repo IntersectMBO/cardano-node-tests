@@ -768,7 +768,14 @@ class TestDelegateAddr:
             )
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
-            if "(MissingScriptWitnessesUTXOW" not in str_exc and "(MissingRedeemers" not in str_exc:
+            if not (
+                # Old cardano-cli 297 issue
+                "(MissingScriptWitnessesUTXOW" in str_exc
+                or "(MissingRedeemers" in str_exc
+                # New cardano-cli 297 issue
+                or "(ExtraRedeemers" in str_exc
+                or "points to a script hash that is not known" in str_exc
+            ):
                 raise
             ISSUE_297.finish_test()
 
