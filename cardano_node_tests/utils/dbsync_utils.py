@@ -663,7 +663,11 @@ def check_pool_data(  # noqa: C901
             f"Expected: {ledger_pool_data['margin']} vs Returned: {db_pool_data.margin}"
         )
 
-    ledger_reward_address = ledger_pool_data["rewardAccount"]["credential"]["key hash"]
+    ledger_reward_credential = ledger_pool_data["rewardAccount"]["credential"]
+    # The "KeyHash" is present in cardano-node >= 8.4.0
+    ledger_reward_address = (
+        ledger_reward_credential.get("key hash") or ledger_reward_credential["keyHash"]
+    )
     if ledger_reward_address != db_pool_data.reward_addr:
         errors_list.append(
             "'reward address' value is different than expected; "
