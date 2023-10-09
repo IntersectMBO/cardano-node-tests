@@ -1009,6 +1009,7 @@ class TestDelegateAddr:
             db_record=tx_db_record_deleg,
             deleg_epoch=init_epoch,
             pool_id=pool_id,
+            check_registration=False,
         )
 
         # Step 3: withdraw rewards and deregister
