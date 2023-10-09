@@ -19,6 +19,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
+from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -150,7 +151,7 @@ class TestBasicTransactions:
         return cluster_default
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_SUBMIT_METHOD
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.parametrize(
         "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
@@ -204,7 +205,7 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
-        if submit_method == "cli":
+        if submit_method == submit_utils.SubmitMethods.CLI:
             cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
         else:
             submit_api.submit_tx(
@@ -229,7 +230,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    @common.PARAM_SUBMIT_METHOD
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize(
         "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
     )
@@ -279,7 +280,7 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
-        if submit_method == "cli":
+        if submit_method == submit_utils.SubmitMethods.CLI:
             cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
         else:
             submit_api.submit_tx(cluster_obj=cluster, tx_file=tx_signed, txins=tx_output.txins)
@@ -407,7 +408,7 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_SUBMIT_METHOD
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_transfer_all_funds(
         self,
@@ -450,7 +451,7 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
-        if submit_method == "cli":
+        if submit_method == submit_utils.SubmitMethods.CLI:
             cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
         else:
             submit_api.submit_tx(

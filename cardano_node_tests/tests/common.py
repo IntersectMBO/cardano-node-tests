@@ -1,5 +1,4 @@
 import logging
-import shutil
 import time
 import typing as tp
 
@@ -88,24 +87,6 @@ PARAM_PLUTUS_VERSION = pytest.mark.parametrize(
         pytest.param("v2", marks=SKIPIF_PLUTUSV2_UNUSABLE),
     ),
     ids=("plutus_v1", "plutus_v2"),
-)
-
-
-# The "submit_method" is a fixtrue defined in `conftest.py`.
-PARAM_SUBMIT_METHOD = pytest.mark.parametrize(
-    "submit_method",
-    (
-        "cli",
-        pytest.param(
-            "api",
-            marks=pytest.mark.skipif(
-                not shutil.which("cardano-submit-api"),
-                reason="`cardano-submit-api` is not available",
-            ),
-        ),
-    ),
-    ids=("submit_cli", "submit_api"),
-    indirect=True,
 )
 
 
