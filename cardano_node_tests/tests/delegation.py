@@ -95,15 +95,18 @@ def db_check_delegation(
     db_record: tp.Optional[dbsync_types.TxRecord],
     deleg_epoch: int,
     pool_id: str,
+    check_registration: bool = True,
 ):
     """Check delegation in db-sync."""
     if not db_record:
         return
 
-    assert pool_user.stake.address in db_record.stake_registration
     assert pool_user.stake.address == db_record.stake_delegation[0].address
     assert db_record.stake_delegation[0].active_epoch_no == deleg_epoch + 2
     assert pool_id == db_record.stake_delegation[0].pool_id
+
+    if check_registration:
+        assert pool_user.stake.address in db_record.stake_registration
 
 
 def delegate_stake_addr(
