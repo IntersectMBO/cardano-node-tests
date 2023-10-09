@@ -166,6 +166,8 @@ class TestBasicTransactions:
         src_addr_type: str,
         dst_addr_type: str,
         amount: int,
+        submit_method: str,
+        request: FixtureRequest,
     ):
         """Send funds to payment address.
 
@@ -173,7 +175,7 @@ class TestBasicTransactions:
         * check expected balances for both source and destination addresses
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{src_addr_type}_{dst_addr_type}_{amount}"
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
 
         src_addr = byron_addrs[0] if src_addr_type == "byron" else payment_addrs[0]
         dst_addr = byron_addrs[1] if dst_addr_type == "byron" else payment_addrs[1]
@@ -181,13 +183,32 @@ class TestBasicTransactions:
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
-        tx_raw_output = cluster.g_transaction.send_tx(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_addr.address,
             tx_name=temp_template,
             txouts=destinations,
             tx_files=tx_files,
             witness_count_add=1 if src_addr_type == "byron" else 0,
         )
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
+            src_address=src_addr.address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+        )
+        out_file_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        if submit_method == "cli":
+            cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        else:
+            submit_api.submit_tx(
+                cluster_obj=cluster, tx_file=out_file_signed, txins=tx_raw_output.txins
+            )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
