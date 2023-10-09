@@ -9,6 +9,7 @@ import typing as tp
 import pytest
 from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
+from _pytest.fixtures import SubRequest
 from _pytest.tmpdir import TempPathFactory
 from cardano_clusterlib import clusterlib
 from pytest_metadata.plugin import metadata_key
@@ -22,6 +23,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
@@ -414,3 +416,12 @@ def cluster_use_pool(
         0
     ]
     return cluster_obj, pool_name
+
+
+@pytest.fixture
+def submit_method(request: SubRequest) -> str:
+    """Return the submit method."""
+    param = request.param
+    if param == "submit_api" and not submit_api.is_running():
+        pytest.skip("The cardano-submit-api REST service is not running.")
+    return str(param)

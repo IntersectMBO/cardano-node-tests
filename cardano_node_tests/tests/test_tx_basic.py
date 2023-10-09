@@ -2,7 +2,6 @@
 import itertools
 import logging
 import re
-import shutil
 import typing as tp
 
 import allure
@@ -24,21 +23,6 @@ from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-
-
-param_submit_method = pytest.mark.parametrize(
-    "submit_method",
-    (
-        "submit_cli",
-        pytest.param(
-            "submit_api",
-            marks=pytest.mark.skipif(
-                not shutil.which("cardano-submit-api"),
-                reason="`cardano-submit-api` is not available",
-            ),
-        ),
-    ),
-)
 
 
 @pytest.mark.testnets
@@ -394,7 +378,7 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @param_submit_method
+    @common.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_transfer_all_funds(
         self,
@@ -410,9 +394,6 @@ class TestBasicTransactions:
         * check output of the `transaction view` command
         """
         temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
-
-        if submit_method == "submit_api" and not submit_api.is_running():
-            pytest.skip("The cardano-submit-api REST service is not running.")
 
         src_address = payment_addrs_disposable[1].address
         dst_address = payment_addrs_disposable[0].address
@@ -440,7 +421,7 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
-        if submit_method == "submit_cli":
+        if submit_method == "cli":
             cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
         else:
             submit_api.submit_tx(
