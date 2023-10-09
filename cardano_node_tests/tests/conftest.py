@@ -23,7 +23,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
-from cardano_node_tests.utils import submit_api
+from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
@@ -422,6 +422,6 @@ def cluster_use_pool(
 def submit_method(request: SubRequest) -> str:
     """Return the submit method."""
     param = request.param
-    if param == "submit_api" and not submit_api.is_running():
+    if param == submit_utils.SubmitMethods.API and not submit_utils.is_submit_api_available():
         pytest.skip("The cardano-submit-api REST service is not running.")
     return str(param)
