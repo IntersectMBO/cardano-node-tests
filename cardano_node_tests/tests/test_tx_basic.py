@@ -150,6 +150,7 @@ class TestBasicTransactions:
         return cluster_default
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.parametrize(
         "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
@@ -228,6 +229,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @common.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize(
         "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
     )
@@ -242,6 +244,8 @@ class TestBasicTransactions:
         byron_addrs: tp.List[clusterlib.AddressRecord],
         src_addr_type: str,
         dst_addr_type: str,
+        submit_method: str,
+        request: FixtureRequest,
     ):
         """Send funds to payment address.
 
@@ -251,7 +255,7 @@ class TestBasicTransactions:
         * check expected balances for both source and destination addresses
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{src_addr_type}_{dst_addr_type}"
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
         amount = 1_500_000
 
         src_addr = byron_addrs[0] if src_addr_type == "byron" else payment_addrs[0]
@@ -274,7 +278,11 @@ class TestBasicTransactions:
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        if submit_method == "cli":
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        else:
+            submit_api.submit_tx(cluster_obj=cluster, tx_file=tx_signed, txins=tx_output.txins)
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
