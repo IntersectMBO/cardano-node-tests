@@ -18,7 +18,6 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -205,12 +204,12 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
-        if submit_method == submit_utils.SubmitMethods.CLI:
-            cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
-        else:
-            submit_api.submit_tx(
-                cluster_obj=cluster, tx_file=out_file_signed, txins=tx_raw_output.txins
-            )
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=out_file_signed,
+            txins=tx_raw_output.txins,
+        )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
@@ -280,10 +279,12 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
-        if submit_method == submit_utils.SubmitMethods.CLI:
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
-        else:
-            submit_api.submit_tx(cluster_obj=cluster, tx_file=tx_signed, txins=tx_output.txins)
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_output.txins,
+        )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
@@ -451,12 +452,12 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
-        if submit_method == submit_utils.SubmitMethods.CLI:
-            cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
-        else:
-            submit_api.submit_tx(
-                cluster_obj=cluster, tx_file=out_file_signed, txins=tx_raw_output.txins
-            )
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=out_file_signed,
+            txins=tx_raw_output.txins,
+        )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert not clusterlib.filter_utxos(
