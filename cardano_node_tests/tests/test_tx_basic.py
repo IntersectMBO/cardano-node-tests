@@ -1579,6 +1579,7 @@ class TestIncrementalSigning:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
     @pytest.mark.dbsync
     def test_incremental_signing(
@@ -1587,6 +1588,7 @@ class TestIncrementalSigning:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         tx_is: str,
+        submit_method: str,
     ):
         """Test sending funds using Tx that is signed incrementally.
 
@@ -1605,7 +1607,7 @@ class TestIncrementalSigning:
         * check expected balances for both source and destination addresses
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_is}"
+        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_is}_{submit_method}"
         amount = 2_000_000
 
         src_addr = payment_addrs[0]
@@ -1643,7 +1645,7 @@ class TestIncrementalSigning:
                 fee=fee,
             )
 
-        # sign or witness Tx body with part of the skeys and thus create Tx file that will be used
+        # Sign or witness Tx body with part of the skeys and thus create Tx file that will be used
         # for incremental signing
         if tx_is == "signed":
             tx_signed = cluster.g_transaction.sign_tx(
@@ -1652,7 +1654,7 @@ class TestIncrementalSigning:
                 tx_name=f"{temp_template}_from0",
             )
         else:
-            # sign Tx body using witness files
+            # Sign Tx body using witness files
             witness_files = [
                 cluster.g_transaction.witness_tx(
                     tx_body_file=tx_output.out_file,
@@ -1667,7 +1669,7 @@ class TestIncrementalSigning:
                 tx_name=f"{temp_template}_from0",
             )
 
-        # incrementally sign the already signed Tx with rest of the skeys, excluding the
+        # Incrementally sign the already signed Tx with rest of the skeys, excluding the
         # required skey
         for idx, skey in enumerate(payment_skey_files[1:5], start=1):
             # sign multiple times with the same skey to see that it doesn't affect Tx fee
@@ -1678,20 +1680,30 @@ class TestIncrementalSigning:
                     tx_name=f"{temp_template}_from{idx}_r{r}",
                 )
 
-        # it is not possible to submit Tx with missing required skey
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        # It is not possible to submit Tx with missing required skey
+        with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
+            submit_utils.submit_tx(
+                submit_method=submit_method,
+                cluster_obj=cluster,
+                tx_file=tx_signed,
+                txins=tx_output.txins,
+            )
         err_str = str(excinfo.value)
         assert "(MissingVKeyWitnessesUTXOW" in err_str, err_str
 
-        # incrementally sign the already signed Tx with the required skey
+        # Incrementally sign the already signed Tx with the required skey
         tx_signed = cluster.g_transaction.sign_tx(
             tx_file=tx_signed,
             signing_key_files=[payment_skey_files[0]],
             tx_name=f"{temp_template}_from_final",
         )
 
-        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_output.txins,
+        )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
