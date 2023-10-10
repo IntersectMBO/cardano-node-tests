@@ -1285,6 +1285,7 @@ class TestMultiInOut:
         from_num: int,
         to_num: int,
         amount: int,
+        submit_method: str,
         use_build_cmd=False,
     ):
         """Test 1 tx from `from_num` payment addresses to `to_num` payment addresses."""
@@ -1296,17 +1297,17 @@ class TestMultiInOut:
             payment_addrs[i].address for i in range(from_num + 1, from_num + to_num + 1)
         ]
 
-        # fund "from" addresses
+        # Fund "from" addresses
         # Using `src_address` to fund the "from" addresses. In `send_tx`, all remaining change is
         # returned to `src_address`, so it should always have enough funds. The "from" addresses has
         # zero balance after each test.
         fund_amount = int(amount * len(dst_addresses) / len(from_addr_recs))
-        # min UTxO on testnets is 1.x ADA
+        # Min UTxO on testnets is 1.x ADA
         fund_amount = fund_amount if fund_amount >= 1_500_000 else 1_500_000
         fund_dst = [
             clusterlib.TxOut(address=d.address, amount=fund_amount) for d in from_addr_recs[:-1]
         ]
-        # add more funds to the last "from" address so it can cover TX fee
+        # Add more funds to the last "from" address so it can cover TX fee
         last_from_addr_rec = from_addr_recs[-1]
         fund_dst.append(
             clusterlib.TxOut(address=last_from_addr_rec.address, amount=fund_amount + 5_000_000)
@@ -1321,28 +1322,42 @@ class TestMultiInOut:
                 txouts=fund_dst,
                 fee_buffer=1_000_000,
             )
-            tx_signed_fund = cluster_obj.g_transaction.sign_tx(
-                tx_body_file=tx_output_fund.out_file,
-                signing_key_files=fund_tx_files.signing_key_files,
-                tx_name=f"{tx_name}_add_funds",
-            )
-            cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_fund, txins=tx_output_fund.txins)
         else:
-            cluster_obj.g_transaction.send_funds(
+            fee = cluster_obj.g_transaction.calculate_tx_fee(
                 src_address=src_address,
-                destinations=fund_dst,
+                txouts=fund_dst,
                 tx_name=f"{tx_name}_add_funds",
                 tx_files=fund_tx_files,
             )
+            tx_output_fund = cluster_obj.g_transaction.build_raw_tx(
+                src_address=src_address,
+                txouts=fund_dst,
+                tx_name=f"{tx_name}_add_funds",
+                tx_files=fund_tx_files,
+                fee=fee,
+            )
 
-        # create TX data
+        tx_signed_fund = cluster_obj.g_transaction.sign_tx(
+            tx_body_file=tx_output_fund.out_file,
+            signing_key_files=fund_tx_files.signing_key_files,
+            tx_name=f"{tx_name}_add_funds",
+        )
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster_obj,
+            tx_file=tx_signed_fund,
+            txins=tx_output_fund.txins,
+        )
+
+        # Create TX data
         _txins = [cluster_obj.g_query.get_utxo(address=r.address) for r in from_addr_recs]
-        # flatten the list of lists that is _txins
+        # Flatten the list of lists that is _txins
         txins = list(itertools.chain.from_iterable(_txins))
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
         tx_files = clusterlib.TxFiles(signing_key_files=[r.skey_file for r in from_addr_recs])
 
-        # send TX
+        # Send TX
         if use_build_cmd:
             tx_raw_output = cluster_obj.g_transaction.build_tx(
                 src_address=from_addr_recs[0].address,
@@ -1353,22 +1368,37 @@ class TestMultiInOut:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-            tx_signed = cluster_obj.g_transaction.sign_tx(
-                tx_body_file=tx_raw_output.out_file,
-                signing_key_files=tx_files.signing_key_files,
-                tx_name=tx_name,
-            )
-            cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
-            tx_raw_output = cluster_obj.g_transaction.send_tx(
-                src_address=src_address,  # change is returned to `src_address`
+            fee = cluster_obj.g_transaction.calculate_tx_fee(
+                src_address=src_address,
                 tx_name=tx_name,
                 txins=txins,
                 txouts=txouts,
                 tx_files=tx_files,
             )
+            tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
+                src_address=src_address,  # Change is returned to `src_address`
+                tx_name=tx_name,
+                txins=txins,
+                txouts=txouts,
+                tx_files=tx_files,
+                fee=fee,
+            )
 
-        # check balances
+        tx_signed = cluster_obj.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=tx_name,
+        )
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster_obj,
+            tx_file=tx_signed,
+            txins=tx_raw_output.txins,
+        )
+
+        # Check balances
         out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[
             0
@@ -1386,16 +1416,21 @@ class TestMultiInOut:
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_10_transactions(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Send 10 transactions to payment address.
 
         * send funds from 1 source address to 1 destination address in 10 separate transactions
         * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         no_of_transactions = 10
 
         src_address = payment_addrs[0].address
@@ -1418,14 +1453,27 @@ class TestMultiInOut:
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         for i in range(no_of_transactions):
-            tx_raw_output = cluster.g_transaction.send_funds(
+            tx_raw_output = cluster.g_transaction.build_raw_tx(
                 src_address=src_address,
-                destinations=destinations,
+                txouts=destinations,
                 tx_name=f"{temp_template}_{i}",
                 tx_files=tx_files,
                 fee=fee,
                 ttl=ttl,
             )
+            tx_signed = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=f"{temp_template}_{i}",
+            )
+
+            submit_utils.submit_tx(
+                submit_method=submit_method,
+                cluster_obj=cluster,
+                tx_file=tx_signed,
+                txins=tx_raw_output.txins,
+            )
+
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         assert (
@@ -1440,6 +1488,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_1_addr(
@@ -1448,24 +1497,28 @@ class TestMultiInOut:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         amount: int,
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test 1 transaction from 1 payment address to 10 payment addresses.
 
         * send funds from 1 source address to 10 destination addresses
         * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}",
+            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}_{submit_method}",
             from_num=1,
             to_num=10,
             amount=amount,
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.dbsync
     def test_transaction_to_1_addr_from_10_addrs(
@@ -1474,24 +1527,28 @@ class TestMultiInOut:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         amount: int,
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test 1 transaction from 10 payment addresses to 1 payment address.
 
         * send funds from 10 source addresses to 1 destination address
         * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}",
+            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}_{submit_method}",
             from_num=10,
             to_num=1,
             amount=amount,
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_10_addrs(
@@ -1500,24 +1557,28 @@ class TestMultiInOut:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         amount: int,
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test 1 transaction from 10 payment addresses to 10 payment addresses.
 
         * send funds from 10 source addresses to 10 destination addresses
         * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}",
+            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}_{submit_method}",
             from_num=10,
             to_num=10,
             amount=amount,
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.dbsync
     def test_transaction_to_100_addrs_from_50_addrs(
@@ -1526,19 +1587,22 @@ class TestMultiInOut:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         amount: int,
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test 1 transaction from 50 payment addresses to 100 payment addresses.
 
         * send funds from 50 source addresses to 100 destination addresses
         * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}",
+            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}_{submit_method}",
             from_num=50,
             to_num=100,
             amount=amount,
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
