@@ -18,6 +18,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -299,18 +300,20 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @submit_utils.PARAM_SUBMIT_METHOD
     def test_byron_fee_too_small(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         byron_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Test cardano-node issue #4752.
 
         Use `cardano-cli transaction build` command for building a transaction that needs to be
         signed by Byron skey. Check if calculated fee is too small and if Tx submit fails.
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         amount = 1_500_000
 
         src_addr = byron_addrs[0]
@@ -332,32 +335,41 @@ class TestBasicTransactions:
         )
 
         try:
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
-        except clusterlib.CLIError as exc:
-            if "FeeTooSmallUTxO" not in str(exc):
+            submit_utils.submit_tx(
+                submit_method=submit_method,
+                cluster_obj=cluster,
+                tx_file=tx_signed,
+                txins=tx_output.txins,
+            )
+        except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
+            if "(FeeTooSmallUTxO" not in str(exc):
                 raise
             blockers.GH(issue=4752, message="FeeTooSmallUTxO").finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_build_no_change(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs_no_change: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Send funds to payment address and balance the outputs so that there is no change.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Tests bug https://github.com/input-output-hk/cardano-node/issues/3041
-
         * try to build a Tx that sends all available funds, and extract fee amount
           from the error message
         * send all available funds minus fee from source address to destination address
         * check that no change UTxO was created
+        * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        # The test checks the following issues:
+        #  - https://github.com/input-output-hk/cardano-node/issues/3041
+
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
 
         src_addr = payment_addrs_no_change[0]
         src_address = src_addr.address
@@ -394,7 +406,13 @@ class TestBasicTransactions:
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_output.txins,
+        )
 
         clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=tx_output.txins)
 
@@ -423,6 +441,7 @@ class TestBasicTransactions:
         * check expected balance for destination addresses
         * check that balance for source address is 0 Lovelace
         * check output of the `transaction view` command
+        * (optional) check transactions in db-sync
         """
         temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
 
@@ -490,6 +509,7 @@ class TestBasicTransactions:
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
         * check min UTxO value
+        * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -537,6 +557,7 @@ class TestBasicTransactions:
         * check that txid from transaction body matches the txid from signed transaction
         * check that txid has expected length
         * check that the txid is listed in UTxO hashes for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -568,32 +589,53 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_extra_signing_keys(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Send a transaction with extra signing key.
 
         Check that it is possible to use unneeded signing key in addition to the necessary
         signing keys for signing the transaction.
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         amount = 2_000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        # use extra signing key
+        # Use extra signing key
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file]
         )
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
-        # it should be possible to submit a transaction with extra signing key
-        tx_raw_output = cluster.g_transaction.send_tx(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
+        )
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+        )
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        # It should be possible to submit a transaction with extra signing key
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_raw_output.txins,
         )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
@@ -608,31 +650,52 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_duplicate_signing_keys(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Send a transaction with duplicate signing key.
 
         Check that it is possible to specify the same signing key twice.
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         amount = 2_000_000
 
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        # use extra signing key
+        # Use extra signing key
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file, payment_addrs[0].skey_file]
         )
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
-        # it should be possible to submit a transaction with duplicate signing key
-        tx_raw_output = cluster.g_transaction.send_tx(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
+        )
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=destinations,
+            tx_files=tx_files,
+            fee=fee,
+        )
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        # It should be possible to submit a transaction with duplicate signing key
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_raw_output.txins,
         )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
@@ -647,6 +710,7 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("file_type", ("tx_body", "tx"))
     @pytest.mark.dbsync
     def test_sign_wrong_file(
@@ -654,13 +718,15 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         file_type: str,
+        submit_method: str,
     ):
         """Sign other file type than the one specified by command line option (Tx vs Tx body).
 
         * specify Tx file and pass Tx body file
         * specify Tx body file and pass Tx file
+        * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{file_type}"
+        temp_template = f"{common.get_test_id(cluster)}_{file_type}_{submit_method}"
         amount = 2_000_000
 
         src_address = payment_addrs[0].address
@@ -669,7 +735,7 @@ class TestBasicTransactions:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
-        # build and sign a transaction
+        # Build and sign a transaction
         fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
@@ -690,10 +756,10 @@ class TestBasicTransactions:
         )
 
         if file_type == "tx":
-            # call `cardano-cli transaction sign --tx-body-file tx`
+            # Call `cardano-cli transaction sign --tx-body-file tx`
             cli_args = {"tx_body_file": out_file_signed}
         else:
-            # call `cardano-cli transaction sign --tx-file txbody`
+            # Call `cardano-cli transaction sign --tx-file txbody`
             cli_args = {"tx_file": tx_raw_output.out_file}
 
         tx_signed_again = cluster.g_transaction.sign_tx(
@@ -701,24 +767,34 @@ class TestBasicTransactions:
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
-        # check that the Tx can be successfully submitted
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_again, txins=tx_raw_output.txins)
+
+        # Check that the Tx can be successfully submitted
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_again,
+            txins=tx_raw_output.txins,
+        )
+
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_no_txout(
         self,
         cluster: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
+        submit_method: str,
     ):
         """Send transaction with just fee, no UTxO is produced.
 
         * submit a transaction where all funds available on source address is used for fee
         * check that no UTxOs are created by the transaction
         * check that there are no funds left on source address
+        * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
 
         src_record = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_0", cluster_obj=cluster
@@ -732,8 +808,20 @@ class TestBasicTransactions:
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_record.skey_file])
         fee = cluster.g_query.get_address_balance(src_record.address)
-        tx_raw_output = cluster.g_transaction.send_tx(
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_record.address, tx_name=temp_template, tx_files=tx_files, fee=fee
+        )
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_raw_output.txins,
         )
 
         assert not tx_raw_output.txouts, "Transaction has unexpected txouts"
@@ -778,14 +866,16 @@ class TestBasicTransactions:
         VERSIONS.transaction_era == VERSIONS.SHELLEY,
         reason="doesn't run with Shelley TX",
     )
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_missing_ttl(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Submit a transaction with a missing `--ttl` (`--invalid-hereafter`) parameter."""
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         src_address = payment_addrs[0].address
 
         tx_raw_template = tx_common.get_raw_tx_values(
@@ -820,7 +910,13 @@ class TestBasicTransactions:
             tx_name=temp_template,
             signing_key_files=[payment_addrs[0].skey_file],
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_file,
+            txins=tx_raw_output.txins,
+        )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
@@ -831,14 +927,16 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_multiple_same_txins(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Try to build a transaction with multiple identical txins."""
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         src_address = payment_addrs[0].address
 
         tx_raw_output = tx_common.get_raw_tx_values(
@@ -874,7 +972,13 @@ class TestBasicTransactions:
             tx_name=temp_template,
             signing_key_files=[payment_addrs[0].skey_file],
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_file, txins=tx_raw_output.txins)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_file,
+            txins=tx_raw_output.txins,
+        )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         assert (
@@ -932,11 +1036,13 @@ class TestBasicTransactions:
         VERSIONS.transaction_era < VERSIONS.ALONZO,
         reason="doesn't run with TX era < Alonzo",
     )
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_utxo_with_datum_hash(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Create a UTxO with datum hash in a regular address and spend it.
 
@@ -944,14 +1050,15 @@ class TestBasicTransactions:
         * check that the UTxO was created with the respective datum hash
         * spend the UTxO (not providing the datum hash)
         * check that the UTxO was spent
+        * (optional) check transactions in db-sync
         """
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         amount = 2_000_000
 
         payment_addr_1 = payment_addrs[0].address
         payment_addr_2 = payment_addrs[1].address
 
-        # step 1: create utxo with a datum hash
+        # Step 1: create utxo with a datum hash
         datum_hash = cluster.g_transaction.get_hash_script_data(
             script_data_value="42",
         )
@@ -972,33 +1079,55 @@ class TestBasicTransactions:
         datum_hash_utxo = cluster.g_query.get_utxo(txin=f"{txid}#0")
         assert datum_hash_utxo[0].datum_hash, "No datum hash"
 
-        # step 2: spend the created utxo
+        # Step 2: spend the created utxo
         destinations_2 = [clusterlib.TxOut(address=payment_addr_1, amount=-1)]
         tx_files_2 = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
 
-        tx_raw_output_2 = cluster.g_transaction.send_tx(
+        fee = cluster.g_transaction.calculate_tx_fee(
             src_address=payment_addr_2,
             tx_name=f"{temp_template}_step_2",
             txins=datum_hash_utxo,
             txouts=destinations_2,
             tx_files=tx_files_2,
         )
+        tx_raw_output_2 = cluster.g_transaction.build_raw_tx(
+            src_address=payment_addr_2,
+            tx_name=f"{temp_template}_step_2",
+            txins=datum_hash_utxo,
+            txouts=destinations_2,
+            tx_files=tx_files_2,
+            fee=fee,
+        )
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output_2.out_file,
+            signing_key_files=tx_files_2.signing_key_files,
+            tx_name=temp_template,
+        )
 
-        # check that the UTxO was spent
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_raw_output_2.txins,
+        )
+
+        # Check that the UTxO was spent
         assert not cluster.g_query.get_utxo(txin=f"{txid}#0"), "UTxO not spent"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_2)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     def test_far_future_ttl(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Send a transaction with ttl far in the future."""
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
 
         src_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -1029,13 +1158,19 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
-        # it should be possible to submit a transaction with ttl far in the future
-        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        # It should be possible to submit a transaction with ttl far in the future
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=out_file_signed,
+            txins=tx_raw_output.txins,
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_WRONG_ERA
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "cluster_default_tx_era",
@@ -1049,6 +1184,7 @@ class TestBasicTransactions:
         cluster_default_tx_era: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
+        submit_method: str,
         request: FixtureRequest,
     ):
         """Test default Tx era.
@@ -1074,19 +1210,33 @@ class TestBasicTransactions:
                 txouts=destinations,
                 fee_buffer=1_000_000,
             )
-            tx_signed_fund = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_output.out_file,
-                signing_key_files=tx_files.signing_key_files,
-                tx_name=temp_template,
-            )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed_fund, txins=tx_output.txins)
         else:
-            tx_output = cluster.g_transaction.send_funds(
+            fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=src_address,
-                destinations=destinations,
+                txouts=destinations,
                 tx_name=temp_template,
                 tx_files=tx_files,
             )
+            tx_output = cluster.g_transaction.build_raw_tx(
+                src_address=src_address,
+                txouts=destinations,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                fee=fee,
+            )
+
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_output.txins,
+        )
 
         # check `transaction view` command, this will check if the tx era is the expected
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
