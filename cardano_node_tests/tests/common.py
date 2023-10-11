@@ -134,7 +134,9 @@ def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
     """
     curr_test = pytest_utils.get_current_test()
     rand_str = clusterlib.get_rand_str(3)
-    test_id = f"{curr_test.test_function}_ci{cluster_obj.cluster_id}_{rand_str}"
+    test_id = (
+        f"{curr_test.test_function}{curr_test.test_params}_ci{cluster_obj.cluster_id}_{rand_str}"
+    )
 
     # log test ID to cluster manager log file - getting test ID happens early
     # after the start of a test, so the log entry can be used for determining
