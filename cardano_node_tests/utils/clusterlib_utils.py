@@ -608,6 +608,7 @@ def mint_or_burn_sign(
     new_tokens: tp.List[TokenRecord],
     temp_template: str,
     submit_method: str = submit_utils.SubmitMethods.CLI,
+    use_build_cmd: bool = False,
     sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using skeys.
@@ -621,7 +622,6 @@ def mint_or_burn_sign(
     signing_key_files = list({*issuers_skey_files, token_mint_addr.skey_file})
 
     # build and sign a transaction
-    tx_files = clusterlib.TxFiles(signing_key_files=signing_key_files)
     mint = [
         clusterlib.Mint(
             txouts=[
@@ -644,23 +644,32 @@ def mint_or_burn_sign(
             clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=lovelace_amount),
             *mint_txouts,
         ]
-    fee = cluster_obj.g_transaction.calculate_tx_fee(
-        src_address=token_mint_addr.address,
-        tx_name=temp_template,
-        txouts=txouts,
-        mint=mint,
-        tx_files=tx_files,
-        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-        witness_count_add=len(issuers_skey_files),
-    )
-    tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
-        src_address=token_mint_addr.address,
-        tx_name=temp_template,
-        txouts=txouts,
-        mint=mint,
-        tx_files=tx_files,
-        fee=fee,
-    )
+
+    if use_build_cmd:
+        tx_raw_output = cluster_obj.g_transaction.build_tx(
+            src_address=token_mint_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            fee_buffer=2000_000,
+            mint=mint,
+            witness_override=len(signing_key_files),
+        )
+    else:
+        fee = cluster_obj.g_transaction.calculate_tx_fee(
+            src_address=token_mint_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            mint=mint,
+            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            witness_count_add=len(signing_key_files),
+        )
+        tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
+            src_address=token_mint_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            mint=mint,
+            fee=fee,
+        )
 
     # sign incrementally (just to check that it works)
     if sign_incrementally and len(signing_key_files) >= 1:
@@ -679,7 +688,7 @@ def mint_or_burn_sign(
     else:
         out_file_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
+            signing_key_files=signing_key_files,
             tx_name=temp_template,
         )
 
