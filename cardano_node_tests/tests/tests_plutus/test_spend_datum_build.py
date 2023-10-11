@@ -111,7 +111,7 @@ class TestDatum:
         plutus_version: str,
     ):
         """Test 'build --tx-out-datum-embed' without providing protocol params file."""
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -210,7 +210,7 @@ class TestNegativeDatum:
         * try to spend the UTxO like it was locked Plutus UTxO
         * check that the expected error was raised
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{address_type}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         payment_addr = payment_addrs[0]
@@ -299,7 +299,7 @@ class TestNegativeDatum:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         datum_file = f"{temp_template}.datum"
         with open(datum_file, "w", encoding="utf-8") as outfile:
@@ -336,7 +336,7 @@ class TestNegativeDatum:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         plutus_op_1 = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -391,7 +391,7 @@ class TestNegativeDatum:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         amount_fund = 4_000_000
         amount_redeem = 2_000_000
@@ -484,7 +484,7 @@ class TestNegativeDatum:
 
         Expect failure on node version < 1.36.0.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         datum_file = f"{temp_template}.datum"
         with open(datum_file, "w", encoding="utf-8") as outfile:

@@ -195,7 +195,7 @@ class TestBasic:
         use_build_cmd: bool,
     ):
         """Send funds to and from script address using the *all* script."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -253,7 +253,7 @@ class TestBasic:
         * send funds from script address using single witness
         * send funds from script address using multiple witnesses
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -337,7 +337,7 @@ class TestBasic:
         use_build_cmd: bool,
     ):
         """Send funds to and from script address using the *atLeast* script."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -402,7 +402,7 @@ class TestBasic:
         use_build_cmd: bool,
     ):
         """Send funds to script address using TX signed with skeys (not using witness files)."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
         amount = 2_000_000
 
@@ -470,7 +470,7 @@ class TestBasic:
         use_build_cmd: bool,
     ):
         """Send funds from script address using TX signed with skeys (not using witness files)."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         dst_addr = payment_addrs[1]
         amount = 2_000_000
 
@@ -1053,7 +1053,7 @@ class TestTimeLocking:
         use_tx_validity: bool,
     ):
         """Check that it is possible to spend from script address after given slot."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{use_tx_validity}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1124,7 +1124,7 @@ class TestTimeLocking:
         use_tx_validity: bool,
     ):
         """Check that it is possible to spend from script address before given slot."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{use_tx_validity}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1193,7 +1193,7 @@ class TestTimeLocking:
 
         The transaction validity interval is not specified.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{slot_type}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1256,7 +1256,7 @@ class TestTimeLocking:
         use_build_cmd: bool,
     ):
         """Check that it is NOT possible to spend from script address when validity is negative."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
@@ -1342,7 +1342,7 @@ class TestTimeLocking:
         The "before" slot is in the past.
         """
         use_build_cmd = request.node.callspec.params["fund_script_before_slot_in_past"]
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         multisig_script, script_address, tx_output, before_slot = fund_script_before_slot_in_past
 
@@ -1409,7 +1409,7 @@ class TestTimeLocking:
         The "before" slot is in the future and the given range is invalid.
         """
         use_build_cmd = request.node.callspec.params["fund_script_before_slot_in_future"]
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         multisig_script, script_address, tx_output, before_slot = fund_script_before_slot_in_future
 
@@ -1457,7 +1457,7 @@ class TestTimeLocking:
         The "after" slot is in the future and the given range is invalid.
         """
         use_build_cmd = request.node.callspec.params["fund_script_after_slot_in_future"]
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         multisig_script, script_address, tx_output, after_slot = fund_script_after_slot_in_future
 
@@ -1524,7 +1524,7 @@ class TestTimeLocking:
         The "after" slot is in the past.
         """
         use_build_cmd = request.node.callspec.params["fund_script_after_slot_in_past"]
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         multisig_script, script_address, tx_output, after_slot = fund_script_after_slot_in_past
 
@@ -1604,7 +1604,7 @@ class TestAuxiliaryScripts:
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1666,7 +1666,7 @@ class TestAuxiliaryScripts:
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1729,7 +1729,7 @@ class TestAuxiliaryScripts:
 
         Check that the auxiliary script is present in the TX body.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
@@ -1782,7 +1782,7 @@ class TestAuxiliaryScripts:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
@@ -1860,7 +1860,7 @@ class TestIncrementalSigning:
         Test with Tx body created by both `transaction build` and `transaction build-raw`.
         Test with Tx created by both `transaction sign` and `transaction assemble`.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_is}"
+        temp_template = common.get_test_id(cluster)
         dst_addr = payment_addrs[1]
         amount = 2_000_000
 
@@ -2043,7 +2043,7 @@ class TestDatum:
         script_version: str,
     ):
         """Test creating UTxO with datum on Simple Scripts V1 and V2 address."""
-        temp_template = f"{common.get_test_id(cluster)}_{script_version}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         src_addr = payment_addrs[0]
@@ -2161,7 +2161,7 @@ class TestReferenceUTxO:
         script_version: str,
     ):
         """Send funds from script address where script is on reference UTxO."""
-        temp_template = f"{common.get_test_id(cluster)}_{script_version}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         src_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
 
@@ -2322,9 +2322,7 @@ class TestReferenceUTxO:
         * spend the reference UTxO
         * check that the UTxO was spent
         """
-        temp_template = (
-            f"{common.get_test_id(cluster)}_{use_build_cmd}_{script_version}_{address_type}"
-        )
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
         payment_addr = payment_addrs[0]
 
@@ -2458,7 +2456,7 @@ class TestNested:
         use_build_cmd: bool,
     ):
         """Check that it is possible to spend using a script with nested rules."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{type_top}_{type_nested}"
+        temp_template = common.get_test_id(cluster)
 
         dst_addr1 = payment_addrs[1]
         dst_addr2 = payment_addrs[2]
@@ -2554,7 +2552,7 @@ class TestNested:
         use_build_cmd: bool,
     ):
         """Check that it is possible to not meet conditions in nested "all" rule."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         dst_addr1 = payment_addrs[1]
 
@@ -2635,7 +2633,7 @@ class TestNested:
     ):
         """Test scenarios where it's NOT possible to spend from a script address."""
         # pylint: disable=too-many-statements
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{scenario}"
+        temp_template = common.get_test_id(cluster)
 
         dst_addr1 = payment_addrs[1]
         dst_addr2 = payment_addrs[2]
@@ -2867,7 +2865,7 @@ class TestCompatibility:
         use_build_cmd: bool,
     ):
         """Check that it is not possible to use 'SimpleScriptV2' in Shelley-era Tx."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]

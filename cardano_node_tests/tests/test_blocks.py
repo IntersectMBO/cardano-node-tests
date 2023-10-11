@@ -55,7 +55,7 @@ class TestLeadershipSchedule:
         """
         # pylint: disable=unused-argument
         cluster, pool_name = cluster_use_pool
-        temp_template = f"{common.get_test_id(cluster)}_{for_epoch}"
+        temp_template = common.get_test_id(cluster)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.g_stake_pool.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)

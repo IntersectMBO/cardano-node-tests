@@ -80,7 +80,7 @@ class TestRegisterAddr:
         * check that the balance for source address was correctly updated
         * (optional) check records in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -200,7 +200,7 @@ class TestRegisterAddr:
           was not needed
         * (optional) check records in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -286,7 +286,7 @@ class TestRegisterAddr:
           was needed
         * (optional) check records in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
@@ -427,7 +427,7 @@ class TestNegative:
         use_build_cmd: bool,
     ):
         """Deregister not registered stake address."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment

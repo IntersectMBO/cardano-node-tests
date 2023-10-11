@@ -6,7 +6,6 @@ import typing as tp
 
 import allure
 import pytest
-from _pytest.fixtures import FixtureRequest
 from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
@@ -169,7 +168,6 @@ class TestBasicTransactions:
         dst_addr_type: str,
         amount: int,
         submit_method: str,
-        request: FixtureRequest,
     ):
         """Send funds to payment address.
 
@@ -177,7 +175,7 @@ class TestBasicTransactions:
         * check expected balances for both source and destination addresses
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
 
         src_addr = byron_addrs[0] if src_addr_type == "byron" else payment_addrs[0]
         dst_addr = byron_addrs[1] if dst_addr_type == "byron" else payment_addrs[1]
@@ -246,7 +244,6 @@ class TestBasicTransactions:
         src_addr_type: str,
         dst_addr_type: str,
         submit_method: str,
-        request: FixtureRequest,
     ):
         """Send funds to payment address.
 
@@ -256,7 +253,7 @@ class TestBasicTransactions:
         * check expected balances for both source and destination addresses
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         amount = 1_500_000
 
         src_addr = byron_addrs[0] if src_addr_type == "byron" else payment_addrs[0]
@@ -313,7 +310,7 @@ class TestBasicTransactions:
         Use `cardano-cli transaction build` command for building a transaction that needs to be
         signed by Byron skey. Check if calculated fee is too small and if Tx submit fails.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         amount = 1_500_000
 
         src_addr = byron_addrs[0]
@@ -369,7 +366,7 @@ class TestBasicTransactions:
         # The test checks the following issues:
         #  - https://github.com/input-output-hk/cardano-node/issues/3041
 
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
 
         src_addr = payment_addrs_no_change[0]
         src_address = src_addr.address
@@ -443,7 +440,7 @@ class TestBasicTransactions:
         * check output of the `transaction view` command
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
 
         src_address = payment_addrs_disposable[1].address
         dst_address = payment_addrs_disposable[0].address
@@ -602,7 +599,7 @@ class TestBasicTransactions:
         Check that it is possible to use unneeded signing key in addition to the necessary
         signing keys for signing the transaction.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         src_address = payment_addrs[0].address
@@ -662,7 +659,7 @@ class TestBasicTransactions:
 
         Check that it is possible to specify the same signing key twice.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         src_address = payment_addrs[0].address
@@ -726,7 +723,7 @@ class TestBasicTransactions:
         * specify Tx body file and pass Tx file
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{file_type}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         src_address = payment_addrs[0].address
@@ -794,7 +791,7 @@ class TestBasicTransactions:
         * check that there are no funds left on source address
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
 
         src_record = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_0", cluster_obj=cluster
@@ -875,7 +872,7 @@ class TestBasicTransactions:
         submit_method: str,
     ):
         """Submit a transaction with a missing `--ttl` (`--invalid-hereafter`) parameter."""
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
 
         tx_raw_template = tx_common.get_raw_tx_values(
@@ -936,7 +933,7 @@ class TestBasicTransactions:
         submit_method: str,
     ):
         """Try to build a transaction with multiple identical txins."""
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
 
         tx_raw_output = tx_common.get_raw_tx_values(
@@ -1052,7 +1049,7 @@ class TestBasicTransactions:
         * check that the UTxO was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         payment_addr_1 = payment_addrs[0].address
@@ -1127,7 +1124,7 @@ class TestBasicTransactions:
         submit_method: str,
     ):
         """Send a transaction with ttl far in the future."""
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
 
         src_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -1185,14 +1182,13 @@ class TestBasicTransactions:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
-        request: FixtureRequest,
     ):
         """Test default Tx era.
 
         * check that default Tx era is implicit
         * check that default Tx era can be specified explicitly
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
 
         cluster = cluster_default_tx_era
 
@@ -1430,7 +1426,7 @@ class TestMultiInOut:
         * check expected balances for both source and destination addresses
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         no_of_transactions = 10
 
         src_address = payment_addrs[0].address
@@ -1508,7 +1504,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}_{submit_method}",
+            tx_name=common.get_test_id(cluster),
             from_num=1,
             to_num=10,
             amount=amount,
@@ -1538,7 +1534,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}_{submit_method}",
+            tx_name=common.get_test_id(cluster),
             from_num=10,
             to_num=1,
             amount=amount,
@@ -1568,7 +1564,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}_{submit_method}",
+            tx_name=common.get_test_id(cluster),
             from_num=10,
             to_num=10,
             amount=amount,
@@ -1598,7 +1594,7 @@ class TestMultiInOut:
         self._from_to_transactions(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,
-            tx_name=f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}_{submit_method}",
+            tx_name=common.get_test_id(cluster),
             from_num=50,
             to_num=100,
             amount=amount,
@@ -1671,7 +1667,7 @@ class TestIncrementalSigning:
         * check expected balances for both source and destination addresses
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_is}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         src_addr = payment_addrs[0]

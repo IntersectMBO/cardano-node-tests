@@ -118,7 +118,7 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -388,7 +388,7 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -809,7 +809,7 @@ class TestBuildMinting:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{key}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -956,7 +956,7 @@ class TestBuildMinting:
           in the future
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{ttl_offset}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -1074,7 +1074,7 @@ class TestCollateralOutput:
         * check that the return collateral amount is the expected
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]

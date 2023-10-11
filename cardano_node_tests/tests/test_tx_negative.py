@@ -314,7 +314,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         self._submit_wrong_validity(
             cluster_obj=cluster,
             pool_users=pool_users,
@@ -340,7 +340,7 @@ class TestNegative:
         Expect failure.
         """
         __: tp.Any  # mypy workaround
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         # Negative values overflow to positive `common.MAX_UINT64`.
         # Valid values are <= `common.MAX_INT64`.
@@ -390,7 +390,7 @@ class TestNegative:
         Check for int overflow. Expect failure.
         """
         __: tp.Any  # mypy workaround
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         # Valid values are <= `common.MAX_INT64`, and overflow happens for
         # values > `common.MAX_UINT64`.
@@ -441,7 +441,7 @@ class TestNegative:
         Expect failure.
         """
         __: tp.Any  # mypy workaround
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         # valid values are <= `common.MAX_INT64`
         before_value = common.MAX_INT64 + 5
@@ -477,10 +477,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = (
-            f"{common.get_test_id(cluster)}_{before_value}_{use_build_cmd}_"
-            f"{common.unique_time_str()}"
-        )
+        temp_template = f"{common.get_test_id(cluster)}_{before_value}_{common.unique_time_str()}"
 
         slot_no, err_str, __ = self._submit_wrong_validity(
             cluster_obj=cluster,
@@ -525,10 +522,7 @@ class TestNegative:
 
         Check for int overflow. Expect failure.
         """
-        temp_template = (
-            f"{common.get_test_id(cluster)}_{before_value}_{use_build_cmd}_"
-            f"{common.unique_time_str()}"
-        )
+        temp_template = f"{common.get_test_id(cluster)}_{before_value}_{common.unique_time_str()}"
 
         over_before_value = common.MAX_UINT64 + before_value
         slot_no, err_str, __ = self._submit_wrong_validity(
@@ -574,10 +568,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = (
-            f"{common.get_test_id(cluster)}_{before_value}_{use_build_cmd}_"
-            f"{common.unique_time_str()}"
-        )
+        temp_template = f"{common.get_test_id(cluster)}_{before_value}_{common.unique_time_str()}"
 
         slot_no, err_str, __ = self._submit_wrong_validity(
             cluster_obj=cluster,
@@ -1191,7 +1182,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = utxo._replace(utxo_ix=5)
@@ -1223,7 +1214,7 @@ class TestNegative:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         new_hash = f"{utxo.utxo_hash[:-4]}fd42"

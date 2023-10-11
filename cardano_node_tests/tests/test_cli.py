@@ -188,7 +188,7 @@ class TestAddressInfo:
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
     def test_address_info_payment(self, cluster: clusterlib.ClusterLib, addr_gen: str):
         """Check payment address info."""
-        temp_template = f"{common.get_test_id(cluster)}_{addr_gen}"
+        temp_template = common.get_test_id(cluster)
 
         if addr_gen == "static":
             address = "addr_test1vzp4kj0rmnl5q5046e2yy697fndej56tm35jekemj6ew2gczp74wk"
@@ -211,7 +211,7 @@ class TestAddressInfo:
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
     def test_address_info_stake(self, cluster: clusterlib.ClusterLib, addr_gen: str):
         """Check stake address info."""
-        temp_template = f"{common.get_test_id(cluster)}_{addr_gen}"
+        temp_template = common.get_test_id(cluster)
 
         if addr_gen == "static":
             address = "stake_test1uz5mstpskyhpcvaw2enlfk8fa5k335cpd0lfz6chd5c2xpck3nld4"
@@ -334,9 +334,7 @@ class TestAddressBuild:
         if stake == "address" and stake_address_option_unusable:
             pytest.skip("`stake-address` option is not available on `address build` command")
 
-        temp_template = (
-            f"{common.get_test_id(cluster)}_{payment}_{stake}_{common.unique_time_str()}"
-        )
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         payment_vkey_file = DATA_DIR / "golden_payment.vkey"
 
@@ -403,7 +401,7 @@ class TestAddressBuild:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{option}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         if option == "vkey_file":
             vkey_file = f"{temp_template}.vkey"
@@ -464,7 +462,7 @@ class TestAddressBuild:
         if option == "address" and stake_address_option_unusable:
             pytest.skip("`stake-address` option is not available on `address build` command")
 
-        temp_template = f"{common.get_test_id(cluster)}_{option}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         if option == "vkey_file":
             vkey_file = f"{temp_template}.vkey"
@@ -543,7 +541,7 @@ class TestAddressKeyHash:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{option}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         if option == "vkey_file":
             vkey_file = f"{temp_template}.redeemer"
@@ -840,7 +838,7 @@ class TestStakeAddressKeyHash:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{option}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         if option == "vkey_file":
             vkey_file = f"{temp_template}.redeemer"
@@ -1102,7 +1100,7 @@ class TestAdvancedQueries:
 
         See also `TestLedgerState.test_stake_snapshot` for more scenarios.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{option}"
+        temp_template = common.get_test_id(cluster)
         self._check_stake_snapshot(
             cluster_manager=cluster_manager,
             cluster_obj=cluster,

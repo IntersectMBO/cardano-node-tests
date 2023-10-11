@@ -5,7 +5,6 @@ import typing as tp
 
 import allure
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -65,7 +64,6 @@ class TestLockingV2:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_inline_datum: bool,
         use_reference_script: bool,
-        request: FixtureRequest,
     ):
         """Test combinations of inline datum and datum file + reference script and script file.
 
@@ -74,7 +72,7 @@ class TestLockingV2:
         * spend the locked UTxO
         * check that the expected UTxOs were correctly spent
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         plutus_op = spend_raw.PLUTUS_OP_GUESSING_GAME_UNTYPED

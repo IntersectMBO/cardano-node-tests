@@ -7,7 +7,6 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.fixtures import FixtureRequest
 from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
@@ -68,7 +67,7 @@ class TestMintingNegative:
         tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], plutus_common.PlutusOp
     ]:
         plutus_version = request.param
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -203,7 +202,7 @@ class TestMintingNegative:
         * check that the minting failed because the budget was overspent
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -298,7 +297,7 @@ class TestMintingNegative:
         * try to mint a token using a Plutus script when fee is set lower than is the computed fee
         * check that minting failed because the fee amount was too low
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -393,7 +392,6 @@ class TestMintingNegative:
         ],
         pparams: dict,
         data: st.DataObject,
-        request: FixtureRequest,
     ):
         """Test minting a token when execution units are above the limit.
 
@@ -403,9 +401,7 @@ class TestMintingNegative:
         * try to mint the token when execution units are set above the limits
         * check that the minting failed because the execution units were too big
         """
-        temp_template = (
-            f"{common.get_test_id(cluster)}_{request.node.callspec.id}_{common.unique_time_str()}"
-        )
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         issuer_addr = payment_addrs[1]
 
@@ -611,7 +607,7 @@ class TestNegativeCollateral:
         * check that the minting failed because no valid collateral was provided
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -711,7 +707,7 @@ class TestNegativeCollateral:
         * check that the minting failed because a collateral with insufficient funds was provided
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]

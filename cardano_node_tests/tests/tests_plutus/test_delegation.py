@@ -519,7 +519,7 @@ class TestRegisterAddr:
 
         __: tp.Any  # mypy workaround
         cluster, __ = cluster_lock_42stake
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         collateral_fund_reg = 1_500_000_000
         collateral_fund_withdraw = 1_500_000_000
@@ -676,7 +676,7 @@ class TestDelegateAddr:
         """
         # pylint: disable=too-many-locals,too-many-statements
         cluster, pool_id = cluster_lock_42stake
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         collateral_fund_deleg = 1_500_000_000
         collateral_fund_withdraw = 1_500_000_000
@@ -865,7 +865,7 @@ class TestDelegateAddr:
         #  - cardano-cli 299: Cannot de-register Plutus script stake address
 
         cluster, pool_id = cluster_lock_42stake
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         collateral_fund_reg = 1_500_000_000
         collateral_fund_deleg = 1_500_000_000

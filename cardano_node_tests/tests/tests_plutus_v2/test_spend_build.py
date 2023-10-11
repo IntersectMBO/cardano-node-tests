@@ -65,7 +65,6 @@ class TestBuildLocking:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_inline_datum: bool,
         use_reference_script: bool,
-        request: FixtureRequest,
     ):
         """Test combinations of inline datum and datum file + reference script and script file.
 
@@ -73,7 +72,7 @@ class TestBuildLocking:
         * spend the locked UTxO
         * check that the expected UTxOs were correctly spent
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
 
         if use_reference_script and use_inline_datum:
             per_time = 171_623_997
@@ -228,7 +227,7 @@ class TestBuildLocking:
         * check the min required UTxO
         """
         test_scenario = request.node.callspec.id
-        temp_template = f"{common.get_test_id(cluster)}_{test_scenario}"
+        temp_template = common.get_test_id(cluster)
 
         expected_min_required_utxo = {
             "with_reference_script-with_token-inline_datum": 9_848_350,

@@ -92,7 +92,7 @@ class TestPoll:
         * (optional) check create-poll transaction in db-sync
         """
         # pylint: disable=unused-argument
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{required_signer_option}"
+        temp_template = common.get_test_id(cluster)
 
         # Publish the poll on chain
 
@@ -243,7 +243,7 @@ class TestPoll:
         * verify poll answer
         """
         # pylint: disable=unused-argument
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_file_type}"
+        temp_template = common.get_test_id(cluster)
 
         poll_file = DATA_DIR / "governance_poll.json"
         spo_signing_key = DATA_DIR / "golden_stake_pool.skey"
@@ -370,7 +370,7 @@ class TestPoll:
         Expect failure.
         """
         # pylint: disable=unused-argument
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{tx_file_type}"
+        temp_template = common.get_test_id(cluster)
         poll_file = DATA_DIR / "governance_poll.json"
 
         # Create answer

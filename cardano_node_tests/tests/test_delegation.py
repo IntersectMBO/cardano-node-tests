@@ -170,7 +170,7 @@ class TestDelegateAddr:
         * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
@@ -217,7 +217,7 @@ class TestDelegateAddr:
         * (optional) check records in db-sync
         """
         cluster, pool_name = cluster_use_pool
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
@@ -732,7 +732,7 @@ class TestDelegateAddr:
             )
 
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable_cluster_and_pool[0]
         user_payment = pool_users_cluster_and_pool[0].payment
@@ -950,7 +950,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable_cluster_and_pool[0]
         user_payment = pool_users_cluster_and_pool[0].payment
@@ -1006,7 +1006,7 @@ class TestNegative:
         Expect failure.
         """
         cluster, pool_id = cluster_and_pool
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable_cluster_and_pool[0]
         user_payment = pool_users_cluster_and_pool[0].payment

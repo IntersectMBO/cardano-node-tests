@@ -145,7 +145,7 @@ class TestSECP256k1:
         * check that the token was minted
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_positive_{algorithm}"
+        temp_template = common.get_test_id(cluster)
 
         script_file = (
             plutus_common.MINTING_SECP256K1_ECDSA_PLUTUS_V2
@@ -214,7 +214,7 @@ class TestSECP256k1:
 
         * Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{test_vector}_{algorithm}"
+        temp_template = common.get_test_id(cluster)
 
         script_file = (
             plutus_common.MINTING_SECP256K1_ECDSA_PLUTUS_V2
