@@ -16,6 +16,7 @@ from cardano_clusterlib import clusterlib
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
@@ -483,6 +484,7 @@ def mint_or_burn_witness(
     temp_template: str,
     invalid_hereafter: tp.Optional[int] = None,
     invalid_before: tp.Optional[int] = None,
+    submit_method: str = submit_utils.SubmitMethods.CLI,
     use_build_cmd: bool = False,
     sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
@@ -590,8 +592,13 @@ def mint_or_burn_witness(
             tx_name=temp_template,
         )
 
-    # submit signed TX
-    cluster_obj.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
+    # Submit signed TX
+    submit_utils.submit_tx(
+        submit_method=submit_method,
+        cluster_obj=cluster_obj,
+        tx_file=tx_witnessed_file,
+        txins=tx_raw_output.txins,
+    )
 
     return tx_raw_output
 
@@ -600,6 +607,7 @@ def mint_or_burn_sign(
     cluster_obj: clusterlib.ClusterLib,
     new_tokens: tp.List[TokenRecord],
     temp_template: str,
+    submit_method: str = submit_utils.SubmitMethods.CLI,
     sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using skeys.
@@ -675,8 +683,13 @@ def mint_or_burn_sign(
             tx_name=temp_template,
         )
 
-    # submit signed transaction
-    cluster_obj.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+    # Submit signed transaction
+    submit_utils.submit_tx(
+        submit_method=submit_method,
+        cluster_obj=cluster_obj,
+        tx_file=out_file_signed,
+        txins=tx_raw_output.txins,
+    )
 
     return tx_raw_output
 
