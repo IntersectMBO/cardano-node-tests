@@ -4,7 +4,6 @@ import typing as tp
 
 import allure
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -166,14 +165,13 @@ class TestNegativeCollateralOutput:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         with_return_collateral: bool,
-        request: FixtureRequest,
     ):
         """Test minting a token with a Plutus script with unbalanced total collateral.
 
         Expect failure.
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 

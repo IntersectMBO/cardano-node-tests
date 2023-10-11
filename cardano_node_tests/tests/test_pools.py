@@ -640,7 +640,7 @@ class TestStakePool:
         Check that pool was registered and stake address delegated.
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_name = "test_stake_pool_metadata"
         pool_metadata = {
@@ -718,7 +718,7 @@ class TestStakePool:
         Check that pool was registered and stake address delegated.
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -798,7 +798,7 @@ class TestStakePool:
         Check that pool was registered.
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{no_of_addr}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -848,7 +848,7 @@ class TestStakePool:
         * check that the pool deposit was returned to reward account
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -1290,7 +1290,7 @@ class TestStakePool:
         * check that the pool metadata hash was correctly updated on chain
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
         no_of_addr = 3
 
         pool_name = f"pool_{rand_str}"
@@ -1417,7 +1417,7 @@ class TestStakePool:
         * check that the pool parameters were correctly updated on chain
         """
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
         no_of_addr = 2
 
         pool_name = f"pool_{rand_str}"
@@ -1854,7 +1854,7 @@ class TestPoolCost:
         """Create and register a stake pool with *pool cost* >= *minPoolCost*."""
         cluster = cluster_mincost
         rand_str = clusterlib.get_rand_str(4)
-        temp_template = f"{common.get_test_id(cluster)}_{rand_str}_{pool_cost}"
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",

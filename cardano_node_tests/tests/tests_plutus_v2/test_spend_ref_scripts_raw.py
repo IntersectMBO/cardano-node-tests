@@ -5,7 +5,6 @@ import typing as tp
 
 import allure
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -61,7 +60,6 @@ class TestReferenceScripts:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_same_script: bool,
-        request: FixtureRequest,
     ):
         """Test locking two Tx output with a V2 reference script and spending it.
 
@@ -70,7 +68,7 @@ class TestReferenceScripts:
         * spend the locked UTxOs using the reference UTxOs
         * check that the UTxOs were correctly spent
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
 
         plutus_op1 = spend_raw.PLUTUS_OP_ALWAYS_SUCCEEDS
 
@@ -519,7 +517,7 @@ class TestReferenceScripts:
         * spend the UTxO
         * check that the UTxO was spent
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{address_type}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         script_file = plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
@@ -568,7 +566,6 @@ class TestReferenceScripts:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
-        request: FixtureRequest,
     ):
         """Test spend an UTxO and use a reference a script on the same transaction.
 
@@ -577,7 +574,7 @@ class TestReferenceScripts:
         * spend a regular UTxO and reference the script at the same transaction
         * check that the destination UTxO have the right balance
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]

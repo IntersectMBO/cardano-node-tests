@@ -68,7 +68,7 @@ class TestReadonlyReferenceInputs:
         * check that the reference input was not spent
         """
         __: tp.Any  # mypy workaround
-        temp_template = f"{common.get_test_id(cluster)}_{reference_input_scenario}"
+        temp_template = common.get_test_id(cluster)
 
         amount = 2_000_000
 

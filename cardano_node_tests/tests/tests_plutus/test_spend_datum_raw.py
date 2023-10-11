@@ -146,7 +146,7 @@ class TestNegativeDatum:
         * try to spend the UTxO like it was locked Plutus UTxO
         * check that the expected error was raised
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{address_type}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         payment_addr = payment_addrs[0]
@@ -221,7 +221,7 @@ class TestNegativeDatum:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         amount = 2_000_000
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -263,7 +263,7 @@ class TestNegativeDatum:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         payment_addr = payment_addrs[0]
@@ -320,7 +320,7 @@ class TestNegativeDatum:
 
         Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         amount_fund = 4_000_000
         amount_redeem = 2_000_000
@@ -412,7 +412,7 @@ class TestNegativeDatum:
 
         Expect failure on node version < 1.36.0.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         amount = 2_000_000
 
         datum_file = f"{temp_template}.datum"

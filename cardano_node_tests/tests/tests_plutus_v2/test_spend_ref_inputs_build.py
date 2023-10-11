@@ -299,13 +299,13 @@ class TestReadonlyReferenceInputs:
         tx_to_submit = []
         txins = []
 
-        for addr in tx_address_combinations:
+        for i, addr in enumerate(tx_address_combinations):
             txouts = [clusterlib.TxOut(address=addr["dst_addr"].address, amount=amount)]
             tx_files = clusterlib.TxFiles(signing_key_files=[addr["payment_addr"].skey_file])
 
             tx_output = cluster.g_transaction.build_tx(
                 src_address=addr["payment_addr"].address,
-                tx_name=f"{temp_template}_{addr['payment_addr'].address}_tx",
+                tx_name=f"{temp_template}_{i}_tx",
                 tx_files=tx_files,
                 txouts=txouts,
                 readonly_reference_txins=reference_input,
@@ -314,7 +314,7 @@ class TestReadonlyReferenceInputs:
             tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_output.out_file,
                 signing_key_files=tx_files.signing_key_files,
-                tx_name=f"{temp_template}_{addr['payment_addr'].address}_signed",
+                tx_name=f"{temp_template}_{i}_signed",
             )
 
             tx_to_submit.append(tx_signed)

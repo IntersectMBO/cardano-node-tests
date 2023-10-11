@@ -6,7 +6,6 @@ import typing as tp
 
 import allure
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -110,7 +109,6 @@ class TestBuildMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_reference_script: bool,
-        request: FixtureRequest,
     ):
         """Test minting a token with a Plutus script.
 
@@ -124,7 +122,7 @@ class TestBuildMinting:
         * check expected Plutus cost
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -246,7 +244,6 @@ class TestBuildMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         valid_redeemer: bool,
-        request: FixtureRequest,
     ):
         """
         Test visibility of reference inputs by a plutus script.
@@ -258,7 +255,7 @@ class TestBuildMinting:
         * check that the reference UTxO was not spent
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -390,7 +387,6 @@ class TestBuildMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         valid_redeemer: bool,
-        request: FixtureRequest,
     ):
         """Test visibility of reference inputs by a plutus script.
 
@@ -401,7 +397,7 @@ class TestBuildMinting:
         * check that the reference UTxO was not spent
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
@@ -518,7 +514,6 @@ class TestBuildMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         scenario: str,
-        request: FixtureRequest,
     ):
         """
         Test visibility of inline datums on reference inputs by a plutus script.
@@ -529,7 +524,7 @@ class TestBuildMinting:
         * check that the reference UTxO was not spent
         """
         # pylint: disable=too-many-locals
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 

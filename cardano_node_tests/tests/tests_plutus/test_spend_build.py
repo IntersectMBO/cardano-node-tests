@@ -6,7 +6,6 @@ import typing as tp
 
 import allure
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -102,7 +101,7 @@ class TestBuildLocking:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -268,7 +267,6 @@ class TestBuildLocking:
         variant: str,
         plutus_version: str,
         embed_datum: bool,
-        request: FixtureRequest,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
@@ -285,7 +283,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         __: tp.Any  # mypy workaround
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
 
         datum_file: tp.Optional[pl.Path] = None
         datum_cbor_file: tp.Optional[pl.Path] = None
@@ -391,7 +389,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
         script_fund = 200_000_000
 
@@ -769,7 +767,7 @@ class TestBuildLocking:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
 
         plutus_op = plutus_common.PlutusOp(
@@ -846,7 +844,7 @@ class TestBuildLocking:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         token_rand = clusterlib.get_rand_str(5)
 
@@ -967,7 +965,7 @@ class TestBuildLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         payment_addr = payment_addrs[0]

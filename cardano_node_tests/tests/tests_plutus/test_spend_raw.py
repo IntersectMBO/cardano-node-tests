@@ -8,7 +8,6 @@ import typing as tp
 
 import allure
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 from packaging import version
 
@@ -150,7 +149,7 @@ class TestLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
@@ -304,7 +303,6 @@ class TestLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
-        request: FixtureRequest,
         embed_datum: bool,
         variant: str,
         plutus_version: str,
@@ -321,7 +319,7 @@ class TestLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         datum_file: tp.Optional[pl.Path] = None
@@ -414,7 +412,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         protocol_params = cluster.g_query.get_protocol_params()
@@ -754,7 +752,7 @@ class TestLocking:
         * check that the expected amounts of Lovelace and native tokens were spent
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
 
         amount = 2_000_000
@@ -816,7 +814,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         __: tp.Any  # mypy workaround
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}"
+        temp_template = common.get_test_id(cluster)
 
         token_rand = clusterlib.get_rand_str(5)
 
@@ -913,7 +911,7 @@ class TestLocking:
           when failure is expected
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{plutus_version}_{scenario}"
+        temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
         max_collateral_ins = cluster.g_query.get_protocol_params()["maxCollateralInputs"]

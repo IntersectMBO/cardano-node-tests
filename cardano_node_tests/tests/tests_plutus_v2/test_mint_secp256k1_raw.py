@@ -146,7 +146,7 @@ class TestSECP256k1:
         * mint the tokens using a Plutus script with a SECP256k1 function
         * check that the token was minted
         """
-        temp_template = f"{common.get_test_id(cluster)}_positive_{algorithm}"
+        temp_template = common.get_test_id(cluster)
 
         script_file = (
             plutus_common.MINTING_SECP256K1_ECDSA_PLUTUS_V2
@@ -193,7 +193,7 @@ class TestSECP256k1:
 
         * Expect failure.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{test_vector}_{algorithm}"
+        temp_template = common.get_test_id(cluster)
 
         script_file = (
             plutus_common.MINTING_SECP256K1_ECDSA_PLUTUS_V2

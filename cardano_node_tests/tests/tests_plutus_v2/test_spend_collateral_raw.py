@@ -4,7 +4,6 @@ import typing as tp
 
 import allure
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -69,7 +68,6 @@ class TestCollateralOutput:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_return_collateral: bool,
         use_total_collateral: bool,
-        request: FixtureRequest,
     ):
         """Test failing script with combination of total and return collateral set.
 
@@ -77,7 +75,7 @@ class TestCollateralOutput:
         * spend the locked UTxO
         * check that the expected amount of collateral was spent
         """
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
 

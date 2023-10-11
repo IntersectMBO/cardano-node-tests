@@ -162,7 +162,7 @@ class TestUpgrade:
         For testing that transaction created by previous node version and/or in previous era can
         be submitted in next node version and/or next era.
         """
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{for_step}_{file_type}"
+        temp_template = common.get_test_id(cluster)
         build_str = "build" if use_build_cmd else "build_raw"
 
         src_address = payment_addrs_disposable[0].address
@@ -269,9 +269,7 @@ class TestUpgrade:
         file_type: str,
     ):
         """Submit transaction that was created by previous node version and/or in previous era."""
-        temp_template = (
-            f"{common.get_test_id(cluster)}_{use_build_cmd}_{from_step}_{for_step}_{file_type}"
-        )
+        temp_template = common.get_test_id(cluster)
         build_str = "build" if use_build_cmd else "build_raw"
 
         tx_dir = (

@@ -17,7 +17,6 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -129,7 +128,6 @@ class TestMinting:
         aname_type: str,
         use_build_cmd: bool,
         submit_method: str,
-        request: FixtureRequest,
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses.
 
@@ -142,7 +140,7 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
+        temp_template = common.get_test_id(cluster)
         asset_name_dec = (
             f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         )
@@ -244,7 +242,7 @@ class TestMinting:
         """
         expected_fee = 188_821
 
-        temp_template = f"{common.get_test_id(cluster)}_{aname_type}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         asset_name_dec = (
             f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         )
@@ -338,7 +336,7 @@ class TestMinting:
         num_of_scripts = 5
         expected_fee = 263_621
 
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         amount = 5
         token_mint_addr = issuers_addrs[0]
         i_addrs = clusterlib_utils.create_payment_addr_records(
@@ -449,7 +447,7 @@ class TestMinting:
         """
         expected_fee = 188_821
 
-        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
+        temp_template = common.get_test_id(cluster)
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -898,7 +896,7 @@ class TestMinting:
         """
         expected_fee = 201_141
 
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
         asset_name = asset_name_dec.encode("utf-8").hex()
         amount = 50
@@ -1069,7 +1067,7 @@ class TestPolicies:
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
         expected_fee = 228_113
 
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1159,7 +1157,7 @@ class TestPolicies:
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
         expected_fee = 228_113
 
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
 
@@ -1588,7 +1586,7 @@ class TestTransfer:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster)}_{amount}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         xfail_issues = []
 
         src_address = new_token.token_mint_addr.address
@@ -1723,7 +1721,7 @@ class TestTransfer:
         * (optional) check transactions in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         amount = 1_000
         rand = clusterlib.get_rand_str(5)
         xfail_issues = []
@@ -1902,7 +1900,7 @@ class TestTransfer:
         use_build_cmd: bool,
     ):
         """Try to create an UTxO with just native tokens, no ADA. Expect failure."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
         amount = 10
 
         src_address = new_token.token_mint_addr.address
@@ -1956,7 +1954,7 @@ class TestTransfer:
         token_amount: int,
     ):
         """Test sending an invalid amount of tokens to payment address."""
-        temp_template = f"{common.get_test_id(cluster)}_{use_build_cmd}_{common.unique_time_str()}"
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
@@ -2344,7 +2342,7 @@ class TestReferenceUTxO:
         # pylint: disable=too-many-locals
         expected_fee = 188821
 
-        temp_template = f"{common.get_test_id(cluster)}_{script_version}_{use_build_cmd}"
+        temp_template = common.get_test_id(cluster)
 
         asset_name_dec = f"couttscoin{clusterlib.get_rand_str(4)}"
         asset_name = asset_name_dec.encode("utf-8").hex()

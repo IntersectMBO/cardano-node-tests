@@ -180,7 +180,7 @@ class TestManyUTXOs:
           to destination address
         * check expected balances for both source and destination addresses
         """
-        temp_template = f"{common.get_test_id(cluster)}_{amount}"
+        temp_template = common.get_test_id(cluster)
         big_funds_idx = -190
 
         src_address = many_utxos[0].address

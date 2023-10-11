@@ -233,7 +233,7 @@ class TestSocketPath:
         * check expected balances for both source and destination addresses
         """
         # pylint: disable=unused-argument
-        temp_template = f"{common.get_test_id(cluster)}_{env_scenario}"
+        temp_template = common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
 
@@ -441,7 +441,7 @@ class TestNegativeSocketPath:
         Expect failure.
         """
         # pylint: disable=unused-argument
-        temp_template = f"{common.get_test_id(cluster)}_{env_scenario}_{socket_scenario}"
+        temp_template = common.get_test_id(cluster)
 
         _setup_scenarios(
             cluster_obj=cluster, env_scenario=env_scenario, socket_scenario=socket_scenario
