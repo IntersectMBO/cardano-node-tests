@@ -17,6 +17,7 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -27,6 +28,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -115,6 +117,7 @@ class TestMinting:
     """Tests for minting and burning tokens."""
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
@@ -125,6 +128,8 @@ class TestMinting:
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         aname_type: str,
         use_build_cmd: bool,
+        submit_method: str,
+        request: FixtureRequest,
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses.
 
@@ -137,7 +142,7 @@ class TestMinting:
         """
         expected_fee = 201141
 
-        temp_template = f"{common.get_test_id(cluster)}_{aname_type}_{use_build_cmd}"
+        temp_template = f"{common.get_test_id(cluster)}_{request.node.callspec.id}"
         asset_name_dec = (
             f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         )
@@ -183,6 +188,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
@@ -195,6 +201,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
@@ -216,6 +223,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -224,6 +232,7 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         aname_type: str,
+        submit_method: str,
     ):
         """Test minting and burning of tokens, sign the transaction using skeys.
 
@@ -235,7 +244,7 @@ class TestMinting:
         """
         expected_fee = 188_821
 
-        temp_template = f"{common.get_test_id(cluster)}_{aname_type}"
+        temp_template = f"{common.get_test_id(cluster)}_{aname_type}_{submit_method}"
         asset_name_dec = (
             f"couttscoin{clusterlib.get_rand_str(4)}" if aname_type == "asset_name" else ""
         )
@@ -275,6 +284,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            submit_method=submit_method,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -286,6 +296,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
+            submit_method=submit_method,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -302,12 +313,14 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_multiple_scripts(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Test minting of tokens using several different scripts in single transaction.
 
@@ -325,7 +338,7 @@ class TestMinting:
         num_of_scripts = 5
         expected_fee = 263_621
 
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         amount = 5
         token_mint_addr = issuers_addrs[0]
         i_addrs = clusterlib_utils.create_payment_addr_records(
@@ -375,6 +388,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=tokens_mint,
             temp_template=f"{temp_template}_mint",
+            submit_method=submit_method,
         )
 
         mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
@@ -390,6 +404,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=tokens_burn,
             temp_template=f"{temp_template}_burn",
+            submit_method=submit_method,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -412,10 +427,14 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_burning_diff_tokens_single_tx(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Test minting one token and burning other token in single transaction.
 
@@ -430,7 +449,7 @@ class TestMinting:
         """
         expected_fee = 188_821
 
-        temp_template = common.get_test_id(cluster)
+        temp_template = f"{common.get_test_id(cluster)}_{submit_method}"
         amount = 5
 
         token_mint_addr = issuers_addrs[0]
@@ -466,6 +485,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[tokens_mint[0]],
             temp_template=f"{temp_template}_mint",
+            submit_method=submit_method,
             sign_incrementally=True,
         )
 
@@ -478,6 +498,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn1, tokens_mint[1]],
             temp_template=f"{temp_template}_mint_burn",
+            submit_method=submit_method,
             sign_incrementally=True,
         )
 
@@ -497,6 +518,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn2],
             temp_template=f"{temp_template}_burn",
+            submit_method=submit_method,
             sign_incrementally=True,
         )
 
