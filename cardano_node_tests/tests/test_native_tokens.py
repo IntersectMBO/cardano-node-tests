@@ -27,6 +27,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -547,6 +548,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn2)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -555,6 +557,7 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test minting one token and burning the same token in single transaction.
 
@@ -647,7 +650,12 @@ class TestMinting:
         )
 
         # submit signed transaction
-        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_output.txins)
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=out_file_signed,
+            txins=tx_output.txins,
+        )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_output, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
@@ -660,6 +668,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "tokens_db",
@@ -684,6 +693,7 @@ class TestMinting:
         multisig_script_policyid: tp.Tuple[pl.Path, str],
         tokens_db: tp.Tuple[int, int, int],
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test minting and burning multiple different tokens that are in single bundle.
 
@@ -727,6 +737,7 @@ class TestMinting:
                 cluster_obj=cluster,
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
+                submit_method=submit_method,
                 use_build_cmd=use_build_cmd,
             )
 
@@ -740,7 +751,7 @@ class TestMinting:
             try:
                 # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
-                with pytest.raises(clusterlib.CLIError) as excinfo:
+                with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
                     _mint_tokens()
                 err_msg = str(excinfo.value)
                 assert (
@@ -778,6 +789,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
@@ -802,6 +814,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "tokens_db",
@@ -826,6 +839,7 @@ class TestMinting:
         simple_script_policyid: tp.Tuple[pl.Path, str],
         tokens_db: tp.Tuple[int, int, int],
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test minting and burning multiple different tokens that are in single bundle.
 
@@ -870,6 +884,7 @@ class TestMinting:
                 cluster_obj=cluster,
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
+                submit_method=submit_method,
                 use_build_cmd=use_build_cmd,
             )
 
@@ -883,7 +898,7 @@ class TestMinting:
             try:
                 # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
-                with pytest.raises(clusterlib.CLIError) as excinfo:
+                with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
                     _mint_tokens()
                 err_msg = str(excinfo.value)
                 assert (
@@ -921,6 +936,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
@@ -941,6 +957,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -949,6 +966,7 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test minting and partial burning of tokens.
 
@@ -990,6 +1008,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             sign_incrementally=True,
         )
@@ -1006,6 +1025,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn1",
+            submit_method=submit_method,
             sign_incrementally=True,
         )
 
@@ -1020,6 +1040,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[final_burn],
             temp_template=f"{temp_template}_burn2",
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             sign_incrementally=True,
         )
@@ -1034,6 +1055,7 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn2)
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -1042,6 +1064,7 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Test minting and burning of token with unicode non-ascii chars in its asset name.
 
@@ -1085,6 +1108,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
@@ -1099,6 +1123,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
+            submit_method=submit_method,
             use_build_cmd=use_build_cmd,
         )
 
