@@ -524,7 +524,7 @@ def mint_or_burn_witness(
         ]
 
     if use_build_cmd:
-        tx_raw_output = cluster_obj.g_transaction.build_tx(
+        tx_output = cluster_obj.g_transaction.build_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
@@ -543,7 +543,7 @@ def mint_or_burn_witness(
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=len(signing_key_files),
         )
-        tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
+        tx_output = cluster_obj.g_transaction.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
@@ -557,13 +557,13 @@ def mint_or_burn_witness(
     if sign_incrementally and len(signing_key_files) >= 1:
         # create witness file for first required key
         witness_file = cluster_obj.g_transaction.witness_tx(
-            tx_body_file=tx_raw_output.out_file,
+            tx_body_file=tx_output.out_file,
             witness_name=f"{temp_template}_skey0",
             signing_key_files=signing_key_files[:1],
         )
         # sign Tx using witness file
         tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
-            tx_body_file=tx_raw_output.out_file,
+            tx_body_file=tx_output.out_file,
             witness_files=[witness_file],
             tx_name=f"{temp_template}_sign0",
         )
@@ -578,7 +578,7 @@ def mint_or_burn_witness(
         # create witness file for each required key
         witness_files = [
             cluster_obj.g_transaction.witness_tx(
-                tx_body_file=tx_raw_output.out_file,
+                tx_body_file=tx_output.out_file,
                 witness_name=f"{temp_template}_skey{idx}",
                 signing_key_files=[skey],
             )
@@ -587,7 +587,7 @@ def mint_or_burn_witness(
 
         # sign Tx using witness files
         tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
-            tx_body_file=tx_raw_output.out_file,
+            tx_body_file=tx_output.out_file,
             witness_files=witness_files,
             tx_name=temp_template,
         )
@@ -597,10 +597,10 @@ def mint_or_burn_witness(
         submit_method=submit_method,
         cluster_obj=cluster_obj,
         tx_file=tx_witnessed_file,
-        txins=tx_raw_output.txins,
+        txins=tx_output.txins,
     )
 
-    return tx_raw_output
+    return tx_output
 
 
 def mint_or_burn_sign(
@@ -646,7 +646,7 @@ def mint_or_burn_sign(
         ]
 
     if use_build_cmd:
-        tx_raw_output = cluster_obj.g_transaction.build_tx(
+        tx_output = cluster_obj.g_transaction.build_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
@@ -663,7 +663,7 @@ def mint_or_burn_sign(
             # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
             witness_count_add=len(signing_key_files),
         )
-        tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
+        tx_output = cluster_obj.g_transaction.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
@@ -674,7 +674,7 @@ def mint_or_burn_sign(
     # sign incrementally (just to check that it works)
     if sign_incrementally and len(signing_key_files) >= 1:
         out_file_signed = cluster_obj.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
+            tx_body_file=tx_output.out_file,
             signing_key_files=signing_key_files[:1],
             tx_name=f"{temp_template}_sign0",
         )
@@ -687,7 +687,7 @@ def mint_or_burn_sign(
             )
     else:
         out_file_signed = cluster_obj.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
+            tx_body_file=tx_output.out_file,
             signing_key_files=signing_key_files,
             tx_name=temp_template,
         )
@@ -697,10 +697,10 @@ def mint_or_burn_sign(
         submit_method=submit_method,
         cluster_obj=cluster_obj,
         tx_file=out_file_signed,
-        txins=tx_raw_output.txins,
+        txins=tx_output.txins,
     )
 
-    return tx_raw_output
+    return tx_output
 
 
 def withdraw_reward_w_build(
