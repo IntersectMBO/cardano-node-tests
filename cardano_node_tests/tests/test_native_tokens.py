@@ -222,6 +222,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -230,6 +231,7 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         aname_type: str,
+        use_build_cmd: bool,
         submit_method: str,
     ):
         """Test minting and burning of tokens, sign the transaction using skeys.
@@ -283,6 +285,7 @@ class TestMinting:
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -295,6 +298,7 @@ class TestMinting:
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -312,12 +316,14 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_multiple_scripts(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
         submit_method: str,
     ):
         """Test minting of tokens using several different scripts in single transaction.
@@ -333,10 +339,11 @@ class TestMinting:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        num_of_scripts = 5
-        expected_fee = 263_621
-
         temp_template = common.get_test_id(cluster)
+
+        expected_fee = 216_629 if use_build_cmd else 260_365
+        num_of_scripts = 5
+
         amount = 5
         token_mint_addr = issuers_addrs[0]
         i_addrs = clusterlib_utils.create_payment_addr_records(
@@ -387,6 +394,7 @@ class TestMinting:
             new_tokens=tokens_mint,
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
         )
 
         mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
@@ -403,6 +411,7 @@ class TestMinting:
             new_tokens=tokens_burn,
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -426,12 +435,14 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_burning_diff_tokens_single_tx(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
         submit_method: str,
     ):
         """Test minting one token and burning other token in single transaction.
@@ -484,6 +495,7 @@ class TestMinting:
             new_tokens=[tokens_mint[0]],
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
             sign_incrementally=True,
         )
 
@@ -497,6 +509,7 @@ class TestMinting:
             new_tokens=[token_burn1, tokens_mint[1]],
             temp_template=f"{temp_template}_mint_burn",
             submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
             sign_incrementally=True,
         )
 
@@ -517,6 +530,7 @@ class TestMinting:
             new_tokens=[token_burn2],
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
             sign_incrementally=True,
         )
 
@@ -533,10 +547,14 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn2)
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_burning_same_token_single_tx(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Test minting one token and burning the same token in single transaction.
 
@@ -591,54 +609,71 @@ class TestMinting:
             ),
         ]
 
-        fee = cluster.g_transaction.calculate_tx_fee(
-            src_address=token_mint_addr.address,
-            tx_name=f"{temp_template}_mint_burn",
-            txouts=txouts,
-            mint=mint,
-            tx_files=tx_files,
-            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
-            witness_count_add=2,
-        )
-        tx_raw_output = cluster.g_transaction.build_raw_tx(
-            src_address=token_mint_addr.address,
-            tx_name=f"{temp_template}_mint_burn",
-            txouts=txouts,
-            # token minting and burning in the same TX
-            mint=mint,
-            tx_files=tx_files,
-            fee=fee,
-        )
+        if use_build_cmd:
+            tx_output = cluster.g_transaction.build_tx(
+                src_address=token_mint_addr.address,
+                tx_name=f"{temp_template}_mint_burn",
+                tx_files=tx_files,
+                txouts=txouts,
+                fee_buffer=2_000_000,
+                # token minting and burning in the same TX
+                mint=mint,
+                witness_override=len(tx_files.signing_key_files),
+            )
+        else:
+            fee = cluster.g_transaction.calculate_tx_fee(
+                src_address=token_mint_addr.address,
+                tx_name=f"{temp_template}_mint_burn",
+                txouts=txouts,
+                mint=mint,
+                tx_files=tx_files,
+                # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+                witness_count_add=len(tx_files.signing_key_files),
+            )
+            tx_output = cluster.g_transaction.build_raw_tx(
+                src_address=token_mint_addr.address,
+                tx_name=f"{temp_template}_mint_burn",
+                txouts=txouts,
+                # token minting and burning in the same TX
+                mint=mint,
+                tx_files=tx_files,
+                fee=fee,
+            )
+
         out_file_signed = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
+            tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_mint_burn",
         )
 
         # submit signed transaction
-        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
+        cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_output.txins)
 
-        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
+        token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_output, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
 
         # check expected fees
         assert helpers.is_in_interval(
-            tx_raw_output.fee, expected_fee, frac=0.15
+            tx_output.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "tokens_db",
         (
-            (5, 226_133),
-            (10, 259_353),
-            (50, 444_549),
-            (100, 684_349),
-            (1_000, 0),
+            # TODO: why is the difference for `transaction calculate-min-fee` and
+            # `transaction build` so big?
+            (5, 226_133, 201_317),
+            (10, 259_353, 210_557),
+            (50, 444_549, 288_085),
+            (100, 684_349, 386_469),
+            (1_000, 0, 0),
         ),
     )
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_bundle_minting_and_burning_witnesses(
         self,
@@ -647,7 +682,8 @@ class TestMinting:
         worker_id: str,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         multisig_script_policyid: tp.Tuple[pl.Path, str],
-        tokens_db: tp.Tuple[int, int],
+        tokens_db: tp.Tuple[int, int, int],
+        use_build_cmd: bool,
     ):
         """Test minting and burning multiple different tokens that are in single bundle.
 
@@ -658,10 +694,14 @@ class TestMinting:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
+        # pylint: disable=too-many-locals
         rand = clusterlib.get_rand_str(8)
         temp_template = f"{common.get_test_id(cluster)}_{rand}"
+
         amount = 5
-        tokens_num, expected_fee = tokens_db
+
+        tokens_num, expected_fee_raw, expected_fee_build = tokens_db
+        expected_fee = expected_fee_build if use_build_cmd else expected_fee_raw
 
         token_mint_addr = issuers_addrs[0]
         script, policyid = multisig_script_policyid
@@ -682,12 +722,13 @@ class TestMinting:
                 )
             )
 
-        # Token minting
-        minting_args = {
-            "cluster_obj": cluster,
-            "new_tokens": tokens_to_mint,
-            "temp_template": f"{temp_template}_mint",
-        }
+        def _mint_tokens() -> clusterlib.TxRawOutput:
+            return clusterlib_utils.mint_or_burn_witness(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_mint,
+                temp_template=f"{temp_template}_mint",
+                use_build_cmd=use_build_cmd,
+            )
 
         if tokens_num >= 500:
             logfiles.add_ignore_rule(
@@ -700,8 +741,12 @@ class TestMinting:
                 # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
                 with pytest.raises(clusterlib.CLIError) as excinfo:
-                    clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
-                assert "OutputTooBigUTxO" in str(excinfo.value)
+                    _mint_tokens()
+                err_msg = str(excinfo.value)
+                assert (
+                    "(OutputTooBigUTxO" in err_msg  # For `build-raw` command
+                    or "balance of the transaction is negative" in err_msg  # For `build` command
+                ), "Unexpected error message"
             finally:
                 logging.disable(logging.NOTSET)
                 # Wait for the log files to be written
@@ -718,7 +763,7 @@ class TestMinting:
                 amount=40_000_000,
             )
 
-        tx_out_mint = clusterlib_utils.mint_or_burn_witness(**minting_args)  # type: ignore
+        tx_out_mint = _mint_tokens()
 
         mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
         for t in tokens_to_mint:
@@ -733,6 +778,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
+            use_build_cmd=use_build_cmd,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -743,8 +789,9 @@ class TestMinting:
             assert not token_utxo, "The token was not burnt"
 
         # Check expected fees
+        mint_fee = tx_out_mint.fee
         assert helpers.is_in_interval(
-            tx_out_mint.fee, expected_fee, frac=0.15
+            mint_fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
         # Check `transaction view` command
@@ -755,16 +802,20 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "tokens_db",
         (
-            (5, 215_617),
-            (10, 246_857),
-            (50, 426_333),
-            (100, 666_133),
-            (1_000, 0),
+            # TODO: why is the difference for `transaction calculate-min-fee` and
+            # `transaction build` so big?
+            (5, 215_617, 183_629),
+            (10, 246_857, 192_869),
+            (50, 426_333, 270_397),
+            (100, 666_133, 368_781),
+            (1_000, 0, 0),
         ),
     )
+    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_bundle_minting_and_burning_sign(
         self,
@@ -773,7 +824,8 @@ class TestMinting:
         worker_id: str,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
         simple_script_policyid: tp.Tuple[pl.Path, str],
-        tokens_db: tp.Tuple[int, int],
+        tokens_db: tp.Tuple[int, int, int],
+        use_build_cmd: bool,
     ):
         """Test minting and burning multiple different tokens that are in single bundle.
 
@@ -784,10 +836,14 @@ class TestMinting:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
+        # pylint: disable=too-many-locals
         rand = clusterlib.get_rand_str(8)
         temp_template = f"{common.get_test_id(cluster)}_{rand}"
+
         amount = 5
-        tokens_num, expected_fee = tokens_db
+
+        tokens_num, expected_fee_raw, expected_fee_build = tokens_db
+        expected_fee = expected_fee_build if use_build_cmd else expected_fee_raw
 
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
@@ -809,12 +865,13 @@ class TestMinting:
                 )
             )
 
-        # Token minting
-        minting_args = {
-            "cluster_obj": cluster,
-            "new_tokens": tokens_to_mint,
-            "temp_template": f"{temp_template}_mint",
-        }
+        def _mint_tokens() -> clusterlib.TxRawOutput:
+            return clusterlib_utils.mint_or_burn_sign(
+                cluster_obj=cluster,
+                new_tokens=tokens_to_mint,
+                temp_template=f"{temp_template}_mint",
+                use_build_cmd=use_build_cmd,
+            )
 
         if tokens_num >= 500:
             logfiles.add_ignore_rule(
@@ -827,8 +884,12 @@ class TestMinting:
                 # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
                 with pytest.raises(clusterlib.CLIError) as excinfo:
-                    clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
-                assert "OutputTooBigUTxO" in str(excinfo.value)
+                    _mint_tokens()
+                err_msg = str(excinfo.value)
+                assert (
+                    "(OutputTooBigUTxO" in err_msg  # For `build-raw` command
+                    or "balance of the transaction is negative" in err_msg  # For `build` command
+                ), "Unexpected error message"
             finally:
                 logging.disable(logging.NOTSET)
                 # Wait for the log files to be written
@@ -845,7 +906,7 @@ class TestMinting:
                 amount=40_000_000,
             )
 
-        tx_out_mint = clusterlib_utils.mint_or_burn_sign(**minting_args)  # type: ignore
+        tx_out_mint = _mint_tokens()
 
         mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
         for t in tokens_to_mint:
@@ -860,6 +921,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
+            use_build_cmd=use_build_cmd,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -870,8 +932,9 @@ class TestMinting:
             assert not token_utxo, "The token was not burnt"
 
         # Check expected fees
+        mint_fee = tx_out_mint.fee
         assert helpers.is_in_interval(
-            tx_out_mint.fee, expected_fee, frac=0.15
+            mint_fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
@@ -971,12 +1034,14 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn2)
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_minting_unicode_asset_name(
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: tp.List[clusterlib.AddressRecord],
+        use_build_cmd: bool,
     ):
         """Test minting and burning of token with unicode non-ascii chars in its asset name.
 
@@ -1020,6 +1085,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
+            use_build_cmd=use_build_cmd,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -1033,6 +1099,7 @@ class TestMinting:
             cluster_obj=cluster,
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
+            use_build_cmd=use_build_cmd,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
