@@ -166,26 +166,15 @@ cardano_cli_log byron genesis genesis \
 
 mv "$STATE_CLUSTER/byron-params.json" "$STATE_CLUSTER/byron/params.json"
 
-gen_genesis() {
-  cardano_cli_log genesis create-staked \
-    --genesis-dir "$STATE_CLUSTER/create_staked" \
-    --testnet-magic "$NETWORK_MAGIC" \
-    --gen-pools "$NUM_POOLS" \
-    --gen-utxo-keys 1 \
-    --supply "$INIT_SUPPLY" \
-    --gen-stake-delegs "$NUM_POOLS" \
-    --supply-delegated "$DELEG_SUPPLY" \
-    --start-time "$START_TIME_SHELLEY"
-}
-
-if ! gen_genesis; then
-  echo "Failed to generate Alonzo genesis, retrying with a different genesis.alonzo.spec.json"
-  mv "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json" \
-    "$STATE_CLUSTER/create_staked/master-genesis.alonzo.spec.json"
-  mv "$STATE_CLUSTER/create_staked/release-genesis.alonzo.spec.json" \
-    "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json"
-  gen_genesis
-fi
+cardano_cli_log genesis create-staked \
+  --genesis-dir "$STATE_CLUSTER/create_staked" \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --gen-pools "$NUM_POOLS" \
+  --gen-utxo-keys 1 \
+  --supply "$INIT_SUPPLY" \
+  --gen-stake-delegs "$NUM_POOLS" \
+  --supply-delegated "$DELEG_SUPPLY" \
+  --start-time "$START_TIME_SHELLEY"
 
 mv "$STATE_CLUSTER/create_staked/delegate-keys" "$STATE_CLUSTER/shelley/delegate-keys"
 mv "$STATE_CLUSTER/create_staked/genesis-keys" "$STATE_CLUSTER/shelley/genesis-keys"
