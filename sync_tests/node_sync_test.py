@@ -157,7 +157,8 @@ def get_node_config_files(env, node_topology_type):
     download_config_file(env, 'byron-genesis.json')
     download_config_file(env, 'shelley-genesis.json')
     download_config_file(env, 'alonzo-genesis.json')
-    download_config_file(env, 'conway-genesis.json')
+    # Temporary hardcoded sanchonet conway genesis file:
+    download_config_file('sanchonet', 'conway-genesis.json')
 
     if env == 'mainnet' and node_topology_type == 'p2p':
         print('Creating the topology.json file...')
@@ -165,6 +166,16 @@ def get_node_config_files(env, node_topology_type):
         enable_p2p_node_config_file('config.json')
     else:
         download_config_file(env, 'topology.json')
+
+    # Temporary hardcoded sanchonet conway genesis file hash:
+    with open('config.json', 'r') as f:
+        lines = f.readlines()
+    with open('config.json', 'w') as f:
+        for line in lines:
+            if 'ConwayGenesisHash' not in line.strip("\n"):
+                f.write(line)
+            else:                
+                f.write('  "ConwayGenesisHash": "89dd23dc6a020afa0c7521fe52fe14e38d494129933a3604154a3acfa4ac16e4",\n')    
 
     #if not utils.cli_has(f"{CLI} governance create-poll"):
     #    Path('conway-genesis.json').unlink(missing_ok=True)
