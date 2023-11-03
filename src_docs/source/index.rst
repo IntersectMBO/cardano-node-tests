@@ -7,6 +7,7 @@ Welcome to Cardano node tests documentation!
 
    readme
    test_results
+   test_plans
    process
    how-tos
    contribute/contributing.rst
