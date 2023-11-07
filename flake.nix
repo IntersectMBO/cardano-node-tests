@@ -10,7 +10,13 @@
       };
     };
     poetry2nix = {
-      url = "github:nix-community/poetry2nix";
+      # pin poetry2nix to 2023.10.05.49422, sometime after
+      # there is a change in the boostrap packages that expects
+      # wheel to take a flint-core argument, but it doesn't. It
+      # doesn't with the nixpkgs reference from cardano-node.
+      # Hence we need to make sure we pin it to an old enough
+      # version to work with our nixpkgs ref from cardano-node.
+      url = "github:nix-community/poetry2nix?ref=2023.10.05.49422";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixpkgs.follows = "cardano-node/nixpkgs";
@@ -30,7 +36,7 @@
           # [poetry2nix](https://github.com/nix-community/poetry2nix) to convert the poetry project (pyproject.toml,
           # and poetry.lock) into a nix-buildable expression. This is preferable over using `pkgs.python3.withPackages`
           # as it adheres to the poetry setup instead of replicating it in nix again.
-          p2n = poetry2nix.legacyPackages.${system};
+          p2n = (import poetry2nix { inherit pkgs; });
 
           # base config of poetry2nix for our local project:
           p2nConfig = {
