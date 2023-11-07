@@ -10,13 +10,6 @@
       };
     };
     poetry2nix = {
-      # pin poetry2nix to 2023.10.05.49422, sometime after
-      # there is a change in the boostrap packages that expects
-      # wheel to take a flint-core argument, but it doesn't. It
-      # doesn't with the nixpkgs reference from cardano-node.
-      # Hence we need to make sure we pin it to an old enough
-      # version to work with our nixpkgs ref from cardano-node.
-      url = "github:nix-community/poetry2nix?ref=2023.10.05.49422";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixpkgs.follows = "cardano-node/nixpkgs";
