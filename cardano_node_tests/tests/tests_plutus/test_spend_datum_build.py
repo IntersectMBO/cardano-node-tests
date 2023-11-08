@@ -100,6 +100,8 @@ class TestDatum:
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
@@ -254,6 +256,8 @@ class TestNegativeDatum:
         utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
             utxos=out_utxos, txouts=tx_output_fund.txouts
         )
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)

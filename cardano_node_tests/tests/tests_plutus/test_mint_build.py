@@ -207,6 +207,8 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # check expected fees
         expected_fee_step1 = 168_977
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
@@ -339,6 +341,8 @@ class TestBuildMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check expected fees
         expected_fee_step1 = 167_349
@@ -762,6 +766,8 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs_step2,
             expected_costs=[plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST],
@@ -911,6 +917,8 @@ class TestBuildMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check expected fees
         expected_fee_step1 = 167_349
@@ -1169,6 +1177,8 @@ class TestCollateralOutput:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check return collateral amount, this is only available on Babbage+ TX
 

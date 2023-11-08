@@ -123,6 +123,8 @@ def multisig_tx(
         clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
     ), f"Incorrect balance for script address `{dst_address}`"
 
+    common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+
     return tx_raw_output
 
 
@@ -2110,6 +2112,8 @@ class TestDatum:
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=script_address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
@@ -2279,6 +2283,8 @@ class TestReferenceUTxO:
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check that reference UTxO was NOT spent
         assert cluster.g_query.get_utxo(utxo=reference_utxo), "Reference input was spent"

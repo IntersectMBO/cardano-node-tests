@@ -911,6 +911,8 @@ class TestBuildLocking:
         # TODO: change UTxO used to be first, now it's last
         build_change_utxo = out_utxos[0] if utxo_ix_offset else out_utxos[-1]
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # Lovelace balance on original script UTxOs
         script_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=script_utxos)
         # Lovelace balance on change UTxOs

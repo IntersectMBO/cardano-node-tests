@@ -132,6 +132,8 @@ class TestSECP256k1:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
+        common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("algorithm", ("ecdsa", "schnorr"))
     def test_use_secp_builtin_functions(
