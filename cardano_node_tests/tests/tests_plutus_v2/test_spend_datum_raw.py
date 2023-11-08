@@ -353,4 +353,7 @@ class TestNegativeInlineDatum:
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
             )
         err_str = str(excinfo.value)
-        assert "NonOutputSupplimentaryDatums" in err_str, err_str
+        assert (
+            "NonOutputSupplimentaryDatums" in err_str
+            or "NotAllowedSupplementalDatums" in err_str  # on node version >= 8.6.0
+        ), err_str
