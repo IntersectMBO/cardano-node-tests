@@ -155,6 +155,10 @@ def get_nodes_missing_utxos(
     missing_nodes: tp.Set[str] = set()
 
     known_nodes = cluster_nodes.get_cluster_type().NODES
+    # Skip the check if there is only one node
+    if len(known_nodes) <= 1:
+        return missing_nodes
+
     instance_num = cluster_nodes.get_instance_num()
 
     # Check if all nodes know about the UTxO

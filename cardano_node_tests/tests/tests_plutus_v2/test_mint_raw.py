@@ -219,6 +219,8 @@ class TestMinting:
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), "The 'token b' was not minted"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
@@ -372,6 +374,8 @@ class TestMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(

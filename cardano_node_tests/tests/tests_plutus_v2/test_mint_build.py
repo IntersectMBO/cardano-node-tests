@@ -93,6 +93,8 @@ def _build_reference_txin(
     reference_txin = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
     assert reference_txin, "UTxO not created"
 
+    common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
     return reference_txin
 
 
@@ -211,6 +213,8 @@ class TestBuildMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(
@@ -373,6 +377,8 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(
             utxo=reference_utxo
@@ -498,6 +504,8 @@ class TestBuildMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(
@@ -638,6 +646,8 @@ class TestBuildMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(

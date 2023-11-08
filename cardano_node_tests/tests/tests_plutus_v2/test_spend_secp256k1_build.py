@@ -128,6 +128,8 @@ class TestSECP256k1:
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
         assert collateral_utxos, "No collateral UTxO"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         return algorithm, script_utxos, collateral_utxos
 
     @allure.link(helpers.get_vcs_link())

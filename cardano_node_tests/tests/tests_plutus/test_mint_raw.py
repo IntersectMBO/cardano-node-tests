@@ -221,6 +221,8 @@ class TestMinting:
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), "The 'token b' was not minted"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
@@ -353,6 +355,8 @@ class TestMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
@@ -463,6 +467,8 @@ class TestMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -681,6 +687,8 @@ class TestMinting:
             token_utxo2 and token_utxo2[0].amount == token_amount
         ), "The 'timerange' token was not minted"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
@@ -836,6 +844,8 @@ class TestMinting:
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), f"The '{asset_name_b_dec}' token was not minted"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
@@ -981,6 +991,8 @@ class TestMinting:
         assert (
             token_utxo_b and token_utxo_b[0].amount == token_amount
         ), f"The '{asset_name_b_dec}' was not minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
@@ -1139,6 +1151,8 @@ class TestMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -1406,3 +1420,5 @@ class TestCollateralOutput:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)

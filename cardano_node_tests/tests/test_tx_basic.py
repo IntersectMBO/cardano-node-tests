@@ -219,6 +219,8 @@ class TestBasicTransactions:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             assert (
@@ -292,6 +294,8 @@ class TestBasicTransactions:
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -421,6 +425,8 @@ class TestBasicTransactions:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
@@ -484,6 +490,8 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         # check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -532,6 +540,8 @@ class TestBasicTransactions:
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check min UTxO value
         min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=destinations)
@@ -644,6 +654,8 @@ class TestBasicTransactions:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
@@ -703,6 +715,8 @@ class TestBasicTransactions:
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -921,6 +935,8 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
@@ -982,6 +998,8 @@ class TestBasicTransactions:
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1409,6 +1427,8 @@ class TestMultiInOut:
                 clusterlib.filter_utxos(utxos=out_utxos, address=addr)[0].amount == amount
             ), f"Incorrect balance for destination address `{addr}`"
 
+        common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
@@ -1773,5 +1793,7 @@ class TestIncrementalSigning:
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
