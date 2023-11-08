@@ -163,7 +163,7 @@ def detect_fork(
 
     instance_num = cluster_nodes.get_instance_num()
 
-    # create a UTxO
+    # Create a UTxO
     payment_rec = cluster_obj.g_address.gen_payment_addr_and_keys(
         name=temp_template,
     )
@@ -176,26 +176,29 @@ def detect_fork(
     assert tx_raw_output
     utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)
 
-    # check if all nodes know about the UTxO
-    for node in known_nodes:
-        # set 'CARDANO_NODE_SOCKET_PATH' to point to socket of the selected node
-        cluster_nodes.set_cluster_env(instance_num=instance_num, socket_file_name=f"{node}.socket")
+    # Check if all nodes know about the UTxO
+    try:
+        for node in known_nodes:
+            # Set 'CARDANO_NODE_SOCKET_PATH' to point to socket of the selected node
+            cluster_nodes.set_cluster_env(
+                instance_num=instance_num, socket_file_name=f"{node}.socket"
+            )
 
-        for __ in range(5):
-            if float(cluster_obj.g_query.get_tip()["syncProgress"]) == 100:
-                break
-            time.sleep(1)
-        else:
-            unsynced_nodes.add(node)
-            continue
+            for __ in range(5):
+                if float(cluster_obj.g_query.get_tip()["syncProgress"]) == 100:
+                    break
+                time.sleep(1)
+            else:
+                unsynced_nodes.add(node)
+                continue
 
-        if not cluster_obj.g_query.get_utxo(utxo=utxos):
-            forked_nodes.add(node)
+            if not cluster_obj.g_query.get_utxo(utxo=utxos):
+                forked_nodes.add(node)
+    finally:
+        # Restore 'CARDANO_NODE_SOCKET_PATH' to original value
+        cluster_nodes.set_cluster_env(instance_num=instance_num)
 
-    # restore 'CARDANO_NODE_SOCKET_PATH' to original value
-    cluster_nodes.set_cluster_env(instance_num=instance_num)
-
-    # forked nodes are the ones that differ from the majority of nodes
+    # Forked nodes are the ones that differ from the majority of nodes
     if forked_nodes and len(forked_nodes) > (len(known_nodes) // 2):
         forked_nodes = known_nodes - forked_nodes
 
