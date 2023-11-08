@@ -147,6 +147,46 @@ def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
     return test_id
 
 
+def get_nodes_missing_utxos(
+    cluster_obj: clusterlib.ClusterLib,
+    utxos: tp.List[clusterlib.UTXOData],
+) -> tp.Set[str]:
+    """Return set of nodes that don't have the given UTxOs."""
+    missing_nodes: tp.Set[str] = set()
+
+    known_nodes = cluster_nodes.get_cluster_type().NODES
+    instance_num = cluster_nodes.get_instance_num()
+
+    # Check if all nodes know about the UTxO
+    try:
+        for node in known_nodes:
+            # Set 'CARDANO_NODE_SOCKET_PATH' to point to socket of the selected node
+            cluster_nodes.set_cluster_env(
+                instance_num=instance_num, socket_file_name=f"{node}.socket"
+            )
+
+            if not cluster_obj.g_query.get_utxo(utxo=utxos):
+                missing_nodes.add(node)
+    finally:
+        # Restore 'CARDANO_NODE_SOCKET_PATH' to original value
+        cluster_nodes.set_cluster_env(instance_num=instance_num)
+
+    return missing_nodes
+
+
+def check_missing_utxos(
+    cluster_obj: clusterlib.ClusterLib,
+    utxos: tp.List[clusterlib.UTXOData],
+) -> None:
+    """Fail if any node is missing the given UTxOs."""
+    missing_nodes = get_nodes_missing_utxos(cluster_obj=cluster_obj, utxos=utxos)
+
+    if missing_nodes:
+        raise AssertionError(
+            f"Following nodes are missing the given UTxOs: {sorted(missing_nodes)}"
+        )
+
+
 def detect_fork(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
