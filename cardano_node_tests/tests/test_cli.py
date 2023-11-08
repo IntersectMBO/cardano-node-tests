@@ -42,7 +42,9 @@ class TestCLI:
     TX_BODY_FILE = DATA_DIR / "test_tx_metadata_both_tx.body"
     TX_FILE = DATA_DIR / "test_tx_metadata_both_tx.signed"
     TX_BODY_OUT = DATA_DIR / "test_tx_metadata_both_tx_body.out"
+    TX_BODY_OUT_JSON = DATA_DIR / "test_tx_metadata_both_tx_body_json.out"
     TX_OUT = DATA_DIR / "test_tx_metadata_both_tx.out"
+    TX_OUT_JSON = DATA_DIR / "test_tx_metadata_both_tx_json.out"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -110,9 +112,17 @@ class TestCLI:
             with open(self.TX_BODY_OUT, encoding="utf-8") as infile:
                 tx_body_view_out = infile.read()
             assert tx_body == tx_body_view_out.strip()
+        elif 'return collateral":' in tx_body:  # JSON format in node >= 8.6.0
+            with open(self.TX_BODY_OUT_JSON, encoding="utf-8") as infile:
+                tx_body_view_out = infile.read()
+            assert tx_body == tx_body_view_out.strip()
 
         if "return collateral:" in tx:
             with open(self.TX_OUT, encoding="utf-8") as infile:
+                tx_view_out = infile.read()
+            assert tx == tx_view_out.strip()
+        elif 'return collateral":' in tx_body:  # JSON format in node >= 8.6.0
+            with open(self.TX_OUT_JSON, encoding="utf-8") as infile:
                 tx_view_out = infile.read()
             assert tx == tx_view_out.strip()
         elif "witnesses:" not in tx:
