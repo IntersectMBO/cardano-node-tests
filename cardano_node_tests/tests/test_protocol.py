@@ -57,6 +57,8 @@ PROTOCOL_PARAM_KEYS = frozenset(
 )
 PROTOCOL_PARAM_KEYS_1_35_2 = frozenset(("utxoCostPerByte",))
 
+PROTOCOL_PARAM_KEYS_MISSING_8_6_0 = frozenset(("utxoCostPerWord",))
+
 
 @common.SKIPIF_WRONG_ERA
 @pytest.mark.testnets
@@ -109,4 +111,8 @@ class TestProtocol:
         if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
             union_with = PROTOCOL_PARAM_KEYS_1_35_2
 
-        assert set(protocol_params) == PROTOCOL_PARAM_KEYS.union(union_with)
+        rem: tp.FrozenSet[str] = frozenset()
+        if clusterlib_utils.cli_has("conway"):
+            rem = PROTOCOL_PARAM_KEYS_MISSING_8_6_0
+
+        assert set(protocol_params) == PROTOCOL_PARAM_KEYS.union(union_with).difference(rem)
