@@ -1,0 +1,41 @@
+{
+    "auxiliary scripts": null,
+    "certificates": null,
+    "collateral inputs": null,
+    "era": "Mary",
+    "fee": "190182 Lovelace",
+    "inputs": [
+        "9d43c61d25e780112200a023840b2fdfdf318c12acc9b230685f788167a9419f#0"
+    ],
+    "metadata": {
+        "1": "foo",
+        "2": "bar",
+        "3": "baz",
+        "5": "cardano",
+        "6": "rules"
+    },
+    "mint": null,
+    "outputs": [
+        {
+            "address": "addr_test1vz2522g9f8lznckrujg9zxxkyk7qd9thnq292855sxz3gmszxqcfc",
+            "address era": "Shelley",
+            "amount": {
+                "lovelace": 2809818
+            },
+            "network": "Testnet",
+            "payment credential key hash": "9545290549fe29e2c3e4905118d625bc0695779814551e948185146e",
+            "reference script": null,
+            "stake reference": null
+        }
+    ],
+    "reference inputs": null,
+    "required signers (payment key hashes needed for scripts)": null,
+    "return collateral": null,
+    "total collateral": null,
+    "update proposal": null,
+    "validity range": {
+        "lower bound": null,
+        "upper bound": null
+    },
+    "withdrawals": null
+}
