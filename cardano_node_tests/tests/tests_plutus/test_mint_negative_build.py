@@ -18,6 +18,8 @@ from cardano_node_tests.tests.tests_plutus import mint_build
 from cardano_node_tests.tests.tests_plutus.mint_build import _fund_issuer
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_api
+from cardano_node_tests.utils import submit_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -86,10 +88,12 @@ class TestBuildMintingNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
+    @submit_utils.PARAM_SUBMIT_METHOD
     def test_witness_redeemer_missing_signer(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Test minting a token with a Plutus script with invalid signers.
 
@@ -167,8 +171,13 @@ class TestBuildMintingNegative:
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
+            submit_utils.submit_tx(
+                submit_method=submit_method,
+                cluster_obj=cluster,
+                tx_file=tx_signed_step2,
+                txins=mint_utxos,
+            )
         assert "MissingRequiredSigners" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
