@@ -5,6 +5,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import submit_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ def _fund_issuer(
     minting_cost: plutus_common.ScriptCost,
     amount: int,
     collateral_utxo_num: int = 1,
+    submit_method: str = submit_utils.SubmitMethods.CLI,
 ) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund the token issuer."""
     single_collateral_amount = minting_cost.collateral // collateral_utxo_num
@@ -50,7 +52,13 @@ def _fund_issuer(
         signing_key_files=tx_files.signing_key_files,
         tx_name=f"{temp_template}_step1",
     )
-    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+    submit_utils.submit_tx(
+        submit_method=submit_method,
+        cluster_obj=cluster_obj,
+        tx_file=tx_signed,
+        txins=tx_output.txins,
+    )
 
     issuer_balance = cluster_obj.g_query.get_address_balance(issuer_addr.address)
     assert (

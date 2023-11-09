@@ -18,6 +18,7 @@ from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -98,12 +99,14 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS_VERSION
     def test_minting_one_token(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
+        submit_method: str,
     ):
         """Test minting a token with a Plutus script.
 
@@ -146,6 +149,7 @@ class TestBuildMinting:
             minting_cost=minting_cost,
             amount=script_fund,
             collateral_utxo_num=2,
+            submit_method=submit_method,
         )
 
         # Step 2: mint the "qacoin"
@@ -194,7 +198,13 @@ class TestBuildMinting:
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_step2,
+            txins=mint_utxos,
+        )
 
         assert (
             cluster.g_query.get_address_balance(issuer_addr.address)
@@ -230,8 +240,12 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @submit_utils.PARAM_SUBMIT_METHOD
     def test_time_range_minting(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Test minting a token with a time constraints Plutus script.
 
@@ -270,6 +284,7 @@ class TestBuildMinting:
             issuer_addr=issuer_addr,
             minting_cost=minting_cost,
             amount=script_fund,
+            submit_method=submit_method,
         )
 
         # Step 2: mint the "qacoin"
@@ -329,7 +344,13 @@ class TestBuildMinting:
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_step2,
+            txins=mint_utxos,
+        )
 
         assert (
             cluster.g_query.get_address_balance(issuer_addr.address)
@@ -365,6 +386,7 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize(
         "plutus_version",
         (
@@ -377,6 +399,7 @@ class TestBuildMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
+        submit_method: str,
     ):
         """Test minting two tokens with two different Plutus scripts.
 
@@ -461,7 +484,13 @@ class TestBuildMinting:
             signing_key_files=tx_files_step1.signing_key_files,
             tx_name=f"{temp_template}_step1",
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_step1,
+            txins=tx_output_step1.txins,
+        )
 
         out_utxos_step1 = cluster.g_query.get_utxo(tx_raw_output=tx_output_step1)
 
@@ -562,7 +591,13 @@ class TestBuildMinting:
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_step2,
+            txins=mint_utxos,
+        )
 
         out_utxos_step2 = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
 
@@ -613,8 +648,12 @@ class TestBuildMinting:
     )
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @submit_utils.PARAM_SUBMIT_METHOD
     def test_minting_context_equivalence(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        submit_method: str,
     ):
         """Test context equivalence while minting a token.
 
@@ -654,6 +693,7 @@ class TestBuildMinting:
             issuer_addr=issuer_addr,
             minting_cost=minting_cost,
             amount=script_fund,
+            submit_method=submit_method,
         )
 
         # Step 2: mint the "qacoin"
@@ -753,7 +793,13 @@ class TestBuildMinting:
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_step2,
+            txins=mint_utxos,
+        )
 
         assert (
             cluster.g_query.get_address_balance(issuer_addr.address)
@@ -789,6 +835,7 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize(
         "key",
         (
@@ -801,6 +848,7 @@ class TestBuildMinting:
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         key: str,
+        submit_method: str,
     ):
         """Test minting a token with a Plutus script.
 
@@ -847,6 +895,7 @@ class TestBuildMinting:
             issuer_addr=issuer_addr,
             minting_cost=minting_cost,
             amount=script_fund,
+            submit_method=submit_method,
         )
 
         # Step 2: mint the "qacoin"
@@ -905,7 +954,13 @@ class TestBuildMinting:
             signing_key_files=[signing_key_golden],
             tx_name=f"{temp_template}_step2_sign1",
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed_step2_inc, txins=mint_utxos)
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed_step2_inc,
+            txins=mint_utxos,
+        )
 
         assert (
             cluster.g_query.get_address_balance(issuer_addr.address)
@@ -1062,12 +1117,14 @@ class TestCollateralOutput:
     """Tests for collateral output."""
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS_VERSION
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         plutus_version: str,
+        submit_method: str,
     ):
         """Test minting a token with a Plutus script while using the same collateral input twice.
 
@@ -1166,7 +1223,12 @@ class TestCollateralOutput:
         )
 
         try:
-            cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+            submit_utils.submit_tx(
+                submit_method=submit_method,
+                cluster_obj=cluster,
+                tx_file=tx_signed_step2,
+                txins=mint_utxos,
+            )
         except clusterlib.CLIError as exc:
             if "IncorrectTotalCollateralField" not in str(exc):
                 raise
