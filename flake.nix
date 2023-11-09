@@ -12,6 +12,16 @@
     poetry2nix = {
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    poetry2nix-old = {
+      # pin poetry2nix to 2023.10.05.49422, sometime after
+      # there is a change in the boostrap packages that expects
+      # wheel to take a flint-core argument, but it doesn't. It
+      # doesn't with the nixpkgs reference from cardano-node.
+      # Hence we need to make sure we pin it to an old enough
+      # version to work with our nixpkgs ref from cardano-node.
+      url = "github:nix-community/poetry2nix?ref=2023.10.05.49422";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixpkgs.follows = "cardano-node/nixpkgs";
     flake-utils = {
       url = "github:numtide/flake-utils";
@@ -19,7 +29,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, cardano-node, poetry2nix }:
+  outputs = { self, nixpkgs, flake-utils, cardano-node, poetry2nix, poetry2nix-old }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let
@@ -29,7 +39,20 @@
           # [poetry2nix](https://github.com/nix-community/poetry2nix) to convert the poetry project (pyproject.toml,
           # and poetry.lock) into a nix-buildable expression. This is preferable over using `pkgs.python3.withPackages`
           # as it adheres to the poetry setup instead of replicating it in nix again.
-          p2n = (import poetry2nix { inherit pkgs; });
+          p2n-for-nixpkgs =
+            # if we are using an old nixpkgs (<23.11) then pin poetry2nix to
+            # 2023.10.05.49422, sometime after there is a change in the boostrap
+            # packages that expects wheel to take a flit-core argument, but it
+            # doesn't. It doesn't with the nixpkgs reference from cardano-node.
+            # Hence we need to make sure we pin it to an old enough version to
+            # work with our nixpkgs ref from cardano-node.
+
+            # see https://github.com/NixOS/nixpkgs/commit/3cd71e0ae67cc48f1135e55bf78cb0d67b53ff86
+            # for why we do this check.
+            if pkgs.lib.versionAtLeast pkgs.python3Packages.wheel.version "0.41.1"
+            then (__trace "using NEW poetry2nix" poetry2nix)
+            else (__trace "using OLD poetry2nix" poetry2nix-old);
+          p2n = (import p2n-for-nixpkgs { inherit pkgs; });
 
           # base config of poetry2nix for our local project:
           p2nConfig = {
