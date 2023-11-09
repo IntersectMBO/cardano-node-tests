@@ -42,13 +42,16 @@
           p2n-for-nixpkgs =
             # if we are using an old nixpkgs (<23.11) then pin poetry2nix to
             # 2023.10.05.49422, sometime after there is a change in the boostrap
-            # packages that expects wheel to take a flint-core argument, but it
+            # packages that expects wheel to take a flit-core argument, but it
             # doesn't. It doesn't with the nixpkgs reference from cardano-node.
             # Hence we need to make sure we pin it to an old enough version to
             # work with our nixpkgs ref from cardano-node.
-            if (with nixpkgs.lib; versionAtLeast version "23.11")
-            then poetry2nix
-            else poetry2nix-old;
+
+            # see https://github.com/NixOS/nixpkgs/commit/3cd71e0ae67cc48f1135e55bf78cb0d67b53ff86
+            # for why we do this check.
+            if pkgs.lib.versionAtLeast pkgs.python3Packages.wheel.version "0.41.1"
+            then (__trace "using NEW poetry2nix" poetry2nix)
+            else (__trace "using OLD poetry2nix" poetry2nix-old);
           p2n = (import p2n-for-nixpkgs { inherit pkgs; });
 
           # base config of poetry2nix for our local project:
