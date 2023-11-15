@@ -70,6 +70,10 @@ TX_ERA = os.environ.get("TX_ERA") or ""
 if TX_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage"):
     raise RuntimeError(f"Invalid TX_ERA: {TX_ERA}")
 
+COMMAND_ERA = os.environ.get("COMMAND_ERA") or ""
+if COMMAND_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage", "conway"):
+    raise RuntimeError(f"Invalid COMMAND_ERA: {COMMAND_ERA}")
+
 CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)
 WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 1)
 CLUSTERS_COUNT = int(CLUSTERS_COUNT or (WORKERS_COUNT if WORKERS_COUNT <= 9 else 9))

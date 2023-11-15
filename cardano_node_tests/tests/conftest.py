@@ -77,6 +77,7 @@ def pytest_configure(config: tp.Any) -> None:
     config.stash[metadata_key]["cardano-cli ghc"] = VERSIONS.cli_ghc
     config.stash[metadata_key]["CLUSTER_ERA"] = configuration.CLUSTER_ERA
     config.stash[metadata_key]["TX_ERA"] = configuration.TX_ERA
+    config.stash[metadata_key]["COMMAND_ERA"] = configuration.COMMAND_ERA
     config.stash[metadata_key]["SCRIPTS_DIRNAME"] = configuration.SCRIPTS_DIRNAME
     config.stash[metadata_key]["ENABLE_P2P"] = str(configuration.ENABLE_P2P)
     config.stash[metadata_key]["MIXED_P2P"] = str(configuration.MIXED_P2P)
