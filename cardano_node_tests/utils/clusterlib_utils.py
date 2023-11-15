@@ -1184,19 +1184,21 @@ def gen_byron_addr(
     secret_file = destination_dir / f"{name_template}_byron_orig.key"
     skey_file = destination_dir / f"{name_template}_byron.skey"
 
-    # generate Byron key
+    # Generate Byron key
     cluster_obj.cli(
         [
+            "cardano-cli",
             "byron",
             "key",
             "keygen",
             "--secret",
             str(secret_file),
-        ]
+        ],
+        add_default_args=False,
     )
     assert secret_file.exists()
 
-    # generate Shelley address and keys out of the Byron key
+    # Generate Shelley address and keys out of the Byron key
     cluster_obj.cli(
         [
             "key",

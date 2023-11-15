@@ -67,22 +67,22 @@ class TestBasicTransactions:
             if fixture_cache.value:
                 return fixture_cache.value  # type: ignore
 
-            byron_addrs = [
+            new_byron_addrs = [
                 clusterlib_utils.gen_byron_addr(
                     cluster_obj=cluster,
                     name_template=f"addr_payment_ci{cluster_manager.cluster_instance_num}_{i}",
                 )
                 for i in range(2)
             ]
-            fixture_cache.value = byron_addrs
+            fixture_cache.value = new_byron_addrs
 
         # fund source addresses
         clusterlib_utils.fund_from_faucet(
-            *byron_addrs,
+            *new_byron_addrs,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
-        return byron_addrs
+        return new_byron_addrs
 
     @pytest.fixture
     def payment_addrs_disposable(

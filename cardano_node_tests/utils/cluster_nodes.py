@@ -29,6 +29,7 @@ class ClusterEnv(tp.NamedTuple):
     instance_num: int
     cluster_era: str
     tx_era: str
+    command_era: str
 
 
 class ServiceStatus(tp.NamedTuple):
@@ -72,7 +73,7 @@ class ClusterType:
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
 
     def get_cluster_obj(
-        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0, command_era: str = ""
     ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
@@ -134,7 +135,7 @@ class LocalCluster(ClusterType):
         return offset
 
     def get_cluster_obj(
-        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0, command_era: str = ""
     ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
@@ -143,6 +144,7 @@ class LocalCluster(ClusterType):
             protocol=protocol or clusterlib.Protocols.CARDANO,
             tx_era=tx_era or cluster_env.tx_era,
             slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
+            command_era=command_era or cluster_env.command_era,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         cluster_obj._min_change_value = 2_000_000  # TODO: hardcoded `minUTxOValue`
@@ -282,7 +284,7 @@ class TestnetCluster(ClusterType):
         return offset
 
     def get_cluster_obj(
-        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0
+        self, protocol: str = "", tx_era: str = "", slots_offset: int = 0, command_era: str = ""
     ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
@@ -291,6 +293,7 @@ class TestnetCluster(ClusterType):
             protocol=protocol or clusterlib.Protocols.CARDANO,
             tx_era=tx_era or cluster_env.tx_era,
             slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
+            command_era=command_era or cluster_env.command_era,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         cluster_obj._min_change_value = 2_000_000  # TODO: hardcoded `minUTxOValue`
@@ -375,6 +378,7 @@ def get_cluster_env() -> ClusterEnv:
         instance_num=instance_num,
         cluster_era=configuration.CLUSTER_ERA,
         tx_era=configuration.TX_ERA,
+        command_era=configuration.COMMAND_ERA,
     )
     return cluster_env
 

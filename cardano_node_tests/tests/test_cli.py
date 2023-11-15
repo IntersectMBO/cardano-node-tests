@@ -1218,6 +1218,7 @@ class TestPing:
 
         cli_out = cluster.cli(
             [
+                "cardano-cli",
                 "ping",
                 "--count",
                 str(count),
@@ -1231,6 +1232,7 @@ class TestPing:
                 "--quiet",
             ],
             timeout=30,
+            add_default_args=False,
         )
 
         err_str = cli_out.stderr.rstrip().decode("utf-8")
@@ -1266,6 +1268,7 @@ class TestPing:
         try:
             cli_out = cluster.cli(
                 [
+                    "cardano-cli",
                     "ping",
                     "--count",
                     str(count),
@@ -1277,6 +1280,7 @@ class TestPing:
                     "--quiet",
                 ],
                 timeout=30,
+                add_default_args=False,
             )
         except clusterlib.CLIError as exc:
             if "MuxError MuxBearerClosed" not in str(exc):
