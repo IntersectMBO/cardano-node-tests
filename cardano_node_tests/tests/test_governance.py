@@ -30,8 +30,8 @@ LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent / "data"
 
 pytestmark = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALONZO,
-    reason="runs only with Tx era >= Alonzo",
+    VERSIONS.transaction_era != VERSIONS.BABBAGE,
+    reason="legacy SPO polls work only with Babbage Tx era",
 )
 
 
@@ -98,7 +98,7 @@ class TestPoll:
 
         poll_question = f"Poll {clusterlib.get_rand_str(4)}: Pineapples on pizza?"
 
-        # The poll should be signed with the delegateKey so that SPOS can verify it is a legit poll
+        # The poll should be signed with the delegateKey so that SPOs can verify it is a legit poll
         required_signer_file = cluster.g_genesis.genesis_keys.delegate_skeys[0]
 
         required_signer_vkey = required_signer_file.parent / f"{required_signer_file.stem}.vkey"
