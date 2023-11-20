@@ -34,9 +34,9 @@ Regression testing on a local cluster
    * - Upgrade testing (8.1.2 to 8.6.0-pre)
      - |:heavy_check_mark:|
    * - Rollback testing
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Sanity checks of the submit-api REST service
      - |:heavy_check_mark:|
 
