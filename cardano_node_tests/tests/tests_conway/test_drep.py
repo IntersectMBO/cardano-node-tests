@@ -1,6 +1,7 @@
 """Tests for Conway governance DRep functionality."""
 import logging
 import pathlib as pl
+import typing as tp
 
 import allure
 import pytest
@@ -22,29 +23,43 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+@pytest.fixture
+def payment_addr(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> clusterlib.AddressRecord:
+    """Create new payment address."""
+    addr = clusterlib_utils.create_payment_addr_records(
+        f"chain_tx_addr_ci{cluster_manager.cluster_instance_num}",
+        cluster_obj=cluster,
+    )[0]
+
+    # Fund source address
+    clusterlib_utils.fund_from_faucet(
+        addr,
+        cluster_obj=cluster,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+    )
+
+    return addr
+
+
+@pytest.fixture
+def pool_users_disposable(
+    cluster: clusterlib.ClusterLib,
+) -> tp.List[clusterlib.PoolUser]:
+    """Create function scoped pool users."""
+    test_id = common.get_test_id(cluster)
+    pool_users = clusterlib_utils.create_pool_users(
+        cluster_obj=cluster,
+        name_template=f"{test_id}_pool_user",
+        no_of_addr=2,
+    )
+    return pool_users
+
+
 class TestDReps:
     """Tests for DReps."""
-
-    @pytest.fixture
-    def payment_addr(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
-    ) -> clusterlib.AddressRecord:
-        """Create new payment address."""
-        addr = clusterlib_utils.create_payment_addr_records(
-            f"chain_tx_addr_ci{cluster_manager.cluster_instance_num}",
-            cluster_obj=cluster,
-        )[0]
-
-        # Fund source address
-        clusterlib_utils.fund_from_faucet(
-            addr,
-            cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
-        )
-
-        return addr
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -148,3 +163,94 @@ class TestDReps:
             - tx_output_ret.fee
             + reg_drep.deposit
         ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+
+class TestDelegDReps:
+    """Tests for votes delegation to DReps."""
+
+    @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
+    def test_always_abstain(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        pool_users_disposable: tp.List[clusterlib.PoolUser],
+        use_build_cmd: bool,
+        submit_method: str,
+    ):
+        """Test delegating to always-abstain default DRep.
+
+        * register stake address
+        * delegate stake to always-abstain default DRep
+        * check that stake address is registered
+        """
+        temp_template = common.get_test_id(cluster)
+        pool_user = pool_users_disposable[0]
+        deposit_amt = cluster.g_query.get_address_deposit()
+
+        # Create stake address registration cert
+        reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=deposit_amt,
+            stake_vkey_file=pool_user.stake.vkey_file,
+        )
+
+        # Create vote delegation cert
+        deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
+            addr_name=temp_template,
+            stake_vkey_file=pool_user.stake.vkey_file,
+            always_abstain=True,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[reg_cert, deleg_cert],
+            signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
+        )
+
+        if use_build_cmd:
+            tx_output = cluster.g_transaction.build_tx(
+                src_address=payment_addr.address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                witness_override=len(tx_files.signing_key_files),
+            )
+        else:
+            fee = cluster.g_transaction.calculate_tx_fee(
+                src_address=payment_addr.address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                witness_count_add=len(tx_files.signing_key_files),
+            )
+            tx_output = cluster.g_transaction.build_raw_tx(
+                src_address=payment_addr.address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                fee=fee,
+                deposit=deposit_amt,
+            )
+
+        tx_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=tx_signed,
+            txins=tx_output.txins,
+        )
+
+        assert cluster.g_query.get_stake_addr_info(
+            pool_user.stake.address
+        ).address, f"Stake address is NOT registered: {pool_user.stake.address}"
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+        ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+        # Check that stake address is delegated to always-abstain default DRep
+        # TODO

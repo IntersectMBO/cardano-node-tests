@@ -1301,7 +1301,7 @@ def register_drep(
     use_build_cmd: bool = False,
 ) -> DRepRegistration:
     """Register DRep."""
-    deposit_amt = deposit_amt if deposit_amt >= 0 else cluster_obj.conway_genesis["dRepDeposit"]
+    deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.conway_genesis["dRepDeposit"]
 
     drep_keys = cluster_obj.g_conway_governance.drep.gen_key_pair(key_name=name_template)
     reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
