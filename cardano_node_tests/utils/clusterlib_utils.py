@@ -860,6 +860,38 @@ def filtered_ledger_state(
     return helpers.run_in_bash(cmd).decode("utf-8").strip()
 
 
+def get_delegation_state(
+    cluster_obj: clusterlib.ClusterLib,
+) -> dict:
+    """Get `delegationState` section of ledger state."""
+    cardano_cli_args = [
+        "cardano-cli",
+        "query",
+        "ledger-state",
+        *cluster_obj.magic_args,
+        f"--{cluster_obj.protocol}-mode",
+    ]
+    cardano_cmd = " ".join(cardano_cli_args)
+
+    # Record cli coverage
+    clusterlib.record_cli_coverage(
+        cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
+    )
+
+    # Get rid of a huge amount of data we don't have any use for
+    cmd = (
+        f"{cardano_cmd} | jq -n --stream -c "
+        "'fromstream(3|truncate_stream(inputs|select(.[0][2] == \"delegationState\")))'"
+    )
+
+    deleg_state_raw = helpers.run_in_bash(cmd).decode("utf-8").strip()
+    if not deleg_state_raw:
+        return {}
+
+    deleg_state: dict = json.loads(deleg_state_raw)
+    return deleg_state
+
+
 def get_blocks_before(
     cluster_obj: clusterlib.ClusterLib,
 ) -> tp.Dict[str, int]:
