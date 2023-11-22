@@ -833,10 +833,9 @@ def new_tokens(
     return tokens_to_mint
 
 
-def filtered_ledger_state(
+def _get_ledger_state_cmd(
     cluster_obj: clusterlib.ClusterLib,
 ) -> str:
-    """Get filtered output of `query ledger-state`."""
     cardano_cli_args = [
         "cardano-cli",
         "query",
@@ -844,43 +843,25 @@ def filtered_ledger_state(
         *cluster_obj.magic_args,
         f"--{cluster_obj.protocol}-mode",
     ]
-    cardano_cmd = " ".join(cardano_cli_args)
-
-    # record cli coverage
-    clusterlib.record_cli_coverage(
-        cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
-    )
-
-    # get rid of a huge amount of data we don't have any use for
-    cmd = (
-        f"{cardano_cmd} | jq -n --stream -c "
-        "'fromstream(inputs|select((length == 2 and .[0][1] == \"esLState\")|not))'"
-    )
-
-    return helpers.run_in_bash(cmd).decode("utf-8").strip()
-
-
-def get_delegation_state(
-    cluster_obj: clusterlib.ClusterLib,
-) -> dict:
-    """Get `delegationState` section of ledger state."""
-    cardano_cli_args = [
-        "cardano-cli",
-        "query",
-        "ledger-state",
-        *cluster_obj.magic_args,
-        f"--{cluster_obj.protocol}-mode",
-    ]
-    cardano_cmd = " ".join(cardano_cli_args)
+    ledger_state_cmd = " ".join(cardano_cli_args)
 
     # Record cli coverage
     clusterlib.record_cli_coverage(
         cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
     )
 
+    return ledger_state_cmd
+
+
+def get_delegation_state(
+    cluster_obj: clusterlib.ClusterLib,
+) -> dict:
+    """Get `delegationState` section of ledger state."""
+    ledger_state_cmd = _get_ledger_state_cmd(cluster_obj=cluster_obj)
+
     # Get rid of a huge amount of data we don't have any use for
     cmd = (
-        f"{cardano_cmd} | jq -n --stream -c "
+        f"{ledger_state_cmd} | jq -n --stream -c "
         "'fromstream(3|truncate_stream(inputs|select(.[0][2] == \"delegationState\")))'"
     )
 
@@ -896,39 +877,41 @@ def get_blocks_before(
     cluster_obj: clusterlib.ClusterLib,
 ) -> tp.Dict[str, int]:
     """Get `blocksBefore` section of ledger state with bech32 encoded pool ids."""
-    cardano_cli_args = [
-        "cardano-cli",
-        "query",
-        "ledger-state",
-        *cluster_obj.magic_args,
-        f"--{cluster_obj.protocol}-mode",
-    ]
-    cardano_cmd = " ".join(cardano_cli_args)
+    ledger_state_cmd = _get_ledger_state_cmd(cluster_obj=cluster_obj)
 
-    # record cli coverage
-    clusterlib.record_cli_coverage(
-        cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
-    )
-
-    # get rid of a huge amount of data we don't have any use for
+    # Get rid of a huge amount of data we don't have any use for
     cmd = (
-        f"{cardano_cmd} | jq -n --stream -c "
+        f"{ledger_state_cmd} | jq -n --stream -c "
         "'fromstream(1|truncate_stream(inputs|select(.[0][0] == \"blocksBefore\")))'"
     )
 
-    out_str = helpers.run_in_bash(cmd).decode("utf-8").strip()
-    out_json: dict = json.loads(out_str)
-    return {helpers.encode_bech32(prefix="pool", data=key): val for key, val in out_json.items()}
+    blocks_before_raw = helpers.run_in_bash(cmd).decode("utf-8").strip()
+    if not blocks_before_raw:
+        return {}
+
+    blocks_before: dict = json.loads(blocks_before_raw)
+    return {
+        helpers.encode_bech32(prefix="pool", data=key): val for key, val in blocks_before.items()
+    }
 
 
 def get_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
 ) -> dict:
     """Return the current ledger state info."""
-    f_ledger_state = filtered_ledger_state(cluster_obj)
-    if not f_ledger_state:
+    ledger_state_cmd = _get_ledger_state_cmd(cluster_obj=cluster_obj)
+
+    # Get rid of a huge amount of data we don't have any use for
+    cmd = (
+        f"{ledger_state_cmd} | jq -n --stream -c "
+        "'fromstream(inputs|select((length == 2 and .[0][1] == \"esLState\")|not))'"
+    )
+
+    ledger_state_raw = helpers.run_in_bash(cmd).decode("utf-8").strip()
+    if not ledger_state_raw:
         return {}
-    ledger_state: dict = json.loads(f_ledger_state)
+
+    ledger_state: dict = json.loads(ledger_state_raw)
     return ledger_state
 
 
