@@ -1,20 +1,20 @@
 exclude: ^sync_tests/
 repos:
 - repo: https://github.com/asottile/reorder_python_imports
-  rev: v3.10.0
+  rev: v3.12.0
   hooks:
   - id: reorder-python-imports
     entry: env SETUPTOOLS_USE_DISTUTILS=stdlib reorder-python-imports
     language_version: python3
 - repo: https://github.com/ambv/black
-  rev: 23.9.1
+  rev: 23.11.0
   hooks:
   - id: black
     args: [--safe, --quiet]
     language_version: python3
     require_serial: true
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.5.0
   hooks:
   - id: trailing-whitespace
     language_version: python3
@@ -27,15 +27,15 @@ repos:
   - id: debug-statements
     language_version: python3
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.287
+  rev: v0.1.6
   hooks:
     - id: ruff
 - repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.9.0.5
+  rev: v0.9.0.6
   hooks:
   - id: shellcheck
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.36.0
+  rev: v0.37.0
   hooks:
   - id: markdownlint
 - repo: https://github.com/rstcheck/rstcheck
@@ -56,6 +56,6 @@ repos:
     language: system
     types: [python]
 - repo: https://github.com/python-poetry/poetry
-  rev: 1.6.0
+  rev: 1.7.0
   hooks:
     - id: poetry-check
