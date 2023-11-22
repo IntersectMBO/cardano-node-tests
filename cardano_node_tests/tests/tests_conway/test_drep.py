@@ -120,6 +120,8 @@ class TestDReps:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
+    @pytest.mark.smoke
     def test_register_and_retire_drep(
         self,
         cluster: clusterlib.ClusterLib,
