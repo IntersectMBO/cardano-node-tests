@@ -354,10 +354,12 @@ class TestDelegDReps:
 
         # Check that stake address is delegated to the correct DRep.
         # This takes one epoch, so test this only for selected combinations of build command
-        # and submit method, and only if we are not running smoke tests.
+        # and submit method, only when we are running on local testnet, and only if we are not
+        # running smoke tests.
         if (
             use_build_cmd
             and submit_method == submit_utils.SubmitMethods.CLI
+            and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
             and "smoke" not in request.config.getoption("-m")
         ):
             cluster.wait_for_new_epoch(padding_seconds=5)
