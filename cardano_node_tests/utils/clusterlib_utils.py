@@ -49,6 +49,14 @@ class DRepRegistration(tp.NamedTuple):
     deposit: int
 
 
+class CommitteeRegistration(tp.NamedTuple):
+    registration_cert: pl.Path
+    cold_key_pair: clusterlib.KeyPair
+    hot_key_pair: clusterlib.KeyPair
+    tx_output: clusterlib.TxRawOutput
+    key_hash: str
+
+
 def get_pool_state(
     cluster_obj: clusterlib.ClusterLib,
     pool_id: str,
@@ -1376,4 +1384,75 @@ def register_drep(
         tx_output=tx_output,
         drep_id=drep_id,
         deposit=deposit_amt,
+    )
+
+
+def register_committee(
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    payment_addr: clusterlib.AddressRecord,
+    submit_method: str = submit_utils.SubmitMethods.CLI,
+    use_build_cmd: bool = False,
+) -> CommitteeRegistration:
+    """Register Constitutional Committee Member."""
+    committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
+        key_name=name_template
+    )
+    committee_hot_keys = cluster_obj.g_conway_governance.committee.gen_hot_key_pair(
+        key_name=name_template
+    )
+    reg_cert = cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
+        key_name=name_template,
+        cold_vkey_file=committee_cold_keys.vkey_file,
+        hot_key_file=committee_hot_keys.vkey_file,
+    )
+
+    tx_files = clusterlib.TxFiles(
+        certificate_files=[reg_cert],
+        signing_key_files=[payment_addr.skey_file, committee_cold_keys.skey_file],
+    )
+
+    if use_build_cmd:
+        tx_output = cluster_obj.g_transaction.build_tx(
+            src_address=payment_addr.address,
+            tx_name=name_template,
+            tx_files=tx_files,
+            witness_override=len(tx_files.signing_key_files),
+        )
+    else:
+        fee = cluster_obj.g_transaction.calculate_tx_fee(
+            src_address=payment_addr.address,
+            tx_name=name_template,
+            tx_files=tx_files,
+            witness_count_add=len(tx_files.signing_key_files),
+        )
+        tx_output = cluster_obj.g_transaction.build_raw_tx(
+            src_address=payment_addr.address,
+            tx_name=name_template,
+            tx_files=tx_files,
+            fee=fee,
+        )
+
+    tx_signed = cluster_obj.g_transaction.sign_tx(
+        tx_body_file=tx_output.out_file,
+        signing_key_files=tx_files.signing_key_files,
+        tx_name=name_template,
+    )
+    submit_utils.submit_tx(
+        submit_method=submit_method,
+        cluster_obj=cluster_obj,
+        tx_file=tx_signed,
+        txins=tx_output.txins,
+    )
+
+    key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+        vkey_file=committee_cold_keys.vkey_file,
+    )
+
+    return CommitteeRegistration(
+        registration_cert=reg_cert,
+        cold_key_pair=committee_cold_keys,
+        hot_key_pair=committee_cold_keys,
+        tx_output=tx_output,
+        key_hash=key_hash,
     )
