@@ -565,24 +565,13 @@ done
 
 WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + 1))"
 
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 3 \
-        --witness-count "$WITNESS_COUNT" \
-        --byron-witness-count 0 \
-        --tx-body-file "$STATE_CLUSTER/shelley/transfer-register-delegate-fee-tx.txbody" |
-        cut -d' ' -f1)"
-
-TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
-
-cardano_cli_log transaction build-raw \
+cardano_cli_log transaction build \
   --babbage-era \
-  --fee    "$FEE" \
   "${TXINS[@]}" \
-  --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
+  --change-address   "$TXIN_ADDR" \
   "${POOL_ARGS[@]}" \
+  --witness-override "$WITNESS_COUNT" \
+  --testnet-magic    "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
 
 cardano_cli_log transaction sign \

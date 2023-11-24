@@ -282,40 +282,37 @@ for i in $(seq 1 "$NUM_POOLS"); do
   echo "Generating Pool $i Secrets"
 
   # pool owner addresses and keys
-  cardano_cli_log address key-gen \
+  cardano_cli_log conway address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey"
-  cardano_cli_log stake-address key-gen \
+  cardano_cli_log conway stake-address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
   #   payment address
-  cardano_cli_log address build \
+  cardano_cli_log conway address build \
     --payment-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner.addr"
   #   stake address
-  cardano_cli_log stake-address build \
+  cardano_cli_log conway stake-address build \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
   #   stake address registration cert
-  cardano_cli_log stake-address registration-certificate \
-    --conway-era \
+  cardano_cli_log conway stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
 
   # stake reward address registration cert
-  cardano_cli_log stake-address registration-certificate \
-    --conway-era \
+  cardano_cli_log conway stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
     --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
 
   # stake address delegation certs
-  cardano_cli_log stake-address delegation-certificate \
-    --conway-era \
+  cardano_cli_log conway stake-address stake-delegation-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
@@ -348,14 +345,13 @@ EoF
     > "$STATE_CLUSTER/webserver/pool$i.json"
 
   METADATA_URL="http://localhost:%%WEBSERVER_PORT%%/pool$i.json"
-  METADATA_HASH=$(cardano_cli_log stake-pool metadata-hash --pool-metadata-file \
+  METADATA_HASH=$(cardano_cli_log conway stake-pool metadata-hash --pool-metadata-file \
     "$STATE_CLUSTER/webserver/pool$i.json")
   POOL_PORT=$(("%%NODE_PORT_BASE%%" + ("$NUM_BFT_NODES" + i - 1) * "%%PORTS_PER_NODE%%"))
   echo "$POOL_PORT" > "$STATE_CLUSTER/nodes/node-pool$i/port"
   echo $POOL_PLEDGE > "$STATE_CLUSTER/nodes/node-pool$i/pledge"
 
-  cardano_cli_log stake-pool registration-certificate \
-    --conway-era \
+  cardano_cli_log conway stake-pool registration-certificate \
     --cold-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
     --vrf-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
     --pool-pledge "$POOL_PLEDGE" \
@@ -472,7 +468,7 @@ done
 
 # Tranfer funds, register stake addresses and pools, all in one big transaction:
 
-cardano_cli_log query protocol-parameters \
+cardano_cli_log conway query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
@@ -527,7 +523,7 @@ cardano_cli_log conway transaction build \
   --testnet-magic    "$NETWORK_MAGIC" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
 
-cardano_cli_log transaction sign \
+cardano_cli_log conway transaction sign \
   "${POOL_SIGNING[@]}" \
   "${GENESIS_SIGNING[@]}" \
   "${DELEGATE_SIGNING[@]}" \
@@ -536,7 +532,7 @@ cardano_cli_log transaction sign \
   --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx"
 
-cardano_cli_log transaction submit \
+cardano_cli_log conway transaction submit \
   --tx-file "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
