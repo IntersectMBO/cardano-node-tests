@@ -194,13 +194,24 @@ gen_genesis() {
     --start-time "$START_TIME_SHELLEY"
 }
 
-if ! gen_genesis; then
-  echo "Failed to generate Alonzo genesis, retrying with a different genesis.alonzo.spec.json"
+gen_genesis && genesis_created=1 || genesis_created=0
+
+if [ "$genesis_created" -eq 0 ] ; then
+  echo "Failed to generate genesis files, retrying with a different genesis.conway.spec.json"
+  mv "$STATE_CLUSTER/create_staked/genesis.conway.spec.json" \
+    "$STATE_CLUSTER/create_staked/master-genesis.conway.spec.json"
+  mv "$STATE_CLUSTER/create_staked/empty-genesis.conway.spec.json" \
+    "$STATE_CLUSTER/create_staked/genesis.conway.spec.json"
+  gen_genesis && genesis_created=1 || genesis_created=0
+fi
+
+if [ "$genesis_created" -eq 0 ] ; then
+  echo "Failed to generate genesis files, retrying with a different genesis.alonzo.spec.json"
   mv "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json" \
     "$STATE_CLUSTER/create_staked/master-genesis.alonzo.spec.json"
   mv "$STATE_CLUSTER/create_staked/release-genesis.alonzo.spec.json" \
     "$STATE_CLUSTER/create_staked/genesis.alonzo.spec.json"
-  gen_genesis
+  gen_genesis && genesis_created=1 || genesis_created=0
 fi
 
 mv "$STATE_CLUSTER/create_staked/delegate-keys" "$STATE_CLUSTER/shelley/delegate-keys"
