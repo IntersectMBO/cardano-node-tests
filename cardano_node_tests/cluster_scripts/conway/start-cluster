@@ -1096,8 +1096,6 @@ sleep "$NEXT_EPOCH_SLEEP"
 
 wait_for_era "Conway"
 
-# TODO: protocol parameters update doesn't work in conway era yet
-if false; then
 cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
@@ -1105,6 +1103,5 @@ cardano_cli_log query protocol-parameters \
 PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")"
 
 [ "$PROTOCOL_VERSION" = 9 ] || { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
-fi
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
