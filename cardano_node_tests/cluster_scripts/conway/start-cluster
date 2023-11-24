@@ -109,21 +109,7 @@ wait_for_epoch() {
   exit 1
 }
 
-enable_submit_api() {
-  type cardano-submit-api >/dev/null 2>&1 || return 1
-
-  # TODO: `--metrics-port` is not available in older cardano-node releases, see node issue #4280
-  # If the metrics port is not available, we can start the `cardano-submit-api` only on the first
-  # cluster instance.
-  [[ "$CARDANO_NODE_SOCKET_PATH" == */cluster0/* ]] && return 0
-  if cardano-submit-api --metrics-port 8081 2>&1 | { read -r i; [[ "$i" == *Invalid* ]]; }; then
-    return 1
-  fi
-
-  return 0
-}
-
-ENABLE_SUBMIT_API="$(enable_submit_api && echo 1 || echo 0)"
+ENABLE_SUBMIT_API="$(type cardano-submit-api >/dev/null 2>&1 && echo 1 || echo 0)"
 
 if [ -e "$SCRIPT_DIR/shell_env" ]; then
   # shellcheck disable=SC1090,SC1091
