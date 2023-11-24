@@ -26,6 +26,8 @@ NUM_POOLS=%%NUM_POOLS%%
 PROPOSAL_DELAY=5
 POOL_PLEDGE=1000000000000
 
+FEE=5000000
+
 SECURITY_PARAM="$(jq '.securityParam' < "$SCRIPT_DIR/genesis.spec.json")"
 NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
@@ -576,10 +578,6 @@ for skey in "$STATE_CLUSTER"/shelley/delegate-keys/delegate?.skey; do
   DELEGATE_SIGNING+=("--signing-key-file" "$skey")
 done
 
-DELEGATE_WITNESS_COUNT="$((${#DELEGATE_SIGNING[@]} + 1))"
-
-FEE_BUFFER=100000000
-
 FAUCET_ADDR="$(<"$STATE_CLUSTER"/byron/address-000-converted)"
 FAUCET_SKEY="$STATE_CLUSTER/byron/payment-keys.000-converted.skey"
 
@@ -614,7 +612,7 @@ cardano_cli_log query protocol-parameters \
 DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' \
   < "$STATE_CLUSTER/shelley/genesis.json")"
 NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
-STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE_BUFFER))"
+STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE))"
 
 TXINS=()
 TXIN_COUNT=0
@@ -644,16 +642,6 @@ for i in $(seq 1 "$NUM_POOLS"); do
   )
 done
 
-cardano_cli_log transaction build-raw \
-  --shelley-era \
-  --ttl    "$TTL" \
-  --fee    0 \
-  "${TXINS[@]}" \
-  --tx-out "$FAUCET_ADDR+0" \
-  "${POOL_ARGS[@]}" \
-  --update-proposal-file "$ALLEGRA_HF_PROPOSAL_FILE" \
-  --out-file "${ALLEGRA_TX_BASE}-fee-tx.txbody"
-
 POOL_SIGNING=()
 for i in $(seq 1 "$NUM_POOLS"); do
   POOL_SIGNING+=( \
@@ -662,18 +650,6 @@ for i in $(seq 1 "$NUM_POOLS"); do
     "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/cold.skey" \
   )
 done
-
-WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + DELEGATE_WITNESS_COUNT))"
-
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 3 \
-        --witness-count "$WITNESS_COUNT" \
-        --byron-witness-count 0 \
-        --tx-body-file "${ALLEGRA_TX_BASE}-fee-tx.txbody" |
-        cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE - NEEDED_AMOUNT))"
 
@@ -731,7 +707,7 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-STOP_TXIN_AMOUNT=$FEE_BUFFER
+STOP_TXIN_AMOUNT=$FEE
 
 TXINS=()
 TXIN_COUNT=0
@@ -747,24 +723,6 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace$|[0-9]$")"
-
-cardano_cli_log transaction build-raw \
-  --allegra-era \
-  --fee    0 \
-  "${TXINS[@]}" \
-  --tx-out "$FAUCET_ADDR+0" \
-  --update-proposal-file "${MARY_HF_PROPOSAL}.proposal" \
-  --out-file "${MARY_HF_PROPOSAL}-fee-tx.txbody"
-
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 1 \
-        --witness-count "$DELEGATE_WITNESS_COUNT" \
-        --byron-witness-count 0 \
-        --tx-body-file "${MARY_HF_PROPOSAL}-fee-tx.txbody" |
-        cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
@@ -814,7 +772,7 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-STOP_TXIN_AMOUNT=$FEE_BUFFER
+STOP_TXIN_AMOUNT=$FEE
 
 TXINS=()
 TXIN_COUNT=0
@@ -830,24 +788,6 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace$|[0-9]$")"
-
-cardano_cli_log transaction build-raw \
-  --mary-era \
-  --fee    0 \
-  "${TXINS[@]}" \
-  --tx-out "$FAUCET_ADDR+0" \
-  --update-proposal-file "${ALONZO_UPDATE_PROPOSAL}.proposal" \
-  --out-file "${ALONZO_UPDATE_PROPOSAL}-fee-tx.txbody"
-
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 1 \
-        --witness-count "$DELEGATE_WITNESS_COUNT" \
-        --byron-witness-count 0 \
-        --tx-body-file "${ALONZO_UPDATE_PROPOSAL}-fee-tx.txbody" |
-        cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
@@ -898,7 +838,7 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-STOP_TXIN_AMOUNT=$FEE_BUFFER
+STOP_TXIN_AMOUNT=$FEE
 
 TXINS=()
 TXIN_COUNT=0
@@ -914,24 +854,6 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
-
-cardano_cli_log transaction build-raw \
-  --alonzo-era \
-  --fee    0 \
-  "${TXINS[@]}" \
-  --tx-out "$FAUCET_ADDR+0" \
-  --update-proposal-file "${ALONZO_UPDATE_PROPOSAL_PV6}.proposal" \
-  --out-file "${ALONZO_UPDATE_PROPOSAL_PV6}-fee-tx.txbody"
-
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 1 \
-        --witness-count "$DELEGATE_WITNESS_COUNT" \
-        --byron-witness-count 0 \
-        --tx-body-file "${ALONZO_UPDATE_PROPOSAL_PV6}-fee-tx.txbody" |
-        cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
@@ -998,7 +920,7 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-STOP_TXIN_AMOUNT=$FEE_BUFFER
+STOP_TXIN_AMOUNT=$FEE
 
 TXINS=()
 TXIN_COUNT=0
@@ -1014,24 +936,6 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
-
-cardano_cli_log transaction build-raw \
-  --alonzo-era \
-  --fee    0 \
-  "${TXINS[@]}" \
-  --tx-out "$FAUCET_ADDR+0" \
-  --update-proposal-file "${BABBAGE_UPDATE_PROPOSAL}.proposal" \
-  --out-file "${BABBAGE_UPDATE_PROPOSAL}-fee-tx.txbody"
-
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 1 \
-        --witness-count "$DELEGATE_WITNESS_COUNT" \
-        --byron-witness-count 0 \
-        --tx-body-file "${BABBAGE_UPDATE_PROPOSAL}-fee-tx.txbody" |
-        cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
@@ -1082,7 +986,7 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-STOP_TXIN_AMOUNT=$FEE_BUFFER
+STOP_TXIN_AMOUNT=$FEE
 
 TXINS=()
 TXIN_COUNT=0
@@ -1098,24 +1002,6 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
-
-cardano_cli_log transaction build-raw \
-  --babbage-era \
-  --fee    0 \
-  "${TXINS[@]}" \
-  --tx-out "$FAUCET_ADDR+0" \
-  --update-proposal-file "${BABBAGE_UPDATE_PROPOSAL_PV8}.proposal" \
-  --out-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-fee-tx.txbody"
-
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 1 \
-        --witness-count "$DELEGATE_WITNESS_COUNT" \
-        --byron-witness-count 0 \
-        --tx-body-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-fee-tx.txbody" |
-        cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
@@ -1145,7 +1031,7 @@ sleep "$NEXT_EPOCH_SLEEP"
 
 
 #
-# In Babbage era PV8
+# In Babbage era with PV8
 #
 
 wait_for_epoch "$((BABBAGE_EPOCH + 1))"
@@ -1176,7 +1062,7 @@ cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-STOP_TXIN_AMOUNT=$FEE_BUFFER
+STOP_TXIN_AMOUNT=$FEE
 
 TXINS=()
 TXIN_COUNT=0
@@ -1192,24 +1078,6 @@ done <<< "$(cardano_cli_log query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$FAUCET_ADDR" |
             grep -E "lovelace \+ TxOutDatumNone$")"
-
-cardano_cli_log transaction build-raw \
-  --babbage-era \
-  --fee    0 \
-  "${TXINS[@]}" \
-  --tx-out "$FAUCET_ADDR+0" \
-  --update-proposal-file "${CONWAY_UPDATE_PROPOSAL}.proposal" \
-  --out-file "${CONWAY_UPDATE_PROPOSAL}-fee-tx.txbody"
-
-FEE="$(cardano_cli_log transaction calculate-min-fee \
-        --testnet-magic "$NETWORK_MAGIC" \
-        --protocol-params-file "$STATE_CLUSTER"/pparams.json \
-        --tx-in-count 1 \
-        --tx-out-count 1 \
-        --witness-count "$DELEGATE_WITNESS_COUNT" \
-        --byron-witness-count 0 \
-        --tx-body-file "${CONWAY_UPDATE_PROPOSAL}-fee-tx.txbody" |
-        cut -d' ' -f1)"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
