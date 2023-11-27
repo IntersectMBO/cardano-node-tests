@@ -82,6 +82,7 @@ def build_and_submit_tx(
     invalid_hereafter: tp.Optional[int] = None,
     invalid_before: tp.Optional[int] = None,
     witness_override: tp.Optional[int] = None,
+    witness_count_add: int = 0,
     script_valid: bool = True,
     calc_script_cost_file: tp.Optional[ttypes.FileType] = None,
     join_txouts: bool = True,
@@ -96,11 +97,13 @@ def build_and_submit_tx(
     """
     # pylint: disable=too-many-arguments,too-many-locals
     tx_files = tx_files or clusterlib.TxFiles()
-    witness_override = (
-        len(tx_files.signing_key_files) if witness_override is None else witness_override
-    )
 
     if use_build_cmd:
+        witness_override = (
+            len(tx_files.signing_key_files) + witness_count_add
+            if witness_override is None
+            else witness_override
+        )
         tx_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
             tx_name=name_template,
@@ -156,7 +159,7 @@ def build_and_submit_tx(
             script_withdrawals=script_withdrawals,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
-            witness_count_add=witness_override or 0,
+            witness_count_add=witness_count_add,
             join_txouts=join_txouts,
             destination_dir=destination_dir,
         )
