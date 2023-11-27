@@ -12,6 +12,7 @@ import typing as tp
 
 import cbor2
 from cardano_clusterlib import clusterlib
+from cardano_clusterlib import txtools as cl_txtools
 
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import helpers
@@ -55,6 +56,146 @@ class CommitteeRegistration(tp.NamedTuple):
     hot_key_pair: clusterlib.KeyPair
     tx_output: clusterlib.TxRawOutput
     key_hash: str
+
+
+def build_and_submit_tx(
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    src_address: str,
+    submit_method: str = submit_utils.SubmitMethods.CLI,
+    use_build_cmd: bool = False,
+    txins: clusterlib.OptionalUTXOData = (),
+    txouts: clusterlib.OptionalTxOuts = (),
+    readonly_reference_txins: clusterlib.OptionalUTXOData = (),
+    script_txins: clusterlib.OptionalScriptTxIn = (),
+    return_collateral_txouts: clusterlib.OptionalTxOuts = (),
+    total_collateral_amount: tp.Optional[int] = None,
+    mint: clusterlib.OptionalMint = (),
+    tx_files: tp.Optional[clusterlib.TxFiles] = None,
+    complex_certs: clusterlib.OptionalScriptCerts = (),
+    change_address: str = "",
+    fee_buffer: tp.Optional[int] = None,
+    required_signers: ttypes.OptionalFiles = (),
+    required_signer_hashes: tp.Optional[tp.List[str]] = None,
+    withdrawals: clusterlib.OptionalTxOuts = (),
+    script_withdrawals: clusterlib.OptionalScriptWithdrawals = (),
+    deposit: tp.Optional[int] = None,
+    invalid_hereafter: tp.Optional[int] = None,
+    invalid_before: tp.Optional[int] = None,
+    witness_override: tp.Optional[int] = None,
+    script_valid: bool = True,
+    calc_script_cost_file: tp.Optional[ttypes.FileType] = None,
+    join_txouts: bool = True,
+    destination_dir: ttypes.FileType = ".",
+    skip_asset_balancing: bool = False,
+) -> clusterlib.TxRawOutput:
+    """
+    Build and submit a transaction.
+
+    Use `use_build_cmd` to switch between `transaction build` and `transaction build-raw`.
+    Use `submit_method` to switch between `cardano-cli transaction submit` and submit-api.
+    """
+    # pylint: disable=too-many-arguments,too-many-locals
+    tx_files = tx_files or clusterlib.TxFiles()
+
+    if use_build_cmd:
+        tx_output = cluster_obj.g_transaction.build_tx(
+            src_address=src_address,
+            tx_name=name_template,
+            txins=txins,
+            txouts=txouts,
+            readonly_reference_txins=readonly_reference_txins,
+            script_txins=script_txins,
+            return_collateral_txouts=return_collateral_txouts,
+            total_collateral_amount=total_collateral_amount,
+            mint=mint,
+            tx_files=tx_files,
+            complex_certs=complex_certs,
+            change_address=change_address,
+            fee_buffer=fee_buffer,
+            required_signers=required_signers,
+            required_signer_hashes=required_signer_hashes,
+            withdrawals=withdrawals,
+            script_withdrawals=script_withdrawals,
+            deposit=deposit,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            witness_override=witness_override,
+            script_valid=script_valid,
+            calc_script_cost_file=calc_script_cost_file,
+            join_txouts=join_txouts,
+            destination_dir=destination_dir,
+            skip_asset_balancing=skip_asset_balancing,
+        )
+    else:
+        # resolve withdrawal amounts here (where -1 for total rewards amount is used) so the
+        # resolved values can be passed around, and it is not needed to resolve them again
+        # every time `_get_withdrawals` is called
+        withdrawals, script_withdrawals, *__ = cl_txtools._get_withdrawals(
+            clusterlib_obj=cluster_obj,
+            withdrawals=withdrawals,
+            script_withdrawals=script_withdrawals,
+        )
+        fee = cluster_obj.g_transaction.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=name_template,
+            txins=txins,
+            txouts=txouts,
+            readonly_reference_txins=readonly_reference_txins,
+            script_txins=script_txins,
+            return_collateral_txouts=return_collateral_txouts,
+            total_collateral_amount=total_collateral_amount,
+            mint=mint,
+            tx_files=tx_files,
+            complex_certs=complex_certs,
+            required_signers=required_signers,
+            required_signer_hashes=required_signer_hashes,
+            withdrawals=withdrawals,
+            script_withdrawals=script_withdrawals,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            witness_count_add=witness_override or 0,
+            join_txouts=join_txouts,
+            destination_dir=destination_dir,
+        )
+        tx_output = cluster_obj.g_transaction.build_raw_tx(
+            src_address=src_address,
+            tx_name=name_template,
+            txins=txins,
+            txouts=txouts,
+            readonly_reference_txins=readonly_reference_txins,
+            script_txins=script_txins,
+            return_collateral_txouts=return_collateral_txouts,
+            total_collateral_amount=total_collateral_amount,
+            mint=mint,
+            tx_files=tx_files,
+            complex_certs=complex_certs,
+            fee=fee,
+            required_signers=required_signers,
+            required_signer_hashes=required_signer_hashes,
+            withdrawals=withdrawals,
+            script_withdrawals=script_withdrawals,
+            deposit=deposit,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            join_txouts=join_txouts,
+            destination_dir=destination_dir,
+        )
+
+    tx_signed = cluster_obj.g_transaction.sign_tx(
+        tx_body_file=tx_output.out_file,
+        signing_key_files=tx_output.tx_files.signing_key_files,
+        tx_name=name_template,
+    )
+
+    submit_utils.submit_tx(
+        submit_method=submit_method,
+        cluster_obj=cluster_obj,
+        tx_file=tx_signed,
+        txins=tx_output.txins,
+    )
+
+    return tx_output
 
 
 def get_pool_state(
