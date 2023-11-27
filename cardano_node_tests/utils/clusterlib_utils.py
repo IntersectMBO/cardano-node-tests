@@ -45,7 +45,6 @@ class TxMetadata(tp.NamedTuple):
 class DRepRegistration(tp.NamedTuple):
     registration_cert: pl.Path
     key_pair: clusterlib.KeyPair
-    tx_output: clusterlib.TxRawOutput
     drep_id: str
     deposit: int
 
@@ -97,6 +96,9 @@ def build_and_submit_tx(
     """
     # pylint: disable=too-many-arguments,too-many-locals
     tx_files = tx_files or clusterlib.TxFiles()
+    witness_override = (
+        len(tx_files.signing_key_files) if witness_override is None else witness_override
+    )
 
     if use_build_cmd:
         tx_output = cluster_obj.g_transaction.build_tx(
@@ -128,9 +130,9 @@ def build_and_submit_tx(
             skip_asset_balancing=skip_asset_balancing,
         )
     else:
-        # resolve withdrawal amounts here (where -1 for total rewards amount is used) so the
+        # Resolve withdrawal amounts here (where -1 for total rewards amount is used) so the
         # resolved values can be passed around, and it is not needed to resolve them again
-        # every time `_get_withdrawals` is called
+        # every time `_get_withdrawals` is called.
         withdrawals, script_withdrawals, *__ = cl_txtools._get_withdrawals(
             clusterlib_obj=cluster_obj,
             withdrawals=withdrawals,
@@ -1454,19 +1456,15 @@ def get_snapshot_delegations(ledger_snapshot: dict) -> tp.Dict[str, tp.List[str]
     return delegations
 
 
-def register_drep(
+def get_drep_reg_record(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
-    payment_addr: clusterlib.AddressRecord,
     deposit_amt: int = -1,
     drep_metadata_url: str = "",
     drep_metadata_hash: str = "",
-    submit_method: str = submit_utils.SubmitMethods.CLI,
-    use_build_cmd: bool = False,
 ) -> DRepRegistration:
-    """Register DRep."""
+    """Get DRep registration record."""
     deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.conway_genesis["dRepDeposit"]
-
     drep_keys = cluster_obj.g_conway_governance.drep.gen_key_pair(key_name=name_template)
     reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
         cert_name=name_template,
@@ -1475,46 +1473,6 @@ def register_drep(
         drep_metadata_url=drep_metadata_url,
         drep_metadata_hash=drep_metadata_hash,
     )
-
-    tx_files = clusterlib.TxFiles(
-        certificate_files=[reg_cert],
-        signing_key_files=[payment_addr.skey_file, drep_keys.skey_file],
-    )
-
-    if use_build_cmd:
-        tx_output = cluster_obj.g_transaction.build_tx(
-            src_address=payment_addr.address,
-            tx_name=name_template,
-            tx_files=tx_files,
-            witness_override=len(tx_files.signing_key_files),
-        )
-    else:
-        fee = cluster_obj.g_transaction.calculate_tx_fee(
-            src_address=payment_addr.address,
-            tx_name=name_template,
-            tx_files=tx_files,
-            witness_count_add=len(tx_files.signing_key_files),
-        )
-        tx_output = cluster_obj.g_transaction.build_raw_tx(
-            src_address=payment_addr.address,
-            tx_name=name_template,
-            tx_files=tx_files,
-            fee=fee,
-            deposit=deposit_amt,
-        )
-
-    tx_signed = cluster_obj.g_transaction.sign_tx(
-        tx_body_file=tx_output.out_file,
-        signing_key_files=tx_files.signing_key_files,
-        tx_name=name_template,
-    )
-    submit_utils.submit_tx(
-        submit_method=submit_method,
-        cluster_obj=cluster_obj,
-        tx_file=tx_signed,
-        txins=tx_output.txins,
-    )
-
     drep_id = cluster_obj.g_conway_governance.drep.gen_id(
         id_name=name_template, drep_vkey_file=drep_keys.vkey_file, out_format="hex"
     )
@@ -1522,7 +1480,6 @@ def register_drep(
     return DRepRegistration(
         registration_cert=reg_cert,
         key_pair=drep_keys,
-        tx_output=tx_output,
         drep_id=drep_id,
         deposit=deposit_amt,
     )

@@ -87,12 +87,24 @@ def custom_drep(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-        reg_drep = clusterlib_utils.register_drep(
+        reg_drep = clusterlib_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template="drep_custom",
-            payment_addr=payment_addr,
+        )
+
+        tx_files_reg = clusterlib.TxFiles(
+            certificate_files=[reg_drep.registration_cert],
+            signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
+        )
+
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template="drep_custom_reg",
+            src_address=payment_addr.address,
             submit_method=submit_utils.SubmitMethods.CLI,
             use_build_cmd=True,
+            tx_files=tx_files_reg,
+            deposit=reg_drep.deposit,
         )
         fixture_cache.value = reg_drep
 
@@ -141,19 +153,31 @@ class TestDReps:
 
         # Register DRep
 
-        reg_drep = clusterlib_utils.register_drep(
+        reg_drep = clusterlib_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
-            payment_addr=payment_addr,
-            submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
         )
 
-        reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=reg_drep.tx_output)
+        tx_files_reg = clusterlib.TxFiles(
+            certificate_files=[reg_drep.registration_cert],
+            signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
+        )
+
+        tx_output_reg = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_reg",
+            src_address=payment_addr.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files_reg,
+            deposit=reg_drep.deposit,
+        )
+
+        reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_reg)
         assert (
             clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
-            == clusterlib.calculate_utxos_balance(reg_drep.tx_output.txins)
-            - reg_drep.tx_output.fee
+            == clusterlib.calculate_utxos_balance(tx_output_reg.txins)
+            - tx_output_reg.fee
             - reg_drep.deposit
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
@@ -175,38 +199,14 @@ class TestDReps:
             signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
         )
 
-        if use_build_cmd:
-            tx_output_ret = cluster.g_transaction.build_tx(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files_ret,
-                witness_override=len(tx_files_ret.signing_key_files),
-            )
-        else:
-            fee_ret = cluster.g_transaction.calculate_tx_fee(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files_ret,
-                witness_count_add=len(tx_files_ret.signing_key_files),
-            )
-            tx_output_ret = cluster.g_transaction.build_raw_tx(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files_ret,
-                fee=fee_ret,
-                deposit=-reg_drep.deposit,
-            )
-
-        tx_signed_ret = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_output_ret.out_file,
-            signing_key_files=tx_files_ret.signing_key_files,
-            tx_name=temp_template,
-        )
-        submit_utils.submit_tx(
-            submit_method=submit_method,
+        tx_output_ret = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            tx_file=tx_signed_ret,
-            txins=tx_output_ret.txins,
+            name_template=f"{temp_template}_ret",
+            src_address=payment_addr.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files_ret,
+            deposit=reg_drep.deposit,
         )
 
         ret_drep_state = cluster.g_conway_governance.query.drep_state(
@@ -214,7 +214,7 @@ class TestDReps:
         )
         assert not ret_drep_state, "DRep was not retired"
 
-        ret_out_utxos = cluster.g_query.get_utxo(tx_raw_output=reg_drep.tx_output)
+        ret_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_ret)
         assert (
             clusterlib.filter_utxos(utxos=ret_out_utxos, address=payment_addr.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output_ret.txins)
@@ -279,44 +279,19 @@ class TestDelegDReps:
             signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
         )
 
-        if use_build_cmd:
-            tx_output = cluster.g_transaction.build_tx(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files,
-                witness_override=len(tx_files.signing_key_files),
-            )
-        else:
-            fee = cluster.g_transaction.calculate_tx_fee(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files,
-                witness_count_add=len(tx_files.signing_key_files),
-            )
-            tx_output = cluster.g_transaction.build_raw_tx(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files,
-                fee=fee,
-                deposit=deposit_amt,
-            )
-
-        tx_signed = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=temp_template,
-        )
-
         # Make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
         )
 
-        submit_utils.submit_tx(
-            submit_method=submit_method,
+        tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            tx_file=tx_signed,
-            txins=tx_output.txins,
+            name_template=temp_template,
+            src_address=payment_addr.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files,
+            deposit=deposit_amt,
         )
 
         # Deregister stake address so it doesn't affect stake distribution
@@ -335,9 +310,11 @@ class TestDelegDReps:
                         pool_user.stake.skey_file,
                     ],
                 )
-                cluster.g_transaction.send_tx(
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_dereg",
                     src_address=payment_addr.address,
-                    tx_name=f"{temp_template}_dereg",
+                    use_build_cmd=use_build_cmd,
                     tx_files=tx_files_dereg,
                     deposit=-deposit_amt,
                 )
