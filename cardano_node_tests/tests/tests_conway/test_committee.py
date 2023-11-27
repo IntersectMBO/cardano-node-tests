@@ -54,7 +54,7 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
-    def test_register_and_resign_committee(
+    def test_register_and_resign_committee_member(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
@@ -72,18 +72,29 @@ class TestCommittee:
 
         # Register CC Member
 
-        reg_cc = clusterlib_utils.register_committee(
+        reg_cc = clusterlib_utils.get_cc_member_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
-            payment_addr=payment_addr,
-            submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
         )
 
-        reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=reg_cc.tx_output)
+        tx_files_reg = clusterlib.TxFiles(
+            certificate_files=[reg_cc.registration_cert],
+            signing_key_files=[payment_addr.skey_file, reg_cc.cold_key_pair.skey_file],
+        )
+
+        tx_output_reg = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_reg",
+            src_address=payment_addr.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files_reg,
+        )
+
+        reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_reg)
         assert (
             clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
-            == clusterlib.calculate_utxos_balance(reg_cc.tx_output.txins) - reg_cc.tx_output.fee
+            == clusterlib.calculate_utxos_balance(tx_output_reg.txins) - tx_output_reg.fee
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
         reg_committee_state = cluster.g_conway_governance.query.committee_state()
@@ -107,37 +118,13 @@ class TestCommittee:
             signing_key_files=[payment_addr.skey_file, reg_cc.cold_key_pair.skey_file],
         )
 
-        if use_build_cmd:
-            tx_output_res = cluster.g_transaction.build_tx(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files_res,
-                witness_override=len(tx_files_res.signing_key_files),
-            )
-        else:
-            fee_res = cluster.g_transaction.calculate_tx_fee(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files_res,
-                witness_count_add=len(tx_files_res.signing_key_files),
-            )
-            tx_output_res = cluster.g_transaction.build_raw_tx(
-                src_address=payment_addr.address,
-                tx_name=temp_template,
-                tx_files=tx_files_res,
-                fee=fee_res,
-            )
-
-        tx_signed_res = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_output_res.out_file,
-            signing_key_files=tx_files_res.signing_key_files,
-            tx_name=temp_template,
-        )
-        submit_utils.submit_tx(
-            submit_method=submit_method,
+        tx_output_res = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            tx_file=tx_signed_res,
-            txins=tx_output_res.txins,
+            name_template=f"{temp_template}_res",
+            src_address=payment_addr.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files_res,
         )
 
         res_committee_state = cluster.g_conway_governance.query.committee_state()
@@ -147,7 +134,7 @@ class TestCommittee:
                 == "MemberResigned"
             ), "CC Member not resigned"
 
-        res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=reg_cc.tx_output)
+        res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_res)
         assert (
             clusterlib.filter_utxos(utxos=res_out_utxos, address=payment_addr.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output_res.txins) - tx_output_res.fee
