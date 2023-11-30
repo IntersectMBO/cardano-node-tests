@@ -7,6 +7,7 @@ on:
       - 'flake.lock'
       - 'poetry.lock'
       - '**.nix'
+      - '.github/workflows/nix_smoke.yaml'
   workflow_dispatch:
 
 jobs:
