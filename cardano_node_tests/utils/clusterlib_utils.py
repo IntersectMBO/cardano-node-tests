@@ -425,18 +425,20 @@ def create_pool_users(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     no_of_addr: int = 1,
+    destination_dir: ttypes.FileType = ".",
 ) -> tp.List[clusterlib.PoolUser]:
     """Create PoolUsers."""
     pool_users = []
     for i in range(no_of_addr):
         # create key pairs and addresses
         stake_addr_rec = create_stake_addr_records(
-            f"{name_template}_addr{i}", cluster_obj=cluster_obj
+            f"{name_template}_addr{i}", cluster_obj=cluster_obj, destination_dir=destination_dir
         )[0]
         payment_addr_rec = create_payment_addr_records(
             f"{name_template}_addr{i}",
             cluster_obj=cluster_obj,
             stake_vkey_file=stake_addr_rec.vkey_file,
+            destination_dir=destination_dir,
         )[0]
         # create pool user struct
         pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
@@ -1464,19 +1466,26 @@ def get_drep_reg_record(
     deposit_amt: int = -1,
     drep_metadata_url: str = "",
     drep_metadata_hash: str = "",
+    destination_dir: ttypes.FileType = ".",
 ) -> DRepRegistration:
     """Get DRep registration record."""
     deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.conway_genesis["dRepDeposit"]
-    drep_keys = cluster_obj.g_conway_governance.drep.gen_key_pair(key_name=name_template)
+    drep_keys = cluster_obj.g_conway_governance.drep.gen_key_pair(
+        key_name=name_template, destination_dir=destination_dir
+    )
     reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
         cert_name=name_template,
         deposit_amt=deposit_amt,
         drep_vkey_file=drep_keys.vkey_file,
         drep_metadata_url=drep_metadata_url,
         drep_metadata_hash=drep_metadata_hash,
+        destination_dir=destination_dir,
     )
     drep_id = cluster_obj.g_conway_governance.drep.gen_id(
-        id_name=name_template, drep_vkey_file=drep_keys.vkey_file, out_format="hex"
+        id_name=name_template,
+        drep_vkey_file=drep_keys.vkey_file,
+        out_format="hex",
+        destination_dir=destination_dir,
     )
 
     return DRepRegistration(
@@ -1490,18 +1499,22 @@ def get_drep_reg_record(
 def get_cc_member_reg_record(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
+    destination_dir: ttypes.FileType = ".",
 ) -> CCMemberRegistration:
     """Get Constitutional Committee Members registration record."""
     committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
-        key_name=name_template
+        key_name=name_template,
+        destination_dir=destination_dir,
     )
     committee_hot_keys = cluster_obj.g_conway_governance.committee.gen_hot_key_pair(
-        key_name=name_template
+        key_name=name_template,
+        destination_dir=destination_dir,
     )
     reg_cert = cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
         key_name=name_template,
         cold_vkey_file=committee_cold_keys.vkey_file,
         hot_key_file=committee_hot_keys.vkey_file,
+        destination_dir=destination_dir,
     )
     key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
         vkey_file=committee_cold_keys.vkey_file,
