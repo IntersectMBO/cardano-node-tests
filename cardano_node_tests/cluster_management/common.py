@@ -22,6 +22,8 @@ CLUSTER_STARTED_BY_FRAMEWORK = ".cluster_started_by_cnt"
 
 CLUSTER_START_CMDS_LOG = "start_cluster_cmds.log"
 
+ADDRS_DATA_DIRNAME = "addrs_data"
+
 
 def _get_resources_from_paths(paths: tp.Iterator[pl.Path]) -> tp.List[str]:
     """Get resources names from status files path."""
