@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests.tests_conway import gov_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -109,21 +110,6 @@ def custom_drep(
         fixture_cache.value = reg_drep
 
     return reg_drep
-
-
-def _check_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
-    drep_records = deleg_state["dstate"]["unified"]["credentials"]
-
-    stake_addr_key = f"keyHash-{stake_addr_hash}"
-    stake_addr_val = drep_records.get(stake_addr_key) or {}
-
-    expected_drep = f"drep-keyHash-{drep_id}"
-    if drep_id == "always_abstain":
-        expected_drep = "drep-alwaysAbstain"
-    elif drep_id == "always_no_confidence":
-        expected_drep = "drep-alwaysNoConfidence"
-
-    assert stake_addr_val.get("drep") == expected_drep
 
 
 class TestDReps:
@@ -267,7 +253,7 @@ class TestDelegDReps:
 
         # Create vote delegation cert
         deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
-            addr_name=temp_template,
+            addr_name=f"{temp_template}_addr0",
             stake_vkey_file=pool_user.stake.vkey_file,
             drep_key_hash=custom_drep.drep_id if drep == "custom" else "",
             always_abstain=drep == "always_abstain",
@@ -347,6 +333,6 @@ class TestDelegDReps:
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user.stake.vkey_file
             )
-            _check_delegation(
+            gov_common.check_drep_delegation(
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
             )

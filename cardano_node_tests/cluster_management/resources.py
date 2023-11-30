@@ -20,3 +20,5 @@ class Resources:
     RESERVES: tp.Final[str] = "reserves"
     TREASURY: tp.Final[str] = "treasury"
     PERF: tp.Final[str] = "performance"
+    DREPS: tp.Final[str] = "dreps"
+    COMMITTEE: tp.Final[str] = "committee"
