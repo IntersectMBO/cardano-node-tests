@@ -176,6 +176,33 @@ cardano_cli_log genesis create-staked \
   --supply-delegated "$DELEG_SUPPLY" \
   --start-time "$START_TIME_SHELLEY"
 
+# Create committee keys
+mkdir -p "$STATE_CLUSTER/governance_data"
+for i in {1..3}; do
+  cardano_cli_log conway governance committee key-gen-cold \
+    --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+    --cold-signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.skey"
+  cardano_cli_log conway governance committee key-gen-hot \
+    --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
+    --signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.skey"
+  cardano_cli_log conway governance committee create-hot-key-authorization-certificate \
+    --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+    --hot-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
+    --out-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot_auth.cert"
+  cardano_cli_log conway governance committee key-hash \
+    --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+    > "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.hash"
+done
+
+# Pre-register committee in genesis
+KEY_HASH_JSON=$(jq -nR '[inputs | {("keyHash-" + .): 10000}] | add' \
+  "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.hash)
+jq \
+  --argjson keyHashJson "$KEY_HASH_JSON" \
+  '.committee.members = $keyHashJson' \
+  "$STATE_CLUSTER/create_staked/genesis.conway.json" > "$STATE_CLUSTER/shelley/genesis.conway.json"
+rm -f "$STATE_CLUSTER/create_staked/genesis.conway.json"
+
 mv "$STATE_CLUSTER/create_staked/delegate-keys" "$STATE_CLUSTER/shelley/delegate-keys"
 mv "$STATE_CLUSTER/create_staked/genesis-keys" "$STATE_CLUSTER/shelley/genesis-keys"
 jq \
@@ -513,12 +540,23 @@ for i in $(seq 1 "$NUM_POOLS"); do
   )
 done
 
-WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + 1))"
+CC_ARGS=()
+for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot_auth.cert; do
+  CC_ARGS+=( "--certificate-file" "$f" )
+done
+
+CC_SIGNING=()
+for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.skey; do
+  CC_SIGNING+=( "--signing-key-file" "$f" )
+done
+
+WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + ${#CC_SIGNING[@]} + 1))"
 
 cardano_cli_log conway transaction build \
   "${TXINS[@]}" \
   --change-address   "$TXIN_ADDR" \
   "${POOL_ARGS[@]}" \
+  "${CC_ARGS[@]}" \
   --witness-override "$WITNESS_COUNT" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
@@ -527,6 +565,7 @@ cardano_cli_log conway transaction sign \
   "${POOL_SIGNING[@]}" \
   "${GENESIS_SIGNING[@]}" \
   "${DELEGATE_SIGNING[@]}" \
+  "${CC_SIGNING[@]}" \
   --signing-key-file "$STATE_CLUSTER/shelley/genesis-utxo.skey" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
