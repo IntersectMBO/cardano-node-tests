@@ -48,6 +48,33 @@ def payment_addr(
     return addr
 
 
+@pytest.fixture
+def pool_user(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> clusterlib.PoolUser:
+    """Create a pool user."""
+    with cluster_manager.cache_fixture() as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+        test_id = common.get_test_id(cluster)
+        pool_user = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster,
+            name_template=f"{test_id}_pool_user",
+            no_of_addr=1,
+        )[0]
+        fixture_cache.value = pool_user
+
+    # Fund the payment address with some ADA
+    clusterlib_utils.fund_from_faucet(
+        pool_user.payment,
+        cluster_obj=cluster,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+    )
+    return pool_user
+
+
 class TestCommittee:
     """Tests for Constitutional Committee."""
 
@@ -139,3 +166,82 @@ class TestCommittee:
             clusterlib.filter_utxos(utxos=res_out_utxos, address=payment_addr.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output_res.txins) - tx_output_res.fee
         ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+    @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
+    def test_update_commitee_action(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_user: clusterlib.PoolUser,
+        use_build_cmd: bool,
+        submit_method: str,
+    ):
+        temp_template = common.get_test_id(cluster)
+        cc_size = 3
+
+        cc_reg_records = [
+            clusterlib_utils.get_cc_member_reg_record(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_{i}",
+            )
+            for i in range(1, cc_size + 1)
+        ]
+        cc_members = [
+            clusterlib.CCMember(
+                epoch=10_000,
+                cold_vkey_file=r.cold_key_pair.vkey_file,
+                cold_skey_file=r.cold_key_pair.skey_file,
+                hot_vkey_file=r.hot_key_pair.vkey_file,
+                hot_skey_file=r.hot_key_pair.skey_file,
+            )
+            for r in cc_reg_records
+        ]
+
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        anchor_url = "http://www.cc-update.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        update_action = cluster.g_conway_governance.action.update_committee(
+            action_name=temp_template,
+            deposit_amt=deposit_amt,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            quorum="2/3",
+            add_cc_members=cc_members,
+            deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[r.registration_cert for r in cc_reg_records],
+            proposal_files=[update_action],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                *[r.cold_key_pair.skey_file for r in cc_reg_records],
+            ],
+        )
+
+        tx_output = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_reg",
+            src_address=pool_user.payment.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files,
+        )
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
+        proposals = cluster.g_conway_governance.query.gov_state()["proposals"]
+        prop = {}
+        for p in proposals:
+            if p["actionId"]["txId"] == txid:
+                prop = p
+                break
+        assert prop, "Update committee action not found"
+        assert prop["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"
