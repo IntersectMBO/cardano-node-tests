@@ -143,7 +143,7 @@ class ClusterGetter:
         # pylint: disable=too-many-branches,too-many-statements
         cluster_running_file = self.instance_dir / common.CLUSTER_RUNNING_FILE
 
-        # don't respin cluster if it was started outside of test framework
+        # Don't respin cluster if it was started outside of test framework
         if configuration.DEV_CLUSTER_RUNNING:
             self.log(f"c{self.cluster_instance_num}: ignoring respin, dev cluster is running")
             if cluster_running_file.exists():
@@ -152,7 +152,7 @@ class ClusterGetter:
                 cluster_running_file.touch()
             return True
 
-        # fail if cluster respin is forbidden and the cluster was already started
+        # Fail if cluster respin is forbidden and the cluster was already started
         if configuration.FORBID_RESTART and cluster_running_file.exists():
             raise RuntimeError("Cannot respin cluster when 'FORBID_RESTART' is set.")
 
@@ -199,10 +199,10 @@ class ClusterGetter:
 
             _kill_supervisor(self.cluster_instance_num)
 
-            # give the cluster time to stop
+            # Give the cluster time to stop
             time.sleep(5)
 
-            # save artifacts only when produced during this test run
+            # Save artifacts only when produced during this test run
             if cluster_running_file.exists() or i > 0:
                 artifacts.save_start_script_coverage(
                     log_file=state_dir / common.CLUSTER_START_CMDS_LOG,
@@ -245,8 +245,8 @@ class ClusterGetter:
             (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
             return False
 
-        # generate ID for the new cluster instance so it is possible to match log entries with
-        # cluster instance files saved as artifacts
+        # Generate ID for the new cluster instance so it is possible to match log entries with
+        # cluster instance files saved as artifacts.
         cluster_instance_id = helpers.get_rand_str(8)
         with open(
             state_dir / artifacts.CLUSTER_INSTANCE_ID_FILENAME, "w", encoding="utf-8"
@@ -254,13 +254,13 @@ class ClusterGetter:
             fp_out.write(cluster_instance_id)
         self.log(f"c{self.cluster_instance_num}: started cluster instance '{cluster_instance_id}'")
 
-        # Create temp dir for faucet addresses data
-        tmp_path = temptools.get_pytest_worker_tmp() / f"addrs_data_ci{self.cluster_instance_num}"
-        tmp_path.mkdir(parents=True, exist_ok=True)
+        # Create dir for faucet addresses data
+        addr_data_dir = state_dir / common.ADDRS_DATA_DIRNAME
+        addr_data_dir.mkdir(parents=True, exist_ok=True)
 
-        # setup faucet addresses
+        # Setup faucet addresses
         try:
-            cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=tmp_path)
+            cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=addr_data_dir)
         except Exception as err:
             self.log(
                 f"c{self.cluster_instance_num}: failed to setup test addresses:\n{err}\n"
@@ -276,7 +276,7 @@ class ClusterGetter:
             (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
             return False
 
-        # create file that indicates that the cluster is running
+        # Create file that indicates that the cluster is running
         if not cluster_running_file.exists():
             cluster_running_file.touch()
 
@@ -297,13 +297,11 @@ class ClusterGetter:
 
         self.log(f"c{cluster_env.instance_num}: setting up dev cluster")
 
-        # Create "addrs_data" directly in the cluster state dir, so it can be reused
-        # (in normal non-`DEV_CLUSTER_RUNNING` setup we want "addrs_data" stored among
-        # tests artifacts, so it can be used during cleanup etc.).
-        tmp_path = cluster_env.state_dir / "addrs_data"
-        tmp_path.mkdir(exist_ok=True, parents=True)
+        # Setup faucet addresses
+        addr_data_dir = cluster_env.state_dir / common.ADDRS_DATA_DIRNAME
+        addr_data_dir.mkdir(exist_ok=True, parents=True)
         cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
-        cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=tmp_path)
+        cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=addr_data_dir)
 
     def _is_healthy(self, instance_num: int) -> bool:
         """Check health of cluster services."""
