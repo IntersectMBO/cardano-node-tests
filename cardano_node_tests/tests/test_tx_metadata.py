@@ -72,14 +72,15 @@ class TestMetadata:
             metadata_json_files=[self.JSON_METADATA_WRONG_FILE],
         )
 
-        # it should NOT be possible to build a transaction using wrongly formatted metadata JSON
+        # It should NOT be possible to build a transaction using wrongly formatted metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_raw_tx(
                 src_address=payment_addr.address,
                 tx_name="wrong_json_format",
                 tx_files=tx_files,
             )
-        assert "The JSON metadata top level must be a map" in str(excinfo.value)
+        str_err = str(excinfo.value)
+        assert "The JSON metadata top level must be a map" in str_err, str_err
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -106,7 +107,8 @@ class TestMetadata:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-        assert "The JSON metadata top level must be a map" in str(excinfo.value)
+        str_err = str(excinfo.value)
+        assert "The JSON metadata top level must be a map" in str_err, str_err
 
     @allure.link(helpers.get_vcs_link())
     def test_tx_invalid_json_metadata(
@@ -130,7 +132,11 @@ class TestMetadata:
                 tx_name="invalid_metadata",
                 tx_files=tx_files,
             )
-        assert "Failed reading: satisfy" in str(excinfo.value)
+        str_err = str(excinfo.value)
+        assert (
+            "Failed reading: satisfy" in str_err  # cardano-node < 8.7.0
+            or "JSON parse error:" in str_err
+        ), str_err
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -158,7 +164,11 @@ class TestMetadata:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-        assert "Failed reading: satisfy" in str(excinfo.value)
+        str_err = str(excinfo.value)
+        assert (
+            "Failed reading: satisfy" in str_err  # cardano-node < 8.7.0
+            or "JSON parse error:" in str_err
+        ), str_err
 
     @allure.link(helpers.get_vcs_link())
     def test_tx_too_long_metadata_json(
@@ -172,16 +182,17 @@ class TestMetadata:
             metadata_json_files=[self.JSON_METADATA_LONG_FILE],
         )
 
-        # it should NOT be possible to build a transaction using too long metadata JSON
+        # It should NOT be possible to build a transaction using too long metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_raw_tx(
                 src_address=payment_addr.address,
                 tx_name="too_long_metadata",
                 tx_files=tx_files,
             )
-        assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(
-            excinfo.value
-        )
+        str_err = str(excinfo.value)
+        assert (
+            "Text string metadata value must consist of at most 64 UTF8 bytes" in str_err
+        ), str_err
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -199,7 +210,7 @@ class TestMetadata:
             metadata_json_files=[self.JSON_METADATA_LONG_FILE],
         )
 
-        # it should NOT be possible to build a transaction using too long metadata JSON
+        # It should NOT be possible to build a transaction using too long metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addr.address,
@@ -207,9 +218,10 @@ class TestMetadata:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-        assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str(
-            excinfo.value
-        )
+        str_err = str(excinfo.value)
+        assert (
+            "Text string metadata value must consist of at most 64 UTF8 bytes" in str_err
+        ), str_err
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

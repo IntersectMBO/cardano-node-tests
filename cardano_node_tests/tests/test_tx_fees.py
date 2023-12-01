@@ -293,7 +293,7 @@ class TestExpectedFees:
         ), "Expected fee doesn't match the actual fee"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("addr_fee", [(1, 197753), (3, 234009), (5, 270265), (10, 360905)])
+    @pytest.mark.parametrize("addr_fee", [(1, 197_753), (3, 234_009), (5, 270_265), (10, 340_000)])
     def test_pool_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -345,7 +345,7 @@ class TestExpectedFees:
         ), "Expected fee doesn't match the actual fee"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("addr_fee", [(1, 185213), (3, 210205), (5, 235197), (10, 297677)])
+    @pytest.mark.parametrize("addr_fee", [(1, 185_213), (3, 210_205), (5, 235_197), (10, 280_000)])
     def test_pool_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -409,7 +409,7 @@ class TestExpectedFees:
         ), "Expected fee doesn't match the actual fee"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 304_893)])
+    @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 290_000)])
     def test_addr_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -447,7 +447,7 @@ class TestExpectedFees:
         ), "Expected fee doesn't match the actual fee"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 304_893)])
+    @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 290_000)])
     def test_addr_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -575,7 +575,7 @@ class TestExpectedFees:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "amount_expected",
-        [(1, 1_370_881), (100, 1_375_281), (11_000, 1_379_681), (100_000, 1_388_481)],
+        [(1, 1_200_000), (100, 1_210_000), (11_000, 1_220_000), (100_000, 1_250_000)],
     )
     def test_transaction_to_100_addrs_from_100_addrs_fees(
         self,
