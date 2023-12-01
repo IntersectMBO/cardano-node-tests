@@ -33,9 +33,9 @@ if [ "$1" = "step1" ]; then
   if [ -n "${BASE_TAR_URL:-""}" ]; then
     # download and extract base revision binaries
     BASE_TAR_FILE="$WORKDIR/base_rev.tar.gz"
-    curl -sSL "$BASE_TAR_URL" > "$BASE_TAR_FILE"
+    curl -sSL "$BASE_TAR_URL" > "$BASE_TAR_FILE" || exit 6
     mkdir -p "${WORKDIR}/base_rev"
-    tar -C "${WORKDIR}/base_rev" -xzf "$BASE_TAR_FILE"
+    tar -C "${WORKDIR}/base_rev" -xzf "$BASE_TAR_FILE" || exit 6
     rm -f "$BASE_TAR_FILE"
     # add base revision binaries to the PATH
     BASE_REV_BIN="${WORKDIR}/base_rev/bin"
