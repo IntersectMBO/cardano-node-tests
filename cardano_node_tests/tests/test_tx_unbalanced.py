@@ -152,6 +152,7 @@ class TestUnbalanced:
             "option --tx-out: Failed reading" in exc_val
             or "TxOutAdaOnly" in exc_val
             or "AdaAssetId,-1" in exc_val
+            or "Negative quantity" in exc_val  # cardano-node >= 8.7.0
         )
 
     @allure.link(helpers.get_vcs_link())
