@@ -8,6 +8,7 @@ import allure
 import pytest
 from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -874,8 +875,8 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era == VERSIONS.SHELLEY,
-        reason="doesn't run with Shelley TX",
+        VERSIONS.transaction_era == VERSIONS.SHELLEY and VERSIONS.node < version.parse("8.7.0"),
+        reason="doesn't run with Shelley TX on node < 8.7.0",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
