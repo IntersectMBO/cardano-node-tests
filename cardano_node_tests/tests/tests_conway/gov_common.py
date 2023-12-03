@@ -53,7 +53,7 @@ def get_default_governance(
         with locking.FileLockIfXdist(str(cluster_env.state_dir / f".{GOV_DATA_STORE}.lock")):
             gov_data_dir.mkdir(exist_ok=True, parents=True)
 
-            governance_recs = governance_setup.setup(
+            governance_data = governance_setup.setup(
                 cluster_obj=cluster_obj,
                 cluster_manager=cluster_manager,
                 destination_dir=gov_data_dir,
@@ -61,17 +61,17 @@ def get_default_governance(
 
             # Check delegation to DReps
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster_obj)
-            drep_id = governance_recs.dreps_reg[0].drep_id
+            drep_id = governance_data.dreps_reg[0].drep_id
             stake_addr_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
-                stake_vkey_file=governance_recs.drep_delegators[0].stake.vkey_file
+                stake_vkey_file=governance_data.drep_delegators[0].stake.vkey_file
             )
             check_drep_delegation(
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
             )
 
-            fixture_cache.value = governance_recs
+            fixture_cache.value = governance_data
 
             with open(gov_data_store, "wb") as out_data:
-                pickle.dump(governance_recs, out_data)
+                pickle.dump(governance_data, out_data)
 
-    return governance_recs
+    return governance_data
