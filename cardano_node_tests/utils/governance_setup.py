@@ -130,7 +130,7 @@ def load_committee() -> tp.List[clusterlib.CCMember]:
     cc_members = []
     for vkey_file in sorted(data_dir.glob("cc_member*_committee_cold.vkey")):
         fpath = vkey_file.parent
-        fbase = fpath.name.replace("cold.vkey", "")
+        fbase = vkey_file.name.replace("cold.vkey", "")
         cc_members.append(
             clusterlib.CCMember(
                 epoch=10_000,
