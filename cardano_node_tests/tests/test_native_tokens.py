@@ -1877,7 +1877,7 @@ class TestTransfer:
         ]
 
         tx_files = clusterlib.TxFiles(
-            signing_key_files={t.token_mint_addr.skey_file for t in new_tokens}
+            signing_key_files=list({t.token_mint_addr.skey_file for t in new_tokens})
         )
 
         if use_build_cmd:
