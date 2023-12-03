@@ -225,7 +225,7 @@ class TestCommittee:
 
         tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            name_template=f"{temp_template}_reg",
+            name_template=temp_template,
             src_address=pool_user.payment.address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
