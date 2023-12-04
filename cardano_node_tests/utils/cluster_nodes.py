@@ -211,12 +211,12 @@ class TestnetCluster(ClusterType):
     """Testnet cluster type (full cardano mode)."""
 
     TESTNETS: tp.ClassVar[tp.Dict[int, dict]] = {
-        1597669200: {"type": Testnets.shelley_qa, "shelley_start": "2020-08-17T17:00:00Z"},
         1563999616: {"type": Testnets.testnet, "shelley_start": "2020-07-28T20:20:16Z"},
         1506450213: {"type": Testnets.staging, "shelley_start": "2020-08-01T18:23:33Z"},
         1506203091: {"type": Testnets.mainnet, "shelley_start": "2020-07-29T21:44:51Z"},
         1654041600: {"type": Testnets.preprod, "byron_epochs": 4},
         1666656000: {"type": Testnets.preview, "byron_epochs": 0},
+        1689206400: {"type": Testnets.shelley_qa, "byron_epochs": 0},
     }
 
     NODES: tp.ClassVar[tp.Set[str]] = {"relay1"}
