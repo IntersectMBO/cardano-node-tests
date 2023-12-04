@@ -32,6 +32,19 @@ def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str)
     assert stake_addr_val.get("drep") == expected_drep
 
 
+def lookup_proposal(
+    cluster_obj: clusterlib.ClusterLib, action_txid: str, action_ix: int = 0
+) -> tp.Dict[str, tp.Any]:
+    proposals = cluster_obj.g_conway_governance.query.gov_state()["proposals"]
+    prop: tp.Dict[str, tp.Any] = {}
+    for _p in proposals:
+        _p_action_id = _p["actionId"]
+        if _p_action_id["txId"] == action_txid and _p_action_id["govActionIx"] == action_ix:
+            prop = _p
+            break
+    return prop
+
+
 def get_default_governance(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
