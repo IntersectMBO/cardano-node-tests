@@ -1,3 +1,4 @@
+import enum
 import logging
 import pickle
 import typing as tp
@@ -17,6 +18,21 @@ GOV_DATA_STORE = "governance_data.pickle"
 GovClusterT = tp.Tuple[clusterlib.ClusterLib, governance_setup.DefaultGovernance]
 
 
+class PrevActionRec(tp.NamedTuple):
+    txid: str
+    ix: int
+
+    def __bool__(self) -> bool:
+        return bool(self.txid)
+
+
+class PrevGovActionIds(enum.Enum):
+    COMMITTEE = "pgaCommittee"
+    CONSTITUTION = "pgaConstitution"
+    HARDFORK = "pgaHardFork"
+    PPARAM_UPDATE = "pgaPParamUpdate"
+
+
 def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
     drep_records = deleg_state["dstate"]["unified"]["credentials"]
 
@@ -30,6 +46,20 @@ def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str)
         expected_drep = "drep-alwaysNoConfidence"
 
     assert stake_addr_val.get("drep") == expected_drep
+
+
+def get_prev_action(
+    cluster_obj: clusterlib.ClusterLib, action_type: PrevGovActionIds
+) -> PrevActionRec:
+    prev_action_rec = (
+        cluster_obj.g_conway_governance.query.gov_state()["enactState"]["prevGovActionIds"][
+            action_type.value
+        ]
+        or {}
+    )
+    txid = prev_action_rec.get("txId") or ""
+    ix = prev_action_rec.get("govActionIx") or -1
+    return PrevActionRec(txid=txid, ix=ix)
 
 
 def lookup_proposal(
