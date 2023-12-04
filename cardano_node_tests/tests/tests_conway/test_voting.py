@@ -1,8 +1,10 @@
 """Tests for Conway governance voting functionality."""
 import logging
+import pathlib as pl
 
 import allure
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -185,6 +187,195 @@ class TestVoting:
             anchor = state["constitution"]["anchor"]
             assert anchor["dataHash"] == constitution_hash, "Incorrect constitution anchor hash"
             assert anchor["url"] == constitution_url, "Incorrect constitution anchor URL"
+
+        # Check ratification
+        cluster.wait_for_new_epoch(padding_seconds=5)
+        next_rat_state = cluster.g_conway_governance.query.gov_state()["nextRatifyState"]
+        _check_state(next_rat_state["nextEnactState"])
+        assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
+        assert next_rat_state["removedGovActions"], "No removed actions"
+
+        # Check enactment
+        cluster.wait_for_new_epoch(padding_seconds=5)
+        enact_state = cluster.g_conway_governance.query.gov_state()["enactState"]
+        _check_state(enact_state)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_add_new_committee_member(
+        self,
+        cluster_lock_governance: gov_common.GovClusterT,
+        pool_user: clusterlib.PoolUser,
+        testfile_temp_dir: pl.Path,
+        request: FixtureRequest,
+    ):
+        """Test adding new CC member.
+
+        * create an "update committee" action
+        * vote to approve the action
+        * check that the action is ratified
+        * check that the action is enacted
+        """
+        # pylint: disable=too-many-locals
+        cluster, governance_data = cluster_lock_governance
+        temp_template = common.get_test_id(cluster)
+
+        # Create an action
+
+        cc_reg_record = clusterlib_utils.get_cc_member_reg_record(
+            cluster_obj=cluster,
+            name_template=temp_template,
+        )
+        cc_member = clusterlib.CCMember(
+            epoch=10,
+            cold_vkey_file=cc_reg_record.cold_key_pair.vkey_file,
+            cold_skey_file=cc_reg_record.cold_key_pair.skey_file,
+            hot_vkey_file=cc_reg_record.hot_key_pair.vkey_file,
+            hot_skey_file=cc_reg_record.hot_key_pair.skey_file,
+        )
+
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        anchor_url = "http://www.cc-update.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        prev_action_rec = gov_common.get_prev_action(
+            cluster_obj=cluster, action_type=gov_common.PrevGovActionIds.COMMITTEE
+        )
+
+        update_action = cluster.g_conway_governance.action.update_committee(
+            action_name=temp_template,
+            deposit_amt=deposit_amt,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            quorum=str(cluster.conway_genesis["committee"]["quorum"]),
+            add_cc_members=[cc_member],
+            prev_action_txid=prev_action_rec.txid,
+            prev_action_ix=prev_action_rec.ix,
+            deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
+        )
+
+        tx_files_action = clusterlib.TxFiles(
+            certificate_files=[cc_reg_record.registration_cert],
+            proposal_files=[update_action],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                cc_reg_record.cold_key_pair.skey_file,
+            ],
+        )
+
+        # Make sure we have enough time to submit the proposal in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        tx_output_action = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_action",
+            src_address=pool_user.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_action,
+        )
+
+        out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+            - tx_output_action.fee
+            - deposit_amt
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+        prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        assert prop_action, "Update committee action not found"
+        assert prop_action["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"
+
+        # Vote & approve the action
+
+        action_ix = prop_action["actionId"]["govActionIx"]
+
+        vote_files_drep = [
+            cluster.g_conway_governance.vote.create(
+                vote_name=f"{temp_template}_drep{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote_yes=True,
+                drep_vkey_file=d.key_pair.vkey_file,
+            )
+            for i, d in enumerate(governance_data.dreps_reg, start=1)
+        ]
+        vote_files_pool = [
+            cluster.g_conway_governance.vote.create(
+                vote_name=f"{temp_template}_pool{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote_yes=True,
+                cold_vkey_file=p.vkey_file,
+            )
+            for i, p in enumerate(governance_data.pools_cold, start=1)
+        ]
+
+        tx_files_vote = clusterlib.TxFiles(
+            vote_files=[*vote_files_drep, *vote_files_pool],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                *[r.skey_file for r in governance_data.pools_cold],
+                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+            ],
+        )
+
+        tx_output_vote = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_vote",
+            src_address=pool_user.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_vote,
+        )
+
+        # Resign the CC member so it doesn't affect voting
+        def _resign():
+            with helpers.change_cwd(testfile_temp_dir):
+                res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
+                    key_name=temp_template,
+                    cold_vkey_file=cc_reg_record.cold_key_pair.vkey_file,
+                    resignation_metadata_url="http://www.cc-resign.com",
+                    resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+                )
+
+                tx_files_res = clusterlib.TxFiles(
+                    certificate_files=[res_cert],
+                    signing_key_files=[
+                        pool_user.payment.skey_file,
+                        cc_reg_record.cold_key_pair.skey_file,
+                    ],
+                )
+
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_res",
+                    src_address=pool_user.payment.address,
+                    use_build_cmd=True,
+                    tx_files=tx_files_res,
+                )
+
+        request.addfinalizer(_resign)
+
+        out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        assert not prop_vote["committeeVotes"], "Unexpected committee votes"
+        assert prop_vote["dRepVotes"], "No DRep votes"
+        assert prop_vote["stakePoolVotes"], "No stake pool votes"
+
+        def _check_state(state: dict):
+            cc_member_val = state["committee"]["members"].get(f"keyHash-{cc_reg_record.key_hash}")
+            assert cc_member_val, "New committee member not found"
+            assert cc_member_val == cc_member.epoch
 
         # Check ratification
         cluster.wait_for_new_epoch(padding_seconds=5)

@@ -20,6 +20,7 @@ class DefaultGovernance(tp.NamedTuple):
     dreps_reg: tp.List[clusterlib_utils.DRepRegistration]
     drep_delegators: tp.List[clusterlib.PoolUser]
     cc_members: tp.List[clusterlib.CCMember]
+    pools_cold: tp.List[clusterlib.ColdKeyPair]
 
 
 def create_vote_stake(
@@ -161,9 +162,16 @@ def setup(
         pool_users=vote_stake,
         destination_dir=destination_dir,
     )
+    node_cold_records = [
+        cluster_manager.cache.addrs_data[pn]["cold_key_pair"]
+        for pn in cluster_management.Resources.ALL_POOLS
+    ]
 
     cluster_obj.wait_for_new_epoch(padding_seconds=5)
 
     return DefaultGovernance(
-        dreps_reg=drep_reg_records, drep_delegators=drep_users, cc_members=cc_members
+        dreps_reg=drep_reg_records,
+        drep_delegators=drep_users,
+        cc_members=cc_members,
+        pools_cold=node_cold_records,
     )
