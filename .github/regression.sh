@@ -92,7 +92,9 @@ if [ "${TX_ERA:-""}" == "default" ]; then
   export TX_ERA=""
 fi
 
-if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ]; then
+if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
+  :  # don't touch `SCRIPTS_DIRNAME` when running on testnet
+elif [ "${CI_FAST_CLUSTER:-"false"}" != "false" ]; then
   export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"${CLUSTER_ERA}_fast"}"
 else
   export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"$CLUSTER_ERA"}"
