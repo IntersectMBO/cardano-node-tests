@@ -305,6 +305,22 @@ class EpochDBRow(tp.NamedTuple):
     epoch_number: int
 
 
+class CommitteeRegistrationDBRow(tp.NamedTuple):
+    id: int
+    tx_id: int
+    cert_index: int
+    cold_key: memoryview
+    hot_key: memoryview
+
+
+class CommitteeDeregistrationDBRow(tp.NamedTuple):
+    id: int
+    tx_id: int
+    cert_index: int
+    voting_anchor_id: int
+    cold_key: memoryview
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -888,3 +904,33 @@ def query_epoch(
     with execute(query=query, vars=query_vars) as cur:
         while (result := cur.fetchone()) is not None:
             yield EpochDBRow(*result)
+
+
+def query_committee_registration(
+    cold_key: str,
+) -> tp.Generator[CommitteeRegistrationDBRow, None, None]:
+    """Query committee registration in db-sync."""
+    query = (
+        "SELECT id, tx_id, cert_index, cold_key, hot_key "
+        "FROM committee_registration "
+        "WHERE cold_key = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{cold_key}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield CommitteeRegistrationDBRow(*result)
+
+
+def query_committee_deregistration(
+    cold_key: str,
+) -> tp.Generator[CommitteeDeregistrationDBRow, None, None]:
+    """Query committee registration in db-sync."""
+    query = (
+        "SELECT id, tx_id, cert_index, voting_anchor_id, cold_key "
+        "FROM committee_de_registration "
+        "WHERE cold_key = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{cold_key}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield CommitteeDeregistrationDBRow(*result)

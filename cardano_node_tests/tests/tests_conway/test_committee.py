@@ -8,6 +8,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
@@ -132,6 +133,16 @@ class TestCommittee:
             == "MemberAuthorized"
         ), "CC Member was not registered"
 
+        # dbsync_utils.check_committee_member_registration(reg_cc.key_hash, reg_committee_state)
+        cc_member_db = dbsync_utils.get_committee_member(reg_cc.key_hash)
+        assert cc_member_db, f"No data returned from db-sync for CC Member {member_key}"
+        assert (
+            reg_committee_state["committee"][member_key]["hotCredsAuthStatus"]["contents"][
+                "keyHash"
+            ]
+            == cc_member_db.hot_key
+        ), "CC Member not present in registration table in db-sync"
+
         # Resignation of CC Member
 
         res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
@@ -161,6 +172,13 @@ class TestCommittee:
                 res_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
                 == "MemberResigned"
             ), "CC Member not resigned"
+
+        # dbsync_utils.check_committee_member_deregistration(reg_cc.key_hash)
+        res_cc_member_db = dbsync_utils.get_deregistered_committee_member(reg_cc.key_hash)
+        assert res_cc_member_db, f"No data returned from db-sync for CC Member {member_key}"
+        assert (
+            reg_cc.key_hash == res_cc_member_db.cold_key
+        ), "CC Member not present in deregistration table in db-sync"
 
         res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_res)
         assert (
