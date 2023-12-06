@@ -191,7 +191,7 @@ class TestDReps:
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files_ret,
-            deposit=reg_drep.deposit,
+            deposit=-reg_drep.deposit,
         )
 
         ret_drep_state = cluster.g_conway_governance.query.drep_state(
