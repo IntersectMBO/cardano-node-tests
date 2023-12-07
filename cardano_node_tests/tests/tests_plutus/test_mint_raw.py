@@ -948,13 +948,15 @@ class TestMinting:
             *mint_txouts,
         ]
 
-        plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
-            tx_files=tx_files_step2,
-            txouts=txouts_step2,
-            mint=plutus_mint_data,
-        )
+        plutus_costs = []
+        if common.BUILD_UNUSABLE:
+            plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_step2",
+                tx_files=tx_files_step2,
+                txouts=txouts_step2,
+                mint=plutus_mint_data,
+            )
 
         tx_raw_output_step2 = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
@@ -994,10 +996,11 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        plutus_common.check_plutus_costs(
-            plutus_costs=plutus_costs,
-            expected_costs=[plutus_common.MINTING_TOKENNAME_COST],
-        )
+        if plutus_costs:
+            plutus_common.check_plutus_costs(
+                plutus_costs=plutus_costs,
+                expected_costs=[plutus_common.MINTING_TOKENNAME_COST],
+            )
 
         # check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -1010,6 +1013,7 @@ class TestMinting:
         not shutil.which("create-script-context"),
         reason="cannot find `create-script-context` on the PATH",
     )
+    @common.SKIPIF_MISMATCHED_ERAS
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_minting_context_equivalence(

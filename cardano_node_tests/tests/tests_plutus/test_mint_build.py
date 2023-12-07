@@ -646,6 +646,7 @@ class TestBuildMinting:
         not shutil.which("create-script-context"),
         reason="cannot find `create-script-context` on the PATH",
     )
+    @common.SKIPIF_MISMATCHED_ERAS
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @submit_utils.PARAM_SUBMIT_METHOD
