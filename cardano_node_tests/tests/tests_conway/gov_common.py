@@ -1,6 +1,7 @@
 import enum
 import itertools
 import logging
+import pathlib as pl
 import pickle
 import typing as tp
 
@@ -139,3 +140,52 @@ def get_pparams_update_args(
     _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
     cli_args = list(itertools.chain.from_iterable(_cli_args))
     return cli_args
+
+
+def check_action_view(
+    cluster_obj: clusterlib.ClusterLib,
+    action_tag: ActionTags,
+    action_file: pl.Path,
+    anchor_url: str,
+    anchor_data_hash: str,
+    deposit_amt: int,
+    recv_addr_vkey_hash: str,
+    return_addr_vkey_hash: str,
+    transfer_amt: int = -1,
+) -> None:
+    contents = []
+    if action_tag == ActionTags.TREASURY_WITHDRAWALS:
+        if transfer_amt == -1:
+            raise ValueError("`transfer_amt` must be specified for treasury withdrawals")
+
+        contents = [
+            [
+                {
+                    "credential": {"keyHash": recv_addr_vkey_hash},
+                    "network": "Testnet",
+                },
+                transfer_amt,
+            ]
+        ]
+    else:
+        raise NotImplementedError(f"Not implemented for action tag `{action_tag}`")
+
+    action_view_out = cluster_obj.g_conway_governance.action.view(action_file=action_file)
+
+    expected_action_out = {
+        "anchor": {
+            "dataHash": anchor_data_hash,
+            "url": anchor_url,
+        },
+        "deposit": deposit_amt,
+        "governance action": {
+            "contents": contents,
+            "tag": action_tag.value,
+        },
+        "return address": {
+            "credential": {"keyHash": return_addr_vkey_hash},
+            "network": "Testnet",
+        },
+    }
+
+    assert action_view_out == expected_action_out, f"{action_view_out} != {expected_action_out}"
