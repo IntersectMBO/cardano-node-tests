@@ -249,7 +249,7 @@ class TestVoting:
             name_template=temp_template,
         )
         cc_member = clusterlib.CCMember(
-            epoch=20,
+            epoch=cluster.g_query.get_epoch() + 3,
             cold_vkey_file=cc_reg_record.cold_key_pair.vkey_file,
             cold_skey_file=cc_reg_record.cold_key_pair.skey_file,
             hot_vkey_file=cc_reg_record.hot_key_pair.vkey_file,
