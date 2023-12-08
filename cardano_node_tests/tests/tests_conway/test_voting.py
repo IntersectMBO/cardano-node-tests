@@ -22,20 +22,19 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture
-def pool_user(
+def get_pool_user(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: gov_common.GovClusterT,
+    cluster_obj: clusterlib.ClusterLib,
+    caching_key: str,
 ) -> clusterlib.PoolUser:
     """Create a pool user."""
-    cluster, __ = cluster_lock_governance
-    with cluster_manager.cache_fixture() as fixture_cache:
+    with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-        test_id = common.get_test_id(cluster)
+        test_id = common.get_test_id(cluster_obj)
         pool_user = clusterlib_utils.create_pool_users(
-            cluster_obj=cluster,
+            cluster_obj=cluster_obj,
             name_template=f"{test_id}_pool_user",
             no_of_addr=1,
         )[0]
@@ -44,10 +43,32 @@ def pool_user(
     # Fund the payment address with some ADA
     clusterlib_utils.fund_from_faucet(
         pool_user.payment,
-        cluster_obj=cluster,
+        cluster_obj=cluster_obj,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
     )
     return pool_user
+
+
+@pytest.fixture
+def pool_user_lg(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_lock_governance: gov_common.GovClusterT,
+) -> clusterlib.PoolUser:
+    """Create a pool user for "lock governance"."""
+    cluster, __ = cluster_lock_governance
+    key = cluster_management.get_fixture_line_str()
+    return get_pool_user(cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key)
+
+
+@pytest.fixture
+def pool_user_ug(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_use_governance: gov_common.GovClusterT,
+) -> clusterlib.PoolUser:
+    """Create a pool user for "use governance"."""
+    cluster, __ = cluster_use_governance
+    key = cluster_management.get_fixture_line_str()
+    return get_pool_user(cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key)
 
 
 class TestVoting:
@@ -57,7 +78,7 @@ class TestVoting:
     def test_enact_constitution(
         self,
         cluster_lock_governance: gov_common.GovClusterT,
-        pool_user: clusterlib.PoolUser,
+        pool_user_lg: clusterlib.PoolUser,
     ):
         """Test enactment of change of constitution.
 
@@ -92,12 +113,12 @@ class TestVoting:
             constitution_hash=constitution_hash,
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
-            deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
+            deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[constitution_action],
-            signing_key_files=[pool_user.payment.skey_file],
+            signing_key_files=[pool_user_lg.payment.skey_file],
         )
 
         # Make sure we have enough time to submit the proposal in one epoch
@@ -108,25 +129,27 @@ class TestVoting:
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
-            src_address=pool_user.payment.address,
+            src_address=pool_user_lg.payment.address,
             use_build_cmd=True,
             tx_files=tx_files_action,
         )
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user.payment.address)[
+            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_lg.payment.address)[
                 0
             ].amount
             == clusterlib.calculate_utxos_balance(tx_output_action.txins)
             - tx_output_action.fee
             - deposit_amt
-        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_action, "Create constitution action not found"
-        assert prop_action["action"]["tag"] == "NewConstitution", "Incorrect action tag"
+        assert (
+            prop_action["action"]["tag"] == gov_common.ActionTags.NEW_CONSTITUTION.value
+        ), "Incorrect action tag"
 
         # Vote & approve the action
 
@@ -156,7 +179,7 @@ class TestVoting:
         tx_files_vote = clusterlib.TxFiles(
             vote_files=[*vote_files_cc, *vote_files_drep],
             signing_key_files=[
-                pool_user.payment.skey_file,
+                pool_user_lg.payment.skey_file,
                 *[r.hot_skey_file for r in governance_data.cc_members],
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
             ],
@@ -165,18 +188,18 @@ class TestVoting:
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_vote",
-            src_address=pool_user.payment.address,
+            src_address=pool_user_lg.payment.address,
             use_build_cmd=True,
             tx_files=tx_files_vote,
         )
 
         out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user.payment.address)[
+            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_lg.payment.address)[
                 0
             ].amount
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
-        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_vote["committeeVotes"], "No committee votes"
@@ -204,7 +227,7 @@ class TestVoting:
     def test_add_new_committee_member(
         self,
         cluster_lock_governance: gov_common.GovClusterT,
-        pool_user: clusterlib.PoolUser,
+        pool_user_lg: clusterlib.PoolUser,
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
     ):
@@ -226,7 +249,7 @@ class TestVoting:
             name_template=temp_template,
         )
         cc_member = clusterlib.CCMember(
-            epoch=10,
+            epoch=20,
             cold_vkey_file=cc_reg_record.cold_key_pair.vkey_file,
             cold_skey_file=cc_reg_record.cold_key_pair.skey_file,
             hot_vkey_file=cc_reg_record.hot_key_pair.vkey_file,
@@ -249,14 +272,14 @@ class TestVoting:
             add_cc_members=[cc_member],
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
-            deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
+            deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[cc_reg_record.registration_cert],
             proposal_files=[update_action],
             signing_key_files=[
-                pool_user.payment.skey_file,
+                pool_user_lg.payment.skey_file,
                 cc_reg_record.cold_key_pair.skey_file,
             ],
         )
@@ -269,25 +292,27 @@ class TestVoting:
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
-            src_address=pool_user.payment.address,
+            src_address=pool_user_lg.payment.address,
             use_build_cmd=True,
             tx_files=tx_files_action,
         )
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user.payment.address)[
+            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_lg.payment.address)[
                 0
             ].amount
             == clusterlib.calculate_utxos_balance(tx_output_action.txins)
             - tx_output_action.fee
             - deposit_amt
-        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_action, "Update committee action not found"
-        assert prop_action["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"
+        assert (
+            prop_action["action"]["tag"] == gov_common.ActionTags.UPDATE_COMMITTEE.value
+        ), "Incorrect action tag"
 
         # Vote & approve the action
 
@@ -317,7 +342,7 @@ class TestVoting:
         tx_files_vote = clusterlib.TxFiles(
             vote_files=[*vote_files_drep, *vote_files_pool],
             signing_key_files=[
-                pool_user.payment.skey_file,
+                pool_user_lg.payment.skey_file,
                 *[r.skey_file for r in governance_data.pools_cold],
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
             ],
@@ -326,7 +351,7 @@ class TestVoting:
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_vote",
-            src_address=pool_user.payment.address,
+            src_address=pool_user_lg.payment.address,
             use_build_cmd=True,
             tx_files=tx_files_vote,
         )
@@ -344,7 +369,7 @@ class TestVoting:
                 tx_files_res = clusterlib.TxFiles(
                     certificate_files=[res_cert],
                     signing_key_files=[
-                        pool_user.payment.skey_file,
+                        pool_user_lg.payment.skey_file,
                         cc_reg_record.cold_key_pair.skey_file,
                     ],
                 )
@@ -352,7 +377,7 @@ class TestVoting:
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_res",
-                    src_address=pool_user.payment.address,
+                    src_address=pool_user_lg.payment.address,
                     use_build_cmd=True,
                     tx_files=tx_files_res,
                 )
@@ -361,11 +386,11 @@ class TestVoting:
 
         out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user.payment.address)[
+            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_lg.payment.address)[
                 0
             ].amount
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
-        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert not prop_vote["committeeVotes"], "Unexpected committee votes"
