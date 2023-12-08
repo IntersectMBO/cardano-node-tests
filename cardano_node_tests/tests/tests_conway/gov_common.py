@@ -33,6 +33,13 @@ class PrevGovActionIds(enum.Enum):
     PPARAM_UPDATE = "pgaPParamUpdate"
 
 
+class ActionTags(enum.Enum):
+    NEW_CONSTITUTION = "NewConstitution"
+    UPDATE_COMMITTEE = "UpdateCommittee"
+    PARAMETER_CHANGE = "ParameterChange"
+    TREASURY_WITHDRAWALS = "TreasuryWithdrawals"
+
+
 def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
     drep_records = deleg_state["dstate"]["unified"]["credentials"]
 
@@ -52,13 +59,14 @@ def get_prev_action(
     cluster_obj: clusterlib.ClusterLib, action_type: PrevGovActionIds
 ) -> PrevActionRec:
     prev_action_rec = (
-        cluster_obj.g_conway_governance.query.gov_state()["enactState"]["prevGovActionIds"][
-            action_type.value
-        ]
+        cluster_obj.g_conway_governance.query.gov_state()["nextRatifyState"]["nextEnactState"][
+            "prevGovActionIds"
+        ][action_type.value]
         or {}
     )
     txid = prev_action_rec.get("txId") or ""
-    ix = prev_action_rec.get("govActionIx") or -1
+    _ix = prev_action_rec.get("govActionIx", None)
+    ix = -1 if _ix is None else _ix
     return PrevActionRec(txid=txid, ix=ix)
 
 

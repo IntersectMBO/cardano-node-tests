@@ -557,7 +557,7 @@ def check_updated_params(update_proposals: tp.List[UpdateProposal], protocol_par
         if not u.name:
             continue
 
-        # nested dictionaries - keys are separated with comma (,)
+        # Nested dictionaries - keys are separated with comma (,)
         names = u.name.split(",")
         nested = protocol_params
         for n in names:
@@ -569,7 +569,7 @@ def check_updated_params(update_proposals: tp.List[UpdateProposal], protocol_par
 
     if failures:
         failures_str = "\n".join(failures)
-        raise AssertionError(f"Cluster update proposal failed!\n{failures_str}")
+        raise AssertionError(f"Update proposal failed!\n{failures_str}")
 
 
 def update_params(
