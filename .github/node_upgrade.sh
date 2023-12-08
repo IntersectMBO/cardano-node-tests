@@ -64,8 +64,10 @@ echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
 
 set +e
-# shellcheck disable=SC2086,SC2016
-nix develop --accept-flake-config $NODE_OVERRIDE --command bash -c '
+# shellcheck disable=SC2086
+nix flake update --accept-flake-config $NODE_OVERRIDE
+# shellcheck disable=SC2016
+nix develop --accept-flake-config --command bash -c '
   : > "$WORKDIR/.nix_step1"
   printf "finish: %(%H:%M:%S)T\n" -1
   echo "::endgroup::"  # end group for "Nix env setup"
@@ -94,8 +96,10 @@ else
   NODE_OVERRIDE=$(node_override)
 fi
 
-# shellcheck disable=SC2086,SC2016
-nix develop --accept-flake-config $NODE_OVERRIDE --command bash -c '
+# shellcheck disable=SC2086
+nix flake update --accept-flake-config $NODE_OVERRIDE
+# shellcheck disable=SC2016
+nix develop --accept-flake-config --command bash -c '
   : > "$WORKDIR/.nix_step2"
 
   # update cluster nodes, run smoke tests
