@@ -208,6 +208,139 @@ class TestDReps:
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
 
+class TestNegativeDReps:
+    """Tests for DReps where we test failing condition."""
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_no_witness_register_and_retire(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        use_build_cmd: bool,
+    ):
+        """Test DRep registration and retirement without needing an skey as witness.
+
+        There was a ledger issue that allowed a DRep to be registered without needing
+        the corresponding skey witness.
+
+        * try to register DRep without skey, expect failure
+        * register DRep
+        * check that DRep was registered
+        * try to retire DRep without skey, expect failure
+        * retire DRep
+        * check that DRep was retired
+        """
+        temp_template = common.get_test_id(cluster)
+        errors_final = []
+
+        # Register DRep
+
+        reg_drep = clusterlib_utils.get_drep_reg_record(
+            cluster_obj=cluster,
+            name_template=temp_template,
+        )
+
+        tx_files_reg_missing = clusterlib.TxFiles(
+            certificate_files=[reg_drep.registration_cert],
+            signing_key_files=[payment_addr.skey_file],
+        )
+
+        reg_missing_success = False
+        try:
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_reg",
+                src_address=payment_addr.address,
+                use_build_cmd=use_build_cmd,
+                tx_files=tx_files_reg_missing,
+                deposit=reg_drep.deposit,
+            )
+        except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if "(MissingVKeyWitnessesUTXOW" not in str_exc:
+                errors_final.append(f"Unexpected DRep registration error: {str_exc}")
+        else:
+            reg_missing_success = True
+            errors_final.append("DRep registered without needing an skey")
+
+        if not reg_missing_success:
+            tx_files_reg = clusterlib.TxFiles(
+                certificate_files=[reg_drep.registration_cert],
+                signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
+            )
+
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_reg",
+                src_address=payment_addr.address,
+                use_build_cmd=use_build_cmd,
+                tx_files=tx_files_reg,
+                deposit=reg_drep.deposit,
+            )
+
+        reg_drep_state = cluster.g_conway_governance.query.drep_state(
+            drep_vkey_file=reg_drep.key_pair.vkey_file
+        )
+        assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
+
+        # Retire DRep
+
+        ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+            cert_name=temp_template,
+            deposit_amt=reg_drep.deposit,
+            drep_vkey_file=reg_drep.key_pair.vkey_file,
+        )
+
+        tx_files_ret_missing = clusterlib.TxFiles(
+            certificate_files=[ret_cert],
+            signing_key_files=[payment_addr.skey_file],
+        )
+
+        ret_missing_success = False
+        try:
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_ret",
+                src_address=payment_addr.address,
+                use_build_cmd=use_build_cmd,
+                tx_files=tx_files_ret_missing,
+                deposit=-reg_drep.deposit,
+            )
+        except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if "(MissingVKeyWitnessesUTXOW" not in str_exc:
+                errors_final.append(f"Unexpected DRep retirement error: {str_exc}")
+        else:
+            ret_missing_success = True
+            errors_final.append("DRep retired without needing an skey")
+
+        if not ret_missing_success:
+            tx_files_ret = clusterlib.TxFiles(
+                certificate_files=[ret_cert],
+                signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
+            )
+
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_ret",
+                src_address=payment_addr.address,
+                use_build_cmd=use_build_cmd,
+                tx_files=tx_files_ret,
+                deposit=-reg_drep.deposit,
+            )
+
+        ret_drep_state = cluster.g_conway_governance.query.drep_state(
+            drep_vkey_file=reg_drep.key_pair.vkey_file
+        )
+        assert not ret_drep_state, "DRep was not retired"
+
+        if errors_final:
+            raise AssertionError("\n".join(errors_final))
+
+
 class TestDelegDReps:
     """Tests for votes delegation to DReps."""
 
