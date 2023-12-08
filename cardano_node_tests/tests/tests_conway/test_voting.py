@@ -1,6 +1,7 @@
 """Tests for Conway governance voting functionality."""
 import logging
 import pathlib as pl
+import random
 
 import allure
 import pytest
@@ -413,3 +414,338 @@ class TestVoting:
         cluster.wait_for_new_epoch(padding_seconds=5)
         enact_state = cluster.g_conway_governance.query.gov_state()["enactState"]
         _check_state(enact_state)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_enact_pparam_update(
+        self,
+        cluster_lock_governance: gov_common.GovClusterT,
+        pool_user_lg: clusterlib.PoolUser,
+    ):
+        """Test enactment of protocol parameter update.
+
+        * submit a "protocol parameters update" action
+        * vote to approve the action
+        * check that the action is ratified
+        * check that the action is enacted
+        """
+        cluster, governance_data = cluster_lock_governance
+        temp_template = common.get_test_id(cluster)
+
+        # Create an action
+
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+
+        anchor_url = "http://www.pparam-action.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+
+        prev_action_rec = gov_common.get_prev_action(
+            cluster_obj=cluster, action_type=gov_common.PrevGovActionIds.PPARAM_UPDATE
+        )
+
+        # Picked parameters and values that can stay changed even for other tests
+        update_proposals = [
+            clusterlib_utils.UpdateProposal(
+                arg="--committee-term-length",
+                value=random.randint(11000, 12000),
+                name="committeeMaxTermLength",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--drep-activity",
+                value=random.randint(101, 120),
+                name="dRepActivity",
+            ),
+        ]
+        update_args = gov_common.get_pparams_update_args(update_proposals=update_proposals)
+
+        pparams_action = cluster.g_conway_governance.action.create_pparams_update(
+            action_name=temp_template,
+            deposit_amt=deposit_amt,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            cli_args=update_args,
+            prev_action_txid=prev_action_rec.txid,
+            prev_action_ix=prev_action_rec.ix,
+            deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
+        )
+
+        tx_files_action = clusterlib.TxFiles(
+            proposal_files=[pparams_action],
+            signing_key_files=[pool_user_lg.payment.skey_file],
+        )
+
+        # Make sure we have enough time to submit the proposal in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        tx_output_action = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_action",
+            src_address=pool_user_lg.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_action,
+        )
+
+        out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_lg.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+            - tx_output_action.fee
+            - deposit_amt
+        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+
+        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+        prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        assert prop_action, "Param update action not found"
+        assert (
+            prop_action["action"]["tag"] == gov_common.ActionTags.PARAMETER_CHANGE.value
+        ), "Incorrect action tag"
+
+        # Vote & approve the action
+
+        action_ix = prop_action["actionId"]["govActionIx"]
+
+        vote_files_cc = [
+            cluster.g_conway_governance.vote.create(
+                vote_name=f"{temp_template}_cc{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote_yes=True,
+                cc_hot_vkey_file=m.hot_vkey_file,
+            )
+            for i, m in enumerate(governance_data.cc_members, start=1)
+        ]
+        vote_files_drep = [
+            cluster.g_conway_governance.vote.create(
+                vote_name=f"{temp_template}_drep{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote_yes=True,
+                drep_vkey_file=d.key_pair.vkey_file,
+            )
+            for i, d in enumerate(governance_data.dreps_reg, start=1)
+        ]
+
+        tx_files_vote = clusterlib.TxFiles(
+            vote_files=[*vote_files_cc, *vote_files_drep],
+            signing_key_files=[
+                pool_user_lg.payment.skey_file,
+                *[r.hot_skey_file for r in governance_data.cc_members],
+                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+            ],
+        )
+
+        tx_output_vote = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_vote",
+            src_address=pool_user_lg.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_vote,
+        )
+
+        out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_lg.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
+        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+
+        prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        assert prop_vote["committeeVotes"], "No committee votes"
+        assert prop_vote["dRepVotes"], "No DRep votes"
+        assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
+
+        def _check_state(state: dict):
+            pparams = state["curPParams"]
+            clusterlib_utils.check_updated_params(
+                update_proposals=update_proposals, protocol_params=pparams
+            )
+
+        # Check ratification
+        cluster.wait_for_new_epoch(padding_seconds=5)
+        next_rat_state = cluster.g_conway_governance.query.gov_state()["nextRatifyState"]
+        _check_state(next_rat_state["nextEnactState"])
+        assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
+        assert next_rat_state["removedGovActions"], "No removed actions"
+
+        # Check enactment
+        cluster.wait_for_new_epoch(padding_seconds=5)
+        enact_state = cluster.g_conway_governance.query.gov_state()["enactState"]
+        _check_state(enact_state)
+
+    @allure.link(helpers.get_vcs_link())
+    def test_enact_treasury_withdrawal(
+        self,
+        cluster_use_governance: gov_common.GovClusterT,
+        pool_user_ug: clusterlib.PoolUser,
+    ):
+        """Test enactment of treasury withdrawal.
+
+        * submit a "treasury withdrawal" action
+        * vote to approve the action
+        * check that the action is ratified
+        * check that the action is enacted
+        """
+        cluster, governance_data = cluster_use_governance
+        temp_template = common.get_test_id(cluster)
+
+        # Create stake address and registration certificate
+        stake_deposit_amt = cluster.g_query.get_address_deposit()
+
+        recv_stake_addr_rec = cluster.g_stake_address.gen_stake_addr_and_keys(
+            name=f"{temp_template}_receive"
+        )
+        recv_stake_addr_reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_receive",
+            deposit_amt=stake_deposit_amt,
+            stake_vkey_file=recv_stake_addr_rec.vkey_file,
+        )
+
+        # Create an action and register stake address
+
+        action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        transfer_amt = 10_000_000_000
+
+        anchor_url = "http://www.withdrawal-action.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+
+        withdrawal_action = cluster.g_conway_governance.action.create_treasury_withdrawal(
+            action_name=temp_template,
+            transfer_amt=transfer_amt,
+            deposit_amt=action_deposit_amt,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
+            deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
+        )
+
+        tx_files_action = clusterlib.TxFiles(
+            certificate_files=[recv_stake_addr_reg_cert],
+            proposal_files=[withdrawal_action],
+            signing_key_files=[pool_user_ug.payment.skey_file, recv_stake_addr_rec.skey_file],
+        )
+
+        # Make sure we have enough time to submit the proposal in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        tx_output_action = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_action",
+            src_address=pool_user_ug.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_action,
+        )
+
+        assert cluster.g_query.get_stake_addr_info(
+            recv_stake_addr_rec.address
+        ).address, f"Stake address is not registered: {recv_stake_addr_rec.address}"
+
+        out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_ug.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+            - tx_output_action.fee
+            - action_deposit_amt
+            - stake_deposit_amt
+        ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
+
+        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+        prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        assert prop_action, "Treasury withdrawals action not found"
+        assert (
+            prop_action["action"]["tag"] == gov_common.ActionTags.TREASURY_WITHDRAWALS.value
+        ), "Incorrect action tag"
+
+        # Vote & approve the action
+
+        action_ix = prop_action["actionId"]["govActionIx"]
+
+        vote_files_cc = [
+            cluster.g_conway_governance.vote.create(
+                vote_name=f"{temp_template}_cc{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote_yes=True,
+                cc_hot_vkey_file=m.hot_vkey_file,
+            )
+            for i, m in enumerate(governance_data.cc_members, start=1)
+        ]
+        vote_files_drep = [
+            cluster.g_conway_governance.vote.create(
+                vote_name=f"{temp_template}_drep{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote_yes=True,
+                drep_vkey_file=d.key_pair.vkey_file,
+            )
+            for i, d in enumerate(governance_data.dreps_reg, start=1)
+        ]
+
+        tx_files_vote = clusterlib.TxFiles(
+            vote_files=[*vote_files_cc, *vote_files_drep],
+            signing_key_files=[
+                pool_user_ug.payment.skey_file,
+                *[r.hot_skey_file for r in governance_data.cc_members],
+                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+            ],
+        )
+
+        tx_output_vote = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_vote",
+            src_address=pool_user_ug.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_vote,
+        )
+
+        out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_ug.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
+        ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
+
+        prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        assert prop_vote["committeeVotes"], "No committee votes"
+        assert prop_vote["dRepVotes"], "No DRep votes"
+        assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
+
+        # Check ratification
+        cluster.wait_for_new_epoch(padding_seconds=5)
+        next_rat_state = cluster.g_conway_governance.query.gov_state()["nextRatifyState"]
+        assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
+        assert next_rat_state["removedGovActions"], "No removed actions"
+
+        # Check enactment
+        cluster.wait_for_new_epoch(padding_seconds=5)
+        assert (
+            cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
+            == transfer_amt
+        ), "Incorrect reward account balance"
+
+        # Check action view
+        recv_addr_vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
+            stake_vkey_file=recv_stake_addr_rec.vkey_file
+        )
+        return_addr_vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
+            stake_vkey_file=pool_user_ug.stake.vkey_file
+        )
+        gov_common.check_action_view(
+            cluster_obj=cluster,
+            action_tag=gov_common.ActionTags.TREASURY_WITHDRAWALS,
+            action_file=withdrawal_action,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            transfer_amt=transfer_amt,
+            deposit_amt=action_deposit_amt,
+            recv_addr_vkey_hash=recv_addr_vkey_hash,
+            return_addr_vkey_hash=return_addr_vkey_hash,
+        )

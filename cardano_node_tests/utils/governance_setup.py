@@ -5,7 +5,6 @@ from cardano_clusterlib import clusterlib
 
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.cluster_management import cluster_management
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 
 LOGGER = logging.getLogger(__name__)
@@ -125,19 +124,30 @@ def create_dreps(
     return drep_reg_records, drep_users
 
 
-def load_committee() -> tp.List[clusterlib.CCMember]:
-    data_dir = cluster_nodes.get_cluster_env().state_dir / GOV_DATA_DIR
+def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[clusterlib.CCMember]:
+    genesis_cc_members = cluster_obj.conway_genesis.get("committee", {}).get("members") or {}
+    if not genesis_cc_members:
+        return []
+
+    data_dir = cluster_obj.state_dir / GOV_DATA_DIR
 
     cc_members = []
     for vkey_file in sorted(data_dir.glob("cc_member*_committee_cold.vkey")):
         fpath = vkey_file.parent
         fbase = vkey_file.name.replace("cold.vkey", "")
+        hot_vkey_file = fpath / f"{fbase}hot.vkey"
+        cold_vkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(vkey_file=vkey_file)
+        genesis_epoch = genesis_cc_members[f"keyHash-{cold_vkey_hash}"]
         cc_members.append(
             clusterlib.CCMember(
-                epoch=10_000,
+                epoch=genesis_epoch,
                 cold_vkey_file=vkey_file,
+                cold_vkey_hash=cold_vkey_hash,
                 cold_skey_file=fpath / f"{fbase}cold.skey",
-                hot_vkey_file=fpath / f"{fbase}hot.vkey",
+                hot_vkey_file=hot_vkey_file,
+                hot_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                    vkey_file=hot_vkey_file
+                ),
                 hot_skey_file=fpath / f"{fbase}hot.skey",
             )
         )
@@ -150,7 +160,7 @@ def setup(
     cluster_obj: clusterlib.ClusterLib,
     destination_dir: ttypes.FileType = ".",
 ) -> DefaultGovernance:
-    cc_members = load_committee()
+    cc_members = load_committee(cluster_obj=cluster_obj)
     vote_stake = create_vote_stake(
         cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,
