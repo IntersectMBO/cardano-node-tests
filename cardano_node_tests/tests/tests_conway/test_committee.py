@@ -1,6 +1,5 @@
 """Tests for Conway governance Constitutional Committee functionality."""
 import logging
-import pathlib as pl
 
 import allure
 import pytest
@@ -8,13 +7,13 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests.tests_conway import gov_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-DATA_DIR = pl.Path(__file__).parent / "data"
 
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
@@ -225,7 +224,7 @@ class TestCommittee:
 
         tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            name_template=f"{temp_template}_reg",
+            name_template=temp_template,
             src_address=pool_user.payment.address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
@@ -239,11 +238,6 @@ class TestCommittee:
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
-        proposals = cluster.g_conway_governance.query.gov_state()["proposals"]
-        prop = {}
-        for p in proposals:
-            if p["actionId"]["txId"] == txid:
-                prop = p
-                break
+        prop = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=txid)
         assert prop, "Update committee action not found"
         assert prop["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"

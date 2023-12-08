@@ -13,5 +13,5 @@ node_override() {
     ref=""
   fi
 
-  echo --override-input cardano-node "github:input-output-hk/cardano-node$ref" --recreate-lock-file
+  echo --override-input cardano-node "github:input-output-hk/cardano-node$ref"
 }

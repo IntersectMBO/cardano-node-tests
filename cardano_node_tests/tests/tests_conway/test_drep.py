@@ -17,7 +17,6 @@ from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-DATA_DIR = pl.Path(__file__).parent / "data"
 
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
@@ -192,7 +191,7 @@ class TestDReps:
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files_ret,
-            deposit=reg_drep.deposit,
+            deposit=-reg_drep.deposit,
         )
 
         ret_drep_state = cluster.g_conway_governance.query.drep_state(

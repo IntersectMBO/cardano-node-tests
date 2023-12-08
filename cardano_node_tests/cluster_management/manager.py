@@ -32,7 +32,7 @@ if configuration.CLUSTERS_COUNT > 1 and configuration.DEV_CLUSTER_RUNNING:
     raise RuntimeError("Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set.")
 
 
-def _get_fixture_line_str() -> str:
+def get_fixture_line_str() -> str:
     """Get `filename#lineno` of current fixture."""
     # get past `cache_fixture` and `contextmanager` to the fixture
     calling_frame = inspect.currentframe().f_back.f_back.f_back  # type: ignore
@@ -68,6 +68,7 @@ class ClusterManager:
         self.log_lock = f"{self.pytest_tmp_dir}/{common.LOG_LOCK}"
 
         self._cluster_instance_num = -1
+        self._initialized = False
 
     @property
     def cluster_instance_num(self) -> int:
@@ -218,7 +219,7 @@ class ClusterManager:
     @contextlib.contextmanager
     def cache_fixture(self, key: str = "") -> tp.Iterator[FixtureCache]:
         """Cache fixture value - context manager."""
-        key_str = key or _get_fixture_line_str()
+        key_str = key or get_fixture_line_str()
         key_hash = int(hashlib.sha1(key_str.encode("utf-8")).hexdigest(), 16)
         cached_value = self.cache.test_data.get(key_hash)
         container = FixtureCache(value=cached_value)
@@ -390,6 +391,7 @@ class ClusterManager:
             raise AssertionError("`cluster_obj` not available, that cannot happen")
         cluster_obj.cluster_id = self.cluster_instance_num
         cluster_obj._cluster_manager = self  # type: ignore
+        self._initialized = True
 
     def get(
         self,
@@ -399,11 +401,20 @@ class ClusterManager:
         prio: bool = False,
         cleanup: bool = False,
         start_cmd: str = "",
+        check_initialized: bool = True,
     ) -> clusterlib.ClusterLib:
         """Get `cardano_clusterlib.ClusterLib` object on an initialized cluster instance.
 
         Convenience method that calls `init`.
         """
+        # Most of the time the initialization should be done just once per test. There is a risk of
+        # using multiple `cluster` fixtures by single test and having a deadlock when different
+        # fixtures want to lock the same resources.
+        # If you've ran into this issue, check that all the fixtures you use in the test are using
+        # the same `cluster` fixture.
+        if check_initialized and self._initialized:
+            raise AssertionError("manager is already initialized")
+
         self.init(
             mark=mark,
             lock_resources=lock_resources,

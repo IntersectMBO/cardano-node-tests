@@ -14,6 +14,7 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -1341,8 +1342,8 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.SHELLEY,
-        reason="runs only with Shelley TX",
+        VERSIONS.transaction_era != VERSIONS.SHELLEY or VERSIONS.node >= version.parse("8.7.0"),
+        reason="runs only with Shelley TX on node < 8.7.0",
     )
     def test_missing_ttl(
         self,

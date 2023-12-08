@@ -92,7 +92,9 @@ if [ "${TX_ERA:-""}" == "default" ]; then
   export TX_ERA=""
 fi
 
-if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ]; then
+if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
+  :  # don't touch `SCRIPTS_DIRNAME` when running on testnet
+elif [ "${CI_FAST_CLUSTER:-"false"}" != "false" ]; then
   export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"${CLUSTER_ERA}_fast"}"
 else
   export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"$CLUSTER_ERA"}"
@@ -115,8 +117,10 @@ printf "start: %(%H:%M:%S)T\n" -1
 
 # run tests and generate report
 set +e
-# shellcheck disable=SC2046,SC2016,SC2119
-nix develop --accept-flake-config $(node_override) --command bash -c '
+# shellcheck disable=SC2046,SC2119
+nix flake update --accept-flake-config $(node_override)
+# shellcheck disable=SC2016
+nix develop --accept-flake-config --command bash -c '
   printf "finish: %(%H:%M:%S)T\n" -1
   echo "::endgroup::"  # end group for "Nix env setup"
   echo "::group::Pytest run"

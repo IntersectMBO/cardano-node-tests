@@ -146,6 +146,7 @@ class TestBuildLocking:
         not shutil.which("create-script-context"),
         reason="cannot find `create-script-context` on the PATH",
     )
+    @common.SKIPIF_MISMATCHED_ERAS
     @pytest.mark.dbsync
     def test_context_equivalence(
         self,

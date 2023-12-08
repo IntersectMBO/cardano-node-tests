@@ -20,22 +20,22 @@ MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
 
 
-# common `skipif`s
 _BLD_SKIP_REASON = ""
-if VERSIONS.transaction_era <= VERSIONS.ALLEGRA:
-    _BLD_SKIP_REASON = "node issue #4286"
-elif VERSIONS.transaction_era == VERSIONS.MARY:
-    _BLD_SKIP_REASON = "node issue #4287"
-elif VERSIONS.transaction_era == VERSIONS.ALONZO:
-    _BLD_SKIP_REASON = "node issue #5109"
+if VERSIONS.transaction_era != VERSIONS.cluster_era:
+    _BLD_SKIP_REASON = "transaction era must be the same as node era"
 BUILD_UNUSABLE = bool(_BLD_SKIP_REASON)
 
+# common `skipif`s
 SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
     BUILD_UNUSABLE,
     reason=(
-        f"cannot use `build` with Tx era '{VERSIONS.transaction_era_name}', "
-        f"see {_BLD_SKIP_REASON}"
+        f"cannot use `build` with Tx era '{VERSIONS.transaction_era_name}': {_BLD_SKIP_REASON}"
     ),
+)
+
+SKIPIF_MISMATCHED_ERAS = pytest.mark.skipif(
+    VERSIONS.transaction_era != VERSIONS.cluster_era,
+    reason="transaction era must be the same as node era",
 )
 
 SKIPIF_WRONG_ERA = pytest.mark.skipif(
@@ -54,8 +54,6 @@ SKIPIF_TOKENS_UNUSABLE = pytest.mark.skipif(
 _PLUTUS_SKIP_REASON = ""
 if VERSIONS.transaction_era < VERSIONS.ALONZO:
     _PLUTUS_SKIP_REASON = "Plutus is available only in Alonzo+ eras"
-elif VERSIONS.transaction_era == VERSIONS.ALONZO:
-    _PLUTUS_SKIP_REASON = "Plutus unusable due to node issue #5109"
 SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
     bool(_PLUTUS_SKIP_REASON),
     reason=_PLUTUS_SKIP_REASON,
