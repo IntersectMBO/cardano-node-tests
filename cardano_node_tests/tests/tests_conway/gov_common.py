@@ -1,4 +1,5 @@
 import enum
+import itertools
 import logging
 import pickle
 import typing as tp
@@ -126,3 +127,15 @@ def get_default_governance(
                 pickle.dump(governance_data, out_data)
 
     return governance_data
+
+
+def get_pparams_update_args(
+    update_proposals: tp.List[clusterlib_utils.UpdateProposal],
+) -> tp.List[str]:
+    """Get cli arguments for pparams update action."""
+    if not update_proposals:
+        return []
+
+    _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
+    cli_args = list(itertools.chain.from_iterable(_cli_args))
+    return cli_args
