@@ -949,7 +949,7 @@ class TestMinting:
         ]
 
         plutus_costs = []
-        if common.BUILD_UNUSABLE:
+        if not common.BUILD_UNUSABLE:
             plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_step2",
