@@ -1,18 +1,8 @@
 8.7.2
 =====
 
-* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/8.7.2>
-* tag PR -
-* tag commits - <https://github.com/input-output-hk/cardano-node/compare/8.1.2...8.7.2>
-
-
-Changelogs
-----------
-
-* cardano-api: <https://github.com/input-output-hk/cardano-node/blob/8.7.2/cardano-api/ChangeLog.md>
-* cardano-cli: <https://github.com/input-output-hk/cardano-node/blob/8.7.2/cardano-cli/ChangeLog.md>
-* cardano-node: <https://github.com/input-output-hk/cardano-node/blob/8.7.2/cardano-node/ChangeLog.md>
-* submit-api: <https://github.com/input-output-hk/cardano-node/blob/8.7.2/cardano-submit-api/CHANGELOG.md>
+* Release notes - <https://github.com/input-output-hk/cardano-node/releases/tag/8.7.2>
+* Tag commits - <https://github.com/input-output-hk/cardano-node/compare/8.1.2...8.7.2>
 
 
 Regression testing on a local cluster
