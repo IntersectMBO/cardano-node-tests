@@ -11,8 +11,9 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests.tests_conway import gov_common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_setup
+from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -54,7 +55,7 @@ def get_pool_user(
 @pytest.fixture
 def pool_user_lg(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: gov_common.GovClusterT,
+    cluster_lock_governance: governance_setup.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
@@ -65,7 +66,7 @@ def pool_user_lg(
 @pytest.fixture
 def pool_user_ug(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_use_governance: gov_common.GovClusterT,
+    cluster_use_governance: governance_setup.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "use governance"."""
     cluster, __ = cluster_use_governance
@@ -79,7 +80,7 @@ class TestVoting:
     @allure.link(helpers.get_vcs_link())
     def test_enact_constitution(
         self,
-        cluster_lock_governance: gov_common.GovClusterT,
+        cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test enactment of change of constitution.
@@ -102,8 +103,8 @@ class TestVoting:
         constitution_url = "http://www.const-new.com"
         constitution_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
-        prev_action_rec = gov_common.get_prev_action(
-            cluster_obj=cluster, action_type=gov_common.PrevGovActionIds.CONSTITUTION
+        prev_action_rec = governance_utils.get_prev_action(
+            cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.CONSTITUTION
         )
 
         constitution_action = cluster.g_conway_governance.action.create_constitution(
@@ -147,10 +148,10 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_action, "Create constitution action not found"
         assert (
-            prop_action["action"]["tag"] == gov_common.ActionTags.NEW_CONSTITUTION.value
+            prop_action["action"]["tag"] == governance_utils.ActionTags.NEW_CONSTITUTION.value
         ), "Incorrect action tag"
 
         # Vote & approve the action
@@ -203,7 +204,7 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
-        prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
@@ -228,7 +229,7 @@ class TestVoting:
     @allure.link(helpers.get_vcs_link())
     def test_add_new_committee_member(
         self,
-        cluster_lock_governance: gov_common.GovClusterT,
+        cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
@@ -246,7 +247,7 @@ class TestVoting:
 
         # Create an action
 
-        cc_reg_record = clusterlib_utils.get_cc_member_reg_record(
+        cc_reg_record = governance_utils.get_cc_member_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
         )
@@ -261,8 +262,8 @@ class TestVoting:
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
         anchor_url = "http://www.cc-update.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-        prev_action_rec = gov_common.get_prev_action(
-            cluster_obj=cluster, action_type=gov_common.PrevGovActionIds.COMMITTEE
+        prev_action_rec = governance_utils.get_prev_action(
+            cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.COMMITTEE
         )
 
         update_action = cluster.g_conway_governance.action.update_committee(
@@ -310,10 +311,10 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_action, "Update committee action not found"
         assert (
-            prop_action["action"]["tag"] == gov_common.ActionTags.UPDATE_COMMITTEE.value
+            prop_action["action"]["tag"] == governance_utils.ActionTags.UPDATE_COMMITTEE.value
         ), "Incorrect action tag"
 
         # Vote & approve the action
@@ -394,7 +395,7 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
-        prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert not prop_vote["committeeVotes"], "Unexpected committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
@@ -419,7 +420,7 @@ class TestVoting:
     @allure.link(helpers.get_vcs_link())
     def test_enact_pparam_update(
         self,
-        cluster_lock_governance: gov_common.GovClusterT,
+        cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test enactment of protocol parameter update.
@@ -439,8 +440,8 @@ class TestVoting:
         anchor_url = "http://www.pparam-action.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
-        prev_action_rec = gov_common.get_prev_action(
-            cluster_obj=cluster, action_type=gov_common.PrevGovActionIds.PPARAM_UPDATE
+        prev_action_rec = governance_utils.get_prev_action(
+            cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE
         )
 
         # Picked parameters and values that can stay changed even for other tests
@@ -456,7 +457,7 @@ class TestVoting:
                 name="dRepActivity",
             ),
         ]
-        update_args = gov_common.get_pparams_update_args(update_proposals=update_proposals)
+        update_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
 
         pparams_action = cluster.g_conway_governance.action.create_pparams_update(
             action_name=temp_template,
@@ -498,10 +499,10 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_action, "Param update action not found"
         assert (
-            prop_action["action"]["tag"] == gov_common.ActionTags.PARAMETER_CHANGE.value
+            prop_action["action"]["tag"] == governance_utils.ActionTags.PARAMETER_CHANGE.value
         ), "Incorrect action tag"
 
         # Vote & approve the action
@@ -554,7 +555,7 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
-        prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
@@ -580,7 +581,7 @@ class TestVoting:
     @allure.link(helpers.get_vcs_link())
     def test_enact_treasury_withdrawal(
         self,
-        cluster_use_governance: gov_common.GovClusterT,
+        cluster_use_governance: governance_setup.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
     ):
         """Test enactment of treasury withdrawal.
@@ -658,10 +659,10 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_action, "Treasury withdrawals action not found"
         assert (
-            prop_action["action"]["tag"] == gov_common.ActionTags.TREASURY_WITHDRAWALS.value
+            prop_action["action"]["tag"] == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
         ), "Incorrect action tag"
 
         # Vote & approve the action
@@ -714,7 +715,7 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
-        prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
@@ -738,9 +739,9 @@ class TestVoting:
         return_addr_vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
             stake_vkey_file=pool_user_ug.stake.vkey_file
         )
-        gov_common.check_action_view(
+        governance_utils.check_action_view(
             cluster_obj=cluster,
-            action_tag=gov_common.ActionTags.TREASURY_WITHDRAWALS,
+            action_tag=governance_utils.ActionTags.TREASURY_WITHDRAWALS,
             action_file=withdrawal_action,
             anchor_url=anchor_url,
             anchor_data_hash=anchor_data_hash,
@@ -753,7 +754,7 @@ class TestVoting:
     @allure.link(helpers.get_vcs_link())
     def test_vote_info(
         self,
-        cluster_use_governance: gov_common.GovClusterT,
+        cluster_use_governance: governance_setup.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
     ):
         """Test voting on info action.
@@ -809,10 +810,10 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_action, "Info action not found"
         assert (
-            prop_action["action"]["tag"] == gov_common.ActionTags.INFO_ACTION.value
+            prop_action["action"]["tag"] == governance_utils.ActionTags.INFO_ACTION.value
         ), "Incorrect action tag"
 
         # Vote
@@ -889,7 +890,7 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
-        prop_vote = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
         assert prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
@@ -898,9 +899,9 @@ class TestVoting:
         return_addr_vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
             stake_vkey_file=pool_user_ug.stake.vkey_file
         )
-        gov_common.check_action_view(
+        governance_utils.check_action_view(
             cluster_obj=cluster,
-            action_tag=gov_common.ActionTags.INFO_ACTION,
+            action_tag=governance_utils.ActionTags.INFO_ACTION,
             action_file=info_action,
             anchor_url=anchor_url,
             anchor_data_hash=anchor_data_hash,

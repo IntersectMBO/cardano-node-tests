@@ -7,8 +7,8 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests.tests_conway import gov_common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
@@ -100,7 +100,7 @@ class TestCommittee:
 
         # Register CC Member
 
-        reg_cc = clusterlib_utils.get_cc_member_reg_record(
+        reg_cc = governance_utils.get_cc_member_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
         )
@@ -183,7 +183,7 @@ class TestCommittee:
         cc_size = 3
 
         cc_reg_records = [
-            clusterlib_utils.get_cc_member_reg_record(
+            governance_utils.get_cc_member_reg_record(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_{i}",
             )
@@ -238,6 +238,6 @@ class TestCommittee:
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
-        prop = gov_common.lookup_proposal(cluster_obj=cluster, action_txid=txid)
+        prop = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=txid)
         assert prop, "Update committee action not found"
         assert prop["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"

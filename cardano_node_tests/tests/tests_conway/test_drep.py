@@ -9,9 +9,9 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests.tests_conway import gov_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
@@ -78,7 +78,7 @@ def custom_drep(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
-) -> clusterlib_utils.DRepRegistration:
+) -> governance_utils.DRepRegistration:
     """Create a custom DRep."""
     if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
         pytest.skip("runs only on local cluster")
@@ -87,7 +87,7 @@ def custom_drep(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-        reg_drep = clusterlib_utils.get_drep_reg_record(
+        reg_drep = governance_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template="drep_custom",
         )
@@ -138,7 +138,7 @@ class TestDReps:
 
         # Register DRep
 
-        reg_drep = clusterlib_utils.get_drep_reg_record(
+        reg_drep = governance_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
         )
@@ -238,7 +238,7 @@ class TestNegativeDReps:
 
         # Register DRep
 
-        reg_drep = clusterlib_utils.get_drep_reg_record(
+        reg_drep = governance_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
         )
@@ -355,7 +355,7 @@ class TestDelegDReps:
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         pool_user: clusterlib.PoolUser,
-        custom_drep: clusterlib_utils.DRepRegistration,
+        custom_drep: governance_utils.DRepRegistration,
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
         use_build_cmd: bool,
@@ -465,6 +465,6 @@ class TestDelegDReps:
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user.stake.vkey_file
             )
-            gov_common.check_drep_delegation(
+            governance_utils.check_drep_delegation(
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
             )
