@@ -40,6 +40,7 @@ class ActionTags(enum.Enum):
     UPDATE_COMMITTEE = "UpdateCommittee"
     PARAMETER_CHANGE = "ParameterChange"
     TREASURY_WITHDRAWALS = "TreasuryWithdrawals"
+    INFO_ACTION = "InfoAction"
 
 
 def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
@@ -149,24 +150,32 @@ def check_action_view(
     anchor_url: str,
     anchor_data_hash: str,
     deposit_amt: int,
-    recv_addr_vkey_hash: str,
     return_addr_vkey_hash: str,
+    recv_addr_vkey_hash: str = "",
     transfer_amt: int = -1,
 ) -> None:
-    contents = []
     if action_tag == ActionTags.TREASURY_WITHDRAWALS:
         if transfer_amt == -1:
             raise ValueError("`transfer_amt` must be specified for treasury withdrawals")
+        if not recv_addr_vkey_hash:
+            raise ValueError("`recv_addr_vkey_hash` must be specified for treasury withdrawals")
 
-        contents = [
-            [
-                {
-                    "credential": {"keyHash": recv_addr_vkey_hash},
-                    "network": "Testnet",
-                },
-                transfer_amt,
-            ]
-        ]
+        gov_action = {
+            "contents": [
+                [
+                    {
+                        "credential": {"keyHash": recv_addr_vkey_hash},
+                        "network": "Testnet",
+                    },
+                    transfer_amt,
+                ]
+            ],
+            "tag": action_tag.value,
+        }
+    elif action_tag == ActionTags.INFO_ACTION:
+        gov_action = {
+            "tag": action_tag.value,
+        }
     else:
         raise NotImplementedError(f"Not implemented for action tag `{action_tag}`")
 
@@ -178,10 +187,7 @@ def check_action_view(
             "url": anchor_url,
         },
         "deposit": deposit_amt,
-        "governance action": {
-            "contents": contents,
-            "tag": action_tag.value,
-        },
+        "governance action": gov_action,
         "return address": {
             "credential": {"keyHash": return_addr_vkey_hash},
             "network": "Testnet",
