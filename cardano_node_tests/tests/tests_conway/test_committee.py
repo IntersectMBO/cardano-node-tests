@@ -203,6 +203,10 @@ class TestCommittee:
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
         anchor_url = "http://www.cc-update.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        prev_action_rec = governance_utils.get_prev_action(
+            cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.COMMITTEE
+        )
+
         update_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -210,6 +214,8 @@ class TestCommittee:
             anchor_data_hash=anchor_data_hash,
             quorum="2/3",
             add_cc_members=cc_members,
+            prev_action_txid=prev_action_rec.txid,
+            prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
         )
 
@@ -229,6 +235,7 @@ class TestCommittee:
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files,
+            deposit=deposit_amt,
         )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
